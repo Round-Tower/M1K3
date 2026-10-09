@@ -49,6 +49,19 @@ struct VoiceModeFloorTests {
         #expect(!code.contains(".init(color: .black.opacity"), "the scrim is hard-coded black again")
     }
 
+    @Test("the phone voice face is full-bleed, not a 340-pt box")
+    func iosVoiceFaceIsFullBleed() throws {
+        let code = try Self.code("M1K3iOSApp/VoiceScreen.swift")
+        #expect(!code.contains("maxHeight: 340"), "the boxed face is back")
+        #expect(!code.contains(".padding(.horizontal, 44)"), "the face is inset again")
+    }
+
+    @Test("ChatScreen hands the one RealityView to the voice cover")
+    func iosChatUnmountsBackdropUnderVoice() throws {
+        let code = try Self.code("M1K3iOSApp/ChatScreen.swift")
+        #expect(code.contains("backdropActive && core.voiceLoop == nil"), "the backdrop stays mounted under voice")
+    }
+
     @Test("the Mac voice hero draws no private floor of its own")
     func macVoiceHeroHasNoPrivateFloor() throws {
         let src = try Self.source("M1K3App/VoiceModeView.swift")

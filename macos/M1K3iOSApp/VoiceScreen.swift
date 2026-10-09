@@ -29,6 +29,9 @@
 //  shows), matching ChatScreen; the private navy gradient is gone. Still forced dark
 //  for 1.1, so the change is near-invisible until light mode is allowed. Pinned by
 //  VoiceModeFloorTests (source scan). Confidence 0.7 (verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (2) — the face is full-bleed like the Mac hero (no 340-pt box or 44-pt
+//  inset); tap still wakes/barges in; caption and hint float on glass; the face pauses under Low Power. The waveform
+//  (None) branch is unchanged, centred. ChatScreen unmounts its backdrop while this cover is up (one RealityView).
 //
 
 import M1K3Avatar
@@ -63,11 +66,13 @@ struct VoiceScreen: View {
             windowField
                 .ignoresSafeArea()
 
+            // The hero fills the screen like the Mac's; caption and controls float over it.
+            face
+                .ignoresSafeArea()
+
             VStack(spacing: 28) {
-                Spacer(minLength: 12)
-                face
-                caption
                 Spacer()
+                caption
                 controls
             }
             .padding(.bottom, 36)
@@ -121,12 +126,15 @@ struct VoiceScreen: View {
                     .symbolEffect(.variableColor.iterative, isActive: isLive)
                     .frame(maxHeight: 320)
             } else {
-                AvatarSurface(controller: core.avatar)
-                    .frame(maxHeight: 340)
-                    .padding(.horizontal, 44)
+                // Full-bleed, like the Mac hero. Paused under Low Power (one crisp frame):
+                // the voice hero shares the GPU with MLX, ASR and TTS.
+                AvatarSurface(
+                    controller: core.avatar,
+                    paused: ProcessInfo.processInfo.isLowPowerModeEnabled
+                )
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(.rect)
         .onTapGesture { primaryAction() }
         .accessibilityElement(children: .ignore)
@@ -154,6 +162,10 @@ struct VoiceScreen: View {
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.center)
                     .lineLimit(4)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 12)
+                    .m1k3Glass(cornerRadius: 18)
+                    .opacity(captionText.isEmpty ? 0 : 1)
                     .animation(.easeInOut(duration: 0.15), value: captionText)
             }
             if let error = core.voiceLoop?.lastError {
@@ -167,7 +179,10 @@ struct VoiceScreen: View {
             if case .listening = state {
                 Text(PoliteEndpoint.uiHint)
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .m1k3Glass(cornerRadius: 14)
             }
         }
         .padding(.horizontal, 32)

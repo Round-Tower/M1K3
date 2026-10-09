@@ -51,8 +51,10 @@
 //  change, shared `AttachmentRouting`); an image a blind brain can't take is named. Confidence 0.8 (device-owed).
 //  Review: Kev + claude-opus-5-5, 2026-10-03 — the screengrab beat also pushes the plate's screen (`phoneRoute`:
 //  Settings ▸ Documents / Memories) so App Preview footage needs no taps. Confidence 0.85 (verify-by-launch on the sim).
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — the navy gradient floor is the window's own field (see `backdrop`), shared
-//  with VoiceScreen; forced dark keeps it near-black until light mode is allowed. Verify-by-launch.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — the navy gradient floor is the window's own field (see `backdrop`),
+//  shared with VoiceScreen; forced dark keeps it near-black until light mode is allowed. Verify-by-launch.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (2) — the backdrop unmounts while the voice cover is presented (the cover
+//  keeps this view mounted beneath it, so two RealityViews ran); VoiceScreen's full-bleed hero is the one.
 
 import M1K3Avatar
 import M1K3Chat
@@ -103,6 +105,13 @@ struct ChatScreen: View {
     /// not to do — the Mac's glass swap, same spirit); the boxed hero stands in.
     private var backdropActive: Bool {
         avatarBackdrop && !avatarHidden && !reduceTransparency
+    }
+
+    /// The backdrop's RealityView is unmounted while the voice cover is up: the
+    /// cover (VoiceScreen) carries its own full-bleed hero, and the cover does not
+    /// unmount what is beneath it — ONE RealityView at a time.
+    private var backdropMounted: Bool {
+        backdropActive && core.voiceLoop == nil
     }
 
     /// Composing — keyboard up or a draft in hand; recedes the backdrop avatar.
@@ -265,13 +274,13 @@ struct ChatScreen: View {
     private var backdrop: some View {
         ZStack {
             windowField
-            if backdropActive {
+            if backdropMounted {
                 ChatBackdrop(core: core, isComposing: isComposing)
                     .transition(.opacity)
             }
         }
         .ignoresSafeArea()
-        .animation(.easeInOut(duration: 0.35), value: backdropActive)
+        .animation(.easeInOut(duration: 0.35), value: backdropMounted)
     }
 
     // MARK: - Hero avatar
