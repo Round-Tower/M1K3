@@ -1,0 +1,5 @@
+Lil can see. On iPhones and iPads with 8 GB of memory, Lil is now Qwen3.5 (4B) and it reads images: attach a photo or a screenshot and ask about it. It downloads once more (about 3 GB).
+
+Lil's tools: quicker tool turns, and a fix for a tool call Lil sometimes wrote with a stray tag.
+
+Everything still runs on your device. No account, no telemetry. The network is used for brain downloads and web search — one switch in Settings turns web search off.

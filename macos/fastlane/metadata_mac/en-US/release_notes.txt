@@ -1,1 +1,13 @@
-First public release of M1K3 — a fully private, on-device AI assistant for Mac.
+Lil can see. Lil is now Qwen3.5 (4B) and it reads images: attach a photo, a screenshot or a whiteboard and ask about it. It downloads once more (about 3 GB); the old Lil stays on disk until you remove it in Settings > M1K3 > Free up space. The Reasoning setting works for Lil again.
+
+Faster Big. Big (Gemma 4) no longer spends about a second per step re-reading its own prompt, so long answers and tool turns finish sooner.
+
+No more stalls when the display sleeps.
+
+Calls: one call that could not be read no longer hides the rest of your call list.
+
+Lil's tools: quicker tool turns, and a fix for a tool call Lil sometimes wrote with a stray tag.
+
+Search index: if you turned on MLX semantic embeddings in Settings > Advanced, M1K3 rebuilds your search index once after this update, the next time your Mac is idle and cool.
+
+Everything still runs on your Mac. No account, no telemetry. The network is used for brain downloads, web search and the optional private cloud — each a switch in Settings > Privacy.

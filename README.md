@@ -59,9 +59,9 @@ Private by design: on your Mac by default, no telemetry, and every network call 
 Everything above runs on the device. M1K3 uses the network for two things: the
 one-time download of a bigger brain when you ask for one, and web search, which
 is on by default so answers can be current, with one switch in Settings to turn
-it off. The 1.0 build has no cloud path at all. A later release adds an opt-in Private
-Cloud Compute rung — off by default, one message at a time, every PCC answer
-labelled — see [SECURITY.md](./SECURITY.md).
+it off. A third crossing is opt-in: Private Cloud Compute, off by default, consent
+asked per conversation, every PCC answer labelled — see
+[SECURITY.md](./SECURITY.md).
 
 | Surface | Where | Stack | Status |
 |---|---|---|---|
@@ -186,11 +186,10 @@ state: [`CLAUDE.md`](./CLAUDE.md). Security reports: [`SECURITY.md`](./SECURITY.
 ## Privacy
 
 Inference, retrieval, and voice run on-device; M1K3 itself has no servers and
-never sees or stores your conversations, and the 1.0 build has no cloud path
-at all. A later release adds an opt-in Private Cloud Compute rung (off by
-default): the one message you choose to send will go to Apple's Private Cloud
-Compute — see [SECURITY.md](./SECURITY.md) for what will and will not be sent
-and Apple's own guarantees, quoted and linked.
+never sees or stores your conversations. Private Cloud Compute is an opt-in
+rung, off by default: only a conversation you choose to send goes to Apple's
+Private Cloud Compute — see [SECURITY.md](./SECURITY.md) for what is and is not
+sent and Apple's own guarantees, quoted and linked.
 
 ## License
 
@@ -226,3 +225,8 @@ Contributions are by invitation under a short [CLA](./CLA.md) (Apache-2.0
 inbound, FSL outbound). M1K3 is built in the open with
 [MurphySig](https://murphysig.dev) provenance — the git history is signed,
 human-and-AI collaboration on the record.
+
+<!-- Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 (the v1.1.0 pass: the two
+     "1.0 build has no cloud path" sentences now describe PCC as the opt-in third crossing,
+     consent per conversation per ADR 0007; the MCP count of 18 was re-read off
+     M1K3MCPKit + M1K3BrainServe the same day). Prior: Unknown. -->

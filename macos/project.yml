@@ -23,6 +23,8 @@
 # Review: Kev + claude-opus-5.5, 2026-09-23 — NSAudioCaptureUsageDescription for the call recorder's Core Audio process tap
 # (it replaced ScreenCaptureKit, so the app no longer asks for Screen Recording); the context-senses comment now says the
 # TCC dialog fires as the toggle goes on. Confidence 0.85.
+# Review: Kev + claude-fable-5.1, 2026-10-09 — MARKETING_VERSION 1.0.0 → 1.1.0 (chore(release): v1.1.0, held until 1.0.0
+# clears review). CURRENT_PROJECT_VERSION stays "1": Xcode Cloud numbers the store builds (VERSIONING.md). Confidence 0.9.
 
 name: M1K3
 
@@ -38,7 +40,7 @@ settings:
     # Versioning scheme: see /VERSIONING.md. This is the single source of truth
     # for the user-facing version on every Apple surface (TestFlight, MAS, the
     # nightly DMG's name). Build numbers are Xcode Cloud's (auto-managed).
-    MARKETING_VERSION: "1.0.0"
+    MARKETING_VERSION: "1.1.0"
     CURRENT_PROJECT_VERSION: "1"
     # Apple Silicon only (2026-09-15). Every brain needs it — MLX (Lil, Big, pocket)
     # and Apple Intelligence (Mini) are both arm64-only — yet the Mac archive was

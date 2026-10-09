@@ -8,9 +8,12 @@ The release-by-release plan for the macOS 27 wave (1.0 → 1.1 → 1.2) lives in
 `docs/GOLDEN_GATE_PLAN.md` § Roadmap; this file points at it rather than
 copying it.
 
-Last swept: 2026-09-26 — **1.0.0 is still in App Review; nothing is live yet.**
-Resubmitted on build 372 (Mac + iOS, local release, 2026-09-24);
-`itunes.apple.com/lookup?id=6780230835` still returns no listing on 09-26.
+Last swept: 2026-10-09 — **1.0.0 is in App Review on build 453 (Mac IN_REVIEW,
+iOS WAITING_FOR_REVIEW); nothing is live yet.** The v1.1.0 release commit
+(`chore(release): v1.1.0`, see § v1.1.0 below) is held on a branch and lands the
+day 1.0.0 clears. Before 453: resubmitted on build 372 (Mac + iOS, local
+release, 2026-09-24); `itunes.apple.com/lookup?id=6780230835` returned no
+listing on 09-26.
 The 09-18 note below stands as the record of that week.
 (The 09-17 sweep read "1.1.0 merged" as "1.1.0 shipped". Checked 09-18:
 `itunes.apple.com/lookup?id=6780230835` → no listing; Kev: "we're releasing all
@@ -128,14 +131,43 @@ the first Teams customer, the move from engineer to honest founder.
 - **Prefix prewarm: n ≥ 5 in-app rerun owed** (turn-1 2.7 s vs 5.8 s at n = 2).
 - **The Mini palette call (Kev):** 16-tool palette puts ~3.9k of Mini's 4,096
   in the fixed prompt. Levers: smaller palette, shorter descriptions, or
-  `toolCallingMode(.disallowed)` for small talk (now available in 1.1.0).
+  `toolCallingMode(.disallowed)` for small talk (available since the September bundle).
 - Mini's invented user threads; the verbatim-recital hardening (#111).
 
 ---
 
 ## Next — the releases
 
-### "1.1.0" — MERGED 2026-09-16, riding under 1.0.0 (`docs/GOLDEN_GATE_PLAN.md`)
+### v1.1.0 (Gemma-shaped) — the held release commit (`docs/GEMMA_1_1_PLAN.md`)
+
+Marketing version 1.1.0 on every surface (`VERSIONING.md`); Xcode Cloud mints the
+build. Lands when 1.0.0 clears review. What rides in it, user-facing:
+
+- **Lil is Qwen3.5-4B and it sees** (#501, #517): image attachments on Lil, the
+  VLM load path, weights pinned at `32f3e8ec`; one more ~3 GB download, the
+  retired Lil freed from Settings. The Reasoning picker is back for Lil.
+- **Lil's tool turns**: exact-seed checkpoints (#509, ~60 prefill tokens a step,
+  not ~2,585) and the orphan-`</parameter>` repair (#511) — tool-use 19/20 at
+  5.9 s at tier.
+- **Big no longer re-reads its prompt every step**: the Gemma tokenizer fix
+  (swift-transformers 1.3.4, #499) and the display-sleep stall hold (#498).
+- **Calls**: one unreadable call no longer blanks the call list (#507).
+- **Search index**: MLX-embedding users re-index once after the update (#503's
+  mlx-swift 0.32.3 / mlx-swift-lm 3.32.3 tag pair).
+- **Content Controls on DMG builds + the adult band's copy** (#518, #519, #520);
+  MCP works on DMG builds on macOS 27 (#518).
+- Not user-facing but riding: every tier can dispatch read-only tools behind
+  flags (#510), the eval harness sees (#497, #502), App Store creative assets
+  (#506), the README hero (#505).
+
+Open branches still to land under it (each its own PR): `feat/voice-window-backdrop`
+(the voice-mode window backdrop), `fix/1-1-mini-sees-lil-polish` (Mini sees — pixels
+attached in-process — and Lil polish), `fix/1-1-honest-strings` (the honest
+strings), `chore/followups-2026-10-09b`. The Gemma plan's triage of what stays out
+(Stream C port, the caption-memory slice, Stream E, E2B, the cross-turn checkpoint,
+the display-off A/B) is in `docs/GEMMA_1_1_PLAN.md` § 5.
+
+### The September Golden Gate bundle (then called "1.1.0") — MERGED 2026-09-16, riding under 1.0.0 (`docs/GOLDEN_GATE_PLAN.md`)
 
 On master, not on the store (see the header). Toolchain bump to Xcode 27 GA
 (#362), typed AFM errors, CI guards, and **Private Cloud Compute is merged**
@@ -238,7 +270,7 @@ stays a possible later companion.
 - Dream-cycle Tier-2 soak → the Tier-3 decision is a re-measure, not a
   build; #94's corrected-facts lens makes the soak eyeball-able.
 - **#102** Mini's turn shape → now answerable by `toolCallingMode` (shipped in
-  1.1.0); the small-talk gate stays rejected ("brittle both ways", 2026-06-12).
+  the September bundle); the small-talk gate stays rejected ("brittle both ways", 2026-06-12).
 - Android eval harness — SHIPPED 08-22 (`tools/eval/android/`; the F1/F2/
   KV-clear fixes lifted Mini 9 → 19/22 and falsified the "armv9 broken
   logits" read). The KMP app is a slow burn; models may diverge from Apple.
@@ -319,7 +351,7 @@ stays a possible later companion.
   One post a week; the product demos itself; the DyslexiaAI story is the
   unfair advantage.
 - **The Mini palette call** (above): smaller palette / shorter descriptions /
-  `toolCallingMode(.disallowed)` (available since 1.1.0).
+  `toolCallingMode(.disallowed)` (available since the September bundle).
 - **#271** `TAP_PUSH_TOKEN` so the nightly bumps the Homebrew cask.
 - Brain-at-home §8 calls (naming, serving indicator, thermal etiquette,
   visionOS timing) unblock Phase A of the Android client.
@@ -430,3 +462,8 @@ stays a possible later companion.
 <!-- Review: Kev + claude-opus-5-5, 2026-10-07 — the WhisperKit 0.18 → 1.1 line: probed with
      swift-transformers 1.3.4 (the Gemma tokenizer fix, GEMMA_1_1_PLAN); builds and tests green; the
      launch checks and the landing timing stay open. Confidence 0.75. -->
+<!-- Review: Kev + claude-fable-5.1, 2026-10-09 — v1.1.0 release-commit pass: the header reads build 453
+     (Mac IN_REVIEW, iOS WAITING_FOR_REVIEW; nothing live); the September bundle loses the "1.1.0" name so the
+     real v1.1.0 (Gemma-shaped: Qwen3.5 Lil that sees, Lil tool turns, the Big tokenizer fix, #497–#520) has
+     its own section with the open branches; the two toolCallingMode lines point at the bundle instead of
+     "1.1.0". Confidence 0.85 (the PR list is git log; the branches are the worktree list, unpushed). -->

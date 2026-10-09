@@ -202,6 +202,14 @@ Lil on merit or on our plumbing.
 
 ## 5. Progress and learnings (2026-10-06)
 
+Review: Kev + claude-fable-5.1, 2026-10-09 — the 1.1 triage (the release commit is held until 1.0.0 clears
+review). IN: the voice-mode window backdrop, Mini sees (pixels attached in-process, not the sandboxed file
+URL), the honest strings, Lil polish (Qwen3.5 #517, the orphan-tag repair #511, exact-seed checkpoints #509,
+the Reasoning picker back), and the v1.1.0 bump. OUT, and why: Stream C's Swift port waits for upstream #684;
+Stream D (the caption-memory slice) is the 1.2 headline, not a 1.1 line; Stream E is blocked on upstream #400;
+E2B is 1.2 (Kev: "add it later"); the Qwen3.5 cross-turn checkpoint needs the scripted-chat prefill curve
+measured first; the display-off A/B is a measurement task, not a release item. Confidence 0.85 (the in-list
+matches the open branches and the landed PRs; the out-list is the §5 open-next list, re-read today).
 Signed: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.8, Prior: the plan above was
 drafted the same day in a cloud planning session (research only); this section and
 the in-place corrections are the on-machine session's.
