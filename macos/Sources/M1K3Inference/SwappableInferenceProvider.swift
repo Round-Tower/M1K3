@@ -24,6 +24,8 @@
 //  question a capability forward can't answer: WHICH brain serves. The tool router asked it
 //  with a cast to this type alone, so behind the app's RuntimeInferenceProvider it never
 //  ran on the Mac (build 373). Both façades conform; pinned by `routeSeesThroughFacades`.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — forwards `ImageCaptioning` (caption memory); a backend
+//  without it throws rather than answering with the wrong model.
 
 import Foundation
 import Synchronization
@@ -151,5 +153,17 @@ extension SwappableInferenceProvider: TurnWarmable {
 extension SwappableInferenceProvider: RawCompletionProviding {
     public func generateRawStreaming(prompt: String, maxTokens: Int?) -> AsyncStream<String>? {
         (active as? RawCompletionProviding)?.generateRawStreaming(prompt: prompt, maxTokens: maxTokens)
+    }
+}
+
+/// Forwards the neutral image-captioning capability to the current backend
+/// (the façade-forwarding rule). A backend that cannot caption throws -- the
+/// caller refuses by brain name before it ever gets here; this is the swap race.
+extension SwappableInferenceProvider: ImageCaptioning {
+    public func caption(image: ImageAttachment, prompt: String) async throws -> String {
+        guard let captioner = active as? ImageCaptioning else {
+            throw InferenceError.generationFailed("active backend cannot caption images")
+        }
+        return try await captioner.caption(image: image, prompt: prompt)
     }
 }

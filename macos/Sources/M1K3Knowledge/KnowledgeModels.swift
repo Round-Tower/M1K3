@@ -11,7 +11,8 @@
 //  domain-record/PDF-specific). GRDB record types; persistence lives in KnowledgeStore.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — caption memory: adds `.image` (Photo), `.captioned`, `allStaticKinds`, `launchSweepKinds`, `withheldFromMCP`, `displayLabel`; string-backed, no migration.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — caption memory: adds `.image` (Photo), `.captioned`,
+//  `allStaticKinds`, `launchSweepKinds`, `withheldFromMCP`, `displayLabel`; string-backed, no migration.
 
 import Foundation
 import GRDB

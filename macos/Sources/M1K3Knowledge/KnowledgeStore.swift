@@ -21,7 +21,8 @@
 //  (separate doc/memory budgets) so the document corpus can't crowd short
 //  memory facts out of a single top-K (the open-chat recall miss). Pinned by
 //  KnowledgeStoreGroundingTests; existing callers unaffected (filter defaults nil).
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — caption memory: `.image` joins groundingDocumentKinds so grounded answers can cite a remembered photo.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — caption memory: `.image` joins groundingDocumentKinds so grounded
+//  answers can cite a remembered photo.
 
 import Foundation
 import GRDB

@@ -35,7 +35,8 @@
 //  on M1K3Inference — the equality is pinned by ModelThinkingMarkerPinTests.)
 //  Prior: Unknown
 //
-//  Review: Kev + claude-fable-5.1, 2026-10-09 — caption memory: sweep walks KnowledgeKind.launchSweepKinds; Photos are model-written text.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — caption memory: sweep walks KnowledgeKind.launchSweepKinds; Photos
+//  are model-written text.
 
 import Foundation
 
