@@ -252,13 +252,16 @@ echo "✓ m1k3 helper launches (--help answered)"
 # export is checked for the profile and the keychain group, failing closed.
 [ -f "$APP/Contents/embedded.provisionprofile" ] || {
   echo "✗ $APP_NAME.app embeds no provisioning profile — its keychain saves would fail -34018"; exit 1; }
-APP_ENT="$(codesign -d --entitlements - --xml "$APP" 2>/dev/null | plutil -convert xml1 -o - - 2>/dev/null)"
-case "$APP_ENT" in
-  *keychain-access-groups*) ;;
-  *)
-    echo "✗ $APP_NAME.app is signed without keychain-access-groups (check M1K3_APP_ENTITLEMENTS)"
-    exit 1 ;;
-esac
+# `|| true`: a failed read must reach the message below, not end the script silently.
+APP_IDENTIFIER="$(codesign -d --entitlements - --xml "$APP" 2>/dev/null \
+  | plutil -extract 'com\.apple\.application-identifier' raw - 2>/dev/null || true)"
+KEYCHAIN_GROUP="$(codesign -d --entitlements - --xml "$APP" 2>/dev/null \
+  | plutil -extract keychain-access-groups.0 raw - 2>/dev/null || true)"
+if [ "$APP_IDENTIFIER" != "$TEAM.app.m1k3" ] || [ "$KEYCHAIN_GROUP" != "$TEAM.app.m1k3" ]; then
+  echo "✗ $APP_NAME.app is signed as '${APP_IDENTIFIER:-no identifier}' with keychain group"
+  echo "  '${KEYCHAIN_GROUP:-none}', expected $TEAM.app.m1k3 for both (check M1K3_APP_ENTITLEMENTS)"
+  exit 1
+fi
 echo "✓ app embeds its Developer ID profile and keychain group"
 
 # ── 3. Notarize + staple the .app (offline first-launch) ─────────────────────
