@@ -68,6 +68,9 @@
 //  same day: the orbs route through `AmbientBackdropPolicy` (voice mode no longer a cue — they were hidden behind
 //  the hero's gradient since 06-26 and would now show), and the split view is `.disabled` under the hero so Tab
 //  cannot reach the covered text field. Confidence 0.8 (the disabled Tab order is verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (PR #525 fold) — the split view is also `.accessibilityHidden`
+//  under the hero: `.disabled` kept the covered transcript and sidebar in the VoiceOver tree. Pinned in
+//  VoiceModeFloorTests. Confidence 0.8 (verify-by-launch with VoiceOver).
 
 import M1K3Avatar
 import M1K3Chat
@@ -332,8 +335,12 @@ struct ContentView: View {
         // Disabled underneath the hero: the covered transcript, input and sidebar
         // leave the key-view loop, so Tab from the hero cannot land typing in a
         // text field nobody can see (and Space stays the barge-in). The overlay
-        // and the toolbar sit outside this modifier, so they stay live.
+        // and the toolbar sit outside this modifier, so they stay live. Hidden
+        // from VoiceOver for the same reason: `.disabled` leaves the covered
+        // transcript and sidebar in the accessibility tree, so the cursor could
+        // still land on rows nobody can see.
         .disabled(env.isVoiceModeActive)
+        .accessibilityHidden(env.isVoiceModeActive)
         .overlay {
             if env.isVoiceModeActive {
                 VoiceModeView()

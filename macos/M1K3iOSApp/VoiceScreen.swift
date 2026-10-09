@@ -37,6 +37,9 @@
 //  user is talking to, and the Mac hero never pauses. `VoiceHeroPausePolicy`: Low Power or Reduce Motion only,
 //  deliberately not the chat backdrop's recede. The creature surface ignores `paused` today (AvatarSurface's
 //  logged follow-up), so this bites the pixel face first.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (PR #525 fold) — Low Power is observed (`@State lowPower` fed by
+//  `NSProcessInfoPowerStateDidChange`, hopped to the main run loop), not read at render: a toggle mid-session
+//  triggered no render, so the hero kept its old clock. Pinned in VoiceModeFloorTests. Confidence 0.75.
 //
 
 import M1K3Avatar
@@ -48,6 +51,9 @@ struct VoiceScreen: View {
     @Environment(AppCore.self) private var core
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(CompanionDefaults.companionKey) private var companion = ""
+    /// Low Power Mode, observed: a toggle mid-session triggers no render on its
+    /// own, so a render-time read would miss it until something else moved.
+    @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
 
     private var state: VoiceLoopState {
         core.voiceLoop?.state ?? .ended
@@ -106,6 +112,13 @@ struct VoiceScreen: View {
         .onChange(of: state) { _, newState in
             if case .awaitingAnswer = newState { spokenBubbles.removeAll() }
         }
+        // The power-state notification arrives off the main thread.
+        .onReceive(
+            NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)
+                .receive(on: RunLoop.main)
+        ) { _ in
+            lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
+        }
     }
 
     // MARK: - The face
@@ -136,11 +149,12 @@ struct VoiceScreen: View {
     }
 
     /// The hero's clock stop (VoiceHeroPausePolicy, package-tested): Low Power or
-    /// Reduce Motion, never the turn. Low Power is read at render like ChatBackdrop
-    /// does — state changes re-render and re-read it.
+    /// Reduce Motion, never the turn. Low Power is the observed `lowPower` state
+    /// (NSProcessInfoPowerStateDidChange), so a toggle mid-session pauses or
+    /// resumes the face at once — nothing else re-renders this screen on its own.
     private var heroPaused: Bool {
         VoiceHeroPausePolicy.paused(
-            lowPower: ProcessInfo.processInfo.isLowPowerModeEnabled,
+            lowPower: lowPower,
             reduceMotion: reduceMotion
         )
     }

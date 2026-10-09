@@ -14,6 +14,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (review fold) — the phone screens share one
 //  `WindowField` (its arms are pinned in WindowFieldTests); ContentView's orbs come from
 //  `AmbientBackdropPolicy`, voice mode no longer a cue; one `code(_:)` helper.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (PR #525 fold) — two more pins: the Mac split view is
+//  `.accessibilityHidden` under the hero (VoiceOver, not just Tab), and the phone hero observes
+//  `NSProcessInfoPowerStateDidChange` instead of reading Low Power at render.
 //
 
 import Foundation
@@ -64,6 +67,17 @@ struct VoiceModeFloorTests {
         let code = try Self.code("M1K3iOSApp/VoiceScreen.swift")
         #expect(code.contains("VoiceHeroPausePolicy.paused("), "the hero must take VoiceHeroPausePolicy")
         #expect(!code.contains("chatBackdropTreatment("), "the hero recedes with the chat backdrop again")
+        // Low Power is observed, not read at render: a toggle mid-session triggers no
+        // render on its own, so the policy must take observed state.
+        #expect(
+            code.contains("NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)"),
+            "the hero must observe NSProcessInfoPowerStateDidChange"
+        )
+        #expect(code.contains("lowPower: lowPower,"), "the policy must take the observed lowPower state")
+        #expect(
+            !code.contains("lowPower: ProcessInfo.processInfo.isLowPowerModeEnabled,"),
+            "the policy reads Low Power at render again"
+        )
     }
 
     @Test("ChatScreen hands the one RealityView to the voice cover")
@@ -93,6 +107,10 @@ struct VoiceModeFloorTests {
         #expect(
             code.contains(".disabled(env.isVoiceModeActive)"),
             "the split view must leave the Tab order while voice is up"
+        )
+        #expect(
+            code.contains(".accessibilityHidden(env.isVoiceModeActive)"),
+            "the split view must leave the VoiceOver tree while voice is up"
         )
     }
 }
