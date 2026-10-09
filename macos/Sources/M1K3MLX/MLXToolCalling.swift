@@ -72,6 +72,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-07 (repair), Confidence 0.8 — both tool loops hand a rejected
 //  call to `Qwen35CallRepair` first: Qwen3.5's orphan `</parameter>` is dropped and the call re-parsed by
 //  upstream's own processor; anything else stays rejected. Logged as REPAIRED (names + counts only).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — comment only: `chatMessage`'s images note named gemma-4-12B
+//  as the one seeing model; Lil (Qwen3.5-4B, #517) loads through MLXVLM too. No logic changed.
 
 import Foundation
 import M1K3Inference
@@ -220,10 +222,11 @@ enum MLXToolMapping {
         case let .system(text):
             return .system(text)
         case let .user(text, images):
-            // Images flow ONLY when the backing model is vision-capable
-            // (VLM-loaded gemma-4-12B) — a text-only checkpoint's processor
-            // would choke on (or silently mangle) image parts. Default false
-            // keeps every pre-vision call site byte-identical.
+            // Images flow ONLY when the backing model is vision-capable (the
+            // VLM-loaded tiers: Lil's Qwen3.5-4B since #517, Big's gemma-4-12B)
+            // — a text-only checkpoint's processor would choke on (or silently
+            // mangle) image parts. Default false keeps every pre-vision call
+            // site byte-identical.
             guard imagesAllowed, !images.isEmpty else { return .user(text) }
             return .user(text, images: images.map { .url($0.url) })
         case let .toolResult(_, output):
