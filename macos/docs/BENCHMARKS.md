@@ -89,6 +89,22 @@ python3 tools/eval/scorecard.py \
   ~/Library/Containers/app.m1k3/Data/scorecard.txt --markdown scorecard.md
 ```
 
+### The chat curve (prefill over a scripted chat)
+
+`M1K3_SELFTEST_CHATCURVE=1` (Lil; or `lil`, `big`, a model id) drives a fixed eight-message
+chat through `AgentRAGResponder` with the history accumulating, and reports per message the
+rendered prompt tokens, the tool session's cache reuse (`reuse: X/Y`), the tokens and
+milliseconds actually prefilled, and peak RSS, plus the slope per message. A flat prefill
+slope means the cache carries across turns; a rising one is the cost a cross-turn checkpoint
+would buy back (`docs/GEMMA_1_1_PLAN.md`). Quit the live app first (two MLX processes crawl).
+Run the built app's binary directly, report on stdout:
+
+```bash
+M1K3_SELFTEST=1 M1K3_SELFTEST_CHATCURVE=1 M1K3_SELFTEST_OUT=- \
+  /path/to/M1K3.app/Contents/MacOS/M1K3 > chatcurve.txt
+# the JSON is the block between -----BEGIN/END CHATCURVE JSON----- ; with a file OUT it is <OUT>.json
+```
+
 ### macOS 27: the report comes out over stdout
 
 App-data privacy on macOS 27 closes `~/Library/Containers/app.m1k3` to shells:
