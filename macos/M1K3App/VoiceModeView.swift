@@ -37,6 +37,14 @@
 //  Review: Kev + claude-opus-5, 2026-09-13 — REVERTED to the fixed shot: under `.fit` the
 //  2026-09-13 capture showed every creature overflowing the voice window, head cut off.
 //  Confidence 0.85 (the morning's plates show the fixed shot framing the whole creature).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — the private dark gradient (`VoiceBackdrop`) is gone:
+//  the hero sits on the window's own behind-window glass (`.glassBackdrop()`, the same floor the chat
+//  has, with the flat Reduce Transparency fallback for free), and the thinking rain reads the
+//  appearance (`BackdropInk.rain`). The listening hint moves onto glass — `.tertiary` grey was
+//  unreadable on light. UNVERIFIED by launch: that the effect view hides the transcript and sidebar
+//  beneath it; if they ghost through, fade the split view in ContentView (`.opacity(0)` while voice
+//  is active, under the overlay). No reading scrim here: the chat's top scrim is deliberately off in
+//  voice mode (ContentView) so the full-window hero keeps clean edges. Confidence 0.6 (taste gate).
 
 import M1K3Avatar
 import M1K3Voice
@@ -51,9 +59,13 @@ struct VoiceModeView: View {
 
     var body: some View {
         ZStack {
-            // A deep backdrop so the chat behind the overlay never bleeds through
-            // and a bright face / stars pop. The avatar is the room now.
-            VoiceBackdrop()
+            // The window's own glass (the chat's floor), so the hero sits on the
+            // same background as everything else and the chat behind the overlay
+            // does not bleed through. The avatar is the room now.
+            Color.clear
+                .ignoresSafeArea()
+                .glassBackdrop()
+                .allowsHitTesting(false)
 
             // The thinking rain: M1K3's live inference (reasoning · tool ·
             // answer) scrolling up behind the avatar — transparency as
@@ -186,7 +198,10 @@ struct VoiceModeView: View {
                 // of waiting out the conversational pause.
                 Text(PoliteEndpoint.uiHint)
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .glassEffect(.regular, in: .capsule)
             }
 
         case .awaitingAnswer:
@@ -355,23 +370,5 @@ struct VoiceModeView: View {
               last.role == .assistant, !last.text.isEmpty
         else { return }
         env.avatar.setActivity(.generating)
-    }
-}
-
-/// A deep, near-opaque backdrop for the full-window voice hero — it hides the
-/// chat behind the overlay and makes a bright face / the constellation's stars
-/// read. Non-interactive (taps belong to the avatar above it).
-private struct VoiceBackdrop: View {
-    var body: some View {
-        LinearGradient(
-            colors: [
-                Color(red: 0.04, green: 0.04, blue: 0.08),
-                Color(red: 0.07, green: 0.05, blue: 0.12),
-            ],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
     }
 }
