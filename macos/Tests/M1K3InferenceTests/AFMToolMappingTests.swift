@@ -21,6 +21,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `visionFailureReply(for:imageCount:…)`: the image-turn
 //  fallback per AFMFailure class (decline / resend / fresh chat), the brain names derived per platform
 //  (PR #526 second-pass review). Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (2) — `visionTurn(from:imagesAttachable:)` + `visionRoute`: the
+//  neutral shape exists only where `Attachment(imageURL:)` runs; elsewhere the turn is the honest
+//  `.cannotShow` reply, never a persona-free session. `visionDecline(from:)` deleted (PR #526 third-pass
+//  review). Confidence 0.85.
 
 import Foundation
 @testable import M1K3Inference
@@ -103,7 +107,7 @@ struct AFMVisionTurnTests {
     func imageTurnIsNeutral() throws {
         let turn = try #require(AFMToolPrompt.visionTurn(from: [
             .system(M1K3Persona.systemPrompt(variant: nil)), .user("total?", images: [image]),
-        ]))
+        ], imagesAttachable: true))
         #expect(!turn.instructions.contains(M1K3Persona.standingPersonaAnchor))
         #expect(!turn.instructions.contains("M1K3"))
         #expect(turn.instructions.contains("image"))
@@ -122,7 +126,7 @@ struct AFMVisionTurnTests {
             .user("what's here?", images: []), .assistant(text: "Notes.", toolCalls: []),
             .toolResult(name: "recall", output: "a café"), .user("and the total?", images: [image]),
         ]
-        let turn = try #require(AFMToolPrompt.visionTurn(from: messages))
+        let turn = try #require(AFMToolPrompt.visionTurn(from: messages, imagesAttachable: true))
         let rendered = AFMToolPrompt.render(messages: messages, tools: [])
         #expect(rendered.hasPrefix(turn.body.replacingOccurrences(of: "\n\n" + AFMToolPrompt.visionSteer, with: "")))
         #expect(turn.body.contains("Result from recall: a café"))
@@ -130,8 +134,11 @@ struct AFMVisionTurnTests {
 
     @Test("no images means no neutral shape — the persona and the tools stay")
     func noImagesKeepsThePersona() {
-        #expect(AFMToolPrompt.visionTurn(from: [.system("persona"), .user("hi", images: [])]) == nil)
-        #expect(AFMToolPrompt.visionTurn(from: [.system("persona")]) == nil)
+        let text: [ToolMessage] = [.system("persona"), .user("hi", images: [])]
+        #expect(AFMToolPrompt.visionTurn(from: text, imagesAttachable: true) == nil)
+        #expect(AFMToolPrompt.visionTurn(from: [.system("persona")], imagesAttachable: true) == nil)
+        #expect(AFMToolPrompt.visionRoute(from: text, imagesAttachable: true, platform: .mac) == nil)
+        #expect(AFMToolPrompt.visionRoute(from: text, imagesAttachable: false, platform: .mac) == nil)
     }
 
     @Test("only the LATEST user turn counts: an old image does not strip a later text turn's persona")
@@ -139,16 +146,53 @@ struct AFMVisionTurnTests {
         let messages: [ToolMessage] = [
             .user("look", images: [image]), .assistant(text: "ok", toolCalls: []), .user("thanks", images: []),
         ]
-        #expect(AFMToolPrompt.visionTurn(from: messages) == nil)
-        #expect(AFMToolPrompt.visionDecline(from: messages) == nil)
+        #expect(AFMToolPrompt.visionTurn(from: messages, imagesAttachable: true) == nil)
+        #expect(AFMToolPrompt.visionRoute(from: messages, imagesAttachable: false, platform: .mac) == nil)
     }
 
-    @Test("the fallback decline names the count and never guesses")
-    func declineNamesTheCount() {
-        let text = AFMToolPrompt.visionDecline(from: [.system("persona"), .user("total?", images: [image, image])])
-        #expect(text?.contains("couldn't read") == true)
-        #expect(text?.contains("2 images") == true)
-        #expect(AFMToolPrompt.visionDecline(from: [.user("hi", images: [])]) == nil)
+    // MARK: - Where the runtime can't attach the image (PR #526 third-pass review, finding 1)
+
+    /// `Attachment(imageURL:)` runs only on macOS/iOS 27 under a 6.4 compiler. Before this pin the
+    /// neutral shape was chosen on every image turn: on an older runtime no image was sent, the body
+    /// said "(… this brain cannot view.)" and the steer said "describe it" — persona-free, tool-free,
+    /// and an open invitation to confabulate. Not attachable means NO vision shape at all.
+    @Test("not attachable: no neutral shape — the turn is the honest cannot-show reply")
+    func notAttachableIsTheHonestReply() throws {
+        let messages: [ToolMessage] = [.system("persona"), .user("total?", images: [image, image])]
+        #expect(AFMToolPrompt.visionTurn(from: messages, imagesAttachable: false) == nil)
+        let route = try #require(AFMToolPrompt.visionRoute(from: messages, imagesAttachable: false, platform: .mac))
+        guard case let .cannotShow(reply) = route else {
+            Issue.record("expected .cannotShow, got \(route)")
+            return
+        }
+        #expect(reply.contains("won't guess"))
+        #expect(reply.contains("2 images"))
+        #expect(reply.contains("Lil or Big"))
+        #expect(!reply.contains("describe"))
+        // Nothing about the runtime is a tool or a persona: the reply is final text.
+        #expect(reply.hasSuffix("."))
+    }
+
+    @Test("attachable: the route is the neutral shape, the same one visionTurn builds")
+    func attachableIsTheNeutralShape() throws {
+        let messages: [ToolMessage] = [.system("persona"), .user("total?", images: [image])]
+        let route = try #require(AFMToolPrompt.visionRoute(from: messages, imagesAttachable: true, platform: .mac))
+        #expect(try route == .see(#require(AFMToolPrompt.visionTurn(from: messages, imagesAttachable: true))))
+    }
+
+    @Test("the cannot-show reply names the brains that read images on this platform, or says none do")
+    func cannotShowNamesTheReaders() {
+        func reply(_ platform: BrainTier.DevicePlatform) -> String {
+            AFMToolPrompt.cannotShowImageReply(imageCount: 1, readers: BrainTier.imageReaders(platform: platform))
+        }
+        let mac = reply(.mac), mobile = reply(.mobile)
+        let none = AFMToolPrompt.cannotShowImageReply(imageCount: 1, readers: [])
+        #expect(mac.contains("Lil or Big") && mac.contains("image you"))
+        #expect(mobile.contains("Switch to Lil,") && !mobile.contains("Big"))
+        #expect(none.contains("No brain on this device"))
+        // The same closing line the guardrail decline uses: one source of the brain names.
+        let guardrail = AFMToolPrompt.visionFailureReply(for: .guardrailViolation, imageCount: 1, platform: .mac)
+        #expect(mac.hasSuffix(guardrail.components(separatedBy: ". ").last ?? "?"))
     }
 
     // MARK: - The failure reply, per class (PR #526 second-pass review, finding 1)
@@ -213,12 +257,12 @@ struct AFMVisionTurnTests {
         }
     }
 
-    @Test("the transcript decline (visionDecline) is the guardrail reply on this platform")
-    func visionDeclineIsTheGuardrailReply() {
-        let messages: [ToolMessage] = [.user("total?", images: [image])]
-        let expected = AFMToolPrompt.visionFailureReply(
-            for: .guardrailViolation, imageCount: 1, platform: BrainTier.DevicePlatform.current
-        )
-        #expect(AFMToolPrompt.visionDecline(from: messages) == expected)
+    @Test("imagesAttachable is the one availability read both AFM image paths share")
+    func imagesAttachableMatchesTheRuntime() {
+        var expected = false
+        #if compiler(>=6.4)
+            if #available(macOS 27.0, iOS 27.0, visionOS 27.0, *) { expected = true }
+        #endif
+        #expect(AFMToolPrompt.imagesAttachable == expected)
     }
 }

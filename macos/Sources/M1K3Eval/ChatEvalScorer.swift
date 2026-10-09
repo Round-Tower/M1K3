@@ -66,6 +66,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.9 — a digit edge in `containsWholeWord` treats a
 //  decimal separator between digits as inside the number ("4" ∉ "3.4" / "€4.08" / "1,4"; ∈ "4." / "4, 5"),
 //  the #497 review gap. Audit: 0 of the committed vision passes flip under the new rule.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (2), Confidence 0.9 — the think tags are the exception to that
+//  scoping: read whole-answer on code-gen too, since they are never content (PR #526 third-pass review).
 //  Review: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 — `excludes forbidden` on code-gen reads leak
 //  markers in the prose and every other marker in the fence (`codeInsideFences`, the complement of
 //  `proseOutsideFences`, one `splitFences` walk feeds both). Lil's 2026-10-07 misses: the diagnosis "the bug
@@ -701,16 +703,20 @@ public enum ChatEvalScorer {
             // in the fix), so it is read inside the fence — Lil's "the bug is `best = 0`" beside
             // a correct fix was 0/3 on 2026-10-07. With no fence, nothing was made and the whole
             // answer is read as before: a decline with no code still carries its own words.
+            // A think tag is the one marker with no legitimate home: `<think>` / `</think>` can't be
+            // page content the way a "M1K3:" bubble can, so on code-gen they are read in the WHOLE
+            // answer, fence or prose (PR #526 third-pass review — the cut-off shape is a second
+            // close inside an unclosed fence). The other leak markers stay prose-scoped.
             let scoped = fixture.kind == .codeGen, leak = Set(ChatEvalFixtures.leakMarkers)
+            let thinkTags = Set(ReasoningSplit.openTags + ReasoningSplit.closeTags)
             let normalisedAnswer = RefusalHeuristic.normalised(answer)
             let prose = scoped
                 ? RefusalHeuristic.normalised(RefusalHeuristic.proseOutsideFences(answer)) : normalisedAnswer
             let fenced = scoped ? RefusalHeuristic.codeInsideFences(answer) : ""
             let code = fenced.isEmpty ? normalisedAnswer : RefusalHeuristic.normalised(fenced)
             let offending = exp.mustNotContain.filter { marker in
-                RefusalHeuristic.containsWholeWord(
-                    leak.contains(marker) ? prose : code, RefusalHeuristic.normalised(marker)
-                )
+                let haystack = thinkTags.contains(marker) ? normalisedAnswer : leak.contains(marker) ? prose : code
+                return RefusalHeuristic.containsWholeWord(haystack, RefusalHeuristic.normalised(marker))
             }
             checks.append(EvalCheck(
                 name: "excludes forbidden",

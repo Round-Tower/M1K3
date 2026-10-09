@@ -35,6 +35,11 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (3) — `visionFailureReply(for:imageCount:…)`: the fallback by
 //  AFMFailure class (guardrail/unknown decline, transient resend, overflow fresh chat), the brain names
 //  derived from `BrainTier.imageReaders` (PR #526 second-pass review). Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (4) — `visionTurn(from:imagesAttachable:)` + `visionRoute`: the
+//  neutral shape exists only where `Attachment(imageURL:)` runs (`imagesAttachable`, the one runtime read both
+//  image paths share); elsewhere the turn is the honest `.cannotShow` reply and no persona-free session is
+//  built. `visionDecline(from:)` (Review 1) is deleted: no production caller since (2); the guardrail form
+//  lives in `visionFailureReply` (PR #526 third-pass review). Confidence 0.85.
 //  Review: Kev + claude-opus-4-6, 2026-09-16 — image support: on macOS 27+ images
 //  ride the Prompt via Attachment(imageURL:) and the "cannot view" text note is
 //  suppressed; `imageURLs(from:)` extracts attached URLs for the provider.
@@ -218,24 +223,68 @@ public enum AFMToolPrompt {
     /// tool paragraph.
     public static let visionSteer = "An image is attached: describe it or answer from it."
 
+    /// Whether this runtime can hand AFM an image at all: `Attachment(imageURL:)` is
+    /// macOS / iOS / visionOS 27 under a 6.4 compiler. The ONE read both image paths gate
+    /// on — the same check that decides whether the URLs ride the Prompt. Where it is
+    /// false, no image is ever sent, so the neutral shape would be a persona-free,
+    /// tool-free session told to "describe it" with nothing to describe (PR #526 review).
+    public static var imagesAttachable: Bool {
+        #if compiler(>=6.4)
+            if #available(macOS 27.0, iOS 27.0, visionOS 27.0, *) { return true }
+        #endif
+        return false
+    }
+
     /// The neutral shape for an image turn; `nil` when the latest user turn has no image
-    /// (text turns keep the persona and the tools; an old image never changes a later text turn).
-    public static func visionTurn(from messages: [ToolMessage]) -> VisionTurn? {
-        guard latestTurnImageCount(in: messages) > 0 else { return nil }
+    /// (text turns keep the persona and the tools; an old image never changes a later text
+    /// turn) and `nil` when the images can't be attached — the honest reply is the turn then
+    /// (`visionRoute`), never a session that can't see what it is told to look at.
+    public static func visionTurn(from messages: [ToolMessage], imagesAttachable: Bool) -> VisionTurn? {
+        guard imagesAttachable, latestTurnImageCount(in: messages) > 0 else { return nil }
         let body = (conversationLines(messages) + ["", visionSteer]).joined(separator: "\n")
         return VisionTurn(instructions: visionInstructions, body: body)
     }
 
-    /// The honest FALLBACK when the guardrail still refuses an image turn in the neutral
-    /// shape: Mini says it could not read the image rather than guessing (the in-app path
-    /// confabulated for ~40 s before 2026-10-09). `nil` when the latest user turn has no
-    /// image. Not the first response any more — `visionTurn(from:)` is. The guardrail
-    /// reply for this platform; `visionFailureReply(for:…)` is the per-class form the
-    /// image paths use.
-    public static func visionDecline(from messages: [ToolMessage]) -> String? {
+    /// What an image turn becomes: the neutral shape where the image can ride the Prompt,
+    /// the honest reply where it can't. Exclusive by construction, so a call site can't
+    /// build the persona-free session on a runtime that sends no image.
+    public enum VisionRoute: Equatable, Sendable {
+        /// Run the neutral, tool-free turn with the image attached.
+        case see(VisionTurn)
+        /// Reply with this text and run no model turn at all.
+        case cannotShow(String)
+    }
+
+    /// `nil` when the latest user turn has no image.
+    public static func visionRoute(
+        from messages: [ToolMessage], imagesAttachable: Bool, platform: BrainTier.DevicePlatform
+    ) -> VisionRoute? {
         let count = latestTurnImageCount(in: messages)
         guard count > 0 else { return nil }
-        return visionFailureReply(for: .guardrailViolation, imageCount: count, platform: .current)
+        guard let turn = visionTurn(from: messages, imagesAttachable: imagesAttachable) else {
+            let readers = BrainTier.imageReaders(platform: platform)
+            return .cannotShow(cannotShowImageReply(imageCount: count, readers: readers))
+        }
+        return .see(turn)
+    }
+
+    /// The reply where the runtime can't hand Mini the image (pre-27): the same "won't
+    /// guess" promise as the guardrail decline, with the reason named, and the same
+    /// closing line naming the brains that can read images here.
+    public static func cannotShowImageReply(imageCount: Int, readers: [BrainTier]) -> String {
+        "This version of the system can't pass me the \(imageNoun(imageCount)) you attached, "
+            + "so I won't guess at what's in it. " + switchBrainLine(readers: readers)
+    }
+
+    static func imageNoun(_ count: Int) -> String {
+        count == 1 ? "image" : "\(max(count, 2)) images"
+    }
+
+    /// The decline's closing line: the brains that read images on this platform, or none.
+    static func switchBrainLine(readers: [BrainTier]) -> String {
+        guard !readers.isEmpty else { return "No brain on this device can read images yet." }
+        let names = readers.map(\.displayName).joined(separator: " or ")
+        return "Switch to \(names), which can read images, and send it again."
     }
 
     /// What Mini says when its image turn throws, by failure class (PR #526 review): one
@@ -252,7 +301,7 @@ public enum AFMToolPrompt {
     /// The same, with the readers supplied — the "no MLX brain sees here" case is a list, not
     /// a platform, so it stays testable without inventing one.
     public static func visionFailureReply(for failure: AFMFailure, imageCount: Int, readers: [BrainTier]) -> String {
-        let noun = imageCount == 1 ? "image" : "\(max(imageCount, 2)) images"
+        let noun = imageNoun(imageCount)
         switch failure {
         case .rateLimited, .daemonUnavailable, .timeout:
             return "I couldn't read the \(noun) you attached just now — try again in a moment."
@@ -260,10 +309,11 @@ public enum AFMToolPrompt {
             return "This conversation is too long to read an image alongside it — "
                 + "start a fresh chat and send the \(noun) again."
         case .guardrailViolation, .unknown:
-            let decline = "I couldn't read the \(noun) you attached on this brain, so I won't guess at what's in it. "
-            guard !readers.isEmpty else { return decline + "No brain on this device can read images yet." }
-            let names = readers.map(\.displayName).joined(separator: " or ")
-            return decline + "Switch to \(names), which can read images, and send it again."
+            // `.unknown` gets the switch-brain decline on purpose (conservative by design): a
+            // throw the string heuristics can't place may well be the guardrail under new
+            // wording, and "try again" on a guardrail is a loop; a brain switch always resolves.
+            return "I couldn't read the \(noun) you attached on this brain, so I won't guess at what's in it. "
+                + switchBrainLine(readers: readers)
         }
     }
 }

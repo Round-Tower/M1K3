@@ -105,7 +105,7 @@ struct AFMVisionLiveTests {
             let steer = "An image is attached: describe it or answer from it first; call a tool only if "
                 + "the question needs one."
             let hardSteer = "An image is attached. Answer from the image. Do not call a tool for this message."
-            let shipped = try #require(AFMToolPrompt.visionTurn(from: messages))
+            let shipped = try #require(AFMToolPrompt.visionTurn(from: messages, imagesAttachable: true))
             struct Arm {
                 let label: String, instructions: String, tools: [AFMNativeTool], steer: String
                 var mode: GenerationOptions.ToolCallingMode = .allowed

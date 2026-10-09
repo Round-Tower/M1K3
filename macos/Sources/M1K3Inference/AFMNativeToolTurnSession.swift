@@ -32,8 +32,8 @@
 //  `AFMNativeTool.Intercepted`, caught here as the call it is): the stub result used to let Mini write
 //  a whole answer the agent discarded before the real tool ran. Confidence 0.8 (live Mini arm).
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — an image on the latest user turn gets the honest vision
-//  decline (AFMToolPrompt.visionDecline) instead of a confabulation; the live probe says the app's prompt
-//  shape, not the file hand-off, defeats AFM vision. Confidence 0.7.
+//  decline (now the guardrail arm of AFMToolPrompt.visionFailureReply) instead of a confabulation; the live
+//  probe says the app's prompt shape, not the file hand-off, defeats AFM vision. Confidence 0.7.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (2) — Mini SEES: an image turn runs the neutral, tool-free
 //  shape (AFMToolPrompt.visionTurn — persona and tools both defeat AFM vision, seven probe arms); the
 //  decline is the fallback when that turn still fails. Live-probed, not unit-tested here. Confidence 0.75.
@@ -43,6 +43,9 @@
 //  RECORDED in the transcript as the model's words (`recordGenerated`) on purpose: later turns then see
 //  M1K3 saying it couldn't read the image, which is the truth of the turn — a transcript that hid it
 //  would let the next answer guess at a picture nobody read. Don't "fix" that. Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (4) — the neutral shape is gated on the SAME runtime read that
+//  attaches the image (AFMToolPrompt.imagesAttachable, via visionRoute): where no image can ride the Prompt
+//  the turn is the honest `.cannotShow` reply and no session is built (PR #526 third-pass review). Confidence 0.85.
 
 #if compiler(>=6.2)
     import Foundation
@@ -107,7 +110,18 @@
             // (AFMToolPrompt.visionTurn): the persona trips the guardrail and any
             // tool palette — or tool talk in the body — makes Mini call a tool
             // instead of looking (the 2026-10-09 probe). Its body has no tool paragraph.
-            let vision = AFMToolPrompt.visionTurn(from: snapshot)
+            // Only where the image can ride the Prompt (`imagesAttachable`, the same
+            // check as the attach branch below): elsewhere the turn is the honest
+            // reply, recorded as the model's words like the failure fallback.
+            let route = AFMToolPrompt.visionRoute(
+                from: snapshot, imagesAttachable: AFMToolPrompt.imagesAttachable, platform: .current
+            )
+            if case let .cannotShow(reply) = route {
+                transcript.withLock { $0.recordGenerated(.text(reply)) }
+                onToken(reply)
+                return .text(reply)
+            }
+            let vision: AFMToolPrompt.VisionTurn? = if case let .see(turn) = route { turn } else { nil }
             let body = vision?.body ?? AFMToolPrompt.render(messages: snapshot, tools: [])
             let imageURLs = AFMToolPrompt.imageURLs(from: snapshot)
             let standing = vision?.instructions
