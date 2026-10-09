@@ -23,6 +23,14 @@
 # Review: Kev + claude-opus-5.5, 2026-09-23 — NSAudioCaptureUsageDescription for the call recorder's Core Audio process tap
 # (it replaced ScreenCaptureKit, so the app no longer asks for Screen Recording); the context-senses comment now says the
 # TCC dialog fires as the toggle goes on. Confidence 0.85.
+# Review: Kev + claude-fable-5.1, 2026-10-09 (#479) — the usage strings drop "Nothing leaves" where it was false:
+# calendar and location ground answers, and a web search M1K3 writes (on by default) can carry them; the iOS
+# local-network string now describes the connection, not the app. Mic and call-audio strings stay — transcription
+# is on-device and the audio really does not leave. Confidence 0.85.
+# Review: Kev + claude-fable-5.1, 2026-10-09 — M1K3 + M1K3iOS stamp GitCommitSHA (tools/ci/git_commit_stamp.py) in a post-BUILD
+# phase (post-compile was overwritten by ProcessInfoPlistFile; pre-push review), with script sandboxing off for those two
+# targets so the phase can read .git.
+# Review: Kev + claude-fable-5.1, 2026-10-09 — RememberPhotoButton.swift joins the MobileShell template (caption memory).
 # Review: Kev + claude-fable-5.1, 2026-10-09 — MARKETING_VERSION 1.0.0 → 1.1.0 (chore(release): v1.1.0, held until 1.0.0
 # clears review). CURRENT_PROJECT_VERSION stays "1": Xcode Cloud numbers the store builds (VERSIONING.md). Confidence 0.9.
 
@@ -104,6 +112,9 @@ targetTemplates:
       # and CompanionAvatarView #if's out its shading calls on visionOS.
       - path: M1K3App/CompanionAvatarView.swift
       - path: M1K3App/CodeBlockView.swift
+      # "Remember this photo" under a sent image (caption memory): pure SwiftUI over
+      # M1K3Chat's PhotoMemory, one file for both shells.
+      - path: M1K3App/RememberPhotoButton.swift
       # App Store privacy manifest — Apple REQUIRES one at the bundle root of every
       # iOS/visionOS submission (the Mac target sweeps it in with `M1K3App/`; this
       # template cherry-picks, so it's explicit here). The SAME file: zero tracking,
@@ -172,6 +183,32 @@ targetTemplates:
 targets:
   M1K3:
     type: application
+    postBuildScripts:
+      # Stamps GitCommitSHA into the built Info.plist BEFORE signing: a post-build
+      # phase with the processed plist as its input runs after ProcessInfoPlistFile
+      # and ahead of CodeSign (as a post-compile phase, or without the input, the
+      # plist step ran later and overwrote the stamp — build logs, 2026-10-09), so
+      # run_chateval.py / ChatEvalStage know which commit the app is. Xcode Cloud inherits CI_COMMIT into this env; locally
+      # it is `git rev-parse --short HEAD` (+ -dirty). Never fails the build.
+      - name: Stamp GitCommitSHA
+        basedOnDependencyAnalysis: false
+        # The processed plist as a declared INPUT orders this phase after
+        # ProcessInfoPlistFile; without it the build system scheduled the plist
+        # step after the script even as the last phase (build logs, 2026-10-09).
+        inputFiles:
+          - $(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)
+        script: |
+          PLIST="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
+          [ -f "$PLIST" ] || { echo "warning: no Info.plist at $PLIST; GitCommitSHA not stamped"; exit 0; }
+          SHA="$(/usr/bin/python3 -I "$SRCROOT/tools/ci/git_commit_stamp.py" "$SRCROOT" 2>/dev/null)"
+          [ -n "$SHA" ] || SHA=unknown
+          # The script's stderr is dropped above (tracebacks), so say the loss here: an
+          # `unknown` on an archive is a build that cannot be matched to a commit.
+          [ "$SHA" != unknown ] || echo "warning: GitCommitSHA is unknown (git, python3 or CI_COMMIT unavailable)" >&2
+          /usr/libexec/PlistBuddy -c "Set :GitCommitSHA $SHA" "$PLIST" 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :GitCommitSHA string $SHA" "$PLIST" \
+            || { echo "warning: GitCommitSHA not stamped into $PLIST"; exit 0; }
+          echo "GitCommitSHA=$SHA"
     platform: macOS
     deploymentTarget: "26.0"
     sources:
@@ -282,6 +319,11 @@ targets:
         PRODUCT_NAME: M1K3
         ASSETCATALOG_COMPILER_APPICON_NAME: M1K3
         GENERATE_INFOPLIST_FILE: YES
+        # The Stamp GitCommitSHA phase reads .git AND rewrites the built Info.plist
+        # (PlistBuddy on $TARGET_BUILD_DIR/$INFOPLIST_PATH, declared only as an
+        # input): a sandboxed script phase can do neither. Only these two app
+        # shells carry a script phase, so the blast radius is just them.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
         INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Round Tower Software Studios Ltd"
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
         # DEFAULT to the App-Store-SAFE entitlements (no audioanalyticsd
@@ -324,7 +366,7 @@ targets:
         # Call recording (consent-gated, user-started): the far end is a Core
         # Audio process tap — System Audio Recording, never Screen Recording
         # (App Review 2026-09-23; SystemAudioTap.swift).
-        NSAudioCaptureUsageDescription: "When you record a call, M1K3 captures the other side's audio so it can transcribe the call on your Mac. Nothing leaves your Mac."
+        NSAudioCaptureUsageDescription: "When you record a call, M1K3 captures the other side's audio so it can transcribe the call on your Mac. The audio never leaves your Mac."
         # Brain at Home (default OFF): advertising the paired-devices brain
         # service on the local network (Bonjour) — macOS surfaces a local-network
         # consent dialog on first use.
@@ -333,11 +375,11 @@ targets:
           - "_m1k3._tcp"
         # The context senses (default OFF, docs/CONTEXT_TOOLS_PLAN.md): TCC
         # prompts fire as the in-app toggle is switched on (never before it).
-        NSCalendarsFullAccessUsageDescription: "M1K3 reads your next few events (titles and times) to ground answers — only while the Calendar context toggle is on. Nothing leaves your Mac."
+        NSCalendarsFullAccessUsageDescription: "M1K3 reads your next few events (titles and times) to ground answers — only while the Calendar context toggle is on. They stay on this Mac, except that a web search M1K3 runs can carry words from them — web search is a switch in Settings."
         # Both location keys: requestWhenInUseAuthorization documents the
         # WhenInUse key on macOS; the general key is belt-and-braces (audit S3).
-        NSLocationUsageDescription: "M1K3 uses your location — a coarse ~10 km area unless you opt up to precise — to ground answers, only while the Location context toggle is on. Nothing leaves your Mac."
-        NSLocationWhenInUseUsageDescription: "M1K3 uses your location — a coarse ~10 km area unless you opt up to precise — to ground answers, only while the Location context toggle is on. Nothing leaves your Mac."
+        NSLocationUsageDescription: "M1K3 uses your location — a coarse ~10 km area unless you opt up to precise — to ground answers, only while the Location context toggle is on. It stays on this Mac, except that a web search M1K3 runs can carry it — web search is a switch in Settings."
+        NSLocationWhenInUseUsageDescription: "M1K3 uses your location — a coarse ~10 km area unless you opt up to precise — to ground answers, only while the Location context toggle is on. It stays on this Mac, except that a web search M1K3 runs can carry it — web search is a switch in Settings."
         # Export compliance: M1K3 uses only standard, exempt encryption (HTTPS/TLS
         # for on-device model-weight downloads). Declaring this up front skips the
         # per-submission encryption prompt in App Store Connect and prevents an
@@ -359,6 +401,32 @@ targets:
   # a clean, unambiguous Xcode Cloud archive lane.
   M1K3iOS:
     type: application
+    postBuildScripts:
+      # Stamps GitCommitSHA into the built Info.plist BEFORE signing: a post-build
+      # phase with the processed plist as its input runs after ProcessInfoPlistFile
+      # and ahead of CodeSign (as a post-compile phase, or without the input, the
+      # plist step ran later and overwrote the stamp — build logs, 2026-10-09), so
+      # run_chateval.py / ChatEvalStage know which commit the app is. Xcode Cloud inherits CI_COMMIT into this env; locally
+      # it is `git rev-parse --short HEAD` (+ -dirty). Never fails the build.
+      - name: Stamp GitCommitSHA
+        basedOnDependencyAnalysis: false
+        # The processed plist as a declared INPUT orders this phase after
+        # ProcessInfoPlistFile; without it the build system scheduled the plist
+        # step after the script even as the last phase (build logs, 2026-10-09).
+        inputFiles:
+          - $(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)
+        script: |
+          PLIST="$TARGET_BUILD_DIR/$INFOPLIST_PATH"
+          [ -f "$PLIST" ] || { echo "warning: no Info.plist at $PLIST; GitCommitSHA not stamped"; exit 0; }
+          SHA="$(/usr/bin/python3 -I "$SRCROOT/tools/ci/git_commit_stamp.py" "$SRCROOT" 2>/dev/null)"
+          [ -n "$SHA" ] || SHA=unknown
+          # The script's stderr is dropped above (tracebacks), so say the loss here: an
+          # `unknown` on an archive is a build that cannot be matched to a commit.
+          [ "$SHA" != unknown ] || echo "warning: GitCommitSHA is unknown (git, python3 or CI_COMMIT unavailable)" >&2
+          /usr/libexec/PlistBuddy -c "Set :GitCommitSHA $SHA" "$PLIST" 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Add :GitCommitSHA string $SHA" "$PLIST" \
+            || { echo "warning: GitCommitSHA not stamped into $PLIST"; exit 0; }
+          echo "GitCommitSHA=$SHA"
     platform: iOS
     deploymentTarget: "26.0"
     templates: [MobileShell]
@@ -409,6 +477,11 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         ASSETCATALOG_COMPILER_APPICON_NAME: M1K3
         GENERATE_INFOPLIST_FILE: YES
+        # The Stamp GitCommitSHA phase reads .git AND rewrites the built Info.plist
+        # (PlistBuddy on $TARGET_BUILD_DIR/$INFOPLIST_PATH, declared only as an
+        # input): a sandboxed script phase can do neither. Only these two app
+        # shells carry a script phase, so the blast radius is just them.
+        ENABLE_USER_SCRIPT_SANDBOXING: NO
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         TARGETED_DEVICE_FAMILY: "1,2"
         SWIFT_VERSION: "6.2"
@@ -425,7 +498,7 @@ targets:
         NSMicrophoneUsageDescription: "M1K3 uses the microphone for voice conversations. Audio is transcribed on-device and never leaves your device."
         NSSpeechRecognitionUsageDescription: "M1K3 transcribes your speech on-device so you can talk to it. Nothing is sent to Apple or any server."
         NSCameraUsageDescription: "M1K3 uses the camera only to scan the pairing code your Mac shows for Brain at Home. No photos or video are captured or stored."
-        NSLocalNetworkUsageDescription: "Brain at Home connects to your own Mac over your Wi-Fi so this device can use its bigger brain. Nothing leaves your network."
+        NSLocalNetworkUsageDescription: "Brain at Home connects to your own Mac over your Wi-Fi so this device can use its bigger brain. That connection stays on your own network, encrypted."
 
   # visionOS sibling — same shell, same portable graph, rendered spatially as a
   # window. The Kokoro visionOS gap (no xrOS ONNX slice) is RESOLVED as of
@@ -470,7 +543,7 @@ targets:
         NSMicrophoneUsageDescription: "M1K3 uses the microphone for voice conversations. Audio is transcribed on-device and never leaves your device."
         NSSpeechRecognitionUsageDescription: "M1K3 transcribes your speech on-device so you can talk to it. Nothing is sent to Apple or any server."
         NSCameraUsageDescription: "M1K3 uses the camera only to scan the pairing code your Mac shows for Brain at Home. No photos or video are captured or stored."
-        NSLocalNetworkUsageDescription: "Brain at Home connects to your own Mac over your Wi-Fi so this device can use its bigger brain. Nothing leaves your network."
+        NSLocalNetworkUsageDescription: "Brain at Home connects to your own Mac over your Wi-Fi so this device can use its bigger brain. That connection stays on your own network, encrypted."
 
   # App Store screengrab suites (marketing/app-store/CAPTURE-PLAN.md): one XCUITest
   # per plate, launching the app under M1K3_SCREENGRAB=1 with the plate's launch

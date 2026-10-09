@@ -10,6 +10,7 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.9 — every forbidden marker must fire on a
 //  sentence quoting it (#497 review: whole-word must not leave a dead marker). Reasoning tags exempt —
 //  the stripper removes them before any content check, on master too.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — chain fixtures: `alsoCallTools` is pinned alongside `mustCallTool`.
 
 @testable import M1K3Eval
 import M1K3Inference
@@ -213,6 +214,19 @@ struct ChatEvalFixturesTests {
         }
     }
 
+    @Test("chain fixtures exist, each pins two distinct tools the stub palette offers")
+    func chainShape() {
+        let chains = ChatEvalFixtures.toolUse.filter { !$0.expectation.alsoCallTools.isEmpty }
+        #expect(chains.count >= 2, "only \(chains.count) two-tool fixtures")
+        let names = Set(ChatEvalStubPalette.names)
+        for fixture in chains {
+            let tools = [fixture.expectation.mustCallTool ?? ""] + fixture.expectation.alsoCallTools
+            #expect(Set(tools).count == tools.count, "\(fixture.id) repeats a tool")
+            #expect(tools.allSatisfy(names.contains), "\(fixture.id) names a tool no stub offers: \(tools)")
+            #expect(fixture.id.hasPrefix("tool-chain-"), "\(fixture.id) should be named tool-chain-*")
+        }
+    }
+
     @Test("refusal fixtures all expect a refusal")
     func refusalShape() {
         for fixture in ChatEvalFixtures.refusal {
@@ -384,12 +398,28 @@ struct ChatEvalFixturesTests {
         // Reasoning tags are exempt: ThinkStripper removes them before ANY content check
         // (master too), and the always-on "no think-leak" check owns their residue.
         let strippedTags = Set(ReasoningSplit.openTags + ReasoningSplit.closeTags)
+        let leak = Set(ChatEvalFixtures.leakMarkers)
+        func fires(_ fixture: ChatEvalFixture, _ answer: String) -> Bool {
+            let score = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: answer))
+            return score.checks.first { $0.name == "excludes forbidden" }?.outcome == .fail
+        }
         for fixture in ChatEvalFixtures.all {
             for marker in fixture.expectation.mustNotContain where !strippedTags.contains(marker) {
-                let answer = "Well, \(marker) indeed."
-                let score = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: answer))
-                let outcome = score.checks.first { $0.name == "excludes forbidden" }?.outcome
-                #expect(outcome == .fail, "\(fixture.id): marker \(marker.debugDescription) never fires")
+                #expect(fires(fixture, "Well, \(marker) indeed."),
+                        "\(fixture.id): marker \(marker.debugDescription) never fires")
+                // Code-gen scopes the list (2026-10-09): a leak marker is read in the prose beside
+                // the artifact, every other marker inside the fence. Both placements must stay live.
+                guard fixture.kind == .codeGen else { continue }
+                let fenced = "Here it is.\n\n```text\nline one\nWell, \(marker) indeed.\nline three\n```"
+                let beside = "Well, \(marker) indeed.\n\n```text\nline one\nline two\nline three\n```"
+                let who = "\(fixture.id): marker \(marker.debugDescription)"
+                if leak.contains(marker) {
+                    #expect(fires(fixture, beside), "\(who) (leak) misses the prose")
+                    #expect(!fires(fixture, fenced), "\(who) (leak) fires inside code")
+                } else {
+                    #expect(fires(fixture, fenced), "\(who) misses the fence")
+                    #expect(!fires(fixture, beside), "\(who) fires on the prose")
+                }
             }
         }
     }

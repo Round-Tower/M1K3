@@ -19,6 +19,9 @@
 //
 //  Signed: Kev + claude-sonnet-4-6, 2026-07-14, Confidence 0.85 (store layer
 //  unit-pinned; UI is verify-by-launch). Prior: Kev + claude-opus-4-8, 2026-06-06.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — Photo rows (caption memory): `photo` icon, "Photo" label, no
+//  quarantine button (restore would make it Spotlight-donatable), privacy line in the empty state. TDD_SKIP: view
+//  body.
 
 import M1K3Knowledge
 import SwiftUI
@@ -40,7 +43,7 @@ struct DocumentsView: View {
                 ContentUnavailableView {
                     Label("Nothing remembered yet", systemImage: "tray")
                 } description: {
-                    Text("Drop or import a PDF or text file and it'll appear here.")
+                    Text("Drop or import a PDF or text file and it'll appear here. Photos you ask me to remember appear too; their descriptions stay on this device.")
                 }
             } else {
                 List {
@@ -160,21 +163,25 @@ private struct DocumentRow: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
-            Button(action: onTag) {
-                Image(systemName: doc.kind == .quarantined ? "lock.open" : "lock")
+            // A Photo has no quarantine: restoring re-tags to .document, which is
+            // donatable -- the caption's title would land in Spotlight. Delete is its off switch.
+            if doc.kind != .image {
+                Button(action: onTag) {
+                    Image(systemName: doc.kind == .quarantined ? "lock.open" : "lock")
+                }
+                .buttonStyle(.borderless)
+                .help(doc.kind == .quarantined ? "Restore to documents" : "Quarantine (hidden from AI)")
+                .accessibilityLabel(
+                    doc.kind == .quarantined
+                        ? "Restore \(doc.title)"
+                        : "Quarantine \(doc.title)"
+                )
             }
-            .buttonStyle(.borderless)
-            .help(doc.kind == .quarantined ? "Restore to documents" : "Quarantine (hidden from AI)")
-            .accessibilityLabel(
-                doc.kind == .quarantined
-                    ? "Restore \(doc.title)"
-                    : "Quarantine \(doc.title)"
-            )
             Button(role: .destructive, action: onDelete) {
                 Image(systemName: "trash")
             }
             .buttonStyle(.borderless)
-            .help("Delete this document")
+            .help(doc.kind == .image ? "Forget this photo" : "Delete this document")
             .accessibilityLabel("Delete \(doc.title)")
         }
         .padding(.vertical, 4)
@@ -182,8 +189,7 @@ private struct DocumentRow: View {
 
     private var kindLabel: String {
         switch doc.kind {
-        case .quarantined: "internal"
-        default: doc.kind.rawValue
+        default: doc.kind.displayLabel
         }
     }
 
@@ -193,6 +199,7 @@ private struct DocumentRow: View {
         case .note: "note.text"
         case .memory: "brain"
         case .quarantined: "lock.doc"
+        case .image: "photo"
         default: "doc.text"
         }
     }

@@ -33,6 +33,8 @@
 //  — this closes the copy-paste door, which is the one that was open, not every
 //  door.) Prior: Unknown
 //
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — caption memory: sweep walks KnowledgeKind.launchSweepKinds (was a
+//  hard-coded list that would have exempted Photos).
 
 import Foundation
 
@@ -100,7 +102,7 @@ public extension KnowledgeStore {
     ) throws -> [UUID] {
         guard !spans.isEmpty else { return [] }
         var moved: [UUID] = []
-        for kind in [KnowledgeKind.document, .call, .note, .memory] {
+        for kind in KnowledgeKind.launchSweepKinds {
             for item in try allItems(kind: kind, limit: 100_000) {
                 let text = try chunks(forItem: item.id).map(\.content).joined(separator: "\n")
                 guard SelfWiringQuarantine.isSelfWiring(text, spans: spans, threshold: threshold)

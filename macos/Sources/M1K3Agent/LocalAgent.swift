@@ -35,6 +35,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85 — `run` holds GenerationActivity for the whole
 //  turn (generations + the tool execution between them), so an overnight `ask_m1k3` is one App Nap opt-out
 //  with no unheld gaps (#498 review). Injectable for tests; the body moved to `runHeld` unchanged.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — comment only: the ReAct-floor image note said only Big
+//  sees; Lil (Qwen3.5-4B, #517) sees too and also resolves native. No logic changed.
 
 import Foundation
 import M1K3Inference
@@ -209,8 +211,9 @@ public actor LocalAgent {
         // and this path never touches the image-drop mapping: a floor turn
         // with images would SILENTLY drop them (no "can't view" note, unlike
         // the AFM renderer's honesty). Unreachable for a vision turn in
-        // practice — only Big supports images and Big always resolves native
-        // — so the honest-note plumbing waits until a floor model can see.
+        // practice — the seeing tiers, Lil (Qwen3.5-4B, #517) and Big
+        // (gemma-4-12B), both resolve native — so the honest-note plumbing
+        // waits until a floor model can see.
 
         return try await runReAct(
             goal: goal,

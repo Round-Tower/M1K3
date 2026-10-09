@@ -11,6 +11,7 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85, Prior: none (new file).
 //  The arithmetic is pinned here; the copy/prefill/state plumbing is verify-by-launch.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — pins `stepSnapshotLabel`, the per-step RAM snapshot's label.
 //
 
 import Foundation
@@ -66,6 +67,18 @@ struct ExactPrefixReuseTests {
     @Test("an image anywhere in the turn vetoes reuse: the pixels ride beside the token ids")
     func imagesVeto() {
         #expect(ExactPrefixReuse.plan(candidates: [[1, 2]], full: [1, 2, 3, 4], turnCarriesImages: true) == .fresh)
+    }
+
+    /// #509 follow-up (2026-10-09): the per-step memory snapshot in checkpoint mode. The
+    /// rolling checkpoint is a full-precision copy of the whole transcript's cache, so RAM
+    /// per step is the number that says whether "flat per step" holds; the label names the
+    /// step and what was reused so the unified log reads as a curve, not a pile.
+    @Test("the per-step snapshot label names the step and the reuse, so the log reads as a curve")
+    func stepSnapshotLabel() {
+        #expect(ExactPrefixReuse.stepSnapshotLabel(step: 1, reused: 2585, total: 2633)
+            == "toolTurnSession checkpoint step 1 (reused 2585/2633)")
+        #expect(ExactPrefixReuse.stepSnapshotLabel(step: 3, reused: 0, total: 2700)
+            == "toolTurnSession checkpoint step 3 (reused 0/2700)")
     }
 
     @Test("checkpoint mode is for an exact seed whose cache can't be trimmed — and only that")

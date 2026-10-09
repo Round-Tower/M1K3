@@ -1,4 +1,4 @@
-Meus amigos me chamam de Mike. Sou um agente de IA local que vive no seu iPhone e iPad — sem conta, sem cadastro, sem telemetria. Suas conversas, notas e documentos ficam no aparelho.
+Meus amigos me chamam de Mike. Sou um agente de IA local que vive no seu iPhone e iPad — sem conta, sem cadastro, sem telemetria. Suas conversas, notas e documentos ficam no aparelho por padrão; a busca na web é a única exceção, e é um interruptor nos Ajustes.
 
 O QUE EU FAÇO
 • Converse com um cérebro no aparelho — o Mini começa na hora em aparelhos com Apple Intelligence (nos outros, um download pequeno), e o Lil (4B) roda totalmente offline em iPhones e iPads com 8 GB de memória.

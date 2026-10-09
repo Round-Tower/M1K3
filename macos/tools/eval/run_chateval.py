@@ -44,6 +44,12 @@ binary with the trigger as env + stdout reporting (the only route on macOS 27);
 `extract_fenced_json` + `direct_env` pinned. Confidence now 0.8.
 Review: Kev + claude-opus-5-5, 2026-10-07 — summarise reports latency-only fails and the content score
 (the display-sleep stall: E4B 246/324 raw, 288/324 on content).
+Review: Kev + claude-fable-5.1, 2026-10-09 — `--router dispatch [--router-head] [--router-chain]`
+plumb the ChatEvalStage router keys through the trigger (the router arm, tools/eval/router_arm.sh).
+Review: Kev + claude-fable-5.1, 2026-10-09 — `kind_rows` / `kind_table`: a per-kind table under each run line with the
+latency-only and content columns (step 5 of the Qwen3.5 stream read "code-gen 24/30" off the JSON by hand).
+Review: Kev + claude-fable-5.1, 2026-10-09 — `over_lil_own_peak_cap`: the summary flags a lil run whose own peak
+exceeds the signed 5 GB cap (BrainTier.lilOwnPeakCapGB); the bake-off had applied it by eye.
 """
 
 from __future__ import annotations
@@ -64,6 +70,7 @@ from pathlib import Path
 BUNDLE_ID = "app.m1k3"
 LIVE_APP = "/Applications/M1K3.app"
 KNOWN_BRAINS = ("mini", "pocket", "lil", "big")
+ROUTER_MODES = ("dispatch",)  # "1" (the Mini-style plain route) is a different experiment
 THINKING_MODES = ("tier", "always", "fast")  # EvalThinkingMode in M1K3Eval
 AFM_COOLDOWN_S = 120
 STAMP = Path(tempfile.gettempdir()) / "m1k3-chateval-last-launch"
@@ -188,6 +195,9 @@ class RunOptions:
     pcc: bool = False
     thinking: str | None = None  # None → the app's default (tier: production's shape)
     full_answers: bool = False  # whole answers in the document (bake-offs), not the 240-char excerpt
+    router: str | None = None  # "dispatch": the app's own tool route, every tier on (the router arm)
+    router_head: bool = False  # + the group head (toolGroupRouter); needs router
+    router_chain: bool = False  # + two-tool chains (toolChain); needs router
 
 
 def build_trigger(opts: RunOptions, *, container: Path, power_source: str, powermode: int | None,
@@ -203,6 +213,10 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         raise ValueError("repeats must be ≥ 1")
     if opts.thinking is not None and opts.thinking not in THINKING_MODES:
         raise ValueError(f"thinking {opts.thinking!r}: choose from {', '.join(THINKING_MODES)}")
+    if opts.router is not None and opts.router not in ROUTER_MODES:
+        raise ValueError(f"router {opts.router!r}: choose from {', '.join(ROUTER_MODES)}")
+    if (opts.router_head or opts.router_chain) and opts.router is None:
+        raise ValueError("router head/chain need --router dispatch (the app reads them only there)")
     report = out_path(container, opts.name)
     trig = {
         "M1K3_SELFTEST": "1",
@@ -224,6 +238,12 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         trig["M1K3_SELFTEST_CHATEVAL_THINKING"] = opts.thinking
     if opts.full_answers:
         trig["M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS"] = "1"
+    if opts.router:
+        trig["M1K3_SELFTEST_CHATEVAL_ROUTER"] = opts.router
+        if opts.router_head:
+            trig["M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD"] = "1"
+        if opts.router_chain:
+            trig["M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN"] = "1"
     if powermode is not None:
         trig["M1K3_SELFTEST_POWERMODE"] = str(powermode)
     if commit:
@@ -308,29 +328,82 @@ def app_bundle_id(app: Path) -> str | None:
         return None
 
 
+def _applicable(scores: list[dict]) -> list[dict]:
+    """n/a (a vision turn on a brain that can't see) is one skip named "applicable" — out of every count."""
+    return [s for s in scores
+            if [(c.get("name"), c.get("outcome")) for c in s.get("checks", [])] != [("applicable", "skip")]]
+
+
+def _passed(score: dict) -> bool:
+    return not any(c.get("outcome") == "fail" for c in score.get("checks", []))
+
+
+def _latency_only(score: dict) -> bool:
+    """A fail whose ONLY failing check is the latency ceiling: the answer was right, the clock wasn't
+    (2026-10-07: a display-sleep stall made 42 of E4B's fails exactly this). Reported, never folded in."""
+    return [c.get("name") for c in score.get("checks", []) if c.get("outcome") == "fail"] == ["responsive"]
+
+
+def kind_rows(scores: list[dict]) -> list[dict]:
+    """Per task-kind: passed, total, latency-only fails and the content score (passed + latency-only).
+    Sorted by kind; n/a trials left out. "code-gen 24/30, grounded-Q 18/24" were hand counts off the
+    JSON before this (2026-10-09); content is a column, not a hand count on top of one."""
+    rows: dict[str, dict] = {}
+    for s in _applicable(scores):
+        row = rows.setdefault(s.get("kind") or "?", {"passed": 0, "total": 0, "latency_only": 0})
+        row["total"] += 1
+        if _passed(s):
+            row["passed"] += 1
+        elif _latency_only(s):
+            row["latency_only"] += 1
+    return [{"kind": kind, **row, "content": row["passed"] + row["latency_only"]}
+            for kind, row in sorted(rows.items())]
+
+
+def kind_table(rows: list[dict]) -> str:
+    """The rows as an aligned text table: kind | passed | latency-only | content."""
+    width = max([len("kind")] + [len(r["kind"]) for r in rows])
+    lines = [f"    {'kind'.ljust(width)}  passed  latency-only  content"]
+    for r in rows:
+        passed, content = f"{r['passed']}/{r['total']}", f"{r['content']}/{r['total']}"
+        lines.append(f"    {r['kind'].ljust(width)}  {passed.rjust(6)}  {str(r['latency_only']).rjust(12)}  {content.rjust(7)}")
+    return "\n".join(lines)
+
+
+# Lil's RAM cap, signed 2026-10-09 (BrainTier.lilOwnPeakCapGB): 5 GB of the brain's OWN peak on a
+# 16 GB Mac, in the mebibytes the report records. The incumbent and Qwen3.5-4B measured 4.8 GB;
+# gemma-4 E4B's 10.3 GB is what it rejects. Inclusive at the cap.
+LIL_OWN_PEAK_CAP_GB = 5
+
+
+def over_lil_own_peak_cap(brain_id: str, own_mb: int | None) -> bool:
+    """True when a lil run's own peak exceeds the signed cap. Other brains have their own floors."""
+    return brain_id == "lil" and own_mb is not None and own_mb > LIL_OWN_PEAK_CAP_GB * 1024
+
+
 def summarise(doc_path: Path) -> str:
     doc = json.loads(doc_path.read_text())
     lines = []
     for run in doc.get("runs", []):
         everything = run.get("scores", [])
-        # n/a (a vision turn on a brain that can't see) is one skip named "applicable" — out of every count.
-        scores = [s for s in everything
-                  if [(c.get("name"), c.get("outcome")) for c in s.get("checks", [])] != [("applicable", "skip")]]
-        passed = sum(1 for s in scores if not any(c.get("outcome") == "fail" for c in s.get("checks", [])))
-        # Fails whose ONLY failing check is the latency ceiling: the answer was right, the clock wasn't
-        # (2026-10-07: a display-sleep stall made 42 of E4B's fails exactly this). Reported, never folded in.
-        latency_only = sum(1 for s in scores
-                           if [c.get("name") for c in s.get("checks", []) if c.get("outcome") == "fail"] == ["responsive"])
+        scores = _applicable(everything)
+        passed = sum(1 for s in scores if _passed(s))
+        latency_only = sum(1 for s in scores if _latency_only(s))
         label = run.get("brainID") or "?"
         model = run.get("modelID") or "stock"
         na = len(everything) - len(scores)
         peak, resident = run.get("peakMemoryMB"), run.get("residentMemoryMBAtStart")
         # Same rule as BrainRun.ownPeakMemoryMB: peak below resident means no number.
-        own = f" (own {peak - resident} MB)" if peak is not None and resident is not None and peak >= resident else ""
+        own_mb = peak - resident if peak is not None and resident is not None and peak >= resident else None
+        own = f" (own {own_mb} MB)" if own_mb is not None else ""
+        if over_lil_own_peak_cap(label, own_mb):
+            own += f" ⚠ OVER the Lil RAM cap ({LIL_OWN_PEAK_CAP_GB} GB own peak)"
         lines.append(f"  {label} [{model}]: {passed}/{len(scores)} trials passed" + (f" ({na} n/a)" if na else "")
                      + (f", {latency_only} latency-only (content {passed + latency_only}/{len(scores)})"
                         if latency_only else "")
                      + (f", peak {peak} MB{own}" if peak is not None else ""))
+        if scores:
+            lines.append(kind_table(kind_rows(everything)))
     prov = doc.get("provenance", {})
     lines.append(f"  power={prov.get('powerSource')} powermode={prov.get('powerMode')} commit={prov.get('appCommit')}")
     return "\n".join(lines)
@@ -411,6 +484,10 @@ def main(argv: list[str] | None = None) -> int:
                     help="how every arm thinks: tier (production's shape, the app default), always, fast")
     ap.add_argument("--full-answers", action="store_true",
                     help="keep every answer whole in the document (bake-offs: fails stay re-adjudicable)")
+    ap.add_argument("--router", choices=ROUTER_MODES,
+                    help="the app's own tool route with every tier on (ChatEvalStage _ROUTER=dispatch)")
+    ap.add_argument("--router-head", action="store_true", help="with --router: the group head in front of the pick")
+    ap.add_argument("--router-chain", action="store_true", help="with --router: let a pick run two read-only tools")
     ap.add_argument("--notes", help="free-text provenance note")
     ap.add_argument("--dump-prompt", action="store_true", help="dump no-call turns' exact prompts")
     ap.add_argument("--app", default=LIVE_APP, help="the M1K3.app bundle to run (default: installed)")
@@ -435,6 +512,7 @@ def main(argv: list[str] | None = None) -> int:
         kinds=[k for k in args.kinds.split(",") if k], repeats=args.repeats,
         live_path=not args.bare, notes=args.notes, dump_prompt=args.dump_prompt, pcc=args.pcc,
         thinking=args.thinking, full_answers=args.full_answers,
+        router=args.router, router_head=args.router_head, router_chain=args.router_chain,
     )
     if args.direct and args.dump_prompt:
         print("✗ --dump-prompt writes into the container, which --direct exists to avoid reading", file=sys.stderr)
@@ -450,7 +528,7 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps(trig, indent=1, sort_keys=True))
     print(f"power: {power} · quit: {plan.to_quit} · live running: {plan.live_was_running}")
     if "M1K3_SELFTEST_APP_COMMIT" not in trig:
-        print("! app commit unknown (local builds carry no GitCommitSHA) — pass --commit")
+        print("! app commit unknown (this build predates the GitCommitSHA stamp phase, or was built outside Xcode) — rebuild, or pass --commit")
     if plan.blockers:
         for pid, exe in plan.blockers:
             print(f"✗ pid {pid} is someone else's M1K3 ({exe}) — not quitting it; stop it yourself", file=sys.stderr)

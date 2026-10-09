@@ -25,6 +25,9 @@
 //  blocked idle system sleep, contrary to this header) to the App-Nap-only set.
 //  Review: Kev + claude-opus-5-5, 2026-10-07 — #498 review follow-ups: `during` runs on the
 //  caller's isolation (LocalAgent holds across a whole turn); call sites carry distinct reasons.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `-generationActivity NO` at launch turns the hold
+//  off (arm B of tools/perf/display_off_ab.sh, the A/B that decides the Open above). A test
+//  switch only: no UI, no default change; read through one reader like `-afm.prefixPrewarm`.
 
 import Foundation
 import Synchronization
@@ -60,13 +63,27 @@ public struct ProcessActivityAsserter: ActivityAsserting {
 }
 
 public final class GenerationActivity: Sendable {
-    public static let shared = GenerationActivity(asserter: ProcessActivityAsserter())
+    /// Launch-argument key: `M1K3 -generationActivity NO` runs without the hold (the A/B's arm B).
+    public static let defaultsKey = "generationActivity"
+
+    public static let shared = GenerationActivity(
+        asserter: ProcessActivityAsserter(),
+        enabled: isEnabled(in: .standard)
+    )
+
+    /// Absent means on; a launch-argument string reads the way its words say ("NO", "false",
+    /// "0" off) — `object(forKey:) as? Bool` would read "NO" as nil (the #324 consent bug).
+    public static func isEnabled(in defaults: UserDefaults) -> Bool {
+        defaults.object(forKey: defaultsKey) == nil || defaults.bool(forKey: defaultsKey)
+    }
 
     private let asserter: any ActivityAsserting
+    private let enabled: Bool
     private let state = Mutex<(holders: Int, token: ActivityToken?)>((0, nil))
 
-    public init(asserter: any ActivityAsserting) {
+    public init(asserter: any ActivityAsserting, enabled: Bool = true) {
         self.asserter = asserter
+        self.enabled = enabled
     }
 
     /// Turns in flight right now.
@@ -90,7 +107,7 @@ public final class GenerationActivity: Sendable {
     private func enter(_ reason: String) {
         state.withLock { state in
             state.holders += 1
-            if state.holders == 1 { state.token = asserter.begin(reason: reason) }
+            if state.holders == 1, enabled { state.token = asserter.begin(reason: reason) }
         }
     }
 

@@ -97,7 +97,8 @@ extension AppEnvironment {
     /// Persisted voice-mode thinking toggle (default off = fast replies).
     /// While voice mode is active this REPLACES the Settings Reasoning picker
     /// (see VoiceThinkingPolicy). The VoiceDock's brain button writes it.
-    nonisolated static let voiceModeThinkingKey = "voiceMode.thinking"
+    /// The resolver's key (#198): the iOS shell reads the same one.
+    nonisolated static let voiceModeThinkingKey = ThinkingModeResolver.voiceThinkingKey
 
     /// Persisted voice-mode avatar choice. Empty string (default) = the pixel face;
     /// otherwise a CompanionSpec id (e.g. "Fox"). The picker writes it; the VoiceDock

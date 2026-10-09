@@ -38,6 +38,8 @@
 //  `LMOutput.State`. Qwen3.5 (kvBits + MambaCache) now gets an exact seed, and on MLXVLM a warm
 //  cache without its rope delta throws `missingState` at iterator init — so this ships with the seed
 //  change or Lil's plain chat breaks (the challenger's catch). Verify-by-launch: a Lil plain turn.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `plan(seed:full:seedIsExact:)`: the argument was still
+//  called `seedTrimmed` after 2026-09-26 made it the builder's `exact` (#509 follow-up). Rename only.
 
 import Foundation
 import MLX
@@ -99,8 +101,7 @@ extension MLXBrainProvider {
             // The builder vouches for exactness (trimmed back, or prefilled
             // without a sampled token) — layer trimmability alone would veto an
             // exact recurrent seed that never needed trimming.
-            let seedTrimmed = seedExact
-            switch SeededPlainTurn.plan(seed: seedIDs, full: fullIDs, seedTrimmed: seedTrimmed) {
+            switch SeededPlainTurn.plan(seed: seedIDs, full: fullIDs, seedIsExact: seedExact) {
             case let .reuse(prefixTokens):
                 cache = box.cache
                 state = box.state
@@ -115,7 +116,7 @@ extension MLXBrainProvider {
                 while at < min(seedIDs.count, fullIDs.count), seedIDs[at] == fullIDs[at] {
                     at += 1
                 }
-                if !seedTrimmed, at == seedIDs.count {
+                if !seedExact, at == seedIDs.count {
                     // An exact prefix on a seed its builder could not vouch exact:
                     // a persona that wrapped a sliding window keeps one sampled
                     // token past its ids. (Recurrent LFM2 seeds are built exact

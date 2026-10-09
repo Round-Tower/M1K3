@@ -11,6 +11,11 @@
 //  abstention pins. FTS-only surface unchanged via the nil default.
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — #378: empty query and bad/unknown ids now pin a
 //  throw, the quarantine case included. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — caption memory: a Photo (.image) item is withheld from
+//  list, search and get-by-id (photoCaptionsAreWithheld); list excludes in the query (fold).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — the completeness guard: a store holding
+//  ONLY a Photo reads as empty through every MCP tool (photoOnlyStoreIsEmptyToMCP); search withholds in
+//  the query (Photos crowding FTS top-K cannot starve the page).
 
 import Foundation
 import M1K3Knowledge
@@ -32,6 +37,74 @@ private func seededStore() async throws -> KnowledgeStore {
 }
 
 struct KnowledgeMCPToolsTests {
+    @Test("a Photo caption never reaches an MCP client: not listed, not searched, not fetched")
+    func photoCaptionsAreWithheld() async throws {
+        let store = try await seededStore()
+        let result = try await ImageCaptionIngester(store: store, embedder: HashingEmbeddingService())
+            .ingest(caption: "A whiteboard listing the hydraulic pricing tiers.", attachmentFilename: "P.jpg")
+        let tools = KnowledgeMCPTools(store: store)
+        #expect(try !tools.listDocuments().contains("whiteboard"))
+        #expect(try !tools.listDocuments().contains(result.itemID.uuidString))
+        let found = try await tools.searchKnowledge(query: "hydraulic", limit: 10)
+        #expect(!found.contains("pricing tiers"))
+        #expect(found.contains("Plant Notes"))
+        let refusal = #expect(throws: MCPInputError.self) {
+            try tools.getDocument(idString: result.itemID.uuidString)
+        }
+        #expect(refusal?.description.contains("No document found") == true)
+    }
+
+    /// THE GUARD FOR THE NEXT KIND / THE NEXT TOOL: every MCP read over the store (list,
+    /// search — FTS and hybrid — and get-by-id) runs against a store holding ONLY a Photo
+    /// and must come back empty. A new withheld kind joins `storeWithOnly`; a new MCP read
+    /// joins the assertions. (The agent-palette twin lives in DocumentToolsExclusionTests +
+    /// AgentRAGResponderTests.mcpPaletteNeverObservesAPhoto.)
+    @Test("a store holding only a Photo reads as empty through every MCP read")
+    func photoOnlyStoreIsEmptyToMCP() async throws {
+        for embedder in [nil, HashingEmbeddingService()] as [HashingEmbeddingService?] {
+            let store = try KnowledgeStore()
+            let photo = try await ImageCaptionIngester(store: store, embedder: embedder)
+                .ingest(caption: "A whiteboard listing the hydraulic pricing tiers.", attachmentFilename: "P.jpg")
+            let tools = KnowledgeMCPTools(store: store, embedder: embedder)
+            #expect(try tools.listDocuments().contains("No documents"))
+            let search = try await tools.searchKnowledge(query: "whiteboard hydraulic pricing", limit: 10)
+            #expect(!search.contains("pricing tiers"))
+            #expect(!search.contains("(image)"))
+            #expect(throws: MCPInputError.self) { try tools.getDocument(idString: photo.itemID.uuidString) }
+        }
+    }
+
+    @Test("search_knowledge (FTS) withholds Photos in the query: six Photos above a document cannot starve limit 3")
+    func searchFTSPageSurvivesCrowdingPhotos() async throws {
+        let store = try KnowledgeStore()
+        let doc = UUID()
+        let padding = (1 ... 40).map { "filler\($0)" }.joined(separator: " ")
+        try store.index(
+            item: KnowledgeItem(id: doc, kind: .document, title: "Plant Notes"),
+            chunks: [KnowledgeChunk(itemID: doc, ordinal: 0, content: "\(padding) the hydraulic seal failed")],
+            embeddings: nil
+        )
+        for n in 1 ... 6 {
+            try await ImageCaptionIngester(store: store)
+                .ingest(caption: "hydraulic hydraulic hydraulic", attachmentFilename: "P\(n).jpg")
+        }
+        let found = try await KnowledgeMCPTools(store: store).searchKnowledge(query: "hydraulic", limit: 3)
+        #expect(found.contains("Plant Notes"))
+        #expect(!found.contains("(image)"))
+    }
+
+    @Test("list_documents excludes Photos in the query, so a page is never eaten by newer Photos")
+    func listDocumentsPageSurvivesNewerPhotos() async throws {
+        let store = try await seededStore()
+        for name in ["P1.jpg", "P2.jpg", "P3.jpg"] {
+            try await ImageCaptionIngester(store: store).ingest(caption: "Photo \(name)", attachmentFilename: name)
+        }
+        let page = try KnowledgeMCPTools(store: store).listDocuments(limit: 2)
+        #expect(page.contains("Plant Notes"))
+        #expect(page.contains("Safety"))
+        #expect(!page.contains("Photo"))
+    }
+
     @Test("get_document by id treats a quarantined item as not found")
     func getDocumentQuarantinedHidden() async throws {
         let store = try await seededStore()

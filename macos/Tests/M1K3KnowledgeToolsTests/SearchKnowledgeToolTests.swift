@@ -7,6 +7,7 @@
 //  the agent concludes from the real observation. Plus direct tool unit tests.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (code-quality fold) — excludedKinds pin (caption memory).
 
 import Foundation
 import M1K3Agent
@@ -73,6 +74,21 @@ private func storeWithNotes() throws -> KnowledgeStore {
 }
 
 // MARK: - Tests
+
+struct SearchKnowledgeToolExclusionTests {
+    @Test("excludedKinds keeps a Photo caption out of the tool's observation; the default still finds it")
+    func excludedKindsHidePhotos() async throws {
+        let store = try storeWithNotes()
+        try await ImageCaptionIngester(store: store)
+            .ingest(caption: "A whiteboard listing the hydraulic pricing tiers.", attachmentFilename: "W.jpg")
+        let withheld = try await SearchKnowledgeTool(store: store, excludedKinds: KnowledgeKind.withheldFromMCP)
+            .execute(input: ["query": "hydraulic"])
+        #expect(!withheld.output.contains("pricing tiers"))
+        #expect(withheld.output.contains("conveyor"))
+        let local = try await SearchKnowledgeTool(store: store).execute(input: ["query": "hydraulic"])
+        #expect(local.output.contains("pricing tiers"))
+    }
+}
 
 struct SearchKnowledgeToolTests {
     @Test("returns matching chunks formatted with title and heading")

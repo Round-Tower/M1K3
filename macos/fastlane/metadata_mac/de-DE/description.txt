@@ -1,4 +1,4 @@
-Meine Freunde nennen mich Mike. Ich bin ein lokaler KI-Agent, der vollständig auf deinem Mac läuft — kein Konto, keine Cloud, keine Telemetrie. Deine Gespräche, Notizen und Dokumente verlassen niemals das Gerät.
+Meine Freunde nennen mich Mike. Ich bin ein lokaler KI-Agent, der auf deinem Mac läuft — kein Konto, keine Telemetrie. Deine Gespräche, Notizen und Dokumente bleiben standardmäßig auf dem Gerät. Zwei Dinge können nach draußen gehen, jedes mit einem Schalter in den Einstellungen: die Websuche (standardmäßig an, damit Antworten aktuell sind) und das optionale Private-Cloud-Compute-Hirn, das du selbst auswählst und einmal bestätigst.
 
 WAS ICH KANN
 • Chatte mit einem leistungsstarken On-Device-Sprachmodell — schnell auf Apple Silicon.

@@ -21,7 +21,7 @@ CONTENT CONTROLS (DeclaredAgeRange): uses Apple's Declared Age Range API (gates 
 
 CALENDAR + LOCATION: optional context senses, OFF by default, so no alert at launch (expected). The macOS alert appears the moment you switch one on: Settings > Privacy > Context > Calendar (or Location). Declining turns the switch back off. Then ask "What's on my calendar today?" (or "Where am I?"). On-device only; never stored or sent.
 
-CALL RECORDING (system audio): user-started, consent-affirmed. Captures the Mac's audio output (the other side of a call) + the mic, transcribed on-device (WhisperKit). Audio only, never screen content. Nothing leaves the Mac. Recording deleted after transcription; transcript encrypted, deletable. Policy: https://m1k3.app/privacy#call-recording
+CALL RECORDING (system audio): user-started, consent-affirmed. Captures the Mac's audio output (the other side of a call) + the mic, transcribed on-device (WhisperKit). Audio only, never screen content. The audio and transcript stay on the Mac. Recording deleted after transcription; transcript encrypted, deletable. Policy: https://m1k3.app/privacy#call-recording
 
 MICROPHONE: on-device speech-to-text. Never transmitted.
 FILES: user-selected notes/PDFs only. Processed locally.

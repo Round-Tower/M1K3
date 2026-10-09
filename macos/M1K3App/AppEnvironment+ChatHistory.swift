@@ -26,6 +26,12 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-04 — egressClauseProvider + `egressFacts()` (#482): what can leave
 //  this Mac per turn — web search (switch AND age band), PCC offered by `PrivateCloudRung.setting`, never
 //  "picked" (a PCC turn never reaches the responder). Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — thinkingModeProvider resolves via the shared
+//  ThinkingModeResolver (#198); behaviour unchanged.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (fold) — `excludedKinds` threads through makeAgentResponder and
+//  interactiveAgentTools (the search tool) so the MCP responder withholds Photo captions.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — list_documents and get_document take
+//  `excludedKinds` too (the agent's copies leaked a caption as an observation); pinned by text scan.
 
 import Foundation
 import M1K3Agent
@@ -204,14 +210,17 @@ extension AppEnvironment {
         contextSenses: ContextSenseHook? = nil,
         recentActivity: (any ActivityReading)? = nil,
         ageBandProvider: (any AgeBandProviding)? = nil, // swiftformat:disable:next unusedArguments
-        availability: ToolPalettePolicy.Availability? = nil
+        availability: ToolPalettePolicy.Availability? = nil,
+        excludedKinds: Set<KnowledgeKind> = []
     ) -> [any AgentTool] {
         var tools: [any AgentTool] = [
             DateTimeTool(),
             SystemStatusTool(),
-            SearchKnowledgeTool(store: store, embedder: embedder, onHits: onHits),
-            ListDocumentsTool(store: store),
-            GetDocumentTool(store: store),
+            // Every store-reading tool takes `excludedKinds` — the `.mcp` palette withholds Photos
+            // on all three, not just search (AskSurfaceCallSiteTests pins the wiring by text).
+            SearchKnowledgeTool(store: store, embedder: embedder, excludedKinds: excludedKinds, onHits: onHits),
+            ListDocumentsTool(store: store, excludedKinds: excludedKinds),
+            GetDocumentTool(store: store, excludedKinds: excludedKinds),
         ]
         // delegate_deep joins ONLY the interactive-chat palette (non-nil hook is
         // passed solely by the main responder): MCP's ask_m1k3 has its own job
@@ -412,7 +421,8 @@ extension AppEnvironment {
         scriptExecution: ScriptExecutionHook? = nil,
         contextSenses: ContextSenseHook? = nil,
         recentActivity: (any ActivityReading)? = nil,
-        ageBandProvider: (any AgeBandProviding)? = nil // swiftformat:disable:next unusedArguments
+        ageBandProvider: (any AgeBandProviding)? = nil, // swiftformat:disable:next unusedArguments
+        excludedKinds: Set<KnowledgeKind> = []
     ) -> any RAGResponding {
         // Hits the model retrieves itself (search_knowledge) flow through the
         // collector into the turn's sources + the citation allow-list.
@@ -431,20 +441,19 @@ extension AppEnvironment {
                     scriptExecution: scriptExecution,
                     contextSenses: contextSenses,
                     recentActivity: recentActivity,
-                    ageBandProvider: ageBandProvider
+                    ageBandProvider: ageBandProvider,
+                    excludedKinds: excludedKinds
                 )
             },
             sourceCollector: sourceCollector,
             thinkingModeProvider: {
                 // A forced mode (MCP ask_m1k3 → .fast) bypasses Settings entirely.
-                if let forcedThinkingMode { return forcedThinkingMode }
+                // Voice mode swaps Settings for its own in-mode toggle (default
+                // off → fast; read per turn). Shared with the iOS shell (#198).
                 let defaults = UserDefaults.standard
-                let stored = defaults.string(forKey: Self.thinkingModeKey)
-                    .flatMap(ThinkingMode.init(rawValue:)) ?? .auto
-                // Voice mode swaps Settings for its own in-mode toggle
-                // (default off → fast; read per turn, so flips apply next turn).
-                return VoiceThinkingPolicy.effectiveMode(
-                    stored: stored,
+                return ThinkingModeResolver.resolve(
+                    storedRaw: defaults.string(forKey: Self.thinkingModeKey),
+                    forced: forcedThinkingMode,
                     voiceModeActive: defaults.bool(forKey: Self.voiceModeActiveKey),
                     voiceThinkingEnabled: defaults.bool(forKey: Self.voiceModeThinkingKey)
                 )
@@ -547,7 +556,8 @@ extension AppEnvironment {
                     allTiers: ToolRouterWiring.allTiersEnabled(),
                     chain: ToolRouterWiring.chainEnabled()
                 )
-            }
+            },
+            excludedKinds: excludedKinds
         )
     }
 

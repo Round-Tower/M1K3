@@ -65,6 +65,8 @@
 //  Review: same day (#497 review fold) — `imageGap` says why it reads `BrainTier.mini` for AFM. The
 //  own-peak number still charges the lazily-loaded embedder to the first brain of a multi-brain launch:
 //  the bake-off runs one brain per launch.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#486) — the responder gets the Mac's age and egress clauses
+//  (web on, PCC offered), so chat-what-leaves scores against what ships. The Lil/Big re-run is owed.
 
 import Foundation
 
@@ -343,6 +345,15 @@ enum ChatEvalStage {
             toolsProvider: { palette }, maxIterations: 3,
             thinkingModeProvider: { Self.thinkingMode(thinking) },
             fastThinkingProvider: { thinking.liveFastByDefault },
+            // The Mac's clauses (#482, mirrors MiniLiveEvalTests): no declared age band, web
+            // search on (the default), PCC offered (its switch on — the fuller clause, so the
+            // answer has to name both exits). chat-what-leaves is scored against what ships.
+            ageClauseProvider: { AgeAppropriateness.policy(for: .undeclared).promptClause },
+            egressClauseProvider: {
+                EgressDisclosure.clause(
+                    EgressFacts(webSearch: true, privateCloudOffered: true), device: HostPlatform.thisDevice
+                )
+            },
             plainRouteProvider: plainRoute
         )
         let (_, stream) = try await responder.answerStreaming(

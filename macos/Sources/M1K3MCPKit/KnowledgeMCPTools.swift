@@ -22,6 +22,12 @@
 //  unknown id throw (the registry's isError) instead of returning "Error: …" as success; a
 //  no-results line quotes only the query's start (`MCPInput.echo`). A quarantined id still
 //  refuses exactly as an absent one does. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — caption memory: `.image` (Photo) items are
+//  withheld from list, search and get-by-id (KnowledgeKind.withheldFromMCP). Search over-reads
+//  nothing: a Photo hit just drops from the ranked list. Fold: list excludes in the query
+//  (`allItems(excluding:)`), so a page is never eaten by newer Photos.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — search withholds in the query too
+//  (`GroundedSearch.run(excludedKinds:)`), replacing the post-`limit` filter that could empty a page.
 //
 
 import Foundation
@@ -41,8 +47,11 @@ struct KnowledgeMCPTools {
     func searchKnowledge(query: String, limit: Int = 5) async throws -> String {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { throw MCPInputError("search_knowledge requires a non-empty query") }
+        // Photo captions describe private images: withheld from MCP clients,
+        // in the query (never a post-filter that could empty the page).
         let hits = try await GroundedSearch.run(
-            store: store, embedder: embedder, query: trimmed, limit: limit
+            store: store, embedder: embedder, query: trimmed, limit: limit,
+            excludedKinds: KnowledgeKind.withheldFromMCP
         )
         guard !hits.isEmpty else {
             if embedder != nil {
@@ -61,7 +70,7 @@ struct KnowledgeMCPTools {
 
     /// List indexed items (documents, calls, notes) with their ids.
     func listDocuments(limit: Int = 100) throws -> String {
-        let items = try store.allItems(limit: limit)
+        let items = try store.allItems(excluding: KnowledgeKind.withheldFromMCP, limit: limit)
         guard !items.isEmpty else { return "No documents indexed yet." }
         return items.map { item in
             "\(item.id.uuidString)  [\(item.kind.rawValue)]  \(item.title)"
@@ -78,7 +87,9 @@ struct KnowledgeMCPTools {
         guard let id = UUID(uuidString: idString.trimmingCharacters(in: .whitespacesAndNewlines)) else {
             throw MCPInputError("“\(MCPInput.echo(idString))” is not a valid document id.")
         }
-        guard let item = try store.item(id: id), item.kind != .quarantined else {
+        guard let item = try store.item(id: id), item.kind != .quarantined,
+              !KnowledgeKind.withheldFromMCP.contains(item.kind)
+        else {
             // A quarantined item renders as absent, not as denied — the by-id
             // path must not confirm existence of what list/search never show
             // (index segregation; see KnowledgeKind.quarantined).

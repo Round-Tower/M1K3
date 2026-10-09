@@ -32,6 +32,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.8 — `identity(brainName:)` splits the
 //  brain clause out: Mini's plain turn takes it without the date (#428/#349,
 //  MiniInventedMemoryEvalTests: date mentions on small talk 11/16 → 1/16).
+//  Review: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.75 — #488: the line adds the
+//  ISO date and "earlier dates are in the past" (~14 tokens). Pinned pure; the grounded-Q
+//  ×3 eval on Big that proves gemma stops calling the past the future is still owed.
 
 import Foundation
 import M1K3Inference
@@ -44,8 +47,17 @@ public enum PromptContext {
         formatter.locale = Locale(identifier: "en_US_POSIX") // stable English names
         formatter.dateFormat = "EEEE, d MMMM yyyy"
         let date = formatter.string(from: now)
+        // #488: the ISO form beside the prose one, and the ordering rule said outright.
+        // Big read "Monday, 5 October 2026" next to a memory's "On 2026-10-02 …" and
+        // called 2 October the future — two shapes of one date, compared by eye. The
+        // ISO form is the shape memories and tool outputs use, so the model compares
+        // like with like; the cue costs ~14 tokens on every dated turn (Mini's agent
+        // turn included; its plain turn takes `identity` alone and pays nothing).
+        formatter.dateFormat = "yyyy-MM-dd"
+        let iso = formatter.string(from: now)
         let identity = identity(brainName: brainName)
-        return "Right now (true for this turn): it's \(date)." + (identity.isEmpty ? "" : " " + identity)
+        return "Right now (true for this turn): it's \(date) (\(iso)); earlier dates are in the past."
+            + (identity.isEmpty ? "" : " " + identity)
     }
 
     /// The brain clause alone, no date: what Mini's plain turn takes (#428/#349). On small

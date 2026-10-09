@@ -55,6 +55,8 @@
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — the App Store rating ledger (ReviewPromptLedger); a completed answer counts toward the ask.
 //  Review: Kev + claude-fable-5.1, 2026-09-15 (2) — a stopped answer is not a win; voice turns count too (AppCore+Voice) — local review fold.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `thinkingModeProvider` via the shared ThinkingModeResolver (#198):
+//  voice turns fast, chat auto.
 //  Review: Kev + claude-opus-5-5, 2026-09-25 — `mlxAvailable` also refuses Apple GPU family 5 (MLXRuntimeSupport): an iPad 8th gen
 //  trapped warming M1K3 Voice; A12X/A12Z iPad Pros pass the brain memory floor but share that GPU. A stage left behind is
 //  discarded at launch. Verify-by-launch on the A12 iPad. Confidence 0.85.
@@ -63,6 +65,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-04 — egressClauseProvider (#482): web search + the Home brain
 //  (a live `homeBrainLive` mirror of `homeBrainActive` — the persisted flag missed a phone with no local
 //  brain). No PCC on iOS. Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `photoMemory` (caption memory) + the delete-cascade wiring.
+//  Compile-checked; verify-by-launch owed.
 
 import Foundation
 import M1K3Agent
@@ -103,6 +107,13 @@ final class AppCore {
     let embedder: any EmbeddingService
     let ingester: DocumentIngester
     let chat: ChatSession
+    /// "Remember this photo" (caption memory): the same shared model as the Mac. Lazy because its
+    /// closures read `self`; the provider is the swappable slot (it forwards ImageCaptioning).
+    @ObservationIgnored lazy var photoMemory = PhotoMemory(
+        provider: { [unowned self] in activeProvider },
+        tier: { [unowned self] in selectedBrain },
+        ingester: ImageCaptionIngester(store: store, embedder: embedder)
+    )
     /// The pixel-cube companion, shared verbatim with the Mac app (AvatarView).
     let avatar = AvatarController()
     /// The App Store rating ledger (ReviewPromptPolicy's facts). The phone has
@@ -415,6 +426,10 @@ final class AppCore {
             ),
             autoCaptureEnabled: { Self.memoryAutoCaptureEnabled() }
         )
+
+        // Caption memory: a deleted chat forgets its Photo memories.
+        photoMemory.onChange = { [weak self] in self?.refreshCounts() }
+        chat.onAttachmentsDiscarded = { [weak self] in self?.photoMemory.forget($0) }
 
         refreshCounts()
         // Brain at Home: restore a paired Mac, and re-point the slot at it if
@@ -905,6 +920,19 @@ final class AppCore {
                 ))
             },
             sourceCollector: sourceCollector,
+            thinkingModeProvider: {
+                // The Mac's resolution, shared (#198). No Reasoning picker on the
+                // phone, so the stored value is unset → the shared default (auto);
+                // a spoken turn is fast unless voice mode's thinking toggle is on.
+                // Read per turn. Lil (Qwen3.5) reads enable_thinking from this.
+                let defaults = UserDefaults.standard
+                return ThinkingModeResolver.resolve(
+                    storedRaw: defaults.string(forKey: ThinkingModeResolver.storedModeKey),
+                    forced: nil,
+                    voiceModeActive: defaults.bool(forKey: VoiceModeDefaults.activeKey),
+                    voiceThinkingEnabled: defaults.bool(forKey: ThinkingModeResolver.voiceThinkingKey)
+                )
+            },
             brainNameProvider: {
                 let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
                 return BrainTier(persisted: raw)?.displayName ?? ""

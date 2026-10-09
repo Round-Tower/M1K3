@@ -62,6 +62,11 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-08, Confidence 0.85 — Lil is Qwen3.5-4B again (Kev's call on the
 //  post-#509/#511 evals): ~3,060 MB, and it SEES (supportsImageInput, vision 42/48 on MLXVLM). The window
 //  and rotating-cache notes now say hybrid: KVCacheSimple + MambaCache (MLXVLM Qwen35.newCache).
+//  Review: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 — `lilOwnPeakCapGB` (5 GB own peak on a
+//  16 GB Mac, MiB) signs the RAM cap the 1.1 bake-off applied by hand: 4.8 GB passes, E4B's 10.3 is out.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (2), Confidence 0.85 — `imageReaders(platform:)` +
+//  `DevicePlatform.current`: the tiers Mini's image decline may name, derived from `supportsImageInput`
+//  and the platform floor (PR #526 review: "Switch to Big" went stale the day Lil learned to see).
 
 import Foundation
 
@@ -435,6 +440,26 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
 
     public static let deepReasoningFloorGB: Double = 24
 
+    /// Lil's RAM cap, SIGNED 2026-10-09 (Kev): 5 GB of the brain's OWN peak — what it adds
+    /// over what was already resident (`BrainRun.ownPeakMemoryMB`: MLX peak minus the
+    /// embedder and any earlier brain) — on a 16 GB Mac, the smallest Mac that recommends
+    /// Lil (`recommended`). Measured on master, ×3 all kinds, one brain per launch: the
+    /// incumbent Qwen3-4B 4.8 GB and Qwen3.5-4B 4.8 GB both fit; gemma-4 E4B's 10.3 GB is what
+    /// the cap rejects (GEMMA_1_1_PLAN.md §5, MODEL_CHOICES.md 2026-10-08). A Lil candidate
+    /// over it is not Lil, whatever it scores. `run_chateval.py summarise` flags a lil run that
+    /// exceeds it; `lilOwnPeakCapMB` is the same number in the mebibytes MLX reports.
+    public static let lilOwnPeakCapGB: Double = 5
+
+    /// `lilOwnPeakCapGB` in MiB — the unit of `peakMemoryMB` / `ownPeakMemoryMB`
+    /// (MLXMemoryBudget divides by 1,048,576), NOT the 1000-MB "GB" of download sizes.
+    public static let lilOwnPeakCapMB: Int = .init(lilOwnPeakCapGB * 1024)
+
+    /// Whether a measured own peak (MiB) is inside Lil's cap. Inclusive: the cap is the
+    /// number itself, not a strict bound.
+    public static func lilOwnPeakWithinCap(megabytes: Int) -> Bool {
+        megabytes <= lilOwnPeakCapMB
+    }
+
     /// Whether this Mac can comfortably host Big for a deep dive.
     public static func supportsDeepReasoning(forPhysicalMemoryGB gigabytes: Double) -> Bool {
         gigabytes >= deepReasoningFloorGB
@@ -497,6 +522,26 @@ public enum BrainTier: String, CaseIterable, Identifiable, Sendable, Comparable 
     public enum DevicePlatform: Sendable, Equatable {
         case mac
         case mobile
+
+        /// The platform this process runs on: the Mac, or the iOS/visionOS shell.
+        public static var current: DevicePlatform {
+            #if os(macOS)
+                .mac
+            #else
+                .mobile
+            #endif
+        }
+    }
+
+    /// The brains an image decline may send the user to: the MLX tiers that see AND can be
+    /// picked on `platform` (a finite floor — Big's infinite mobile floor keeps it off a phone).
+    /// Mini (AFM) is never listed: it is the brain that just failed to read the image. Derived
+    /// rather than written, so the decline can't say "Switch to Big" after Lil learned to see.
+    public static func imageReaders(platform: DevicePlatform) -> [BrainTier] {
+        allCases.filter { tier in
+            tier.mlxModelID != nil && tier.supportsImageInput
+                && tier.minimumPhysicalMemoryGB(platform: platform) != .infinity
+        }
     }
 
     /// Convenience: the recommendation for the machine we're running on.

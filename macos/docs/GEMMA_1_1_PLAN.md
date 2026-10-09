@@ -136,6 +136,21 @@ Goal: images, screenshots and audio live in the knowledge graph beside text.
 - [ ] UI: image results render as thumbnails in grounded answers; citations still work.
 - [ ] Privacy copy: everything on-device; nothing new leaves the machine. PCC paths unchanged (ADR 0010).
 
+#### Stream D, 1.1 slice: caption memory (built 2026-10-09, branch `feat/caption-memory`, not yet merged or launched)
+
+The part of Stream D that needs **no new embedder and no migration**. Challenger-shaped: opt-in, reference-only, neutral.
+
+- **Trigger:** "Remember this photo" under a sent image, on Mac and iOS. The tap is the consent. Never automatic, never "when idle" (a caption queues on the model's actor ahead of the next turn, and no idle scheduler exists).
+- **Brains:** MLX Lil and Big only, on the brain already selected (never load one to caption). Mini and Pocket are refused by name: "Switch to Lil to remember photos."
+- **Generation:** `ImageCaptioning` capability on `MLXBrainProvider` (neutral instructions only, thinking forced off, 220 tokens), run under the same `withInstructions` + `backgroundUtility` wrapper the call summaries use. Forwarded by `SwappableInferenceProvider` and the app's `RuntimeInferenceProvider`.
+- **Storage:** string-backed `KnowledgeKind.image` ("Photo"), `source: .captioned`, `sourceRef = "attachment:<filename>"` (filename only; re-send dedupes; the delete cascade keys on it). In `groundingDocumentKinds`, in both launch sweeps (one `KnowledgeKind.launchSweepKinds`, pinned against `allStaticKinds`), never donated to Spotlight, withheld from MCP list/search/get.
+- **Delete:** deleting a chat forgets its Photo memories (`ChatSession.onAttachmentsDiscarded` -> `PhotoMemory.forget`), gated like the file discard.
+- **UI:** the row shows the caption head (first 60 characters), a `photo` icon, no quarantine button (restore re-tags to `.document`, which is donatable). Privacy line in the Documents empty state: descriptions stay on this device.
+
+Still waits for Stream C (an image embedder) and the rest of Stream D: `modality` column and thumbnail/blob reference (the migration), text-to-image retrieval beyond caption words, per-modality floors, thumbnails inside grounded answers, lazy vision-encoder loading, automatic or idle captioning (needs a scheduler and cancellation checks), Mini/AFM captioning (needs its own summary-style AFM instance), "also forgets N photos" in the delete confirmation, a Mac Photo row that shows the full caption, and a vision eval for caption accuracy (42/48 means roughly 1 caption in 8 can be wrong; the row shows the caption so the user can delete it).
+
+Verify-by-launch owed: attach `whiteboard-pricing.png` on Lil, tap Remember, ask "the whiteboard photo about pricing", delete the chat and confirm the Photo row is gone, and feel the next turn while a caption runs.
+
 ### Stream E — Big hears: Gemma 12B audio (batch)
 
 - [ ] Spike: feed a WAV through MLXVLM `UserInput` audio to gemma-4-12B. Upstream state 2026-10-06: #400 (Gemma4Unified audio + video in the processor) and #392 (native audio encoder) both **open** — expect to carry or wait. Does mlx-swift-lm's `Gemma4Unified` wire the audio embedder end to end? Measure length cap, RAM, latency.
@@ -144,11 +159,19 @@ Goal: images, screenshots and audio live in the knowledge graph beside text.
 
 ### Stream F — Quick win: image turns on Lil escalate
 
+**Moot, 2026-10-09:** Lil is Qwen3.5-4B and sees (#517, vision 42/48) — an image turn on Lil stays on
+Lil. Nothing below ships; kept for the record.
+
 Independent of B; ship it if B doesn't swap Lil within the week.
 - [ ] Read `Sources/M1K3Inference/AttachmentRouting.swift`: what happens today when an image is attached while Lil is active?
 - [ ] Route that turn to Big when RAM allows (same gate as `delegate_deep`), else Mini's AFM vision; tell the user which brain looked.
 
 ### Stream G — gemma-4 speed: the sliding window and prefix reuse (keep an open mind)
+
+**Retired, 2026-10-09:** the veto wording landed in #509 (the reuse log names both untrimmable
+causes — a wrapped window, a recurrent layer — and checkpoint mode covers the exact ones), and no
+shipped brain is misconfigured: Big's 1024 is measured on the 12B it runs, Lil has no window. What
+is left is a spike for the next gemma audition (E4B/E2B), not 1.1 work.
 
 Why: Lil's runtime has been tuned around a dense Qwen3 — trimmable caches, cross-turn prefix
 reuse, quantised KV. Every gemma-4 candidate pays a tax that is partly **ours**, not the model's:
@@ -222,6 +245,16 @@ cap. Confidence 0.8 on the findings; E4B 53/57 after hand-adjudicating two score
 Review: Kev + claude-opus-5-5, 2026-10-06 23:40 — the fixed harness built and launched: Qwen3.5 fair
 re-test 22/24, E4B vision proven (13/16), vision baseline (Mini 1/16 — open), Stream C slice 1.
 Confidence 0.8; Mini's cause is UNVERIFIED.
+Review: Kev + claude-fable-5.1, 2026-10-09 — step 7 hygiene (branch `fix/1-1-mini-sees-lil-polish`): the
+Lil RAM cap signed (5 GB own peak, `BrainTier.lilOwnPeakCapGB`, flagged by run_chateval); Stream F moot
+and Stream G retired (Lil sees; the veto wording is in #509); the thinking-disclosure side-finding moot at
+our pin (the decoder never emits `.reasoning`) with its inverse pinned in step 2; Mini vision points at
+step 1's honest decline (the prompt shape trips AFM's guardrail, not the file hand-off); #509's cheap
+half done (per-step RAM snapshot, `seedIsExact`, the "flat except image turns" line). Confidence 0.85 —
+every tick is code- or test-pinned; the per-step RAM curve is still verify-by-launch.
+Review: Kev + claude-fable-5.1, 2026-10-09 (2) — Mini sees: the seven-arm bisect found the shape AFM vision
+accepts (neutral, tool-free, steer) and it ships as `AFMToolPrompt.visionTurn`; the decline is the fallback.
+Confidence 0.75 — one fixture on one device reads cleanly; the Mini vision baseline re-run is the proof.
 Review: Kev + claude-opus-5-5, 2026-10-08 00:40 — #513 review folded: the probe and AFM results are archived
 under docs/evals; the unified-log figures are labelled unarchived; the median convention is stated; "matches"
 now reads "on aggregate", with the incumbent's interview 4/15 explained (exemplar echo, real behaviour).
@@ -468,6 +501,12 @@ entirely**, so the clash goes away with it.
 
 Still open: E4B's 10.3 GB own peak — the stall explains the latency, not obviously the RAM.
 
+**Display-off A/B (2026-10-09): built, NOT RUN.** `macos/tools/perf/display_off_ab.sh` runs one long
+CHATEVAL twice — hold on, then `-generationActivity NO` — forcing the display off 30 s in, and prints
+decode tok/s before/after for both. It decides whether App Nap is the mechanism (A holds, B collapses),
+or display-off throttling is (both collapse). Owes: Kev quits the live app, AC power, hands off the
+keyboard; `--dry-run` first. Until then fix-list item 2 stays UNVERIFIED.
+
 Fix list, in order:
 1. **Eval:** `caffeinate -dis` for every overnight run (the runner scripts), and log display state
    into the scorecard provenance. Re-measure gemma latency and RAM after.
@@ -583,9 +622,14 @@ Fix list, in order:
      → **19/20 @ 5.9 s** (#511's final code, app 79981cc5, `…-lil-q35-repair2-tier…`; those three files
      landed with #511). The bar is met. The remaining miss is `tool-recent-busiest`: the
      model doesn't call `recent_activity`.
-- **UNVERIFIED side-finding:** because the decoder routes reasoning away from `.chunk`, a thinking
-  brain on the native tool path may show an empty "thinking" disclosure in the chat UI (our tool
-  session only reads `.chunk`). Check on a live Qwen3.5 thinking turn.
+- ~~UNVERIFIED side-finding: the decoder routes reasoning away from `.chunk`, so a thinking brain on the
+  native tool path may show an empty "thinking" disclosure.~~ **Moot at our pin (2026-10-09):**
+  mlx-swift-lm 3.32.3's `StandardTokenStreamDecoder` emits only `.response` / `.toolCall` /
+  `.rejectedToolCall` — never `.reasoning` — so nothing is routed away from `.chunk`. The INVERSE is
+  the real shape (reasoning arrives in `.chunk` and could leak into the bubble), and that is closed
+  in this branch (step 2): the tool session yields a synthetic `<think>` as token zero, so
+  ThinkStreamGate opens in reasoning mode and closes on the lone `</think>` — pinned in
+  ThinkStreamGateTests. The remaining exposure is Brain at Home's raw route (no opener).
 - `feat/gemma-1-1-next`: one hold per **agent turn** (`LocalAgent.run`; no unheld tool gaps) and
   per-call-site reasons for `pmset -g assertions`.
 
@@ -619,6 +663,9 @@ Before a swap:
 - Read the Qwen3.5 misses: `code-py-fix-bug` ×3, `code-site-about-chat` ×2, `ground-part` ×3.
 - **`chat-what-leaves` is wrong on BOTH models**, not just under-scored: "nothing leaves this Mac", yet
   web search sends queries out. This is a persona fix.
+  **Harness artefact until re-run (2026-10-09):** the CHATEVAL responder had no `egressClauseProvider`, so
+  the run never saw the per-turn egress clause #482 ships (`EgressDisclosure`). `ChatEvalStage` now wires
+  the Mac's shipped defaults (web on, PCC offered); re-run `chat-what-leaves` before reading the miss as real.
 - **Measure, then build, the cross-turn checkpoint.** The eval is single-turn, so it can't see that a
   real chat re-reads its whole history on each new message. That's ~4 s at message 5 and ~8 s at
   message 10 (estimate).
@@ -630,9 +677,24 @@ not AFM's ceiling.
 
 ### Open next
 
-- [ ] **Mini vision — AFM can see (2026-10-07 21:23, `AFMVisionLiveTests`: URL and CGImage both read
-      €23.40).** So the in-app confabulation is the attach path: decode in-process and attach
-      pixels, not the sandboxed file URL. Then re-run the vision kind on Mini.
+- [x] **Mini vision — AFM can see (2026-10-07 21:23, `AFMVisionLiveTests`: URL and CGImage both read
+      €23.40).** ~~So the in-app confabulation is the attach path~~ — **it is the prompt shape, not the
+      file hand-off (this branch, step 1, `04ef7b90`):** the app-shaped arm of `AFMVisionLiveTests`
+      (persona + 16 tools + rendered body + `Attachment(imageURL:)`, unsandboxed) hits the guardrail
+      ("May contain unsafe content") with persona or tools present and reads the receipt bare. No pixel
+      decode was built; `AFMToolPrompt.visionDecline(from:)` made Mini decline an attached image
+      honestly instead of confabulating.
+      **Mini SEES (2026-10-09, later, this branch):** the seven-arm bisect of the same probe — the
+      persona trips the guardrail; ANY tool palette (generic instructions, a steer, a hard "do not call
+      a tool", even `toolCallingMode: .disallowed`) makes Mini call `read_document` / `search_knowledge`
+      instead of looking; **"neutral instructions, no tools, steer" reads €23.40.** Shipped as
+      `AFMToolPrompt.visionTurn(from:)`: an image turn on Mini runs persona-free and tool-free with a
+      body that is the conversation plus the steer (render's closing tool paragraph made the tool-free
+      arm answer "Call the calculator tool with the amount €23.40"; without it: `"€23.40"`). Both AFM
+      paths (`AFMNativeToolTurnSession`, `continueToolTurn`) take it; the decline is the fallback when
+      that turn still fails. Trades, named: the image turn loses M1K3's voice and cannot call a tool
+      (the next text turn can). One fixture, one device — the 16-fixture vision baseline on Mini is the
+      measurement owed (was 1/16).
 - [~] (history) **Mini vision — investigation started (2026-10-07):** the attach path IS compiled in (the
       `#if compiler(>=6.4)` gate; local toolchain Swift 6.4 / Xcode 27), so the baseline really sent
       `Attachment(imageURL:)`. Suspects: (1) the out-of-process model can't read the app's file URL in
@@ -641,11 +703,10 @@ not AFM's ceiling.
       receipt total by URL AND by decoded CGImage — it decides between them. Blocked right now:
       Apple Intelligence reports `modelNotReady` (assets updating); re-run when ready. If the CGImage
       path reads it and the app doesn't, decode in-process and attach pixels, not paths.
-- [ ] **Mini vision (possible user-facing bug):** on the native AFM path every Mini answer
-      confabulates ("The note says three hinges", "the function is `capture_overlay`"), ~38 s a turn,
-      never "can't see". Either the attachment never reaches AFM or AFM vision is this weak — trace
-      `AFMToolPrompt.imageURLs` → `Attachment(imageURL:)` on a live turn before anything else; the app
-      shows Mini an attach button on macOS 27.
+- [x] **Mini vision (user-facing bug, fixed in this branch — step 1, `04ef7b90`):** on the native AFM
+      path every Mini answer confabulated ("The note says three hinges"), ~38 s a turn, never "can't
+      see". Cause: the attachment reached AFM, but the persona + tool prompt shape trips its guardrail
+      (hypothesis B). Mini now declines attached images honestly; the live probe pins why.
 - [x] The bake-off proper (overnight 2026-10-06/07) — text is in; gemma latency/RAM void (stall).
 - [x] **Re-run the gemma columns once #499 lands** — done 2026-10-07 on `bc2dc9bd`: E4B 292/324, 9.0 s,
       **10.3 GB own peak confirmed** (twice Qwen3.5's 4.8 GB).
@@ -654,19 +715,26 @@ not AFM's ceiling.
       since it is full-precision. Measure a scripted 6–8-message chat's prefill curve FIRST.
 - [ ] **Persona: the honest privacy answer** — web search sends queries to DuckDuckGo; say so.
 - [ ] Read Qwen3.5's code-gen and grounded misses before the swap call.
-- [ ] `tool-recent-busiest`: a prompt nudge for recency asks, before anything heavier.
+- [x] `tool-recent-busiest`: a prompt nudge for recency asks, before anything heavier — 2026-10-09: the
+      routing line settles "busiest / most active" as activity on this device, and the tool description
+      (app + eval stub) names the words. 5× Lil replay owed.
 - [ ] `run_chateval`: stamp the app's build commit, not HEAD (three files hand-corrected 2026-10-07).
 - [ ] File the orphan-`</parameter>` issue upstream (draft above; Kev). Retires `Qwen35CallRepair`.
-- [ ] #509 follow-ups: peak RSS per step, re-seed after a fresh/image send, a pure seam for the
-      checkpoint bookkeeping, `seedTrimmed` → `seedIsExact`.
-- [ ] Set the Lil RAM cap BEFORE that re-run (own peak, not raw): incumbent 4.75 GB, Qwen3.5 4.07.
+- [x] #509 follow-ups, the cheap half (this branch, step 7): a per-step `MLXMemoryBudget` snapshot in
+      checkpoint mode (`ExactPrefixReuse.stepSnapshotLabel`), `seedTrimmed` → `seedIsExact`, and the
+      header's honest line — flat per step EXCEPT image turns. Curve verify-by-launch on a 5+ step turn.
+- [ ] #509 follow-ups, the rest: re-seed after a fresh/image send; a pure seam for the checkpoint
+      bookkeeping.
+- [x] **Lil RAM cap, signed 2026-10-09 (step 7):** 5 GB OWN peak on a 16 GB Mac —
+      `BrainTier.lilOwnPeakCapGB`, MiB, inclusive; `run_chateval.py summarise` flags a lil run over it.
+      Incumbent 4.8 / Qwen3.5 4.8 pass; E4B's 10.3 is what it rejects (MODEL_CHOICES 2026-10-08).
 - [ ] `selfquery-notes`: "I don't run internal QA…" is a decline the markers miss (challenger first).
-- [ ] Stream F (image turns on Lil escalate) — still the fallback if Lil stays Qwen3.
+- [x] ~~Stream F (image turns on Lil escalate)~~ — moot: Lil is Qwen3.5-4B and sees (#517).
 - [ ] Stream C, slice 2: the Swift port (spec below).
 - [~] **The stall + tokenizer fixes:** eval caffeinate + app hold landed (#498); the tokenizer bump
       is #499. Still owed: the display-off A/B (is App Nap the mechanism?).
-- [ ] **Stream G** (gemma-4 speed) — re-read after the tokenizer bump: part of E4B's 5.6× was CPU
-      tokenizing, not prefill.
+- [x] ~~**Stream G** (gemma-4 speed)~~ — retired 2026-10-09: the veto wording landed in #509 and no
+      shipped brain is misconfigured (see §2); the E4B/E2B speed split is a spike for their next audition.
 - [ ] **Qwen3.5 vision + tools (Kev: "Vision would be great to test, tools can be tuned, and I like
       that interviewing improved"):** the cached conversion already ships its vision tower (297
       `vision_tower.*` tensors; `qwen3_5` is MLXVLM.Qwen35 in our pin) — routing its exact id through
@@ -689,10 +757,12 @@ not AFM's ceiling.
         attachment.
       - **Stream E audio** — the cheap Gemma ASR + diarization to benchmark against WhisperKit behind
         `TranscriptionProvider`.
-      Setup when we get to it: exact id in `usesVLMLoadPath`; a per-repo `Gemma4TemplateFix.Heal`
-      (hash google/gemma-4-E2B-it's template; expect the same stale `2f1b4d75…` class); read its
-      `sliding_window`; ~3.6 GB download (Kev's call); ×1 shootout on vision + text kinds, scored as a
-      mobile / Mini-vision candidate, never against Lil.
+      **Auditionable as of 2026-10-09** (no weights downloaded): exact id in `usesVLMLoadPath`; a
+      `Gemma4TemplateFix.Heal` for the repo (it serves the same stale `2f1b4d75…`; google/gemma-4-E2B-it's
+      template hashes to E4B's `0a2c8073…` byte for byte, so the Heal shares E4B's vendored resource);
+      `config.json` says `sliding_window` 512, 35 layers, with vision + audio configs (pinned in
+      `MLXBrainProviderTests`). Still Kev's call: the ~3.6 GB download and the ×1 shootout on vision +
+      text kinds, scored as a mobile / Mini-vision candidate, never against Lil.
 
 ### Stream C, slice 1 — done (reference vectors)
 
@@ -727,3 +797,5 @@ dependency; it does NOT reuse Gemma4Text — the PLE differs):
 - EmbeddingGemma 2: [Google blog](https://blog.google/innovation-and-ai/technology/developers-tools/embeddinggemma-2/) · [developer guide](https://developers.googleblog.com/en/embeddinggemma-2-the-developer-guide/) · [MarkTechPost](https://www.marktechpost.com/2026/10/06/google-deepmind-releases-embeddinggemma-2-a-740m-open-multimodal-embedding-model-built-on-gemma-4/) · [AI Weekly](https://aiweekly.co/alerts/google-ships-embeddinggemma-2-740m-multimodal-embedder-apache-20) · [Sentence Transformers guide](https://ai.google.dev/gemma/docs/embeddinggemma/inference-embeddinggemma-with-sentence-transformers)
 - Gemma 4: [July 2026 refresh](https://runaihome.com/blog/gemma-4-july-2026-flash-attention-4-prefill-ollama-update/) · [releases](https://ai.google.dev/gemma/docs/releases) · [model card](https://ai.google.dev/gemma/docs/core/model_card_4) · [12B intro](https://blog.google/innovation-and-ai/technology/developers-tools/introducing-gemma-4-12b/) · [12B on DataNorth](https://datanorth.ai/news/google-releases-gemma-4-12b)
 - Qwen3.5 small: [MarkTechPost](https://www.marktechpost.com/2026/03/02/alibaba-just-released-qwen-3-5-small-models-a-family-of-0-8b-to-9b-parameters-built-for-on-device-applications/) · [mlx-swift-lm releases](https://github.com/ml-explore/mlx-swift-lm/releases)
+
+Review: Kev + claude-fable-5.1, 2026-10-09 — Stream D's 1.1 slice (caption memory) written up above; the migration, the image embedder and the thumbnails wait for Stream C.

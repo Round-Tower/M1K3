@@ -154,6 +154,7 @@ MOBILE_PATH_PREFIXES = (
     "macos/M1K3App/KaraokeReadingText.swift",
     "macos/M1K3App/CompanionAvatarView.swift",
     "macos/M1K3App/CodeBlockView.swift",
+    "macos/M1K3App/RememberPhotoButton.swift",
     "macos/M1K3App/PhosphorMaterial.swift",
     "macos/M1K3App/Phosphor.metal",
     "macos/M1K3App/PrivacyInfo.xcprivacy",

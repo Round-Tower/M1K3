@@ -619,3 +619,20 @@ _Signed: Kev + claude-fable-5.1, 2026-09-02, Confidence 0.85 (the three facts ar
 read off the ASC API + developer portal the same day, not inferred; the guard is
 red-then-green against the real file; the cloud upload is the still-unverified
 step — nothing here is claimed to have reached TestFlight yet)._
+
+## Addendum — 2026-10-09: the window's own field
+
+Chat and voice no longer paint a private navy gradient of their own: both sit on
+the shared `WindowField` — `Rectangle().fill(.background)` on iOS (the counterpart
+of the Mac's behind-window glass); on visionOS the deep gradient they always had,
+kept there on purpose (`Color.clear` would hand the floor to the system glass pane,
+and a RealityView hero over it is unseen on a device — challenger NO-GO). The app
+is still forced dark for 1.1, so on iOS this is near-invisible until light mode is
+allowed; `ChatBackdrop`'s reading scrim now takes its tone and stops from the shared
+`BackdropInk`, so it is correct that day. The voice hero is full-bleed and never pauses
+for the turn — it is what the user is talking to — only for Low Power or Reduce
+Motion (`VoiceHeroPausePolicy`); `ChatScreen` unmounts its backdrop while the voice
+cover is up (one RealityView). Source-scan tests
+(`VoiceModeFloorTests`, `WindowFieldTests`) pin the field. Verify-owed: the Simulator
+look, and the visionOS gradient under the full-bleed hero (Simulator can't be
+trusted for RealityView). Not touched: `OnboardingScreen` keeps its own floor (1.1).

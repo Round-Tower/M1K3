@@ -149,6 +149,14 @@
 //  pick and up to one more read-only tool, results under one shared budget, one answer. All failed → the
 //  agent; none failed and none found anything → plain; else answer from what ran. A single pick behaves
 //  as before (DispatchTurnTests unchanged). Confidence 0.75.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — a cancel in the dispatch chain is no tool failure (#512).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — `recentActivityRouting` settles "busy": busiest / most
+//  active days means activity on this device → call recent_activity, never ask which kind of busy. Lil
+//  (Qwen3.5) asked ~6/16 on `tool-recent-busiest`. Wording pinned (RecentActivityRoutingTests); the
+//  5× Lil replay is owed. Confidence 0.7.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (fold) — `excludedKinds` (caption memory): per-responder withhold
+//  threaded into `searchGrounding` and the `collectedSources` citation gate. The MCP ask passes
+//  KnowledgeKind.withheldFromMCP; the chat and local asks pass nothing (byte-identical).
 
 import Foundation
 import M1K3Agent
@@ -229,6 +237,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// The tool router's plain-chat route, read per turn. nil (the default, and
     /// every brain but Mini with the flag on) is today's agent turn, byte for byte.
     private let plainRouteProvider: (@Sendable () -> PlainTurnRoute?)?
+    /// Kinds this responder never grounds on, cites, or lets a tool hand back
+    /// (caption memory, 2026-10-09): the MCP surface passes
+    /// `KnowledgeKind.withheldFromMCP`; local surfaces leave it empty.
+    private let excludedKinds: Set<KnowledgeKind>
 
     public init(
         store: KnowledgeStore,
@@ -250,7 +262,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         egressClauseProvider: @escaping @Sendable () -> String? = { nil }, // swiftformat:disable:next unusedArguments
         browserContextProvider: (@Sendable () -> BrowserContext?)? = nil,
         todoContextProvider: (@Sendable () -> String?)? = nil,
-        plainRouteProvider: (@Sendable () -> PlainTurnRoute?)? = nil
+        plainRouteProvider: (@Sendable () -> PlainTurnRoute?)? = nil,
+        excludedKinds: Set<KnowledgeKind> = []
     ) {
         self.store = store
         self.embedder = embedder
@@ -272,6 +285,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         self.defersHeavyGenerationProvider = defersHeavyGenerationProvider
         self.groundingBudgetProvider = groundingBudgetProvider
         self.plainRouteProvider = plainRouteProvider
+        self.excludedKinds = excludedKinds
     }
 
     /// Fixed tool list — convenience for tests and simple callers.
@@ -377,7 +391,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // own city when the query leaned even slightly documentary).
             let retrieved = try store.searchGrounding(
                 query: question, queryVector: queryVector,
-                documentLimit: topK, memoryLimit: memoryTopK
+                documentLimit: topK, memoryLimit: memoryTopK,
+                excludedKinds: excludedKinds
             )
             // Gate on relevance: each lane ALWAYS returns something, even for "what
             // model are you?" — weak hits pollute the prompt and derail small
@@ -782,6 +797,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             if Task.isCancelled { return .answered }
             onActivity(.usingTool(name: step.tool.name, argument: step.input.values.first ?? ""))
             guard let output = try? await step.tool.execute(input: step.input).output, !output.hasPrefix("Error") else {
+                // A cancel surfaces here as a nil output: it is no tool failure.
+                if Task.isCancelled { return .answered }
                 Self.log.notice("tool dispatch: \(step.tool.name, privacy: .public) failed")
                 failures += 1
                 failedNames.append(step.tool.name)
@@ -1020,7 +1037,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// merged into the message's sources (and the citation allow-list) by
     /// ChatSession once the stream completes.
     public func collectedSources() -> [ChunkHit] {
-        sourceCollector?.drain() ?? []
+        // The citation gate re-applies the withhold: a tool that slipped an
+        // excluded kind into the collector never becomes a source.
+        (sourceCollector?.drain() ?? []).filter { !excludedKinds.contains($0.kind) }
     }
 
     /// One line per retrieved hit with both relevance signals, so the gate
@@ -1414,10 +1433,18 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// reconstruction from the history window, which holds one conversation's
     /// tail and nothing of the visitors or the heartbeat (2026-09-10).
     /// Offered-only, like every routing line (RecentActivityRoutingTests).
+    ///
+    /// 2026-10-09: "What were the busiest days this week?" drew a clarifying
+    /// question from Lil (Qwen3.5) — "your calendar, a team, web traffic?" —
+    /// in ~6/16 trials instead of the call (`tool-recent-busiest`). The second
+    /// sentence settles the ambiguity in the rule itself: busy here means
+    /// activity on this device, and the tool is the answer, not a question.
     static let recentActivityRouting =
         "- For what happened lately on \(HostPlatform.thisDevice) — recent chats, new memories, "
             + "visiting agents, heartbeat pulses, todos, how busy it's been — call recent_activity (window: today, "
-            + "yesterday, or N days); do not reconstruct it from this conversation."
+            + "yesterday, or N days); do not reconstruct it from this conversation. "
+            + "\"Busy\", \"busiest\" or \"most active\" days means activity on \(HostPlatform.thisDevice): "
+            + "call recent_activity straight away; do not ask which kind of busy they mean."
 
     /// The web route (2026-09-12). Byte-replayed on Lil, n=4 per probe, master →
     /// this line plus the persona's matching bullet: "What's the newest Claude

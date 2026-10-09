@@ -59,8 +59,9 @@ Private by design: on your Mac by default, no telemetry, and every network call 
 Everything above runs on the device. M1K3 uses the network for two things: the
 one-time download of a bigger brain when you ask for one, and web search, which
 is on by default so answers can be current, with one switch in Settings to turn
-it off. A third crossing is opt-in: Private Cloud Compute, off by default, consent
-asked per conversation, every PCC answer labelled — see
+it off. The Mac App Store build also carries an opt-in Private Cloud Compute
+brain — off by default, picked by you, consent asked once, every PCC answer
+labelled. The Developer ID DMG has no cloud path at all — see
 [SECURITY.md](./SECURITY.md).
 
 | Surface | Where | Stack | Status |
@@ -186,10 +187,12 @@ state: [`CLAUDE.md`](./CLAUDE.md). Security reports: [`SECURITY.md`](./SECURITY.
 ## Privacy
 
 Inference, retrieval, and voice run on-device; M1K3 itself has no servers and
-never sees or stores your conversations. Private Cloud Compute is an opt-in
-rung, off by default: only a conversation you choose to send goes to Apple's
-Private Cloud Compute — see [SECURITY.md](./SECURITY.md) for what is and is not
-sent and Apple's own guarantees, quoted and linked.
+never sees or stores your conversations. Two things can leave the machine, each
+a switch: web search and the lookups it makes (on by default) and, in the Mac App Store build only, the
+opt-in Private Cloud Compute brain (off by default) — when you pick it, your
+message goes to Apple's Private Cloud Compute, and the conversation so far only
+if you tick it. See [SECURITY.md](./SECURITY.md) for what is and is not sent
+and Apple's own guarantees, quoted and linked.
 
 ## License
 
@@ -226,6 +229,12 @@ inbound, FSL outbound). M1K3 is built in the open with
 [MurphySig](https://murphysig.dev) provenance — the git history is signed,
 human-and-AI collaboration on the record.
 
+<!-- Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85, Prior: Unknown (the README predates
+     this signature). The network and privacy paragraphs say what ships: web search on by default, PCC
+     opt-in in the App Store build, no cloud path on the DMG — "the 1.0 build has no cloud path" was
+     written before the rung shipped (first live generation 2026-09-15).
+     Review: Kev + claude-fable-5.1, 2026-10-09 (PR #527 fold) — web search names the lookups it makes
+     (Wikipedia, page fetches), so the clause matches the chat's egress answer. -->
 <!-- Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 (the v1.1.0 pass: the two
      "1.0 build has no cloud path" sentences now describe PCC as the opt-in third crossing,
      consent per conversation per ADR 0007; the MCP count of 18 was re-read off

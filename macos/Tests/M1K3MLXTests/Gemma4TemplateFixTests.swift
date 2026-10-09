@@ -150,9 +150,28 @@ struct Gemma4TemplateFixTests {
         #expect(Gemma4TemplateFix.decision(existingSHA256: twelve.staleSHA256, heal: e4b) == .leaveAlone)
     }
 
+    // E2B (2026-10-09): mlx-community/gemma-4-e2b-it-4bit serves the same stale `2f1b4d75…` and
+    // google/gemma-4-E2B-it publishes byte-identical bytes to E4B's (`0a2c8073…`), so the heal
+    // reuses E4B's vendored resource — no second copy of the same file.
+
+    @Test("E2B heals to Google's published E2B template (byte-identical to E4B's, one resource)")
+    func e2bHealUsesSharedVendoredTemplate() throws {
+        let e2b = try #require(Gemma4TemplateFix.heal(for: "mlx-community/gemma-4-e2b-it-4bit"))
+        let e4b = try #require(Gemma4TemplateFix.heal(for: "mlx-community/gemma-4-e4b-it-4bit"))
+        #expect(e2b.canonicalSHA256 == "0a2c8073c878ab1da004bee933a998606537bbb62016310352c7285c3f01c5b5")
+        #expect(e2b.staleSHA256 == "2f1b4d75d067bae3fe44e676721c7f077d243bc007156cb9c2f8b5836613d082")
+        #expect(try sha256(Gemma4TemplateFix.canonicalTemplate(for: e2b)) == e2b.canonicalSHA256)
+        #expect(try Gemma4TemplateFix.canonicalTemplate(for: e2b) == Gemma4TemplateFix.canonicalTemplate(for: e4b))
+        let twelve = try #require(Gemma4TemplateFix.heal(for: "mlx-community/gemma-4-12B-it-4bit"))
+        #expect(Gemma4TemplateFix.decision(existingSHA256: twelve.staleSHA256, heal: e2b) == .leaveAlone)
+        #expect(Gemma4TemplateFix.decision(existingSHA256: e2b.staleSHA256, heal: e2b) == .replace)
+    }
+
     @Test("only the exact repos heal — the OptiQ conversion already ships the new template")
     func onlyExactRepos() {
         #expect(Gemma4TemplateFix.heal(for: "mlx-community/gemma-4-e4b-it-OptiQ-4bit") == nil)
         #expect(Gemma4TemplateFix.heal(for: "mlx-community/gemma-4-e4b-it-8bit") == nil)
+        #expect(Gemma4TemplateFix.heal(for: "mlx-community/gemma-4-e2b-it-8bit") == nil)
+        #expect(Gemma4TemplateFix.heal(for: "google/gemma-4-E2B-it") == nil)
     }
 }

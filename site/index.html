@@ -51,7 +51,7 @@
     "A local tool-using agent; web search on by default, one switch in Settings to turn it off",
     "MCP server with 18 tools on http://127.0.0.1:4242/mcp (off by default) and the m1k3 command-line client",
     "Brain at Home: serve the Mac's brain to your own devices over the LAN (off by default)",
-    "No account, no telemetry; the 1.0 build has no cloud path at all (an opt-in Private Cloud Compute rung arrives in a later release)"
+    "No account, no telemetry; on-device by default — web search is one switch, and the Mac App Store build's Private Cloud Compute brain is opt-in and off by default (the DMG has no cloud path)"
   ],
   "keywords": "local AI, on-device LLM, private AI for Mac, offline AI assistant, MCP server, Apple Silicon, MLX, Apple Foundation Models, voice assistant, knowledge graph",
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR", "availability": "https://schema.org/InStock" },
@@ -1054,6 +1054,9 @@ tick();
      "nothing leaves". Contact hello@round-tower.ie; the footer names Round Tower Software Studios Ltd.
      Still flagged, not edited: "No cloud attached", "pull the ethernet cable", the "0 network calls"
      demo. Confidence 0.8.
+     Review: Kev + claude-fable-5.1, 2026-10-09 (#479) — the JSON-LD feature line said "the 1.0 build has
+     no cloud path at all (… a later release)"; PCC shipped opt-in in the App Store build, so it now names
+     both exits and the DMG's lack of one. Nothing else touched; dateModified NOT bumped. -->
      Review: Kev + claude-fable-5.1, 2026-10-09 — the v1.1.0 release bump: softwareVersion 1.1.0; the JSON-LD
      brains line names Lil as Qwen3.5 4B and says it reads images (#517). Nothing is live on the store yet
      (1.0.0 in review on build 453). Confidence 0.9. -->

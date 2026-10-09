@@ -89,6 +89,22 @@ python3 tools/eval/scorecard.py \
   ~/Library/Containers/app.m1k3/Data/scorecard.txt --markdown scorecard.md
 ```
 
+### The chat curve (prefill over a scripted chat)
+
+`M1K3_SELFTEST_CHATCURVE=1` (Lil; or `lil`, `big`, a model id) drives a fixed eight-message
+chat through `AgentRAGResponder` with the history accumulating, and reports per message the
+rendered prompt tokens, the tool session's cache reuse (`reuse: X/Y`), the tokens and
+milliseconds actually prefilled, and peak RSS, plus the slope per message. A flat prefill
+slope means the cache carries across turns; a rising one is the cost a cross-turn checkpoint
+would buy back (`docs/GEMMA_1_1_PLAN.md`). Quit the live app first (two MLX processes crawl).
+Run the built app's binary directly, report on stdout:
+
+```bash
+M1K3_SELFTEST=1 M1K3_SELFTEST_CHATCURVE=1 M1K3_SELFTEST_OUT=- \
+  /path/to/M1K3.app/Contents/MacOS/M1K3 > chatcurve.txt
+# the JSON is the block between -----BEGIN/END CHATCURVE JSON----- ; with a file OUT it is <OUT>.json
+```
+
 ### macOS 27: the report comes out over stdout
 
 App-data privacy on macOS 27 closes `~/Library/Containers/app.m1k3` to shells:
@@ -221,6 +237,43 @@ Read these before quoting any number here.
 
 ---
 
+## The tool-router arm (flip a default only on the numbers)
+
+`toolRouterAllTiers`, `toolGroupRouter` and `toolChain` shipped dark (#510). Mini's tool turns got
+5x faster behind the cascade (50 s -> 10 s); nobody has measured Lil or Big. The arm measures each
+flag on both brains and flips only the ones that win. Lil already scores 19/20 tool-use at 5.9 s
+natively (#511), so "Apple's model picks first" has to beat that, not just exist.
+
+```bash
+# Prereqs: a build of THIS branch (--app), AC power, the live M1K3 QUIT, :4242 free.
+macos/tools/eval/router_arm.sh --dry-run --app /path/to/M1K3.app      # the plan; touches nothing
+macos/tools/eval/router_arm.sh --app /path/to/M1K3.app                # 8 cells, one brain per launch
+python3 macos/tools/eval/router_arm_summary.py --date <YYYY-MM-DD>    # the table + verdicts
+```
+
+Eight cells (Lil and Big x four configurations), each tool-use + open-chat at x3 with full answers,
+saved as `docs/evals/<date>-router-arm-<brain>-<config>-x3-ac.json` (an existing cell is skipped, so
+an interrupted evening resumes). The configurations are the SelfTest keys `run_chateval.py` now
+plumbs through `--direct`:
+
+| config | flags | SelfTest keys |
+|---|---|---|
+| `off` | none (the shipping defaults) | none |
+| `routing` | `toolRouterAllTiers` | `CHATEVAL_ROUTER=dispatch` |
+| `head` | routing + `toolGroupRouter` | + `CHATEVAL_ROUTER_HEAD=1` |
+| `chain` | routing + `toolChain` | + `CHATEVAL_ROUTER_CHAIN=1` |
+
+The summariser tabulates pass rate by kind (trials and fixtures), the median turn, and a verdict per
+flag against `off`: **flip iff** accuracy is at least `off`'s within one fixture (in both kinds) **and**
+the median turn is faster; otherwise `keep off (<which test>)`. A fixture passes on a majority of its
+repeats. Notes: the verdict is against `off`, not against `routing`, so a `head` or `chain` "flip"
+means "better than today", and Kev should read the `routing` row beside it before flipping a flag
+that only works on top of routing. The two-tool `tool-chain-*` fixtures (`alsoCallTools`, #512) are
+shown in their own `chain fx` column and stay OUT of every verdict: each stub's canned output tells a
+native loop it is done ("no further search needed"), so `off` can only fail them while a dispatch
+chain runs both tools up front — a win by construction, not a measurement, until the stubs are
+chain-aware (follow-up). Read that column by eye for `toolChain`.
+
 ## Results
 
 Published scorecards live alongside this file as `BENCHMARK-RESULTS.md`, each
@@ -228,6 +281,15 @@ stamped with the date, the hardware, the app commit, and the `mlx-swift-lm`
 revision it ran against. Generate your own with the steps above — the numbers
 here are one machine's, and the point of publishing the method is that you do
 not have to take them on trust.
+
+The app commit comes from `GitCommitSHA` in the built Info.plist, stamped by the
+`Stamp GitCommitSHA` post-build phase in `project.yml` (`tools/ci/git_commit_stamp.py`:
+`$CI_COMMIT` on Xcode Cloud, else the short HEAD, `-dirty` if the tree has changes,
+`unknown` without git). `run_chateval.py` reads it, so `--commit` is only needed for
+a build that predates the phase. A `-dirty` stamp means the scorecard is not
+reproducible from that commit alone (untracked files count, so build artifacts
+must be gitignored — `macos/.dd/` is). The CI stamp is 8 characters and the
+local one is git's short hash (7+): prefix-match, never compare for equality.
 
 ---
 
@@ -238,3 +300,8 @@ that matters and is deliberately unflattering). Prior: Unknown.*
 stdout route, the PCC column and the two reference runners, each driven on the
 day it was written (Bench-Max day); the container route above is kept for
 macOS 26 readers.*
+*Review: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.7 — the tool-router arm
+section (#510/#512): eight cells, the flip rule, and the chain fixtures kept out of the
+verdict until the stubs are chain-aware.*
+*Review: Kev + claude-fable-5.1, 2026-10-09 (#522) — the GitCommitSHA stamp
+paragraph: where the app commit comes from and what `-dirty` means.*

@@ -35,6 +35,8 @@
 //  on M1K3Inference — the equality is pinned by ModelThinkingMarkerPinTests.)
 //  Prior: Unknown
 //
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — caption memory: sweep walks KnowledgeKind.launchSweepKinds; Photos
+//  are model-written text.
 
 import Foundation
 
@@ -75,7 +77,7 @@ public extension KnowledgeStore {
     /// would (correctly, and uselessly) decline to fire.
     func quarantineModelThinking() throws -> [UUID] {
         var moved: [UUID] = []
-        for kind in [KnowledgeKind.document, .call, .note, .memory] {
+        for kind in KnowledgeKind.launchSweepKinds {
             for item in try allItems(kind: kind, limit: 100_000) {
                 let poisoned = try chunks(forItem: item.id)
                     .contains { ModelThinkingQuarantine.isModelThinking($0.content) }

@@ -7,6 +7,8 @@ outside the sandbox, another session's debug build killed mid-run.
 Signed: Kev + claude-opus-5, 2026-09-12, Confidence 0.8 (pure parts pinned
 here; the launch/quit glue is driven by hand on the real app).
 Prior: none (new file).
+Review: Kev + claude-fable-5.1, 2026-10-09 — the router arm's keys (`--router dispatch`, head, chain) pinned.
+Review: Kev + claude-fable-5.1, 2026-10-09 — pins the Lil RAM-cap flag (5 GB own peak, lil only, inclusive).
 """
 
 import json
@@ -245,6 +247,29 @@ def test_summary_leaves_out_not_applicable_trials(tmp_path):
     assert "1 n/a" in summary
 
 
+def test_summary_has_a_per_kind_table_with_a_content_column(tmp_path):
+    # Stream B step 5 (2026-10-09): "code-gen 24/30, grounded-Q 18/24" were hand counts off the
+    # JSON, and the latency-only split was hand-counted on top. One table, four columns.
+    ok = {"fixtureID": "a", "kind": "open-chat", "latencyMS": 9, "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    slow = {"fixtureID": "b", "kind": "code-gen", "latencyMS": 200000,
+            "checks": [{"name": "non-empty", "outcome": "pass"}, {"name": "responsive", "outcome": "fail"}]}
+    wrong = {"fixtureID": "c", "kind": "code-gen", "latencyMS": 9,
+             "checks": [{"name": "contains expected", "outcome": "fail"}, {"name": "responsive", "outcome": "fail"}]}
+    right = {"fixtureID": "d", "kind": "code-gen", "latencyMS": 9, "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    na = {"fixtureID": "e", "kind": "vision", "latencyMS": 0, "checks": [{"name": "applicable", "outcome": "skip"}]}
+    rows = rc.kind_rows([ok, slow, wrong, right, na])
+    assert rows == [
+        {"kind": "code-gen", "passed": 1, "total": 3, "latency_only": 1, "content": 2},
+        {"kind": "open-chat", "passed": 1, "total": 1, "latency_only": 0, "content": 1},
+    ], "kinds sorted, n/a trials left out, content = passed + latency-only"
+    doc = tmp_path / "run.json"
+    doc.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok, slow, wrong, right, na]}], "provenance": {}}))
+    table = rc.kind_table(rows)
+    assert table.splitlines()[0].split() == ["kind", "passed", "latency-only", "content"]
+    assert "code-gen" in table and "1/3" in table and "2/3" in table
+    assert table in rc.summarise(doc), "the table rides in the summary under the run line"
+
+
 def test_summary_counts_latency_only_fails_as_content_passes(tmp_path):
     # 2026-10-07: a display-sleep stall turned 42 of E4B's fails into latency-ceiling fails with
     # right answers — the summary must say how many, and what the content score is.
@@ -260,7 +285,9 @@ def test_summary_counts_latency_only_fails_as_content_passes(tmp_path):
     assert "1 latency-only (content 2/3)" in first
     clean = tmp_path / "clean.json"
     clean.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok]}], "provenance": {}}))
-    assert "latency-only" not in rc.summarise(clean)
+    # The run line's suffix only appears when there is something to say; the per-kind table's
+    # latency-only column is always there (that is what makes it a column).
+    assert "latency-only (content" not in rc.summarise(clean)
 
 
 def test_thinking_mode_rides_the_trigger_only_when_set():
@@ -307,3 +334,58 @@ def test_summary_omits_own_peak_when_peak_is_below_resident(tmp_path):
                                          "residentMemoryMBAtStart": 900}], "provenance": {}}))
     summary = rc.summarise(doc)
     assert "own" not in summary and "peak 0 MB" in summary
+
+
+# ── the router arm (2026-10-09): the app's own route, with the head and chains as flags ──
+
+def _trig(**over):
+    return rc.build_trigger(base_opts(**over), container=CONTAINER, power_source="ac",
+                            powermode=None, commit=None, mlx_rev=None)
+
+
+def test_router_keys_are_absent_unless_asked():
+    trig = _trig()
+    assert not [k for k in trig if "ROUTER" in k]
+
+
+def test_router_dispatch_rides_the_trigger_with_head_and_chain_only_when_set():
+    assert _trig(router="dispatch")["M1K3_SELFTEST_CHATEVAL_ROUTER"] == "dispatch"
+    plain = _trig(router="dispatch")
+    assert "M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD" not in plain and "M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN" not in plain
+    both = _trig(router="dispatch", router_head=True, router_chain=True)
+    assert both["M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD"] == "1"
+    assert both["M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN"] == "1"
+
+
+def test_router_head_or_chain_without_dispatch_is_refused():
+    # The app reads them only under _ROUTER=dispatch; a silent no-op arm would read as "no gain".
+    for over in ({"router_head": True}, {"router_chain": True}):
+        with pytest.raises(ValueError):
+            _trig(**over)
+
+
+def test_unknown_router_mode_is_refused():
+    with pytest.raises(ValueError):
+        _trig(router="turbo")
+
+
+def test_summary_flags_a_lil_run_over_the_own_peak_cap(tmp_path):
+    # Signed 2026-10-09: Lil's cap is 5 GB OWN peak (BrainTier.lilOwnPeakCapGB) on a 16 GB Mac —
+    # the incumbent and Qwen3.5 both measured 4.8 GB; gemma-4 E4B's 10.3 GB is what it rejects.
+    ok = {"fixtureID": "chat-x", "kind": "open-chat", "latencyMS": 9, "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    over = tmp_path / "over.json"
+    over.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok], "peakMemoryMB": 11000,
+                                          "residentMemoryMBAtStart": 453}], "provenance": {}}))
+    summary = rc.summarise(over)
+    assert "own 10547 MB" in summary
+    assert "OVER the Lil RAM cap (5 GB own peak)" in summary
+    under = tmp_path / "under.json"
+    under.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok], "peakMemoryMB": 5368,
+                                           "residentMemoryMBAtStart": 453}], "provenance": {}}))
+    assert "RAM cap" not in rc.summarise(under), "4.8 GB own peak is inside the cap"
+    # The rule itself: mebibytes, inclusive at the cap, Lil only (Big's 7.4 GB has its own floor).
+    assert rc.LIL_OWN_PEAK_CAP_GB == 5
+    assert rc.over_lil_own_peak_cap("lil", 5120) is False
+    assert rc.over_lil_own_peak_cap("lil", 5121) is True
+    assert rc.over_lil_own_peak_cap("big", 7402) is False
+    assert rc.over_lil_own_peak_cap("lil", None) is False
