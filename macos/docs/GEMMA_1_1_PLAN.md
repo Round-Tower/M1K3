@@ -460,6 +460,12 @@ entirely**, so the clash goes away with it.
 
 Still open: E4B's 10.3 GB own peak — the stall explains the latency, not obviously the RAM.
 
+**Display-off A/B (2026-10-09): built, NOT RUN.** `macos/tools/perf/display_off_ab.sh` runs one long
+CHATEVAL twice — hold on, then `-generationActivity NO` — forcing the display off 30 s in, and prints
+decode tok/s before/after for both. It decides whether App Nap is the mechanism (A holds, B collapses),
+or display-off throttling is (both collapse). Owes: Kev quits the live app, AC power, hands off the
+keyboard; `--dry-run` first. Until then fix-list item 2 stays UNVERIFIED.
+
 Fix list, in order:
 1. **Eval:** `caffeinate -dis` for every overnight run (the runner scripts), and log display state
    into the scorecard provenance. Re-measure gemma latency and RAM after.
