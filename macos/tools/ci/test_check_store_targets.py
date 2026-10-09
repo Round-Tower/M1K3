@@ -186,11 +186,10 @@ def test_pcc_in_developer_id_entitlements_is_flagged():
     assert "private-cloud-compute" in leaks[0]
 
 
-def test_declared_age_range_in_developer_id_entitlements_is_flagged():
-    leaks = m.profile_only_leaks({"com.apple.developer.declared-age-range": True})
-    assert len(leaks) == 1
-    assert "declared-age-range" in leaks[0]
-
+# 2026-10-09: the Developer ID lane carries a profile now (#518), and that profile grants Declared
+# Age Range, so Content Controls works on DMG builds too. PCC is still not in it.
+def test_declared_age_range_is_allowed_on_the_developer_id_lane_now_it_has_a_profile():
+    assert m.profile_only_leaks({"com.apple.developer.declared-age-range": True}) == []
 
 
 # 2026-10-08/09: macOS 27 routes every keychain call to the data-protection keychain, which
@@ -213,17 +212,25 @@ def test_an_app_group_is_not_a_keychain_identity_without_its_profile():
     gaps = m.developer_id_keychain_gaps({"com.apple.security.application-groups": ["76DJH43A4P.app.m1k3"]})
     assert len(gaps) == 1
 
+
 # 2026-10-01: build 375 shipped Content Controls with no declared-age-range
 # entitlement, so "Set up" did nothing on the Mac — the path App Review is sent down.
 def test_store_lane_without_declared_age_range_is_flagged():
-    missing = m.store_lane_gaps("M1K3-MAS.entitlements", {"com.apple.security.app-sandbox": True})
+    missing = m.lane_gaps("M1K3-MAS.entitlements", {"com.apple.security.app-sandbox": True})
     assert len(missing) == 1
     assert "declared-age-range" in missing[0]
     assert "M1K3-MAS.entitlements" in missing[0]
 
 
 def test_store_lane_with_declared_age_range_passes():
-    assert m.store_lane_gaps("M1K3iOS.entitlements", {"com.apple.developer.declared-age-range": True}) == []
+    assert m.lane_gaps("M1K3iOS.entitlements", {"com.apple.developer.declared-age-range": True}) == []
+
+
+def test_the_developer_id_lane_must_carry_declared_age_range_too():
+    # Without it, DMG "Set up" says Apple's age sharing "isn't available here" (the build-375 trap).
+    assert "M1K3App/M1K3.entitlements" in m.LANE_ENTITLEMENTS
+    missing = m.lane_gaps("M1K3.entitlements", {"com.apple.security.app-sandbox": True})
+    assert len(missing) == 1 and "declared-age-range" in missing[0]
 
 
 def test_archs_arm64_passes():
