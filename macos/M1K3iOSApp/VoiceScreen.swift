@@ -33,10 +33,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (2) — the face is full-bleed like the Mac hero (no 340-pt box or 44-pt
 //  inset); tap still wakes/barges in; caption and hint float on glass; the face pauses under Low Power. The waveform
 //  (None) branch is unchanged, centred. ChatScreen unmounts its backdrop while this cover is up (one RealityView).
-//  Review fold, same day: the hero pauses on the chat backdrop's policy (`chatBackdropTreatment`: thinking /
-//  generating, Reduce Motion, Low Power), not Low Power alone — a full-bleed RealityView at 60 fps beside MLX
-//  decode on a phone is the drawable cost the challenger named. The creature surface ignores `paused` today
-//  (AvatarSurface's logged follow-up), so this bites the pixel face first.
+//  Review fold, same day (Kev's ruling): the hero must NOT freeze while M1K3 thinks or speaks — it is what the
+//  user is talking to, and the Mac hero never pauses. `VoiceHeroPausePolicy`: Low Power or Reduce Motion only,
+//  deliberately not the chat backdrop's recede. The creature surface ignores `paused` today (AvatarSurface's
+//  logged follow-up), so this bites the pixel face first.
 //
 
 import M1K3Avatar
@@ -121,10 +121,9 @@ struct VoiceScreen: View {
                     .symbolEffect(.variableColor.iterative, isActive: isLive)
                     .frame(maxHeight: 320)
             } else {
-                // Full-bleed, like the Mac hero. Paused on the chat backdrop's policy
-                // (thinking / generating, Reduce Motion, Low Power — one crisp frame):
-                // the voice hero shares the GPU with MLX, ASR and TTS, and a full-bleed
-                // scene at 60 fps beside decode is the cost that shows on a phone.
+                // Full-bleed, like the Mac hero. Never paused by the turn — the face
+                // is what the user is talking to — only by Low Power (the GPU is
+                // shared with MLX, ASR and TTS) or Reduce Motion (VoiceHeroPausePolicy).
                 AvatarSurface(controller: core.avatar, paused: heroPaused)
             }
         }
@@ -136,14 +135,14 @@ struct VoiceScreen: View {
         .accessibilityHint("Double-tap to start talking, or to interrupt while M1K3 is speaking.")
     }
 
-    /// The hero's clock stop: the same verdict ChatBackdrop renders from
-    /// (ChatBackdropTreatment, package-tested). Low Power is read at render like
-    /// there — activity and loop-state changes re-render and re-read it.
+    /// The hero's clock stop (VoiceHeroPausePolicy, package-tested): Low Power or
+    /// Reduce Motion, never the turn. Low Power is read at render like ChatBackdrop
+    /// does — state changes re-render and re-read it.
     private var heroPaused: Bool {
-        !core.avatar.state.activity.chatBackdropTreatment(
-            reduceMotion: reduceMotion,
-            lowPower: ProcessInfo.processInfo.isLowPowerModeEnabled
-        ).animatesMotion
+        VoiceHeroPausePolicy.paused(
+            lowPower: ProcessInfo.processInfo.isLowPowerModeEnabled,
+            reduceMotion: reduceMotion
+        )
     }
 
     /// Mic or speech actively moving — drives the waveform's variable-color pulse.

@@ -59,10 +59,11 @@ struct VoiceModeFloorTests {
         #expect(!code.contains(".padding(.horizontal, 44)"), "the face is inset again")
     }
 
-    @Test("the phone voice hero pauses like the chat backdrop (one policy, not Low Power alone)")
-    func iosVoiceHeroPausesLikeTheBackdrop() throws {
+    @Test("the phone voice hero pauses only for Low Power / Reduce Motion — never for the turn")
+    func iosVoiceHeroNeverPausesForTheTurn() throws {
         let code = try Self.code("M1K3iOSApp/VoiceScreen.swift")
-        #expect(code.contains("chatBackdropTreatment("), "the hero must take the shared pause policy")
+        #expect(code.contains("VoiceHeroPausePolicy.paused("), "the hero must take VoiceHeroPausePolicy")
+        #expect(!code.contains("chatBackdropTreatment("), "the hero recedes with the chat backdrop again")
     }
 
     @Test("ChatScreen hands the one RealityView to the voice cover")
