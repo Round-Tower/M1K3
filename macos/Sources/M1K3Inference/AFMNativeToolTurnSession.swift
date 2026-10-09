@@ -34,6 +34,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — an image on the latest user turn gets the honest vision
 //  decline (AFMToolPrompt.visionDecline) instead of a confabulation; the live probe says the app's prompt
 //  shape, not the file hand-off, defeats AFM vision. Confidence 0.7.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (2) — Mini SEES: an image turn runs the neutral, tool-free
+//  shape (AFMToolPrompt.visionTurn — persona and tools both defeat AFM vision, seven probe arms); the
+//  decline is the fallback when that turn still fails. Live-probed, not unit-tested here. Confidence 0.75.
 
 #if compiler(>=6.2)
     import Foundation
@@ -93,17 +96,19 @@
             // Empty tool list: the text catalogue is omitted because the FM
             // session already carries structured definitions via `tools:`.
             // Rendering both doubled the token count past Mini's 4096 window.
-            if let decline = AFMToolPrompt.visionDecline(from: snapshot) {
-                transcript.withLock { $0.recordGenerated(.text(decline)) }
-                onToken(decline)
-                return .text(decline)
-            }
-            let body = AFMToolPrompt.render(messages: snapshot, tools: [])
+            //
+            // An image on the latest user turn takes the neutral, tool-free shape
+            // (AFMToolPrompt.visionTurn): the persona trips the guardrail and any
+            // tool palette — or tool talk in the body — makes Mini call a tool
+            // instead of looking (the 2026-10-09 probe). Its body has no tool paragraph.
+            let vision = AFMToolPrompt.visionTurn(from: snapshot)
+            let body = vision?.body ?? AFMToolPrompt.render(messages: snapshot, tools: [])
             let imageURLs = AFMToolPrompt.imageURLs(from: snapshot)
-            let standing = AFMToolPrompt.systemInstructions(from: snapshot) ?? instructions
+            let standing = vision?.instructions
+                ?? AFMToolPrompt.systemInstructions(from: snapshot) ?? instructions
 
             let session = LanguageModelSession(
-                tools: tools,
+                tools: vision == nil ? tools : [],
                 instructions: standing
             )
 
@@ -167,9 +172,21 @@
             } catch {
                 let described = String(describing: error)
                 let preview = LogPreview.preview(described, max: 200)
+                let failure = AFMFailure.classify(error: error)
                 Self.log.error(
-                    "afm native tool session failed: \(preview, privacy: .public)"
+                    """
+                    afm native tool session failed: \(failure.rawValue, privacy: .public) — \
+                    \(preview, privacy: .public)
+                    """
                 )
+                // An image turn that still fails (the guardrail firing on the picture
+                // itself, or anything else) gets the honest decline — never a guess,
+                // never an empty bubble. Text turns keep the empty conclusion.
+                if vision != nil, let decline = AFMToolPrompt.visionDecline(from: snapshot) {
+                    transcript.withLock { $0.recordGenerated(.text(decline)) }
+                    onToken(decline)
+                    return .text(decline)
+                }
                 return .text("")
             }
         }

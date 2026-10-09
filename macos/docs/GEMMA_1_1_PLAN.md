@@ -229,6 +229,9 @@ our pin (the decoder never emits `.reasoning`) with its inverse pinned in step 2
 step 1's honest decline (the prompt shape trips AFM's guardrail, not the file hand-off); #509's cheap
 half done (per-step RAM snapshot, `seedIsExact`, the "flat except image turns" line). Confidence 0.85 —
 every tick is code- or test-pinned; the per-step RAM curve is still verify-by-launch.
+Review: Kev + claude-fable-5.1, 2026-10-09 (2) — Mini sees: the seven-arm bisect found the shape AFM vision
+accepts (neutral, tool-free, steer) and it ships as `AFMToolPrompt.visionTurn`; the decline is the fallback.
+Confidence 0.75 — one fixture on one device reads cleanly; the Mini vision baseline re-run is the proof.
 Review: Kev + claude-opus-5-5, 2026-10-08 00:40 — #513 review folded: the probe and AFM results are archived
 under docs/evals; the unified-log figures are labelled unarchived; the median convention is stated; "matches"
 now reads "on aggregate", with the incumbent's interview 4/15 explained (exemplar echo, real behaviour).
@@ -647,8 +650,19 @@ not AFM's ceiling.
       file hand-off (this branch, step 1, `04ef7b90`):** the app-shaped arm of `AFMVisionLiveTests`
       (persona + 16 tools + rendered body + `Attachment(imageURL:)`, unsandboxed) hits the guardrail
       ("May contain unsafe content") with persona or tools present and reads the receipt bare. No pixel
-      decode was built; `AFMToolPrompt.visionDecline(from:)` makes Mini decline an attached image
-      honestly instead of confabulating. Open: a Mini prompt shape AFM vision accepts (or Lil sees).
+      decode was built; `AFMToolPrompt.visionDecline(from:)` made Mini decline an attached image
+      honestly instead of confabulating.
+      **Mini SEES (2026-10-09, later, this branch):** the seven-arm bisect of the same probe — the
+      persona trips the guardrail; ANY tool palette (generic instructions, a steer, a hard "do not call
+      a tool", even `toolCallingMode: .disallowed`) makes Mini call `read_document` / `search_knowledge`
+      instead of looking; **"neutral instructions, no tools, steer" reads €23.40.** Shipped as
+      `AFMToolPrompt.visionTurn(from:)`: an image turn on Mini runs persona-free and tool-free with a
+      body that is the conversation plus the steer (render's closing tool paragraph made the tool-free
+      arm answer "Call the calculator tool with the amount €23.40"; without it: `"€23.40"`). Both AFM
+      paths (`AFMNativeToolTurnSession`, `continueToolTurn`) take it; the decline is the fallback when
+      that turn still fails. Trades, named: the image turn loses M1K3's voice and cannot call a tool
+      (the next text turn can). One fixture, one device — the 16-fixture vision baseline on Mini is the
+      measurement owed (was 1/16).
 - [~] (history) **Mini vision — investigation started (2026-10-07):** the attach path IS compiled in (the
       `#if compiler(>=6.4)` gate; local toolchain Swift 6.4 / Xcode 27), so the baseline really sent
       `Attachment(imageURL:)`. Suspects: (1) the out-of-process model can't read the app's file URL in

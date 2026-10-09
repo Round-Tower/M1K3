@@ -90,29 +90,61 @@ struct AFMToolMappingTests {
     }
 }
 
-/// Mini cannot read images in the app's prompt shape (live probe 2026-10-09: persona + tools +
-/// rendered body → a guardrail error or a tool call, never the receipt total; bare session reads
-/// it). Until a shape that works is proven, an attached image gets an honest decline, not a guess.
-struct AFMVisionDeclineTests {
+/// The image turn on Mini (2026-10-09 live probe, AFMVisionLiveTests): the persona trips the guardrail
+/// and any tool palette makes Mini call a tool instead of looking, so an image turn runs the NEUTRAL,
+/// tool-free shape; the honest decline is the fallback when that turn still fails.
+struct AFMVisionTurnTests {
     private let image = ImageAttachment(url: URL(fileURLWithPath: "/tmp/receipt.png"))
 
-    @Test("a latest user turn with images declines, naming the count")
-    func declinesWithImages() {
-        let text = AFMToolPrompt.visionDecline(from: [.system("persona"), .user("total?", images: [image, image])])
-        #expect(text?.contains("can't see") == true)
-        #expect(text?.contains("2") == true)
+    @Test("a latest user turn with images takes the neutral shape: no persona, no M1K3, a steer")
+    func imageTurnIsNeutral() throws {
+        let turn = try #require(AFMToolPrompt.visionTurn(from: [
+            .system(M1K3Persona.systemPrompt(variant: nil)), .user("total?", images: [image]),
+        ]))
+        #expect(!turn.instructions.contains(M1K3Persona.standingPersonaAnchor))
+        #expect(!turn.instructions.contains("M1K3"))
+        #expect(turn.instructions.contains("image"))
+        #expect(turn.instructions.count < 160, "neutral instructions stay a sentence or two")
+        // The body: the conversation, then the steer — and no tool paragraph (with one, a
+        // tool-free Mini still answered "Call the calculator tool with the amount €23.40").
+        #expect(turn.body.contains("Conversation:\nUser: total?"))
+        #expect(turn.body.hasSuffix(AFMToolPrompt.visionSteer))
+        #expect(!turn.body.contains("Decide the single next step"))
+        #expect(!turn.body.contains("tool"))
     }
 
-    @Test("no images means no decline")
-    func noDeclineWithoutImages() {
-        #expect(AFMToolPrompt.visionDecline(from: [.user("hi", images: [])]) == nil)
+    @Test("the image turn's conversation is render's own: earlier turns and tool results ride along")
+    func bodyKeepsTheConversation() throws {
+        let messages: [ToolMessage] = [
+            .user("what's here?", images: []), .assistant(text: "Notes.", toolCalls: []),
+            .toolResult(name: "recall", output: "a café"), .user("and the total?", images: [image]),
+        ]
+        let turn = try #require(AFMToolPrompt.visionTurn(from: messages))
+        let rendered = AFMToolPrompt.render(messages: messages, tools: [])
+        #expect(rendered.hasPrefix(turn.body.replacingOccurrences(of: "\n\n" + AFMToolPrompt.visionSteer, with: "")))
+        #expect(turn.body.contains("Result from recall: a café"))
     }
 
-    @Test("only the LATEST user turn counts, an old image does not poison later text turns")
+    @Test("no images means no neutral shape — the persona and the tools stay")
+    func noImagesKeepsThePersona() {
+        #expect(AFMToolPrompt.visionTurn(from: [.system("persona"), .user("hi", images: [])]) == nil)
+        #expect(AFMToolPrompt.visionTurn(from: [.system("persona")]) == nil)
+    }
+
+    @Test("only the LATEST user turn counts: an old image does not strip a later text turn's persona")
     func onlyLatestTurn() {
         let messages: [ToolMessage] = [
             .user("look", images: [image]), .assistant(text: "ok", toolCalls: []), .user("thanks", images: []),
         ]
+        #expect(AFMToolPrompt.visionTurn(from: messages) == nil)
         #expect(AFMToolPrompt.visionDecline(from: messages) == nil)
+    }
+
+    @Test("the fallback decline names the count and never guesses")
+    func declineNamesTheCount() {
+        let text = AFMToolPrompt.visionDecline(from: [.system("persona"), .user("total?", images: [image, image])])
+        #expect(text?.contains("couldn't read") == true)
+        #expect(text?.contains("2 images") == true)
+        #expect(AFMToolPrompt.visionDecline(from: [.user("hi", images: [])]) == nil)
     }
 }
