@@ -24,6 +24,22 @@
 //  takes a long quiet spell (EndpointCadence.emptyListensBeforeParking), not
 //  a few seconds. And the bubble timeline no longer wipes itself at every
 //  sentence boundary (the per-chunk nil hop); it resets on a new answer.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — the floor is the shared `WindowField`
+//  (the window's own `.background` on iOS; visionOS keeps its deep gradient — the
+//  challenger's NO-GO on `Color.clear` there), matching ChatScreen; the screen's own
+//  navy gradient is gone. Still forced dark for 1.1, so the change is near-invisible
+//  until light mode is allowed. Pinned by VoiceModeFloorTests + WindowFieldTests
+//  (source scans). Confidence 0.7 (verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (2) — the face is full-bleed like the Mac hero (no 340-pt box or 44-pt
+//  inset); tap still wakes/barges in; caption and hint float on glass; the face pauses under Low Power. The waveform
+//  (None) branch is unchanged, centred. ChatScreen unmounts its backdrop while this cover is up (one RealityView).
+//  Review fold, same day (Kev's ruling): the hero must NOT freeze while M1K3 thinks or speaks — it is what the
+//  user is talking to, and the Mac hero never pauses. `VoiceHeroPausePolicy`: Low Power or Reduce Motion only,
+//  deliberately not the chat backdrop's recede. The creature surface ignores `paused` today (AvatarSurface's
+//  logged follow-up), so this bites the pixel face first.
+//  Review: Kev + claude-fable-5.1, 2026-10-09 (PR #525 fold) — Low Power is observed (`@State lowPower` fed by
+//  `NSProcessInfoPowerStateDidChange`, hopped to the main run loop), not read at render: a toggle mid-session
+//  triggered no render, so the hero kept its old clock. Pinned in VoiceModeFloorTests. Confidence 0.75.
 //
 
 import M1K3Avatar
@@ -33,7 +49,11 @@ import SwiftUI
 
 struct VoiceScreen: View {
     @Environment(AppCore.self) private var core
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(CompanionDefaults.companionKey) private var companion = ""
+    /// Low Power Mode, observed: a toggle mid-session triggers no render on its
+    /// own, so a render-time read would miss it until something else moved.
+    @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
 
     private var state: VoiceLoopState {
         core.voiceLoop?.state ?? .ended
@@ -41,17 +61,19 @@ struct VoiceScreen: View {
 
     var body: some View {
         ZStack {
-            LinearGradient(
-                colors: [Color(red: 0.05, green: 0.05, blue: 0.11), .black],
-                startPoint: .top, endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            // The window's own field (Kev, 2026-10-09), not a private navy: the same
+            // floor as the chat, so the hero sits on one surface (visionOS keeps
+            // its gradient — see WindowField).
+            WindowField()
+                .ignoresSafeArea()
+
+            // The hero fills the screen like the Mac's; caption and controls float over it.
+            face
+                .ignoresSafeArea()
 
             VStack(spacing: 28) {
-                Spacer(minLength: 12)
-                face
-                caption
                 Spacer()
+                caption
                 controls
             }
             .padding(.bottom, 36)
@@ -90,6 +112,13 @@ struct VoiceScreen: View {
         .onChange(of: state) { _, newState in
             if case .awaitingAnswer = newState { spokenBubbles.removeAll() }
         }
+        // The power-state notification arrives off the main thread.
+        .onReceive(
+            NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)
+                .receive(on: RunLoop.main)
+        ) { _ in
+            lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
+        }
     }
 
     // MARK: - The face
@@ -105,17 +134,29 @@ struct VoiceScreen: View {
                     .symbolEffect(.variableColor.iterative, isActive: isLive)
                     .frame(maxHeight: 320)
             } else {
-                AvatarSurface(controller: core.avatar)
-                    .frame(maxHeight: 340)
-                    .padding(.horizontal, 44)
+                // Full-bleed, like the Mac hero. Never paused by the turn — the face
+                // is what the user is talking to — only by Low Power (the GPU is
+                // shared with MLX, ASR and TTS) or Reduce Motion (VoiceHeroPausePolicy).
+                AvatarSurface(controller: core.avatar, paused: heroPaused)
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .contentShape(.rect)
         .onTapGesture { primaryAction() }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityStateLabel)
         .accessibilityHint("Double-tap to start talking, or to interrupt while M1K3 is speaking.")
+    }
+
+    /// The hero's clock stop (VoiceHeroPausePolicy, package-tested): Low Power or
+    /// Reduce Motion, never the turn. Low Power is the observed `lowPower` state
+    /// (NSProcessInfoPowerStateDidChange), so a toggle mid-session pauses or
+    /// resumes the face at once — nothing else re-renders this screen on its own.
+    private var heroPaused: Bool {
+        VoiceHeroPausePolicy.paused(
+            lowPower: lowPower,
+            reduceMotion: reduceMotion
+        )
     }
 
     /// Mic or speech actively moving — drives the waveform's variable-color pulse.
@@ -138,6 +179,10 @@ struct VoiceScreen: View {
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.center)
                     .lineLimit(4)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 12)
+                    .m1k3Glass(cornerRadius: 18)
+                    .opacity(captionText.isEmpty ? 0 : 1)
                     .animation(.easeInOut(duration: 0.15), value: captionText)
             }
             if let error = core.voiceLoop?.lastError {
@@ -151,7 +196,10 @@ struct VoiceScreen: View {
             if case .listening = state {
                 Text(PoliteEndpoint.uiHint)
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .m1k3Glass(cornerRadius: 14)
             }
         }
         .padding(.horizontal, 32)

@@ -14,6 +14,8 @@
 //  package-TDD'd; the full-bleed look, legibility, and bloom/recede feel on
 //  device are verify-by-launch). Prior: none (new file, patterned on the Mac's
 //  AvatarChatBackground.swift).
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — ReadingScrim now takes its tone and stops from the shared
+//  `BackdropInk` (the Mac's, verbatim) instead of fixed black; identical under forced dark.
 //
 
 import M1K3Avatar
@@ -70,17 +72,23 @@ struct ChatBackdrop: View {
     }
 }
 
-/// The Mac's ReadingScrim stops verbatim — slightly darker at the top (nav bar)
-/// and bottom (input bar + the newest, streaming turn), near-clear through the
-/// middle — so text reads over a bright avatar without curtaining it.
+/// The Mac's ReadingScrim verbatim: a gentle vertical scrim, stronger at the top
+/// (nav bar) and bottom (input bar + the newest, streaming turn), near-clear through
+/// the middle. Darkens on dark, lightens on light (`BackdropInk`) — inert while the
+/// app is forced dark, correct the day light is allowed. Non-interactive.
 private struct ReadingScrim: View {
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
+        let ink = BackdropInk(isDark: colorScheme == .dark)
+        let tone: Color = ink.scrimIsDark ? .black : .white
+        let scrim = ink.scrim
         LinearGradient(
             stops: [
-                .init(color: .black.opacity(0.18), location: 0.0),
-                .init(color: .black.opacity(0.04), location: 0.28),
-                .init(color: .black.opacity(0.04), location: 0.72),
-                .init(color: .black.opacity(0.22), location: 1.0),
+                .init(color: tone.opacity(scrim.top), location: 0.0),
+                .init(color: tone.opacity(scrim.upper), location: 0.28),
+                .init(color: tone.opacity(scrim.lower), location: 0.72),
+                .init(color: tone.opacity(scrim.bottom), location: 1.0),
             ],
             startPoint: .top,
             endPoint: .bottom

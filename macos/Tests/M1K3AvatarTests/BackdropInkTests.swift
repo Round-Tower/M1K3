@@ -33,3 +33,24 @@ struct BackdropInkTests {
         #expect(scrim.bottom > scrim.top && scrim.bottom > scrim.upper && scrim.bottom > scrim.lower)
     }
 }
+
+/// The thinking rain (voice mode's phosphor text) was tuned on the old near-black
+/// gradient: pale-green tints at half strength vanish on light glass. Dark keeps
+/// today's 0.5 cap and un-darkened tints; light gets a stronger, darker ink.
+struct BackdropInkRainTests {
+    @Test("dark rain is byte-identical to the tuned look: 0.5 cap, tints untouched")
+    func darkRainUnchanged() {
+        let rain = BackdropInk(isDark: true).rain
+        #expect(rain.opacityScale == 0.5)
+        #expect(rain.tintDarkening == 0)
+    }
+
+    @Test("light rain lays down more ink than dark, and darkens the pale tints")
+    func lightRainIsStrongerAndDarker() {
+        let dark = BackdropInk(isDark: true).rain
+        let light = BackdropInk(isDark: false).rain
+        #expect(light.opacityScale > dark.opacityScale)
+        #expect(light.opacityScale <= 1)
+        #expect(light.tintDarkening > 0 && light.tintDarkening < 1)
+    }
+}

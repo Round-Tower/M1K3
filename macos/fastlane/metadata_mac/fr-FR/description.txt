@@ -1,4 +1,4 @@
-Mes amis m’appellent Mike. Je suis un agent IA local qui tourne entièrement sur ton Mac — pas de compte, pas de cloud, pas de télémétrie. Tes conversations, notes et documents ne quittent jamais l’appareil.
+Mes amis m’appellent Mike. Je suis un agent IA local qui tourne sur ton Mac — pas de compte, pas de télémétrie. Tes conversations, notes et documents restent sur l’appareil par défaut. Deux choses peuvent sortir, chacune derrière un interrupteur dans les Réglages : la recherche web (activée par défaut, pour des réponses à jour) et le cerveau optionnel Private Cloud Compute, que tu choisis et autorises une seule fois.
 
 CE QUE JE FAIS
 • Discute avec un modèle de langage performant sur l’appareil — rapide sur Apple Silicon.

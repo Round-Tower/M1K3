@@ -1,4 +1,4 @@
-Meus amigos me chamam de Mike. Sou um agente de IA local que roda inteiramente no seu Mac — sem conta, sem nuvem, sem telemetria. Suas conversas, notas e documentos nunca saem do dispositivo.
+Meus amigos me chamam de Mike. Sou um agente de IA local que roda no seu Mac — sem conta, sem telemetria. Suas conversas, notas e documentos ficam no aparelho por padrão. Duas coisas podem sair, cada uma com seu interruptor nos Ajustes: a busca na web (ligada por padrão, para respostas atuais) e o cérebro opcional Private Cloud Compute, que você escolhe e autoriza uma única vez.
 
 O QUE EU FAÇO
 • Converse com um modelo de linguagem potente no dispositivo — rápido em Apple Silicon.

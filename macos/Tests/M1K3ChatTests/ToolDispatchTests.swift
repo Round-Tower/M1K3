@@ -10,6 +10,7 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.8. Prior: Unknown.
 //
+//  Review: Kev + claude-fable-5.1, 2026-10-09 — chainPicks pin (#512).
 
 import Foundation
 import M1K3Agent
@@ -150,6 +151,19 @@ struct ToolPickerChoicesTests {
     @Test("the AFM picker's choices are ToolDispatch's, name for name")
     func choicesMatch() {
         #expect(Set(AFMToolPicker.choices) == Set(ToolDispatch.pickerChoices))
+    }
+
+    /// #510 review 3: a `none` head with a real `also` went plain, and the tool never ran.
+    @Test("a chain answer's picks: also adds a tool, repeats or none add nothing, a none head becomes also")
+    func chainPicks() {
+        let both = AFMToolPicker.chainPicks(tool: "web_search", query: "weather", also: "calendar_peek", alsoQuery: "")
+        #expect(both.map { $0.tool } == ["web_search", "calendar_peek"])
+        #expect(AFMToolPicker.chainPicks(tool: "datetime", query: "", also: "none", alsoQuery: "").map { $0.tool } == ["datetime"])
+        #expect(AFMToolPicker.chainPicks(tool: "datetime", query: "", also: "datetime", alsoQuery: "").map { $0.tool } == ["datetime"])
+        let promoted = AFMToolPicker.chainPicks(tool: "none", query: "", also: "web_search", alsoQuery: "news")
+        #expect(promoted.map { $0.tool } == ["web_search"])
+        #expect(promoted.first?.query == "news")
+        #expect(AFMToolPicker.chainPicks(tool: "none", query: "", also: "none", alsoQuery: "").map { $0.tool } == ["none"])
     }
 
     @Test("a chain's second slot offers the read-only tools and none, never action")
