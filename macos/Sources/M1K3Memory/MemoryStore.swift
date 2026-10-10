@@ -81,6 +81,10 @@
 //  the duplicated sanitiser is lifted into M1K3Knowledge.FTSQuery (shared with
 //  KnowledgeStore), and recallFTS gained the strict→relaxed zero-hit retry (B5)
 //  its twin already had. The cosine floor in `recall` still gates relaxed hits.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 — the edge and recall cutoffs resolve from an injected
+//  `floors` (EmbedderFloors, set by the composition root from the live embedder) instead of the
+//  GroundingGate Qwen constants, so an embedder with a different cone (EmbeddingGemma 2) is gated by
+//  its own measured bars. `threshold:` stays as an explicit override.
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — #180: `liveMemory(where:)`, the newest live row whose
 //  text passes a predicate (ids and texts only). Confidence 0.9.
 
@@ -261,6 +265,14 @@ public struct MemoryHit: Identifiable, Equatable, Sendable {
 /// GRDB-backed memory store. Same concurrency stance as KnowledgeStore:
 /// DatabaseQueue is internally serialized → @unchecked Sendable.
 public final class MemoryStore: @unchecked Sendable {
+    /// The per-embedder bars this store's edge and recall cutoffs resolve
+    /// from. The composition root sets it from the live embedder's
+    /// fingerprint (`EmbedderFloors.forFingerprint`) and again on an embedder
+    /// swap; the default is the legacy Qwen set so tests and the hashing-only
+    /// shells keep their measured behaviour. The parameters below take
+    /// precedence when a caller passes one explicitly.
+    public var floors: EmbedderFloors = .qwen3Instructed
+
     private let dbQueue: DatabaseQueue
 
     /// `nil` path → in-memory store (tests).
@@ -431,9 +443,10 @@ public final class MemoryStore: @unchecked Sendable {
         _ memory: Memory,
         embedding: [Float],
         maxLinks: Int = 3,
-        threshold: Float = GroundingGate.edgeThreshold,
+        threshold: Float? = nil,
         supersedes oldID: UUID? = nil
     ) throws -> Int {
+        let threshold = threshold ?? floors.edge
         try remember(memory, embedding: embedding, supersedes: oldID)
         // Nearest live neighbours by cosine — the +1 absorbs the node we just
         // inserted (cosine 1.0 with itself), which we then drop by id.
@@ -495,8 +508,9 @@ public final class MemoryStore: @unchecked Sendable {
         query: String,
         queryVector: [Float],
         limit: Int = 5,
-        threshold: Float = GroundingGate.memoryThreshold
+        threshold: Float? = nil
     ) throws -> [MemoryHit] {
+        let threshold = threshold ?? floors.memory
         let ftsHits = try recallFTS(query: query, limit: limit * 2)
         let vectorHits = try recallVector(queryVector: queryVector, limit: limit * 2)
 

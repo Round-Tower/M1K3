@@ -182,7 +182,7 @@ struct EmbeddingGemma2Tests {
         #expect(gemma.composeDocument("Pro is €8 a month.") == "title: none | text: Pro is €8 a month.")
         #expect(gemma.composeQuery("what does Pro cost?") == "task: search result | query: what does Pro cost?")
 
-        let qwen = MLXEmbeddingService()
+        let qwen = MLXEmbeddingService(configuration: EmbedderRegistry.qwen3_embedding)
         #expect(qwen.prompting == .qwen3Instruct)
         #expect(qwen.fingerprint == "mlx/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ/d512/\(kernel)", "unchanged")
 

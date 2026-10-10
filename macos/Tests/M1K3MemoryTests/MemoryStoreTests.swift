@@ -17,6 +17,7 @@
 //  (Kev + claude-fable-5).
 //  Review: Kev + claude-fable-5.1, 2026-09-18 — `linkIsIdempotent`: `link`'s doc comment has always claimed INSERT OR IGNORE on
 //  (from, to, relation); nothing pinned it until a review of the screengrab seeder (#383) noticed. The FIRST date stands. Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — `cutoffsFollowFloors` pins that the edge / recall bars resolve from the injected floors.
 
 import Foundation
 @testable import M1K3Knowledge
@@ -52,6 +53,24 @@ private struct Fixture {
 }
 
 struct MemoryStoreWriteRecallTests {
+    @Test("the edge and recall cutoffs resolve from the injected floors; an explicit threshold still wins")
+    func cutoffsFollowFloors() throws {
+        let store = try MemoryStore()
+        let a = Memory(kind: .profile, text: "Kev lives in Cork.", source: "test")
+        let b = Memory(kind: .profile, text: "Kev's home is Cork city.", source: "test")
+        try store.remember(a, embedding: [1, 0, 0])
+        // cos([1,0,0],[0.9,0.1,0]) = 0.994: under a 0.999 edge bar, not linked; under 0.8, linked.
+        store.floors = EmbedderFloors(chunk: 0.5, memory: 0.5, edge: 0.999, dedupe: 0.9, forgetSuggestion: 0.5)
+        #expect(try store.rememberConnected(b, embedding: [0.9, 0.1, 0]) == 0, "0.999 edge bar: not linked")
+        let c = Memory(kind: .profile, text: "Kev is from Cork.", source: "test")
+        store.floors = EmbedderFloors(chunk: 0.5, memory: 0.5, edge: 0.8, dedupe: 0.9, forgetSuggestion: 0.5)
+        #expect(try store.rememberConnected(c, embedding: [0.9, 0.1, 0]) > 0, "0.8 edge bar: linked")
+        #expect(try store.recall(query: "zzz", queryVector: [1, 0, 0]).count == 3)
+        store.floors = EmbedderFloors(chunk: 0.5, memory: 0.999, edge: 0.8, dedupe: 0.9, forgetSuggestion: 0.5)
+        #expect(try store.recall(query: "zzz", queryVector: [1, 0, 0]).count == 1, "only the exact vector")
+        #expect(try store.recall(query: "zzz", queryVector: [1, 0, 0], threshold: 0).count == 3, "explicit wins")
+    }
+
     @Test("a remembered fact is recalled by a matching query")
     func rememberThenRecall() async throws {
         let f = try Fixture()

@@ -33,6 +33,8 @@
 //  the unit-tested MemoryCosineStats / ContradictionEvalReport / coordinator;
 //  the wiring is verify-by-launch like every SelfTest arm). Prior:
 //  MemGraphEvalStage (Kev + claude-opus-4-8).
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the dedupe bar is
+//  `semanticDedupeThreshold(for:)` of the embedder in use; `M1K3_SELFTEST_EMBEDDER` picks the embedder (the A/B).
 //
 
 import Foundation
@@ -127,8 +129,10 @@ enum MemStatStage {
 
     private static func probePairs(emit: (String) -> Void) async {
         do {
-            let embedder = MLXEmbeddingService() // production default — qwen3-embed-512
-            let bar = MemoryDistillationCoordinator.semanticDedupeThreshold
+            // The production default unless M1K3_SELFTEST_EMBEDDER names another (the A/B).
+            guard let embedder = SelfTest.candidateEmbedder() else { return }
+            let bar = MemoryDistillationCoordinator.semanticDedupeThreshold(for: embedder)
+            emit("memstat embedder: \(embedder.fingerprint) · dedupe bar \(bar)")
 
             // Pass 2: raw pair cosines, per class.
             var scoresByLabel: [String: [Float]] = [:]

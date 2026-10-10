@@ -77,9 +77,13 @@ SHIPPED_REPOS = {
     # path once PR #232 rendered its tool block in trained key order
     # (swift-jinja's tojson sorts keys); open-chat 7-8/8 at ~1.9 s/turn.
     "mlx-community/LFM2.5-1.2B-Instruct-4bit": LLM_CACHE,
-    # The retrieval embedder. Smaller, but it is still third-party weights
-    # fetched at runtime and fed to MLX — the same exposure, just quieter.
-    "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ": EMBEDDER_CACHE,
+    # The retrieval embedder since 2026-10-10 (Stream C): EmbeddingGemma 2, 8-bit —
+    # one checkpoint for text now and images/audio later. Replaced
+    # Qwen3-Embedding-0.6B-4bit-DWQ (retired: offered in Settings ▸ Free up
+    # space, never deleted automatically). Pinned at the revision the Swift port's
+    # reference fixture was generated from (7505ef2f). Evals:
+    # docs/evals/2026-10-10-retrieval-evals-*.txt, -embeddinggemma2-reference.txt.
+    "mlx-community/embeddinggemma-2-8bit": EMBEDDER_CACHE,
 }
 
 # Which download root each repo belongs under, emitted into the manifest so the

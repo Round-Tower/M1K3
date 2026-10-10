@@ -23,6 +23,7 @@
 //  file family — see WeightImportDisplay.swift for what's actually pinned).
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings-screen pass: section headers are
 //  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the Mode value names EmbeddingGemma 2.
 //
 
 import AppKit
@@ -48,7 +49,7 @@ struct AdvancedSettingsPane: View {
         Form {
             Section {
                 LabeledContent("Mode",
-                               value: env.usingMLXEmbeddings ? "MLX Qwen3-Embedding (semantic)" : "Hashing (offline)")
+                               value: env.usingMLXEmbeddings ? "MLX EmbeddingGemma 2 (semantic)" : "Hashing (offline)")
                 if env.isReindexing {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)

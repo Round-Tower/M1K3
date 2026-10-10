@@ -32,6 +32,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (Stream C slice 3) — MEMEVAL / ABSEP / KEYEVAL measure the
 //  embedder `M1K3_SELFTEST_EMBEDDER` names (`candidateEmbedder()`); KEYEVAL's "instructed" arm is the
 //  embedder's own `embedQuery` (Qwen's instruction or Gemma's prefix): the Gemma A/B reads production's composition.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the MLX embed smoke names the fingerprint (ci_post_xcodebuild greps `✓ MLX embed (`);
+//  KEYEVAL's floor lines come from EmbedderFloors.forFingerprint of the candidate.
 
 import Foundation
 import M1K3Chat
@@ -205,7 +207,7 @@ enum SelfTest {
         //    warmEmbedderOnLaunch removes from the first chat turn's critical
         //    path (every turn embeds the query BEFORE retrieval + generation).
         //    cold − warm = the measured first-turn TTFT win (ledger 113-4).
-        emit("• loading MLX Qwen3-Embedding (downloads on first use)…")
+        emit("• loading the MLX embedder (EmbeddingGemma 2; downloads on first use)…")
         do {
             let mlx = MLXEmbeddingService()
             let clock = ContinuousClock()
@@ -213,7 +215,7 @@ enum SelfTest {
             let v = try await mlx.embed("hydraulic seal conveyor")
             let cold = clock.now - coldStart
             let norm = v.reduce(Float(0)) { $0 + $1 * $1 }.squareRoot()
-            emit("✓ MLX Qwen3-Embedding embed: dim=\(v.count) ‖v‖=\(String(format: "%.3f", norm))")
+            emit("✓ MLX embed (\(mlx.fingerprint)): dim=\(v.count) ‖v‖=\(String(format: "%.3f", norm))")
             // Warm cost: best of three, so one GC/thermal hiccup can't skew it.
             var warmBest: Duration?
             for _ in 1 ... 3 {
@@ -819,10 +821,8 @@ enum SelfTest {
                 }
                 arms.append(.init(label: spec.label, keyword: keyword, question: question, noise: noise))
             }
-            emit(QueryStyleEvalReport.render(
-                arms,
-                floors: [GroundingGate.memoryThreshold, GroundingGate.chunkThreshold]
-            ))
+            let floors = EmbedderFloors.forFingerprint(embedder.fingerprint)
+            emit(QueryStyleEvalReport.render(arms, floors: [floors.memory, floors.chunk]))
 
             // Per-floor re-derivation data: the SAME fixture sets that
             // originally tuned each floor, re-scored with instructed queries.

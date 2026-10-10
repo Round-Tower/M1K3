@@ -18,7 +18,7 @@
 //      # plus M1K3_SELFTEST_MEMGRAPH_OUT if set.
 //
 //  The embedder is constructed the SAME way ChatEvalStage's grounded path does
-//  (bare `MLXEmbeddingService()` = the qwen3-embed-512 default) so this measures
+//  (bare `MLXEmbeddingService()` = the production default, EmbeddingGemma 2 since 2026-10-10) so this measures
 //  the production retrieval stack, not a test double.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-16, Confidence 0.8 (the runner is
@@ -26,6 +26,7 @@
 //  production MLXEmbeddingService; the wiring itself can only be confirmed
 //  on-device, where the semantic probes finally have a real embedder to satisfy
 //  them). Prior: ChatEvalStage (Kev + claude-opus-4-8).
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — comment only — the bare `MLXEmbeddingService()` default is now EmbeddingGemma 2.
 
 import Foundation
 import M1K3Memory
@@ -59,7 +60,7 @@ enum MemGraphEvalStage {
 
         line("• memgraph: running life-graph scenario against MLX embedder (semantic probes ON)…")
         do {
-            let embedder = MLXEmbeddingService() // qwen3-embed-512 default — same as the grounded RAG path
+            let embedder = MLXEmbeddingService() // the production default — same as the grounded RAG path
             let report = try await MemoryGraphEval.run(
                 MemoryGraphFixtures.lifeGraph,
                 embedder: embedder,

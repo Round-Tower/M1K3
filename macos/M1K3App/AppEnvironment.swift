@@ -96,6 +96,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#544 fold) — `saveFirstRunName(rewriteProfile:)` applies the
 //  pure `UserProfileText.rewritingName` (M1K3Inference) instead of an inline string edit.
 //  Compile-checked; verify-by-launch owed. Fold: `mcpResponder`, the ask responder that withholds Photos.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the memory graph's floors follow the live embedder (set after the embedder is built and on
+//  every switchEmbeddings / rollback); the switch label names EmbeddingGemma 2.
 
 import AppKit
 import Foundation
@@ -873,6 +875,9 @@ final class AppEnvironment {
         let swappable = SwappableEmbeddingService(baseEmbedder)
         embedder = swappable
         usingMLXEmbeddings = preferMLX
+        // The memory graph's edge / recall bars follow the live embedder's cone
+        // (and follow it again on every switchEmbeddings).
+        memoryStore?.floors = EmbedderFloors.forFingerprint(swappable.fingerprint)
 
         // Restore the chosen brain (default Mini = Apple Foundation Models).
         // Decode via init(persisted:) so a stale "huge" (retired 2026-07-02)
@@ -1713,6 +1718,7 @@ final class AppEnvironment {
             })
             : HashingEmbeddingService()
         embedder.setEmbedder(newEmbedder)
+        memoryStore?.floors = EmbedderFloors.forFingerprint(newEmbedder.fingerprint)
         do {
             let count = try await store.reindexEmbeddings(
                 using: newEmbedder,
@@ -1720,13 +1726,14 @@ final class AppEnvironment {
             )
             usingMLXEmbeddings = useMLX
             UserDefaults.standard.set(useMLX, forKey: Self.embedderPrefersMLXKey)
-            let label = useMLX ? "MLX Qwen3-Embedding" : "Hashing"
+            let label = useMLX ? "MLX EmbeddingGemma 2" : "Hashing"
             Self.embedLog.notice("switched embeddings to \(label, privacy: .public), reindexed \(count) chunk(s)")
             embeddingStatus = "Reindexed \(count) chunk\(count == 1 ? "" : "s") with \(label)."
         } catch {
             // Reindex writes atomically, so the store still matches the previous
             // embedder — roll the façade back to it.
             embedder.setEmbedder(usingMLXEmbeddings ? MLXEmbeddingService() : HashingEmbeddingService())
+            memoryStore?.floors = EmbedderFloors.forFingerprint(embedder.fingerprint)
             Self.embedLog.error("embedding switch failed, rolled back: \(error.localizedDescription, privacy: .public)")
             embeddingStatus = "Couldn’t switch embeddings: \(error.localizedDescription)"
         }

@@ -49,7 +49,11 @@
 //  the Gemma arm's fingerprint carries `gemmaPromptVersion` because its document prefix lives in stored vectors.
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (Stream C slice 3) — `preset(named:)` resolves `qwen` / `gemma` /
 //  a Hub id for the eval harness. Measured the same day: Gemma separates less than Qwen on every fixture family
-//  (docs/evals/2026-10-10-retrieval-evals-*.txt), so Qwen stays the default.
+//  (docs/evals/2026-10-10-retrieval-evals-*.txt).
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (Kev's ruling: ONE embedder) — the default is EmbeddingGemma 2:
+//  one checkpoint for text now and the image/audio encoders later, one download, one thing to maintain. Its
+//  narrower (but clean) dead zones get their own floors (EmbedderFloors.embeddingGemma2, challenged); the
+//  fingerprint change re-indexes every store once on next launch. Qwen stays constructible for the A/B.
 
 import Foundation
 import M1K3Inference
@@ -150,7 +154,7 @@ public final class MLXEmbeddingService: EmbeddingService, @unchecked Sendable {
     ///     instead of an indefinite spinner. Nil = silent (the default base
     ///     embedder; only the user-triggered switch wires it up).
     public init(
-        configuration: ModelConfiguration = EmbedderRegistry.qwen3_embedding,
+        configuration: ModelConfiguration = MLXEmbeddingService.embeddingGemma2,
         dimension: Int = 512,
         prompting: EmbedderPrompting? = nil,
         onLoadProgress: (@Sendable (Double) -> Void)? = nil
