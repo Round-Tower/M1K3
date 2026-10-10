@@ -28,6 +28,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-10 — `recencyCorrected`: a lookup_fact pick on a question about now
 //  ("this year", "latest", …) runs web_search instead, when it's on offer; the router arm's chain cell sent
 //  "who won … this year" to lookup_fact 3/3. Confidence 0.85 (pinned; the chain cells re-run to confirm).
+//  Review: Kev + claude-opus-5-5, 2026-10-10 — #542 round 2: "yet" leaves the cues ("strong yet light"); the
+//  chained-query limit is documented and pinned. Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -160,10 +162,13 @@ public enum ToolDispatch {
 
     /// Words that put a question in the present: "who won … this year", "the latest …".
     /// Not a bare "current" ("an electrical current", "my current account") or "so far": the
-    /// challenger's lookalikes (2026-10-10); "currently" and "this season" carry those cases.
+    /// challenger's lookalikes (2026-10-10); "currently" and "this season" carry those cases. Not
+    /// "yet" ("strong yet light", #542 round 2). Accepted lookalikes: "most recent common
+    /// ancestor", "why is Napoleon still important today?" — a stable fact answered from the web,
+    /// and only when the user has web search on.
     static let nowCues = [
         "this year", "this season", "this month", "this week", "latest", "newest", "most recent",
-        "today", "tonight", "right now", "currently", "yet",
+        "today", "tonight", "right now", "currently",
     ]
 
     /// A reference lookup about now goes to the web instead. With chains on, Apple's pick sent
@@ -175,7 +180,9 @@ public enum ToolDispatch {
     ///
     /// A single pick reads the whole question; in a chain each pick reads only its own query, its
     /// half of the ask (the 10-10 `all` cell: "the current date … and the founding year of Cork"
-    /// sent the fact half to the web on the date half's "current").
+    /// sent the fact half to the web on the date half's "current"). The limit: a chained query is
+    /// Apple's rewrite, and a rewrite that drops "this year" stays lookup_fact (pinned), as does a
+    /// chain head with an empty query. The `all` cells' rewrites kept their cue.
     public static func recencyCorrected(_ pick: ToolPick, palette: [any AgentTool], question: String) -> ToolPick {
         guard palette.contains(where: { $0.name == "web_search" }) else { return pick }
         func aboutNow(_ text: String) -> Bool {

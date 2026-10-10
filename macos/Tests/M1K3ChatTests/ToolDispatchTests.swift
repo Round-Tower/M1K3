@@ -205,6 +205,8 @@ struct ToolDispatchRecencyTests {
         let fact = ToolPick(tool: "lookup_fact", query: "electrical current")
         #expect(ToolDispatch.recencyCorrected(fact, palette: palette, question: "What is an electrical current?") == fact)
         #expect(ToolDispatch.recencyCorrected(fact, palette: palette, question: "How far is Mars so far from Earth?") == fact)
+        // Round 2 of #542: "yet" joins a contrast more often than it asks about now.
+        #expect(ToolDispatch.recencyCorrected(fact, palette: palette, question: "Why is steel strong yet light?") == fact)
         #expect(ToolDispatch.recencyCorrected(fact, palette: palette, question: "Who is currently the Taoiseach?").tool
             == "web_search")
     }
@@ -220,6 +222,15 @@ struct ToolDispatchRecencyTests {
         let headFact = ToolPick(tool: "lookup_fact", query: "Cork founding year", then: [weather])
         let both = "When was Cork founded, and the weather today?"
         #expect(ToolDispatch.recencyCorrected(headFact, palette: palette, question: both) == headFact)
+    }
+
+    @Test("a chained query that dropped the recency word stays lookup_fact: the guard reads the rewrite, not the ask")
+    func chainedQueryWithoutCueStays() {
+        // A known limit, pinned so a change to it is deliberate: Apple's rewrite can drop "this year".
+        let lookup = ToolPick(tool: "lookup_fact", query: "final winner")
+        let pick = ToolPick(tool: "datetime", query: "", then: [lookup])
+        let question = "What time is it, and who won the final this year?"
+        #expect(ToolDispatch.recencyCorrected(pick, palette: palette, question: question) == pick)
     }
 
     @Test("the chained second tool is corrected too")
