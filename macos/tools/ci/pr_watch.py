@@ -46,6 +46,8 @@ in project memory. Now they are code, tested in test_pr_watch.py:
   N when N passes are owed — must APPROVE naming this head; a missing, malformed or
   CHANGES_REQUESTED verdict, or one naming another sha, refuses. Under `--passes 0`
   a head with nothing posted reads no verdict, but a pass on it still must approve.
+* Only an AUTO_LAND_AUTHORS PR whose head branch lives in this repo lands. M1K3 is
+  public: a contributor's or a bot's PR, or anything from a fork, is merged by hand.
 
     python3 pr_watch.py <PR> [--passes N] [--once] [--interval 60] [--timeout 5400]
 
@@ -126,6 +128,11 @@ sha. "Newest" is when a pass finished (updated_at: a summon's tracking comment i
 start, #547). Two owed passes must both approve — the risk-surface pair runs concurrently, and
 newest-only would let run order decide whether a blocker lands. Confidence now 0.8 — the parser is
 pinned on shapes read off #543/#547; whether the bots emit the line reliably is unmeasured.
+Review: Kev + claude-opus-5.5, 2026-10-10 (2) — M1K3 is public, so a green, approved PR from an
+outside contributor, a bot or a fork could have landed hands-off. Ready now also needs the author in
+AUTO_LAND_AUTHORS (a constant: widening it is a reviewed change, not an env var an agent can set to
+unblock itself) and the head repo equal to the base repo; snapshot reads author + headRepository,
+and an unknown one refuses. Confidence now 0.85 — pinned in test_pr_watch.py, the gh wiring included.
 """
 from __future__ import annotations
 
@@ -294,6 +301,12 @@ def downgrade_refused(explicit: int | None, files: list[str], why: str | None, *
     return explicit is not None and explicit < required_passes(None, files, **risk) and not reasoned
 
 BOT_LOGIN = "claude[bot]"
+# Whose PRs land hands-off: the author must be here AND the head branch must live
+# in this repo, not a fork. M1K3 is public, so an outside contributor's green,
+# approved PR is merged by hand, never by land.sh; bots (dependabot) are not here
+# either. A constant, not an env var: widening it is a reviewed change, not a flag
+# an agent can set to unblock itself. Lowercase — logins compare without case.
+AUTO_LAND_AUTHORS = frozenset({"kpmmmurphy"})
 GREEN = {"success", "skipped"}
 RED = {"failure", "cancelled", "timed_out", "action_required", "startup_failure"}
 
@@ -497,6 +510,21 @@ def review_refusals(head: str, on_head: list[dict | None], passes_needed: int) -
     return list(dict.fromkeys(refusals))
 
 
+def origin_refusals(author: str | None, head_repo: str | None, base_repo: str | None) -> list[str]:
+    """Why this PR may not land hands-off whatever its CI and reviews say. Fails
+    closed: an unknown author or head repo (a deleted fork has none) refuses."""
+    reasons: list[str] = []
+    if not author:
+        reasons.append("author: unknown")
+    elif author.lower() not in AUTO_LAND_AUTHORS:
+        reasons.append(f"author: {author} is not on the auto-land list")
+    if not head_repo or not base_repo:
+        reasons.append("head repo: unknown")
+    elif head_repo.lower() != base_repo.lower():
+        reasons.append(f"fork: head is {head_repo}, not {base_repo}")
+    return reasons
+
+
 def linked_run_id(body: str) -> str | None:
     """The workflow run a bot comment links — the action's own
     "[View job](…/actions/runs/N)" anchor on every summon and auto run's tracking
@@ -606,6 +634,9 @@ def verdict(
     passes_needed: int,
     auto_comment: dict | None = None,
     head_seen_at: str | None = None,
+    author: str | None = None,
+    head_repo: str | None = None,
+    base_repo: str | None = None,
 ) -> Verdict:
     ci = ci_verdict(required_jobs(changed_files), jobs)
     # The auto pass's own comment can be summon-shaped ("Claude finished …", #404)
@@ -614,12 +645,13 @@ def verdict(
     on_head = passes_on_head(head, comments, auto_ok, auto_comment, head_seen_at)
     passes = len(on_head)
     review = review_refusals(head, on_head, passes_needed)
+    origin = origin_refusals(author, head_repo, base_repo)
     reasons: list[str] = []
     if ci.state != "green":
         reasons.append(f"CI {ci.state} ({ci.detail})")
     if passes < passes_needed:
         reasons.append(f"passes {passes}/{passes_needed} on {head[:8]}")
-    reasons += review
+    reasons += review + origin
     ready = not reasons
     bits = [f"head {head[:8]}", f"CI {ci.state}" + (f" ({ci.detail})" if ci.detail else "")]
     if ci.advisory:
@@ -629,6 +661,7 @@ def verdict(
         bits += review
     elif on_head:
         bits.append("verdict APPROVE")
+    bits += origin
     summary = " · ".join(bits) + (" → READY" if ready else "")
     return Verdict(ready, ci, passes, passes_needed, summary, reasons)
 
@@ -644,9 +677,13 @@ def _gh_json(*args: str):
     return json.loads(_gh(*args))
 
 
-def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | None], list[dict], dict | None, int, str | None, dict[str, str]]:
-    view = _gh_json("pr", "view", str(pr), "--repo", repo, "--json", "state,headRefOid")
+def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | None], list[dict], dict | None, int,
+                                          str | None, dict[str, str], str | None, str | None]:
+    view = _gh_json("pr", "view", str(pr), "--repo", repo, "--json", "state,headRefOid,author,headRepository")
     head = view["headRefOid"]
+    # Who opened it and where its head lives: a deleted fork's headRepository is null.
+    author = (view.get("author") or {}).get("login")
+    head_repo = (view.get("headRepository") or {}).get("nameWithOwner")
     # REST + --paginate: `gh pr view --json files` caps at 100 files, and a
     # dropped mobile-shell path would silently demote the mobile job to advisory.
     raw = [f for page in _gh_json("api", "--paginate", "--slurp", f"repos/{repo}/pulls/{pr}/files") for f in page]
@@ -671,7 +708,7 @@ def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | N
     inline = _gh_json("api", "--paginate", "--slurp", f"repos/{repo}/pulls/{pr}/comments")
     inline_count = sum(len(page) for page in inline)
     return (view["state"], head, files, jobs, comments, auto_pass_comment(head, review_runs, comments),
-            inline_count, head_seen_at, patches)
+            inline_count, head_seen_at, patches, author, head_repo)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -700,7 +737,8 @@ def main(argv: list[str] | None = None) -> int:
               "migration edits will only be caught by the patch", flush=True)
     while True:
         try:
-            state, head, files, jobs, comments, auto_comment, inline, head_seen_at, patches = snapshot(repo, args.pr)
+            (state, head, files, jobs, comments, auto_comment, inline, head_seen_at, patches,
+             author, head_repo) = snapshot(repo, args.pr)
         except subprocess.CalledProcessError as err:
             # A gh blip (rate limit, 5xx) must not read as "CI red": exit 4 once,
             # or wait out the interval and look again while polling.
@@ -726,7 +764,8 @@ def main(argv: list[str] | None = None) -> int:
             print(f"note: risk surface ({', '.join(risky[:3])}) landing on --passes {needed}: {args.why}", flush=True)
             warned = True
         v = verdict(head, files, jobs, comments, auto_comment is not None, needed,
-                    auto_comment=auto_comment, head_seen_at=head_seen_at)
+                    auto_comment=auto_comment, head_seen_at=head_seen_at,
+                    author=author, head_repo=head_repo, base_repo=repo)
         stamp = time.strftime("%H:%M:%S")
         print(f"{stamp} #{args.pr} {v.summary} · inline comments {inline}", flush=True)
         if v.ready:

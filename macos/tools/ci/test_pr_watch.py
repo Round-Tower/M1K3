@@ -16,6 +16,8 @@ def bot(body, created="2026-09-12T08:00:00Z", updated=None):
 GREEN_JOBS = {"Detect compilable changes": "success", "Swift · Mac MVP (swift test)": "success",
               "Swift · App shell (xcodebuild)": "success",
               "Project guards (test scheme · store targets)": "success", "Docs match the code (module map)": "success"}
+# Kev's PR, from a branch of this repo: the only origin that lands hands-off.
+OURS = {"author": "kpmmmurphy", "head_repo": "Round-Tower/M1K3", "base_repo": "Round-Tower/M1K3"}
 
 
 # --- comment classification -------------------------------------------------
@@ -288,7 +290,8 @@ def test_a_concurrent_summon_in_the_window_does_not_eat_the_auto_runs_gh_pr_comm
     review = bot("## Review: CI tooling pass\nFocused on pr_watch.py…\n\nVERDICT: APPROVE @ 95e8dbaf", created="2026-09-24T21:09:55Z")
     assert m.auto_pass_comment(head, runs, [summon, review]) is review
     jobs = {m.JOB_SWIFT_TEST: "skipped", m.JOB_APP: "skipped", m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
-    v = m.verdict(head, ["macos/tools/ci/pr_watch.py"], jobs, [summon, review], auto_ok=True, passes_needed=2, auto_comment=review)
+    v = m.verdict(head, ["macos/tools/ci/pr_watch.py"], jobs, [summon, review], auto_ok=True, passes_needed=2, auto_comment=review,
+                  **OURS)
     assert v.passes == 2 and v.ready
 
 
@@ -387,7 +390,8 @@ def test_ready_needs_green_required_ci_and_enough_passes_on_this_head():
                     "VERDICT: APPROVE @ 08eb0c00", created="2026-09-12T08:00:00Z")]
     auto = bot("## Review: auto pass\nFine.\n\nVERDICT: APPROVE @ 08eb0c00", created="2026-09-12T08:05:00Z")
     jobs = {m.JOB_SWIFT_TEST: "success", m.JOB_APP: "success", m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
-    v = m.verdict(head, ["macos/Sources/A.swift"], jobs, comments + [auto], auto_ok=True, passes_needed=2, auto_comment=auto)
+    v = m.verdict(head, ["macos/Sources/A.swift"], jobs, comments + [auto], auto_ok=True, passes_needed=2, auto_comment=auto,
+                  **OURS)
     assert v.ready and v.passes == 2
     v = m.verdict(head, ["macos/Sources/A.swift"], jobs, comments, auto_ok=False, passes_needed=2)
     assert not v.ready and v.passes == 1 and "1/2" in v.summary
@@ -396,7 +400,7 @@ def test_ready_needs_green_required_ci_and_enough_passes_on_this_head():
 def test_trivial_head_needs_no_passes():
     head = "aaaaaaaa" + "0" * 32
     jobs = {m.JOB_SWIFT_TEST: "success", m.JOB_APP: "success", m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
-    assert m.verdict(head, ["macos/Sources/A.swift"], jobs, [], auto_ok=False, passes_needed=0).ready
+    assert m.verdict(head, ["macos/Sources/A.swift"], jobs, [], auto_ok=False, passes_needed=0, **OURS).ready
 
 
 def test_one_pass_is_the_default_and_two_is_the_risk_surface_opt_in():
@@ -491,7 +495,7 @@ def test_a_head_no_auto_pass_will_review_is_named():
 
 def test_main_refuses_a_downgrade_without_why_with_exit_5(monkeypatch, capsys):
     snap = ("OPEN", "a" * 40, ["macos/Sources/M1K3MCPKit/LoopbackAccessTokenVault.swift"],
-            {}, [], None, 0, None, {})
+            {}, [], None, 0, None, {}, "kpmmmurphy", "o/r")
     monkeypatch.setattr(m, "snapshot", lambda repo, pr: snap)
     monkeypatch.setattr(m, "migration_files", lambda: {"macos/Sources/X/XStore.swift"})
     assert m.main(["9", "--once", "--passes", "1", "--repo", "o/r"]) == 5
@@ -550,9 +554,9 @@ def _summon(verdict_line, created="2026-10-10T10:00:00Z", updated=None, title="#
     return bot(body + "\n · branch `fix/x`", created=created, updated=updated)
 
 
-def _gate(comments, passes_needed=1, auto_comment=None, files=("macos/Sources/A.swift",), head=V_HEAD):
+def _gate(comments, passes_needed=1, auto_comment=None, files=("macos/Sources/A.swift",), head=V_HEAD, origin=None):
     return m.verdict(head, list(files), GREEN_JOBS, comments, auto_ok=auto_comment is not None,
-                     passes_needed=passes_needed, auto_comment=auto_comment)
+                     passes_needed=passes_needed, auto_comment=auto_comment, **(origin or OURS))
 
 
 def test_review_verdict_reads_the_closing_verdict_line():
@@ -700,3 +704,72 @@ def test_the_summon_asks_for_the_verdict_line_and_stays_in_tag_mode():
     prompt = args.split("--append-system-prompt", 1)[1].strip()
     assert prompt.startswith('"') and prompt.endswith('"') and prompt.count('"') == 2
     assert "$" not in prompt and "\\" not in prompt and "`" not in prompt
+
+
+# --- who may land hands-off (2026-10-10) -----------------------------------
+# M1K3 is public: an outside contributor's green, approved PR must never
+# auto-land. Only an allowlisted author's PR from a branch of this repo does.
+
+APPROVED = "VERDICT: APPROVE @ c0ffee12"
+
+
+def test_an_author_off_the_allowlist_is_never_ready():
+    v = _gate([_summon(APPROVED)], origin={**OURS, "author": "outside-dev"})
+    assert not v.ready
+    assert "author: outside-dev is not on the auto-land list" in v.reasons
+    assert "author: outside-dev" in v.summary
+    # bots too: dependabot is green and reviewed and still Kev's call
+    assert not _gate([_summon(APPROVED)], origin={**OURS, "author": "app/dependabot"}).ready
+    assert "kpmmmurphy" in m.AUTO_LAND_AUTHORS
+
+
+def test_a_fork_head_is_never_ready():
+    v = _gate([_summon(APPROVED)], origin={**OURS, "head_repo": "outside-dev/M1K3"})
+    assert not v.ready
+    assert "fork: head is outside-dev/M1K3, not Round-Tower/M1K3" in v.reasons
+
+
+def test_an_unknown_origin_fails_closed():
+    # a deleted fork has no head repository; a caller that passes nothing gets nothing
+    assert not _gate([_summon(APPROVED)], origin={**OURS, "head_repo": None}).ready
+    assert not _gate([_summon(APPROVED)], origin={**OURS, "author": None}).ready
+    v = m.verdict(V_HEAD, ["macos/Sources/A.swift"], GREEN_JOBS, [_summon(APPROVED)], auto_ok=False, passes_needed=1)
+    assert not v.ready and "author: unknown" in v.reasons and "head repo: unknown" in v.reasons
+
+
+def test_logins_and_repo_names_compare_without_case():
+    # both are case-insensitive upstream; `gh repo view` and the PR can disagree on case
+    assert _gate([_summon(APPROVED)], origin={"author": "KPMMMurphy", "head_repo": "round-tower/m1k3",
+                                              "base_repo": "Round-Tower/M1K3"}).ready
+
+
+def test_snapshot_reads_the_author_and_head_repo(monkeypatch):
+    asked = []
+
+    def fake_gh_json(*args):
+        asked.append(args)
+        if args[:2] == ("pr", "view"):
+            return {"state": "OPEN", "headRefOid": V_HEAD, "author": {"login": "outside-dev"},
+                    "headRepository": {"name": "M1K3", "nameWithOwner": "outside-dev/M1K3"}}
+        if args[:2] == ("run", "list"):
+            return []
+        return [[]]  # every paginated --slurp endpoint: one empty page
+
+    monkeypatch.setattr(m, "_gh_json", fake_gh_json)
+    snap = m.snapshot("Round-Tower/M1K3", 9)
+    assert snap[-2:] == ("outside-dev", "outside-dev/M1K3")
+    fields = next(a for a in asked if a[:2] == ("pr", "view"))[-1].split(",")
+    assert "author" in fields and "headRepository" in fields
+
+
+def test_main_will_not_land_a_fork_even_with_green_ci_and_an_approving_pass(monkeypatch, capsys):
+    def snap(author, head_repo):
+        return ("OPEN", V_HEAD, ["macos/Sources/A/B.swift"], GREEN_JOBS, [_summon(APPROVED)], None, 0, None, {},
+                author, head_repo)
+
+    monkeypatch.setattr(m, "migration_files", lambda: {"macos/Sources/X/XStore.swift"})
+    monkeypatch.setattr(m, "snapshot", lambda repo, pr: snap("kpmmmurphy", "outside-dev/M1K3"))
+    assert m.main(["9", "--once", "--repo", "Round-Tower/M1K3"]) == 2
+    assert "fork: head is outside-dev/M1K3" in capsys.readouterr().out
+    monkeypatch.setattr(m, "snapshot", lambda repo, pr: snap("kpmmmurphy", "Round-Tower/M1K3"))
+    assert m.main(["9", "--once", "--repo", "Round-Tower/M1K3"]) == 0
