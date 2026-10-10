@@ -9,6 +9,7 @@
 //  Signed: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.8, Prior: none (new file).
 //  Review: Kev + claude-opus-5-5, 2026-10-08, Confidence 0.85 — #511 review: pins that the repair never
 //  re-emits an earlier, already-streamed call, and the unterminated-shape pass-throughs.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#418) — `ToolTurnRejectionSummaryTests` pins the steer text.
 //
 
 import Foundation
@@ -171,5 +172,38 @@ struct Qwen35CallRepairTests {
     func offeredNamesFromSpecs() {
         #expect(Qwen35CallRepair.offeredNames([datetimeSchema]) == ["datetime"])
         #expect(Qwen35CallRepair.offeredNames(nil).isEmpty)
+    }
+}
+
+// MARK: - the rejection summary the agent loop steers with (#418)
+
+struct ToolTurnRejectionSummaryTests {
+    @Test("the summary names reason, tool and detail, never the raw model text")
+    func summaryIsSafe() {
+        let rejections = [
+            RejectedToolCall(
+                reason: .invalidArguments, format: .qwen35, toolName: "search",
+                rawText: "<tool_call>SECRET ARGUMENT VALUE</tool_call>", detail: "expected 'query' to be a string"
+            ),
+            RejectedToolCall(reason: .undeclaredTool, format: .qwen35, toolName: "fly", rawText: "raw"),
+        ]
+        let summary = ToolTurnDiagnostics.rejectionSummary(rejections)
+        #expect(summary == "invalid_arguments (search): expected 'query' to be a string; undeclared_tool (fly)")
+        #expect(!summary.contains("SECRET"))
+    }
+
+    @Test("an over-long diagnostic detail is capped so it cannot inflate the prompt")
+    func detailIsCapped() {
+        let long = String(repeating: "x", count: ToolTurnDiagnostics.detailCap + 50)
+        let rejection = RejectedToolCall(reason: .invalidArguments, format: .qwen35, rawText: "raw", detail: long)
+        let summary = ToolTurnDiagnostics.rejectionSummary([rejection])
+        #expect(summary.hasPrefix("invalid_arguments: "))
+        #expect(summary.hasSuffix("…"))
+        #expect(summary.count == "invalid_arguments: ".count + ToolTurnDiagnostics.detailCap + 1)
+    }
+
+    @Test("no rejections summarise to an empty string")
+    func emptySummary() {
+        #expect(ToolTurnDiagnostics.rejectionSummary([]).isEmpty)
     }
 }

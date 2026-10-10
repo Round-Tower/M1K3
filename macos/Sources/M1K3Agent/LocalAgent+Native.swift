@@ -30,6 +30,10 @@
 //  gathered (it claimed "I gathered some information…" over zero evidence). An empty-turn steer was built,
 //  challenged, measured (never fired on chat; on its target, Qwen3.5's `datetime`, it recovered nothing — the
 //  turn is a malformed call, not a stall) and backed out: no measured benefit, no ship.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#418), Confidence 0.8 — a `.rejectedToolCalls` turn is
+//  steered once with its reason ("rejected before it ran (invalid_arguments (search): …)"); a second
+//  rejection concludes with the model's prose. Unlike the backed-out empty-turn steer, this one carries
+//  the schema error the model needs; the live rate on Lil is the verify-owed (ChatEval tool-use).
 
 import Foundation
 import M1K3Inference
@@ -120,6 +124,7 @@ extension LocalAgent {
 
         logRunStart(goal: goal, grounding: grounding)
 
+        var rejectionSteers = 0
         for iteration in 0 ..< maxIterations {
             try Task.checkCancellation()
             onEvent?(.thinking(iteration: iteration))
@@ -157,6 +162,30 @@ extension LocalAgent {
                 // real answer instead of re-showing the chain-of-thought.
                 // Answer tokens already streamed live via onConclusionToken.
                 return concluded(remainder.isEmpty ? "" : answer, usedTools, iteration + 1)
+
+            case let .rejectedToolCalls(reason, text):
+                // The call never ran (schema mismatch, undeclared tool, bad syntax —
+                // mlx-swift-lm #548). Before #548 the model read a tool error and
+                // tried again; concluding here would make the failed call the final
+                // answer (#418). Steer ONCE with the reason, the way the empty turn is
+                // steered; a second rejection concludes with whatever prose it wrote,
+                // so a model that cannot form the call does not burn the iteration cap.
+                reasoningTrace.append(ReasoningStep(
+                    iteration: iteration, thought: text, observation: "rejected tool call: \(reason)"
+                ))
+                transcript.append(.assistant(text: text.isEmpty ? nil : text, toolCalls: []))
+                guard rejectionSteers == 0 else {
+                    // As before #418, the prose is the answer. Every session streams a
+                    // rejected turn's prose through the gate as it generates (the MLX
+                    // session chunk by chunk, the stateless one whole), so the same
+                    // empty-remainder rule as `.text` applies and nothing is re-emitted.
+                    return concluded(remainder.isEmpty ? "" : text, usedTools, iteration + 1)
+                }
+                rejectionSteers += 1
+                pendingMessages = [.user(
+                    "Your tool call was rejected before it ran (\(reason)). Call the tool again with "
+                        + "arguments that match its declared parameters, or reply with your final answer."
+                )]
 
             case let .toolCalls(calls) where calls.isEmpty:
                 // Neither text nor calls: steer instead of regenerating over an
@@ -359,7 +388,7 @@ extension LocalAgent {
             // AgentResult.conclusion carries the RAW text (see its doc) for the
             // trace/eval consumers.
             return answer
-        case .text, .toolCalls:
+        case .text, .toolCalls, .rejectedToolCalls:
             // .text with an EMPTY remainder lands here on purpose: the model
             // only reasoned (or called a tool against the instruction) — the
             // gathered evidence is the best available answer in both cases.

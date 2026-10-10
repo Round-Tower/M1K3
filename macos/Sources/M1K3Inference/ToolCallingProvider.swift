@@ -36,6 +36,9 @@
 //  decided by eval — the MLX provider returns `.groundingInSystem` for lfm2 only.
 //  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `personaVariant` requirement (default `.standard`):
 //  which persona (core and exemplars) a model gets is per model, like the prompt shape.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#418), Confidence 0.85 — `ToolTurn.rejectedToolCalls`:
+//  a turn whose calls were all rejected before running is its own case, so the loop can steer instead of
+//  taking the failed call as the final answer. Transcript and session record it as an assistant turn.
 
 import Foundation
 import Synchronization
@@ -168,6 +171,12 @@ public struct ParsedToolCall: Sendable, Equatable {
 public enum ToolTurn: Sendable, Equatable {
     case text(String)
     case toolCalls([ParsedToolCall])
+    /// The model called a tool and every call was rejected before it could run
+    /// (mlx-swift-lm #548: arguments off the declared schema, an undeclared tool,
+    /// malformed syntax). `reason` is a safe summary — reason codes, tool names and
+    /// the library's diagnostic detail, never raw model text — that the agent loop
+    /// steers a retry with (#418). `text` is whatever prose came with the call.
+    case rejectedToolCalls(reason: String, text: String)
 }
 
 /// A role-tagged turn in the agent↔model conversation. The agent owns the
@@ -348,6 +357,11 @@ final class StatelessToolTurnSession: ToolTurnSession, @unchecked Sendable {
             if !answer.isEmpty { onToken(answer) }
         case let .toolCalls(calls):
             transcript.withLock { $0.append(.assistant(text: nil, toolCalls: calls)) }
+        case let .rejectedToolCalls(_, text):
+            // Streamed like `.text` so every session behaves as the MLX one, which emits
+            // a rejected turn's prose chunk by chunk; the loop decides what it means.
+            transcript.withLock { $0.append(.assistant(text: text.isEmpty ? nil : text, toolCalls: [])) }
+            if !text.isEmpty { onToken(text) }
         }
         return turn
     }
@@ -380,6 +394,8 @@ public struct ToolTurnTranscript: Sendable {
             full.append(.assistant(text: answer, toolCalls: []))
         case let .toolCalls(calls):
             full.append(.assistant(text: nil, toolCalls: calls))
+        case let .rejectedToolCalls(_, text):
+            full.append(.assistant(text: text.isEmpty ? nil : text, toolCalls: []))
         }
     }
 }
