@@ -120,7 +120,10 @@ jobs:
         run: |
           set -euo pipefail
           probe() { xcrun --no-cache -sdk macosx metal --version >/dev/null 2>&1; }
-          installed() { xcodebuild -showComponent MetalToolchain >/dev/null 2>&1; }
+          # Installed-ness by OUTPUT, not exit status: `-showComponent` prints a
+          # "Build Version:" line only for an installed component (its exit code for
+          # the absent case is not pinned anywhere we trust).
+          installed() { xcodebuild -showComponent MetalToolchain 2>/dev/null | grep -q '^Build Version:'; }
           diagnose() {
             echo "::group::Metal toolchain diagnostics"
             xcode-select -p || true
@@ -264,11 +267,11 @@ jobs:
 
           Permanent download: https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/M1K3.dmg"
           if gh release view "$DATE" >/dev/null 2>&1; then
-            # Move the tag to this commit (the release's target follows the tag), swap
-            # the asset, then refresh the title/notes and the --latest mark.
+            # Move the tag to this commit, swap the asset, then rewrite the release's
+            # stored target (it does NOT follow the tag), title, notes and --latest.
             git push -f origin "$GITHUB_SHA:refs/tags/$DATE"
             gh release upload "$DATE" "$RUNNER_TEMP/M1K3.dmg" --clobber
-            gh release edit "$DATE" --title "$TITLE" --latest --notes "$NOTES"
+            gh release edit "$DATE" --target "$GITHUB_SHA" --title "$TITLE" --latest --notes "$NOTES"
           else
             gh release create "$DATE" "$RUNNER_TEMP/M1K3.dmg" \
               --target "$GITHUB_SHA" \
@@ -276,15 +279,23 @@ jobs:
               --latest \
               --notes "$NOTES"
           fi
-          # End state, not exit code: the release exists, points at this commit, and
-          # carries exactly the DMG we built.
+          # End state, not exit code: the tag AND the release's stored target point at
+          # this commit, and the asset is exactly the DMG we built.
+          TAG_SHA="$(git ls-remote origin "refs/tags/$DATE" | cut -f1)"
+          [ "$TAG_SHA" = "$GITHUB_SHA" ] \
+            || { echo "❌ tag $DATE is at ${TAG_SHA:-<missing>}, not $GITHUB_SHA"; exit 1; }
           PUBLISHED_SHA="$(gh release view "$DATE" --json targetCommitish -q .targetCommitish)"
           [ "$PUBLISHED_SHA" = "$GITHUB_SHA" ] \
             || { echo "❌ release $DATE targets $PUBLISHED_SHA, not $GITHUB_SHA"; exit 1; }
           WANT="$(shasum -a 256 "$RUNNER_TEMP/M1K3.dmg" | cut -d' ' -f1)"
-          GOT="$(gh release view "$DATE" --json assets -q '.assets[] | select(.name=="M1K3.dmg") | .digest' | sed 's/^sha256://')"
+          GOT="$(gh release view "$DATE" --json assets -q '.assets[] | select(.name=="M1K3.dmg") | .digest // empty' | sed 's/^sha256://')"
+          if [ -z "$GOT" ]; then
+            # Older gh / API without asset digests: hash the published asset itself.
+            gh release download "$DATE" --pattern M1K3.dmg --output "$RUNNER_TEMP/published.dmg" --clobber
+            GOT="$(shasum -a 256 "$RUNNER_TEMP/published.dmg" | cut -d' ' -f1)"
+          fi
           [ "$GOT" = "$WANT" ] \
-            || { echo "❌ release $DATE carries sha256 $GOT, built $WANT"; exit 1; }
+            || { echo "❌ release $DATE carries sha256 ${GOT:-<none>}, built $WANT"; exit 1; }
           echo "✅ Published DateVer release $DATE → M1K3.dmg ($(du -h "$DMG" | cut -f1))"
 
       - name: Bump the Homebrew cask (Round-Tower/homebrew-tap)
@@ -344,6 +355,11 @@ jobs:
         if: always() && steps.gate.outputs.configured == 'true'
         run: security delete-keychain "$KEYCHAIN" 2>/dev/null || true
 
+# Review: Kev + claude-fable-5.1, 2026-10-10 (#541 fold) — the update path rewrites the release's
+# stored target with `gh release edit --target` (it does not follow a moved tag; the first draft's
+# own end-state check would have failed), the check also reads the tag via ls-remote, installed-ness
+# comes from `-showComponent`'s output rather than its exit status, and a missing asset digest falls
+# back to hashing the published DMG.
 # Review: Kev + claude-fable-5.1, 2026-10-10 (Metal, 2) — the export/import fallback fired for the
 # first time on run 38044495495 and failed: `-downloadComponent -exportPath` had already installed
 # the asset, so the import refused ("already installed") while `metal` still reported missing. The
