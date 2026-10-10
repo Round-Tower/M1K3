@@ -9,10 +9,11 @@
 # is deliberately a separate, physical-device gate.
 #
 # Review: Kev + claude-opus-5, 2026-09-13 — run 349 failed "wrote no report": the
-#  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the archive smoke greps `✓ MLX embed (` — the line names the embedder's fingerprint now.
 # archived app is sandboxed, so the smoke now runs an ad-hoc, unsandboxed COPY of
 # it (the archive is untouched); the watchdog timer can no longer hold the hook
 # open after a pass. Proven by running this script on run 349's own archive.
+# Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the archive smoke greps
+#  `✓ MLX embed (` — the line names the embedder's fingerprint now.
 set -euo pipefail
 
 echo "=== M1K3 CI: Post-Build ==="

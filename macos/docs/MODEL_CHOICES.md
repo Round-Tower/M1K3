@@ -676,8 +676,10 @@ summary). The numbers it sits on are the ×3 bake-off's own; no decision changed
 `mlx-community/embeddinggemma-2-8bit` (text core ported in `M1K3MLX/EmbeddingGemma2.swift`,
 cosine ≥ 0.9998 vs mlx-vlm's reference; one 1.23 GB checkpoint that also carries the image and
 audio encoders Stream D will load) replaces `Qwen3-Embedding-0.6B-4bit-DWQ` as the default.
-Qwen stays constructible for the A/B harness (`M1K3_SELFTEST_EMBEDDER=qwen`) and becomes a
-retired folder (offered in Free up space, never deleted).
+Qwen stays constructible for the A/B harness (`M1K3_SELFTEST_EMBEDDER=qwen`) — unpinned and
+eval-only from here (`WeightIntegrityScan` lets an unpinned repo load unverified; nothing
+user-reachable selects it) — and its folder becomes retired (offered in Free up space, never
+deleted: `RetiredWeightsPolicy` keeps only pinned repos, shipped tiers and the loaded model).
 
 **What the measurement said first** (`docs/evals/2026-10-10-retrieval-evals-{gemma,qwen}.txt`,
 production arms): Gemma separates cleanly on every family but with narrower dead zones —

@@ -98,7 +98,9 @@
 //  Compile-checked; verify-by-launch owed. Fold: `mcpResponder`, the ask responder that withholds Photos.
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the memory graph's floors follow the
 //  live embedder (set after the embedder is built and on
-//  every switchEmbeddings / rollback); the switch label names EmbeddingGemma 2.
+//  every switchEmbeddings / rollback); the switch label names EmbeddingGemma 2. Fold (#547 review): the
+//  graph's floors follow its VECTORS — the stored fingerprint at init, the live embedder's only once
+//  reindexMemoryGraphIfNeeded has moved (or adopted) the graph into its space.
 
 import AppKit
 import Foundation
@@ -876,9 +878,14 @@ final class AppEnvironment {
         let swappable = SwappableEmbeddingService(baseEmbedder)
         embedder = swappable
         usingMLXEmbeddings = preferMLX
-        // The memory graph's edge / recall bars follow the live embedder's cone
-        // (and follow it again on every switchEmbeddings).
-        memoryStore?.floors = EmbedderFloors.forFingerprint(swappable.fingerprint)
+        // The memory graph's edge / recall bars follow the space its VECTORS are
+        // in: the stored fingerprint until a re-index moves them (then
+        // reindexMemoryGraphIfNeeded sets the live embedder's), else the live
+        // embedder's on a fresh graph.
+        if let memoryStore {
+            let stored = (try? memoryStore.meta(key: MemoryStore.embedderFingerprintKey)) ?? nil
+            memoryStore.floors = EmbedderFloors.forFingerprint(stored ?? swappable.fingerprint)
+        }
 
         // Restore the chosen brain (default Mini = Apple Foundation Models).
         // Decode via init(persisted:) so a stale "huge" (retired 2026-07-02)
@@ -1719,7 +1726,7 @@ final class AppEnvironment {
             })
             : HashingEmbeddingService()
         embedder.setEmbedder(newEmbedder)
-        memoryStore?.floors = EmbedderFloors.forFingerprint(newEmbedder.fingerprint)
+        // The graph's floors move with its vectors, in reindexMemoryGraphIfNeeded below.
         do {
             let count = try await store.reindexEmbeddings(
                 using: newEmbedder,
@@ -2480,6 +2487,9 @@ extension AppEnvironment {
         let policySaysReindex = EmbedderReindexPolicy.needsReindex(
             stored: stored, current: current, embeddingCount: vectorCount
         )
+        // The bars follow the vectors: the live embedder's once the graph is
+        // (or is about to be, on an empty graph) in its space.
+        let liveFloors = EmbedderFloors.forFingerprint(embedder.fingerprint)
         guard policySaysReindex || ((backfilled > 0 || owedFromPriorCrash) && vectorCount > 0) else {
             if stored != current, vectorCount == 0 {
                 // Adopt the marker on fresh/empty graphs. MemoryStore's
@@ -2489,10 +2499,12 @@ extension AppEnvironment {
                 // match the other.
                 _ = try? await memoryStore.reindexEmbeddings(using: embedder, fingerprint: current)
             }
+            if stored == current || vectorCount == 0 { memoryStore.floors = liveFloors }
             return
         }
         do {
             let count = try await memoryStore.reindexEmbeddings(using: embedder, fingerprint: current)
+            memoryStore.floors = liveFloors
             // Vectors repaired — the crash-recovery flag (set before the first
             // title write) has served its purpose.
             try? memoryStore.deleteMeta(key: MemoryStore.titleBackfillPendingKey)

@@ -94,7 +94,9 @@ enum SelfTest {
     /// `MLXEmbeddingService.preset(named:)`. The same fixture sets, the same
     /// composition, so Gemma's distributions read against Qwen's floors.
     /// A name that resolves to nothing is a FAILED stage, never a Qwen run
-    /// saved under the wrong label.
+    /// saved under the wrong label. The Qwen arm is UNPINNED since 2026-10-10
+    /// (retired as a shipped embedder): `WeightIntegrityScan` lets an unpinned
+    /// repo load unverified — an eval-only exposure, by design.
     static func candidateEmbedder() -> MLXEmbeddingService? {
         let name = SelfTestEnv.value("M1K3_SELFTEST_EMBEDDER") ?? ""
         guard let configuration = MLXEmbeddingService.preset(named: name) else {

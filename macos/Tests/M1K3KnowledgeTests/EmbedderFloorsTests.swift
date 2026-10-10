@@ -66,8 +66,10 @@ struct EmbedderFloorsTests {
         let fourBit = "mlx/mlx-community/embeddinggemma-2-4bit/d512/mlx-swift-0.32/prompt-v1"
         let narrower = "mlx/mlx-community/embeddinggemma-2-8bit/d256/mlx-swift-0.32/prompt-v1"
         let promptV2 = "mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v2"
+        let promptV10 = "mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v10"
+        let malformed = "mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v1x+title-v1"
         let strict = EmbedderFloors.strictest(of: [.qwen3Instructed, .embeddingGemma2])
-        for fingerprint in [fourBit, narrower, promptV2] {
+        for fingerprint in [fourBit, narrower, promptV2, promptV10, malformed] {
             #expect(EmbedderFloors.forFingerprint(fingerprint) == strict, Comment(rawValue: fingerprint))
         }
         #expect(strict.chunk == max(EmbedderFloors.qwen3Instructed.chunk, EmbedderFloors.embeddingGemma2.chunk))
