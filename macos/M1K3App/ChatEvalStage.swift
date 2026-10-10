@@ -67,6 +67,11 @@
 //  the bake-off runs one brain per launch.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#486) — the responder gets the Mac's age and egress clauses
 //  (web on, PCC offered), so chat-what-leaves scores against what ships. The Lil/Big re-run is owed.
+//  Review: Kev + claude-opus-5-5, 2026-10-10 — with a router mode set, tool-use takes the live path (it never
+//  reached the router before: the 10-09 arm's tool-use column ran LocalAgent in every cell); `ROUTER=off` is that
+//  path with no route; the turn records its tools (onActivity) and its pick stage. Confidence 0.75 (verify-by-
+//  launch: the arm).
+//
 
 import Foundation
 
@@ -326,6 +331,11 @@ enum ChatEvalStage {
         let palette: [any AgentTool] = SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_TOOLS") == "none" ? [] : toolPalette
         var plainRoute: (@Sendable () -> PlainTurnRoute?)?
         switch SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER") {
+        case "off":
+            // The router arm's baseline (2026-10-10): this same live path with no route, which is
+            // how Lil and Big ship with the router flags off. Before, the arm's "off" cell ran
+            // tool-use through LocalAgent, a different path from the cells it was compared with.
+            break
         case "1":
             let embedder = NLSentenceEmbedder()
             let route = PlainTurnRoute(decide: { ToolNeedRouter.decide(for: $0, embed: embedder.vector) }, instructions: nil)
@@ -356,15 +366,24 @@ enum ChatEvalStage {
             },
             plainRouteProvider: plainRoute
         )
-        let (_, stream) = try await responder.answerStreaming(
-            fixture.prompt, images: images, history: [], onActivity: { _ in }
-        )
-        var raw = ""
-        for await piece in stream {
-            // The responder's fallback passes provider chunks through raw, and a
-            // cumulative provider (AFM, PCC) yields snapshots — `+=` would score
-            // "HHeHel…". Same fold the app's consumer applies (ChatSession).
-            raw = StreamFold.fold(current: raw, chunk: piece)
+        // The tools the turn ran and the stage that picked them (2026-10-10): the 10-09 arm could
+        // see neither. The recorder is a task-local, so the turn runs inside its scope.
+        let tools = EvalToolLog()
+        let stages = PickStageRecorder()
+        let raw = try await ToolRouterWiring.$pickRecorder.withValue(stages) {
+            let (_, stream) = try await responder.answerStreaming(
+                fixture.prompt, images: images, history: [], onActivity: { activity in
+                    if case let .usingTool(name, _) = activity { tools.append(name) }
+                }
+            )
+            var raw = ""
+            for await piece in stream {
+                // The responder's fallback passes provider chunks through raw, and a
+                // cumulative provider (AFM, PCC) yields snapshots — `+=` would score
+                // "HHeHel…". Same fold the app's consumer applies (ChatSession).
+                raw = StreamFold.fold(current: raw, chunk: piece)
+            }
+            return raw
         }
         // An empty stream from a provider that can name its failure is a failed
         // call, scored as "ran — <reason>", never as "0 chars".
@@ -373,8 +392,18 @@ enum ChatEvalStage {
         }
         return EvalObservation(
             rawText: raw,
-            latencyMS: milliseconds(clock.now - start)
+            toolCalls: tools.names,
+            latencyMS: milliseconds(clock.now - start),
+            routeStages: stages.stages.map(\.rawValue)
         )
+    }
+
+    /// The router arm asked for a route mode (`off`, `1`, `dispatch`): tool-use fixtures then take
+    /// the live path, the only one the router is wired into. Without one they keep LocalAgent's
+    /// native loop, so every other tool-use cell measures what it always did (2026-10-10: the 10-09
+    /// arm's tool-use column never reached the router, in any cell).
+    private static var routerArmRequested: Bool {
+        SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER") != nil
     }
 
     /// Run the requested brains across the requested fixtures, emit per-fixture
@@ -669,6 +698,14 @@ enum ChatEvalStage {
             case .groundedQ:
                 let observation = try await groundedObservation(fixture, provider: provider, start: start, clock: clock)
                 return ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit)
+            case .toolUse where routerArmRequested:
+                let observation = try await livePathObservation(
+                    fixture, provider: provider, thinking: thinking, start: start, clock: clock
+                )
+                return ChatEvalScorer.score(
+                    fixture: fixture, observation: observation,
+                    latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
+                )
             case .toolUse:
                 // Three AFM tool paths, selected by env (MLX always goes through
                 // LocalAgent's native dialect):

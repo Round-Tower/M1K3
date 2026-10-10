@@ -157,6 +157,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (fold) — `excludedKinds` (caption memory): per-responder withhold
 //  threaded into `searchGrounding` and the `collectedSources` citation gate. The MCP ask passes
 //  KnowledgeKind.withheldFromMCP; the chat and local asks pass nothing (byte-identical).
+//  Review: Kev + claude-opus-5-5, 2026-10-10 — the dispatched pick passes `ToolDispatch.recencyCorrected`
+//  before it is planned.
 
 import Foundation
 import M1K3Agent
@@ -751,10 +753,12 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 instructions: instructions, onActivity: onActivity, continuation: continuation
             ) ? .answered : .agent(tools)
         }
-        guard let pick = await picker(question, ToolDispatch.menu(palette: tools)) else {
+        guard let picked = await picker(question, ToolDispatch.menu(palette: tools)) else {
             Self.log.notice("tool dispatch: no pick — the agent turn answers")
             return .agent(tools)
         }
+        // A reference lookup about now goes to the web (2026-10-10: "this year" picked lookup_fact).
+        let pick = ToolDispatch.recencyCorrected(picked, palette: tools, question: question)
         if pick.tool == ToolPick.noTool {
             Self.log.notice("tool dispatch: none — a plain turn answers")
             return await plain()

@@ -37,6 +37,12 @@
 //  Confidence 0.7.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — the gate and the head share one sentence vector per
 //  turn (`OneTurnEmbedder`, #512).
+//  Review: Kev + claude-opus-5-5, 2026-10-10 — the cascade reports its stage (head / picker / agent) to a
+//  @TaskLocal `PickStageRecorder` the eval sets; nil on every shipping turn. The 10-09 arm couldn't see
+//  that the head never fired. Confidence 0.85 (the cascade side is pinned; the eval wiring is by launch).
+//  Review: Kev + claude-opus-5-5, 2026-10-10 — each flag reader takes `whenUnset:` (an explicit setting still
+//  wins), so a shell picks the default: the Mac turns them on after the 10-10 arm, iOS keeps them off.
+//  Review: Kev + claude-opus-5-5, 2026-10-10 — `route`'s doc no longer calls `allTiers` unmeasured.
 //
 
 import Foundation
@@ -61,29 +67,40 @@ public enum ToolRouterWiring {
         defaults.object(forKey: dispatchKey) == nil || defaults.bool(forKey: dispatchKey)
     }
 
-    /// The group head in front of the picker: absent = OFF. ADR 0009's spike found a
-    /// per-group router too loose to pick alone; this one also needs the family's words
-    /// and falls back to Apple's pick, but it is an experiment until an arm measures it.
+    /// The group head in front of the picker. Absent = the shell's default: ON on the Mac
+    /// since the 2026-10-10 router arm (it fired on exactly its 18 head-fixture trials, Mini
+    /// 0.6 s faster at equal accuracy), OFF on iOS. ADR 0009's spike found a per-group router
+    /// too loose to pick alone; this one also needs the family's words and falls back to
+    /// Apple's pick.
     public static let groupRouterKey = "toolGroupRouter"
 
-    public static func groupRouterEnabled(_ defaults: UserDefaults = .standard) -> Bool {
-        defaults.bool(forKey: groupRouterKey)
+    public static func groupRouterEnabled(_ defaults: UserDefaults = .standard, whenUnset: Bool = false) -> Bool {
+        flag(groupRouterKey, defaults, whenUnset: whenUnset)
     }
 
-    /// The route for every brain, not only Mini: absent = OFF until the eval arm
-    /// (`M1K3_SELFTEST_CHATEVAL_ROUTER=dispatch`) has measured Lil and Big on it.
+    /// The route for every brain, not only Mini. Absent = the shell's default: ON on the Mac
+    /// since the 2026-10-10 router arm (Lil tool-use 38/48 → 48/48 at half the latency, Big
+    /// about 3× faster), OFF on iOS until a phone smoke.
     public static let allTiersKey = "toolRouterAllTiers"
 
-    public static func allTiersEnabled(_ defaults: UserDefaults = .standard) -> Bool {
-        defaults.bool(forKey: allTiersKey)
+    public static func allTiersEnabled(_ defaults: UserDefaults = .standard, whenUnset: Bool = false) -> Bool {
+        flag(allTiersKey, defaults, whenUnset: whenUnset)
     }
 
-    /// Chains: a tool turn may run two read-only tools ("the weather and my calendar").
-    /// Absent = OFF: Apple's pick gets a second slot, which the eval arm measures first.
+    /// Chains: a tool turn may run two read-only tools ("the weather and my calendar"):
+    /// Apple's pick gets a second slot. Absent = the shell's default: ON on the Mac since the
+    /// 2026-10-10 router arm (two-tool asks 0/3 → 3/3 with routing), OFF on iOS.
     public static let chainKey = "toolChain"
 
-    public static func chainEnabled(_ defaults: UserDefaults = .standard) -> Bool {
-        defaults.bool(forKey: chainKey)
+    public static func chainEnabled(_ defaults: UserDefaults = .standard, whenUnset: Bool = false) -> Bool {
+        flag(chainKey, defaults, whenUnset: whenUnset)
+    }
+
+    /// An explicit setting wins; absent, the shell's default (`whenUnset`). The shells choose:
+    /// the Mac turns the router flags on (the 2026-10-10 arm), iOS keeps them off until a phone
+    /// smoke (Lil + Apple's picker on an 8 GB iPhone is unmeasured).
+    private static func flag(_ key: String, _ defaults: UserDefaults, whenUnset: Bool) -> Bool {
+        defaults.object(forKey: key) == nil ? whenUnset : defaults.bool(forKey: key)
     }
 
     /// Loaded once: the embedding asset is read-only and shared across turns.
@@ -104,7 +121,8 @@ public enum ToolRouterWiring {
     /// its voice and chips); reversed the same day on evidence: with a tool result in the
     /// prompt the standard persona narrated 12 of 39 answers in the third person, Mini's
     /// own 0 of 100, and it's faster. Mini's synthesised tool answers always used this one.
-    /// `allTiers` gives a brain that isn't Mini the route too (unmeasured; flagged off).
+    /// `allTiers` gives a brain that isn't Mini the route too: measured 2026-10-10 (Lil 38/48 → 48/48
+    /// tool-use at half the latency, Big 42.6 s → 14.7 s), on for the Mac, off on iOS.
     public static func route(
         provider: any InferenceProvider, enabled: Bool, dispatch: Bool = false,
         groupRouter: Bool = false, allTiers: Bool = false, chain: Bool = false
@@ -133,6 +151,9 @@ public enum ToolRouterWiring {
         )
     }
 
+    /// Set by the eval around one fixture's turn (ChatEvalStage); nil on every shipping turn.
+    @TaskLocal public static var pickRecorder: PickStageRecorder?
+
     /// The pick for a tools-verdict turn: the group head if it speaks, else the
     /// fallback picker, else nil (the agent turn). Each stage fails open to the next.
     static func cascade(
@@ -141,10 +162,16 @@ public enum ToolRouterWiring {
     ) async -> ToolPick? {
         if let picked = classify?(question) {
             log.notice("tool pick: group head → \(picked.tool, privacy: .public)")
+            pickRecorder?.record(.head)
             return picked
         }
-        guard let fallback else { return nil }
-        return await pick(with: fallback, question: question, menu: menu, chain: chain)
+        guard let fallback else {
+            pickRecorder?.record(.agent)
+            return nil
+        }
+        let picked = await pick(with: fallback, question: question, menu: menu, chain: chain)
+        pickRecorder?.record(picked == nil ? .agent : .picker)
+        return picked
     }
 
     /// Apple's model names one tool from the menu (two with `chain`: the second rides
@@ -200,5 +227,29 @@ final class OneTurnEmbedder: Sendable {
         let vector = embed(text)
         last.withLock { $0 = (text, vector) }
         return vector
+    }
+}
+
+/// Which stage named a tool turn's pick: the group head, Apple's picker, or neither (the
+/// agent turn). The router arm of 2026-10-09 couldn't tell: the head's notice went to os_log,
+/// so a head that never fired read as a head that won.
+public enum PickStage: String, Sendable, Codable {
+    case head
+    case picker
+    case agent
+}
+
+/// An eval's ear on the cascade: the stages this task's tool turns took, in order.
+public final class PickStageRecorder: Sendable {
+    private let recorded = Mutex<[PickStage]>([])
+
+    public init() {}
+
+    public var stages: [PickStage] {
+        recorded.withLock { $0 }
+    }
+
+    func record(_ stage: PickStage) {
+        recorded.withLock { $0.append(stage) }
     }
 }

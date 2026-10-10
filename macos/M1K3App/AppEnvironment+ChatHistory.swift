@@ -32,6 +32,8 @@
 //  interactiveAgentTools (the search tool) so the MCP responder withholds Photo captions.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — list_documents and get_document take
 //  `excludedKinds` too (the agent's copies leaked a caption as an observation); pinned by text scan.
+//  Review: Kev + claude-opus-5-5, 2026-10-10 — the Mac turns the router's three flags on by default
+//  (`whenUnset: true`): every tier, the group head and chains, on the 10-10 arm's evidence. iOS unchanged.
 
 import Foundation
 import M1K3Agent
@@ -544,17 +546,20 @@ extension AppEnvironment {
             // and read here as a snapshot — per-turn content, never the
             // cached persona prefix.
             todoContextProvider: { AppEnvironment.todoGroundingSnapshot.withLock { $0 } },
-            // The tool router (flagged; Mini only unless `toolRouterAllTiers`): a turn it
-            // reads as plain chat skips the palette for one streamed generation; a tool turn
-            // tries the group head, then Mini's pick. Read per turn.
+            // The tool router: a turn it reads as plain chat skips the palette for one streamed
+            // generation; a tool turn tries the group head, then Apple's pick, and the app runs
+            // the read-only tool(s). Every tier, the head and chains are ON on the Mac since the
+            // 2026-10-10 router arm (Lil 38/48 → 48/48 at half the latency, Big 3× faster, Mini's
+            // head 0.6 s faster; docs/adr/0009); an explicit setting still wins. iOS keeps them
+            // off until a phone smoke (AppCore). Read per turn.
             plainRouteProvider: {
                 ToolRouterWiring.route(
                     provider: provider,
                     enabled: ToolRouterWiring.isEnabled(),
                     dispatch: ToolRouterWiring.dispatchEnabled(),
-                    groupRouter: ToolRouterWiring.groupRouterEnabled(),
-                    allTiers: ToolRouterWiring.allTiersEnabled(),
-                    chain: ToolRouterWiring.chainEnabled()
+                    groupRouter: ToolRouterWiring.groupRouterEnabled(whenUnset: true),
+                    allTiers: ToolRouterWiring.allTiersEnabled(whenUnset: true),
+                    chain: ToolRouterWiring.chainEnabled(whenUnset: true)
                 )
             },
             excludedKinds: excludedKinds

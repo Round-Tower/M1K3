@@ -50,6 +50,8 @@ Review: Kev + claude-fable-5.1, 2026-10-09 — `kind_rows` / `kind_table`: a per
 latency-only and content columns (step 5 of the Qwen3.5 stream read "code-gen 24/30" off the JSON by hand).
 Review: Kev + claude-fable-5.1, 2026-10-09 — `over_lil_own_peak_cap`: the summary flags a lil run whose own peak
 exceeds the signed 5 GB cap (BrainTier.lilOwnPeakCapGB); the bake-off had applied it by eye.
+Review: Kev + claude-opus-5-5, 2026-10-10 — `--router off` (the live path, no route: the arm's like-for-like
+baseline); head/chain now need `dispatch` specifically.
 """
 
 from __future__ import annotations
@@ -70,7 +72,7 @@ from pathlib import Path
 BUNDLE_ID = "app.m1k3"
 LIVE_APP = "/Applications/M1K3.app"
 KNOWN_BRAINS = ("mini", "pocket", "lil", "big")
-ROUTER_MODES = ("dispatch",)  # "1" (the Mini-style plain route) is a different experiment
+ROUTER_MODES = ("dispatch", "off")  # "off": the live path, no route (the router arm's baseline)  # "1" (the Mini-style plain route) is a different experiment
 THINKING_MODES = ("tier", "always", "fast")  # EvalThinkingMode in M1K3Eval
 AFM_COOLDOWN_S = 120
 STAMP = Path(tempfile.gettempdir()) / "m1k3-chateval-last-launch"
@@ -215,7 +217,7 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         raise ValueError(f"thinking {opts.thinking!r}: choose from {', '.join(THINKING_MODES)}")
     if opts.router is not None and opts.router not in ROUTER_MODES:
         raise ValueError(f"router {opts.router!r}: choose from {', '.join(ROUTER_MODES)}")
-    if (opts.router_head or opts.router_chain) and opts.router is None:
+    if (opts.router_head or opts.router_chain) and opts.router != "dispatch":
         raise ValueError("router head/chain need --router dispatch (the app reads them only there)")
     report = out_path(container, opts.name)
     trig = {
