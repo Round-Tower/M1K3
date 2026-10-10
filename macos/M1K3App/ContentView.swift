@@ -75,6 +75,9 @@
 //  this Mac": it meant the weights are on disk, but read as the retired privacy absolute. Copy only.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (PR #527 fold) — the pitch says "the weights are already on
 //  this Mac", so the sentence names what is on disk.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#552) — the transcript follows a streaming turn only while
+//  pinned to the bottom (`onScrollGeometryChange`, 48 pt); a scroll-up releases it, a new turn re-pins; the
+//  reasoning follow is unanimated so it never fights the disclosure's height animation. Verify by launch.
 
 import M1K3Avatar
 import M1K3Chat
@@ -151,6 +154,11 @@ struct ContentView: View {
     @State private var attachmentError: String?
     @State private var showConsentDialog = false
     @State private var isDropTargeted = false
+    /// The transcript follows the streaming turn ONLY while the reader is at the
+    /// bottom (#552). Scrolling up to read the live reasoning used to be undone
+    /// ~20 times a second by `followLatest`; now a scroll-up releases the pin and
+    /// a new turn (or scrolling back down) takes it again.
+    @State private var transcriptPinnedToBottom = true
     /// Set by the intro card's "Introduce yourself" — the floor is theirs.
     @FocusState private var inputFocused: Bool
     @AppStorage(AppEnvironment.avatarDisplayKey) private var avatarDisplay = AvatarDisplay.panel
@@ -723,11 +731,26 @@ struct ContentView: View {
                     .frame(maxWidth: Self.chatContentMaxWidth)
                     .frame(maxWidth: .infinity) // centre the capped column
                 }
+                // Within 48 pt of the bottom counts as pinned: a reader who scrolls up
+                // past that is reading, and the follow lets go until they come back
+                // or send the next turn.
+                .onScrollGeometryChange(for: Bool.self) { geometry in
+                    let bottom = geometry.contentOffset.y + geometry.containerSize.height
+                    return bottom >= geometry.contentSize.height - 48
+                } action: { _, pinned in
+                    transcriptPinnedToBottom = pinned
+                }
+                // A new turn always re-pins: the reader asked for it.
+                .onChange(of: env.chat.messages.count) { _, _ in
+                    transcriptPinnedToBottom = true
+                    followLatest(proxy)
+                }
                 .onChange(of: env.chat.messages.last?.text) { followLatest(proxy) }
                 // Follow the live reasoning too — during the think phase `text` is
                 // empty, so without this the auto-expanded reasoning grows off the
-                // bottom edge. Throttled upstream (~20Hz), so the follow eases.
-                .onChange(of: env.chat.messages.last?.reasoning) { followLatest(proxy) }
+                // bottom edge. Throttled upstream (~20Hz); no animation here, so the
+                // follow never fights the disclosure's own height animation.
+                .onChange(of: env.chat.messages.last?.reasoning) { followLatest(proxy, animated: false) }
             }
         }
     }
@@ -1282,9 +1305,14 @@ struct ContentView: View {
     /// Paused while voice is active so the transcript becomes the calm scroll-back
     /// record — the dock's karaoke is the live read — and the user can read earlier
     /// turns without being yanked to the bottom mid-utterance.
-    private func followLatest(_ proxy: ScrollViewProxy) {
-        guard !env.isVoiceModeActive, let last = env.chat.messages.last?.id else { return }
-        withAnimation(.easeOut(duration: 0.15)) {
+    private func followLatest(_ proxy: ScrollViewProxy, animated: Bool = true) {
+        guard !env.isVoiceModeActive, transcriptPinnedToBottom,
+              let last = env.chat.messages.last?.id else { return }
+        if animated {
+            withAnimation(.easeOut(duration: 0.15)) {
+                proxy.scrollTo(last, anchor: .bottom)
+            }
+        } else {
             proxy.scrollTo(last, anchor: .bottom)
         }
     }
