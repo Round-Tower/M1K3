@@ -25,6 +25,9 @@
 //  the gap ("a question needing two gets the better single pick"). Confidence 0.7.
 //
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — the shares tie note (#512).
+//  Review: Kev + claude-opus-5-5, 2026-10-10 — `recencyCorrected`: a lookup_fact pick on a question about now
+//  ("this year", "latest", …) runs web_search instead, when it's on offer; the router arm's chain cell sent
+//  "who won … this year" to lookup_fact 3/3. Confidence 0.85 (pinned; the chain cells re-run to confirm).
 
 import Foundation
 import M1K3Agent
@@ -153,6 +156,29 @@ public enum ToolDispatch {
             picks.append(ToolPick(tool: next.tool, query: next.query))
         }
         return picks
+    }
+
+    /// Words that put a question in the present: "who won … this year", "the latest …".
+    static let nowCues = [
+        "this year", "this season", "this month", "this week", "latest", "newest", "most recent",
+        "today", "tonight", "right now", "currently", "current", "so far", "yet",
+    ]
+
+    /// A reference lookup about now goes to the web instead. With chains on, Apple's pick sent
+    /// "Who won the All-Ireland hurling final this year?" to lookup_fact in 3/3 trials (its menu
+    /// line says "changeable fact"), and a reference source answers a this-year question stale:
+    /// the 2026-09-12 "isn't searching the internet much" miss again. Only when web_search is on
+    /// offer this turn (web search off changes nothing); the chained pick is corrected too, and
+    /// `chain` drops a repeat if both become web_search.
+    public static func recencyCorrected(_ pick: ToolPick, palette: [any AgentTool], question: String) -> ToolPick {
+        guard palette.contains(where: { $0.name == "web_search" }),
+              ToolGroupRouter.mentions(question, any: nowCues)
+        else { return pick }
+        func corrected(_ one: ToolPick) -> ToolPick {
+            one.tool == "lookup_fact" ? ToolPick(tool: "web_search", query: one.query) : one
+        }
+        let head = corrected(pick)
+        return ToolPick(tool: head.tool, query: head.query, then: pick.then.map(corrected))
     }
 
     public struct Plan: Sendable {
