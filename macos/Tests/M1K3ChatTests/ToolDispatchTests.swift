@@ -206,7 +206,8 @@ struct ToolDispatchRecencyTests {
         #expect(ToolDispatch.recencyCorrected(fact, palette: palette, question: "What is an electrical current?") == fact)
         #expect(ToolDispatch.recencyCorrected(fact, palette: palette, question: "How far is Mars so far from Earth?") == fact)
         // Round 2 of #542: "yet" joins a contrast more often than it asks about now.
-        #expect(ToolDispatch.recencyCorrected(fact, palette: palette, question: "Why is steel strong yet light?") == fact)
+        let contrast = "Why is steel strong yet light?"
+        #expect(ToolDispatch.recencyCorrected(fact, palette: palette, question: contrast) == fact)
         #expect(ToolDispatch.recencyCorrected(fact, palette: palette, question: "Who is currently the Taoiseach?").tool
             == "web_search")
     }
