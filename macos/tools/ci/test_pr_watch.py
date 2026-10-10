@@ -838,6 +838,9 @@ def test_the_summon_asks_for_the_verdict_line_and_stays_in_tag_mode():
     assert "--append-system-prompt" in args
     for outcome in ("APPROVE", "CHANGES_REQUESTED"):
         assert f"VERDICT: {outcome} @ <head-sha>" in args
+    # the gate approves nothing shorter (2026-10-10), and summons write 8-char shas in their titles
+    flat = " ".join(args.split())
+    assert "full 40-character headRefOid" in flat and "never a short" in flat
     # shell-quote parses claude_args: a $ would expand to nothing, a " would end the string
     prompt = args.split("--append-system-prompt", 1)[1].strip()
     assert prompt.startswith('"') and prompt.endswith('"') and prompt.count('"') == 2
