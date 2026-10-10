@@ -121,19 +121,24 @@ public struct EvalObservation: Sendable, Equatable {
     /// The router's stages for this turn, in order (`PickStage` raw values: head / picker /
     /// agent). Empty when the turn never reached a pick: a chat verdict, or no router at all.
     public let routeStages: [String]
+    /// First token → first answer token on the live stream (`ThinkPhaseClock`);
+    /// nil when nothing was thought or the path has no stream timing.
+    public let thinkMS: Int?
 
     public init(
         rawText: String,
         toolCalls: [String] = [],
         validCitationCount: Int = 0,
         latencyMS: Int = 0,
-        routeStages: [String] = []
+        routeStages: [String] = [],
+        thinkMS: Int? = nil
     ) {
         self.rawText = rawText
         self.toolCalls = toolCalls
         self.validCitationCount = validCitationCount
         self.latencyMS = latencyMS
         self.routeStages = routeStages
+        self.thinkMS = thinkMS
     }
 }
 
@@ -179,9 +184,16 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
     /// as benchmark evidence, and a full code-gen answer would bury the result.
     public static let answerPreviewLimit = 240
 
+    /// Characters inside the think block (`ThinkPhase.measure`; ≈ tokens × 4) and
+    /// the time the think phase took on the live stream. Optional: older reports
+    /// predate them (a non-optional with a default still throws on old JSON).
+    public let thinkChars: Int?
+    public let thinkMS: Int?
+
     public init(
         fixtureID: String, kind: TaskKind, checks: [EvalCheck], latencyMS: Int,
-        answerPreview: String? = nil, repeatIndex: Int = 0, routeStage: String? = nil
+        answerPreview: String? = nil, repeatIndex: Int = 0, routeStage: String? = nil,
+        thinkChars: Int? = nil, thinkMS: Int? = nil
     ) {
         self.fixtureID = fixtureID
         self.kind = kind
@@ -190,6 +202,8 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
         self.answerPreview = answerPreview
         self.repeatIndex = repeatIndex
         self.routeStage = routeStage
+        self.thinkChars = thinkChars
+        self.thinkMS = thinkMS
     }
 
     /// The same score stamped as trial `index` — the stage scores each repeat
@@ -197,7 +211,8 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
     public func withRepeatIndex(_ index: Int) -> ChatEvalScore {
         ChatEvalScore(
             fixtureID: fixtureID, kind: kind, checks: checks, latencyMS: latencyMS,
-            answerPreview: answerPreview, repeatIndex: index, routeStage: routeStage
+            answerPreview: answerPreview, repeatIndex: index, routeStage: routeStage,
+            thinkChars: thinkChars, thinkMS: thinkMS
         )
     }
 
@@ -863,7 +878,8 @@ public enum ChatEvalScorer {
             fixtureID: fixture.id, kind: fixture.kind, checks: checks,
             latencyMS: observation.latencyMS,
             answerPreview: preview.isEmpty ? nil : preview,
-            routeStage: observation.routeStages.isEmpty ? nil : observation.routeStages.joined(separator: ",")
+            routeStage: observation.routeStages.isEmpty ? nil : observation.routeStages.joined(separator: ","),
+            thinkChars: ThinkPhase.measure(observation.rawText).thinkChars, thinkMS: observation.thinkMS
         )
     }
 

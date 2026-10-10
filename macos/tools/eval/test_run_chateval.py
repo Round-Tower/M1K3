@@ -260,13 +260,15 @@ def test_summary_has_a_per_kind_table_with_a_content_column(tmp_path):
     na = {"fixtureID": "e", "kind": "vision", "latencyMS": 0, "checks": [{"name": "applicable", "outcome": "skip"}]}
     rows = rc.kind_rows([ok, slow, wrong, right, na])
     assert rows == [
-        {"kind": "code-gen", "passed": 1, "total": 3, "latency_only": 1, "content": 2},
-        {"kind": "open-chat", "passed": 1, "total": 1, "latency_only": 0, "content": 1},
-    ], "kinds sorted, n/a trials left out, content = passed + latency-only"
+        {"kind": "code-gen", "passed": 1, "total": 3, "latency_only": 1, "content": 2,
+         "think_tokens": None, "think_ms": None},
+        {"kind": "open-chat", "passed": 1, "total": 1, "latency_only": 0, "content": 1,
+         "think_tokens": None, "think_ms": None},
+    ], "kinds sorted, n/a trials left out, content = passed + latency-only; no think fields → None"
     doc = tmp_path / "run.json"
     doc.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok, slow, wrong, right, na]}], "provenance": {}}))
     table = rc.kind_table(rows)
-    assert table.splitlines()[0].split() == ["kind", "passed", "latency-only", "content"]
+    assert table.splitlines()[0].split() == ["kind", "passed", "latency-only", "content", "~think-tk", "think-ms"]
     assert "code-gen" in table and "1/3" in table and "2/3" in table
     assert table in rc.summarise(doc), "the table rides in the summary under the run line"
 
@@ -399,3 +401,17 @@ def test_router_off_is_the_arms_like_for_like_baseline():
     for over in ({"router_head": True}, {"router_chain": True}):
         with pytest.raises(ValueError):
             _trig(router="off", **over)
+
+
+def test_kind_rows_carry_the_think_phase_medians():
+    # 2026-10-10: Lil's reasoning "running wild" was a feeling until the score carried the think block.
+    thought = {"fixtureID": "a", "kind": "reasoning", "latencyMS": 9, "thinkChars": 800, "thinkMS": 4000,
+               "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    thought2 = {"fixtureID": "b", "kind": "reasoning", "latencyMS": 9, "thinkChars": 1200, "thinkMS": 6000,
+                "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    old = {"fixtureID": "c", "kind": "reasoning", "latencyMS": 9, "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    rows = rc.kind_rows([thought, thought2, old])
+    assert rows[0]["think_tokens"] == 300 and rows[0]["think_ms"] == 6000, "median over the trials that recorded it"
+    table = rc.kind_table(rows)
+    assert "300" in table and "6000" in table
+

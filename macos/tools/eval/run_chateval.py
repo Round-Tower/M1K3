@@ -50,6 +50,8 @@ Review: Kev + claude-fable-5.1, 2026-10-09 — `kind_rows` / `kind_table`: a per
 latency-only and content columns (step 5 of the Qwen3.5 stream read "code-gen 24/30" off the JSON by hand).
 Review: Kev + claude-fable-5.1, 2026-10-09 — `over_lil_own_peak_cap`: the summary flags a lil run whose own peak
 exceeds the signed 5 GB cap (BrainTier.lilOwnPeakCapGB); the bake-off had applied it by eye.
+Review: Kev + claude-fable-5.1, 2026-10-10 — `--think-steer` (the think-phase A/B clause) and two think columns
+in `kind_rows` / `kind_table` (median ~tokens and ms of the think block, from the new score fields).
 Review: Kev + claude-opus-5-5, 2026-10-10 — `--router off` (the live path, no route: the arm's like-for-like
 baseline); head/chain now need `dispatch` specifically.
 """
@@ -196,6 +198,7 @@ class RunOptions:
     dump_prompt: bool = False
     pcc: bool = False
     thinking: str | None = None  # None → the app's default (tier: production's shape)
+    think_steer: str | None = None  # none | terse | emoji | softcap — the think-steer A/B clause
     full_answers: bool = False  # whole answers in the document (bake-offs), not the 240-char excerpt
     router: str | None = None  # "dispatch": the app's own tool route, every tier on (the router arm)
     router_head: bool = False  # + the group head (toolGroupRouter); needs router
@@ -238,6 +241,8 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         trig["M1K3_SELFTEST_CHATEVAL_REPEATS"] = str(opts.repeats)
     if opts.thinking:
         trig["M1K3_SELFTEST_CHATEVAL_THINKING"] = opts.thinking
+    if opts.think_steer:
+        trig["M1K3_SELFTEST_CHATEVAL_THINK_STEER"] = opts.think_steer
     if opts.full_answers:
         trig["M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS"] = "1"
     if opts.router:
@@ -346,29 +351,53 @@ def _latency_only(score: dict) -> bool:
     return [c.get("name") for c in score.get("checks", []) if c.get("outcome") == "fail"] == ["responsive"]
 
 
+def _median(values: list[int]) -> int | None:
+    if not values:
+        return None
+    ordered = sorted(values)
+    return ordered[len(ordered) // 2]
+
+
 def kind_rows(scores: list[dict]) -> list[dict]:
-    """Per task-kind: passed, total, latency-only fails and the content score (passed + latency-only).
-    Sorted by kind; n/a trials left out. "code-gen 24/30, grounded-Q 18/24" were hand counts off the
-    JSON before this (2026-10-09); content is a column, not a hand count on top of one."""
+    """Per task-kind: passed, total, latency-only fails, the content score (passed + latency-only),
+    and the think phase (2026-10-10): median think tokens (thinkChars / 4) and median think ms over
+    the trials that recorded them (None when none did — older reports). Sorted by kind; n/a trials
+    left out. "code-gen 24/30, grounded-Q 18/24" were hand counts off the JSON before this
+    (2026-10-09); content is a column, not a hand count on top of one."""
     rows: dict[str, dict] = {}
+    think_chars: dict[str, list[int]] = {}
+    think_ms: dict[str, list[int]] = {}
     for s in _applicable(scores):
-        row = rows.setdefault(s.get("kind") or "?", {"passed": 0, "total": 0, "latency_only": 0})
+        kind = s.get("kind") or "?"
+        row = rows.setdefault(kind, {"passed": 0, "total": 0, "latency_only": 0})
         row["total"] += 1
         if _passed(s):
             row["passed"] += 1
         elif _latency_only(s):
             row["latency_only"] += 1
-    return [{"kind": kind, **row, "content": row["passed"] + row["latency_only"]}
-            for kind, row in sorted(rows.items())]
+        if s.get("thinkChars") is not None:
+            think_chars.setdefault(kind, []).append(int(s["thinkChars"]))
+        if s.get("thinkMS") is not None:
+            think_ms.setdefault(kind, []).append(int(s["thinkMS"]))
+    out = []
+    for kind, row in sorted(rows.items()):
+        chars = _median(think_chars.get(kind, []))
+        out.append({"kind": kind, **row, "content": row["passed"] + row["latency_only"],
+                    "think_tokens": None if chars is None else chars // 4,
+                    "think_ms": _median(think_ms.get(kind, []))})
+    return out
 
 
 def kind_table(rows: list[dict]) -> str:
-    """The rows as an aligned text table: kind | passed | latency-only | content."""
+    """The rows as an aligned text table: kind | passed | latency-only | content | ~think tk | think ms."""
     width = max([len("kind")] + [len(r["kind"]) for r in rows])
-    lines = [f"    {'kind'.ljust(width)}  passed  latency-only  content"]
+    lines = [f"    {'kind'.ljust(width)}  passed  latency-only  content  ~think-tk  think-ms"]
     for r in rows:
         passed, content = f"{r['passed']}/{r['total']}", f"{r['content']}/{r['total']}"
-        lines.append(f"    {r['kind'].ljust(width)}  {passed.rjust(6)}  {str(r['latency_only']).rjust(12)}  {content.rjust(7)}")
+        tk = "—" if r.get("think_tokens") is None else str(r["think_tokens"])
+        ms = "—" if r.get("think_ms") is None else str(r["think_ms"])
+        lines.append(f"    {r['kind'].ljust(width)}  {passed.rjust(6)}  {str(r['latency_only']).rjust(12)}  "
+                     f"{content.rjust(7)}  {tk.rjust(9)}  {ms.rjust(8)}")
     return "\n".join(lines)
 
 
@@ -482,6 +511,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--kinds", default="", help="comma list of task kinds (default: all)")
     ap.add_argument("--repeats", type=int, default=1)
     ap.add_argument("--bare", action="store_true", help="bare provider.generate instead of the live path")
+    ap.add_argument("--think-steer", choices=["none", "terse", "emoji", "softcap"],
+                    help="the think-steer A/B clause appended to the turn's rules (M1K3_SELFTEST_CHATEVAL_THINK_STEER)")
     ap.add_argument("--thinking", choices=THINKING_MODES,
                     help="how every arm thinks: tier (production's shape, the app default), always, fast")
     ap.add_argument("--full-answers", action="store_true",
@@ -513,7 +544,7 @@ def main(argv: list[str] | None = None) -> int:
         name=args.name, brains=[b for b in args.brains.split(",") if b], model=args.model,
         kinds=[k for k in args.kinds.split(",") if k], repeats=args.repeats,
         live_path=not args.bare, notes=args.notes, dump_prompt=args.dump_prompt, pcc=args.pcc,
-        thinking=args.thinking, full_answers=args.full_answers,
+        thinking=args.thinking, think_steer=args.think_steer, full_answers=args.full_answers,
         router=args.router, router_head=args.router_head, router_chain=args.router_chain,
     )
     if args.direct and args.dump_prompt:

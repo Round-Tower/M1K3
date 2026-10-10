@@ -71,6 +71,9 @@
 //  reached the router before: the 10-09 arm's tool-use column ran LocalAgent in every cell); `ROUTER=off` is that
 //  path with no route; the turn records its tools (onActivity) and its pick stage. Confidence 0.75 (verify-by-
 //  launch: the arm).
+//  Review: Kev + claude-fable-5.1, 2026-10-10 — the think phase measured: `ThinkPhaseClock` on the live
+//  stream (thinkMS), `thinkChars` on every score, and the `M1K3_SELFTEST_CHATEVAL_THINK_STEER` arm
+//  (terse / emoji / softcap) as the responder's style clause.
 //
 
 import Foundation
@@ -350,6 +353,8 @@ enum ChatEvalStage {
         default:
             break
         }
+        // The think-steer arm (2026-10-10): one rules clause on HOW to reason, nothing else.
+        let steer = ThinkSteer(envValue: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_THINK_STEER"))
         let responder = AgentRAGResponder(
             store: store, embedder: MLXEmbeddingService(), provider: provider,
             toolsProvider: { palette }, maxIterations: 3,
@@ -364,26 +369,30 @@ enum ChatEvalStage {
                     EgressFacts(webSearch: true, privateCloudOffered: true), device: HostPlatform.thisDevice
                 )
             },
+            styleClauseProvider: { steer.clause },
             plainRouteProvider: plainRoute
         )
         // The tools the turn ran and the stage that picked them (2026-10-10): the 10-09 arm could
         // see neither. The recorder is a task-local, so the turn runs inside its scope.
         let tools = EvalToolLog()
         let stages = PickStageRecorder()
-        let raw = try await ToolRouterWiring.$pickRecorder.withValue(stages) {
+        let (raw, thinkMS) = try await ToolRouterWiring.$pickRecorder.withValue(stages) {
             let (_, stream) = try await responder.answerStreaming(
                 fixture.prompt, images: images, history: [], onActivity: { activity in
                     if case let .usingTool(name, _) = activity { tools.append(name) }
                 }
             )
             var raw = ""
+            var thinkClock = ThinkPhaseClock()
             for await piece in stream {
                 // The responder's fallback passes provider chunks through raw, and a
                 // cumulative provider (AFM, PCC) yields snapshots — `+=` would score
                 // "HHeHel…". Same fold the app's consumer applies (ChatSession).
                 raw = StreamFold.fold(current: raw, chunk: piece)
+                // The think phase on the clock: first token → first answer token.
+                thinkClock.feed(piece, at: clock.now - start)
             }
-            return raw
+            return (raw, thinkClock.thinkMS)
         }
         // An empty stream from a provider that can name its failure is a failed
         // call, scored as "ran — <reason>", never as "0 chars".
@@ -394,7 +403,8 @@ enum ChatEvalStage {
             rawText: raw,
             toolCalls: tools.names,
             latencyMS: milliseconds(clock.now - start),
-            routeStages: stages.stages.map(\.rawValue)
+            routeStages: stages.stages.map(\.rawValue),
+            thinkMS: thinkMS
         )
     }
 
@@ -607,6 +617,8 @@ enum ChatEvalStage {
         _ tier: BrainTier, modelID: String?, emit: @escaping (String) -> Void
     ) async -> [ChatEvalScore]? {
         let plan = EvalThinkingPlan(tier: tier, mode: thinkingMode)
+        let steer = ThinkSteer(envValue: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_THINK_STEER"))
+        emit("  think steer: \(steer.rawValue)")
         emit("  thinking: \(thinkingMode.rawValue) (bare \(plan.bareThinks ? "on" : "off"), "
             + "live \(plan.liveForced.map { $0 ? "always" : "fast" } ?? "auto, \(plan.liveFastByDefault ? "speed-tier" : "full") policy"))")
         let provider: any InferenceProvider
