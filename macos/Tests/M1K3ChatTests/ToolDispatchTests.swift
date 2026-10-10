@@ -186,8 +186,8 @@ struct ToolDispatchRecencyTests {
             pick, palette: palette, question: "Who won the All-Ireland hurling final this year?"
         )
         #expect(fixed == ToolPick(tool: "web_search", query: "All-Ireland hurling final winner"))
-        #expect(ToolDispatch.recencyCorrected(pick, palette: palette, question: "What's the latest on the Artemis mission?").tool
-            == "web_search")
+        let latest = "What's the latest on the Artemis mission?"
+        #expect(ToolDispatch.recencyCorrected(pick, palette: palette, question: latest).tool == "web_search")
     }
 
     @Test("a stable fact, another tool, or web search off: the pick is unchanged")
@@ -202,8 +202,11 @@ struct ToolDispatchRecencyTests {
 
     @Test("the chained second tool is corrected too")
     func chainedLookupIsWeb() {
-        let pick = ToolPick(tool: "datetime", query: "", then: [ToolPick(tool: "lookup_fact", query: "newest iPhone")])
-        let fixed = ToolDispatch.recencyCorrected(pick, palette: palette, question: "What time is it, and what's the newest iPhone?")
-        #expect(fixed == ToolPick(tool: "datetime", query: "", then: [ToolPick(tool: "web_search", query: "newest iPhone")]))
+        let lookup = ToolPick(tool: "lookup_fact", query: "newest iPhone")
+        let pick = ToolPick(tool: "datetime", query: "", then: [lookup])
+        let question = "What time is it, and what's the newest iPhone?"
+        let fixed = ToolDispatch.recencyCorrected(pick, palette: palette, question: question)
+        let web = ToolPick(tool: "web_search", query: "newest iPhone")
+        #expect(fixed == ToolPick(tool: "datetime", query: "", then: [web]))
     }
 }

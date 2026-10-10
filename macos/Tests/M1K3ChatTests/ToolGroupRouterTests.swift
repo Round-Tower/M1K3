@@ -299,6 +299,22 @@ struct ToolPickCascadeTests {
         #expect(ToolRouterWiring.allTiersEnabled(defaults))
         #expect(ToolRouterWiring.chainEnabled(defaults))
     }
+
+    @Test("a shell picks the unset default (the Mac: on, after the 10-10 arm); an explicit setting still wins")
+    func unsetDefaultIsTheShells() throws {
+        let suite = "ToolPickCascadeTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        #expect(ToolRouterWiring.groupRouterEnabled(defaults, whenUnset: true))
+        #expect(ToolRouterWiring.allTiersEnabled(defaults, whenUnset: true))
+        #expect(ToolRouterWiring.chainEnabled(defaults, whenUnset: true))
+        defaults.set(false, forKey: ToolRouterWiring.groupRouterKey)
+        defaults.set(false, forKey: ToolRouterWiring.allTiersKey)
+        defaults.set(false, forKey: ToolRouterWiring.chainKey)
+        #expect(!ToolRouterWiring.groupRouterEnabled(defaults, whenUnset: true))
+        #expect(!ToolRouterWiring.allTiersEnabled(defaults, whenUnset: true))
+        #expect(!ToolRouterWiring.chainEnabled(defaults, whenUnset: true))
+    }
 }
 
 /// The challenger on the flip (2026-10-10): only the device family guarded writes, so "forget

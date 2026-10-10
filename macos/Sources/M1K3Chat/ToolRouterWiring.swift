@@ -40,6 +40,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-10 — the cascade reports its stage (head / picker / agent) to a
 //  @TaskLocal `PickStageRecorder` the eval sets; nil on every shipping turn. The 10-09 arm couldn't see
 //  that the head never fired. Confidence 0.85 (the cascade side is pinned; the eval wiring is by launch).
+//  Review: Kev + claude-opus-5-5, 2026-10-10 — each flag reader takes `whenUnset:` (an explicit setting still
+//  wins), so a shell picks the default: the Mac turns them on after the 10-10 arm, iOS keeps them off.
 //
 
 import Foundation
@@ -69,24 +71,31 @@ public enum ToolRouterWiring {
     /// and falls back to Apple's pick, but it is an experiment until an arm measures it.
     public static let groupRouterKey = "toolGroupRouter"
 
-    public static func groupRouterEnabled(_ defaults: UserDefaults = .standard) -> Bool {
-        defaults.bool(forKey: groupRouterKey)
+    public static func groupRouterEnabled(_ defaults: UserDefaults = .standard, whenUnset: Bool = false) -> Bool {
+        flag(groupRouterKey, defaults, whenUnset: whenUnset)
     }
 
     /// The route for every brain, not only Mini: absent = OFF until the eval arm
     /// (`M1K3_SELFTEST_CHATEVAL_ROUTER=dispatch`) has measured Lil and Big on it.
     public static let allTiersKey = "toolRouterAllTiers"
 
-    public static func allTiersEnabled(_ defaults: UserDefaults = .standard) -> Bool {
-        defaults.bool(forKey: allTiersKey)
+    public static func allTiersEnabled(_ defaults: UserDefaults = .standard, whenUnset: Bool = false) -> Bool {
+        flag(allTiersKey, defaults, whenUnset: whenUnset)
     }
 
     /// Chains: a tool turn may run two read-only tools ("the weather and my calendar").
     /// Absent = OFF: Apple's pick gets a second slot, which the eval arm measures first.
     public static let chainKey = "toolChain"
 
-    public static func chainEnabled(_ defaults: UserDefaults = .standard) -> Bool {
-        defaults.bool(forKey: chainKey)
+    public static func chainEnabled(_ defaults: UserDefaults = .standard, whenUnset: Bool = false) -> Bool {
+        flag(chainKey, defaults, whenUnset: whenUnset)
+    }
+
+    /// An explicit setting wins; absent, the shell's default (`whenUnset`). The shells choose:
+    /// the Mac turns the router flags on (the 2026-10-10 arm), iOS keeps them off until a phone
+    /// smoke (Lil + Apple's picker on an 8 GB iPhone is unmeasured).
+    private static func flag(_ key: String, _ defaults: UserDefaults, whenUnset: Bool) -> Bool {
+        defaults.object(forKey: key) == nil ? whenUnset : defaults.bool(forKey: key)
     }
 
     /// Loaded once: the embedding asset is read-only and shared across turns.
