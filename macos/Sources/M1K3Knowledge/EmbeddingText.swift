@@ -28,6 +28,8 @@
 //  Qwen3-Embedding asymmetric query instruction (measurement-first: KEYEVAL
 //  measures it before any call site adopts it). Doc-side composition and the
 //  fingerprint salt are untouched. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 — `forGemmaQuery` / `forGemmaDocument`, EmbeddingGemma 2's
+//  card prompts (Stream C slice 2); the Qwen composer and the salt are untouched. Confidence 0.85.
 //
 
 import Foundation
@@ -86,5 +88,25 @@ public enum EmbeddingText {
     /// either changing means the stored vectors are no longer comparable.
     public static func storeFingerprint(embedder fingerprint: String) -> String {
         "\(fingerprint)+\(compositionVersion)"
+    }
+}
+
+// MARK: - EmbeddingGemma 2 prompts
+
+public extension EmbeddingText {
+    /// EmbeddingGemma 2's model-card prompts (`config_sentence_transformers.json`,
+    /// `Retrieval-query` / `Retrieval-document`). Unlike Qwen3-Embedding, BOTH
+    /// sides carry a prefix, so the document one changes stored vectors — it is
+    /// tied to the model id, which the embedder fingerprint already carries, so
+    /// it needs no extra salt.
+    static let gemmaQueryPrefix = "task: search result | query: "
+    static let gemmaDocumentPrefix = "title: none | text: "
+
+    static func forGemmaQuery(_ query: String) -> String {
+        gemmaQueryPrefix + query
+    }
+
+    static func forGemmaDocument(_ document: String) -> String {
+        gemmaDocumentPrefix + document
     }
 }
