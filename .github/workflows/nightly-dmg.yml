@@ -266,7 +266,10 @@ jobs:
           # The DMG is already published above — that is the nightly's deliverable.
           # A tap hiccup (revoked token, non-fast-forward, network) must not redden
           # this run: the bump runs in a subshell and any failure becomes an
-          # ::error:: annotation, still exit 0.
+          # ::error:: annotation, still exit 0. The subshell is a PLAIN statement
+          # whose status is read afterwards — never `( … ) || echo`, because bash
+          # switches errexit off inside the left side of `||`, which is how the
+          # 2026-10-10 run printed "Cask bumped" over a 403 on the push.
           (
             set -euo pipefail
             DATE="$(date -u +%Y.%m.%d)"
@@ -283,13 +286,25 @@ jobs:
             if git diff --quiet; then echo "cask already at $DATE / $SHA"; exit 0; fi
             git -c user.name="m1k3-nightly" -c user.email="nightly@m1k3.app" commit -qam "m1k3 $DATE (master @ $SHORT)"
             git push -q origin HEAD
+            # End state, not exit code: the tap's HEAD must now be our commit.
+            REMOTE="$(git ls-remote -q origin HEAD | cut -f1)"
+            [ "$REMOTE" = "$(git rev-parse HEAD)" ] \
+              || { echo "pushed, but the tap's HEAD is $REMOTE, not $(git rev-parse HEAD)"; exit 1; }
             echo "✅ Cask bumped to $DATE"
-          ) || echo "::error::Homebrew cask bump failed — the DMG is published; bump Casks/m1k3.rb by hand (see #271)"
+          )
+          status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "::error::Homebrew cask bump failed (exit $status) — the DMG is published; the cask still serves the previous nightly. A 403 on the push means TAP_PUSH_TOKEN lacks contents:write on Round-Tower/homebrew-tap (org approval pending?). See #271."
+          fi
 
       - name: Clean up the temporary keychain
         if: always() && steps.gate.outputs.configured == 'true'
         run: security delete-keychain "$KEYCHAIN" 2>/dev/null || true
 
+# Review: Kev + claude-fable-5.1, 2026-10-10 (cask) — the bump's `( … ) || echo` swallowed the
+# push's 403 (errexit is off inside a `||` operand) and reported "Cask bumped" with the tap
+# untouched; the subshell is now a plain statement with its status read after, and the step
+# checks the tap's HEAD against the pushed commit. Verify-on-dispatch once the token has write.
 # Review: Kev + claude-fable-5.1, 2026-10-10 — the Metal step grew an explicit
 # export/import fallback: on image 20261006 the plain download completed but the
 # component was never mounted into the selected Xcode (`metal` still missing,
