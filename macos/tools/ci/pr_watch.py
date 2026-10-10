@@ -44,8 +44,9 @@ in project memory. Now they are code, tested in test_pr_watch.py:
 * A pass lands nothing unless it says so. Every review prompt (claude-code-review*.yml,
   claude.yml) asks for a closing `VERDICT: APPROVE @ <sha>` or
   `VERDICT: CHANGES_REQUESTED @ <sha>` line. The newest pass on the head — the newest
-  N when N passes are owed — must APPROVE naming this head; a missing, malformed or
-  CHANGES_REQUESTED verdict, or one naming another sha, refuses. A CHANGES_REQUESTED
+  N when N passes are owed — must APPROVE naming this head's FULL 40-char sha (a short
+  prefix can be ground to match a new commit); a missing, malformed or
+  CHANGES_REQUESTED verdict, a short sha, or another sha refuses. A CHANGES_REQUESTED
   or unparseable verdict on any pass counted for the head stands until a review that
   STARTED after it finished approves: a pass that ran alongside it clears nothing,
   whichever finished last (a missing line on an older pass is ignored). Under `--passes 0`
@@ -160,6 +161,15 @@ line, so a stray one could promote a fenced example verdict and hide the real on
 now makes any verdict-shaped line unparseable (a standing blocker), and a body with none stays
 "missing". `_outside_fences` itself is unchanged, since classify's checklist read uses it too.
 Confidence now 0.85.
+Review: Kev + claude-opus-5.5, 2026-10-10 (7) — Kev's call: an APPROVE counts only when it names
+the head's full 40-char sha, case-insensitive. A 7-char prefix can be ground in ~2^28 tries, so an
+agent could push a new head that borrows an old approval. A short or 39-char prefix now reads
+"verdict: short sha (N chars) …"; another sha prints to 12 chars, so a ground 8-char collision reads
+as two shas. Blockers stay generous (`_about`: any 7+ prefix of the head), and only a full-sha
+APPROVE clears one. Pass counting (`_names`, `named_heads`) is unchanged: a title naming a ground
+prefix still counts, but its verdict cannot approve the new head. Same rule as dyslexia-ai #892's
+review_gate.py. Confidence now 0.85, pinned in test_pr_watch.py. Whether the bots write the full
+sha unprompted is unmeasured; the summon prompt now asks for it.
 """
 from __future__ import annotations
 
@@ -497,15 +507,27 @@ def review_verdict(body: str) -> tuple[str, str]:
     return (mt.group(1), mt.group(2).lower())
 
 
+def _about(head: str, sha: str) -> bool:
+    """The verdict's sha is this head or a 7+ prefix of it (the parser takes 7–40
+    hex): enough to put a BLOCKER on this head, never enough to approve it."""
+    return bool(sha) and head.lower().startswith(sha)
+
+
 def verdict_refusal(head: str, comment: dict | None) -> str | None:
-    """Why this pass does not approve THIS head, or None when it does."""
+    """Why this pass does not approve THIS head, or None when it does. Only the
+    head's full 40-char sha approves (Kev, 2026-10-10): a 7-char prefix can be
+    ground in ~2^28 tries, so a new commit could borrow an old approval. A
+    blocker stays generous: one naming any 7+ prefix is on this head. The other
+    sha is shown to 12 chars, so a ground 8-char collision reads as two shas."""
     outcome, sha = review_verdict((comment or {}).get("body", ""))
     if outcome in ("missing", "unparseable"):
         return f"verdict: {outcome} on {head[:8]}"
-    if not _names(head, [sha]):
-        return f"verdict: {outcome} names {sha[:8]}, not {head[:8]}"
+    if not _about(head, sha):
+        return f"verdict: {outcome} names {sha[:12]}, not {head[:12]}"
     if outcome != "APPROVE":
         return f"verdict: {outcome} on {head[:8]}"
+    if sha != head.lower():
+        return f"verdict: short sha ({len(sha)} chars) on {head[:12]}; the gate needs the full 40-char head sha"
     return None
 
 
