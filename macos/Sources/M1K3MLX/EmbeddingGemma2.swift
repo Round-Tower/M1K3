@@ -36,6 +36,7 @@
 //  text-only split is a follow-up).
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#545 bot pass) — the sliding mask is now covered by a
 //  1,396-token fixture case (cosine 0.99996); `loadWeights` takes the per-layer quantization only.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#545 pass 2) — an empty id sequence yields no vector.
 
 import Foundation
 import MLX
@@ -189,6 +190,10 @@ public actor EmbeddingGemma2Embedder {
     /// Inputs past `contextLength` tokens are cut, keeping the closing `<eos>`.
     public func embed(_ text: String) -> [Float] {
         let ids = Self.capped(tokenize(text), to: EmbeddingGemma2TextModel.contextLength)
+        // The post-processor always adds <bos>/<eos>; an empty sequence would
+        // mean-pool to NaN, so it returns no vector and the service's width
+        // check throws instead of storing garbage.
+        guard !ids.isEmpty else { return [] }
         let tokens = MLXArray(ids.map { Int32($0) }).expandedDimensions(axis: 0)
         let states = model(tokens).asType(.float32)
         let pooled = states.mean(axis: 1).squeezed(axis: 0)

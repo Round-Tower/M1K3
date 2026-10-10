@@ -6,6 +6,7 @@
 //  for the model and its provenance). Split out for file length only.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-10, Confidence 0.85, Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#545 pass 2) — `if let` reword of the model_type check.
 
 import Foundation
 
@@ -97,11 +98,12 @@ public struct EmbeddingGemma2Configuration: Decodable, Sendable {
 
     public init(from decoder: any Decoder) throws {
         let root = try decoder.container(keyedBy: RootKeys.self)
-        let modelType = try root.decodeIfPresent(String.self, forKey: .modelType)
-        guard modelType == nil || EmbeddingGemma2TextModel.modelTypes.contains(modelType!) else {
+        if let modelType = try root.decodeIfPresent(String.self, forKey: .modelType),
+           !EmbeddingGemma2TextModel.modelTypes.contains(modelType)
+        {
             throw DecodingError.dataCorruptedError(
                 forKey: .modelType, in: root,
-                debugDescription: "not an EmbeddingGemma 2 checkpoint: model_type \(modelType ?? "nil")"
+                debugDescription: "not an EmbeddingGemma 2 checkpoint: model_type \(modelType)"
             )
         }
         let text = try root.decodeIfPresent(Text.self, forKey: .textConfig) ?? Text(from: decoder)

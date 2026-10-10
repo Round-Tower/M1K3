@@ -27,6 +27,7 @@
 //  `MatryoshkaTruncation` the service uses; ranking pairs come from the
 //  fixture; the RSS figure is labelled as the whole process's.
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#545 bot pass) — true/yes count as the preset.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#545 pass 2) — a NaN cosine can no longer read as PASS.
 
 import Foundation
 import M1K3Knowledge
@@ -174,7 +175,9 @@ enum EmbeddingGemma2RefStage {
         let minPipeline = values.map(\.pipeline).min() ?? 0
         let sorted = values.map(\.embedMillis).sorted()
         let median = sorted.isEmpty ? 0 : sorted[sorted.count / 2]
-        let pass = tokenMatches == total && total > 0
+        // `min()` skips a NaN that isn't first, so finiteness is required explicitly.
+        let finite = values.allSatisfy { $0.cos768.isFinite && $0.cos512.isFinite && $0.pipeline.isFinite }
+        let pass = tokenMatches == total && total > 0 && finite
             && minCos768 >= threshold && minCos512 >= threshold && minPipeline >= threshold && rankingOK
         return String(
             format: "eg2ref summary: tokens %d/%d · min cos768 %.5f · min cos512 %.5f · min pipeline %.5f · "

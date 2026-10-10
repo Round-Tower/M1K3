@@ -30,6 +30,8 @@
 //  fingerprint salt are untouched. Confidence 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-10-10 — `forGemmaQuery` / `forGemmaDocument`, EmbeddingGemma 2's
 //  card prompts (Stream C slice 2); the Qwen composer and the salt are untouched. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#545 pass 2) — the doc now points at the Gemma prompt
+//  version in the service instead of claiming the model id is salt enough.
 //
 
 import Foundation
@@ -96,9 +98,9 @@ public enum EmbeddingText {
 public extension EmbeddingText {
     /// EmbeddingGemma 2's model-card prompts (`config_sentence_transformers.json`,
     /// `Retrieval-query` / `Retrieval-document`). Unlike Qwen3-Embedding, BOTH
-    /// sides carry a prefix, so the document one changes stored vectors — it is
-    /// tied to the model id, which the embedder fingerprint already carries, so
-    /// it needs no extra salt.
+    /// sides carry a prefix, so the document one lives in stored vectors: the
+    /// Gemma fingerprint carries `MLXEmbeddingService.gemmaPromptVersion`, and
+    /// editing `gemmaDocumentPrefix` means bumping it (a test pins the pair).
     static let gemmaQueryPrefix = "task: search result | query: "
     static let gemmaDocumentPrefix = "title: none | text: "
 

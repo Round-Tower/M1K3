@@ -160,7 +160,10 @@ struct EmbeddingGemma2Tests {
         let kernel = MLXEmbeddingService.kernelTag
         let salt = MLXEmbeddingService.gemmaPromptVersion
         #expect(gemma.fingerprint == "mlx/mlx-community/embeddinggemma-2-8bit/d512/\(kernel)/\(salt)")
+        // The prompt strings and the version are one unit: editing either prefix means bumping the version.
+        #expect(MLXEmbeddingService.gemmaPromptVersion == "prompt-v1")
         #expect(EmbeddingText.gemmaDocumentPrefix == "title: none | text: ", "edit → bump gemmaPromptVersion")
+        #expect(EmbeddingText.gemmaQueryPrefix == "task: search result | query: ", "edit → bump gemmaPromptVersion")
         #expect(gemma.composeDocument("Pro is €8 a month.") == "title: none | text: Pro is €8 a month.")
         #expect(gemma.composeQuery("what does Pro cost?") == "task: search result | query: what does Pro cost?")
 
