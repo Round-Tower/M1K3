@@ -28,6 +28,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `-generationActivity NO` at launch turns the hold
 //  off (arm B of tools/perf/display_off_ab.sh, the A/B that decides the Open above). A test
 //  switch only: no UI, no default change; read through one reader like `-afm.prefixPrewarm`.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 — the Open above is CLOSED: the A/B ran on
+//  2026-10-10 (hold off 29 → 4 tok/s, hold on 28.5 → 28; docs/evals, #533), App Nap is the
+//  mechanism and this hold is the fix. The switch now reads the argument domain only (#530).
 
 import Foundation
 import Synchronization
@@ -73,8 +76,13 @@ public final class GenerationActivity: Sendable {
 
     /// Absent means on; a launch-argument string reads the way its words say ("NO", "false",
     /// "0" off) — `object(forKey:) as? Bool` would read "NO" as nil (the #324 consent bug).
+    /// Read from the ARGUMENT domain only: this is an A/B lever, not a setting, so a key that
+    /// somehow persisted in the app's defaults must never switch the hold off in a shipped
+    /// build (#530).
     public static func isEnabled(in defaults: UserDefaults) -> Bool {
-        defaults.object(forKey: defaultsKey) == nil || defaults.bool(forKey: defaultsKey)
+        guard let raw = defaults.volatileDomain(forName: UserDefaults.argumentDomain)[defaultsKey] else { return true }
+        if let flag = raw as? Bool { return flag }
+        return (raw as? NSString)?.boolValue ?? true
     }
 
     private let asserter: any ActivityAsserting

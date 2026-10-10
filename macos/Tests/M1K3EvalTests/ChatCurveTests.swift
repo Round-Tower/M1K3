@@ -63,6 +63,36 @@ struct ChatCurveTests {
         #expect(folded.prefillMS == 620)
     }
 
+    @Test("a turn's window keeps only entries dated at or after the turn started")
+    func windowDropsEarlierTurns() {
+        let t0 = Date(timeIntervalSinceReferenceDate: 1000)
+        let entries = [
+            ChatCurveLogEntry(date: t0.addingTimeInterval(-5), message: "chatcurve [m]: prompt=3071tok prefill=900ms decode=10tok @30tok/s"),
+            ChatCurveLogEntry(date: t0.addingTimeInterval(-1), message: "toolTurnSession reuse: 0/3071 tok from cache, prefilling 3071, seed=persona"),
+            ChatCurveLogEntry(date: t0, message: "toolTurnSession reuse: 3000/3223 tok from cache, prefilling 223, seed=tail"),
+            ChatCurveLogEntry(date: t0.addingTimeInterval(2), message: "chatcurve [m]: prompt=223tok prefill=80ms decode=10tok @30tok/s"),
+        ]
+        let folded = ChatCurveLogParser.fold(ChatCurveLogParser.turnLines(entries, since: t0, label: "chatcurve"))
+        // The 2026-10-10 run read 3071, 6294, 9891…: every message summed the generations since
+        // launch. A per-message window reads this turn's 223, not the running total.
+        #expect(folded.generations == 1)
+        #expect(folded.promptTokens == 223)
+        #expect(folded.reuse == ChatCurveReuse(reused: 3000, total: 3223))
+    }
+
+    @Test("another provider's generation in the window is not this turn's prefill")
+    func windowKeepsOnlyTheLabelledProvider() {
+        let t0 = Date(timeIntervalSinceReferenceDate: 2000)
+        let entries = [
+            ChatCurveLogEntry(date: t0.addingTimeInterval(1), message: "chatcurve [m]: prompt=200tok prefill=70ms decode=10tok @30tok/s"),
+            ChatCurveLogEntry(date: t0.addingTimeInterval(2), message: "title [m]: prompt=900tok prefill=400ms decode=5tok @30tok/s"),
+        ]
+        let folded = ChatCurveLogParser.fold(ChatCurveLogParser.turnLines(entries, since: t0, label: "chatcurve"))
+        #expect(folded.generations == 1)
+        #expect(folded.promptTokens == 200)
+        #expect(folded.prefillMS == 70)
+    }
+
     @Test("a turn with no metric lines folds to nils, not zeros")
     func foldsEmpty() {
         let folded = ChatCurveLogParser.fold(["noise"])

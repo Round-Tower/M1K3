@@ -21,6 +21,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#522 review fold) — a throw mid-script still reports the
 //  samples collected so far. Follow-up: the 1 s log-flush sleep is a fixed wait; poll for the generation
 //  line with a cap if a slow turn ever reads nil.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#530) — the first Big run's prefill column was the
+//  running sum since launch (3071, 6294, 9891…): OSLogStore's position(date:) was trusted alone. Each
+//  turn is now windowed by date and by the `chatcurve` provider label, and the store is polled (≤ 5 s)
+//  for the turn's generation line instead of the fixed 1 s sleep. Re-run owed before the slope is read.
 //
 
 import Darwin
@@ -54,15 +58,34 @@ enum ChatCurveStage {
         return Int(usage.ru_maxrss) / 1_048_576
     }
 
-    /// The app's metric lines since `date`: the tool session's reuse line (category mlx-load)
-    /// and the generation line (ttft), oldest first.
-    private static func metricLines(since date: Date) -> [String] {
+    /// The provider label on the generation line (`chatcurve [model]: prompt=…`).
+    static let providerLabel = "chatcurve"
+
+    /// The app's metric entries since `date`: the tool session's reuse line (category mlx-load)
+    /// and the generation line (ttft), oldest first, each with the date it landed. The store's
+    /// position is a hint only; `ChatCurveLogParser.turnLines` re-checks the date (the first
+    /// Big run read cumulative sums because the position was not honoured, #530).
+    private static func metricEntries(since date: Date) -> [ChatCurveLogEntry] {
         guard let store = try? OSLogStore(scope: .currentProcessIdentifier),
               let entries = try? store.getEntries(at: store.position(date: date))
         else { return [] }
         return entries.compactMap { $0 as? OSLogEntryLog }
             .filter { $0.subsystem == "app.m1k3" && ($0.category == "ttft" || $0.category == "mlx-load") }
-            .map(\.composedMessage)
+            .map { ChatCurveLogEntry(date: $0.date, message: $0.composedMessage) }
+    }
+
+    /// This turn's figures: poll the store until its generation line has landed (entries
+    /// arrive a beat after the call), capped so a turn that logged nothing still reports nil.
+    private static func foldTurn(since started: Date) async -> ChatCurveFolded {
+        var folded = ChatCurveLogParser.fold([])
+        for _ in 0 ..< 10 {
+            try? await Task.sleep(for: .milliseconds(500))
+            folded = ChatCurveLogParser.fold(
+                ChatCurveLogParser.turnLines(metricEntries(since: started), since: started, label: providerLabel)
+            )
+            if folded.generations > 0 { break }
+        }
+        return folded
     }
 
     static func run(emit: @escaping (String) -> Void) async {
@@ -75,7 +98,7 @@ enum ChatCurveStage {
         // a partial curve is still a curve, and the run cost minutes of GPU.
         var samples: [ChatCurveSample] = []
         do {
-            let provider = MLXBrainProvider(modelID: modelID, name: "chatcurve")
+            let provider = MLXBrainProvider(modelID: modelID, name: providerLabel)
             let responder = try AgentRAGResponder(
                 store: KnowledgeStore(), embedder: MLXEmbeddingService(), provider: provider,
                 toolsProvider: { ChatEvalStage.toolPalette }, maxIterations: 3
@@ -93,9 +116,7 @@ enum ChatCurveStage {
                 let cleaned = answer.trimmingCharacters(in: .whitespacesAndNewlines)
                 history.append(ChatTurn(role: .user, text: question))
                 history.append(ChatTurn(role: .assistant, text: cleaned))
-                // Log entries land in the store a beat after the call.
-                try? await Task.sleep(for: .seconds(1))
-                let folded = ChatCurveLogParser.fold(metricLines(since: started))
+                let folded = await foldTurn(since: started)
                 let sample = ChatCurveSample(
                     index: index, question: question, renderedTokens: folded.reuse?.total,
                     reusedTokens: folded.reuse?.reused, promptTokens: folded.promptTokens,
