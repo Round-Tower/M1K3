@@ -681,9 +681,30 @@ def test_only_a_review_that_started_after_the_blocker_finished_clears_it():
     # may have run alongside the blocker and cannot clear it, however late it posted
     late_auto = bot("## Review\nFine.\n\nVERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:30:00Z")
     assert not _gate([blocker, late_auto], auto_comment=late_auto).ready
-    # a blocker naming another head is that head's business (the stale-sha rule covers the owed pass)
+    # a CHANGES_REQUESTED on a pass counted for this head that names another sha still blocks
+    # (pass 1 on #550) — and, like any blocker, a review started after it can clear it
     old = _summon("VERDICT: CHANGES_REQUESTED @ 7c0383c1", created="2026-10-10T09:00:00Z")
     assert _gate([old, resummon]).ready
+
+
+def test_a_malformed_concurrent_blocker_stands_like_a_well_formed_one():
+    # Pass 1 on #550 (VERDICT: CHANGES_REQUESTED): only a well-formed CHANGES_REQUESTED naming
+    # the head stood. A concurrent pass that wrote "CHANGES REQUESTED" (a space), or named a
+    # wrong sha, counted as nothing, and the summon's later APPROVE landed the head.
+    summon_ok = _summon("VERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:00:05Z", updated="2026-10-10T10:04:00Z")
+    for line, reason in (("VERDICT: CHANGES REQUESTED @ c0ffee12", "verdict: unparseable on c0ffee12"),
+                         ("VERDICT: CHANGES_REQUESTED @ c0ffee", "verdict: unparseable on c0ffee12"),
+                         ("VERDICT: CHANGES_REQUESTED @ 7c0383c1", "verdict: CHANGES_REQUESTED names 7c0383c1, not c0ffee12")):
+        auto = bot(f"## Review\nBLOCKING.\n\n{line}", created="2026-10-10T10:03:00Z")
+        v = _gate([summon_ok, auto], passes_needed=1, auto_comment=auto)
+        assert v.passes == 2 and not v.ready, line
+        assert reason in v.reasons, (line, v.reasons)
+    # a malformed blocker is cleared the way a well-formed one is: by a review started after it
+    blocker = _summon("VERDICT: CHANGES REQUESTED @ c0ffee12", created="2026-10-10T10:00:00Z", updated="2026-10-10T10:01:00Z")
+    resummon = _summon("VERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:20:00Z")
+    assert _gate([blocker, resummon]).ready
+    # a MISSING line on an older pass stays ignorable: summons before 2026-10-10 never wrote one
+    assert _gate([_summon(None, created="2026-10-10T10:00:00Z"), resummon]).ready
 
 
 def test_a_trivial_head_needs_no_verdict_until_a_pass_on_it_says_otherwise():

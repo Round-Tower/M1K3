@@ -45,8 +45,9 @@ in project memory. Now they are code, tested in test_pr_watch.py:
   `VERDICT: CHANGES_REQUESTED @ <sha>` line. The newest pass on the head — the newest
   N when N passes are owed — must APPROVE naming this head; a missing, malformed or
   CHANGES_REQUESTED verdict, or one naming another sha, refuses. A CHANGES_REQUESTED
-  on the head stands until a review that STARTED after it finished approves: a pass
-  that ran alongside it clears nothing, whichever finished last. Under `--passes 0`
+  or unparseable verdict on any pass counted for the head stands until a review that
+  STARTED after it finished approves: a pass that ran alongside it clears nothing,
+  whichever finished last (a missing line on an older pass is ignored). Under `--passes 0`
   a head with nothing posted reads no verdict, but a pass on it still must approve.
 * Only an AUTO_LAND_AUTHORS PR whose head branch lives in this repo lands. M1K3 is
   public: a contributor's or a bot's PR, or anything from a fork, is merged by hand.
@@ -142,6 +143,12 @@ the later APPROVE wave the other's blocker through (and --passes 0 with it). A C
 the head now stands until an APPROVE from a pass that STARTED after it finished — knowable only for
 a tracking comment (created at run start); a `gh pr comment` review's start is unknown, so it clears
 nothing. Re-summoning still overrides a blocker, as Kev's brief wants. Confidence now 0.8.
+Review: Kev + claude-opus-5.5, 2026-10-10 (4) — summon pass 1 on #550 (CHANGES_REQUESTED): only a
+well-formed CHANGES_REQUESTED naming the head stood, so a concurrent "CHANGES REQUESTED" (a space),
+a short sha, or a CR naming another sha counted as nothing and a later APPROVE landed the head. An
+unparseable verdict, or a CR naming any sha, on a pass counted for the head now stands as a blocker,
+cleared the same way; a missing line on an older pass is still ignored (older summons never wrote
+one). Confidence now 0.8.
 """
 from __future__ import annotations
 
@@ -518,19 +525,22 @@ def _started_at(comment: dict | None) -> str:
 
 
 def _standing_blockers(head: str, on_head: list[dict | None]) -> list[str]:
-    """A CHANGES_REQUESTED on this head stands until an APPROVE from a pass that
-    STARTED after it finished — a re-summon that could read it. A pass that ran
-    alongside it (the auto pass and a summon fired at push time) clears nothing,
-    whichever finished last; one whose start is unknown is taken to have run
-    alongside."""
+    """A CHANGES_REQUESTED on a pass counted for this head — whatever sha it
+    names — or an UNPARSEABLE verdict (a misspelled "CHANGES REQUESTED", a
+    short sha) stands until an APPROVE from a pass that STARTED after it
+    finished: a re-summon that could read it. A pass that ran alongside it (the
+    auto pass and a summon fired at push time) clears nothing, whichever
+    finished last; one whose start is unknown is taken to have run alongside.
+    A MISSING line is not a blocker: summons before 2026-10-10 never wrote one."""
     blockers: list[str] = []
     for c in on_head:
-        outcome, sha = review_verdict((c or {}).get("body", ""))
-        if outcome != "CHANGES_REQUESTED" or not _names(head, [sha]):
+        outcome, _ = review_verdict((c or {}).get("body", ""))
+        reason = verdict_refusal(head, c)  # never None for these two outcomes
+        if outcome not in ("CHANGES_REQUESTED", "unparseable") or reason is None:
             continue
         done = _finished_at(c)
         if not any(verdict_refusal(head, later) is None and _started_at(later) > done for later in on_head):
-            blockers.append(f"verdict: CHANGES_REQUESTED on {head[:8]}")
+            blockers.append(reason)
     return blockers
 
 
