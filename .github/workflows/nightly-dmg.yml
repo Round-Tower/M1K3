@@ -95,10 +95,11 @@ jobs:
         if: steps.gate.outputs.configured == 'true'
         # Pinned by path, not by "latest": the next Xcode must be a deliberate
         # bump here AND in release-macos.sh's toolchain guard, never a silent
-        # one. Xcode_27.0.app is a symlink the image provides; the bundle on
-        # disk is Xcode_27_Release_Candidate.app, whose build (27A266a) is the GA
-        # build — the RC was promoted unchanged. release-macos.sh's guard rejects
-        # only a path containing "beta", so either name passes it.
+        # one. Xcode_27.0.app is a symlink the image provides; the bundle it
+        # points at has moved between images (Xcode_27_Release_Candidate.app on
+        # 20260928, Xcode_27.app on 20261006 — same GA build 27A266a, with 27.1
+        # and 27.2 beta now installed beside it). release-macos.sh's guard
+        # rejects only a path containing "beta", so the symlink passes it.
         run: |
           set -euo pipefail
           sudo xcode-select -s /Applications/Xcode_27.0.app
@@ -107,15 +108,31 @@ jobs:
       - name: Ensure the Metal toolchain (MLX compiles shaders)
         if: steps.gate.outputs.configured == 'true'
         # Xcode 27 ships the Metal toolchain as a separate component; a fresh
-        # install has none and the MLX build fails without it.
+        # install has none and the MLX build fails without it. On image
+        # 20261006 (2026-10-10) `-downloadComponent` printed "Done downloading"
+        # and `metal` still reported missing: the asset lands in
+        # /System/Library/AssetsV2 but is never mounted into the selected Xcode.
+        # Apple's escape hatch for that is to export the downloaded component to
+        # a bundle and import it explicitly, so that is the fallback below.
         run: |
           set -euo pipefail
           if xcrun -sdk macosx metal --version >/dev/null 2>&1; then
             echo "Metal toolchain present"
-          else
-            xcodebuild -downloadComponent MetalToolchain
-            xcrun -sdk macosx metal --version
+            exit 0
           fi
+          xcodebuild -downloadComponent MetalToolchain
+          if xcrun -sdk macosx metal --version >/dev/null 2>&1; then
+            echo "Metal toolchain installed"
+            exit 0
+          fi
+          echo "::warning::Metal toolchain downloaded but not mounted — exporting and importing it explicitly"
+          EXPORT="$RUNNER_TEMP/metal-export"
+          xcodebuild -deleteComponent MetalToolchain || true
+          xcodebuild -downloadComponent MetalToolchain -exportPath "$EXPORT"
+          BUNDLE="$(find "$EXPORT" -maxdepth 1 -name "MetalToolchain-*.exportedBundle" | head -1)"
+          test -n "$BUNDLE"
+          xcodebuild -importComponent MetalToolchain -importPath "$BUNDLE"
+          xcrun -sdk macosx metal --version
 
       - name: Install xcodegen + xcbeautify
         if: steps.gate.outputs.configured == 'true'
@@ -273,6 +290,12 @@ jobs:
         if: always() && steps.gate.outputs.configured == 'true'
         run: security delete-keychain "$KEYCHAIN" 2>/dev/null || true
 
+# Review: Kev + claude-fable-5.1, 2026-10-10 — the Metal step grew an explicit
+# export/import fallback: on image 20261006 the plain download completed but the
+# component was never mounted into the selected Xcode (`metal` still missing,
+# run 38023109509), the first red nightly since 09-19. Also corrected the
+# Xcode-path comment (the symlink's target moved to Xcode_27.app). Verify-on-
+# dispatch: the fallback branch is untested until a run takes it.
 # Review: Kev + claude-fable-5.1, 2026-09-19 (review folds, comments only) — the
 # preview-label warning above `runs-on`, the FoundationModels reason restored, and
 # the symlink-vs-bundle wording on the Xcode step (#389 passes 1 + 2). Correction
