@@ -29,9 +29,9 @@
 //  failure detail (`ToolTurn.rejectedToolCalls`).
 //  Review: Kev + claude-fable-5.1, 2026-10-10 — dispatches EmbeddingGemma2RefStage (M1K3_SELFTEST_EG2REF=1, the
 //  Stream C port's reference check; fixture on stdin); no other change.
-//  Review: Kev + claude-fable-5.1, 2026-10-10 (Stream C slice 3) — MEMEVAL / ABSEP / KEYEVAL measure the embedder
-//  `M1K3_SELFTEST_EMBEDDER` names (`candidateEmbedder()`); KEYEVAL's "instructed" arm is the embedder's own
-//  `embedQuery` (Qwen's instruction or Gemma's prefix), so the Gemma A/B reads the production composition.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (Stream C slice 3) — MEMEVAL / ABSEP / KEYEVAL measure the
+//  embedder `M1K3_SELFTEST_EMBEDDER` names (`candidateEmbedder()`); KEYEVAL's "instructed" arm is the
+//  embedder's own `embedQuery` (Qwen's instruction or Gemma's prefix): the Gemma A/B reads production's composition.
 
 import Foundation
 import M1K3Chat
@@ -719,7 +719,8 @@ enum SelfTest {
 
             let bgeResult = SeparationEvalReport.Result(label: "bge-small-384", inDomain: bgeIn, offDomain: bgeOff)
             let candidateResult = SeparationEvalReport.Result(
-                label: candidateIsDefault ? "qwen3-embed-512" : candidate.fingerprint, inDomain: candIn, offDomain: candOff
+                label: candidateIsDefault ? "qwen3-embed-512" : candidate.fingerprint,
+                inDomain: candIn, offDomain: candOff
             )
             // candidate second → the head-to-head verdict describes it vs bge.
             emit(SeparationEvalReport.render([bgeResult, candidateResult]))
