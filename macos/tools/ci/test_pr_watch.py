@@ -564,6 +564,9 @@ def test_review_verdict_reads_the_closing_verdict_line():
     assert m.review_verdict("Blocker.\n\nVERDICT: CHANGES_REQUESTED @ c0ffee12") == ("CHANGES_REQUESTED", "c0ffee12")
     # markdown dressing and a full sha are the same line
     assert m.review_verdict("**VERDICT: APPROVE @ `C0FFEE12" + "0" * 32 + "`**") == ("APPROVE", "c0ffee12" + "0" * 32)
+    # a bolded label is the natural way to dress it (code review on this PR)
+    assert m.review_verdict("**VERDICT:** CHANGES_REQUESTED @ c0ffee12") == ("CHANGES_REQUESTED", "c0ffee12")
+    assert m.review_verdict("**VERDICT:** **APPROVE** @ `c0ffee12`") == ("APPROVE", "c0ffee12")
     # the action appends " · branch `x`" after a summon's body; the bot may sign off after the line
     assert m.review_verdict("x\nVERDICT: APPROVE @ c0ffee12\n · branch `fix/x`") == ("APPROVE", "c0ffee12")
     assert m.review_verdict("x\nVERDICT: APPROVE @ c0ffee12\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)") == ("APPROVE", "c0ffee12")

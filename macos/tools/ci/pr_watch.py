@@ -336,9 +336,10 @@ _TITLE_BARE_SHA = re.compile(r"\b(?=[0-9a-f]*[0-9])([0-9a-f]{7,40})\b")
 _RUN_LINK = re.compile(r"\[View job\]\([^)]*?/actions/runs/(\d+)")
 # The closing line every review prompt asks for (claude-code-review*.yml, claude.yml):
 # "VERDICT: APPROVE @ <sha>" or "VERDICT: CHANGES_REQUESTED @ <sha>". Markdown dressing
-# (bold, backticks) is tolerated; anything else on the line makes it unparseable.
+# (bold, backticks — "**VERDICT:** APPROVE") is tolerated; anything else on the line
+# makes it unparseable.
 _VERDICT_LINE = re.compile(r"^[\s*_`]*VERDICT:")
-_VERDICT = re.compile(r"^[\s*_`]*VERDICT:\s*(APPROVE|CHANGES_REQUESTED)\s*@\s*`?([0-9a-fA-F]{7,40})`?[\s*_`.]*$")
+_VERDICT = re.compile(r"^[\s*_`]*VERDICT:[\s*_`]*(APPROVE|CHANGES_REQUESTED)[\s*_`]*@\s*`?([0-9a-fA-F]{7,40})`?[\s*_`.]*$")
 
 
 def _progress_unchecked(text: str) -> bool:
