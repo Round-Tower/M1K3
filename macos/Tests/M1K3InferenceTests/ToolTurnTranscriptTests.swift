@@ -45,6 +45,17 @@ struct ToolTurnTranscriptTests {
         #expect(calls.isEmpty)
     }
 
+    @Test("a rejected tool call is recorded as an assistant turn carrying its prose, no calls (#418)")
+    func rejectedTurnRecorded() {
+        var transcript = ToolTurnTranscript()
+        transcript.recordGenerated(.rejectedToolCalls(reason: "invalid_arguments", text: "Let me try."))
+        transcript.recordGenerated(.rejectedToolCalls(reason: "malformed_syntax", text: ""))
+        #expect(transcript.full == [
+            .assistant(text: "Let me try.", toolCalls: []),
+            .assistant(text: nil, toolCalls: []),
+        ])
+    }
+
     @Test("the leading system message is retained for a fresh re-render")
     func keepsSystemForReRender() {
         // The delta path drops .system (it's in the seeded cache), but a

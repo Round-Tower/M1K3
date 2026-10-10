@@ -358,8 +358,10 @@ final class StatelessToolTurnSession: ToolTurnSession, @unchecked Sendable {
         case let .toolCalls(calls):
             transcript.withLock { $0.append(.assistant(text: nil, toolCalls: calls)) }
         case let .rejectedToolCalls(_, text):
-            // Not streamed: the loop steers a retry, so this prose is not the answer.
+            // Streamed like `.text` so every session behaves as the MLX one, which emits
+            // a rejected turn's prose chunk by chunk; the loop decides what it means.
             transcript.withLock { $0.append(.assistant(text: text.isEmpty ? nil : text, toolCalls: [])) }
+            if !text.isEmpty { onToken(text) }
         }
         return turn
     }

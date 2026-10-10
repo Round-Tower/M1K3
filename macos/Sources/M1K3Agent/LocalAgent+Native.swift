@@ -175,18 +175,11 @@ extension LocalAgent {
                 ))
                 transcript.append(.assistant(text: text.isEmpty ? nil : text, toolCalls: []))
                 guard rejectionSteers == 0 else {
-                    // As before #418, the prose is the answer. The session did not stream a
-                    // rejected turn (a steer usually follows), so route it through the gate
-                    // now: think aside, answer live, and the same empty-remainder rule.
-                    // Inline rather than via sendThroughGate: that helper gates tokens AS
-                    // the session generates them; here the text already exists in full.
-                    var gate = ThinkStreamGate()
-                    var answer = ""
-                    let live = gate.feed(text, onAnswerToken: { answer += $0 })
-                    if !answer.isEmpty { onConclusionToken?(answer) }
-                    if !live.isEmpty { onReasoningToken?(live) }
-                    let prose = gate.flushRemainder().trimmingCharacters(in: .whitespacesAndNewlines)
-                    return concluded(prose.isEmpty ? "" : text, usedTools, iteration + 1)
+                    // As before #418, the prose is the answer. Every session streams a
+                    // rejected turn's prose through the gate as it generates (the MLX
+                    // session chunk by chunk, the stateless one whole), so the same
+                    // empty-remainder rule as `.text` applies and nothing is re-emitted.
+                    return concluded(remainder.isEmpty ? "" : text, usedTools, iteration + 1)
                 }
                 rejectionSteers += 1
                 pendingMessages = [.user(

@@ -66,6 +66,18 @@ struct M1K3ModelExecutorTests {
         #expect(channel.answer == "The answer.")
     }
 
+    @Test("a rejected tool call reports its streamed prose like a text turn, once (#418)")
+    func rejectedCallReportsProse() async throws {
+        let session = ScriptedTokenSession(
+            tokens: ["<think>pick a tool</think>", "I couldn't form that call."],
+            outcome: .rejectedToolCalls(reason: "invalid_arguments (search)", text: "I couldn't form that call.")
+        )
+        let channel = GenerationChannel()
+        try await M1K3ModelExecutor(session: session).respond(to: "q", into: channel)
+        #expect(channel.answer == "I couldn't form that call.")
+        #expect(channel.toolCalls.isEmpty)
+    }
+
     @Test("a turn that never thinks → all answer, no reasoning")
     func noThinkAllAnswer() async throws {
         let session = ScriptedTokenSession(

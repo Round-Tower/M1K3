@@ -305,11 +305,16 @@ struct NativeToolCallingTests {
         }
         let tool = RecordingTool(name: "search")
         let agent = LocalAgent(inferenceProvider: provider, tools: [tool])
+        let streamed = Mutex("")
 
-        let result = try await agent.run(goal: "x")
+        let result = try await agent.run(
+            goal: "x", onConclusionToken: { token in streamed.withLock { $0 += token } }
+        )
 
         #expect(tool.executionCount == 0)
         #expect(result.conclusion == "I can't form that call.")
+        // Streamed by the session as it generated, exactly once: the loop never re-emits it.
+        #expect(streamed.withLock { $0 } == "I can't form that call.")
         #expect(provider.continueCallCount == 2)
     }
 
