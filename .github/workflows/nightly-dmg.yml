@@ -123,7 +123,16 @@ jobs:
           # Installed-ness by OUTPUT, not exit status: `-showComponent` prints a
           # "Build Version:" line only for an installed component (its exit code for
           # the absent case is not pinned anywhere we trust).
-          installed() { xcodebuild -showComponent MetalToolchain 2>/dev/null | grep -q '^Build Version:'; }
+          # Captured first, then grepped: `xcodebuild | grep -q` under pipefail can SIGPIPE
+          # xcodebuild and report "not installed" on a match.
+          installed() {
+            local out
+            out="$(xcodebuild -showComponent MetalToolchain 2>/dev/null || true)"
+            grep -qi 'build version' <<<"$out"
+          }
+          echo "::group::xcodebuild -showComponent MetalToolchain (raw)"
+          xcodebuild -showComponent MetalToolchain 2>&1 || true
+          echo "::endgroup::"
           diagnose() {
             echo "::group::Metal toolchain diagnostics"
             xcode-select -p || true
@@ -355,11 +364,14 @@ jobs:
         if: always() && steps.gate.outputs.configured == 'true'
         run: security delete-keychain "$KEYCHAIN" 2>/dev/null || true
 
+# Review: Kev + claude-fable-5.1, 2026-10-10 (#541 fold 2) — `installed()` captures `-showComponent`
+# before grepping (pipefail SIGPIPE), and the raw output is logged once for the first dispatch.
 # Review: Kev + claude-fable-5.1, 2026-10-10 (#541 fold) — the update path rewrites the release's
 # stored target with `gh release edit --target` (it does not follow a moved tag; the first draft's
 # own end-state check would have failed), the check also reads the tag via ls-remote, installed-ness
 # comes from `-showComponent`'s output rather than its exit status, and a missing asset digest falls
-# back to hashing the published DMG.
+# back to hashing the published DMG. Second fold: `installed()` captures before grepping (pipefail
+# SIGPIPE) and the raw `-showComponent` output is logged once so the first dispatch shows the format.
 # Review: Kev + claude-fable-5.1, 2026-10-10 (Metal, 2) — the export/import fallback fired for the
 # first time on run 38044495495 and failed: `-downloadComponent -exportPath` had already installed
 # the asset, so the import refused ("already installed") while `metal` still reported missing. The
