@@ -178,6 +178,8 @@ extension LocalAgent {
                     // As before #418, the prose is the answer. The session did not stream a
                     // rejected turn (a steer usually follows), so route it through the gate
                     // now: think aside, answer live, and the same empty-remainder rule.
+                    // Inline rather than via sendThroughGate: that helper gates tokens AS
+                    // the session generates them; here the text already exists in full.
                     var gate = ThinkStreamGate()
                     var answer = ""
                     let live = gate.feed(text, onAnswerToken: { answer += $0 })

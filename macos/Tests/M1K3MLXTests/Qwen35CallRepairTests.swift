@@ -192,6 +192,16 @@ struct ToolTurnRejectionSummaryTests {
         #expect(!summary.contains("SECRET"))
     }
 
+    @Test("an over-long diagnostic detail is capped so it cannot inflate the prompt")
+    func detailIsCapped() {
+        let long = String(repeating: "x", count: ToolTurnDiagnostics.detailCap + 50)
+        let rejection = RejectedToolCall(reason: .invalidArguments, format: .qwen35, rawText: "raw", detail: long)
+        let summary = ToolTurnDiagnostics.rejectionSummary([rejection])
+        #expect(summary.hasPrefix("invalid_arguments: "))
+        #expect(summary.hasSuffix("…"))
+        #expect(summary.count == "invalid_arguments: ".count + ToolTurnDiagnostics.detailCap + 1)
+    }
+
     @Test("no rejections summarise to an empty string")
     func emptySummary() {
         #expect(ToolTurnDiagnostics.rejectionSummary([]).isEmpty)

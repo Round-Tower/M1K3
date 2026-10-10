@@ -746,12 +746,18 @@ extension MLXBrainProvider: ToolCallingProvider {
 enum ToolTurnDiagnostics {
     /// What the agent loop steers a retry with (#418): reason code, tool name and the
     /// library's diagnostic `detail` per rejection, `;`-joined. Never the raw text —
-    /// that can carry argument values, and this string goes back into the prompt.
+    /// that can carry argument values, and this string goes back into the prompt. The
+    /// detail is upstream's and documented as raw-free, but its length is not ours to
+    /// trust, so it is capped at `detailCap` characters.
+    static let detailCap = 300
+
     static func rejectionSummary(_ rejections: [RejectedToolCall]) -> String {
         rejections.map { rejection in
             var line = rejection.reason.rawValue
             if let tool = rejection.toolName { line += " (\(tool))" }
-            if let detail = rejection.detail, !detail.isEmpty { line += ": \(detail)" }
+            if let detail = rejection.detail, !detail.isEmpty {
+                line += ": " + (detail.count > detailCap ? detail.prefix(detailCap) + "…" : detail)
+            }
             return line
         }.joined(separator: "; ")
     }
