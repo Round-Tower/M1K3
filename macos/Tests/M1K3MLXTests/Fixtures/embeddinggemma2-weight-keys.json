@@ -1,0 +1,199 @@
+{
+ "model": "mlx-community/embeddinggemma-2-8bit",
+ "modelRevision": "7505ef2f8ddef45efef6d060865f27989b3c9cec",
+ "note": "model.safetensors.index.json of the 8-bit checkpoint: every language_model.* key with the layer index folded to N, with its count; the other top-level prefixes are the encoders the text core drops at load.",
+ "totalKeys": 1816,
+ "textKeys": 851,
+ "textPatterns": [
+  {
+   "key": "language_model.embed_tokens.biases",
+   "count": 1
+  },
+  {
+   "key": "language_model.embed_tokens.scales",
+   "count": 1
+  },
+  {
+   "key": "language_model.embed_tokens.weight",
+   "count": 1
+  },
+  {
+   "key": "language_model.embedding_projection.biases",
+   "count": 1
+  },
+  {
+   "key": "language_model.embedding_projection.scales",
+   "count": 1
+  },
+  {
+   "key": "language_model.embedding_projection.weight",
+   "count": 1
+  },
+  {
+   "key": "language_model.layers.N.input_layernorm.weight",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.layer_scalar",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.mlp.down_proj.biases",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.mlp.down_proj.scales",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.mlp.down_proj.weight",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.mlp.gate_proj.biases",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.mlp.gate_proj.scales",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.mlp.gate_proj.weight",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.mlp.up_proj.biases",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.mlp.up_proj.scales",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.mlp.up_proj.weight",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.ple_block.per_layer_input_gate.biases",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.ple_block.per_layer_input_gate.scales",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.ple_block.per_layer_input_gate.weight",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.ple_block.per_layer_projection.biases",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.ple_block.per_layer_projection.scales",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.ple_block.per_layer_projection.weight",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.ple_block.post_per_layer_input_norm.weight",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.post_attention_layernorm.weight",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.post_feedforward_layernorm.weight",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.pre_feedforward_layernorm.weight",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.self_attn.k_norm.weight",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.self_attn.k_proj.biases",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.self_attn.k_proj.scales",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.self_attn.k_proj.weight",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.self_attn.o_proj.biases",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.self_attn.o_proj.scales",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.self_attn.o_proj.weight",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.self_attn.q_norm.weight",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.self_attn.q_proj.biases",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.self_attn.q_proj.scales",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.self_attn.q_proj.weight",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.self_attn.v_proj.biases",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.self_attn.v_proj.scales",
+   "count": 24
+  },
+  {
+   "key": "language_model.layers.N.self_attn.v_proj.weight",
+   "count": 24
+  },
+  {
+   "key": "language_model.norm.weight",
+   "count": 1
+  },
+  {
+   "key": "language_model.ple.per_layer_model_projection.biases",
+   "count": 1
+  },
+  {
+   "key": "language_model.ple.per_layer_model_projection.scales",
+   "count": 1
+  },
+  {
+   "key": "language_model.ple.per_layer_model_projection.weight",
+   "count": 1
+  },
+  {
+   "key": "language_model.ple.per_layer_projection_norm.weight",
+   "count": 1
+  }
+ ],
+ "droppedPrefixes": [
+  "audio_tower",
+  "embed_audio",
+  "embed_vision",
+  "vision_tower"
+ ]
+}

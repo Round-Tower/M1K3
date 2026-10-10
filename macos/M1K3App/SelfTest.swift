@@ -27,6 +27,8 @@
 //  the scripted 8-message prefill curve; report at <M1K3_SELFTEST_OUT>.json, fenced on stdout with OUT=-); no other change.
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#418) — the native-tool-call check records a rejected call as its own
 //  failure detail (`ToolTurn.rejectedToolCalls`).
+//  Review: Kev + claude-fable-5.1, 2026-10-10 — dispatches EmbeddingGemma2RefStage (M1K3_SELFTEST_EG2REF=1, the
+//  Stream C port's reference check; fixture on stdin); no other change.
 
 import Foundation
 import M1K3Chat
@@ -454,6 +456,14 @@ enum SelfTest {
         //     See MemBlockProbeStage.swift.
         if MemBlockProbeStage.isRequested {
             await MemBlockProbeStage.run(emit: emit)
+        }
+
+        // 8d. Optional EmbeddingGemma 2 reference check (M1K3_SELFTEST_EG2REF=1,
+        //     fixture JSON on stdin): tokens and vectors of the Swift text-core
+        //     port against mlx-vlm's — the numeric half of Stream C slice 2 that
+        //     the metallib wall keeps out of `swift test`. EmbeddingGemma2RefStage.swift.
+        if EmbeddingGemma2RefStage.isRequested {
+            await EmbeddingGemma2RefStage.run(emit: emit)
         }
 
         // 9. Optional Gemma-4 vision spike (M1K3_SELFTEST_VISION=1 +
