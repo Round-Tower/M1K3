@@ -1,0 +1,119 @@
+# chat-curve lil — f2f2c753 (eval/1-1-night), Release build 2026-10-10 01:02, AC power, M1K3_SELFTEST_CHATCURVE=lil, headless direct exec, live app quit.
+# Measures per-message rendered tokens, tool-session reuse, prefill and peak RSS over the fixed 8-message script (#522).
+• chatcurve: mlx-community/Qwen3.5-4B-MLX-4bit, 8 scripted messages…
+chatcurve #1 done (1486 chars)
+chatcurve #2 done (465 chars)
+chatcurve #3 done (752 chars)
+chatcurve #4 done (1097 chars)
+chatcurve #5 done (846 chars)
+chatcurve #6 done (569 chars)
+chatcurve #7 done (967 chars)
+chatcurve #8 done (470 chars)
+chatcurve #1 rendered=3289tok reuse=2467 prefilled=21tok prefill=48ms gens=2 rss=3627MB
+chatcurve #2 rendered=3718tok reuse=2467 prefilled=22tok prefill=74ms gens=3 rss=3627MB
+chatcurve #3 rendered=3838tok reuse=2467 prefilled=23tok prefill=99ms gens=4 rss=3627MB
+chatcurve #4 rendered=4017tok reuse=2467 prefilled=24tok prefill=125ms gens=5 rss=3627MB
+chatcurve #5 rendered=4266tok reuse=2467 prefilled=25tok prefill=152ms gens=6 rss=3627MB
+chatcurve #6 rendered=4472tok reuse=2467 prefilled=27tok prefill=206ms gens=8 rss=3627MB
+chatcurve #7 rendered=4611tok reuse=2467 prefilled=27tok prefill=205ms gens=8 rss=3627MB
+chatcurve #8 rendered=4844tok reuse=2467 prefilled=28tok prefill=232ms gens=9 rss=3627MB
+chatcurve slope [mlx-community/Qwen3.5-4B-MLX-4bit]: 208.3 rendered tok/msg, 27.3 prefill ms/msg
+-----BEGIN CHATCURVE JSON-----
+{
+  "modelID" : "mlx-community\/Qwen3.5-4B-MLX-4bit",
+  "samples" : [
+    {
+      "answerChars" : 1486,
+      "generations" : 2,
+      "index" : 0,
+      "peakRSSMB" : 3627,
+      "prefillMS" : 48,
+      "promptTokens" : 21,
+      "question" : "Hi! How's your day going?",
+      "renderedTokens" : 3289,
+      "reusedTokens" : 2467
+    },
+    {
+      "answerChars" : 465,
+      "generations" : 3,
+      "index" : 1,
+      "peakRSSMB" : 3627,
+      "prefillMS" : 74,
+      "promptTokens" : 22,
+      "question" : "What's a good way to start learning the guitar?",
+      "renderedTokens" : 3718,
+      "reusedTokens" : 2467
+    },
+    {
+      "answerChars" : 752,
+      "generations" : 4,
+      "index" : 2,
+      "peakRSSMB" : 3627,
+      "prefillMS" : 99,
+      "promptTokens" : 23,
+      "question" : "I only have twenty minutes a day. Is that enough?",
+      "renderedTokens" : 3838,
+      "reusedTokens" : 2467
+    },
+    {
+      "answerChars" : 1097,
+      "generations" : 5,
+      "index" : 3,
+      "peakRSSMB" : 3627,
+      "prefillMS" : 125,
+      "promptTokens" : 24,
+      "question" : "Which should I practise first, chords or scales?",
+      "renderedTokens" : 4017,
+      "reusedTokens" : 2467
+    },
+    {
+      "answerChars" : 846,
+      "generations" : 6,
+      "index" : 4,
+      "peakRSSMB" : 3627,
+      "prefillMS" : 152,
+      "promptTokens" : 25,
+      "question" : "Funny, my neighbour plays the fiddle.",
+      "renderedTokens" : 4266,
+      "reusedTokens" : 2467
+    },
+    {
+      "answerChars" : 569,
+      "generations" : 8,
+      "index" : 5,
+      "peakRSSMB" : 3627,
+      "prefillMS" : 206,
+      "promptTokens" : 27,
+      "question" : "Can you remind me what we said about practice time?",
+      "renderedTokens" : 4472,
+      "reusedTokens" : 2467
+    },
+    {
+      "answerChars" : 967,
+      "generations" : 8,
+      "index" : 6,
+      "peakRSSMB" : 3627,
+      "prefillMS" : 205,
+      "promptTokens" : 27,
+      "question" : "Give me a tiny weekly plan in two lines.",
+      "renderedTokens" : 4611,
+      "reusedTokens" : 2467
+    },
+    {
+      "answerChars" : 470,
+      "generations" : 9,
+      "index" : 7,
+      "peakRSSMB" : 3627,
+      "prefillMS" : 232,
+      "promptTokens" : 28,
+      "question" : "Thanks. Sum up our whole chat in one sentence.",
+      "renderedTokens" : 4844,
+      "reusedTokens" : 2467
+    }
+  ],
+  "summary" : {
+    "prefillMSPerMessage" : 27.273809523809526,
+    "renderedTokensPerMessage" : 208.3452380952381
+  }
+}
+-----END CHATCURVE JSON-----
