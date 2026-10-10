@@ -1,0 +1,1381 @@
+{
+  "provenance": {
+    "appCommit": "f2f2c753",
+    "date": "2026-10-09T23:58:55Z",
+    "hardware": "Apple M1 Max · 64 GB",
+    "livePath": true,
+    "mlxSwiftLMRevision": "3b339ad6e3b3f44c8121ecff5131c7fd55e075e6",
+    "notes": "f2f2c753 (eval/1-1-night, master after #522/#523/#526), Release build, AC power. Big (gemma-4-12B) grounded-Q x3 with full answers: the #488 date cue — read the answers for 'hasn't happened yet / in the future' on a past date.",
+    "osVersion": "macOS 27.0",
+    "powerMode": 2,
+    "powerSource": "ac",
+    "repeats": 3
+  },
+  "runs": [
+    {
+      "brainID": "big",
+      "modelID": "mlx-community/gemma-4-12B-it-4bit",
+      "peakMemoryMB": 8049,
+      "residentMemoryMBAtStart": 0,
+      "scores": [
+        {
+          "answerPreview": "The hydraulic seal on the conveyor failed while it was under load during the night shift [Notes §3.2 Seals].",
+          "checks": [
+            {
+              "detail": "108 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/18 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"seal\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "108 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "12573ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-seal",
+          "kind": "grounded-Q",
+          "latencyMS": 12573,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The mixer needs to be cleaned every 12 operating hours to keep it from building up residue [Notes §5.4 Cleaning].",
+          "checks": [
+            {
+              "detail": "113 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/18 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"12\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "113 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9419ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-dosage",
+          "kind": "grounded-Q",
+          "latencyMS": 9419,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The curing oven is held at 180 degrees Celsius for the duration of the cycle [Notes §7.1 Curing].",
+          "checks": [
+            {
+              "detail": "97 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/16 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"180\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "97 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9268ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-temp",
+          "kind": "grounded-Q",
+          "latencyMS": 9268,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The part number that replaces the worn gasket is GK-4471 [Notes].",
+          "checks": [
+            {
+              "detail": "65 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/11 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"GK-4471\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "65 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11658ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-part",
+          "kind": "grounded-Q",
+          "latencyMS": 11658,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I'm afraid that information isn't in my records. I can see notes about a hydraulic seal failure, but nothing regarding the motor's warranty.",
+          "checks": [
+            {
+              "detail": "140 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/23 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"not\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "140 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "12062ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-absent",
+          "kind": "grounded-Q",
+          "latencyMS": 12062,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I haven't got anything in my files regarding Bram Stoker's *Frankenstein*. I can tell you that the book is actually by Mary Shelley, not Stoker—he's the one who gave us *Dracula*.   It’s a classic tale of scientific overreach and what happens when you play god with some spare parts. If you're looking for something about the novel itself, I can certainly dig into that, but as for your personal records? They aren't showing any literary analysis.",
+          "checks": [
+            {
+              "detail": "447 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/76 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"shelley\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "447 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "13695ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-wrong-author",
+          "kind": "grounded-Q",
+          "latencyMS": 13695,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I don't have any record in my files regarding the specific year Einstein received his Nobel Prize. I'm afraid it isn't in the data I can see.",
+          "checks": [
+            {
+              "detail": "141 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/27 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"photoelectric\"] in: I don't have any record in my files regarding the specific y",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "141 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11895ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-wrong-nobel",
+          "kind": "grounded-Q",
+          "latencyMS": 11895,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I'm afraid I don't have any information regarding a \"Glanmire Accord of 1987\" in my records. It isn't in the documents provided to me.",
+          "checks": [
+            {
+              "detail": "134 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/23 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"don't\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "134 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "12361ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-fictional-accord",
+          "kind": "grounded-Q",
+          "latencyMS": 12361,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The hydraulic seal on the conveyor failed while it was under load during the night shift [Notes §3.2 Seals].",
+          "checks": [
+            {
+              "detail": "108 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/18 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"seal\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "108 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11549ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-seal",
+          "kind": "grounded-Q",
+          "latencyMS": 11549,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The mixer needs to be cleaned every 12 operating hours to keep it from building up residue [Notes §5.4 Cleaning].",
+          "checks": [
+            {
+              "detail": "113 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/18 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"12\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "113 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11905ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-dosage",
+          "kind": "grounded-Q",
+          "latencyMS": 11905,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The curing oven is held at 180 degrees Celsius for the duration of the cycle [Notes §7.1 Curing].",
+          "checks": [
+            {
+              "detail": "97 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/16 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"180\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "97 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11107ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-temp",
+          "kind": "grounded-Q",
+          "latencyMS": 11107,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The part number that replaces the worn gasket is GK-4471 [Notes].",
+          "checks": [
+            {
+              "detail": "65 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/11 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"GK-4471\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "65 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11560ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-part",
+          "kind": "grounded-Q",
+          "latencyMS": 11560,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I'm afraid I don't have any information regarding the warranty period for the conveyor motor in the records provided.",
+          "checks": [
+            {
+              "detail": "117 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/19 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"don't\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "117 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11453ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-absent",
+          "kind": "grounded-Q",
+          "latencyMS": 11453,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I don't have any information on that in my records. I can certainly tell you it's a classic of Gothic fiction, but as for the specific details of the novel—well, I'm more of a \"how to build/fix things\" sort of villain than a literary critic.",
+          "checks": [
+            {
+              "detail": "241 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/45 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"shelley\", \"dracula\"] in: I don't have any information on that in my records. I can ce",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "241 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "12829ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-wrong-author",
+          "kind": "grounded-Q",
+          "latencyMS": 12829,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I don't have any information about the specific year Einstein received his Nobel Prize in my records. I can tell you that he was actually awarded it for his services to theoretical physics, and would have received it regardless of the discovery of the law of the production and distribution of heat.",
+          "checks": [
+            {
+              "detail": "299 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/52 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"photoelectric\"] in: I don't have any information about the specific year Einstei",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "299 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "12715ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-wrong-nobel",
+          "kind": "grounded-Q",
+          "latencyMS": 12715,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I'm afraid I don't have any information on the Glanmire Accord of 1987 in my records. It isn't in the documents you've provided me.",
+          "checks": [
+            {
+              "detail": "131 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/23 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"don't\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "131 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "12560ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-fictional-accord",
+          "kind": "grounded-Q",
+          "latencyMS": 12560,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The hydraulic seal on the conveyor failed while it was under load during the night shift [Notes §3.2 Seals].",
+          "checks": [
+            {
+              "detail": "108 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/18 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"seal\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "108 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10922ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-seal",
+          "kind": "grounded-Q",
+          "latencyMS": 10922,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "The mixer needs to be cleaned every 12 operating hours to keep it from building up residue [Notes §5.4 Cleaning].",
+          "checks": [
+            {
+              "detail": "113 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/18 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"12\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "113 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11314ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-dosage",
+          "kind": "grounded-Q",
+          "latencyMS": 11314,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "The curing oven is held at 180 degrees Celsius for the duration of the cycle [Notes §7.1 Curing].",
+          "checks": [
+            {
+              "detail": "97 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/16 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"180\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "97 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11026ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-temp",
+          "kind": "grounded-Q",
+          "latencyMS": 11026,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "The part number that replaces the worn gasket is GK-4471 [Notes].",
+          "checks": [
+            {
+              "detail": "65 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/11 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"GK-4471\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "65 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11149ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-part",
+          "kind": "grounded-Q",
+          "latencyMS": 11149,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "I'm afraid I don't have any information regarding the warranty period for the conveyor motor in my records.",
+          "checks": [
+            {
+              "detail": "107 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/18 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"don't\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "107 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "12384ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-absent",
+          "kind": "grounded-Q",
+          "latencyMS": 12384,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "I don't have any information regarding Bram Stoker's novel *Frankenstein* in the provided records. It seems that particular literary masterpiece wasn't part of the data I can access here.",
+          "checks": [
+            {
+              "detail": "187 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/29 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"shelley\", \"dracula\"] in: I don't have any information regarding Bram Stoker's novel *",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "187 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11458ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-wrong-author",
+          "kind": "grounded-Q",
+          "latencyMS": 11458,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "I haven't got any information on Einstein's Nobel Prize_year in the records provided. I can certainly help you find it if there's a specific reason you're digging into his timeline, though.",
+          "checks": [
+            {
+              "detail": "189 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/31 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"photoelectric\"] in: I haven't got any information on Einstein's Nobel Prize_year",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "189 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11687ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-wrong-nobel",
+          "kind": "grounded-Q",
+          "latencyMS": 11687,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "I'm afraid I don't have any information regarding the Glanmire Accord of 1987 in my records. It isn't in what I can see.",
+          "checks": [
+            {
+              "detail": "120 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/22 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"don't\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "120 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11507ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-fictional-accord",
+          "kind": "grounded-Q",
+          "latencyMS": 11507,
+          "repeatIndex": 2
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}
