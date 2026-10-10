@@ -116,9 +116,15 @@ notes, not their calendar. Which tool is a finer decision than whether a tool is
      `--router off` is that path with no route, every score names its pick stage (head / picker / agent), six
      `tool-head-*` fixtures clear the floor (score_head.py; pinned in CI), Mini joined, and an `all` cell
      measures the three flags together. The 10-10 arm (×3, docs/evals/2026-10-10-router-arm-*):
-     Lil off 38/48 tool-use at 8.8 s → routing 48/48 at 4.1 s → all 48/48 at 5.3 s, head 18/18 on its fixtures;
+     Lil off 38/48 tool-use at 8.8 s → routing 48/48 at 4.1 s → all 48/48 at 4.9 s, head 18/18 on its fixtures;
      Big 42.6 s → 14.7 s at 48/48; Mini (routed in shipping) +head 0.6 s faster at equal accuracy. Chains turn
      two-tool asks 0/3 → 3/3; their one systematic miss ("this year" sent to lookup_fact, 3/3 on every brain)
      is closed by ToolDispatch.recencyCorrected (a single pick reads the question, a chained pick its own query).
+     The `all` cells on the final head (8fb7b7e3): 48/48 tool-use and 3/3 two-tool asks on all three brains,
+     open-chat within one fixture of routing. Tool-use medians against routing: Lil +0.8 s (chains alone cost
+     the same), Big +0.2 s, Mini −0.1 s. The script's rule says "keep off" for chains on Mini (not faster);
+     they ship on anyway: level latency for 0/3 → 3/3 two-tool asks.
      The challenger (2026-10-10) held the head and chains until this re-measure; the floor stays 0.763 on
      synthetic data, an upper bound live, with write guards on all three read-only families. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-10-10, Confidence 0.85 — the `all` cells re-ran on the final head
+     (the challenger's condition for chains): every brain held 48/48 and 3/3, so chains stay on. -->
