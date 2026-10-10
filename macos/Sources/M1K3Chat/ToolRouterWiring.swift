@@ -37,6 +37,9 @@
 //  Confidence 0.7.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — the gate and the head share one sentence vector per
 //  turn (`OneTurnEmbedder`, #512).
+//  Review: Kev + claude-opus-5-5, 2026-10-10 — the cascade reports its stage (head / picker / agent) to a
+//  @TaskLocal `PickStageRecorder` the eval sets; nil on every shipping turn. The 10-09 arm couldn't see
+//  that the head never fired. Confidence 0.85 (the cascade side is pinned; the eval wiring is by launch).
 //
 
 import Foundation
@@ -133,6 +136,9 @@ public enum ToolRouterWiring {
         )
     }
 
+    /// Set by the eval around one fixture's turn (ChatEvalStage); nil on every shipping turn.
+    @TaskLocal public static var pickRecorder: PickStageRecorder?
+
     /// The pick for a tools-verdict turn: the group head if it speaks, else the
     /// fallback picker, else nil (the agent turn). Each stage fails open to the next.
     static func cascade(
@@ -141,10 +147,16 @@ public enum ToolRouterWiring {
     ) async -> ToolPick? {
         if let picked = classify?(question) {
             log.notice("tool pick: group head → \(picked.tool, privacy: .public)")
+            pickRecorder?.record(.head)
             return picked
         }
-        guard let fallback else { return nil }
-        return await pick(with: fallback, question: question, menu: menu, chain: chain)
+        guard let fallback else {
+            pickRecorder?.record(.agent)
+            return nil
+        }
+        let picked = await pick(with: fallback, question: question, menu: menu, chain: chain)
+        pickRecorder?.record(picked == nil ? .agent : .picker)
+        return picked
     }
 
     /// Apple's model names one tool from the menu (two with `chain`: the second rides
@@ -200,5 +212,29 @@ final class OneTurnEmbedder: Sendable {
         let vector = embed(text)
         last.withLock { $0 = (text, vector) }
         return vector
+    }
+}
+
+/// Which stage named a tool turn's pick: the group head, Apple's picker, or neither (the
+/// agent turn). The router arm of 2026-10-09 couldn't tell: the head's notice went to os_log,
+/// so a head that never fired read as a head that won.
+public enum PickStage: String, Sendable, Codable {
+    case head
+    case picker
+    case agent
+}
+
+/// An eval's ear on the cascade: the stages this task's tool turns took, in order.
+public final class PickStageRecorder: Sendable {
+    private let recorded = Mutex<[PickStage]>([])
+
+    public init() {}
+
+    public var stages: [PickStage] {
+        recorded.withLock { $0 }
+    }
+
+    func record(_ stage: PickStage) {
+        recorded.withLock { $0.append(stage) }
     }
 }

@@ -35,6 +35,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — "schedule" is a cue only as a noun; a turn opening on it is a write (#512).
 //  Review: same day, code-quality fold — the verb reading covers every position ("Can you schedule time with
 //  Anna for the meeting?" matched "meeting"): "schedule" is the noun only after a lead word (`scheduleNounLeads`).
+//  Review: Kev + claude-opus-5-5, 2026-10-10 — the knowledge and activity families abstain on a memory write
+//  too (`memoryWriteCues`), as device did; the challenger on the flip found "forget what I told you" near the
+//  floor. Confidence 0.85 (tests pin writes and reads).
 
 import Foundation
 
@@ -108,9 +111,9 @@ public enum ToolGroupRouter {
             }
             return ToolPick(tool: first, query: "", then: tools.dropFirst().map { ToolPick(tool: $0, query: "") })
         case "knowledge":
-            return ToolPick(tool: "search_knowledge", query: "")
+            return memoryWrite(question) ? nil : ToolPick(tool: "search_knowledge", query: "")
         case "activity":
-            return ToolPick(tool: "recent_activity", query: "")
+            return memoryWrite(question) ? nil : ToolPick(tool: "recent_activity", query: "")
         default:
             // `none` after a tools verdict (the two heads disagree); `web` (a wrong pick there
             // sends the user's words off the device, so Apple's pick keeps that call: #510
@@ -151,6 +154,19 @@ public enum ToolGroupRouter {
     static let writeCues = [
         "add", "create", "book", "set", "cancel", "move", "remind", "delete", "remove", "reschedule", "invite", "put",
     ]
+
+    /// The read-only families' write words: "remember that…", "forget what I told you", "save
+    /// this to my notes" would be answered with a read. Abstaining hands them to Apple's pick,
+    /// which can still say `action` (the challenger on the flip, 2026-10-10: "forget what I told
+    /// you about my address" read activity at 0.679). A bare "note" stays a read ("what did I
+    /// note about…"); "note that" is the write.
+    static let memoryWriteCues = writeCues + [
+        "remember", "forget", "save", "store", "erase", "note that", "write down", "jot",
+    ]
+
+    static func memoryWrite(_ question: String) -> Bool {
+        mentions(question, any: memoryWriteCues)
+    }
 
     /// The words after which "schedule" is the noun ("my schedule", "today's schedule"). After
     /// anything else — the turn's first word, "you", "please", "to" — it is the verb, a write
