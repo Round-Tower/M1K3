@@ -100,7 +100,8 @@
 //  live embedder (set after the embedder is built and on
 //  every switchEmbeddings / rollback); the switch label names EmbeddingGemma 2. Fold (#547 review): the
 //  graph's floors follow its VECTORS — the stored fingerprint at init, the live embedder's only once
-//  reindexMemoryGraphIfNeeded has moved (or adopted) the graph into its space.
+//  reindexMemoryGraphIfNeeded has moved (or adopted) the graph into its space; the rollback path leaves
+//  them alone (pass 2 caught the reset there pairing old-space vectors with the rolled-back embedder's bars).
 
 import AppKit
 import Foundation
@@ -1741,7 +1742,8 @@ final class AppEnvironment {
             // Reindex writes atomically, so the store still matches the previous
             // embedder — roll the façade back to it.
             embedder.setEmbedder(usingMLXEmbeddings ? MLXEmbeddingService() : HashingEmbeddingService())
-            memoryStore?.floors = EmbedderFloors.forFingerprint(embedder.fingerprint)
+            // The graph's floors were never changed on this path: its vectors
+            // are still in the stored space, and so are its bars.
             Self.embedLog.error("embedding switch failed, rolled back: \(error.localizedDescription, privacy: .public)")
             embeddingStatus = "Couldn’t switch embeddings: \(error.localizedDescription)"
         }
