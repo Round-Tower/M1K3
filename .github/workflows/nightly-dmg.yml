@@ -108,31 +108,59 @@ jobs:
       - name: Ensure the Metal toolchain (MLX compiles shaders)
         if: steps.gate.outputs.configured == 'true'
         # Xcode 27 ships the Metal toolchain as a separate component; a fresh
-        # install has none and the MLX build fails without it. On image
-        # 20261006 (2026-10-10) `-downloadComponent` printed "Done downloading"
-        # and `metal` still reported missing: the asset lands in
-        # /System/Library/AssetsV2 but is never mounted into the selected Xcode.
-        # Apple's escape hatch for that is to export the downloaded component to
-        # a bundle and import it explicitly, so that is the fallback below.
+        # install has none and the MLX build fails without it. Two traps found on
+        # image 20261006 (2026-10-10): (1) `xcrun` CACHES its lookup, so a `metal`
+        # probe made before the download keeps answering with the placeholder
+        # ("cannot execute tool 'metal'") after the asset is installed — the probe
+        # must be `--no-cache` and the cache killed after any install (Homebrew
+        # #23919 found the same); (2) `-downloadComponent -exportPath` installs as
+        # well as exports, so a following `-importComponent` refuses with "Asset is
+        # already installed" (run 38044495495). Installed-ness is read from
+        # `-showComponent`, never from the probe.
         run: |
           set -euo pipefail
-          if xcrun -sdk macosx metal --version >/dev/null 2>&1; then
-            echo "Metal toolchain present"
-            exit 0
+          probe() { xcrun --no-cache -sdk macosx metal --version >/dev/null 2>&1; }
+          # Installed-ness by OUTPUT, not exit status: `-showComponent` prints a
+          # "Build Version:" line only for an installed component (its exit code for
+          # the absent case is not pinned anywhere we trust).
+          # Captured first, then grepped: `xcodebuild | grep -q` under pipefail can SIGPIPE
+          # xcodebuild and report "not installed" on a match.
+          installed() {
+            local out
+            out="$(xcodebuild -showComponent MetalToolchain 2>/dev/null || true)"
+            grep -qi 'build version' <<<"$out"
+          }
+          echo "::group::xcodebuild -showComponent MetalToolchain (raw)"
+          xcodebuild -showComponent MetalToolchain 2>&1 || true
+          echo "::endgroup::"
+          diagnose() {
+            echo "::group::Metal toolchain diagnostics"
+            xcode-select -p || true
+            xcodebuild -showComponent MetalToolchain || true
+            xcrun --no-cache -f metal || true
+            xcrun --no-cache -sdk macosx metal --version || true
+            echo "::endgroup::"
+          }
+          if probe; then echo "Metal toolchain present"; exit 0; fi
+          if ! installed; then
+            xcodebuild -downloadComponent MetalToolchain
           fi
-          xcodebuild -downloadComponent MetalToolchain
-          if xcrun -sdk macosx metal --version >/dev/null 2>&1; then
-            echo "Metal toolchain installed"
-            exit 0
+          xcrun --kill-cache
+          if probe; then echo "Metal toolchain installed"; exit 0; fi
+          if ! installed; then
+            echo "::warning::Metal toolchain downloaded but not registered — exporting and importing it explicitly"
+            EXPORT="$RUNNER_TEMP/metal-export"
+            xcodebuild -downloadComponent MetalToolchain -exportPath "$EXPORT"
+            BUNDLE="$(find "$EXPORT" -maxdepth 1 -name "*.exportedBundle" | head -1 || true)"
+            test -n "$BUNDLE" || { echo "::error::no exported Metal bundle under $EXPORT"; ls -la "$EXPORT" || true; exit 1; }
+            xcodebuild -deleteComponent MetalToolchain || true
+            xcodebuild -importComponent MetalToolchain -importPath "$BUNDLE"
+            xcrun --kill-cache
+            if probe; then echo "Metal toolchain imported"; exit 0; fi
           fi
-          echo "::warning::Metal toolchain downloaded but not mounted — exporting and importing it explicitly"
-          EXPORT="$RUNNER_TEMP/metal-export"
-          xcodebuild -deleteComponent MetalToolchain || true
-          xcodebuild -downloadComponent MetalToolchain -exportPath "$EXPORT"
-          BUNDLE="$(find "$EXPORT" -maxdepth 1 -name "*.exportedBundle" | head -1 || true)"
-          test -n "$BUNDLE" || { echo "::error::no exported Metal bundle under $EXPORT"; ls -la "$EXPORT" || true; exit 1; }
-          xcodebuild -importComponent MetalToolchain -importPath "$BUNDLE"
-          xcrun -sdk macosx metal --version
+          echo "::error::Metal toolchain is installed but xcrun cannot find 'metal' — see the diagnostics group"
+          diagnose
+          exit 1
 
       - name: Install xcodegen + xcbeautify
         if: steps.gate.outputs.configured == 'true'
@@ -238,14 +266,45 @@ jobs:
           cp "$DMG" "$RUNNER_TEMP/M1K3.dmg"
           # Same-day re-run replaces today's release; earlier days accumulate as history.
           # --latest marks this the newest release so /releases/latest resolves to it.
-          gh release delete "$DATE" --yes --cleanup-tag 2>/dev/null || true
-          gh release create "$DATE" "$RUNNER_TEMP/M1K3.dmg" \
-            --target "$GITHUB_SHA" \
-            --title "M1K3 $DATE (app v$VERSION · $SHORT)" \
-            --latest \
-            --notes "Nightly build of M1K3 for Mac — signed, notarized, stapled (Developer ID, off-store). App version $VERSION, built from master @ $SHORT. Not the App Store build.
+          # Update IN PLACE, never delete-then-create: on 2026-10-10 (run 38043102898)
+          # the delete succeeded and the create got "HTTP 403: Resource not accessible
+          # by integration", which left the day with no release and /releases/latest
+          # pointing at yesterday. Now an existing release keeps its page and asset
+          # until the new asset has replaced it.
+          TITLE="M1K3 $DATE (app v$VERSION · $SHORT)"
+          NOTES="Nightly build of M1K3 for Mac — signed, notarized, stapled (Developer ID, off-store). App version $VERSION, built from master @ $SHORT. Not the App Store build.
 
           Permanent download: https://github.com/${GITHUB_REPOSITORY}/releases/latest/download/M1K3.dmg"
+          if gh release view "$DATE" >/dev/null 2>&1; then
+            # Move the tag to this commit, swap the asset, then rewrite the release's
+            # stored target (it does NOT follow the tag), title, notes and --latest.
+            git push -f origin "$GITHUB_SHA:refs/tags/$DATE"
+            gh release upload "$DATE" "$RUNNER_TEMP/M1K3.dmg" --clobber
+            gh release edit "$DATE" --target "$GITHUB_SHA" --title "$TITLE" --latest --notes "$NOTES"
+          else
+            gh release create "$DATE" "$RUNNER_TEMP/M1K3.dmg" \
+              --target "$GITHUB_SHA" \
+              --title "$TITLE" \
+              --latest \
+              --notes "$NOTES"
+          fi
+          # End state, not exit code: the tag AND the release's stored target point at
+          # this commit, and the asset is exactly the DMG we built.
+          TAG_SHA="$(git ls-remote origin "refs/tags/$DATE" | cut -f1)"
+          [ "$TAG_SHA" = "$GITHUB_SHA" ] \
+            || { echo "❌ tag $DATE is at ${TAG_SHA:-<missing>}, not $GITHUB_SHA"; exit 1; }
+          PUBLISHED_SHA="$(gh release view "$DATE" --json targetCommitish -q .targetCommitish)"
+          [ "$PUBLISHED_SHA" = "$GITHUB_SHA" ] \
+            || { echo "❌ release $DATE targets $PUBLISHED_SHA, not $GITHUB_SHA"; exit 1; }
+          WANT="$(shasum -a 256 "$RUNNER_TEMP/M1K3.dmg" | cut -d' ' -f1)"
+          GOT="$(gh release view "$DATE" --json assets -q '.assets[] | select(.name=="M1K3.dmg") | .digest // empty' | sed 's/^sha256://')"
+          if [ -z "$GOT" ]; then
+            # Older gh / API without asset digests: hash the published asset itself.
+            gh release download "$DATE" --pattern M1K3.dmg --output "$RUNNER_TEMP/published.dmg" --clobber
+            GOT="$(shasum -a 256 "$RUNNER_TEMP/published.dmg" | cut -d' ' -f1)"
+          fi
+          [ "$GOT" = "$WANT" ] \
+            || { echo "❌ release $DATE carries sha256 ${GOT:-<none>}, built $WANT"; exit 1; }
           echo "✅ Published DateVer release $DATE → M1K3.dmg ($(du -h "$DMG" | cut -f1))"
 
       - name: Bump the Homebrew cask (Round-Tower/homebrew-tap)
@@ -305,6 +364,24 @@ jobs:
         if: always() && steps.gate.outputs.configured == 'true'
         run: security delete-keychain "$KEYCHAIN" 2>/dev/null || true
 
+# Review: Kev + claude-fable-5.1, 2026-10-10 (#541 fold 2) — `installed()` captures `-showComponent`
+# before grepping (pipefail SIGPIPE), and the raw output is logged once for the first dispatch.
+# Review: Kev + claude-fable-5.1, 2026-10-10 (#541 fold) — the update path rewrites the release's
+# stored target with `gh release edit --target` (it does not follow a moved tag; the first draft's
+# own end-state check would have failed), the check also reads the tag via ls-remote, installed-ness
+# comes from `-showComponent`'s output rather than its exit status, and a missing asset digest falls
+# back to hashing the published DMG. Second fold: `installed()` captures before grepping (pipefail
+# SIGPIPE) and the raw `-showComponent` output is logged once so the first dispatch shows the format.
+# Review: Kev + claude-fable-5.1, 2026-10-10 (Metal, 2) — the export/import fallback fired for the
+# first time on run 38044495495 and failed: `-downloadComponent -exportPath` had already installed
+# the asset, so the import refused ("already installed") while `metal` still reported missing. The
+# step now reads installed-ness from `-showComponent`, probes with `xcrun --no-cache`, kills the
+# xcrun cache after every install, and prints diagnostics before failing. Verify-on-dispatch.
+# Review: Kev + claude-fable-5.1, 2026-10-10 (publish) — a same-day re-run updates the release in
+# place (move the tag, --clobber the asset, edit title/notes/--latest) instead of delete-then-create,
+# after run 38043102898's create 403'd right after its delete and left the day with no release.
+# The step now verifies the end state: the release targets this commit and carries the built DMG's
+# sha256. Verify-on-dispatch: the create branch (fresh day) and the update branch (same day).
 # Review: Kev + claude-fable-5.1, 2026-10-10 (cask, 2) — the first cask fix forgot that the step's
 # shell is `bash -e`: the subshell's non-zero status aborted the step before the annotation
 # (run 38041977856, red). `set +e` is now explicit at the top of the step. Verified by the next
