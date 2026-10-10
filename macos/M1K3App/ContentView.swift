@@ -75,6 +75,12 @@
 //  this Mac": it meant the weights are on disk, but read as the retired privacy absolute. Copy only.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (PR #527 fold) — the pitch says "the weights are already on
 //  this Mac", so the sentence names what is on disk.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#552) — the transcript follows a streaming turn only while
+//  pinned to the bottom (`onScrollGeometryChange`, 48 pt); a scroll-up releases it, a new turn re-pins; the
+//  reasoning follow is unanimated so it never fights the disclosure's height animation. Verify by launch.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#554 pass) — the rule is `TranscriptFollowPolicy` (M1K3Chat,
+//  tested): only a scroll UP releases the pin, so content growth under a still reader never does; the new-turn
+//  re-pin is unanimated. Confidence 0.8 (verify by launch owed).
 
 import M1K3Avatar
 import M1K3Chat
@@ -151,6 +157,14 @@ struct ContentView: View {
     @State private var attachmentError: String?
     @State private var showConsentDialog = false
     @State private var isDropTargeted = false
+    /// The transcript follows the streaming turn ONLY while the reader is at the
+    /// bottom (#552). Scrolling up to read the live reasoning used to be undone
+    /// ~20 times a second by `followLatest`; now a scroll-up releases the pin and
+    /// a new turn (or scrolling back down) takes it again. The rule is
+    /// `TranscriptFollowPolicy` (pure, tested): content growing under a still
+    /// reader — the reasoning expanding — never unpins.
+    @State private var transcriptPinnedToBottom = true
+    @State private var transcriptScroll: TranscriptScrollSnapshot?
     /// Set by the intro card's "Introduce yourself" — the floor is theirs.
     @FocusState private var inputFocused: Bool
     @AppStorage(AppEnvironment.avatarDisplayKey) private var avatarDisplay = AvatarDisplay.panel
@@ -723,11 +737,33 @@ struct ContentView: View {
                     .frame(maxWidth: Self.chatContentMaxWidth)
                     .frame(maxWidth: .infinity) // centre the capped column
                 }
+                // The reader's scroll is the only thing that releases the pin (see
+                // TranscriptFollowPolicy): a scroll up lets go, near-bottom takes it,
+                // growth under a still reader leaves it alone.
+                .onScrollGeometryChange(for: TranscriptScrollSnapshot.self) { geometry in
+                    TranscriptScrollSnapshot(
+                        offsetY: geometry.contentOffset.y,
+                        containerHeight: geometry.containerSize.height,
+                        contentHeight: geometry.contentSize.height
+                    )
+                } action: { _, snapshot in
+                    transcriptPinnedToBottom = TranscriptFollowPolicy.next(
+                        pinned: transcriptPinnedToBottom, previous: transcriptScroll, current: snapshot
+                    )
+                    transcriptScroll = snapshot
+                }
+                // A new turn always re-pins: the reader asked for it. Unanimated — this
+                // also fires on a history load or a conversation switch.
+                .onChange(of: env.chat.messages.count) { _, _ in
+                    transcriptPinnedToBottom = true
+                    followLatest(proxy, animated: false)
+                }
                 .onChange(of: env.chat.messages.last?.text) { followLatest(proxy) }
                 // Follow the live reasoning too — during the think phase `text` is
                 // empty, so without this the auto-expanded reasoning grows off the
-                // bottom edge. Throttled upstream (~20Hz), so the follow eases.
-                .onChange(of: env.chat.messages.last?.reasoning) { followLatest(proxy) }
+                // bottom edge. Throttled upstream (~20Hz); no animation here, so the
+                // follow never fights the disclosure's own height animation.
+                .onChange(of: env.chat.messages.last?.reasoning) { followLatest(proxy, animated: false) }
             }
         }
     }
@@ -1282,9 +1318,14 @@ struct ContentView: View {
     /// Paused while voice is active so the transcript becomes the calm scroll-back
     /// record — the dock's karaoke is the live read — and the user can read earlier
     /// turns without being yanked to the bottom mid-utterance.
-    private func followLatest(_ proxy: ScrollViewProxy) {
-        guard !env.isVoiceModeActive, let last = env.chat.messages.last?.id else { return }
-        withAnimation(.easeOut(duration: 0.15)) {
+    private func followLatest(_ proxy: ScrollViewProxy, animated: Bool = true) {
+        guard !env.isVoiceModeActive, transcriptPinnedToBottom,
+              let last = env.chat.messages.last?.id else { return }
+        if animated {
+            withAnimation(.easeOut(duration: 0.15)) {
+                proxy.scrollTo(last, anchor: .bottom)
+            }
+        } else {
             proxy.scrollTo(last, anchor: .bottom)
         }
     }
