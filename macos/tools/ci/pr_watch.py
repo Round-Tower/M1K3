@@ -39,7 +39,8 @@ in project memory. Now they are code, tested in test_pr_watch.py:
 * A docs-only head gets no auto pass (the review workflow is path-gated), so
   one pass there means a summon; without one the watch waits to its timeout.
 * `--passes 0` is the trivial-head rule: a comment-only fold or a clean master
-  merge whose head already had its passes merges on green CI.
+  merge whose head already had its passes merges on green CI. Like any landing
+  below the inferred count, it needs `--why "<reason>"` (exit 5 otherwise).
 * A pass lands nothing unless it says so. Every review prompt (claude-code-review*.yml,
   claude.yml) asks for a closing `VERDICT: APPROVE @ <sha>` or
   `VERDICT: CHANGES_REQUESTED @ <sha>` line. The newest pass on the head — the newest
@@ -149,6 +150,11 @@ a short sha, or a CR naming another sha counted as nothing and a later APPROVE l
 unparseable verdict, or a CR naming any sha, on a pass counted for the head now stands as a blocker,
 cleared the same way; a missing line on an older pass is still ignored (older summons never wrote
 one). Confidence now 0.8.
+Review: Kev + claude-opus-5.5, 2026-10-10 (5) — the same pass: a bare `--passes 0` was allowed on a
+diff with no risk surface (2026-10-08), and a head with no pass reads no verdict, so an agent could add
+it to land past the review. Any landing below the inferred count now needs `--why`; the exit-5 message
+names what is owed ("below the 1 this diff needs"), not an empty "risk surface ()" (#511/#513). The
+root CLAUDE.md's "bare `--passes 0` otherwise" is stale until it is edited. Confidence now 0.85.
 """
 from __future__ import annotations
 
@@ -306,13 +312,13 @@ def required_passes(explicit: int | None, files: list[str], **risk: object) -> i
 
 
 def downgrade_refused(explicit: int | None, files: list[str], why: str | None, **risk: object) -> bool:
-    """Landing a RISK diff on fewer passes than inferred needs a stated reason.
+    """Landing on fewer passes than inferred needs a stated reason, risk surface or not.
 
-    A diff with no risk surface may go down to a bare `--passes 0` (the trivial-head rule); refusing it
-    printed "risk surface ()" — an empty list — on docs-only PRs (#511, #513).
+    2026-10-08 let a bare `--passes 0` through on a diff with no risk surface (refusing it had printed
+    "risk surface ()", an empty list, on #511/#513). Under hands-off landing that bare flag is how an
+    agent gets past the review, since a head with no pass reads no verdict, so it needs `--why` again;
+    main's message now says what is owed instead of naming an empty surface (summon pass 1 on #550).
     """
-    if not risk_surfaces(files, **risk):  # type: ignore[arg-type]
-        return False
     reasoned = bool(why) and len(why.strip()) >= MIN_WHY
     return explicit is not None and explicit < required_passes(None, files, **risk) and not reasoned
 
@@ -766,7 +772,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--interval", type=int, default=60)
     ap.add_argument("--timeout", type=int, default=5400)
     ap.add_argument("--repo", default=None, help="owner/name (default: the current repo)")
-    ap.add_argument("--why", default=None, help="the reason for landing a risk surface on fewer passes than inferred")
+    ap.add_argument("--why", default=None, help="the reason for landing on fewer passes than inferred (--passes 0 included)")
     return ap.parse_args(argv)
 
 
@@ -798,16 +804,18 @@ def main(argv: list[str] | None = None) -> int:
             return 3
         risk = {"patches": patches, "migration_files": migrations}
         risky = risk_surfaces(files, **risk)
+        inferred = required_passes(None, files, **risk)
+        owed_by = f"risk surface ({', '.join(risky[:3])})" if risky else "this diff"
         if downgrade_refused(args.passes, files, args.why, **risk):
-            print(f"risk surface ({', '.join(risky[:3])}) needs 2 passes; --passes {args.passes} "
-                  f"needs --why \"<reason, {MIN_WHY}+ chars>\"", flush=True)
+            print(f"--passes {args.passes} is below the {inferred} {owed_by} needs; "
+                  f"landing on fewer needs --why \"<reason, {MIN_WHY}+ chars>\"", flush=True)
             return 5
         needed = required_passes(args.passes, files, **risk)
         if needed and not auto_pass_expected(files) and not hinted:
             print("note: nothing in this diff triggers the auto pass — summon one (@claude on the PR)", flush=True)
             hinted = True
-        if risky and needed < 2 and not warned:
-            print(f"note: risk surface ({', '.join(risky[:3])}) landing on --passes {needed}: {args.why}", flush=True)
+        if needed < inferred and not warned:
+            print(f"note: {owed_by} needs {inferred}; landing on --passes {needed}: {args.why}", flush=True)
             warned = True
         v = verdict(head, files, jobs, comments, auto_comment is not None, needed,
                     auto_comment=auto_comment, head_seen_at=head_seen_at,

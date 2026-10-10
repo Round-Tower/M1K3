@@ -468,11 +468,33 @@ def test_an_explicit_passes_wins_and_going_below_the_inference_needs_a_why():
     assert not m.downgrade_refused(1, RISKY, why="docs-only fold on a reviewed head")
     assert not m.downgrade_refused(None, RISKY, why=None)
     assert not m.downgrade_refused(1, ["README.md"], why=None)
-    # #511/#513: a bare --passes 0 on a diff with no risk surface is the trivial-head rule (CLAUDE.md);
-    # it was refused with an empty "risk surface ()" message.
-    assert not m.downgrade_refused(0, ["README.md"], why=None)
-    assert not m.downgrade_refused(0, ["macos/docs/GEMMA_1_1_PLAN.md", "macos/docs/evals/x.json"], why=None)
     assert m.downgrade_refused(0, RISKY, why=None)
+
+
+def test_any_landing_below_the_inference_needs_a_why_even_off_a_risk_surface():
+    # Summon pass 1 on #550: with hands-off landing, a bare --passes 0 is how an agent
+    # unblocks itself past the review — the verdict gate reads nothing on a head with no
+    # pass. The 2026-10-08 ruling let it through on a diff with no risk surface; it now
+    # needs a stated reason like any other downgrade.
+    docs = ["macos/docs/GEMMA_1_1_PLAN.md", "macos/docs/evals/x.json"]
+    assert m.downgrade_refused(0, ["README.md"], why=None)
+    assert m.downgrade_refused(0, docs, why=None)
+    assert m.downgrade_refused(0, docs, why="x")  # a reason, not a token
+    assert not m.downgrade_refused(0, docs, why="trivial head: comment fold on a passed head")
+    assert not m.downgrade_refused(None, docs, why=None)
+    assert not m.downgrade_refused(1, docs, why=None)  # the inference itself needs no reason
+
+
+def test_main_refuses_a_bare_passes_0_off_a_risk_surface_and_names_no_empty_surface(monkeypatch, capsys):
+    # #511/#513 printed "risk surface ()" — an empty list — refusing a docs-only head. The
+    # refusal is back; the message says what is actually owed.
+    snap = ("OPEN", V_HEAD, ["README.md"], GREEN_JOBS, [], None, 0, None, {}, "kpmmmurphy", "o/r")
+    monkeypatch.setattr(m, "snapshot", lambda repo, pr: snap)
+    monkeypatch.setattr(m, "migration_files", lambda: {"macos/Sources/X/XStore.swift"})
+    assert m.main(["9", "--once", "--passes", "0", "--repo", "o/r"]) == 5
+    out = capsys.readouterr().out
+    assert "--why" in out and "risk surface ()" not in out and "below the 1" in out
+    assert m.main(["9", "--once", "--passes", "0", "--why", "trivial head: docs fold", "--repo", "o/r"]) == 0
 
 
 def test_a_swift_file_whose_patch_github_omitted_fails_closed():
