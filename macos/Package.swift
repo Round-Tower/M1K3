@@ -29,7 +29,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.75 — mlx-swift-lm back to a TAG (3.32.3 = our ee673d6a
 //  pin + 6 commits, carries #516) with mlx-swift 0.31.6 → 0.32.3 together (the tag requires it; 0.32.2 fixes a
 //  deadlock + a leak, 0.32.3 the < 26.4 launch crash). Owed: the gemma-4 tool smoke + the voice launch check.
-//  Review: Kev + claude-fable-5.1, 2026-10-10 — M1K3MLX declares MLXFast (already a transitive mlx-swift product); no pin moves.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 — M1K3MLX declares MLXFast (already a transitive mlx-swift
+//  product); no pin moves.
 
 import Foundation
 import PackageDescription
