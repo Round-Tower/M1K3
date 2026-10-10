@@ -30,6 +30,7 @@ Review: same day, code-quality fold — the chain fixtures leave the verdict (th
 and get a `chain fx` column.
 Review: Kev + claude-opus-5-5, 2026-10-10 — a `picked by` column from each score's routeStage; a head cell whose
 head never picked is "untested", not a flip (the 10-09 arm's head never fired); Mini's baseline is `routing`.
+Review: Kev + claude-opus-5-5, 2026-10-10 — an `all` config (routing + head + chains together, what the Mac ships).
 """
 
 from __future__ import annotations
@@ -43,7 +44,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 KINDS = ("tool-use", "open-chat")
-CONFIGS = ("off", "routing", "head", "chain")
+CONFIGS = ("off", "routing", "head", "chain", "all")  # all: routing + head + chains, what ships
 FLAGS = CONFIGS[1:]
 TOLERANCE_FIXTURES = 1
 CHAIN_PREFIX = "tool-chain-"  # ChatEvalFixturesTests pins the name

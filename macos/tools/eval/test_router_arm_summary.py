@@ -7,6 +7,7 @@ Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.7 (the rule is the brie
 fixture" is read as a fixture-level majority count with a one-fixture tolerance). Prior: none (new file).
 Review: same day, code-quality fold — the tool-chain-* fixtures are out of the verdict and in their own column.
 Review: Kev + claude-opus-5-5, 2026-10-10 — route stages, the untested-head verdict, Mini's baseline.
+Review: Kev + claude-opus-5-5, 2026-10-10 — the `all` config and a row per config.
 """
 
 import json
@@ -126,7 +127,7 @@ def test_table_has_a_row_per_brain_and_config_and_verdicts_for_flags(tmp_path):
         write_cell(tmp_path, brain, "head", fixtures({"a", "b"}, 2500))
         write_cell(tmp_path, brain, "chain", fixtures(set(), 2500))
     out = ras.render(ras.load_dir(tmp_path, "2026-10-10"))
-    assert out.count("| lil |") == 4 and out.count("| big |") == 4
+    assert out.count("| lil |") == len(ras.CONFIGS) and out.count("| big |") == len(ras.CONFIGS)
     assert "flip" in out and "keep off" in out
 
 
@@ -175,3 +176,13 @@ def test_the_stage_column_reads_dash_when_nothing_routed(tmp_path):
     write_cell(tmp_path, "lil", "off", fixtures({"a"}, 1000))
     row = next(r for r in ras.render(ras.load_dir(tmp_path, "2026-10-10")).splitlines() if r.startswith("| lil | off |"))
     assert row.split(" | ")[5] == "-"  # brain, config, tool-use, open-chat, chain fx, picked by
+
+
+def test_the_all_config_is_the_shipping_candidate_and_gets_a_verdict(tmp_path):
+    # 2026-10-10: the flip turns routing, the head and chains on TOGETHER; the arm measured each
+    # alone. `all` is the combination that ships, judged against the same baseline.
+    assert ras.CONFIGS[-1] == "all"
+    write_cell(tmp_path, "lil", "off", fixtures({"a", "b"}, 8000))
+    write_cell(tmp_path, "lil", "all", [staged(n, 3000, "head", repeat=r) for n in "abcd" for r in range(3)])
+    row = next(r for r in ras.render(ras.load_dir(tmp_path, "2026-10-10")).splitlines() if r.startswith("| lil | all |"))
+    assert row.endswith("| flip |")
