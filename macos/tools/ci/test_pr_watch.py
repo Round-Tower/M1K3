@@ -6,8 +6,16 @@ repo (read off PR #293, 2026-09-12) or a CI job list read off the Actions API.
 import pr_watch as m
 
 
-def bot(body, created="2026-09-12T08:00:00Z"):
-    return {"user": {"login": "claude[bot]"}, "body": body, "created_at": created}
+def bot(body, created="2026-09-12T08:00:00Z", updated=None):
+    c = {"user": {"login": "claude[bot]"}, "body": body, "created_at": created}
+    if updated:
+        c["updated_at"] = updated
+    return c
+
+
+GREEN_JOBS = {"Detect compilable changes": "success", "Swift · Mac MVP (swift test)": "success",
+              "Swift · App shell (xcodebuild)": "success",
+              "Project guards (test scheme · store targets)": "success", "Docs match the code (module map)": "success"}
 
 
 # --- comment classification -------------------------------------------------
@@ -276,7 +284,8 @@ def test_a_concurrent_summon_in_the_window_does_not_eat_the_auto_runs_gh_pr_comm
     head = "95e8dbaf" + "0" * 32
     runs = [_run(head, 222, "2026-09-24T21:08:05Z", "2026-09-24T21:10:05Z")]
     summon = _tracking(111, "95e8dbaf", created="2026-09-24T21:08:35Z")
-    review = bot("## Review: CI tooling pass\nFocused on pr_watch.py…", created="2026-09-24T21:09:55Z")
+    summon["body"] += "\n\nVERDICT: APPROVE @ 95e8dbaf"
+    review = bot("## Review: CI tooling pass\nFocused on pr_watch.py…\n\nVERDICT: APPROVE @ 95e8dbaf", created="2026-09-24T21:09:55Z")
     assert m.auto_pass_comment(head, runs, [summon, review]) is review
     jobs = {m.JOB_SWIFT_TEST: "skipped", m.JOB_APP: "skipped", m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
     v = m.verdict(head, ["macos/tools/ci/pr_watch.py"], jobs, [summon, review], auto_ok=True, passes_needed=2, auto_comment=review)
@@ -374,9 +383,11 @@ def test_advisory_failure_is_reported_but_does_not_block():
 
 def test_ready_needs_green_required_ci_and_enough_passes_on_this_head():
     head = "08eb0c00" + "0" * 32
-    comments = [bot("**Claude finished @kev's task in 2m** ---\n### Final pass — review of head `08eb0c00`\n- [x] a")]
+    comments = [bot("**Claude finished @kev's task in 2m** ---\n### Final pass — review of head `08eb0c00`\n- [x] a\n\n"
+                    "VERDICT: APPROVE @ 08eb0c00", created="2026-09-12T08:00:00Z")]
+    auto = bot("## Review: auto pass\nFine.\n\nVERDICT: APPROVE @ 08eb0c00", created="2026-09-12T08:05:00Z")
     jobs = {m.JOB_SWIFT_TEST: "success", m.JOB_APP: "success", m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
-    v = m.verdict(head, ["macos/Sources/A.swift"], jobs, comments, auto_ok=True, passes_needed=2)
+    v = m.verdict(head, ["macos/Sources/A.swift"], jobs, comments + [auto], auto_ok=True, passes_needed=2, auto_comment=auto)
     assert v.ready and v.passes == 2
     v = m.verdict(head, ["macos/Sources/A.swift"], jobs, comments, auto_ok=False, passes_needed=2)
     assert not v.ready and v.passes == 1 and "1/2" in v.summary
@@ -521,3 +532,132 @@ def test_red_ci_is_never_ready_however_many_passes():
     jobs = {m.JOB_SWIFT_TEST: "failure", m.JOB_APP: "success", m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
     v = m.verdict(head, ["macos/Sources/A.swift"], jobs, comments, auto_ok=True, passes_needed=2)
     assert not v.ready and v.ci.state == "red"
+
+
+# --- the review's own verdict (2026-10-10) ----------------------------------
+# A pass used to count by author, shape and head alone: one that said
+# "BLOCKING: …" still counted, and land.sh merged. Hands-off landing needs the
+# gate to read what the review concluded, from the line every prompt now asks
+# for: `VERDICT: APPROVE @ <sha>` or `VERDICT: CHANGES_REQUESTED @ <sha>`.
+
+V_HEAD = "c0ffee12" + "0" * 32
+
+
+def _summon(verdict_line, created="2026-10-10T10:00:00Z", updated=None, title="### Review of head `c0ffee12`"):
+    body = f"**Claude finished @kev's task in 40s** ---\n{title}\n\n- [x] Read the diff\n\nFindings…"
+    if verdict_line:
+        body += f"\n\n{verdict_line}"
+    return bot(body + "\n · branch `fix/x`", created=created, updated=updated)
+
+
+def _gate(comments, passes_needed=1, auto_comment=None, files=("macos/Sources/A.swift",), head=V_HEAD):
+    return m.verdict(head, list(files), GREEN_JOBS, comments, auto_ok=auto_comment is not None,
+                     passes_needed=passes_needed, auto_comment=auto_comment)
+
+
+def test_review_verdict_reads_the_closing_verdict_line():
+    assert m.review_verdict("Fine.\n\nVERDICT: APPROVE @ c0ffee12") == ("APPROVE", "c0ffee12")
+    assert m.review_verdict("Blocker.\n\nVERDICT: CHANGES_REQUESTED @ c0ffee12") == ("CHANGES_REQUESTED", "c0ffee12")
+    # markdown dressing and a full sha are the same line
+    assert m.review_verdict("**VERDICT: APPROVE @ `C0FFEE12" + "0" * 32 + "`**") == ("APPROVE", "c0ffee12" + "0" * 32)
+    # the action appends " · branch `x`" after a summon's body; the bot may sign off after the line
+    assert m.review_verdict("x\nVERDICT: APPROVE @ c0ffee12\n · branch `fix/x`") == ("APPROVE", "c0ffee12")
+    assert m.review_verdict("x\nVERDICT: APPROVE @ c0ffee12\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)") == ("APPROVE", "c0ffee12")
+
+
+def test_the_last_verdict_line_is_the_verdict_and_a_malformed_one_fails_closed():
+    assert m.review_verdict("VERDICT: APPROVE @ c0ffee12\n…on reflection…\nVERDICT: CHANGES_REQUESTED @ c0ffee12") == ("CHANGES_REQUESTED", "c0ffee12")
+    # a malformed closing line is not rescued by a well-formed earlier one
+    assert m.review_verdict("VERDICT: APPROVE @ c0ffee12\nVERDICT: APPROVE") == ("unparseable", "")
+    assert m.review_verdict("VERDICT: LGTM @ c0ffee12") == ("unparseable", "")
+    assert m.review_verdict("VERDICT: APPROVE @ c0ffee12 (nits only)") == ("unparseable", "")
+    assert m.review_verdict("VERDICT: APPROVE @ abc12") == ("unparseable", "")  # under 7 chars names nothing
+
+
+def test_prose_quotes_and_fences_are_not_a_verdict():
+    # the shape reviews already write (#543): prose, not the line
+    assert m.review_verdict("**Verdict: looks good to land.** I only read the diff.") == ("missing", "")
+    assert m.review_verdict("The prompt asks for `VERDICT: APPROVE @ <head-sha>` at the end.") == ("missing", "")
+    fenced = "```\nVERDICT: APPROVE @ c0ffee12\n```\nStill reviewing."
+    assert m.review_verdict(fenced) == ("missing", "")
+    assert m.review_verdict("") == ("missing", "")
+
+
+def test_an_approving_pass_on_the_head_is_ready():
+    v = _gate([_summon("VERDICT: APPROVE @ c0ffee12")])
+    assert v.ready, v.reasons
+    assert "verdict APPROVE" in v.summary
+
+
+def test_changes_requested_on_the_head_is_not_ready():
+    v = _gate([_summon("VERDICT: CHANGES_REQUESTED @ c0ffee12")])
+    assert not v.ready and v.passes == 1
+    assert "verdict: CHANGES_REQUESTED on c0ffee12" in v.reasons
+    assert "verdict: CHANGES_REQUESTED on c0ffee12" in v.summary  # main prints the summary, not the reasons
+
+
+def test_a_pass_without_a_verdict_is_not_ready():
+    v = _gate([_summon(None)])
+    assert not v.ready and v.passes == 1
+    assert "verdict: missing on c0ffee12" in v.reasons
+    v = _gate([_summon("VERDICT: APPROVE")])
+    assert "verdict: unparseable on c0ffee12" in v.reasons
+
+
+def test_a_verdict_naming_an_older_sha_is_not_ready():
+    # the pass counts for this head (its title names it) but its verdict is about another
+    v = _gate([_summon("VERDICT: APPROVE @ 7c0383c1")])
+    assert not v.ready
+    assert "verdict: APPROVE names 7c0383c1, not c0ffee12" in v.reasons
+
+
+def test_the_newest_pass_overrides_an_older_approve():
+    older = _summon("VERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:00:00Z")
+    newer = _summon("VERDICT: CHANGES_REQUESTED @ c0ffee12", created="2026-10-10T10:20:00Z")
+    assert not _gate([older, newer]).ready
+    assert not _gate([newer, older]).ready  # newest by time, not by thread order
+    # and a re-review on the same head may clear an older CHANGES_REQUESTED
+    assert _gate([_summon("VERDICT: CHANGES_REQUESTED @ c0ffee12", created="2026-10-10T10:00:00Z"),
+                  _summon("VERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:20:00Z")]).ready
+
+
+def test_newest_is_when_the_pass_finished_not_when_its_tracking_comment_was_created():
+    # A summon's tracking comment is created when its run starts and updated with
+    # the review when it ends (#547: created 16:12:52, updated 16:13:41). The auto
+    # review posted between the two (16:13:21) is the older word.
+    summon = _summon("VERDICT: CHANGES_REQUESTED @ c0ffee12", created="2026-10-10T16:12:52Z", updated="2026-10-10T16:13:41Z")
+    auto = bot("## Review: one embedder\nFine.\n\nVERDICT: APPROVE @ c0ffee12", created="2026-10-10T16:13:21Z",
+               updated="2026-10-10T16:13:21Z")
+    v = _gate([summon, auto], passes_needed=1, auto_comment=auto)
+    assert v.passes == 2 and not v.ready
+    assert "verdict: CHANGES_REQUESTED on c0ffee12" in v.reasons
+
+
+def test_every_owed_pass_must_approve_whichever_finished_last():
+    # Two passes are owed on a risk surface, and the repo's rule is to push then
+    # summon AT ONCE: the auto pass and the summon review the same head
+    # concurrently. If only the newest had to approve, a blocker from the
+    # other would land or not by which run finished first.
+    auto_cr = bot("## Review\nBLOCKING: the gate fails open.\n\nVERDICT: CHANGES_REQUESTED @ c0ffee12", created="2026-10-10T10:03:00Z")
+    summon_ok = _summon("VERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:00:05Z", updated="2026-10-10T10:04:00Z")
+    risky = ("macos/tools/ci/pr_watch.py",)
+    v = _gate([summon_ok, auto_cr], passes_needed=2, auto_comment=auto_cr, files=risky)
+    assert v.passes == 2 and not v.ready
+    assert "verdict: CHANGES_REQUESTED on c0ffee12" in v.reasons
+    auto_ok = bot("## Review\nFine.\n\nVERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:03:00Z")
+    assert _gate([summon_ok, auto_ok], passes_needed=2, auto_comment=auto_ok, files=risky).ready
+
+
+def test_a_trivial_head_needs_no_verdict_until_a_pass_on_it_says_otherwise():
+    # --passes 0 (the trivial-head rule) with nothing posted on the head: CI decides.
+    assert _gate([], passes_needed=0).ready
+    # but a pass on THIS head that requests changes is not waved through by --passes 0
+    v = _gate([_summon("VERDICT: CHANGES_REQUESTED @ c0ffee12")], passes_needed=0)
+    assert not v.ready and "verdict: CHANGES_REQUESTED on c0ffee12" in v.reasons
+
+
+def test_an_auto_pass_whose_comment_is_unknown_cannot_approve():
+    # the two-argument auto_ok form: a green run with no comment in hand reads no verdict
+    v = m.verdict(V_HEAD, ["macos/Sources/A.swift"], GREEN_JOBS, [], auto_ok=True, passes_needed=1)
+    assert v.passes == 1 and not v.ready
+    assert "verdict: missing on c0ffee12" in v.reasons

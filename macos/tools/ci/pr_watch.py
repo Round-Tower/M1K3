@@ -40,6 +40,12 @@ in project memory. Now they are code, tested in test_pr_watch.py:
   one pass there means a summon; without one the watch waits to its timeout.
 * `--passes 0` is the trivial-head rule: a comment-only fold or a clean master
   merge whose head already had its passes merges on green CI.
+* A pass lands nothing unless it says so. Every review prompt (claude-code-review*.yml,
+  claude.yml) asks for a closing `VERDICT: APPROVE @ <sha>` or
+  `VERDICT: CHANGES_REQUESTED @ <sha>` line. The newest pass on the head — the newest
+  N when N passes are owed — must APPROVE naming this head; a missing, malformed or
+  CHANGES_REQUESTED verdict, or one naming another sha, refuses. Under `--passes 0`
+  a head with nothing posted reads no verdict, but a pass on it still must approve.
 
     python3 pr_watch.py <PR> [--passes N] [--once] [--interval 60] [--timeout 5400]
 
@@ -112,6 +118,14 @@ Review: Kev + claude-opus-5-5, 2026-10-08 — `--why` is owed only for a RISK di
 inference, as the root CLAUDE.md's trivial-head rule already said ("bare `--passes 0` otherwise"). The
 code refused any downgrade, and printed `risk surface ()` (an empty list) on docs-only #513 and on #511's
 test-only head. Confidence 0.9 — pinned in test_pr_watch.py.
+Review: Kev + claude-opus-5.5, 2026-10-10 — a pass counted by author, shape and head alone, so one
+that said "BLOCKING: …" still counted and land.sh merged; with hands-off landing nobody reads it
+first. The gate now reads the review's closing VERDICT line (review_verdict): the owed pass(es) on
+the head must APPROVE naming it, failing closed on missing / malformed / CHANGES_REQUESTED / another
+sha. "Newest" is when a pass finished (updated_at: a summon's tracking comment is created at run
+start, #547). Two owed passes must both approve — the risk-surface pair runs concurrently, and
+newest-only would let run order decide whether a blocker lands. Confidence now 0.8 — the parser is
+pinned on shapes read off #543/#547; whether the bots emit the line reliably is unmeasured.
 """
 from __future__ import annotations
 
@@ -307,6 +321,11 @@ _TITLE_BARE_SHA = re.compile(r"\b(?=[0-9a-f]*[0-9])([0-9a-f]{7,40})\b")
 # back — re-pin from a live thread, as classify's wording list has needed
 # (#334, #347, #404).
 _RUN_LINK = re.compile(r"\[View job\]\([^)]*?/actions/runs/(\d+)")
+# The closing line every review prompt asks for (claude-code-review*.yml, claude.yml):
+# "VERDICT: APPROVE @ <sha>" or "VERDICT: CHANGES_REQUESTED @ <sha>". Markdown dressing
+# (bold, backticks) is tolerated; anything else on the line makes it unparseable.
+_VERDICT_LINE = re.compile(r"^[\s*_`]*VERDICT:")
+_VERDICT = re.compile(r"^[\s*_`]*VERDICT:\s*(APPROVE|CHANGES_REQUESTED)\s*@\s*`?([0-9a-fA-F]{7,40})`?[\s*_`.]*$")
 
 
 def _progress_unchecked(text: str) -> bool:
@@ -413,6 +432,69 @@ def counts_as_summon_pass(head: str, comment: dict, head_seen_at: str | None) ->
     if _names(head, shas):
         return True
     return not shas and bool(head_seen_at) and comment.get("created_at", "") >= head_seen_at
+
+
+def review_verdict(body: str) -> tuple[str, str]:
+    """What a pass concluded: ("APPROVE" | "CHANGES_REQUESTED", sha), or
+    ("missing", "") / ("unparseable", ""). The LAST "VERDICT:" line outside ```
+    fences is the verdict — the action appends " · branch `x`" after a summon's
+    body and the bot often signs off below it, so it need not be the last line.
+    A malformed closing verdict is not rescued by a well-formed earlier one, and
+    prose ("**Verdict: looks good to land.**", #543) is no verdict at all."""
+    lines = [ln for ln in _outside_fences(body.splitlines()) if _VERDICT_LINE.match(ln)]
+    if not lines:
+        return ("missing", "")
+    mt = _VERDICT.match(lines[-1])
+    if not mt:
+        return ("unparseable", "")
+    return (mt.group(1), mt.group(2).lower())
+
+
+def verdict_refusal(head: str, comment: dict | None) -> str | None:
+    """Why this pass does not approve THIS head, or None when it does."""
+    outcome, sha = review_verdict((comment or {}).get("body", ""))
+    if outcome in ("missing", "unparseable"):
+        return f"verdict: {outcome} on {head[:8]}"
+    if not _names(head, [sha]):
+        return f"verdict: {outcome} names {sha[:8]}, not {head[:8]}"
+    if outcome != "APPROVE":
+        return f"verdict: {outcome} on {head[:8]}"
+    return None
+
+
+def _finished_at(comment: dict | None) -> str:
+    """When a pass said its last word: a summon's tracking comment is created
+    when its run starts and updated with the review when it ends."""
+    c = comment or {}
+    return c.get("updated_at") or c.get("created_at") or ""
+
+
+def passes_on_head(head: str, comments: list[dict], auto_ok: bool, auto_comment: dict | None = None,
+                   head_seen_at: str | None = None) -> list[dict | None]:
+    """Every pass that counts for this head, oldest word first — the summons,
+    plus the auto pass unless its comment is already one of them (#404, #457:
+    one review is one pass). An auto pass whose comment is unknown (the
+    two-argument auto_ok form) is None and sorts newest: it can't approve."""
+    found: list[dict | None] = [c for c in comments if counts_as_summon_pass(head, c, head_seen_at)]
+    if auto_ok and auto_comment is not None and not counts_as_summon_pass(head, auto_comment, head_seen_at):
+        found.append(auto_comment)
+    order = sorted(range(len(found)), key=lambda i: (_finished_at(found[i]), i))
+    ordered = [found[i] for i in order]
+    if auto_ok and auto_comment is None:
+        ordered.append(None)
+    return ordered
+
+
+def review_refusals(head: str, on_head: list[dict | None], passes_needed: int) -> list[str]:
+    """The passes owed must approve this head. That is the newest pass — the
+    newest `passes_needed` of them when more are owed: two passes on a risk
+    surface run concurrently (push, then summon at once), and a blocker from
+    either must not land or not by which run finished first. An older verdict
+    is overridden by enough newer ones. With nothing owed (--passes 0) and
+    nothing posted on the head, there is no verdict to read."""
+    owed = on_head[-passes_needed:] if passes_needed > 0 else on_head[-1:]
+    refusals = [r for r in (verdict_refusal(head, c) for c in reversed(owed)) if r]
+    return list(dict.fromkeys(refusals))
 
 
 def linked_run_id(body: str) -> str | None:
@@ -527,22 +609,26 @@ def verdict(
 ) -> Verdict:
     ci = ci_verdict(required_jobs(changed_files), jobs)
     # The auto pass's own comment can be summon-shaped ("Claude finished …", #404)
-    # and so already counted by summon_passes — by name, or (#457) by time. One
+    # and so already counted as a summon — by name, or (#457) by time. One
     # review is one pass.
-    auto_extra = 1 if auto_ok else 0
-    if auto_ok and auto_comment is not None and counts_as_summon_pass(head, auto_comment, head_seen_at):
-        auto_extra = 0
-    passes = summon_passes(head, comments, head_seen_at) + auto_extra
+    on_head = passes_on_head(head, comments, auto_ok, auto_comment, head_seen_at)
+    passes = len(on_head)
+    review = review_refusals(head, on_head, passes_needed)
     reasons: list[str] = []
     if ci.state != "green":
         reasons.append(f"CI {ci.state} ({ci.detail})")
     if passes < passes_needed:
         reasons.append(f"passes {passes}/{passes_needed} on {head[:8]}")
+    reasons += review
     ready = not reasons
     bits = [f"head {head[:8]}", f"CI {ci.state}" + (f" ({ci.detail})" if ci.detail else "")]
     if ci.advisory:
         bits.append(f"advisory red: {ci.advisory}")
     bits.append(f"passes {passes}/{passes_needed}")
+    if review:
+        bits += review
+    elif on_head:
+        bits.append("verdict APPROVE")
     summary = " · ".join(bits) + (" → READY" if ready else "")
     return Verdict(ready, ci, passes, passes_needed, summary, reasons)
 
