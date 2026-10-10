@@ -20,6 +20,7 @@
 import Foundation
 import M1K3Knowledge
 @testable import M1K3MLX
+import MLXEmbedders
 import MLXLMCommon
 import Testing
 
@@ -150,6 +151,20 @@ struct EmbeddingGemma2Tests {
         #expect(EmbeddingGemma2TextModel.textCoreKey("embed_vision.embedding_projection.weight") == nil)
         #expect(EmbeddingGemma2TextModel.textCoreKey("audio_tower.layers.0.norm_out.weight") == nil)
         #expect(EmbeddingGemma2TextModel.textCoreKey("embed_audio.embedding_projection.scales") == nil)
+    }
+
+    @Test("harness presets resolve by short name, a Hub id passes through, junk is nil")
+    func presetNames() {
+        #expect(MLXEmbeddingService.preset(named: "gemma")?.name == "mlx-community/embeddinggemma-2-8bit")
+        #expect(MLXEmbeddingService.preset(named: "EG2")?.name == "mlx-community/embeddinggemma-2-8bit")
+        #expect(MLXEmbeddingService.preset(named: "qwen")?.name == EmbedderRegistry.qwen3_embedding.name)
+        #expect(MLXEmbeddingService.preset(named: "")?.name == EmbedderRegistry.qwen3_embedding.name)
+        let hub = "mlx-community/some-embedder-4bit"
+        #expect(MLXEmbeddingService.preset(named: hub)?.name == hub)
+        #expect(MLXEmbeddingService.preset(named: " \(hub) ")?.name == hub, "trimmed once, for the Hub branch too")
+        #expect(MLXEmbeddingService.preset(named: " Gemma ")?.name == "mlx-community/embeddinggemma-2-8bit")
+        #expect(MLXEmbeddingService.preset(named: "default")?.name == EmbedderRegistry.qwen3_embedding.name)
+        #expect(MLXEmbeddingService.preset(named: "nonsense") == nil)
     }
 
     @Test("the service composes the model card's prompts for EmbeddingGemma 2 and leaves Qwen alone")

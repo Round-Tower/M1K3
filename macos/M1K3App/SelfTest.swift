@@ -29,6 +29,9 @@
 //  failure detail (`ToolTurn.rejectedToolCalls`).
 //  Review: Kev + claude-fable-5.1, 2026-10-10 — dispatches EmbeddingGemma2RefStage (M1K3_SELFTEST_EG2REF=1, the
 //  Stream C port's reference check; fixture on stdin); no other change.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (Stream C slice 3) — MEMEVAL / ABSEP / KEYEVAL measure the
+//  embedder `M1K3_SELFTEST_EMBEDDER` names (`candidateEmbedder()`); KEYEVAL's "instructed" arm is the
+//  embedder's own `embedQuery` (Qwen's instruction or Gemma's prefix): the Gemma A/B reads production's composition.
 
 import Foundation
 import M1K3Chat
@@ -83,6 +86,26 @@ enum SelfTestEnv {
 }
 
 enum SelfTest {
+    /// The embedder the retrieval evals (MEMEVAL / ABSEP / KEYEVAL) measure:
+    /// `M1K3_SELFTEST_EMBEDDER` = `qwen` (default) | `gemma` | a Hub id, via
+    /// `MLXEmbeddingService.preset(named:)`. The same fixture sets, the same
+    /// composition, so Gemma's distributions read against Qwen's floors.
+    /// A name that resolves to nothing is a FAILED stage, never a Qwen run
+    /// saved under the wrong label.
+    static func candidateEmbedder() -> MLXEmbeddingService? {
+        let name = SelfTestEnv.value("M1K3_SELFTEST_EMBEDDER") ?? ""
+        guard let configuration = MLXEmbeddingService.preset(named: name) else {
+            emit("✗ M1K3_SELFTEST_EMBEDDER=\(name) is not a preset or Hub id — eval skipped")
+            return nil
+        }
+        return MLXEmbeddingService(configuration: configuration)
+    }
+
+    /// The shipping default, by configuration — no service is built to ask.
+    static func isDefaultEmbedder(_ embedder: MLXEmbeddingService) -> Bool {
+        embedder.configuration.name == EmbedderRegistry.qwen3_embedding.name
+    }
+
     static var isRequested: Bool {
         SelfTestEnv.value("M1K3_SELFTEST") == "1"
     }
@@ -645,10 +668,10 @@ enum SelfTest {
     /// negatives, then the distribution summary + suggested threshold. Each
     /// line lands in the OUT file as it's measured (interrupt-safe).
     private static func runMemoryThresholdEval() async {
+        guard let embedder = candidateEmbedder() else { return }
         emit("• memeval: embedding \(MemoryEvalFixtures.positives.count) positive + "
-            + "\(MemoryEvalFixtures.negatives.count) negative pairs…")
+            + "\(MemoryEvalFixtures.negatives.count) negative pairs with \(embedder.fingerprint)…")
         do {
-            let embedder = MLXEmbeddingService()
             let positiveScores = try await score(
                 pairs: MemoryEvalFixtures.positives, label: "pos", embedder: embedder
             )
@@ -682,21 +705,30 @@ enum SelfTest {
     /// head-to-head margin verdict. The candidate must separate the classes at
     /// least as wide as bge, else the swap isn't justified (the ABSEP gate).
     private static func runSeparationEval() async {
+        guard let candidate = candidateEmbedder() else { return }
+        let candidateIsDefault = isDefaultEmbedder(candidate)
         emit("• absep: \(SeparationEvalFixtures.inDomain.count) in-domain + "
-            + "\(SeparationEvalFixtures.offDomain.count) off-domain pairs, bge-small-384 vs qwen3-embed-512…")
+            + "\(SeparationEvalFixtures.offDomain.count) off-domain pairs, "
+            + "bge-small-384 vs \(candidate.fingerprint)…")
         do {
             // Old embedder stood up explicitly beside the new default — the init
             // params survived the default change precisely for this.
             let bge = MLXEmbeddingService(configuration: EmbedderRegistry.bge_small, dimension: 384)
-            let candidate = MLXEmbeddingService() // new default = qwen3-embed-512
 
             let bgeIn = try await scoreSeparation(pairs: SeparationEvalFixtures.inDomain, label: "bge in", embedder: bge)
             let bgeOff = try await scoreSeparation(pairs: SeparationEvalFixtures.offDomain, label: "bge off", embedder: bge)
-            let candIn = try await scoreSeparation(pairs: SeparationEvalFixtures.inDomain, label: "qwen3 in", embedder: candidate)
-            let candOff = try await scoreSeparation(pairs: SeparationEvalFixtures.offDomain, label: "qwen3 off", embedder: candidate)
+            let candIn = try await scoreSeparation(
+                pairs: SeparationEvalFixtures.inDomain, label: "cand in", embedder: candidate
+            )
+            let candOff = try await scoreSeparation(
+                pairs: SeparationEvalFixtures.offDomain, label: "cand off", embedder: candidate
+            )
 
             let bgeResult = SeparationEvalReport.Result(label: "bge-small-384", inDomain: bgeIn, offDomain: bgeOff)
-            let candidateResult = SeparationEvalReport.Result(label: "qwen3-embed-512", inDomain: candIn, offDomain: candOff)
+            let candidateResult = SeparationEvalReport.Result(
+                label: candidateIsDefault ? "qwen3-embed-512" : candidate.fingerprint,
+                inDomain: candIn, offDomain: candOff
+            )
             // candidate second → the head-to-head verdict describes it vs bge.
             emit(SeparationEvalReport.render([bgeResult, candidateResult]))
         } catch {
@@ -726,10 +758,11 @@ enum SelfTest {
     /// EmbeddingText.forQuery (the SAME composer a production embedQuery
     /// override would call; an inlined template here would measure a phantom).
     private static func runQueryStyleEval() async {
+        guard let embedder = candidateEmbedder() else { return }
         emit("• keyeval: \(QueryStyleEvalFixtures.probes.count) probes + "
-            + "\(QueryStyleEvalFixtures.noise.count) noise pairs, bare vs instructed query arms…")
+            + "\(QueryStyleEvalFixtures.noise.count) noise pairs, bare vs instructed query arms, "
+            + "\(embedder.fingerprint)…")
         do {
-            let embedder = MLXEmbeddingService()
             let targetVectors = try await embedder.embedBatch(QueryStyleEvalFixtures.probes.map {
                 EmbeddingText.forChunk(title: $0.title, content: $0.content)
             })
@@ -743,20 +776,26 @@ enum SelfTest {
             // production query path since the 07-09 adoption), so the harness
             // measures the live seam's composition, with the before-arm kept
             // for the ongoing A/B.
-            let armSpecs: [(label: String, compose: (String) -> String)] = [
-                ("bare", { $0 }),
-                ("instructed", EmbeddingText.forQuery),
+            // "bare" embeds the query as a document (`embed` — on Gemma that
+            // carries the document prefix, so bare rows are not comparable
+            // ACROSS embedders); "instructed" is the embedder's OWN query
+            // composition (`embedQuery`): Qwen's instruction or Gemma's task
+            // prefix — never the other's. Queries go one at a time here;
+            // fine for fixtures this small.
+            let armSpecs: [(label: String, embedQueries: ([String]) async throws -> [[Float]])] = [
+                ("bare", { try await embedder.embedBatch($0) }),
+                ("instructed", { queries in
+                    var vectors: [[Float]] = []
+                    for query in queries {
+                        try vectors.append(await embedder.embedQuery(query))
+                    }
+                    return vectors
+                }),
             ]
             for spec in armSpecs {
-                let keywordVectors = try await embedder.embedBatch(
-                    QueryStyleEvalFixtures.probes.map { spec.compose($0.keyword) }
-                )
-                let questionVectors = try await embedder.embedBatch(
-                    QueryStyleEvalFixtures.probes.map { spec.compose($0.question) }
-                )
-                let noiseVectors = try await embedder.embedBatch(
-                    QueryStyleEvalFixtures.noise.map { spec.compose($0.keyword) }
-                )
+                let keywordVectors = try await spec.embedQueries(QueryStyleEvalFixtures.probes.map(\.keyword))
+                let questionVectors = try await spec.embedQueries(QueryStyleEvalFixtures.probes.map(\.question))
+                let noiseVectors = try await spec.embedQueries(QueryStyleEvalFixtures.noise.map(\.keyword))
                 var keyword: [Float] = []
                 var question: [Float] = []
                 var noise: [Float] = []
@@ -791,13 +830,9 @@ enum SelfTest {
             // chunkThreshold from ABSEP (query→chunk) — a floor move must cite
             // its own register's instructed distribution, not the mixed probes.
             for spec in armSpecs {
-                let posQ = try await embedder.embedBatch(
-                    MemoryEvalFixtures.positives.map { spec.compose($0.query) }
-                )
+                let posQ = try await spec.embedQueries(MemoryEvalFixtures.positives.map(\.query))
                 let posM = try await embedder.embedBatch(MemoryEvalFixtures.positives.map(\.memory))
-                let negQ = try await embedder.embedBatch(
-                    MemoryEvalFixtures.negatives.map { spec.compose($0.query) }
-                )
+                let negQ = try await spec.embedQueries(MemoryEvalFixtures.negatives.map(\.query))
                 let negM = try await embedder.embedBatch(MemoryEvalFixtures.negatives.map(\.memory))
                 let pos = zip(posQ, posM).map { VectorMath.cosineSimilarity($0, $1) }
                 let neg = zip(negQ, negM).map { VectorMath.cosineSimilarity($0, $1) }
@@ -806,13 +841,9 @@ enum SelfTest {
             }
             var chunkArms: [SeparationEvalReport.Result] = []
             for spec in armSpecs {
-                let inQ = try await embedder.embedBatch(
-                    SeparationEvalFixtures.inDomain.map { spec.compose($0.query) }
-                )
+                let inQ = try await spec.embedQueries(SeparationEvalFixtures.inDomain.map(\.query))
                 let inD = try await embedder.embedBatch(SeparationEvalFixtures.inDomain.map(\.document))
-                let offQ = try await embedder.embedBatch(
-                    SeparationEvalFixtures.offDomain.map { spec.compose($0.query) }
-                )
+                let offQ = try await spec.embedQueries(SeparationEvalFixtures.offDomain.map(\.query))
                 let offD = try await embedder.embedBatch(SeparationEvalFixtures.offDomain.map(\.document))
                 chunkArms.append(.init(
                     label: "chunks-\(spec.label)",

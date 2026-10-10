@@ -47,6 +47,9 @@
 //  until slice 3's A/B; the 2026-06-13 "NOT EmbeddingGemma" note above is about v1 and the upstream file.
 //  Fold (review): `prompting:` is an explicit init parameter (a directory load can't be routed by name), and
 //  the Gemma arm's fingerprint carries `gemmaPromptVersion` because its document prefix lives in stored vectors.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (Stream C slice 3) — `preset(named:)` resolves `qwen` / `gemma` /
+//  a Hub id for the eval harness. Measured the same day: Gemma separates less than Qwen on every fixture family
+//  (docs/evals/2026-10-10-retrieval-evals-*.txt), so Qwen stays the default.
 
 import Foundation
 import M1K3Inference
@@ -81,6 +84,20 @@ public final class MLXEmbeddingService: EmbeddingService, @unchecked Sendable {
     /// instruction is query-only and stays unsalted, as before.)
     public static let gemmaPromptVersion = "prompt-v1"
 
+    /// A preset by short name for harnesses (`M1K3_SELFTEST_EMBEDDER`):
+    /// `qwen` / `qwen3` → the shipping Qwen3-Embedding, `gemma` / `eg2` →
+    /// EmbeddingGemma 2, anything with a slash → that Hub id; nil otherwise.
+    /// A Hub id other than the Gemma preset gets Qwen's prompting (the
+    /// inferred default) — pass `prompting:` yourself to bench anything else.
+    public static func preset(named name: String) -> ModelConfiguration? {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        switch trimmed.lowercased() {
+        case "", "qwen", "qwen3", "default": return EmbedderRegistry.qwen3_embedding
+        case "gemma", "eg2", "embeddinggemma2": return embeddingGemma2
+        default: return trimmed.contains("/") ? ModelConfiguration(id: trimmed) : nil
+        }
+    }
+
     /// The prompts for `configuration` when none are given: Gemma's for an
     /// EmbeddingGemma 2 id, Qwen's otherwise (bge_small in the A/B harness has
     /// always taken the Qwen instruction, so that is unchanged).
@@ -93,7 +110,8 @@ public final class MLXEmbeddingService: EmbeddingService, @unchecked Sendable {
     /// Single-flights the container load so a launch warm racing a first embed
     /// shares ONE ~600MB load instead of each kicking off their own.
     private let loader: SingleFlightLoader<LoadedEmbedder>
-    private let configuration: ModelConfiguration
+    /// The model this service embeds with (read-only; the loader owns the load).
+    public let configuration: ModelConfiguration
     private let onLoadProgress: (@Sendable (Double) -> Void)?
 
     public let dimension: Int
