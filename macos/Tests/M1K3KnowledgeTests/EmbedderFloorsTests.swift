@@ -84,6 +84,14 @@ struct EmbedderFloorsTests {
         #expect(EmbedderFloors.hashing.forgetSuggestion == 0.35)
     }
 
+    @Test("an unknown mlx embedder is DELIBERATELY the legacy qwen3 set — a third embedder adds its own branch")
+    func unknownEmbedderIsTheLegacyDefault() {
+        // Pinned on purpose: test doubles and pre-2026-10 Qwen kernels live here. The
+        // fail-closed rule applies only inside the EmbeddingGemma 2 family; a NEW family
+        // must measure its cone and add a branch, not inherit this one silently.
+        #expect(EmbedderFloors.forFingerprint("mlx/some-org/new-embedder/d512/mlx-swift-0.32") == .qwen3Instructed)
+    }
+
     @Test("non-hashing, non-Gemma fingerprints select the instructed qwen3 defaults")
     func qwenSelection() {
         #expect(EmbedderFloors.forFingerprint("mlx/qwen3-embed-512/mlx-swift-0.30") == .qwen3Instructed)

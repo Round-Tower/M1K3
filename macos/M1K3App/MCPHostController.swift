@@ -516,9 +516,11 @@ final class MCPHostController {
                 // success (PR #113 review). Canonical text, not exact (#180): the corpus
                 // twin is keyed on the normalised text, so this lookup must be too.
                 let namedGraphTwin = try? ForgetResolver.namedGraphTwin(query: query, in: memoryStore)
+                // The graph's own bars (they follow its vectors, not the live embedder,
+                // until a re-index has moved them — a consent lane, so consistent).
                 switch ForgetResolver.resolve(
                     hits: hits, query: query, exactGraphMatch: namedGraphTwin,
-                    suggestionFloor: EmbedderFloors.forFingerprint(embedder.fingerprint).forgetSuggestion
+                    suggestionFloor: memoryStore.floors.forgetSuggestion
                 ) {
                 case let .forget(memory):
                     try memoryStore.forget(id: memory.id)
