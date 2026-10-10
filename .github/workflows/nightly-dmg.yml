@@ -129,8 +129,8 @@ jobs:
           EXPORT="$RUNNER_TEMP/metal-export"
           xcodebuild -deleteComponent MetalToolchain || true
           xcodebuild -downloadComponent MetalToolchain -exportPath "$EXPORT"
-          BUNDLE="$(find "$EXPORT" -maxdepth 1 -name "MetalToolchain-*.exportedBundle" | head -1)"
-          test -n "$BUNDLE"
+          BUNDLE="$(find "$EXPORT" -maxdepth 1 -name "*.exportedBundle" | head -1 || true)"
+          test -n "$BUNDLE" || { echo "::error::no exported Metal bundle under $EXPORT"; ls -la "$EXPORT" || true; exit 1; }
           xcodebuild -importComponent MetalToolchain -importPath "$BUNDLE"
           xcrun -sdk macosx metal --version
 
