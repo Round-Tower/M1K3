@@ -200,6 +200,15 @@ struct ToolDispatchRecencyTests {
         #expect(ToolDispatch.recencyCorrected(fact, palette: noWeb, question: "Who won this year?") == fact)
     }
 
+    @Test("a word that only looks like 'now' moves nothing: an electrical current is a stable fact")
+    func lookalikesStay() {
+        let fact = ToolPick(tool: "lookup_fact", query: "electrical current")
+        #expect(ToolDispatch.recencyCorrected(fact, palette: palette, question: "What is an electrical current?") == fact)
+        #expect(ToolDispatch.recencyCorrected(fact, palette: palette, question: "How far is Mars so far from Earth?") == fact)
+        #expect(ToolDispatch.recencyCorrected(fact, palette: palette, question: "Who is currently the Taoiseach?").tool
+            == "web_search")
+    }
+
     @Test("in a chain each pick reads its own query: a 'today' that belongs to the other half moves nothing")
     func chainReadsItsOwnQuery() {
         // The 10-10 `all` cell: "today's date … when was Cork founded" sent the fact half to the web.

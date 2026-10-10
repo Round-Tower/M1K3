@@ -159,9 +159,11 @@ public enum ToolDispatch {
     }
 
     /// Words that put a question in the present: "who won … this year", "the latest …".
+    /// Not a bare "current" ("an electrical current", "my current account") or "so far": the
+    /// challenger's lookalikes (2026-10-10); "currently" and "this season" carry those cases.
     static let nowCues = [
         "this year", "this season", "this month", "this week", "latest", "newest", "most recent",
-        "today", "tonight", "right now", "currently", "current", "so far", "yet",
+        "today", "tonight", "right now", "currently", "yet",
     ]
 
     /// A reference lookup about now goes to the web instead. With chains on, Apple's pick sent
