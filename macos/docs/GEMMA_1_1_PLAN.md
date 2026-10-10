@@ -130,7 +130,7 @@ Goal: swap the embedder; prove it on retrieval before any multimodal work.
   | recall at a floor inside the dead zone | 22/22 · 6/6 · 10/10 | 22/22 · 6/6 · 10/10 |
   | embed, warm | ~28 ms | ~16 ms |
 
-  Gemma's cone is compressed (noise at 0.5–0.65, positives at 0.7–0.9): clean separation on every family, but a narrower dead zone on every family, and slower (head widths 256/512 miss mlx's fused attention kernel). **It does not clear the gate below.** Its floors, if ever used, would be roughly memory 0.67 / chunk 0.66 / keyword 0.67 — a different cone, not a re-tune of Qwen's.
+  Gemma's cone is compressed (noise at 0.5–0.65, positives at 0.7–0.9): clean separation on every family, but a narrower dead zone on every family, and slower (head widths 256/512 miss mlx's fused attention kernel). Read only the instructed (production) arms across embedders: Gemma's "bare" arm embeds the query with its document prefix, Qwen's with none, so the bare rows are not comparable. **It does not clear the gate below.** Its floors, if ever used, would be roughly memory 0.67 / chunk 0.66 / keyword 0.67 — a different cone, not a re-tune of Qwen's.
 - [ ] Re-measure `EmbedderFloors` for Gemma only if it is adopted (per-query normalisation is the lever that would widen its dead zones). **Thresholds → `challenger` first** (carry-forward).
 - [ ] `grounded-Q` ChatEval with each embedder; RAM and embed throughput on a large knowledge store — only worth running if the margins above are overruled.
 - [ ] Pin weights; default switch only if it wins. Users get the re-index on next launch (deferred under heat already).

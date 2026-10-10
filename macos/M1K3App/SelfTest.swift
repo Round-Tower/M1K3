@@ -90,13 +90,20 @@ enum SelfTest {
     /// `M1K3_SELFTEST_EMBEDDER` = `qwen` (default) | `gemma` | a Hub id, via
     /// `MLXEmbeddingService.preset(named:)`. The same fixture sets, the same
     /// composition, so Gemma's distributions read against Qwen's floors.
-    static func candidateEmbedder() -> MLXEmbeddingService {
+    /// A name that resolves to nothing is a FAILED stage, never a Qwen run
+    /// saved under the wrong label.
+    static func candidateEmbedder() -> MLXEmbeddingService? {
         let name = SelfTestEnv.value("M1K3_SELFTEST_EMBEDDER") ?? ""
         guard let configuration = MLXEmbeddingService.preset(named: name) else {
-            emit("✗ M1K3_SELFTEST_EMBEDDER=\(name) is not a preset or Hub id — using the default")
-            return MLXEmbeddingService()
+            emit("✗ M1K3_SELFTEST_EMBEDDER=\(name) is not a preset or Hub id — eval skipped")
+            return nil
         }
         return MLXEmbeddingService(configuration: configuration)
+    }
+
+    /// The shipping default, by configuration — no service is built to ask.
+    static func isDefaultEmbedder(_ embedder: MLXEmbeddingService) -> Bool {
+        embedder.configuration.name == EmbedderRegistry.qwen3_embedding.name
     }
 
     static var isRequested: Bool {
@@ -661,7 +668,7 @@ enum SelfTest {
     /// negatives, then the distribution summary + suggested threshold. Each
     /// line lands in the OUT file as it's measured (interrupt-safe).
     private static func runMemoryThresholdEval() async {
-        let embedder = candidateEmbedder()
+        guard let embedder = candidateEmbedder() else { return }
         emit("• memeval: embedding \(MemoryEvalFixtures.positives.count) positive + "
             + "\(MemoryEvalFixtures.negatives.count) negative pairs with \(embedder.fingerprint)…")
         do {
@@ -698,8 +705,8 @@ enum SelfTest {
     /// head-to-head margin verdict. The candidate must separate the classes at
     /// least as wide as bge, else the swap isn't justified (the ABSEP gate).
     private static func runSeparationEval() async {
-        let candidate = candidateEmbedder()
-        let candidateIsDefault = candidate.fingerprint == MLXEmbeddingService().fingerprint
+        guard let candidate = candidateEmbedder() else { return }
+        let candidateIsDefault = isDefaultEmbedder(candidate)
         emit("• absep: \(SeparationEvalFixtures.inDomain.count) in-domain + "
             + "\(SeparationEvalFixtures.offDomain.count) off-domain pairs, "
             + "bge-small-384 vs \(candidate.fingerprint)…")
@@ -751,7 +758,7 @@ enum SelfTest {
     /// EmbeddingText.forQuery (the SAME composer a production embedQuery
     /// override would call; an inlined template here would measure a phantom).
     private static func runQueryStyleEval() async {
-        let embedder = candidateEmbedder()
+        guard let embedder = candidateEmbedder() else { return }
         emit("• keyeval: \(QueryStyleEvalFixtures.probes.count) probes + "
             + "\(QueryStyleEvalFixtures.noise.count) noise pairs, bare vs instructed query arms, "
             + "\(embedder.fingerprint)…")
@@ -769,9 +776,12 @@ enum SelfTest {
             // production query path since the 07-09 adoption), so the harness
             // measures the live seam's composition, with the before-arm kept
             // for the ongoing A/B.
-            // "bare" embeds the query as a document (`embed`); "instructed" is
-            // the embedder's OWN query composition (`embedQuery`): Qwen's
-            // instruction or Gemma's task prefix — never the other's.
+            // "bare" embeds the query as a document (`embed` — on Gemma that
+            // carries the document prefix, so bare rows are not comparable
+            // ACROSS embedders); "instructed" is the embedder's OWN query
+            // composition (`embedQuery`): Qwen's instruction or Gemma's task
+            // prefix — never the other's. Queries go one at a time here;
+            // fine for fixtures this small.
             let armSpecs: [(label: String, embedQueries: ([String]) async throws -> [[Float]])] = [
                 ("bare", { try await embedder.embedBatch($0) }),
                 ("instructed", { queries in

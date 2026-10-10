@@ -87,11 +87,14 @@ public final class MLXEmbeddingService: EmbeddingService, @unchecked Sendable {
     /// A preset by short name for harnesses (`M1K3_SELFTEST_EMBEDDER`):
     /// `qwen` / `qwen3` → the shipping Qwen3-Embedding, `gemma` / `eg2` →
     /// EmbeddingGemma 2, anything with a slash → that Hub id; nil otherwise.
+    /// A Hub id other than the Gemma preset gets Qwen's prompting (the
+    /// inferred default) — pass `prompting:` yourself to bench anything else.
     public static func preset(named name: String) -> ModelConfiguration? {
-        switch name.trimmingCharacters(in: .whitespaces).lowercased() {
+        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        switch trimmed.lowercased() {
         case "", "qwen", "qwen3", "default": return EmbedderRegistry.qwen3_embedding
         case "gemma", "eg2", "embeddinggemma2": return embeddingGemma2
-        default: return name.contains("/") ? ModelConfiguration(id: name) : nil
+        default: return trimmed.contains("/") ? ModelConfiguration(id: trimmed) : nil
         }
     }
 
@@ -107,7 +110,8 @@ public final class MLXEmbeddingService: EmbeddingService, @unchecked Sendable {
     /// Single-flights the container load so a launch warm racing a first embed
     /// shares ONE ~600MB load instead of each kicking off their own.
     private let loader: SingleFlightLoader<LoadedEmbedder>
-    private let configuration: ModelConfiguration
+    /// The model this service embeds with (read-only; the loader owns the load).
+    public let configuration: ModelConfiguration
     private let onLoadProgress: (@Sendable (Double) -> Void)?
 
     public let dimension: Int
