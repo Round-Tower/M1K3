@@ -39,12 +39,25 @@ in project memory. Now they are code, tested in test_pr_watch.py:
 * A docs-only head gets no auto pass (the review workflow is path-gated), so
   one pass there means a summon; without one the watch waits to its timeout.
 * `--passes 0` is the trivial-head rule: a comment-only fold or a clean master
-  merge whose head already had its passes merges on green CI.
+  merge whose head already had its passes merges on green CI. Like any landing
+  below the inferred count, it needs `--why "<reason>"` (exit 5 otherwise).
+* A pass lands nothing unless it says so. Every review prompt (claude-code-review*.yml,
+  claude.yml) asks for a closing `VERDICT: APPROVE @ <sha>` or
+  `VERDICT: CHANGES_REQUESTED @ <sha>` line. The newest pass on the head — the newest
+  N when N passes are owed — must APPROVE naming this head; a missing, malformed or
+  CHANGES_REQUESTED verdict, or one naming another sha, refuses. A CHANGES_REQUESTED
+  or unparseable verdict on any pass counted for the head stands until a review that
+  STARTED after it finished approves: a pass that ran alongside it clears nothing,
+  whichever finished last (a missing line on an older pass is ignored). Under `--passes 0`
+  a head with nothing posted reads no verdict, but a pass on it still must approve.
+* Only an AUTO_LAND_AUTHORS PR whose head branch lives in this repo lands. M1K3 is
+  public: a contributor's or a bot's PR, or anything from a fork, is merged by hand.
 
     python3 pr_watch.py <PR> [--passes N] [--once] [--interval 60] [--timeout 5400]
 
 Exit 0 = landable now; 1 = a required job failed; 2 = not ready (--once) or
-timed out; 3 = the PR is not open; 4 = gh itself failed; 5 = fewer passes than
+timed out — CI pending, passes short, a verdict short of APPROVE, or a PR that
+may not auto-land (the printed summary says which); 3 = the PR is not open; 4 = gh itself failed; 5 = fewer passes than
 the diff needs, with no --why. Read-only: never
 merges, never comments. tools/ci/land.sh wraps it.
 
@@ -112,6 +125,41 @@ Review: Kev + claude-opus-5-5, 2026-10-08 — `--why` is owed only for a RISK di
 inference, as the root CLAUDE.md's trivial-head rule already said ("bare `--passes 0` otherwise"). The
 code refused any downgrade, and printed `risk surface ()` (an empty list) on docs-only #513 and on #511's
 test-only head. Confidence 0.9 — pinned in test_pr_watch.py.
+Review: Kev + claude-opus-5.5, 2026-10-10 — a pass counted by author, shape and head alone, so one
+that said "BLOCKING: …" still counted and land.sh merged; with hands-off landing nobody reads it
+first. The gate now reads the review's closing VERDICT line (review_verdict): the owed pass(es) on
+the head must APPROVE naming it, failing closed on missing / malformed / CHANGES_REQUESTED / another
+sha. "Newest" is when a pass finished (updated_at: a summon's tracking comment is created at run
+start, #547). Two owed passes must both approve — the risk-surface pair runs concurrently, and
+newest-only would let run order decide whether a blocker lands. Confidence now 0.8 — the parser is
+pinned on shapes read off #543/#547; whether the bots emit the line reliably is unmeasured.
+Review: Kev + claude-opus-5.5, 2026-10-10 (2) — M1K3 is public, so a green, approved PR from an
+outside contributor, a bot or a fork could have landed hands-off. Ready now also needs the author in
+AUTO_LAND_AUTHORS (a constant: widening it is a reviewed change, not an env var an agent can set to
+unblock itself) and the head repo equal to the base repo; snapshot reads author + headRepository,
+and an unknown one refuses. Confidence now 0.85 — pinned in test_pr_watch.py, the gh wiring included.
+Review: Kev + claude-opus-5.5, 2026-10-10 (3) — the pre-push code-quality pass found the concurrency
+hole at ONE owed pass too: a summon fired at push time races the auto pass, and "newest only" let
+the later APPROVE wave the other's blocker through (and --passes 0 with it). A CHANGES_REQUESTED on
+the head now stands until an APPROVE from a pass that STARTED after it finished — knowable only for
+a tracking comment (created at run start); a `gh pr comment` review's start is unknown, so it clears
+nothing. Re-summoning still overrides a blocker, as Kev's brief wants. Confidence now 0.8.
+Review: Kev + claude-opus-5.5, 2026-10-10 (4) — summon pass 1 on #550 (CHANGES_REQUESTED): only a
+well-formed CHANGES_REQUESTED naming the head stood, so a concurrent "CHANGES REQUESTED" (a space),
+a short sha, or a CR naming another sha counted as nothing and a later APPROVE landed the head. An
+unparseable verdict, or a CR naming any sha, on a pass counted for the head now stands as a blocker,
+cleared the same way; a missing line on an older pass is still ignored (older summons never wrote
+one). Confidence now 0.8.
+Review: Kev + claude-opus-5.5, 2026-10-10 (5) — the same pass: a bare `--passes 0` was allowed on a
+diff with no risk surface (2026-10-08), and a head with no pass reads no verdict, so an agent could add
+it to land past the review. Any landing below the inferred count now needs `--why`; the exit-5 message
+names what is owed ("below the 1 this diff needs"), not an empty "risk surface ()" (#511/#513). The
+root CLAUDE.md's "bare `--passes 0` otherwise" is stale until it is edited. Confidence now 0.85.
+Review: Kev + claude-opus-5.5, 2026-10-10 (6) — the same pass: `_outside_fences` toggles on every ```
+line, so a stray one could promote a fenced example verdict and hide the real one. An odd fence count
+now makes any verdict-shaped line unparseable (a standing blocker), and a body with none stays
+"missing". `_outside_fences` itself is unchanged, since classify's checklist read uses it too.
+Confidence now 0.85.
 """
 from __future__ import annotations
 
@@ -269,17 +317,23 @@ def required_passes(explicit: int | None, files: list[str], **risk: object) -> i
 
 
 def downgrade_refused(explicit: int | None, files: list[str], why: str | None, **risk: object) -> bool:
-    """Landing a RISK diff on fewer passes than inferred needs a stated reason.
+    """Landing on fewer passes than inferred needs a stated reason, risk surface or not.
 
-    A diff with no risk surface may go down to a bare `--passes 0` (the trivial-head rule); refusing it
-    printed "risk surface ()" — an empty list — on docs-only PRs (#511, #513).
+    2026-10-08 let a bare `--passes 0` through on a diff with no risk surface (refusing it had printed
+    "risk surface ()", an empty list, on #511/#513). Under hands-off landing that bare flag is how an
+    agent gets past the review, since a head with no pass reads no verdict, so it needs `--why` again;
+    main's message now says what is owed instead of naming an empty surface (summon pass 1 on #550).
     """
-    if not risk_surfaces(files, **risk):  # type: ignore[arg-type]
-        return False
     reasoned = bool(why) and len(why.strip()) >= MIN_WHY
     return explicit is not None and explicit < required_passes(None, files, **risk) and not reasoned
 
 BOT_LOGIN = "claude[bot]"
+# Whose PRs land hands-off: the author must be here AND the head branch must live
+# in this repo, not a fork. M1K3 is public, so an outside contributor's green,
+# approved PR is merged by hand, never by land.sh; bots (dependabot) are not here
+# either. A constant, not an env var: widening it is a reviewed change, not a flag
+# an agent can set to unblock itself. Lowercase — logins compare without case.
+AUTO_LAND_AUTHORS = frozenset({"kpmmmurphy"})
 GREEN = {"success", "skipped"}
 RED = {"failure", "cancelled", "timed_out", "action_required", "startup_failure"}
 
@@ -307,6 +361,12 @@ _TITLE_BARE_SHA = re.compile(r"\b(?=[0-9a-f]*[0-9])([0-9a-f]{7,40})\b")
 # back — re-pin from a live thread, as classify's wording list has needed
 # (#334, #347, #404).
 _RUN_LINK = re.compile(r"\[View job\]\([^)]*?/actions/runs/(\d+)")
+# The closing line every review prompt asks for (claude-code-review*.yml, claude.yml):
+# "VERDICT: APPROVE @ <sha>" or "VERDICT: CHANGES_REQUESTED @ <sha>". Markdown dressing
+# (bold, backticks — "**VERDICT:** APPROVE") is tolerated; anything else on the line
+# makes it unparseable.
+_VERDICT_LINE = re.compile(r"^[\s*_`]*VERDICT:")
+_VERDICT = re.compile(r"^[\s*_`]*VERDICT:[\s*_`]*(APPROVE|CHANGES_REQUESTED)[\s*_`]*@\s*`?([0-9a-fA-F]{7,40})`?[\s*_`.]*$")
 
 
 def _progress_unchecked(text: str) -> bool:
@@ -413,6 +473,119 @@ def counts_as_summon_pass(head: str, comment: dict, head_seen_at: str | None) ->
     if _names(head, shas):
         return True
     return not shas and bool(head_seen_at) and comment.get("created_at", "") >= head_seen_at
+
+
+def review_verdict(body: str) -> tuple[str, str]:
+    """What a pass concluded: ("APPROVE" | "CHANGES_REQUESTED", sha), or
+    ("missing", "") / ("unparseable", ""). The LAST "VERDICT:" line outside ```
+    fences (``` only — not ~~~) is the verdict — the action appends " · branch `x`" after a summon's
+    body and the bot often signs off below it, so it need not be the last line.
+    A malformed closing verdict is not rescued by a well-formed earlier one, and
+    prose ("**Verdict: looks good to land.**", #543) is no verdict at all. An ODD
+    number of fence lines means which lines are quoted is unknowable — a stray
+    fence can promote a fenced example and hide the real line (summon pass 1 on
+    #550) — so any verdict-shaped line then reads as unparseable."""
+    all_lines = body.splitlines()
+    if sum(1 for ln in all_lines if ln.lstrip().startswith("```")) % 2:
+        return ("unparseable", "") if any(_VERDICT_LINE.match(ln) for ln in all_lines) else ("missing", "")
+    lines = [ln for ln in _outside_fences(all_lines) if _VERDICT_LINE.match(ln)]
+    if not lines:
+        return ("missing", "")
+    mt = _VERDICT.match(lines[-1])
+    if not mt:
+        return ("unparseable", "")
+    return (mt.group(1), mt.group(2).lower())
+
+
+def verdict_refusal(head: str, comment: dict | None) -> str | None:
+    """Why this pass does not approve THIS head, or None when it does."""
+    outcome, sha = review_verdict((comment or {}).get("body", ""))
+    if outcome in ("missing", "unparseable"):
+        return f"verdict: {outcome} on {head[:8]}"
+    if not _names(head, [sha]):
+        return f"verdict: {outcome} names {sha[:8]}, not {head[:8]}"
+    if outcome != "APPROVE":
+        return f"verdict: {outcome} on {head[:8]}"
+    return None
+
+
+def _finished_at(comment: dict | None) -> str:
+    """When a pass said its last word: a summon's tracking comment is created
+    when its run starts and updated with the review when it ends."""
+    c = comment or {}
+    return c.get("updated_at") or c.get("created_at") or ""
+
+
+def passes_on_head(head: str, comments: list[dict], auto_ok: bool, auto_comment: dict | None = None,
+                   head_seen_at: str | None = None) -> list[dict | None]:
+    """Every pass that counts for this head, oldest word first — the summons,
+    plus the auto pass unless its comment is already one of them (#404, #457:
+    one review is one pass). An auto pass whose comment is unknown (the
+    two-argument auto_ok form) is None and sorts newest: it can't approve."""
+    found: list[dict | None] = [c for c in comments if counts_as_summon_pass(head, c, head_seen_at)]
+    if auto_ok and auto_comment is not None and not counts_as_summon_pass(head, auto_comment, head_seen_at):
+        found.append(auto_comment)
+    order = sorted(range(len(found)), key=lambda i: (_finished_at(found[i]), i))
+    ordered = [found[i] for i in order]
+    if auto_ok and auto_comment is None:
+        ordered.append(None)
+    return ordered
+
+
+def _started_at(comment: dict | None) -> str:
+    """When a pass began reviewing, where that is knowable: a tracking comment
+    ("**Claude finished …") is created when its run starts. A `gh pr comment`
+    review is created when its run ENDS, so its start is unknown ("")."""
+    if comment and classify(comment.get("body", "")) is Kind.SUMMON:
+        return comment.get("created_at") or ""
+    return ""
+
+
+def _standing_blockers(head: str, on_head: list[dict | None]) -> list[str]:
+    """A CHANGES_REQUESTED on a pass counted for this head — whatever sha it
+    names — or an UNPARSEABLE verdict (a misspelled "CHANGES REQUESTED", a
+    short sha) stands until an APPROVE from a pass that STARTED after it
+    finished: a re-summon that could read it. A pass that ran alongside it (the
+    auto pass and a summon fired at push time) clears nothing, whichever
+    finished last; one whose start is unknown is taken to have run alongside.
+    A MISSING line is not a blocker: summons before 2026-10-10 never wrote one."""
+    blockers: list[str] = []
+    for c in on_head:
+        outcome, _ = review_verdict((c or {}).get("body", ""))
+        reason = verdict_refusal(head, c)  # never None for these two outcomes
+        if outcome not in ("CHANGES_REQUESTED", "unparseable") or reason is None:
+            continue
+        done = _finished_at(c)
+        if not any(verdict_refusal(head, later) is None and _started_at(later) > done for later in on_head):
+            blockers.append(reason)
+    return blockers
+
+
+def review_refusals(head: str, on_head: list[dict | None], passes_needed: int) -> list[str]:
+    """The passes owed must approve this head: the newest pass, or the newest
+    `passes_needed` when more are owed. And no blocker on the head may stand
+    (_standing_blockers): passes on one head often run concurrently (push, then
+    summon at once), and run order must not decide whether a blocker lands.
+    With nothing owed (--passes 0) and nothing posted on the head, there is no
+    verdict to read."""
+    owed = on_head[-passes_needed:] if passes_needed > 0 else on_head[-1:]
+    refusals = [r for r in (verdict_refusal(head, c) for c in reversed(owed)) if r]
+    return list(dict.fromkeys(refusals + _standing_blockers(head, on_head)))
+
+
+def origin_refusals(author: str | None, head_repo: str | None, base_repo: str | None) -> list[str]:
+    """Why this PR may not land hands-off whatever its CI and reviews say. Fails
+    closed: an unknown author or head repo (a deleted fork has none) refuses."""
+    reasons: list[str] = []
+    if not author:
+        reasons.append("author: unknown")
+    elif author.lower() not in AUTO_LAND_AUTHORS:
+        reasons.append(f"author: {author} is not on the auto-land list")
+    if not head_repo or not base_repo:
+        reasons.append("head repo: unknown")
+    elif head_repo.lower() != base_repo.lower():
+        reasons.append(f"fork: head is {head_repo}, not {base_repo}")
+    return reasons
 
 
 def linked_run_id(body: str) -> str | None:
@@ -524,25 +697,34 @@ def verdict(
     passes_needed: int,
     auto_comment: dict | None = None,
     head_seen_at: str | None = None,
+    author: str | None = None,
+    head_repo: str | None = None,
+    base_repo: str | None = None,
 ) -> Verdict:
     ci = ci_verdict(required_jobs(changed_files), jobs)
     # The auto pass's own comment can be summon-shaped ("Claude finished …", #404)
-    # and so already counted by summon_passes — by name, or (#457) by time. One
+    # and so already counted as a summon — by name, or (#457) by time. One
     # review is one pass.
-    auto_extra = 1 if auto_ok else 0
-    if auto_ok and auto_comment is not None and counts_as_summon_pass(head, auto_comment, head_seen_at):
-        auto_extra = 0
-    passes = summon_passes(head, comments, head_seen_at) + auto_extra
+    on_head = passes_on_head(head, comments, auto_ok, auto_comment, head_seen_at)
+    passes = len(on_head)
+    review = review_refusals(head, on_head, passes_needed)
+    origin = origin_refusals(author, head_repo, base_repo)
     reasons: list[str] = []
     if ci.state != "green":
         reasons.append(f"CI {ci.state} ({ci.detail})")
     if passes < passes_needed:
         reasons.append(f"passes {passes}/{passes_needed} on {head[:8]}")
+    reasons += review + origin
     ready = not reasons
     bits = [f"head {head[:8]}", f"CI {ci.state}" + (f" ({ci.detail})" if ci.detail else "")]
     if ci.advisory:
         bits.append(f"advisory red: {ci.advisory}")
     bits.append(f"passes {passes}/{passes_needed}")
+    if review:
+        bits += review
+    elif on_head:
+        bits.append("verdict APPROVE")
+    bits += origin
     summary = " · ".join(bits) + (" → READY" if ready else "")
     return Verdict(ready, ci, passes, passes_needed, summary, reasons)
 
@@ -558,9 +740,13 @@ def _gh_json(*args: str):
     return json.loads(_gh(*args))
 
 
-def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | None], list[dict], dict | None, int, str | None, dict[str, str]]:
-    view = _gh_json("pr", "view", str(pr), "--repo", repo, "--json", "state,headRefOid")
+def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | None], list[dict], dict | None, int,
+                                          str | None, dict[str, str], str | None, str | None]:
+    view = _gh_json("pr", "view", str(pr), "--repo", repo, "--json", "state,headRefOid,author,headRepository")
     head = view["headRefOid"]
+    # Who opened it and where its head lives: a deleted fork's headRepository is null.
+    author = (view.get("author") or {}).get("login")
+    head_repo = (view.get("headRepository") or {}).get("nameWithOwner")
     # REST + --paginate: `gh pr view --json files` caps at 100 files, and a
     # dropped mobile-shell path would silently demote the mobile job to advisory.
     raw = [f for page in _gh_json("api", "--paginate", "--slurp", f"repos/{repo}/pulls/{pr}/files") for f in page]
@@ -585,7 +771,7 @@ def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | N
     inline = _gh_json("api", "--paginate", "--slurp", f"repos/{repo}/pulls/{pr}/comments")
     inline_count = sum(len(page) for page in inline)
     return (view["state"], head, files, jobs, comments, auto_pass_comment(head, review_runs, comments),
-            inline_count, head_seen_at, patches)
+            inline_count, head_seen_at, patches, author, head_repo)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -597,7 +783,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     ap.add_argument("--interval", type=int, default=60)
     ap.add_argument("--timeout", type=int, default=5400)
     ap.add_argument("--repo", default=None, help="owner/name (default: the current repo)")
-    ap.add_argument("--why", default=None, help="the reason for landing a risk surface on fewer passes than inferred")
+    ap.add_argument("--why", default=None, help="the reason for landing on fewer passes than inferred (--passes 0 included)")
     return ap.parse_args(argv)
 
 
@@ -614,7 +800,8 @@ def main(argv: list[str] | None = None) -> int:
               "migration edits will only be caught by the patch", flush=True)
     while True:
         try:
-            state, head, files, jobs, comments, auto_comment, inline, head_seen_at, patches = snapshot(repo, args.pr)
+            (state, head, files, jobs, comments, auto_comment, inline, head_seen_at, patches,
+             author, head_repo) = snapshot(repo, args.pr)
         except subprocess.CalledProcessError as err:
             # A gh blip (rate limit, 5xx) must not read as "CI red": exit 4 once,
             # or wait out the interval and look again while polling.
@@ -628,19 +815,22 @@ def main(argv: list[str] | None = None) -> int:
             return 3
         risk = {"patches": patches, "migration_files": migrations}
         risky = risk_surfaces(files, **risk)
+        inferred = required_passes(None, files, **risk)
+        owed_by = f"risk surface ({', '.join(risky[:3])})" if risky else "this diff"
         if downgrade_refused(args.passes, files, args.why, **risk):
-            print(f"risk surface ({', '.join(risky[:3])}) needs 2 passes; --passes {args.passes} "
-                  f"needs --why \"<reason, {MIN_WHY}+ chars>\"", flush=True)
+            print(f"--passes {args.passes} is below the {inferred} {owed_by} needs; "
+                  f"landing on fewer needs --why \"<reason, {MIN_WHY}+ chars>\"", flush=True)
             return 5
         needed = required_passes(args.passes, files, **risk)
         if needed and not auto_pass_expected(files) and not hinted:
             print("note: nothing in this diff triggers the auto pass — summon one (@claude on the PR)", flush=True)
             hinted = True
-        if risky and needed < 2 and not warned:
-            print(f"note: risk surface ({', '.join(risky[:3])}) landing on --passes {needed}: {args.why}", flush=True)
+        if needed < inferred and not warned:
+            print(f"note: {owed_by} needs {inferred}; landing on --passes {needed}: {args.why}", flush=True)
             warned = True
         v = verdict(head, files, jobs, comments, auto_comment is not None, needed,
-                    auto_comment=auto_comment, head_seen_at=head_seen_at)
+                    auto_comment=auto_comment, head_seen_at=head_seen_at,
+                    author=author, head_repo=head_repo, base_repo=repo)
         stamp = time.strftime("%H:%M:%S")
         print(f"{stamp} #{args.pr} {v.summary} · inline comments {inline}", flush=True)
         if v.ready:

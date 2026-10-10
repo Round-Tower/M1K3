@@ -114,7 +114,23 @@ jobs:
             change, not the module.
 
             Use `gh pr comment` with your Bash tool to leave your review as a
-            comment on the PR.
+            comment on the PR. End that comment with exactly one verdict line,
+            as its last line:
+
+                VERDICT: APPROVE @ ${{ github.event.pull_request.head.sha }}
+
+            when nothing you found blocks landing (nits and style never block),
+            else:
+
+                VERDICT: CHANGES_REQUESTED @ ${{ github.event.pull_request.head.sha }}
+
+            The landing gate (`macos/tools/ci/pr_watch.py`) reads only that line;
+            a missing or malformed one refuses the merge.
+
+          # The VERDICT line is the landing gate's input (2026-10-10): pr_watch.py
+          # refuses a head unless the passes it owes approve it, and test_pr_watch.py
+          # pins the example line above to the parser.
+          # Signed: Kev + claude-opus-5.5, 2026-10-10, Confidence 0.8, Prior: Unknown (this block only)
 
           # Read/Grep/Glob let the reviewer inspect source beyond the raw diff;
           # without them it can only see `gh pr diff` and thrashes against the
