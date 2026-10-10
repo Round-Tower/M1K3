@@ -25,6 +25,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-07 — dispatches SeedProbeStage (M1K3_SELFTEST_SEEDPROBE); no other change.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — dispatches ChatCurveStage (M1K3_SELFTEST_CHATCURVE=1|lil|big|<model id>,
 //  the scripted 8-message prefill curve; report at <M1K3_SELFTEST_OUT>.json, fenced on stdout with OUT=-); no other change.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#418) — the native-tool-call check records a rejected call as its own
+//  failure detail (`ToolTurn.rejectedToolCalls`).
 
 import Foundation
 import M1K3Chat
@@ -899,6 +901,10 @@ enum SelfTest {
                     records.append(ModelEvalRecord(
                         check: "native tool call", outcome: .fail,
                         detail: "no call — answered: \(ModelEvalReport.strippingThink(text).prefix(60))"
+                    ))
+                case let .rejectedToolCalls(reason, _):
+                    records.append(ModelEvalRecord(
+                        check: "native tool call", outcome: .fail, detail: "call rejected — \(reason)"
                     ))
                 }
             } catch {

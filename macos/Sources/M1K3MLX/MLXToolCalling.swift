@@ -77,6 +77,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — #509 follow-up (the cheap half): checkpoint mode logs an
 //  MLXMemoryBudget snapshot per send, labelled by step and reuse (`ExactPrefixReuse.stepSnapshotLabel`),
 //  so a long agent turn's RAM reads as a curve. Verify-by-launch: the curve on a 5+ step Lil turn.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#418) — a turn whose every call was rejected (and not
+//  repaired) now returns `.rejectedToolCalls(reason:text:)` from both loops instead of `.text`, so the
+//  agent loop can steer a retry; `rejectionSummary` is the safe string that goes back into the prompt.
 
 import Foundation
 import M1K3Inference
@@ -532,7 +535,7 @@ extension MLXBrainProvider: ToolCallingProvider {
             let stream = try MLXLMCommon.generate(input: input, parameters: parameters, context: context)
             var text = ""
             var calls: [ParsedToolCall] = []
-            var rejections = 0
+            var rejections: [RejectedToolCall] = []
             for await event in stream {
                 switch event {
                 case let .chunk(piece):
@@ -548,7 +551,7 @@ extension MLXBrainProvider: ToolCallingProvider {
                             rejection, names: repaired.map(\.function.name), label: "toolTurn"
                         )
                     } else {
-                        rejections += 1
+                        rejections.append(rejection)
                         ToolTurnDiagnostics.logRejected(rejection, label: "toolTurn")
                     }
                 case let .info(info):
@@ -559,10 +562,14 @@ extension MLXBrainProvider: ToolCallingProvider {
             }
             if calls.isEmpty {
                 ToolTurnDiagnostics.noteNoCall(
-                    label: "toolTurn", rejections: rejections, toolNames: tools.map(\.name), text: text
+                    label: "toolTurn", rejections: rejections.count, toolNames: tools.map(\.name), text: text
                 ) { context.tokenizer.decode(tokenIds: input.text.tokens.asArray(Int.self)) }
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                return ToolTurn.text(Self.normaliseThinkPrefix(trimmed, preOpened: prefixNeeded))
+                let prose = Self.normaliseThinkPrefix(trimmed, preOpened: prefixNeeded)
+                guard rejections.isEmpty else {
+                    return .rejectedToolCalls(reason: ToolTurnDiagnostics.rejectionSummary(rejections), text: prose)
+                }
+                return ToolTurn.text(prose)
             }
             return ToolTurn.toolCalls(calls)
         }
@@ -737,6 +744,18 @@ extension MLXBrainProvider: ToolCallingProvider {
 /// call is indistinguishable from "the model never called" (LFM2.5-1.2B read
 /// 0/6 that way on 2026-09-05). Shared by the stateless and session loops.
 enum ToolTurnDiagnostics {
+    /// What the agent loop steers a retry with (#418): reason code, tool name and the
+    /// library's diagnostic `detail` per rejection, `;`-joined. Never the raw text —
+    /// that can carry argument values, and this string goes back into the prompt.
+    static func rejectionSummary(_ rejections: [RejectedToolCall]) -> String {
+        rejections.map { rejection in
+            var line = rejection.reason.rawValue
+            if let tool = rejection.toolName { line += " (\(tool))" }
+            if let detail = rejection.detail, !detail.isEmpty { line += ": \(detail)" }
+            return line
+        }.joined(separator: "; ")
+    }
+
     /// A rejected call `Qwen35CallRepair` recovered. Tool names only — every one is a declared tool
     /// (the repair refuses any other), never argument values; the raw text stays out.
     static func logRepaired(_ rejection: RejectedToolCall, names: [String], label: String) {
@@ -1093,7 +1112,7 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
             }
             var text = ""
             var calls: [ParsedToolCall] = []
-            var rejections = 0
+            var rejections: [RejectedToolCall] = []
             for await event in stream {
                 switch event {
                 case let .chunk(piece):
@@ -1110,7 +1129,7 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                             rejection, names: repaired.map(\.function.name), label: "toolTurnSession"
                         )
                     } else {
-                        rejections += 1
+                        rejections.append(rejection)
                         ToolTurnDiagnostics.logRejected(rejection, label: "toolTurnSession")
                     }
                 case let .info(info):
@@ -1147,11 +1166,14 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
             let turn: ToolTurn
             if calls.isEmpty {
                 ToolTurnDiagnostics.noteNoCall(
-                    label: "toolTurnSession", rejections: rejections,
+                    label: "toolTurnSession", rejections: rejections.count,
                     toolNames: ToolTurnDiagnostics.toolNames(from: specs), text: text
                 ) { context.tokenizer.decode(tokenIds: fullIDs) }
                 let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                turn = .text(MLXBrainProvider.normaliseThinkPrefix(trimmed, preOpened: prefixNeeded))
+                let prose = MLXBrainProvider.normaliseThinkPrefix(trimmed, preOpened: prefixNeeded)
+                turn = rejections.isEmpty
+                    ? .text(prose)
+                    : .rejectedToolCalls(reason: ToolTurnDiagnostics.rejectionSummary(rejections), text: prose)
             } else {
                 turn = .toolCalls(calls)
             }
