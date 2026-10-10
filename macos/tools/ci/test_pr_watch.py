@@ -661,3 +661,42 @@ def test_an_auto_pass_whose_comment_is_unknown_cannot_approve():
     v = m.verdict(V_HEAD, ["macos/Sources/A.swift"], GREEN_JOBS, [], auto_ok=True, passes_needed=1)
     assert v.passes == 1 and not v.ready
     assert "verdict: missing on c0ffee12" in v.reasons
+
+
+def _claude_step(workflow):
+    import pathlib
+
+    import yaml
+    path = pathlib.Path(__file__).resolve().parents[3] / ".github" / "workflows" / workflow
+    doc = yaml.safe_load(path.read_text())
+    steps = [s for job in doc["jobs"].values() for s in job["steps"] if "claude-code-action" in s.get("uses", "")]
+    assert len(steps) == 1, workflow
+    return steps[0]["with"]
+
+
+def test_every_auto_review_prompt_asks_for_the_line_the_gate_reads():
+    # Drift guard: the prompt's example line, with the event's head substituted,
+    # must parse as the verdict it names. A reworded prompt that the parser
+    # can't read would refuse every PR.
+    for workflow in ("claude-code-review-mac.yml", "claude-code-review.yml"):
+        prompt = _claude_step(workflow)["prompt"].replace("${{ github.event.pull_request.head.sha }}", V_HEAD)
+        for outcome in ("APPROVE", "CHANGES_REQUESTED"):
+            lines = [ln for ln in prompt.splitlines() if f"VERDICT: {outcome} @" in ln]
+            assert len(lines) == 1, (workflow, outcome)
+            assert m.review_verdict(lines[0]) == (outcome, V_HEAD), (workflow, lines[0])
+
+
+def test_the_summon_asks_for_the_verdict_line_and_stays_in_tag_mode():
+    # claude.yml answers @claude: a `prompt` input would switch the action to
+    # automation mode and it would stop answering mentions, so the instruction
+    # rides --append-system-prompt (the v1 replacement for custom_instructions).
+    step = _claude_step("claude.yml")
+    assert "prompt" not in step
+    args = step["claude_args"]
+    assert "--append-system-prompt" in args
+    for outcome in ("APPROVE", "CHANGES_REQUESTED"):
+        assert f"VERDICT: {outcome} @ <head-sha>" in args
+    # shell-quote parses claude_args: a $ would expand to nothing, a " would end the string
+    prompt = args.split("--append-system-prompt", 1)[1].strip()
+    assert prompt.startswith('"') and prompt.endswith('"') and prompt.count('"') == 2
+    assert "$" not in prompt and "\\" not in prompt and "`" not in prompt

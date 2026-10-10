@@ -41,5 +41,19 @@ jobs:
           additional_permissions: |
             actions: read
 
-          # Allow Claude to interact with GitHub
-          claude_args: '--allowed-tools "Bash(gh issue comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr checks:*)"'
+          # Allow Claude to interact with GitHub. A summon review ends with the
+          # VERDICT line the landing gate reads (pr_watch.py; 2026-10-10). It rides
+          # --append-system-prompt because a `prompt` input would switch the action
+          # out of tag mode (it would stop answering @claude). claude_args is parsed
+          # by shell-quote: no $, backslash, backtick or inner double quote in it.
+          # Signed: Kev + claude-opus-5.5, 2026-10-10, Confidence 0.75, Prior: Unknown (this block only)
+          claude_args: >-
+            --allowed-tools "Bash(gh issue comment:*),Bash(gh issue view:*),Bash(gh issue list:*),Bash(gh pr comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*),Bash(gh pr checks:*)"
+            --append-system-prompt "When your task on a pull request is or includes a review,
+            end your final comment with exactly one verdict line, as its last line:
+            VERDICT: APPROVE @ <head-sha> when nothing you found blocks landing (nits and style never block),
+            else VERDICT: CHANGES_REQUESTED @ <head-sha>.
+            Here <head-sha> is the PR head commit you reviewed: read it when you start, with
+            gh pr view <number> --json headRefOid.
+            The landing gate (macos/tools/ci/pr_watch.py) reads only that line;
+            a missing or malformed one refuses the merge."
