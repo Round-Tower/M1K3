@@ -258,6 +258,10 @@ jobs:
         env:
           TAP_PUSH_TOKEN: ${{ secrets.TAP_PUSH_TOKEN }}
         run: |
+          # No errexit in THIS shell on purpose: GitHub runs `run:` under `bash -e`,
+          # and the bump below must fail into an annotation, not abort the step
+          # (run 38041977856 went red on the push's 403 for exactly that reason).
+          set +e
           set -uo pipefail
           if [ -z "${TAP_PUSH_TOKEN:-}" ]; then
             echo "::notice::TAP_PUSH_TOKEN not set — the Homebrew cask keeps its current version. Add the secret to bump it nightly."
@@ -301,6 +305,10 @@ jobs:
         if: always() && steps.gate.outputs.configured == 'true'
         run: security delete-keychain "$KEYCHAIN" 2>/dev/null || true
 
+# Review: Kev + claude-fable-5.1, 2026-10-10 (cask, 2) — the first cask fix forgot that the step's
+# shell is `bash -e`: the subshell's non-zero status aborted the step before the annotation
+# (run 38041977856, red). `set +e` is now explicit at the top of the step. Verified by the next
+# dispatch: a refused push must leave the run green with an ::error:: annotation.
 # Review: Kev + claude-fable-5.1, 2026-10-10 (cask) — the bump's `( … ) || echo` swallowed the
 # push's 403 (errexit is off inside a `||` operand) and reported "Cask bumped" with the tap
 # untouched; the subshell is now a plain statement with its status read after, and the step
