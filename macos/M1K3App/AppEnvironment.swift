@@ -2332,7 +2332,9 @@ extension AppEnvironment {
     /// On a re-run (`rewriteProfile: true`), also rewrite the profile's
     /// "Name: X." line so the system prompt stays in sync with the greeting.
     func saveFirstRunName(_ name: String, rewriteProfile: Bool = false) {
-        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        // One line, like the profile's Name line (a pasted newline flattens).
+        let trimmed = name.components(separatedBy: .newlines).joined(separator: " ")
+            .trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
         UserDefaults.standard.set(trimmed, forKey: Self.userDisplayNameKey)
         let existing = (try? store.meta(key: Self.userProfileMetaKey)) ?? nil

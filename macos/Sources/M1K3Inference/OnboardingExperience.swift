@@ -18,6 +18,8 @@
 //  (they are stable — each is a persisted preference key that can never
 //  change without a migration).
 //
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#544 pass 2) — `permissionRequiredKeys` doc matches `apply`.
+//
 
 import Foundation
 
@@ -43,9 +45,9 @@ public enum OnboardingExperience: String, Sendable, CaseIterable {
     ]
 
     /// The three keys that need a system setter (TCC dialog or notification
-    /// authorization) rather than a direct `UserDefaults` write. The UI runs
-    /// the permission ceremony for these; `apply(to:)` still writes them as
-    /// a baseline so Private always turns them off.
+    /// authorization) rather than a direct `UserDefaults` write. Full's
+    /// `apply(to:)` skips them for the UI's ceremony; Private's writes them
+    /// `false` (turning off never needs a prompt).
     public static let permissionRequiredKeys: Set<String> = [
         "contextTools.calendar",
         "contextTools.location",

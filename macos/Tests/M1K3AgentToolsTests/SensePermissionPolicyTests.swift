@@ -59,6 +59,8 @@ struct SensePermissionPolicyTests {
 
     @Test func onboardingStoresFalseWhenDeniedBefore() {
         #expect(SensePermissionPolicy.settledValue(before: .denied, answer: nil) == false)
+        // macOS never re-shows a denied prompt, so `onToggle` does not request and
+        // any answer passed here is noise: the stored value is still false.
         #expect(SensePermissionPolicy.settledValue(before: .denied, answer: .granted) == false)
     }
 }

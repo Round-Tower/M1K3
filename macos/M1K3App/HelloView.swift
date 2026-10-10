@@ -63,6 +63,9 @@
 //  (`SensePermissionPolicy.settledValue`; the first cut only wrote the `false` branches, so Full never turned
 //  calendar or location on), and completion waits for it (`settling` disables the doors meanwhile) so the
 //  system dialogs fire over a live hello, never a dismissed one. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#544 pass 2) — the ceremony task is owned by the view and
+//  cancelled on disappear; Cancel and interactive dismiss are gated while settling; the direct keys are
+//  applied AFTER the ceremony, so a cancelled Full writes nothing.
 
 import M1K3AgentTools
 import M1K3Avatar
@@ -88,8 +91,11 @@ struct HelloView: View {
     @State private var phase: Phase = .hello
     @State private var userName = ""
     @State private var afm: AFMAvailability = .available
-    /// The Full door's permission ceremony is running: doors disabled, sheet held.
+    /// The Full door's permission ceremony is running: doors and Cancel
+    /// disabled, the sheet held. The task is owned here so a dismissal cancels
+    /// it and nothing of the hello lands after the user walked away.
     @State private var settling = false
+    @State private var ceremony: Task<Void, Never>?
     /// The wake-setup deck shown during both waits. Its completion rule (pure,
     /// pinned) owns the no-yank behaviour: an untouched deck auto-advances on
     /// ready exactly like the old spinner did; an engaged one waits for a tap.
@@ -132,7 +138,11 @@ struct HelloView: View {
                 ) ?? ""
             }
         }
-        .onDisappear { env.avatar.resetToIdle() }
+        .onDisappear {
+            env.avatar.resetToIdle()
+            ceremony?.cancel()
+        }
+        .interactiveDismissDisabled(settling)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active { afm = env.afmAvailability }
         }
@@ -203,6 +213,7 @@ struct HelloView: View {
 
             if isRerun {
                 Button("Cancel") { onComplete() }
+                    .disabled(settling)
                     .buttonStyle(.plain)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -375,23 +386,28 @@ struct HelloView: View {
 
     private func sayHello(experience: OnboardingExperience = .fullExperience) {
         guard !settling else { return }
-        experience.apply(to: .standard)
         guard experience == .fullExperience else {
-            finishHello()
+            finishHello(experience: experience)
             return
         }
-        // The ceremony is awaited BEFORE completion: the system dialogs fire
-        // over this hello (sheet or window), never over a dismissed one, and
-        // nothing races the name save or the brain pick.
+        // The ceremony is awaited BEFORE anything is written: the system
+        // dialogs fire over this hello (sheet or window), never over a
+        // dismissed one, and a Cancel mid-way (the sheet's Esc is blocked,
+        // the button disabled, but the view can still go away) leaves the
+        // store exactly as it was.
         settling = true
-        Task { @MainActor in
+        ceremony = Task { @MainActor in
             await settleFullPermissions()
             settling = false
-            finishHello()
+            guard !Task.isCancelled else { return }
+            finishHello(experience: experience)
         }
     }
 
-    private func finishHello() {
+    private func finishHello(experience: OnboardingExperience) {
+        // Direct keys after the ceremony, so a cancelled Full never half-applies
+        // (Full's apply skips the three senses the ceremony just stored).
+        experience.apply(to: .standard)
         // Name first, brain second — the gate key flips in onComplete, and the
         // profile write must land before any window swap. On a re-run, rewrite
         // the profile's "Name:" line (not just seed it) so the system prompt
@@ -436,15 +452,18 @@ struct HelloView: View {
     /// Run the three permission-required keys through real setters in
     /// sequence so the system prompts fire during onboarding, not mid-chat,
     /// and STORE each outcome: granted (before or now) → on, anything else → off.
+    /// A cancelled ceremony stores nothing it has not already stored.
     @MainActor
     private func settleFullPermissions() async {
         let calendar = await Self.settle(
             status: ContextSenseAuth.calendarStatus, request: ContextSenseAuth.requestCalendar
         )
+        guard !Task.isCancelled else { return }
         UserDefaults.standard.set(calendar, forKey: AppEnvironment.contextCalendarEnabledKey)
         let location = await Self.settle(
             status: ContextSenseAuth.locationStatus, request: ContextSenseAuth.requestLocation
         )
+        guard !Task.isCancelled else { return }
         UserDefaults.standard.set(location, forKey: AppEnvironment.contextLocationEnabledKey)
         // Heartbeat notifications: the setter stores the authorization answer itself.
         await env.setHeartbeatNotifications(true)
