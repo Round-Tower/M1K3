@@ -200,6 +200,19 @@ struct ToolDispatchRecencyTests {
         #expect(ToolDispatch.recencyCorrected(fact, palette: noWeb, question: "Who won this year?") == fact)
     }
 
+    @Test("in a chain each pick reads its own query: a 'today' that belongs to the other half moves nothing")
+    func chainReadsItsOwnQuery() {
+        // The 10-10 `all` cell: "today's date … when was Cork founded" sent the fact half to the web.
+        let fact = ToolPick(tool: "lookup_fact", query: "Cork founding year")
+        let pick = ToolPick(tool: "datetime", query: "", then: [fact])
+        let question = "What's today's date, and when was Cork founded?"
+        #expect(ToolDispatch.recencyCorrected(pick, palette: palette, question: question) == pick)
+        let weather = ToolPick(tool: "web_search", query: "weather")
+        let headFact = ToolPick(tool: "lookup_fact", query: "Cork founding year", then: [weather])
+        let both = "When was Cork founded, and the weather today?"
+        #expect(ToolDispatch.recencyCorrected(headFact, palette: palette, question: both) == headFact)
+    }
+
     @Test("the chained second tool is corrected too")
     func chainedLookupIsWeb() {
         let lookup = ToolPick(tool: "lookup_fact", query: "newest iPhone")

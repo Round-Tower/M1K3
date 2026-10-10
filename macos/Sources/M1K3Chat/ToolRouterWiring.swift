@@ -66,25 +66,29 @@ public enum ToolRouterWiring {
         defaults.object(forKey: dispatchKey) == nil || defaults.bool(forKey: dispatchKey)
     }
 
-    /// The group head in front of the picker: absent = OFF. ADR 0009's spike found a
-    /// per-group router too loose to pick alone; this one also needs the family's words
-    /// and falls back to Apple's pick, but it is an experiment until an arm measures it.
+    /// The group head in front of the picker. Absent = the shell's default: ON on the Mac
+    /// since the 2026-10-10 router arm (it fired on exactly its 18 head-fixture trials, Mini
+    /// 0.6 s faster at equal accuracy), OFF on iOS. ADR 0009's spike found a per-group router
+    /// too loose to pick alone; this one also needs the family's words and falls back to
+    /// Apple's pick.
     public static let groupRouterKey = "toolGroupRouter"
 
     public static func groupRouterEnabled(_ defaults: UserDefaults = .standard, whenUnset: Bool = false) -> Bool {
         flag(groupRouterKey, defaults, whenUnset: whenUnset)
     }
 
-    /// The route for every brain, not only Mini: absent = OFF until the eval arm
-    /// (`M1K3_SELFTEST_CHATEVAL_ROUTER=dispatch`) has measured Lil and Big on it.
+    /// The route for every brain, not only Mini. Absent = the shell's default: ON on the Mac
+    /// since the 2026-10-10 router arm (Lil tool-use 38/48 → 48/48 at half the latency, Big
+    /// about 3× faster), OFF on iOS until a phone smoke.
     public static let allTiersKey = "toolRouterAllTiers"
 
     public static func allTiersEnabled(_ defaults: UserDefaults = .standard, whenUnset: Bool = false) -> Bool {
         flag(allTiersKey, defaults, whenUnset: whenUnset)
     }
 
-    /// Chains: a tool turn may run two read-only tools ("the weather and my calendar").
-    /// Absent = OFF: Apple's pick gets a second slot, which the eval arm measures first.
+    /// Chains: a tool turn may run two read-only tools ("the weather and my calendar"):
+    /// Apple's pick gets a second slot. Absent = the shell's default: ON on the Mac since the
+    /// 2026-10-10 router arm (two-tool asks 0/3 → 3/3 with routing), OFF on iOS.
     public static let chainKey = "toolChain"
 
     public static func chainEnabled(_ defaults: UserDefaults = .standard, whenUnset: Bool = false) -> Bool {

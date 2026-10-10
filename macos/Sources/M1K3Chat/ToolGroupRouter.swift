@@ -17,7 +17,7 @@
 //  and the turn takes Apple's pick or the agent exactly as before. A wrong tool is a
 //  wrong answer; an abstention is only slower.
 //
-//  An experiment, OFF by default (`toolGroupRouter`). ADR 0009's spike rejected picking
+//  `toolGroupRouter`: ON on the Mac since the 2026-10-10 router arm, OFF on iOS. ADR 0009's spike rejected picking
 //  by group alone: at 95% precision it called "What's 17 × 23?" a device question, and
 //  closed-vocabulary rules alone reached ~83% precision at 40% recall ("meeting notes"
 //  are notes, not the calendar). Here a device pick needs both the group and one cue

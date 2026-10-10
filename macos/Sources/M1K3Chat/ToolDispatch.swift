@@ -170,15 +170,23 @@ public enum ToolDispatch {
     /// the 2026-09-12 "isn't searching the internet much" miss again. Only when web_search is on
     /// offer this turn (web search off changes nothing); the chained pick is corrected too, and
     /// `chain` drops a repeat if both become web_search.
+    ///
+    /// A single pick reads the whole question; in a chain each pick reads only its own query, its
+    /// half of the ask (the 10-10 `all` cell: "the current date … and the founding year of Cork"
+    /// sent the fact half to the web on the date half's "current").
     public static func recencyCorrected(_ pick: ToolPick, palette: [any AgentTool], question: String) -> ToolPick {
-        guard palette.contains(where: { $0.name == "web_search" }),
-              ToolGroupRouter.mentions(question, any: nowCues)
-        else { return pick }
-        func corrected(_ one: ToolPick) -> ToolPick {
-            one.tool == "lookup_fact" ? ToolPick(tool: "web_search", query: one.query) : one
+        guard palette.contains(where: { $0.name == "web_search" }) else { return pick }
+        func aboutNow(_ text: String) -> Bool {
+            ToolGroupRouter.mentions(text, any: nowCues)
         }
-        let head = corrected(pick)
-        return ToolPick(tool: head.tool, query: head.query, then: pick.then.map(corrected))
+        func corrected(_ one: ToolPick, aboutNow now: Bool) -> ToolPick {
+            one.tool == "lookup_fact" && now ? ToolPick(tool: "web_search", query: one.query) : one
+        }
+        let head = corrected(pick, aboutNow: aboutNow(pick.then.isEmpty ? question : pick.query))
+        return ToolPick(
+            tool: head.tool, query: head.query,
+            then: pick.then.map { corrected($0, aboutNow: aboutNow($0.query)) }
+        )
     }
 
     public struct Plan: Sendable {
