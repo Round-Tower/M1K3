@@ -248,8 +248,10 @@ Review: Kev + claude-fable-5.1, 2026-10-10 00:30–02:00 — the owed 1.1 eval q
 master f2f2c753 (all six 1.1 PRs landed 2026-10-09): Mini vision 14/16 (was 1/16; #526's persona-free, tool-free
 image turn), Lil grounded-Q 21/24 + code-gen 29/30 on the honest scorer (was 18/24, 24/30), Lil tool-use 60/65
 with `tool-recent-busiest` 5/5 (was ~10/16), Big grounded-Q 19/24 with no "hasn't happened yet" wording in 24
-answers (#488), and the display-off A/B: **App Nap IS the stall mechanism** — hold on 28.5 → 28 tok/s, hold off
-29 → 4 tok/s with the display asleep. No regression in any cell. Chat-curve ran on both brains but its
+answers (#488), and the display-off A/B: **App Nap confirmed as the stall mechanism by A/B, one Debug run per arm** — hold on
+28.5 → 28 tok/s, hold off 29 → 4 tok/s with the display asleep (arm B stopped at 25/69 trials; pmset never
+named M1K3, so the hold itself was inferred from the gap). No regression in any cell (the two chain fixtures
+that miss are new in #521, not regressions). Chat-curve ran on both brains but its
 prefill columns read cumulative since launch (ChatCurveStage's since-date fold) — fix before the slope feeds the
 checkpoint decision. Files: `docs/evals/2026-10-10-*`. Confidence 0.85 (×1 on Mini, ×3/×5 on the rest).
 Review: Kev + claude-fable-5.1, 2026-10-09 (2) — Mini sees: the seven-arm bisect found the shape AFM vision
@@ -471,7 +473,7 @@ and GPU alike (decode 35 → 0–3 tok/s, prefill 3.4 s → 24–55 s; prompts f
 | 08:17:37 display on | E4B back at 37 tok/s at 08:17:47 |
 
 The incumbent ran 23:59–00:32 entirely with the display on. The **trigger** is confirmed; the
-**mechanism** — RESOLVED 2026-10-10 by the display-off A/B (`docs/evals/2026-10-10-display-off-ab.txt`): App Nap. With the hold off, Lil fell 29 → 4 tok/s once the display slept; with it on, 28.5 → 28. The earlier read stands below for the record: App Nap fits, and so does display-off GPU/WindowServer throttling (`caffeinate
+**mechanism** — RESOLVED 2026-10-10 by the display-off A/B (`docs/evals/2026-10-10-display-off-ab.txt`, one Debug run per arm): App Nap. With the hold off, Lil fell 29 → 4 tok/s once the display slept; with it on, 28.5 → 28. The earlier read stands below for the record: App Nap fits, and so does display-off GPU/WindowServer throttling (`caffeinate
 -is` already held the idle-sleep assertion all night, so App Nap is the only lever the app holds).
 **User-facing too, if it's App Nap:** the app generating with the display off (an agent's overnight
 `ask_m1k3`, a long Big answer after the user walks away) can crawl the same way. Evals: `caffeinate -d`

@@ -1,5 +1,6 @@
 # chat-curve lil — f2f2c753 (eval/1-1-night), Release build 2026-10-10 01:02, AC power, M1K3_SELFTEST_CHATCURVE=lil, headless direct exec, live app quit.
 # Measures per-message rendered tokens, tool-session reuse, prefill and peak RSS over the fixed 8-message script (#522).
+Read with care: prefilled/prefill/gens read as cumulative since launch (ChatCurveStage's since-date fold, #530) — the printed prefill ms/msg slope is cumulative; the rendered-token slope and the reuse/RSS columns are per message.
 • chatcurve: mlx-community/Qwen3.5-4B-MLX-4bit, 8 scripted messages…
 chatcurve #1 done (1486 chars)
 chatcurve #2 done (465 chars)
