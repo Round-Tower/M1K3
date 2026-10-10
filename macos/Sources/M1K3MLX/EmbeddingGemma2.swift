@@ -34,6 +34,8 @@
 //  Open: numeric parity is proven by the in-app reference stage, not here;
 //  the whole 1.2 GB checkpoint is read before the encoders are dropped (a
 //  text-only split is a follow-up).
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#545 bot pass) — the sliding mask is now covered by a
+//  1,396-token fixture case (cosine 0.99996); `loadWeights` takes the per-layer quantization only.
 
 import Foundation
 import MLX
@@ -170,9 +172,9 @@ public actor EmbeddingGemma2Embedder {
         let config = try JSONDecoder.json5().decode(EmbeddingGemma2Configuration.self, from: configData)
         let model = EmbeddingGemma2TextModel(config)
         async let tokenizer = tokenizerLoader.load(from: resolved.tokenizerDirectory)
+        // `perLayerQuantization` carries the checkpoint's `quantization` block too.
         try await loadWeights(
-            modelDirectory: resolved.modelDirectory, model: model,
-            quantization: base.quantization, perLayerQuantization: base.perLayerQuantization
+            modelDirectory: resolved.modelDirectory, model: model, perLayerQuantization: base.perLayerQuantization
         )
         return try await EmbeddingGemma2Embedder(model: model, tokenizer: tokenizer)
     }

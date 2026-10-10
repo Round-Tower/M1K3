@@ -11,7 +11,8 @@
 //  `swift test`.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-10, Confidence 0.85, Prior: none
-//  (new file). The key-pattern fixture is the checkpoint's own index; the
+//  (new file). Review: Kev + claude-fable-5.1, 2026-10-10 (#545 fold) — `capped` edge cases.
+//  The key-pattern fixture is the checkpoint's own index; the
 //  module's own `@ModuleInfo` keys cannot be read without MLX, so the list in
 //  `weightKeys(for:)` pins the naming convention and the loader's
 //  `verify: .all` plus the in-app stage are the runtime guard.
@@ -99,6 +100,9 @@ struct EmbeddingGemma2Tests {
         #expect(capped.last == 1)
         #expect(capped[1] == 100)
         #expect(EmbeddingGemma2Embedder.capped([2, 5, 1], to: 8192) == [2, 5, 1])
+        #expect(EmbeddingGemma2Embedder.capped([], to: 8192) == [])
+        #expect(EmbeddingGemma2Embedder.capped([2, 5, 1], to: 1) == [1], "a one-token limit keeps <eos>")
+        #expect(EmbeddingGemma2Embedder.capped([2, 5, 1], to: 2) == [2, 1])
     }
 
     @Test("a foreign model_type is refused rather than decoded as Gemma")

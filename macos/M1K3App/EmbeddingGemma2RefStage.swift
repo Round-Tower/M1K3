@@ -14,8 +14,8 @@
 //        | M1K3_SELFTEST=1 M1K3_SELFTEST_EG2REF=1 M1K3_SELFTEST_OUT=- \
 //          <Debug M1K3.app>/Contents/MacOS/M1K3
 //
-//  `M1K3_SELFTEST_EG2REF=1` loads the Hub preset (downloads on first use);
-//  any other value is a model directory (reachable only outside the sandbox),
+//  `M1K3_SELFTEST_EG2REF=1` (or true/yes) loads the Hub preset (downloads on
+//  first use); any other value is a model directory (reachable only outside the sandbox),
 //  routed to the port explicitly whatever it is named.
 //  Pass: every id sequence equal, every cosine ≥ 0.999 (mlx-community's own
 //  validation of the conversion sits at 0.9998 against fp32), and the
@@ -26,6 +26,7 @@
 //  the SelfTest; one load at 768 with the 512 column derived by the same
 //  `MatryoshkaTruncation` the service uses; ranking pairs come from the
 //  fixture; the RSS figure is labelled as the whole process's.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#545 bot pass) — true/yes count as the preset.
 
 import Foundation
 import M1K3Knowledge
@@ -75,7 +76,7 @@ enum EmbeddingGemma2RefStage {
 
     static func run(emit: @escaping (String) -> Void) async {
         let value = SelfTestEnv.value("M1K3_SELFTEST_EG2REF") ?? "1"
-        let configuration = value == "1"
+        let configuration = ["1", "true", "yes"].contains(value.lowercased())
             ? MLXEmbeddingService.embeddingGemma2
             : ModelConfiguration(directory: URL(fileURLWithPath: value))
         guard isatty(STDIN_FILENO) == 0 else {

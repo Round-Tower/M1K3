@@ -10,6 +10,8 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.85, Prior: none (new
 //  file; GEMMA_1_1_PLAN Stream C, slice 1).
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#545) — the fixture gained `d-long` (1,396 tokens,
+//  past the 512 sliding window) and `q-long`; `longCasePresent` pins it so the port's local mask stays covered.
 
 import Foundation
 import Testing
@@ -81,6 +83,12 @@ struct EmbeddingGemma2ReferenceTests {
             #expect(item.inputIDs.first == 2, "\(item.id)")
             #expect(item.inputIDs.last == 1, "\(item.id)")
         }
+    }
+
+    @Test("one document is longer than the 512-token sliding window, so the port's local mask is exercised")
+    func longCasePresent() throws {
+        let long = try #require(load().cases.first { $0.id == "d-long" })
+        #expect(long.inputIDs.count > 512 * 2, "two full windows")
     }
 
     @Test("relevance order holds: each query is nearer its document than the off-topic one")
