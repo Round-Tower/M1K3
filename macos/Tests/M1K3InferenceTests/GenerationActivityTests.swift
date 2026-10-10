@@ -12,6 +12,8 @@
 //  cancellation and strict begin/end alternation pinned.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — the `-generationActivity` kill-switch pinned
 //  (reader parity; a disabled hold never begins).
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#530) — the switch is read from the argument
+//  domain only; a persisted key is pinned as ignored. Serialized: that domain is process-wide.
 
 import Foundation
 @testable import M1K3Inference
@@ -35,6 +37,7 @@ final class RecordingAsserter: ActivityAsserting, Sendable {
     }
 }
 
+@Suite(.serialized) // the argument domain is process-wide
 struct GenerationActivityTests {
     @Test("one hold begins one activity and ends it when the work returns")
     func singleHold() async {
@@ -125,16 +128,37 @@ struct GenerationActivityTests {
     func switchParity() throws {
         let suite = "GenerationActivityTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
+        // The argument domain is process-wide: put back what was there, not an empty one.
+        let priorArguments = defaults.volatileDomain(forName: UserDefaults.argumentDomain)
+        defer {
+            defaults.removePersistentDomain(forName: suite)
+            defaults.setVolatileDomain(priorArguments, forName: UserDefaults.argumentDomain)
+        }
         #expect(GenerationActivity.isEnabled(in: defaults))
         for off in ["NO", "false", "0"] {
-            defaults.set(off, forKey: GenerationActivity.defaultsKey)
+            defaults.setVolatileDomain(
+                priorArguments.merging([GenerationActivity.defaultsKey: off]) { _, new in new },
+                forName: UserDefaults.argumentDomain
+            )
             #expect(!GenerationActivity.isEnabled(in: defaults), "\(off)")
         }
         for on in ["YES", "true", "1"] {
-            defaults.set(on, forKey: GenerationActivity.defaultsKey)
+            defaults.setVolatileDomain(
+                priorArguments.merging([GenerationActivity.defaultsKey: on]) { _, new in new },
+                forName: UserDefaults.argumentDomain
+            )
             #expect(GenerationActivity.isEnabled(in: defaults), "\(on)")
         }
+    }
+
+    @Test("a persisted key never turns the hold off: the switch is the launch argument only (#530)")
+    func persistedKeyIsIgnored() throws {
+        let suite = "GenerationActivityTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        defaults.set(false, forKey: GenerationActivity.defaultsKey)
+        defaults.set("NO", forKey: GenerationActivity.defaultsKey)
+        #expect(GenerationActivity.isEnabled(in: defaults))
     }
 
     @Test("a disabled hold never begins an activity, but still counts holders and runs the work")

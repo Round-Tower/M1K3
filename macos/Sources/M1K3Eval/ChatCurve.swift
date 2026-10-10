@@ -20,6 +20,9 @@
 //  Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.8 (TDD'd in ChatCurveTests;
 //  the log-line formats are pinned there against MLXToolCalling.logPrefillReuse and
 //  logGenerationInfo, so a reworded log line fails a test, not a run). Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#530) — `turnLines` windows a turn by date and
+//  provider label; the first Big run's columns were cumulative because the stage trusted
+//  OSLogStore's position(date:) alone.
 //
 
 import Foundation
@@ -67,7 +70,32 @@ public struct ChatCurveFolded: Sendable, Equatable {
     public let generations: Int
 }
 
+/// One `.notice` entry as the stage reads it off OSLogStore: when it landed, and what it said.
+public struct ChatCurveLogEntry: Sendable, Equatable {
+    public let date: Date
+    public let message: String
+
+    public init(date: Date, message: String) {
+        self.date = date
+        self.message = message
+    }
+}
+
 public enum ChatCurveLogParser {
+    /// The lines that belong to ONE turn: entries dated at or after `since` (the 2026-10-10
+    /// run summed every generation since launch — 3071, 6294, 9891… — because the store's
+    /// position was not honoured; the date is checked here, not trusted there), and
+    /// generation lines only from the provider named `label` (a title or summary generation
+    /// in the same window would otherwise count as this turn's prefill). Reuse lines carry no
+    /// label and are kept as they come.
+    public static func turnLines(_ entries: [ChatCurveLogEntry], since: Date, label: String) -> [String] {
+        entries.compactMap { entry in
+            guard entry.date >= since else { return nil }
+            if generation(in: entry.message) != nil, !entry.message.hasPrefix("\(label) [") { return nil }
+            return entry.message
+        }
+    }
+
     /// `toolTurnSession reuse: 2301/2650 tok from cache, …`
     public static func reuse(in line: String) -> ChatCurveReuse? {
         guard let match = line.firstMatch(of: /toolTurnSession reuse: (\d+)\/(\d+) tok/),
