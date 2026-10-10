@@ -17,7 +17,8 @@
 //  (Kev + claude-fable-5).
 //  Review: Kev + claude-fable-5.1, 2026-09-18 — `linkIsIdempotent`: `link`'s doc comment has always claimed INSERT OR IGNORE on
 //  (from, to, relation); nothing pinned it until a review of the screengrab seeder (#383) noticed. The FIRST date stands. Confidence 0.9.
-//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — `cutoffsFollowFloors` pins that the edge / recall bars resolve from the injected floors.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — `cutoffsFollowFloors` pins that the
+//  edge / recall bars resolve from the injected floors.
 
 import Foundation
 @testable import M1K3Knowledge

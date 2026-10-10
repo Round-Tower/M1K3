@@ -32,7 +32,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (Stream C slice 3) — MEMEVAL / ABSEP / KEYEVAL measure the
 //  embedder `M1K3_SELFTEST_EMBEDDER` names (`candidateEmbedder()`); KEYEVAL's "instructed" arm is the
 //  embedder's own `embedQuery` (Qwen's instruction or Gemma's prefix): the Gemma A/B reads production's composition.
-//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the MLX embed smoke names the fingerprint (ci_post_xcodebuild greps `✓ MLX embed (`);
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the MLX embed smoke names the
+//  fingerprint (ci_post_xcodebuild greps `✓ MLX embed (`);
 //  KEYEVAL's floor lines come from EmbedderFloors.forFingerprint of the candidate.
 
 import Foundation

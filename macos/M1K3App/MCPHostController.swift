@@ -51,7 +51,8 @@
 //  rotated from Settings. Confidence 0.85 (vault + gate pinned; the Keychain read is verify-by-launch).
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (fold) — ask_m1k3 answers on the `.mcp` surface (Photo captions
 //  withheld).
-//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — forget_memory passes the live embedder's suggestion bar to ForgetResolver.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — forget_memory passes the live
+//  embedder's suggestion bar to ForgetResolver.
 
 import Foundation
 import M1K3AgentTools // OpenLinkTool.gather + PageBrief — the same brief the in-app agent gets

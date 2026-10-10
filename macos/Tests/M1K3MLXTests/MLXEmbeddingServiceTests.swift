@@ -19,7 +19,8 @@
 //  Run integration (needs app-bundle context): M1K3_MLX_INTEGRATION=1
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
-//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the default is EmbeddingGemma 2; Qwen stays constructible with its old fingerprint.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the default is EmbeddingGemma 2;
+//  Qwen stays constructible with its old fingerprint.
 
 import Foundation
 import M1K3Knowledge

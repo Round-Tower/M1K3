@@ -26,7 +26,8 @@
 //  production MLXEmbeddingService; the wiring itself can only be confirmed
 //  on-device, where the semantic probes finally have a real embedder to satisfy
 //  them). Prior: ChatEvalStage (Kev + claude-opus-4-8).
-//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — comment only — the bare `MLXEmbeddingService()` default is now EmbeddingGemma 2.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — comment only — the bare
+//  `MLXEmbeddingService()` default is now EmbeddingGemma 2.
 
 import Foundation
 import M1K3Memory

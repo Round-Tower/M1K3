@@ -13,7 +13,8 @@
 //  glue, verify-at-⌘R). Prior: Unknown.
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — #180: `namedGraphTwin`, the live fact whose canonical
 //  text equals the query's (the corpus twin's identity). Confidence 0.9.
-//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — `resolve(suggestionFloor:)` takes the embedder's bar (EmbedderFloors.forgetSuggestion);
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — `resolve(suggestionFloor:)` takes
+//  the embedder's bar (EmbedderFloors.forgetSuggestion);
 //  the 0.35 constant stays as the Qwen/hashing default.
 //
 

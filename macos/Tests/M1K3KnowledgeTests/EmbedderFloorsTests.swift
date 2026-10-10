@@ -12,7 +12,8 @@
 //  Signed: Kev + claude-fable-5, 2026-07-31, Confidence 0.85 (selection +
 //  gate plumbing pinned here; the hashing numbers themselves are pinned
 //  against the measured distributions in HashingFloorTests). Prior: Unknown
-//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — Gemma identity / variant-fails-closed / carried-bars tests.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — Gemma identity /
+//  variant-fails-closed / carried-bars tests.
 //
 
 import Foundation

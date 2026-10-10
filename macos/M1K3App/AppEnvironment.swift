@@ -96,7 +96,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#544 fold) — `saveFirstRunName(rewriteProfile:)` applies the
 //  pure `UserProfileText.rewritingName` (M1K3Inference) instead of an inline string edit.
 //  Compile-checked; verify-by-launch owed. Fold: `mcpResponder`, the ask responder that withholds Photos.
-//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the memory graph's floors follow the live embedder (set after the embedder is built and on
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the memory graph's floors follow the
+//  live embedder (set after the embedder is built and on
 //  every switchEmbeddings / rollback); the switch label names EmbeddingGemma 2.
 
 import AppKit
