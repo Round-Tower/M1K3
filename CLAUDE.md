@@ -126,6 +126,18 @@ Anything a cold session needs on turn one belongs below, not there.
   isolated store; the window is pinned at 1440×900). Never exec the binary from
   a shell: it isn't foreground, so system sheets (Declared Age Range) dismiss
   and the API says `notAvailable`. No coordinate clicks while Kev is active.
+  The harness isolates the STORES, not UserDefaults — a Full/Private onboarding
+  door in a Debug build writes the live preferences — and the AX `press` helper
+  (`tools/screengrab/direct/ax.swift`) does not fire SwiftUI Button actions, so
+  a sheet behind a button is a hand run or TestFlight, never a headless proof.
+- **One embedder (Kev, 2026-10-10):** EmbeddingGemma 2 (`MLXEmbeddingService.embeddingGemma2`,
+  pinned, MRL 512) is the Mac retriever; Qwen is A/B-only. Every cosine bar — chunk,
+  memory, graph edge, distiller dedupe, forget suggestion — reads `EmbedderFloors` for
+  the space the VECTORS are in (`MemoryStore.floors` follows the stored fingerprint until
+  the graph re-indexes); never a constant. Gemma's dedupe 0.95 sits in a 0.011 gap:
+  never lower it (an eaten contradiction is a lost correction). A new embedder means
+  `M1K3_SELFTEST_EMBEDDER=<id>` through MEMEVAL / ABSEP / KEYEVAL / MEMSTAT, a measured
+  floor set, and an exact identity match in `forFingerprint` — unmeasured variants fail closed.
 - Entitlements by lane: Declared Age Range in all three (`M1K3-MAS`, `M1K3iOS`
   and the Developer ID `M1K3.entitlements`; `check_store_targets.py` requires
   it), PCC in `M1K3-MAS.entitlements` only (the check forbids it in the
@@ -196,4 +208,8 @@ and that a placement waits for an editable surface. Confidence 0.85.
 Review: Kev + claude-opus-5-5, 2026-10-09 — entitlements by lane after #518: the Developer ID
 lane embeds a profile (macOS 27's keychain), so Declared Age Range is in all three lanes and
 PCC stays MAS-only. Confidence 0.85 (keychain verified by launch; the age sheet owed by Kev).
+Review: Kev + claude-fable-5.1, 2026-10-10 (/debrief) — the one-embedder ruling (#547: Gemma 2
+default, every cosine bar through EmbedderFloors for the vectors' space, the dedupe gap) and the
+verify-by-launch limits that cost an afternoon (#544: the harness leaves UserDefaults live; AX press
+does not fire SwiftUI buttons). Confidence 0.85.
 -->
