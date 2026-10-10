@@ -155,6 +155,11 @@ diff with no risk surface (2026-10-08), and a head with no pass reads no verdict
 it to land past the review. Any landing below the inferred count now needs `--why`; the exit-5 message
 names what is owed ("below the 1 this diff needs"), not an empty "risk surface ()" (#511/#513). The
 root CLAUDE.md's "bare `--passes 0` otherwise" is stale until it is edited. Confidence now 0.85.
+Review: Kev + claude-opus-5.5, 2026-10-10 (6) — the same pass: `_outside_fences` toggles on every ```
+line, so a stray one could promote a fenced example verdict and hide the real one. An odd fence count
+now makes any verdict-shaped line unparseable (a standing blocker), and a body with none stays
+"missing". `_outside_fences` itself is unchanged, since classify's checklist read uses it too.
+Confidence now 0.85.
 """
 from __future__ import annotations
 
@@ -476,8 +481,14 @@ def review_verdict(body: str) -> tuple[str, str]:
     fences (``` only — not ~~~) is the verdict — the action appends " · branch `x`" after a summon's
     body and the bot often signs off below it, so it need not be the last line.
     A malformed closing verdict is not rescued by a well-formed earlier one, and
-    prose ("**Verdict: looks good to land.**", #543) is no verdict at all."""
-    lines = [ln for ln in _outside_fences(body.splitlines()) if _VERDICT_LINE.match(ln)]
+    prose ("**Verdict: looks good to land.**", #543) is no verdict at all. An ODD
+    number of fence lines means which lines are quoted is unknowable — a stray
+    fence can promote a fenced example and hide the real line (summon pass 1 on
+    #550) — so any verdict-shaped line then reads as unparseable."""
+    all_lines = body.splitlines()
+    if sum(1 for ln in all_lines if ln.lstrip().startswith("```")) % 2:
+        return ("unparseable", "") if any(_VERDICT_LINE.match(ln) for ln in all_lines) else ("missing", "")
+    lines = [ln for ln in _outside_fences(all_lines) if _VERDICT_LINE.match(ln)]
     if not lines:
         return ("missing", "")
     mt = _VERDICT.match(lines[-1])

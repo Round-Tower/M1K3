@@ -612,6 +612,27 @@ def test_prose_quotes_and_fences_are_not_a_verdict():
     assert m.review_verdict("") == ("missing", "")
 
 
+def test_an_odd_number_of_fences_makes_the_verdict_unparseable():
+    # Summon pass 1 on #550: _outside_fences toggles on every ``` line, so a stray one
+    # flips which lines read as quoted. Here it turns the fenced EXAMPLE into the verdict
+    # and hides the real CHANGES_REQUESTED inside a "fence".
+    promoted = ("Findings: the gate fails open.\n"
+                "```\nsome text\n"                                  # stray: never closed
+                "```\nVERDICT: APPROVE @ c0ffee12\n```\n"            # the example, fenced
+                "VERDICT: CHANGES_REQUESTED @ c0ffee12")            # the real verdict
+    assert m.review_verdict(promoted) == ("unparseable", "")
+    v = _gate([_summon(promoted)])
+    assert not v.ready and "verdict: unparseable on c0ffee12" in v.reasons
+    # an unclosed fence before the real line no longer hides it as "missing"
+    assert m.review_verdict("```\ncode\nVERDICT: APPROVE @ c0ffee12") == ("unparseable", "")
+    # with no verdict-shaped line anywhere, an odd fence count is still just "missing":
+    # an older summon with a stray fence is no blocker
+    assert m.review_verdict("```\ncode, never closed\nFine.") == ("missing", "")
+    # an even count keeps reading fences as before
+    assert m.review_verdict("```\nVERDICT: APPROVE @ c0ffee12\n```\nVERDICT: CHANGES_REQUESTED @ c0ffee12") == \
+        ("CHANGES_REQUESTED", "c0ffee12")
+
+
 def test_an_approving_pass_on_the_head_is_ready():
     v = _gate([_summon("VERDICT: APPROVE @ c0ffee12")])
     assert v.ready, v.reasons
