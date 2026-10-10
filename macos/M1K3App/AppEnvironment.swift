@@ -2326,13 +2326,24 @@ extension AppEnvironment {
     /// - the persona profile blob is seeded ONLY when no profile exists yet — a
     ///   re-run overwrite would destroy notes the user added in Settings
     ///   ("About you" owns the blob after first run).
-    func saveFirstRunName(_ name: String) {
+    ///
+    /// On a re-run (`rewriteProfile: true`), also rewrite the profile's
+    /// "Name: X." line so the system prompt stays in sync with the greeting.
+    func saveFirstRunName(_ name: String, rewriteProfile: Bool = false) {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
+        let oldName = UserDefaults.standard.string(forKey: Self.userDisplayNameKey)
         UserDefaults.standard.set(trimmed, forKey: Self.userDisplayNameKey)
         let existing = (try? store.meta(key: Self.userProfileMetaKey)) ?? nil
         if existing?.isEmpty != false {
             saveUserProfile("Name: \(trimmed).")
+        } else if rewriteProfile, trimmed != oldName, let existing {
+            let lines = existing.components(separatedBy: "\n")
+            if let first = lines.first, first.hasPrefix("Name: ") {
+                var updated = lines
+                updated[0] = "Name: \(trimmed)."
+                saveUserProfile(updated.joined(separator: "\n"))
+            }
         }
     }
 
