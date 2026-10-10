@@ -681,6 +681,8 @@ def test_only_the_heads_full_sha_approves():
     # the auto pass's `gh pr comment` review is held to the same line
     auto = bot(f"## Review\nFine.\n\nVERDICT: APPROVE @ {V_HEAD[:8]}", created="2026-10-10T10:03:00Z")
     assert not _gate([], auto_comment=auto).ready
+    # fail closed: a head read short (gh never does) cannot turn a prefix into "the full sha"
+    assert m.verdict_refusal("c0ffee12", {"body": "VERDICT: APPROVE @ c0ffee12"}) is not None
 
 
 def test_a_short_sha_blocker_still_stands_and_a_short_sha_approve_clears_nothing():

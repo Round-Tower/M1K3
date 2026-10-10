@@ -168,8 +168,10 @@ agent could push a new head that borrows an old approval. A short or 39-char pre
 as two shas. Blockers stay generous (`_about`: any 7+ prefix of the head), and only a full-sha
 APPROVE clears one. Pass counting (`_names`, `named_heads`) is unchanged: a title naming a ground
 prefix still counts, but its verdict cannot approve the new head. Same rule as dyslexia-ai #892's
-review_gate.py. Confidence now 0.85, pinned in test_pr_watch.py. Whether the bots write the full
-sha unprompted is unmeasured; the summon prompt now asks for it.
+review_gate.py. The sha must be 40 chars as well as equal, so a head read short (gh never does)
+cannot turn a prefix into "the full sha" (the pre-push code-quality pass). Confidence now 0.85,
+pinned in test_pr_watch.py. Whether the bots write the full sha unprompted is unmeasured; the summon
+prompt now asks for it.
 """
 from __future__ import annotations
 
@@ -526,7 +528,7 @@ def verdict_refusal(head: str, comment: dict | None) -> str | None:
         return f"verdict: {outcome} names {sha[:12]}, not {head[:12]}"
     if outcome != "APPROVE":
         return f"verdict: {outcome} on {head[:8]}"
-    if sha != head.lower():
+    if len(sha) != 40 or sha != head.lower():  # fail closed even on a head read short
         return f"verdict: short sha ({len(sha)} chars) on {head[:12]}; the gate needs the full 40-char head sha"
     return None
 
@@ -566,7 +568,7 @@ def _started_at(comment: dict | None) -> str:
 def _standing_blockers(head: str, on_head: list[dict | None]) -> list[str]:
     """A CHANGES_REQUESTED on a pass counted for this head — whatever sha it
     names — or an UNPARSEABLE verdict (a misspelled "CHANGES REQUESTED", a
-    short sha) stands until an APPROVE from a pass that STARTED after it
+    sha under 7 chars) stands until an APPROVE from a pass that STARTED after it
     finished: a re-summon that could read it. A pass that ran alongside it (the
     auto pass and a summon fired at push time) clears nothing, whichever
     finished last; one whose start is unknown is taken to have run alongside.
