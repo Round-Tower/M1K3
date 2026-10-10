@@ -19,6 +19,7 @@
 //
 
 import Foundation
+import M1K3Knowledge
 import M1K3Memory
 
 /// What the resolver decided to do with the top recall hit for a forget query.
@@ -51,6 +52,10 @@ public enum ForgetResolver {
     /// enough to erase a fact. 0.6 ≈ "clearly the same fact". Forget queries
     /// embed BARE (fact-to-fact; a verbatim repeat is cosine ≈ 1.0), so this
     /// bar deliberately did NOT move with the query-instruction floor re-tune.
+    /// Not embedder-scaled on purpose: deletion ALSO requires the caller to have
+    /// NAMED the fact (canonical text match below), whose self-cosine is ≈ 1.0 in
+    /// every cone, so 0.6 only ever fences a hit whose text matched but whose
+    /// vector somehow did not — the same guard under Qwen, Gemma and hashing.
     public static let floor: Float = 0.6
 
     /// The bar for OFFERING a near-miss ("Closest: … repeat it back to
@@ -60,7 +65,7 @@ public enum ForgetResolver {
     /// is a consent hazard (the repeat would DELETE it). 0.35 mirrors the
     /// memory recall floor's register: plausibly-the-same-fact wordings sit
     /// above it, unrelated facts below.
-    public static let suggestionFloor: Float = 0.35
+    public static let suggestionFloor: Float = EmbedderFloors.qwen3Instructed.forgetSuggestion
 
     /// Canonical form for deciding "the caller named THIS fact": case, spacing
     /// and a trailing full stop are noise; anything else is a different fact.

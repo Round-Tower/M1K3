@@ -136,8 +136,6 @@ public struct EmbedderFloors: Sendable, Equatable {
     /// Any EmbeddingGemma 2 fingerprint that is NOT the measured identity
     /// (a 4-bit checkpoint, another width, a prompt-v2): unmeasured.
     public static let embeddingGemma2FamilyPrefix = "mlx/mlx-community/embeddinggemma-2"
-    /// The exact identity `MLXEmbeddingService` gives Qwen3-Embedding 0.6B at 512.
-    public static let qwen3IdentityPrefix = "mlx/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ/d512/"
 
     /// Floors for an embedder (or store) fingerprint. Matches the hashing
     /// family by prefix so "hashing/v1" and the store-composed

@@ -158,12 +158,13 @@ struct EmbeddingGemma2Tests {
         #expect(MLXEmbeddingService.preset(named: "gemma")?.name == "mlx-community/embeddinggemma-2-8bit")
         #expect(MLXEmbeddingService.preset(named: "EG2")?.name == "mlx-community/embeddinggemma-2-8bit")
         #expect(MLXEmbeddingService.preset(named: "qwen")?.name == EmbedderRegistry.qwen3_embedding.name)
-        #expect(MLXEmbeddingService.preset(named: "")?.name == EmbedderRegistry.qwen3_embedding.name)
+        #expect(MLXEmbeddingService.preset(named: "")?.name == "mlx-community/embeddinggemma-2-8bit", "unset = shipping")
+        #expect(MLXEmbeddingService.preset(named: "gemma\n")?.name == "mlx-community/embeddinggemma-2-8bit", "newline")
         let hub = "mlx-community/some-embedder-4bit"
         #expect(MLXEmbeddingService.preset(named: hub)?.name == hub)
         #expect(MLXEmbeddingService.preset(named: " \(hub) ")?.name == hub, "trimmed once, for the Hub branch too")
         #expect(MLXEmbeddingService.preset(named: " Gemma ")?.name == "mlx-community/embeddinggemma-2-8bit")
-        #expect(MLXEmbeddingService.preset(named: "default")?.name == EmbedderRegistry.qwen3_embedding.name)
+        #expect(MLXEmbeddingService.preset(named: "default")?.name == MLXEmbeddingService.embeddingGemma2.name)
         #expect(MLXEmbeddingService.preset(named: "nonsense") == nil)
     }
 

@@ -89,15 +89,16 @@ public final class MLXEmbeddingService: EmbeddingService, @unchecked Sendable {
     public static let gemmaPromptVersion = "prompt-v1"
 
     /// A preset by short name for harnesses (`M1K3_SELFTEST_EMBEDDER`):
-    /// `qwen` / `qwen3` → the shipping Qwen3-Embedding, `gemma` / `eg2` →
-    /// EmbeddingGemma 2, anything with a slash → that Hub id; nil otherwise.
-    /// A Hub id other than the Gemma preset gets Qwen's prompting (the
-    /// inferred default) — pass `prompting:` yourself to bench anything else.
+    /// unset / `default` → the shipping default (EmbeddingGemma 2, also
+    /// `gemma` / `eg2`), `qwen` / `qwen3` → the retired Qwen3-Embedding (the
+    /// A/B baseline, unpinned), anything with a slash → that Hub id; nil
+    /// otherwise. A Hub id other than the Gemma preset gets Qwen's prompting
+    /// (the inferred default) — pass `prompting:` yourself to bench anything else.
     public static func preset(named name: String) -> ModelConfiguration? {
-        let trimmed = name.trimmingCharacters(in: .whitespaces)
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         switch trimmed.lowercased() {
-        case "", "qwen", "qwen3", "default": return EmbedderRegistry.qwen3_embedding
-        case "gemma", "eg2", "embeddinggemma2": return embeddingGemma2
+        case "", "default", "gemma", "eg2", "embeddinggemma2": return embeddingGemma2
+        case "qwen", "qwen3": return EmbedderRegistry.qwen3_embedding
         default: return trimmed.contains("/") ? ModelConfiguration(id: trimmed) : nil
         }
     }

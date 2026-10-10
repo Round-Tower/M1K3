@@ -106,11 +106,6 @@ enum SelfTest {
         return MLXEmbeddingService(configuration: configuration)
     }
 
-    /// The shipping default, by configuration — no service is built to ask.
-    static func isDefaultEmbedder(_ embedder: MLXEmbeddingService) -> Bool {
-        embedder.configuration.name == EmbedderRegistry.qwen3_embedding.name
-    }
-
     static var isRequested: Bool {
         SelfTestEnv.value("M1K3_SELFTEST") == "1"
     }
@@ -711,7 +706,6 @@ enum SelfTest {
     /// least as wide as bge, else the swap isn't justified (the ABSEP gate).
     private static func runSeparationEval() async {
         guard let candidate = candidateEmbedder() else { return }
-        let candidateIsDefault = isDefaultEmbedder(candidate)
         emit("• absep: \(SeparationEvalFixtures.inDomain.count) in-domain + "
             + "\(SeparationEvalFixtures.offDomain.count) off-domain pairs, "
             + "bge-small-384 vs \(candidate.fingerprint)…")
@@ -731,8 +725,7 @@ enum SelfTest {
 
             let bgeResult = SeparationEvalReport.Result(label: "bge-small-384", inDomain: bgeIn, offDomain: bgeOff)
             let candidateResult = SeparationEvalReport.Result(
-                label: candidateIsDefault ? "qwen3-embed-512" : candidate.fingerprint,
-                inDomain: candIn, offDomain: candOff
+                label: candidate.fingerprint, inDomain: candIn, offDomain: candOff
             )
             // candidate second → the head-to-head verdict describes it vs bge.
             emit(SeparationEvalReport.render([bgeResult, candidateResult]))
