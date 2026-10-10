@@ -9,6 +9,7 @@ here; the launch/quit glue is driven by hand on the real app).
 Prior: none (new file).
 Review: Kev + claude-fable-5.1, 2026-10-09 — the router arm's keys (`--router dispatch`, head, chain) pinned.
 Review: Kev + claude-fable-5.1, 2026-10-09 — pins the Lil RAM-cap flag (5 GB own peak, lil only, inclusive).
+Review: Kev + claude-opus-5-5, 2026-10-10 — `--router off`.
 """
 
 import json
@@ -389,3 +390,12 @@ def test_summary_flags_a_lil_run_over_the_own_peak_cap(tmp_path):
     assert rc.over_lil_own_peak_cap("lil", 5121) is True
     assert rc.over_lil_own_peak_cap("big", 7402) is False
     assert rc.over_lil_own_peak_cap("lil", None) is False
+
+
+def test_router_off_is_the_arms_like_for_like_baseline():
+    # 2026-10-10: the arm's `off` cell sent tool-use through LocalAgent while the router cells took
+    # the live path, two different paths. `--router off` is the live path with no route.
+    assert _trig(router="off")["M1K3_SELFTEST_CHATEVAL_ROUTER"] == "off"
+    for over in ({"router_head": True}, {"router_chain": True}):
+        with pytest.raises(ValueError):
+            _trig(router="off", **over)

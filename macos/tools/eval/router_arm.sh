@@ -6,7 +6,8 @@
 #                                  [--repeats 3] [--dry-run]
 #
 # Configurations (ChatEvalStage keys, see tools/eval/run_chateval.py --router*):
-#   off      no ROUTER key — the shipping defaults (toolRouterAllTiers / toolGroupRouter / toolChain off)
+#   off      --router off: the same live path, no route — Lil/Big as they ship (every flag off). Before
+#            2026-10-10 it set no key, and tool-use took LocalAgent, a different path from the other cells.
 #   routing  --router dispatch                              (toolRouterAllTiers)
 #   head     --router dispatch --router-head                (+ toolGroupRouter)
 #   chain    --router dispatch --router-chain               (+ toolChain)
@@ -26,6 +27,7 @@
 # Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.6 (dry-run and the refusals checked;
 # the launches themselves are tonight's first real run). Prior: none (new file).
 # Review: same day, code-quality fold — a flag without its value is refused (NO_UNSET aborted on $2).
+# Review: Kev + claude-opus-5-5, 2026-10-10 — the `off` cell passes `--router off`, so every cell takes the live path.
 
 setopt PIPE_FAIL NO_UNSET
 
@@ -54,7 +56,7 @@ done
 
 configs=(off routing head chain)
 typeset -A flags
-flags[off]=""
+flags[off]="--router off"
 flags[routing]="--router dispatch"
 flags[head]="--router dispatch --router-head"
 flags[chain]="--router dispatch --router-chain"

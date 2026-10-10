@@ -28,6 +28,8 @@ fixture-majority reading of "within one fixture" is mine — see the docs/BENCHM
 section). Prior: none (new file).
 Review: same day, code-quality fold — the chain fixtures leave the verdict (the stub bias above)
 and get a `chain fx` column.
+Review: Kev + claude-opus-5-5, 2026-10-10 — a `picked by` column from each score's routeStage; a head cell whose
+head never picked is "untested", not a flip (the 10-09 arm's head never fired); Mini's baseline is `routing`.
 """
 
 from __future__ import annotations
@@ -54,6 +56,7 @@ class Trial:
     kind: str
     latency_ms: int
     ok: bool
+    stage: str | None = None  # the router stage that picked the tool (head / picker / agent)
 
     @property
     def is_chain(self) -> bool:
@@ -81,6 +84,15 @@ class Cell:
             by_fixture.setdefault(t.fixture, []).append(t.ok)
         return sum(2 * sum(v) > len(v) for v in by_fixture.values()), len(by_fixture)
 
+    def stage_counts(self) -> dict[str, int]:
+        """How often each router stage picked, over every routed turn (a turn may pick twice)."""
+        counts: dict[str, int] = {}
+        for t in self.trials:
+            for stage in (t.stage or "").split(","):
+                if stage:
+                    counts[stage] = counts.get(stage, 0) + 1
+        return counts
+
     def median_ms(self, kind: str | None = None) -> float | None:
         rows = [t.latency_ms for t in self.of(kind, chain=None)]
         return statistics.median(rows) if rows else None
@@ -106,7 +118,8 @@ def load_cell(path: Path) -> Cell:
             if s.get("kind") not in KINDS or _is_not_applicable(s):
                 continue
             ok = not any(c.get("outcome") == "fail" for c in s.get("checks", []))
-            cell.trials.append(Trial(s.get("fixtureID", "?"), s["kind"], int(s.get("latencyMS", 0)), ok))
+            cell.trials.append(Trial(s.get("fixtureID", "?"), s["kind"], int(s.get("latencyMS", 0)), ok,
+                                     s.get("routeStage")))
     return cell
 
 
@@ -118,9 +131,21 @@ def load_dir(directory: Path, date: str) -> dict[tuple[str, str], Cell]:
     return cells
 
 
+# Mini already routes in shipping (miniToolDispatch is on), so its baseline is the routing cell;
+# its `off` row (no route at all) is shown but is not what users have.
+BASELINES = {"mini": "routing"}
+
+
+def baseline_config(brain: str) -> str:
+    return BASELINES.get(brain, "off")
+
+
 def verdict(off: Cell | None, other: Cell | None) -> str:
     if off is None or other is None or not off.trials or not other.trials:
         return "no data"
+    # 2026-10-09: a head that never fired read as a head that won. No head pick, no verdict.
+    if other.config == "head" and not other.stage_counts().get("head"):
+        return "untested (the head never picked)"
     reasons = []
     for kind in KINDS:
         base, now = off.fixtures_passed(kind)[0], other.fixtures_passed(kind)[0]
@@ -137,13 +162,15 @@ def _ms(value: float | None) -> str:
 
 
 def render(cells: dict[tuple[str, str], Cell]) -> str:
-    lines = ["| brain | config | tool-use | open-chat | chain fx | median (tool-use) | median (all) | verdict |",
-             "|---|---|---|---|---|---|---|---|"]
+    lines = ["| brain | config | tool-use | open-chat | chain fx | picked by | median (tool-use) | median (all) "
+             "| verdict |",
+             "|---|---|---|---|---|---|---|---|---|"]
     for brain in sorted({b for b, _ in cells}, key=lambda b: (b != "lil", b)):
+        base = baseline_config(brain)
         for config in CONFIGS:
             cell = cells.get((brain, config))
             if cell is None:
-                lines.append(f"| {brain} | {config} | - | - | - | - | - | missing |")
+                lines.append(f"| {brain} | {config} | - | - | - | - | - | - | missing |")
                 continue
             rates = []
             for kind in KINDS:
@@ -151,8 +178,15 @@ def render(cells: dict[tuple[str, str], Cell]) -> str:
                 fp, fn = cell.fixtures_passed(kind)
                 rates.append(f"{p}/{n} ({fp}/{fn} fx)")
             cp, cn = cell.fixtures_passed("tool-use", chain=True)
-            v = "baseline" if config == "off" else verdict(cells.get((brain, "off")), cell)
-            lines.append(f"| {brain} | {config} | {rates[0]} | {rates[1]} | {cp}/{cn} fx "
+            if config == base:
+                v = "baseline"
+            elif brain in BASELINES and config == "off":
+                v = "not shipping (no route)"
+            else:
+                v = verdict(cells.get((brain, base)), cell)
+            stages = cell.stage_counts()
+            picked = " · ".join(f"{k} {stages[k]}" for k in ("head", "picker", "agent") if k in stages) or "-"
+            lines.append(f"| {brain} | {config} | {rates[0]} | {rates[1]} | {cp}/{cn} fx | {picked} "
                          f"| {_ms(cell.median_ms('tool-use'))} | {_ms(cell.median_ms())} | {v} |")
     return "\n".join(lines)
 

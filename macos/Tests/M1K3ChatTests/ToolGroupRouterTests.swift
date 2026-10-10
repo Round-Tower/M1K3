@@ -295,7 +295,8 @@ struct ToolGroupRouterWriteGuardTests {
     func memoryWritesAbstain() {
         #expect(ToolGroupRouter.pick(group: "activity", question: "Forget what I told you about my address") == nil)
         #expect(ToolGroupRouter.pick(group: "knowledge", question: "Remember that my sister is called Aoife") == nil)
-        #expect(ToolGroupRouter.pick(group: "knowledge", question: "Save this to my notes: the boiler code is 4471") == nil)
+        let saveIt = "Save this to my notes: the boiler code is 4471"
+        #expect(ToolGroupRouter.pick(group: "knowledge", question: saveIt) == nil)
         #expect(ToolGroupRouter.pick(group: "knowledge", question: "Delete my note about the seal") == nil)
         #expect(ToolGroupRouter.pick(group: "activity", question: "Add yesterday's walk to my activity") == nil)
     }
@@ -336,7 +337,9 @@ struct PickStageRecorderTests {
             _ = await ToolRouterWiring.cascade(
                 question: "q", menu: "m", classify: { _ in nil }, fallback: StubPicker(answer: ("web_search", "news"))
             )
-            _ = await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: StubPicker(answer: nil))
+            _ = await ToolRouterWiring.cascade(
+                question: "q", menu: "m", classify: nil, fallback: StubPicker(answer: nil)
+            )
             _ = await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: nil)
         }
         #expect(recorder.stages == [.head, .picker, .agent, .agent])
