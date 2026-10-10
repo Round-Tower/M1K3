@@ -653,6 +653,37 @@ def test_every_owed_pass_must_approve_whichever_finished_last():
     assert "verdict: CHANGES_REQUESTED on c0ffee12" in v.reasons
     auto_ok = bot("## Review\nFine.\n\nVERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:03:00Z")
     assert _gate([summon_ok, auto_ok], passes_needed=2, auto_comment=auto_ok, files=risky).ready
+    # the mirror: the blocker finishes last
+    summon_cr = _summon("VERDICT: CHANGES_REQUESTED @ c0ffee12", created="2026-10-10T10:00:05Z", updated="2026-10-10T10:04:00Z")
+    assert not _gate([summon_cr, auto_ok], passes_needed=2, auto_comment=auto_ok, files=risky).ready
+
+
+def test_a_concurrent_blocker_stands_when_one_pass_is_owed_too():
+    # Code review on this PR: the concurrency case is not only a risk-surface
+    # one. At the default one pass, a summon fired at push time races the auto
+    # pass just the same, and "newest only" let the later APPROVE wave the
+    # other's blocker through.
+    auto_cr = bot("## Review\nBLOCKING.\n\nVERDICT: CHANGES_REQUESTED @ c0ffee12", created="2026-10-10T10:03:00Z")
+    summon_ok = _summon("VERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:00:05Z", updated="2026-10-10T10:04:00Z")
+    v = _gate([summon_ok, auto_cr], passes_needed=1, auto_comment=auto_cr)
+    assert v.passes == 2 and not v.ready
+    assert "verdict: CHANGES_REQUESTED on c0ffee12" in v.reasons
+    # --passes 0 does not wave it through either
+    assert not _gate([summon_ok, auto_cr], passes_needed=0, auto_comment=auto_cr).ready
+
+
+def test_only_a_review_that_started_after_the_blocker_finished_clears_it():
+    blocker = _summon("VERDICT: CHANGES_REQUESTED @ c0ffee12", created="2026-10-10T10:00:00Z", updated="2026-10-10T10:01:00Z")
+    # a re-summon (its tracking comment is created when its run starts) read the blocker's thread
+    resummon = _summon("VERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:20:00Z", updated="2026-10-10T10:21:00Z")
+    assert _gate([blocker, resummon]).ready
+    # a `gh pr comment` review is created when its run ENDS: when it started is unknown, so it
+    # may have run alongside the blocker and cannot clear it, however late it posted
+    late_auto = bot("## Review\nFine.\n\nVERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:30:00Z")
+    assert not _gate([blocker, late_auto], auto_comment=late_auto).ready
+    # a blocker naming another head is that head's business (the stale-sha rule covers the owed pass)
+    old = _summon("VERDICT: CHANGES_REQUESTED @ 7c0383c1", created="2026-10-10T09:00:00Z")
+    assert _gate([old, resummon]).ready
 
 
 def test_a_trivial_head_needs_no_verdict_until_a_pass_on_it_says_otherwise():
@@ -661,6 +692,8 @@ def test_a_trivial_head_needs_no_verdict_until_a_pass_on_it_says_otherwise():
     # but a pass on THIS head that requests changes is not waved through by --passes 0
     v = _gate([_summon("VERDICT: CHANGES_REQUESTED @ c0ffee12")], passes_needed=0)
     assert not v.ready and "verdict: CHANGES_REQUESTED on c0ffee12" in v.reasons
+    # nor by a pass on it that never said
+    assert "verdict: missing on c0ffee12" in _gate([_summon(None)], passes_needed=0).reasons
 
 
 def test_an_auto_pass_whose_comment_is_unknown_cannot_approve():

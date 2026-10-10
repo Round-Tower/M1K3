@@ -44,7 +44,9 @@ in project memory. Now they are code, tested in test_pr_watch.py:
   claude.yml) asks for a closing `VERDICT: APPROVE @ <sha>` or
   `VERDICT: CHANGES_REQUESTED @ <sha>` line. The newest pass on the head — the newest
   N when N passes are owed — must APPROVE naming this head; a missing, malformed or
-  CHANGES_REQUESTED verdict, or one naming another sha, refuses. Under `--passes 0`
+  CHANGES_REQUESTED verdict, or one naming another sha, refuses. A CHANGES_REQUESTED
+  on the head stands until a review that STARTED after it finished approves: a pass
+  that ran alongside it clears nothing, whichever finished last. Under `--passes 0`
   a head with nothing posted reads no verdict, but a pass on it still must approve.
 * Only an AUTO_LAND_AUTHORS PR whose head branch lives in this repo lands. M1K3 is
   public: a contributor's or a bot's PR, or anything from a fork, is merged by hand.
@@ -52,7 +54,8 @@ in project memory. Now they are code, tested in test_pr_watch.py:
     python3 pr_watch.py <PR> [--passes N] [--once] [--interval 60] [--timeout 5400]
 
 Exit 0 = landable now; 1 = a required job failed; 2 = not ready (--once) or
-timed out; 3 = the PR is not open; 4 = gh itself failed; 5 = fewer passes than
+timed out — CI pending, passes short, a verdict short of APPROVE, or a PR that
+may not auto-land (the printed summary says which); 3 = the PR is not open; 4 = gh itself failed; 5 = fewer passes than
 the diff needs, with no --why. Read-only: never
 merges, never comments. tools/ci/land.sh wraps it.
 
@@ -133,6 +136,12 @@ outside contributor, a bot or a fork could have landed hands-off. Ready now also
 AUTO_LAND_AUTHORS (a constant: widening it is a reviewed change, not an env var an agent can set to
 unblock itself) and the head repo equal to the base repo; snapshot reads author + headRepository,
 and an unknown one refuses. Confidence now 0.85 — pinned in test_pr_watch.py, the gh wiring included.
+Review: Kev + claude-opus-5.5, 2026-10-10 (3) — the pre-push code-quality pass found the concurrency
+hole at ONE owed pass too: a summon fired at push time races the auto pass, and "newest only" let
+the later APPROVE wave the other's blocker through (and --passes 0 with it). A CHANGES_REQUESTED on
+the head now stands until an APPROVE from a pass that STARTED after it finished — knowable only for
+a tracking comment (created at run start); a `gh pr comment` review's start is unknown, so it clears
+nothing. Re-summoning still overrides a blocker, as Kev's brief wants. Confidence now 0.8.
 """
 from __future__ import annotations
 
@@ -451,7 +460,7 @@ def counts_as_summon_pass(head: str, comment: dict, head_seen_at: str | None) ->
 def review_verdict(body: str) -> tuple[str, str]:
     """What a pass concluded: ("APPROVE" | "CHANGES_REQUESTED", sha), or
     ("missing", "") / ("unparseable", ""). The LAST "VERDICT:" line outside ```
-    fences is the verdict — the action appends " · branch `x`" after a summon's
+    fences (``` only — not ~~~) is the verdict — the action appends " · branch `x`" after a summon's
     body and the bot often signs off below it, so it need not be the last line.
     A malformed closing verdict is not rescued by a well-formed earlier one, and
     prose ("**Verdict: looks good to land.**", #543) is no verdict at all."""
@@ -499,16 +508,42 @@ def passes_on_head(head: str, comments: list[dict], auto_ok: bool, auto_comment:
     return ordered
 
 
+def _started_at(comment: dict | None) -> str:
+    """When a pass began reviewing, where that is knowable: a tracking comment
+    ("**Claude finished …") is created when its run starts. A `gh pr comment`
+    review is created when its run ENDS, so its start is unknown ("")."""
+    if comment and classify(comment.get("body", "")) is Kind.SUMMON:
+        return comment.get("created_at") or ""
+    return ""
+
+
+def _standing_blockers(head: str, on_head: list[dict | None]) -> list[str]:
+    """A CHANGES_REQUESTED on this head stands until an APPROVE from a pass that
+    STARTED after it finished — a re-summon that could read it. A pass that ran
+    alongside it (the auto pass and a summon fired at push time) clears nothing,
+    whichever finished last; one whose start is unknown is taken to have run
+    alongside."""
+    blockers: list[str] = []
+    for c in on_head:
+        outcome, sha = review_verdict((c or {}).get("body", ""))
+        if outcome != "CHANGES_REQUESTED" or not _names(head, [sha]):
+            continue
+        done = _finished_at(c)
+        if not any(verdict_refusal(head, later) is None and _started_at(later) > done for later in on_head):
+            blockers.append(f"verdict: CHANGES_REQUESTED on {head[:8]}")
+    return blockers
+
+
 def review_refusals(head: str, on_head: list[dict | None], passes_needed: int) -> list[str]:
-    """The passes owed must approve this head. That is the newest pass — the
-    newest `passes_needed` of them when more are owed: two passes on a risk
-    surface run concurrently (push, then summon at once), and a blocker from
-    either must not land or not by which run finished first. An older verdict
-    is overridden by enough newer ones. With nothing owed (--passes 0) and
-    nothing posted on the head, there is no verdict to read."""
+    """The passes owed must approve this head: the newest pass, or the newest
+    `passes_needed` when more are owed. And no blocker on the head may stand
+    (_standing_blockers): passes on one head often run concurrently (push, then
+    summon at once), and run order must not decide whether a blocker lands.
+    With nothing owed (--passes 0) and nothing posted on the head, there is no
+    verdict to read."""
     owed = on_head[-passes_needed:] if passes_needed > 0 else on_head[-1:]
     refusals = [r for r in (verdict_refusal(head, c) for c in reversed(owed)) if r]
-    return list(dict.fromkeys(refusals))
+    return list(dict.fromkeys(refusals + _standing_blockers(head, on_head)))
 
 
 def origin_refusals(author: str | None, head_repo: str | None, base_repo: str | None) -> list[str]:
