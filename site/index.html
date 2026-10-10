@@ -39,11 +39,11 @@
   "processorRequirements": "Apple Silicon (arm64 only)",
   "applicationCategory": "UtilitiesApplication",
   "applicationSubCategory": "Local AI assistant",
-  "softwareVersion": "1.0.0",
+  "softwareVersion": "1.1.0",
   "isAccessibleForFree": true,
   "description": "Privacy-first AI that runs entirely on-device on Apple Silicon Macs: local LLM inference (MLX, Gemma 4, Qwen 3, Apple Foundation Models), live voice with on-device neural TTS, a personal knowledge graph with RAG, a self-repairing temporal memory graph, encrypted call transcription, a local agent, an ambient Heartbeat (off by default), a LAN Brain-at-Home service (off by default), a native screensaver, and an MCP server with 18 tools.",
   "featureList": [
-    "Three on-device brains: Mini (Apple Foundation Models, instant), Lil (Qwen 3 4B, fronts the conversation), Big (Gemma 4 12B, delegated deep work)",
+    "Three on-device brains: Mini (Apple Foundation Models, instant), Lil (Qwen3.5 4B, fronts the conversation and reads images), Big (Gemma 4 12B, delegated deep work)",
     "Live voice: on-device speech recognition in, Kokoro neural TTS out, sentence-streamed",
     "Personal knowledge graph with RAG over your documents, encrypted under a Keychain-held key",
     "Temporal memory graph with dream-cycle self-repair",
@@ -1057,5 +1057,8 @@ tick();
      Review: Kev + claude-fable-5.1, 2026-10-09 (#479) — the JSON-LD feature line said "the 1.0 build has
      no cloud path at all (… a later release)"; PCC shipped opt-in in the App Store build, so it now names
      both exits and the DMG's lack of one. Nothing else touched; dateModified NOT bumped. -->
+     Review: Kev + claude-fable-5.1, 2026-10-09 — the v1.1.0 release bump: softwareVersion 1.1.0; the JSON-LD
+     brains line names Lil as Qwen3.5 4B and says it reads images (#517). Nothing is live on the store yet
+     (1.0.0 in review on build 453). Confidence 0.9. -->
 </body>
 </html>

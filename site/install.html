@@ -40,7 +40,7 @@
     { "@type": "HowToStep", "name": "Get the app", "url": "https://m1k3.app/install#get",
       "text": "Homebrew: brew trust round-tower/tap, then brew install --cask round-tower/tap/m1k3 — this also puts the m1k3 command on your PATH. Or download the signed, notarized M1K3.dmg from GitHub Releases and drag it to Applications. The Mac App Store build is in review; the TestFlight beta is the same lane meanwhile." },
     { "@type": "HowToStep", "name": "Say hello", "url": "https://m1k3.app/install#hello",
-      "text": "Open M1K3. First run picks Mini, Apple's on-device model — instant, nothing to download, no account. Ask it anything. Upgrade to Lil (about 2.2 GB, the brain that fronts the conversation) from the prompt after your first answer or in Settings." },
+      "text": "Open M1K3. First run picks Mini, Apple's on-device model — instant, nothing to download, no account. Ask it anything. Upgrade to Lil (about 3 GB, the brain that fronts the conversation; it reads images too) from the prompt after your first answer or in Settings." },
     { "@type": "HowToStep", "name": "Connect your agent", "url": "https://m1k3.app/install#connect",
       "text": "Turn the MCP server on once: Settings ▸ Privacy ▸ MCP server. It is off by default and serves http://127.0.0.1:4242/mcp only while the app is open. Copy the access token from the same pane and run m1k3 login to paste it; every request carries it. Then run m1k3 connect claude — or codex, cursor, vscode, zed. Add --print to see the config without touching a file. m1k3 agent-notes --write folds the 'M1K3 is the resident' block into your project's AGENTS.md." },
     { "@type": "HowToStep", "name": "Verify", "url": "https://m1k3.app/install#verify",
@@ -216,7 +216,7 @@
   <section class="step" id="hello">
     <h2>Say hello</h2>
     <p>Open M1K3. First run picks <strong>Mini</strong> — Apple's on-device model, already on your Mac, so there is nothing to download and nothing to sign in to. Ask it anything. Type, or hold the mic and talk; ending a spoken sentence on "please" hands it the floor.</p>
-    <p>After your first answer M1K3 offers the upgrade: <strong>Lil</strong> (Qwen 3, about 2.2 GB, downloaded once from Hugging Face) is the brain that fronts the conversation on every Mac; <strong>Big</strong> (Gemma 4 12B) is offered on 16 GB Macs and up, and reached by delegation for deep work. Both are a tap away in Settings any time, and <a href="/brains">how they score</a> is public.</p>
+    <p>After your first answer M1K3 offers the upgrade: <strong>Lil</strong> (Qwen3.5, about 3 GB, downloaded once from Hugging Face) is the brain that fronts the conversation on every Mac, and it reads images; <strong>Big</strong> (Gemma 4 12B) is offered on 16 GB Macs and up, and reached by delegation for deep work. Both are a tap away in Settings any time, and <a href="/brains">how they score</a> is public.</p>
     <div class="only-agent">
       <p>From a shell, the same first run: <code>open -a M1K3</code>. The brain choice is a click in the app, on purpose — a download of that size is the user's to start.</p>
     </div>
@@ -477,6 +477,8 @@ m1k3 ask "what can you do?"</pre></div>
      (AppEnvironment.webSearchAllowed), so the network FAQ (visible + JSON-LD, still byte-identical)
      says so instead of "off by default"; "Nothing leaves your Mac" (title, OG/twitter, CTA) became
      "Private by design" (ADR 0006). Meta copy names TestFlight, not the App Store, while the store
-     lookup returns nothing. Confidence 0.85. -->
+     lookup returns nothing. Confidence 0.85.
+     Review: Kev + claude-fable-5.1, 2026-10-09 — v1.1.0: Lil is Qwen3.5 (about 3 GB, reads images; #517) in the
+     HowTo step and the hello section; install.txt and llms-full.txt carry the same line. Confidence 0.9. -->
 </body>
 </html>

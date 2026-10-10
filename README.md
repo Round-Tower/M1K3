@@ -235,3 +235,7 @@ human-and-AI collaboration on the record.
      written before the rung shipped (first live generation 2026-09-15).
      Review: Kev + claude-fable-5.1, 2026-10-09 (PR #527 fold) — web search names the lookups it makes
      (Wikipedia, page fetches), so the clause matches the chat's egress answer. -->
+<!-- Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 (the v1.1.0 pass: the two
+     "1.0 build has no cloud path" sentences now describe PCC as the opt-in third crossing,
+     consent per conversation per ADR 0007; the MCP count of 18 was re-read off
+     M1K3MCPKit + M1K3BrainServe the same day). Prior: Unknown. -->
