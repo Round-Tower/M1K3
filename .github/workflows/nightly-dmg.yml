@@ -120,15 +120,17 @@ jobs:
         run: |
           set -euo pipefail
           probe() { xcrun --no-cache -sdk macosx metal --version >/dev/null 2>&1; }
-          # Installed-ness by OUTPUT, not exit status: `-showComponent` prints a
-          # "Build Version:" line only for an installed component (its exit code for
-          # the absent case is not pinned anywhere we trust).
+          # Installed-ness by OUTPUT, not exit status. Observed formats (run
+          # 38046028089, image 20261006): absent prints "Build Version: 27A266a" AND
+          # "Status: uninstalled"; present prints "Asset Path: …" and "Build Version:"
+          # (a local Mac). So the version line proves nothing — the Status line does.
           # Captured first, then grepped: `xcodebuild | grep -q` under pipefail can SIGPIPE
           # xcodebuild and report "not installed" on a match.
           installed() {
             local out
             out="$(xcodebuild -showComponent MetalToolchain 2>/dev/null || true)"
-            grep -qi 'build version' <<<"$out"
+            if grep -qi '^Status: *uninstalled' <<<"$out"; then return 1; fi
+            grep -qiE '^(Asset Path:|Status: *installed)' <<<"$out"
           }
           echo "::group::xcodebuild -showComponent MetalToolchain (raw)"
           xcodebuild -showComponent MetalToolchain 2>&1 || true
@@ -364,6 +366,10 @@ jobs:
         if: always() && steps.gate.outputs.configured == 'true'
         run: security delete-keychain "$KEYCHAIN" 2>/dev/null || true
 
+# Review: Kev + claude-fable-5.1, 2026-10-10 (Metal, 3) — run 38046028089 showed the real format: an
+# absent component prints "Build Version: 27A266a" plus "Status: uninstalled", so the version-line
+# grep read "installed" and skipped the download. `installed()` now keys on the Status line (or an
+# Asset Path line, the installed shape on a local Mac). Verify-on-dispatch.
 # Review: Kev + claude-fable-5.1, 2026-10-10 (#541 fold 2) — `installed()` captures `-showComponent`
 # before grepping (pipefail SIGPIPE), and the raw output is logged once for the first dispatch.
 # Review: Kev + claude-fable-5.1, 2026-10-10 (#541 fold) — the update path rewrites the release's
