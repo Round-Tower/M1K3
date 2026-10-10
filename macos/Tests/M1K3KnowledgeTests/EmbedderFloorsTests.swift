@@ -58,6 +58,14 @@ struct EmbedderFloorsTests {
         #expect(gemma.chunk > 0.548 && gemma.chunk < 0.779)
         #expect(gemma.edge >= gemma.chunk)
         #expect(gemma.dedupe > 0.886, "a reworded question scores 0.886 against its fact — not a twin")
+        // MEMSTAT probe classes under this embedder (docs/evals/2026-10-10-memstat-gemma.txt):
+        // contradictions ≤ 0.944 must SURVIVE (an eaten contradiction is a lost correction),
+        // restatements ≥ 0.955 must be eaten. The bar lives in that 0.011 gap; a re-measure
+        // that moves either side moves these numbers with it.
+        let contradictionMax: Float = 0.944
+        let restatementMin: Float = 0.955
+        #expect(gemma.dedupe > contradictionMax && gemma.dedupe <= restatementMin)
+        #expect(gemma.forgetSuggestion >= 0.6, "a Gemma near-miss is never suggested below the hard-delete bar")
         #expect(gemma.forgetSuggestion == gemma.memory)
     }
 
