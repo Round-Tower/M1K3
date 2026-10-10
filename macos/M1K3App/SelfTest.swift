@@ -701,7 +701,8 @@ enum SelfTest {
         let candidate = candidateEmbedder()
         let candidateIsDefault = candidate.fingerprint == MLXEmbeddingService().fingerprint
         emit("• absep: \(SeparationEvalFixtures.inDomain.count) in-domain + "
-            + "\(SeparationEvalFixtures.offDomain.count) off-domain pairs, bge-small-384 vs \(candidate.fingerprint)…")
+            + "\(SeparationEvalFixtures.offDomain.count) off-domain pairs, "
+            + "bge-small-384 vs \(candidate.fingerprint)…")
         do {
             // Old embedder stood up explicitly beside the new default — the init
             // params survived the default change precisely for this.
@@ -751,7 +752,8 @@ enum SelfTest {
     private static func runQueryStyleEval() async {
         let embedder = candidateEmbedder()
         emit("• keyeval: \(QueryStyleEvalFixtures.probes.count) probes + "
-            + "\(QueryStyleEvalFixtures.noise.count) noise pairs, bare vs instructed query arms, \(embedder.fingerprint)…")
+            + "\(QueryStyleEvalFixtures.noise.count) noise pairs, bare vs instructed query arms, "
+            + "\(embedder.fingerprint)…")
         do {
             let targetVectors = try await embedder.embedBatch(QueryStyleEvalFixtures.probes.map {
                 EmbeddingText.forChunk(title: $0.title, content: $0.content)

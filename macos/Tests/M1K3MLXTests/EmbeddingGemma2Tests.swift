@@ -159,7 +159,8 @@ struct EmbeddingGemma2Tests {
         #expect(MLXEmbeddingService.preset(named: "EG2")?.name == "mlx-community/embeddinggemma-2-8bit")
         #expect(MLXEmbeddingService.preset(named: "qwen")?.name == EmbedderRegistry.qwen3_embedding.name)
         #expect(MLXEmbeddingService.preset(named: "")?.name == EmbedderRegistry.qwen3_embedding.name)
-        #expect(MLXEmbeddingService.preset(named: "mlx-community/some-embedder-4bit")?.name == "mlx-community/some-embedder-4bit")
+        let hub = "mlx-community/some-embedder-4bit"
+        #expect(MLXEmbeddingService.preset(named: hub)?.name == hub)
         #expect(MLXEmbeddingService.preset(named: "nonsense") == nil)
     }
 
