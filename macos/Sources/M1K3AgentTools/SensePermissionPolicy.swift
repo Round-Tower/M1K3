@@ -18,6 +18,9 @@
 //  Signed: Kev + claude-opus-5.5, 2026-09-23, Confidence 0.9 (pure, red-first
 //  in SensePermissionPolicyTests; the dialogs themselves are verify-by-launch).
 //  Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#540 / #544 fold) — `settledValue(before:answer:)`: the value
+//  onboarding's Full door stores for a sense after its ceremony. The first cut wrote only the `false`
+//  branches, so Full never turned calendar or location on (the bot pass caught it). Confidence 0.9.
 //
 
 /// macOS's answer for one sense, reduced to what the switch needs.
@@ -52,5 +55,20 @@ public enum SensePermissionPolicy {
     /// The dialog closed with this status.
     public static func afterRequest(_ status: SensePermissionStatus) -> SensePermissionAction {
         status == .granted ? .keep : .revert
+    }
+
+    /// Onboarding's Full door switches a sense ON through the same two steps
+    /// as the pane, then STORES the outcome: `true` when macOS had already
+    /// granted it or grants it now, `false` when it is denied, dismissed, or
+    /// was never asked (`answer == nil` with a `.request` means the dialog
+    /// could not be shown).
+    public static func settledValue(before status: SensePermissionStatus, answer: SensePermissionStatus?) -> Bool {
+        switch onToggle(enabled: true, status: status) {
+        case .keep: return true
+        case .revert: return false
+        case .request:
+            guard let answer else { return false }
+            return afterRequest(answer) == .keep
+        }
     }
 }

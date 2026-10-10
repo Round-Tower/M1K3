@@ -59,6 +59,10 @@
 //  captions lane-honest (no PCC on DMG, no Voice). Re-run is a sheet, not a gate-key flip.
 //  Confidence 0.8 (flow logic tested; permission ceremony + sheet are verify-by-launch).
 //  Open: the issue's "Currently: Full / Private / Custom" line for re-run (slice 2).
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#544 bot pass) — the Full door's ceremony STORES each sense
+//  (`SensePermissionPolicy.settledValue`; the first cut only wrote the `false` branches, so Full never turned
+//  calendar or location on), and completion waits for it (`settling` disables the doors meanwhile) so the
+//  system dialogs fire over a live hello, never a dismissed one. Confidence 0.85.
 
 import M1K3AgentTools
 import M1K3Avatar
@@ -84,6 +88,8 @@ struct HelloView: View {
     @State private var phase: Phase = .hello
     @State private var userName = ""
     @State private var afm: AFMAvailability = .available
+    /// The Full door's permission ceremony is running: doors disabled, sheet held.
+    @State private var settling = false
     /// The wake-setup deck shown during both waits. Its completion rule (pure,
     /// pinned) owns the no-yank behaviour: an untouched deck auto-advances on
     /// ready exactly like the old spinner did; an engaged one waits for a tap.
@@ -357,19 +363,35 @@ struct HelloView: View {
         if prominent {
             Button { sayHello(experience: experience) } label: { label }
                 .buttonStyle(.glassProminent)
+                .disabled(settling)
         } else {
             Button { sayHello(experience: experience) } label: { label }
                 .buttonStyle(.bordered)
+                .disabled(settling)
         }
     }
 
     // MARK: - Actions
 
     private func sayHello(experience: OnboardingExperience = .fullExperience) {
+        guard !settling else { return }
         experience.apply(to: .standard)
-        if experience == .fullExperience {
-            Task { await settleFullPermissions() }
+        guard experience == .fullExperience else {
+            finishHello()
+            return
         }
+        // The ceremony is awaited BEFORE completion: the system dialogs fire
+        // over this hello (sheet or window), never over a dismissed one, and
+        // nothing races the name save or the brain pick.
+        settling = true
+        Task { @MainActor in
+            await settleFullPermissions()
+            settling = false
+            finishHello()
+        }
+    }
+
+    private func finishHello() {
         // Name first, brain second — the gate key flips in onComplete, and the
         // profile write must land before any window swap. On a re-run, rewrite
         // the profile's "Name:" line (not just seed it) so the system prompt
@@ -412,34 +434,32 @@ struct HelloView: View {
     }
 
     /// Run the three permission-required keys through real setters in
-    /// sequence so the system prompts fire during onboarding, not mid-chat.
-    /// A denial reverts that one key to false.
+    /// sequence so the system prompts fire during onboarding, not mid-chat,
+    /// and STORE each outcome: granted (before or now) → on, anything else → off.
     @MainActor
     private func settleFullPermissions() async {
-        // Calendar
-        switch SensePermissionPolicy.onToggle(enabled: true, status: ContextSenseAuth.calendarStatus) {
-        case .keep: break
-        case .revert:
-            UserDefaults.standard.set(false, forKey: AppEnvironment.contextCalendarEnabledKey)
-        case .request:
-            let answer = await ContextSenseAuth.requestCalendar()
-            if SensePermissionPolicy.afterRequest(answer) == .revert {
-                UserDefaults.standard.set(false, forKey: AppEnvironment.contextCalendarEnabledKey)
-            }
-        }
-        // Location
-        switch SensePermissionPolicy.onToggle(enabled: true, status: ContextSenseAuth.locationStatus) {
-        case .keep: break
-        case .revert:
-            UserDefaults.standard.set(false, forKey: AppEnvironment.contextLocationEnabledKey)
-        case .request:
-            let answer = await ContextSenseAuth.requestLocation()
-            if SensePermissionPolicy.afterRequest(answer) == .revert {
-                UserDefaults.standard.set(false, forKey: AppEnvironment.contextLocationEnabledKey)
-            }
-        }
-        // Heartbeat notifications
+        let calendar = await Self.settle(
+            status: ContextSenseAuth.calendarStatus, request: ContextSenseAuth.requestCalendar
+        )
+        UserDefaults.standard.set(calendar, forKey: AppEnvironment.contextCalendarEnabledKey)
+        let location = await Self.settle(
+            status: ContextSenseAuth.locationStatus, request: ContextSenseAuth.requestLocation
+        )
+        UserDefaults.standard.set(location, forKey: AppEnvironment.contextLocationEnabledKey)
+        // Heartbeat notifications: the setter stores the authorization answer itself.
         await env.setHeartbeatNotifications(true)
+    }
+
+    /// One sense through the pane's two steps, asking macOS only when the
+    /// policy says to; the stored value is the policy's, not this view's.
+    @MainActor
+    private static func settle(
+        status: SensePermissionStatus, request: @MainActor () async -> SensePermissionStatus
+    ) async -> Bool {
+        let answer: SensePermissionStatus? = if case .request = SensePermissionPolicy.onToggle(
+            enabled: true, status: status
+        ) { await request() } else { nil }
+        return SensePermissionPolicy.settledValue(before: status, answer: answer)
     }
 
     private func openSystemSettings() {

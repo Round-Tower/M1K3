@@ -93,6 +93,8 @@
 //  show travels WITH the list (`CallsLoad.note`), so a cancelled older load can't leave a stale note;
 //  the cause is a `.notice` breadcrumb with the error's type only, never a payload. Confidence 0.8 (the store half is TDD'd; the screen is verify-by-launch).
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `photoMemory` (caption memory) + the delete-cascade wiring.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#544 fold) — `saveFirstRunName(rewriteProfile:)` applies the
+//  pure `UserProfileText.rewritingName` (M1K3Inference) instead of an inline string edit.
 //  Compile-checked; verify-by-launch owed. Fold: `mcpResponder`, the ask responder that withholds Photos.
 
 import AppKit
@@ -2332,18 +2334,16 @@ extension AppEnvironment {
     func saveFirstRunName(_ name: String, rewriteProfile: Bool = false) {
         let trimmed = name.trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
-        let oldName = UserDefaults.standard.string(forKey: Self.userDisplayNameKey)
         UserDefaults.standard.set(trimmed, forKey: Self.userDisplayNameKey)
         let existing = (try? store.meta(key: Self.userProfileMetaKey)) ?? nil
         if existing?.isEmpty != false {
             saveUserProfile("Name: \(trimmed).")
-        } else if rewriteProfile, trimmed != oldName, let existing {
-            let lines = existing.components(separatedBy: "\n")
-            if let first = lines.first, first.hasPrefix("Name: ") {
-                var updated = lines
-                updated[0] = "Name: \(trimmed)."
-                saveUserProfile(updated.joined(separator: "\n"))
-            }
+        } else if rewriteProfile, let existing,
+                  let updated = UserProfileText.rewritingName(trimmed, in: existing)
+        {
+            // Compared against the PROFILE's own line, not the display-name
+            // default — the two can drift when "About you" was edited.
+            saveUserProfile(updated)
         }
     }
 
