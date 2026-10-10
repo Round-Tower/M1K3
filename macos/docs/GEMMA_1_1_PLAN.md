@@ -120,11 +120,22 @@ Goal: swap the embedder; prove it on retrieval before any multimodal work.
 - [x] `MLXEmbeddingService.embeddingGemma2` (`mlx-community/embeddinggemma-2-8bit`) at **dimension 512** (MRL); fingerprint `mlx/mlx-community/embeddinggemma-2-8bit/d512/<kernel>/prompt-v1` (the Gemma document prefix lives in stored vectors, so it carries a prompt version) triggers the existing re-index. Default stays Qwen until the A/B below. **Unpinned until then:** `WeightIntegrityScan.enforce` lets an unpinned repo through unverified and the load floats on `main` — `pin_weights.py` it with the default switch.
 - [x] Prompts: `EmbeddingText.forGemmaQuery` / `forGemmaDocument` (card-verbatim, BOTH sides prefixed), picked by `MLXEmbeddingService.prompting`; `embedPrompted` is the raw path.
 - [x] **Reference check (in-app):** `M1K3_SELFTEST_EG2REF=1` with the fixture on stdin (`EmbeddingGemma2RefStage`) — tokens, cos768, cos512 and the production composition against mlx-vlm's vectors, pass at ≥ 0.999. **2026-10-10 PASS** (`docs/evals/2026-10-10-embeddinggemma2-reference.txt`): tokens 12/12, min cosine 0.99985 at 768 / 512 / composed, relevance order holds, embed median 28 ms, warm load 6.4 s (the 1.2 GB file is read whole), ~1 min 1.5 GB download cold.
-- [ ] Re-measure `EmbedderFloors` (chunk / memory / edge) on the existing `*EvalFixtures.swift`. **Thresholds → `challenger` first** (carry-forward).
-- [ ] A/B: retrieval fixtures + `grounded-Q` ChatEval with each embedder; RAM and embed throughput on a large knowledge store.
+- [x] **Retrieval A/B, 2026-10-10** (`M1K3_SELFTEST_EMBEDDER=gemma|qwen`, the same MEMEVAL / ABSEP / KEYEVAL fixtures; `docs/evals/2026-10-10-retrieval-evals-{gemma,qwen}.txt`). Production arms (each embedder's own query composition):
+
+  | family | Gemma 2 (8-bit, 512) | Qwen3-Embedding (4-bit DWQ, 512) |
+  |---|---|---|
+  | memory: pos min / neg max / margin | 0.707 / 0.628 / **0.079** | 0.436 / 0.259 / **0.177** |
+  | chunks: in min / off max / margin | 0.779 / 0.548 / **0.231** | 0.509 / 0.231 / **0.278** |
+  | keyword probes: pos min / noise max / margin | 0.700 / 0.643 / **0.057** | 0.421 / 0.201 / **0.219** |
+  | recall at a floor inside the dead zone | 22/22 · 6/6 · 10/10 | 22/22 · 6/6 · 10/10 |
+  | embed, warm | ~28 ms | ~16 ms |
+
+  Gemma's cone is compressed (noise at 0.5–0.65, positives at 0.7–0.9): clean separation on every family, but a narrower dead zone on every family, and slower (head widths 256/512 miss mlx's fused attention kernel). **It does not clear the gate below.** Its floors, if ever used, would be roughly memory 0.67 / chunk 0.66 / keyword 0.67 — a different cone, not a re-tune of Qwen's.
+- [ ] Re-measure `EmbedderFloors` for Gemma only if it is adopted (per-query normalisation is the lever that would widen its dead zones). **Thresholds → `challenger` first** (carry-forward).
+- [ ] `grounded-Q` ChatEval with each embedder; RAM and embed throughput on a large knowledge store — only worth running if the margins above are overruled.
 - [ ] Pin weights; default switch only if it wins. Users get the re-index on next launch (deferred under heat already).
 
-Gate: retrieval ≥ Qwen3-Embedding on every fixture family, re-index verified on a real store, floors signed.
+Gate: retrieval ≥ Qwen3-Embedding on every fixture family, re-index verified on a real store, floors signed. **2026-10-10: not met on any family.** Proposed verdict (Kev's call): Qwen3-Embedding stays the text retriever for 1.1; EmbeddingGemma 2 is kept as the multimodal embedder for Stream D (one 768-d space for text ↔ image ↔ audio), which changes D's shape to a second index beside Qwen's rather than a replacement.
 
 ### Stream D — Multimodal memory (the 1.1 headline, after C)
 
