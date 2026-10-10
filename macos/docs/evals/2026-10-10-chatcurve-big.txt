@@ -1,0 +1,120 @@
+# chat-curve big — f2f2c753 (eval/1-1-night), Release build 2026-10-10 01:07, AC power, M1K3_SELFTEST_CHATCURVE=big, headless direct exec, live app quit.
+# Measures per-message rendered tokens, tool-session reuse, prefill and peak RSS over the fixed 8-message script (#522).
+# Read with care: prefilled/prefill/gens read as cumulative since launch (prefilled tracks the running sum of rendered; gens 2..9), reuse=0 on Big.
+• chatcurve: mlx-community/gemma-4-12B-it-4bit, 8 scripted messages…
+chatcurve #1 done (443 chars)
+chatcurve #2 done (1489 chars)
+chatcurve #3 done (1434 chars)
+chatcurve #4 done (1654 chars)
+chatcurve #5 done (827 chars)
+chatcurve #6 done (670 chars)
+chatcurve #7 done (318 chars)
+chatcurve #8 done (389 chars)
+chatcurve #1 rendered=3051tok reuse=0 prefilled=3071tok prefill=12825ms gens=2 rss=7312MB
+chatcurve #2 rendered=3223tok reuse=0 prefilled=6294tok prefill=26718ms gens=3 rss=7312MB
+chatcurve #3 rendered=3597tok reuse=0 prefilled=9891tok prefill=42224ms gens=4 rss=7312MB
+chatcurve #4 rendered=3946tok reuse=0 prefilled=13837tok prefill=58913ms gens=5 rss=7312MB
+chatcurve #5 rendered=4303tok reuse=0 prefilled=18140tok prefill=77060ms gens=6 rss=7312MB
+chatcurve #6 rendered=4519tok reuse=0 prefilled=22659tok prefill=96509ms gens=7 rss=7312MB
+chatcurve #7 rendered=4680tok reuse=0 prefilled=27339tok prefill=116646ms gens=8 rss=7312MB
+chatcurve #8 rendered=4776tok reuse=0 prefilled=32115tok prefill=136825ms gens=9 rss=7312MB
+chatcurve slope [mlx-community/gemma-4-12B-it-4bit]: 267.7 rendered tok/msg, 17841.0 prefill ms/msg
+-----BEGIN CHATCURVE JSON-----
+{
+  "modelID" : "mlx-community\/gemma-4-12B-it-4bit",
+  "samples" : [
+    {
+      "answerChars" : 443,
+      "generations" : 2,
+      "index" : 0,
+      "peakRSSMB" : 7312,
+      "prefillMS" : 12825,
+      "promptTokens" : 3071,
+      "question" : "Hi! How's your day going?",
+      "renderedTokens" : 3051,
+      "reusedTokens" : 0
+    },
+    {
+      "answerChars" : 1489,
+      "generations" : 3,
+      "index" : 1,
+      "peakRSSMB" : 7312,
+      "prefillMS" : 26718,
+      "promptTokens" : 6294,
+      "question" : "What's a good way to start learning the guitar?",
+      "renderedTokens" : 3223,
+      "reusedTokens" : 0
+    },
+    {
+      "answerChars" : 1434,
+      "generations" : 4,
+      "index" : 2,
+      "peakRSSMB" : 7312,
+      "prefillMS" : 42224,
+      "promptTokens" : 9891,
+      "question" : "I only have twenty minutes a day. Is that enough?",
+      "renderedTokens" : 3597,
+      "reusedTokens" : 0
+    },
+    {
+      "answerChars" : 1654,
+      "generations" : 5,
+      "index" : 3,
+      "peakRSSMB" : 7312,
+      "prefillMS" : 58913,
+      "promptTokens" : 13837,
+      "question" : "Which should I practise first, chords or scales?",
+      "renderedTokens" : 3946,
+      "reusedTokens" : 0
+    },
+    {
+      "answerChars" : 827,
+      "generations" : 6,
+      "index" : 4,
+      "peakRSSMB" : 7312,
+      "prefillMS" : 77060,
+      "promptTokens" : 18140,
+      "question" : "Funny, my neighbour plays the fiddle.",
+      "renderedTokens" : 4303,
+      "reusedTokens" : 0
+    },
+    {
+      "answerChars" : 670,
+      "generations" : 7,
+      "index" : 5,
+      "peakRSSMB" : 7312,
+      "prefillMS" : 96509,
+      "promptTokens" : 22659,
+      "question" : "Can you remind me what we said about practice time?",
+      "renderedTokens" : 4519,
+      "reusedTokens" : 0
+    },
+    {
+      "answerChars" : 318,
+      "generations" : 8,
+      "index" : 6,
+      "peakRSSMB" : 7312,
+      "prefillMS" : 116646,
+      "promptTokens" : 27339,
+      "question" : "Give me a tiny weekly plan in two lines.",
+      "renderedTokens" : 4680,
+      "reusedTokens" : 0
+    },
+    {
+      "answerChars" : 389,
+      "generations" : 9,
+      "index" : 7,
+      "peakRSSMB" : 7312,
+      "prefillMS" : 136825,
+      "promptTokens" : 32115,
+      "question" : "Thanks. Sum up our whole chat in one sentence.",
+      "renderedTokens" : 4776,
+      "reusedTokens" : 0
+    }
+  ],
+  "summary" : {
+    "prefillMSPerMessage" : 17840.97619047619,
+    "renderedTokensPerMessage" : 267.6547619047619
+  }
+}
+-----END CHATCURVE JSON-----
