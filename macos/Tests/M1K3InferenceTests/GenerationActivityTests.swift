@@ -128,17 +128,25 @@ struct GenerationActivityTests {
     func switchParity() throws {
         let suite = "GenerationActivityTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
+        // The argument domain is process-wide: put back what was there, not an empty one.
+        let priorArguments = defaults.volatileDomain(forName: UserDefaults.argumentDomain)
         defer {
             defaults.removePersistentDomain(forName: suite)
-            defaults.setVolatileDomain([:], forName: UserDefaults.argumentDomain)
+            defaults.setVolatileDomain(priorArguments, forName: UserDefaults.argumentDomain)
         }
         #expect(GenerationActivity.isEnabled(in: defaults))
         for off in ["NO", "false", "0"] {
-            defaults.setVolatileDomain([GenerationActivity.defaultsKey: off], forName: UserDefaults.argumentDomain)
+            defaults.setVolatileDomain(
+                priorArguments.merging([GenerationActivity.defaultsKey: off]) { _, new in new },
+                forName: UserDefaults.argumentDomain
+            )
             #expect(!GenerationActivity.isEnabled(in: defaults), "\(off)")
         }
         for on in ["YES", "true", "1"] {
-            defaults.setVolatileDomain([GenerationActivity.defaultsKey: on], forName: UserDefaults.argumentDomain)
+            defaults.setVolatileDomain(
+                priorArguments.merging([GenerationActivity.defaultsKey: on]) { _, new in new },
+                forName: UserDefaults.argumentDomain
+            )
             #expect(GenerationActivity.isEnabled(in: defaults), "\(on)")
         }
     }

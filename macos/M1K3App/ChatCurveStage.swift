@@ -74,16 +74,20 @@ enum ChatCurveStage {
             .map { ChatCurveLogEntry(date: $0.date, message: $0.composedMessage) }
     }
 
-    /// This turn's figures: poll the store until its generation line has landed (entries
-    /// arrive a beat after the call), capped so a turn that logged nothing still reports nil.
+    /// This turn's figures: poll the store until its generation lines have landed (entries
+    /// arrive a beat after the call, and a tool turn logs one per iteration), so stop only
+    /// once the count has held across two polls; capped so a turn that logged nothing still
+    /// reports nil.
     private static func foldTurn(since started: Date) async -> ChatCurveFolded {
         var folded = ChatCurveLogParser.fold([])
         for _ in 0 ..< 10 {
             try? await Task.sleep(for: .milliseconds(500))
-            folded = ChatCurveLogParser.fold(
+            let next = ChatCurveLogParser.fold(
                 ChatCurveLogParser.turnLines(metricEntries(since: started), since: started, label: providerLabel)
             )
-            if folded.generations > 0 { break }
+            let stable = next.generations > 0 && next.generations == folded.generations
+            folded = next
+            if stable { break }
         }
         return folded
     }

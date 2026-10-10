@@ -82,6 +82,8 @@ public final class GenerationActivity: Sendable {
     public static func isEnabled(in defaults: UserDefaults) -> Bool {
         guard let raw = defaults.volatileDomain(forName: UserDefaults.argumentDomain)[defaultsKey] else { return true }
         if let flag = raw as? Bool { return flag }
+        // A string reads as `bool(forKey:)` did: "NO"/"false"/"0" off, and any other word ("foo")
+        // off too. Only a value that is neither Bool nor string keeps the hold on.
         return (raw as? NSString)?.boolValue ?? true
     }
 
