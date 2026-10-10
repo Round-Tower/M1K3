@@ -244,6 +244,14 @@ our pin (the decoder never emits `.reasoning`) with its inverse pinned in step 2
 step 1's honest decline (the prompt shape trips AFM's guardrail, not the file hand-off); #509's cheap
 half done (per-step RAM snapshot, `seedIsExact`, the "flat except image turns" line). Confidence 0.85 —
 every tick is code- or test-pinned; the per-step RAM curve is still verify-by-launch.
+Review: Kev + claude-fable-5.1, 2026-10-10 00:30–02:00 — the owed 1.1 eval queue ran on a Release build of
+master f2f2c753 (all six 1.1 PRs landed 2026-10-09): Mini vision 14/16 (was 1/16; #526's persona-free, tool-free
+image turn), Lil grounded-Q 21/24 + code-gen 29/30 on the honest scorer (was 18/24, 24/30), Lil tool-use 60/65
+with `tool-recent-busiest` 5/5 (was ~10/16), Big grounded-Q 19/24 with no "hasn't happened yet" wording in 24
+answers (#488), and the display-off A/B: **App Nap IS the stall mechanism** — hold on 28.5 → 28 tok/s, hold off
+29 → 4 tok/s with the display asleep. No regression in any cell. Chat-curve ran on both brains but its
+prefill columns read cumulative since launch (ChatCurveStage's since-date fold) — fix before the slope feeds the
+checkpoint decision. Files: `docs/evals/2026-10-10-*`. Confidence 0.85 (×1 on Mini, ×3/×5 on the rest).
 Review: Kev + claude-fable-5.1, 2026-10-09 (2) — Mini sees: the seven-arm bisect found the shape AFM vision
 accepts (neutral, tool-free, steer) and it ships as `AFMToolPrompt.visionTurn`; the decline is the fallback.
 Confidence 0.75 — one fixture on one device reads cleanly; the Mini vision baseline re-run is the proof.
@@ -463,7 +471,7 @@ and GPU alike (decode 35 → 0–3 tok/s, prefill 3.4 s → 24–55 s; prompts f
 | 08:17:37 display on | E4B back at 37 tok/s at 08:17:47 |
 
 The incumbent ran 23:59–00:32 entirely with the display on. The **trigger** is confirmed; the
-**mechanism** is not: App Nap fits, and so does display-off GPU/WindowServer throttling (`caffeinate
+**mechanism** — RESOLVED 2026-10-10 by the display-off A/B (`docs/evals/2026-10-10-display-off-ab.txt`): App Nap. With the hold off, Lil fell 29 → 4 tok/s once the display slept; with it on, 28.5 → 28. The earlier read stands below for the record: App Nap fits, and so does display-off GPU/WindowServer throttling (`caffeinate
 -is` already held the idle-sleep assertion all night, so App Nap is the only lever the app holds).
 **User-facing too, if it's App Nap:** the app generating with the display off (an agent's overnight
 `ask_m1k3`, a long Big answer after the user walks away) can crawl the same way. Evals: `caffeinate -d`
@@ -514,7 +522,7 @@ Fix list, in order:
 
 - **#498 landed** (`e3adeced`): the bake-off scorecards, the stall write-up, the App-Nap-only
   `GenerationActivity` hold around every MLX generation, and `caffeinate -dis -w <pid>` in
-  `run_chateval --direct`. The display-off A/B that decides the App Nap mechanism is still owed.
+  `run_chateval --direct`. The display-off A/B ran 2026-10-10: App Nap confirmed, the hold works (see the 2026-10-10 Review).
 - **#499 LANDED** (`bd1ec024`, Kev: "Land it… we'll leave the queue alone. We'll check voice, and
   screen off after") **— WhisperKit 1.1 + swift-transformers 1.3.4.** The weekly freshness issue is
   live: #500. Gemma persona tokenize 1,183 → 8 ms,
@@ -702,7 +710,7 @@ not AFM's ceiling.
 - [x] The bake-off proper (overnight 2026-10-06/07) — text is in; gemma latency/RAM void (stall).
 - [x] **Re-run the gemma columns once #499 lands** — done 2026-10-07 on `bc2dc9bd`: E4B 292/324, 9.0 s,
       **10.3 GB own peak confirmed** (twice Qwen3.5's 4.8 GB).
-- [ ] **Qwen3.5 cross-turn checkpoint:** adopt an exact checkpoint, plus its state, into
+- [~] **Qwen3.5 cross-turn checkpoint:** the chat-curve stage ran 2026-10-10 (Lil: reuse 2,467 every message, RSS flat 3.6 GB; Big: reuse 0, 3,071 tokens prefilled in 12.8 s on message 1) but its prefill columns are cumulative — fix ChatCurveStage, re-run, then decide. Adopt an exact checkpoint, plus its state, into
       ConversationTailCache, cut at the end of the user turn so the next render extends it. Cap it,
       since it is full-precision. Measure a scripted 6–8-message chat's prefill curve FIRST.
 - [ ] **Persona: the honest privacy answer** — web search sends queries to DuckDuckGo; say so.
