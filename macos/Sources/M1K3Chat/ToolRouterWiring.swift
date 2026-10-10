@@ -42,6 +42,7 @@
 //  that the head never fired. Confidence 0.85 (the cascade side is pinned; the eval wiring is by launch).
 //  Review: Kev + claude-opus-5-5, 2026-10-10 — each flag reader takes `whenUnset:` (an explicit setting still
 //  wins), so a shell picks the default: the Mac turns them on after the 10-10 arm, iOS keeps them off.
+//  Review: Kev + claude-opus-5-5, 2026-10-10 — `route`'s doc no longer calls `allTiers` unmeasured.
 //
 
 import Foundation
@@ -120,7 +121,8 @@ public enum ToolRouterWiring {
     /// its voice and chips); reversed the same day on evidence: with a tool result in the
     /// prompt the standard persona narrated 12 of 39 answers in the third person, Mini's
     /// own 0 of 100, and it's faster. Mini's synthesised tool answers always used this one.
-    /// `allTiers` gives a brain that isn't Mini the route too (unmeasured; flagged off).
+    /// `allTiers` gives a brain that isn't Mini the route too: measured 2026-10-10 (Lil 38/48 → 48/48
+    /// tool-use at half the latency, Big 42.6 s → 14.7 s), on for the Mac, off on iOS.
     public static func route(
         provider: any InferenceProvider, enabled: Bool, dispatch: Bool = false,
         groupRouter: Bool = false, allTiers: Bool = false, chain: Bool = false
