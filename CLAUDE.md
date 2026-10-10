@@ -29,7 +29,8 @@ Anything a cold session needs on turn one belongs below, not there.
 ## Standing carry-forwards
 - **Landing a PR:** `macos/tools/ci/land.sh <PR> [--passes N]` gates on
   `pr_watch.py` (required CI green on the head sha, review passes read against
-  that head), squash-merges by sha, verifies `state`+`mergedAt`. **One pass is
+  that head, each owed pass ending `VERDICT: APPROVE @ <full 40-char head sha>`;
+  a short sha refuses), squash-merges by sha, verifies `state`+`mergedAt`. **One pass is
   the default, whatever the size** (2026-10-04 ruling — PR size is free, rounds
   are the cost): the auto bot pass fires on Swift, the manifest, `project.yml`,
   `macos/tools/**` and the workflows; a docs-only PR gets no auto pass, so summon
@@ -47,8 +48,9 @@ Anything a cold session needs on turn one belongs below, not there.
   ONCE so both read the same head, and fold both in one commit. Fastlane,
   `.entitlements` and `.xcprivacy` sit outside the auto pass's paths, so there
   "2" means two summons. Trivial head (comment fold, clean master merge on a
-  passed head): `--passes 0 --why "trivial head"` on a risk diff, bare
-  `--passes 0` otherwise. `land.sh` never waits: pending CI exits 2 and merges
+  passed head): `--passes 0 --why "trivial head: <what>"` on ANY diff. Since
+  #550 a bare `--passes 0` exits 5, risk surface or not, and a pass already on
+  the head must still approve. `land.sh` never waits: pending CI exits 2 and merges
   nothing — run `pr_watch.py <PR>` first.
 - **PR granularity (2026-09-30 ruling):** one PR per stream of work per day;
   same-day small fixes ride TOGETHER (a token strip, a scorer check, a tool
@@ -212,4 +214,8 @@ Review: Kev + claude-fable-5.1, 2026-10-10 (/debrief) — the one-embedder rulin
 default, every cosine bar through EmbedderFloors for the vectors' space, the dedupe gap) and the
 verify-by-launch limits that cost an afternoon (#544: the harness leaves UserDefaults live; AX press
 does not fire SwiftUI buttons). Confidence 0.85.
+Review: Kev + claude-opus-5.5, 2026-10-10 — the landing carry-forward after #550. A bare `--passes 0`
+now exits 5 on any diff; pr_watch's own Review (5) flagged "bare `--passes 0` otherwise" as stale.
+The owed passes must also end `VERDICT: APPROVE @ <full 40-char head sha>`: Kev's full-sha call,
+since a 7-char prefix can be ground to match a new head. Confidence 0.85.
 -->
