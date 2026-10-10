@@ -18,6 +18,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — an App Store section with the manual Rate M1K3… door.
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings-screen pass: section headers are
 //  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
+//  Review: Kev + claude-opus-4-6, 2026-10-10 — #540: re-run is a sheet (non-destructive),
+//  no gate-key flip — window/session/menu bar stay alive. Confidence 0.85.
 
 import AppKit
 import M1K3Inference
@@ -102,24 +104,11 @@ struct GeneralSettingsPane: View {
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
-        // Destructive re-run confirm, hoisted off the leaf Button (Startup section)
-        // so it presents reliably — a confirmationDialog on a Button inside a Form
-        // can silently fail to show on macOS, and this gate guards a full reset.
-        .confirmationDialog(
-            "Re-run the first-run setup?",
-            isPresented: $showResetOnboarding,
-            titleVisibility: .visible
-        ) {
-            Button("Re-run onboarding", role: .destructive) {
-                // The one-screen hello again — NOT the brain-only re-pick.
-                // Honest to the message below: a blank name won't clear the
-                // saved profile, and a non-Mini brain is kept as-is.
-                UserDefaults.standard.set(false, forKey: M1K3App.onboardingStartAtBrainKey)
-                UserDefaults.standard.set(false, forKey: AppEnvironment.hasChosenBrainKey)
-            }
-        } message: {
-            Text("Shows the first-run hello again. "
-                + "Your saved profile, brain and downloaded models are kept.")
+        // Non-destructive re-run: a sheet over the current content. No gate
+        // keys are flipped — the window, the session and the menu bar stay alive.
+        .sheet(isPresented: $showResetOnboarding) {
+            HelloView(onComplete: { showResetOnboarding = false }, isRerun: true)
+                .environment(env)
         }
         // Re-read the live login-item status each time Settings opens, so a grant
         // the user just made in System Settings (which we can't observe) is
@@ -151,11 +140,7 @@ struct GeneralSettingsPane: View {
                     let hidesDock = StartupVisibility(menuBarOnly: on).hidesDockIcon
                     NSApp.setActivationPolicy(hidesDock ? .accessory : .regular)
                 }
-            // Action only — the destructive confirm is hoisted onto the Form (see
-            // `body`) so it presents reliably; a confirmationDialog on a leaf Button
-            // inside a Form can silently fail to show on macOS, and this gate guards
-            // a full onboarding reset.
-            Button("Re-run onboarding…", role: .destructive) { showResetOnboarding = true }
+            Button("Re-run onboarding…") { showResetOnboarding = true }
                 .buttonStyle(.glass)
         } header: {
             SettingsHeader("Startup", systemImage: "power")

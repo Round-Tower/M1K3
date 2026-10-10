@@ -93,6 +93,8 @@
 //  show travels WITH the list (`CallsLoad.note`), so a cancelled older load can't leave a stale note;
 //  the cause is a `.notice` breadcrumb with the error's type only, never a payload. Confidence 0.8 (the store half is TDD'd; the screen is verify-by-launch).
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `photoMemory` (caption memory) + the delete-cascade wiring.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#544 fold) — `saveFirstRunName(rewriteProfile:)` applies the
+//  pure `UserProfileText.rewritingName` (M1K3Inference) instead of an inline string edit.
 //  Compile-checked; verify-by-launch owed. Fold: `mcpResponder`, the ask responder that withholds Photos.
 
 import AppKit
@@ -2326,13 +2328,24 @@ extension AppEnvironment {
     /// - the persona profile blob is seeded ONLY when no profile exists yet — a
     ///   re-run overwrite would destroy notes the user added in Settings
     ///   ("About you" owns the blob after first run).
-    func saveFirstRunName(_ name: String) {
-        let trimmed = name.trimmingCharacters(in: .whitespaces)
+    ///
+    /// On a re-run (`rewriteProfile: true`), also rewrite the profile's
+    /// "Name: X." line so the system prompt stays in sync with the greeting.
+    func saveFirstRunName(_ name: String, rewriteProfile: Bool = false) {
+        // One line, like the profile's Name line (a pasted newline flattens).
+        let trimmed = name.components(separatedBy: .newlines).joined(separator: " ")
+            .trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
         UserDefaults.standard.set(trimmed, forKey: Self.userDisplayNameKey)
         let existing = (try? store.meta(key: Self.userProfileMetaKey)) ?? nil
         if existing?.isEmpty != false {
             saveUserProfile("Name: \(trimmed).")
+        } else if rewriteProfile, let existing,
+                  let updated = UserProfileText.rewritingName(trimmed, in: existing)
+        {
+            // Compared against the PROFILE's own line, not the display-name
+            // default — the two can drift when "About you" was edited.
+            saveUserProfile(updated)
         }
     }
 
