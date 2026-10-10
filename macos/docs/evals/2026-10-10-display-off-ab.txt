@@ -1,0 +1,21 @@
+# display-off A/B — macos/tools/perf/display_off_ab.sh, first real run (2026-10-10 01:10–01:49)
+# Debug build of f2f2c753 (+ docs-only eval commits, stamp 8fde6758), AC power, live app quit, Kev away (HID idle > 4 h).
+# Brain lil (Qwen3.5-4B-MLX-4bit), kinds open-chat,reasoning,code-gen, repeats 3. Display forced off 30 s after launch per arm.
+# Measures decode tok/s (MLXBrainProvider's "@Ntok/s" .notice line) before vs after display-off, hold ON (arm A) vs
+# hold OFF (arm B, M1K3 -generationActivity NO).
+#
+# The script's own verdict did not print: arm B exceeded MAX_WAIT (1500 s) and the script died (exit 2) before the
+# table, and its awk parse drops the last digit of "@NNtok/s" (substr length RLENGTH-7; should be RLENGTH-6), so
+# A.pre/A.post read "2". The table below is re-derived from the unified log with the right parse, Qwen3.5 lines only.
+# Script work dir: $TMPDIR/display_off_ab.15019 (A.out/B.out transcripts, A.assert/B.assert).
+
+                              A: hold ON      B: hold OFF
+decode tok/s before off       28.5 (n=2)      29 (n=3)
+decode tok/s after off        28   (n=69)     4  (n=20)
+after / before                0.98            0.14
+after-off range               27..29          3..4
+seconds display was off       ~750 (run finished)   ~1470 (killed at the 1500 s cap, 25/69 trials done)
+assertion snapshots w/ M1K3   0               0   (pmset -g assertions never named M1K3 in either arm)
+
+read: A holds & B collapses -> App Nap is the mechanism; the GenerationActivity hold is the fix (per the script's rubric).
+arm A trials: 69 of 69 completed in ~13 min; arm B: 25 of 69 in 25 min, trial latencies 20–470 s, two > the 120 s ceiling.
