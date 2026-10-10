@@ -411,7 +411,7 @@ def test_kind_rows_carry_the_think_phase_medians():
                 "checks": [{"name": "non-empty", "outcome": "pass"}]}
     old = {"fixtureID": "c", "kind": "reasoning", "latencyMS": 9, "checks": [{"name": "non-empty", "outcome": "pass"}]}
     rows = rc.kind_rows([thought, thought2, old])
-    assert rows[0]["think_tokens"] == 300 and rows[0]["think_ms"] == 6000, "median over the trials that recorded it"
+    assert rows[0]["think_tokens"] == 200 and rows[0]["think_ms"] == 4000, "lower-middle median (Swift's rule) over the trials that recorded it"
     table = rc.kind_table(rows)
-    assert "300" in table and "6000" in table
+    assert "200" in table and "4000" in table
 

@@ -35,19 +35,37 @@ struct ThinkPhaseTests {
     @Test("the clock spans first token to first non-blank answer token, nil without a block")
     func clock() {
         var c = ThinkPhaseClock()
-        c.feed("<think>", at: .seconds(1))
-        c.feed("thinking…", at: .seconds(2))
+        var folded = "<think>"
+        c.feed(transcript: folded, at: .seconds(1))
+        folded += "thinking…"
+        c.feed(transcript: folded, at: .seconds(2))
         #expect(c.thinkMS == nil, "no answer yet")
-        c.feed("</think>\n", at: .seconds(3))
+        folded += "</think>\n"
+        c.feed(transcript: folded, at: .seconds(3))
         #expect(c.thinkMS == nil, "whitespace is not an answer")
-        c.feed("Yes", at: .milliseconds(3500))
+        folded += "Yes"
+        c.feed(transcript: folded, at: .milliseconds(3500))
         #expect(c.thinkMS == 2500)
-        c.feed("more", at: .seconds(9))
+        c.feed(transcript: folded + "more", at: .seconds(9))
         #expect(c.thinkMS == 2500, "fixed once the answer started")
 
         var plain = ThinkPhaseClock()
-        plain.feed("Hello", at: .seconds(1))
+        plain.feed(transcript: "Hello", at: .seconds(1))
         #expect(plain.thinkMS == nil, "nothing was thought")
+    }
+
+    @Test("the matrix cell carries ~think tokens only when a trial recorded a block")
+    func reportCell() {
+        let thought = ChatEvalScore(
+            fixtureID: "a", kind: .reasoning, checks: [EvalCheck(name: "non-empty", outcome: .pass)],
+            latencyMS: 100, thinkChars: 800, thinkMS: 4000
+        )
+        let plain = ChatEvalScore(
+            fixtureID: "b", kind: .openChat, checks: [EvalCheck(name: "non-empty", outcome: .pass)], latencyMS: 50
+        )
+        let out = ChatEvalReport.matrix([ChatEvalReport.BrainRun(brainID: "lil", scores: [thought, plain])])
+        #expect(out.contains("1/1 100ms ~200tk"), "reasoning: 800 chars ≈ 200 tokens")
+        #expect(out.contains("1/1 50ms") && !out.contains("50ms ~"), "open-chat: no block, no suffix")
     }
 
     @Test("steer arms parse from the env, case-folded; unknown is the baseline")

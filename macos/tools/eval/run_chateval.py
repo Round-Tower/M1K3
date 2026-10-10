@@ -352,10 +352,11 @@ def _latency_only(score: dict) -> bool:
 
 
 def _median(values: list[int]) -> int | None:
+    """The lower middle for an even count — the same rule as Swift's `medianOf`, so both reports agree."""
     if not values:
         return None
     ordered = sorted(values)
-    return ordered[len(ordered) // 2]
+    return ordered[(len(ordered) - 1) // 2]
 
 
 def kind_rows(scores: list[dict]) -> list[dict]:

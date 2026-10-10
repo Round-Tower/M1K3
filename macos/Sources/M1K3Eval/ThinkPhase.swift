@@ -55,9 +55,11 @@ public enum ThinkPhase {
     }
 }
 
-/// Times the think phase off a live stream: feed every chunk with the clock's
-/// now; `thinkMS` is the span from the first token to the first non-blank
-/// answer token (nil until an answer token lands, or when there was no block).
+/// Times the think phase off a live stream: feed the FOLDED transcript so far
+/// (`StreamFold` output — correct for both delta and cumulative-snapshot
+/// providers) with the clock's now; `thinkMS` is the span from the first
+/// token to the first non-blank answer token (nil until an answer token
+/// lands, or when there was no block).
 public struct ThinkPhaseClock: Sendable {
     private var firstToken: Duration?
     private var answerStart: Duration?
@@ -67,10 +69,10 @@ public struct ThinkPhaseClock: Sendable {
 
     public init() {}
 
-    public mutating func feed(_ chunk: String, at now: Duration) {
+    public mutating func feed(transcript: String, at now: Duration) {
         guard answerStart == nil else { return }
         if firstToken == nil { firstToken = now }
-        text += chunk
+        text = transcript
         if !sawOpen, text.contains(ThinkPhase.openTag) { sawOpen = true }
         if sawOpen, !sawClose, text.contains(ThinkPhase.closeTag) { sawClose = true }
         let answerSoFar: Substring

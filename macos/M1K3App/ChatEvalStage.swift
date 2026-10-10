@@ -389,8 +389,8 @@ enum ChatEvalStage {
                 // cumulative provider (AFM, PCC) yields snapshots — `+=` would score
                 // "HHeHel…". Same fold the app's consumer applies (ChatSession).
                 raw = StreamFold.fold(current: raw, chunk: piece)
-                // The think phase on the clock: first token → first answer token.
-                thinkClock.feed(piece, at: clock.now - start)
+                // The think phase on the clock (fed the FOLDED text: first token → first answer token).
+                thinkClock.feed(transcript: raw, at: clock.now - start)
             }
             return (raw, thinkClock.thinkMS)
         }

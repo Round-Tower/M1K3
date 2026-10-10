@@ -879,7 +879,12 @@ public enum ChatEvalScorer {
             latencyMS: observation.latencyMS,
             answerPreview: preview.isEmpty ? nil : preview,
             routeStage: observation.routeStages.isEmpty ? nil : observation.routeStages.joined(separator: ","),
-            thinkChars: ThinkPhase.measure(observation.rawText).thinkChars, thinkMS: observation.thinkMS
+            // nil (not 0) when nothing was thought, so the think columns count the same trials.
+            thinkChars: {
+                let think = ThinkPhase.measure(observation.rawText)
+                return observation.rawText.contains(ThinkPhase.openTag) ? think.thinkChars : nil
+            }(),
+            thinkMS: observation.thinkMS
         )
     }
 
