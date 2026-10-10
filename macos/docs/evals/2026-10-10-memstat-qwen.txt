@@ -1,0 +1,62 @@
+# MEMSTAT probe classes (contradiction / compatible / restatement pairs, ContradictionEvalFixtures) — embedder: qwen
+# 2026-10-10, Debug build of feat/embedder-unified, M1 Max. Only the fixture-pair passes are kept here; the Tier-0 census of the live graph is not recorded.
+# Command: M1K3_SELFTEST=1 M1K3_SELFTEST_MEMSTAT=1 M1K3_SELFTEST_EMBEDDER=qwen M1K3_SELFTEST_OUT=- <M1K3.app>/Contents/MacOS/M1K3
+# Note: the end-to-end ingest probe eats 0/5 restatements under BOTH embedders (pre-existing; the raw-cosine pass is the dedupe bar's evidence). Follow-up: find out why.
+memstat embedder: mlx/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ/d512/mlx-swift-0.32 · dedupe bar 0.9
+memstat contradiction 0.802 [Kev lives in Dublin. → Kev lives in Ardmore.]
+memstat contradiction 0.809 [The user's favourite editor is Vim. → The user's favourite editor is Zed.]
+memstat contradiction 0.863 [Kev's dog is called Bran. → Kev's dog is called Rex.]
+memstat contradiction 0.690 [The user works at Round Tower. → The user works at Lighthouse Labs.]
+memstat contradiction 0.826 [Kev drinks his coffee black. → Kev drinks his coffee with oat milk.]
+memstat contradiction 0.943 [The user's next release ships in Mar → The user's next release ships in Sep]
+memstat contradiction 0.867 [Kev's sister lives in Galway. → Kev's sister lives in Lisbon.]
+memstat contradiction 0.906 [The user prefers dark mode. → The user prefers light mode.]
+memstat contradiction 0.845 [Kev drives a Toyota. → Kev drives a Volvo.]
+memstat contradiction 0.969 [The user's standing desk is set to 1 → The user's standing desk is set to 9]
+memstat compatible 0.678 [Kev lives in Ardmore. → Kev grew up in Waterford.]
+memstat compatible 0.757 [The user's dog is a collie. → The user's dog is called Bran.]
+memstat compatible 0.659 [Kev works on a Mac Studio. → Kev tests on an iPhone 17 Pro.]
+memstat compatible 0.692 [The user prefers metric units. → The user prefers Celsius for weather]
+memstat compatible 0.759 [Kev's sister is called Aoife. → Kev's sister works as a nurse.]
+memstat compatible 0.767 [The user drinks coffee in the mornin → The user drinks tea in the evening.]
+memstat compatible 0.687 [Kev is dyslexic. → Kev prefers audio summaries.]
+memstat compatible 0.736 [The user plays the guitar. → The user is learning the piano.]
+memstat compatible 0.768 [Kev runs on Saturday mornings. → Kev swims on Wednesday evenings.]
+memstat compatible 0.556 [The user's favourite colour is green → The user's favourite band is Fontain]
+memstat restatement 0.906 [Kev's sister is called Aoife. → Aoife is Kev's sister.]
+memstat restatement 0.890 [The user prefers metric units. → Metric units are the user's preferen]
+memstat restatement 0.933 [Kev lives in Ardmore. → Kev's home is in Ardmore.]
+memstat restatement 0.950 [The user's dog is a collie named Bra → Bran, the user's dog, is a collie.]
+memstat restatement 0.958 [Kev drinks his coffee black. → Kev takes his coffee black.]
+contradictions: min 0.690 median 0.863 max 0.969
+  contradictions ≥ 0.90 (eaten as duplicates): 3/10
+  contradictions in [0.75, 0.90): 6/10
+compatibles: min 0.556 median 0.736 max 0.768
+  compatibles ≥ 0.90 (would be wrongly eaten): 0/10
+  compatibles in [0.75, 0.90): 4/10
+restatements: min 0.890 median 0.933 max 0.958
+  restatements ≥ 0.90 (correctly eaten): 4/5
+  restatements in [0.75, 0.90): 1/5
+memstat ingest contradiction: survived [Kev lives in Ardmore.]
+memstat ingest contradiction: survived [The user's favourite editor is Zed.]
+memstat ingest contradiction: survived [Kev's dog is called Rex.]
+memstat ingest contradiction: survived [The user works at Lighthouse Labs.]
+memstat ingest contradiction: survived [Kev drinks his coffee with oat milk.]
+memstat ingest contradiction: survived [The user's next release ships in Sep]
+memstat ingest contradiction: survived [Kev's sister lives in Lisbon.]
+memstat ingest contradiction: survived [The user prefers light mode.]
+memstat ingest contradiction: survived [Kev drives a Volvo.]
+memstat ingest contradiction: survived [The user's standing desk is set to 9]
+memstat ingest contradiction: 0/10 eaten
+memstat ingest compatible: survived [Kev grew up in Waterford.]
+memstat ingest compatible: survived [The user's dog is called Bran.]
+memstat ingest compatible: survived [Kev tests on an iPhone 17 Pro.]
+memstat ingest compatible: survived [The user prefers Celsius for weather]
+memstat ingest compatible: survived [Kev's sister works as a nurse.]
+memstat ingest compatible: survived [The user drinks tea in the evening.]
+memstat ingest compatible: survived [Kev prefers audio summaries.]
+memstat ingest compatible: survived [The user is learning the piano.]
+memstat ingest compatible: survived [Kev swims on Wednesday evenings.]
+memstat ingest compatible: survived [The user's favourite band is Fontain]
+memstat ingest compatible: 0/10 eaten
+memstat ingest restatement: survived [Aoife is Kev's sister.]

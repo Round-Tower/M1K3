@@ -100,10 +100,11 @@ be resolved.
 
 ## Licensing
 
-All three pinned models are **Apache-2.0**: `gemma-4-12B-it` (Gemma 4 is
-Apache-2.0 — it is *not* under Google's Gemma Terms of Use, which cover Gemma 1
-through 3n and the other family members), `Qwen3-4B-Instruct-2507`, and
-`Qwen3-Embedding-0.6B`.
+The brains and the embedder are **Apache-2.0**: `gemma-4-12B-it` and
+`embeddinggemma-2` (Gemma 4 and EmbeddingGemma 2 are Apache-2.0 — they are *not*
+under Google's Gemma Terms of Use, which cover Gemma 1 through 3n and the other
+family members) and `Qwen3.5-4B`. Check `LFM2.5-1.2B`'s own licence file before
+mirroring it.
 
 Redistribution is permitted. Apache-2.0 section 4 asks you to include a copy of
 the licence, and to state plainly if you changed any files. Note that some

@@ -158,12 +158,13 @@ struct EmbeddingGemma2Tests {
         #expect(MLXEmbeddingService.preset(named: "gemma")?.name == "mlx-community/embeddinggemma-2-8bit")
         #expect(MLXEmbeddingService.preset(named: "EG2")?.name == "mlx-community/embeddinggemma-2-8bit")
         #expect(MLXEmbeddingService.preset(named: "qwen")?.name == EmbedderRegistry.qwen3_embedding.name)
-        #expect(MLXEmbeddingService.preset(named: "")?.name == EmbedderRegistry.qwen3_embedding.name)
+        #expect(MLXEmbeddingService.preset(named: "")?.name == "mlx-community/embeddinggemma-2-8bit", "unset = shipping")
+        #expect(MLXEmbeddingService.preset(named: "gemma\n")?.name == "mlx-community/embeddinggemma-2-8bit", "newline")
         let hub = "mlx-community/some-embedder-4bit"
         #expect(MLXEmbeddingService.preset(named: hub)?.name == hub)
         #expect(MLXEmbeddingService.preset(named: " \(hub) ")?.name == hub, "trimmed once, for the Hub branch too")
         #expect(MLXEmbeddingService.preset(named: " Gemma ")?.name == "mlx-community/embeddinggemma-2-8bit")
-        #expect(MLXEmbeddingService.preset(named: "default")?.name == EmbedderRegistry.qwen3_embedding.name)
+        #expect(MLXEmbeddingService.preset(named: "default")?.name == MLXEmbeddingService.embeddingGemma2.name)
         #expect(MLXEmbeddingService.preset(named: "nonsense") == nil)
     }
 
@@ -182,7 +183,7 @@ struct EmbeddingGemma2Tests {
         #expect(gemma.composeDocument("Pro is €8 a month.") == "title: none | text: Pro is €8 a month.")
         #expect(gemma.composeQuery("what does Pro cost?") == "task: search result | query: what does Pro cost?")
 
-        let qwen = MLXEmbeddingService()
+        let qwen = MLXEmbeddingService(configuration: EmbedderRegistry.qwen3_embedding)
         #expect(qwen.prompting == .qwen3Instruct)
         #expect(qwen.fingerprint == "mlx/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ/d512/\(kernel)", "unchanged")
 

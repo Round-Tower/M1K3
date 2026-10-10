@@ -669,3 +669,46 @@ template heal, window 512 from config.json); no download, no verdict changed. --
 <!-- Review: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 — the Lil RAM cap signed into the
 2026-10-08 entry (5 GB own peak on a 16 GB Mac; `BrainTier.lilOwnPeakCapGB`, flagged by run_chateval's
 summary). The numbers it sits on are the ×3 bake-off's own; no decision changed. -->
+
+## 2026-10-10 — the retrieval embedder is EmbeddingGemma 2 (one embedder, ruled)
+
+**Ruling (Kev):** one embedder for the Mac, not two — fewer downloads, one thing to maintain.
+`mlx-community/embeddinggemma-2-8bit` (text core ported in `M1K3MLX/EmbeddingGemma2.swift`,
+cosine ≥ 0.9998 vs mlx-vlm's reference; one 1.23 GB checkpoint that also carries the image and
+audio encoders Stream D will load) replaces `Qwen3-Embedding-0.6B-4bit-DWQ` as the default.
+Qwen stays constructible for the A/B harness (`M1K3_SELFTEST_EMBEDDER=qwen`) — unpinned and
+eval-only from here (`WeightIntegrityScan` lets an unpinned repo load unverified; nothing
+user-reachable selects it) — and its folder becomes retired (offered in Free up space, never
+deleted: `RetiredWeightsPolicy` keeps only pinned repos, shipped tiers and the loaded model).
+
+**What the measurement said first** (`docs/evals/2026-10-10-retrieval-evals-{gemma,qwen}.txt`,
+production arms): Gemma separates cleanly on every family but with narrower dead zones —
+memory margin 0.079 vs Qwen's 0.177, chunks 0.231 vs 0.278, keyword probes 0.057 vs 0.219 —
+and embeds slower (~28 ms vs ~16 ms warm). The slice-3 gate ("≥ Qwen on every family") was
+not met; the product ruling overrode it for the multimodal and maintenance reasons above,
+with the floors re-derived in Gemma's own cone rather than carried from Qwen's.
+
+**Floors** (`EmbedderFloors.embeddingGemma2`, selected by the exact measured identity
+`mlx/mlx-community/embeddinggemma-2-8bit/d512/…/prompt-v1`; any other member of the family —
+a 4-bit, another width, a prompt-v2 — fails closed to the strictest known bars): memory 0.67
+(the keyword probes bind THIS bar — 7 of 10 target memory facts — margin 0.027 / 0.030, thin),
+chunk 0.70 (precision-first: 0.079 under the weakest chunk, 0.15 over the noise), edge 0.75
+(unmeasured: the bare noise ceiling 0.694 stands in for unrelated fact↔fact pairs), dedupe
+0.95 (MEMSTAT probe classes, `docs/evals/2026-10-10-memstat-{gemma,qwen}.txt`: Gemma
+restatements 0.955–0.975 vs contradictions ≤ 0.944 — 5/5 restatements eaten, 0/10
+contradictions; the shipping Qwen bar eats 3/10 contradictions, i.e. loses corrections, and
+4/5 restatements — so the new cone is cleaner here), forget suggestion 0.67. The challenger's real finding was that the floors seam was incomplete: the
+edge, dedupe and forget-suggestion bars lived as Qwen constants in MemoryStore, the distiller
+and ForgetResolver, and the RecallMemory intent used recall's Qwen default — all now resolve
+from `EmbedderFloors` for the embedder in use (hashing and Qwen keep their old values). The
+lever if the thin memory margin bites live is per-query normalisation, not a lower bar.
+Vector width stays 512: MRL truncation applies to every modality, so the shared space Stream D
+needs holds at 512 and no third re-index follows.
+
+**Cost to users:** one re-index on next launch (the fingerprint moved), deferred under heat as
+every re-index is; a 1.5 GB download replacing a 335 MB one. iOS is unaffected (hashing only).
+
+Signed: Kev + claude-fable-5.1, 2026-10-10, Confidence 0.75 — the ruling is Kev's; the floors
+are measured but thin; the live precision check (grounded-Q ChatEval on a re-indexed store) is
+the verify owed.
+

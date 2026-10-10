@@ -96,6 +96,12 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#544 fold) — `saveFirstRunName(rewriteProfile:)` applies the
 //  pure `UserProfileText.rewritingName` (M1K3Inference) instead of an inline string edit.
 //  Compile-checked; verify-by-launch owed. Fold: `mcpResponder`, the ask responder that withholds Photos.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the memory graph's floors follow the
+//  live embedder (set after the embedder is built and on
+//  every switchEmbeddings / rollback); the switch label names EmbeddingGemma 2. Fold (#547 review): the
+//  graph's floors follow its VECTORS — the stored fingerprint at init, the live embedder's only once
+//  reindexMemoryGraphIfNeeded has moved (or adopted) the graph into its space; the rollback path leaves
+//  them alone (pass 2 caught the reset there pairing old-space vectors with the rolled-back embedder's bars).
 
 import AppKit
 import Foundation
@@ -873,6 +879,14 @@ final class AppEnvironment {
         let swappable = SwappableEmbeddingService(baseEmbedder)
         embedder = swappable
         usingMLXEmbeddings = preferMLX
+        // The memory graph's edge / recall bars follow the space its VECTORS are
+        // in: the stored fingerprint until a re-index moves them (then
+        // reindexMemoryGraphIfNeeded sets the live embedder's), else the live
+        // embedder's on a fresh graph.
+        if let memoryStore {
+            let stored = (try? memoryStore.meta(key: MemoryStore.embedderFingerprintKey)) ?? nil
+            memoryStore.floors = EmbedderFloors.forFingerprint(stored ?? swappable.fingerprint)
+        }
 
         // Restore the chosen brain (default Mini = Apple Foundation Models).
         // Decode via init(persisted:) so a stale "huge" (retired 2026-07-02)
@@ -1713,6 +1727,7 @@ final class AppEnvironment {
             })
             : HashingEmbeddingService()
         embedder.setEmbedder(newEmbedder)
+        // The graph's floors move with its vectors, in reindexMemoryGraphIfNeeded below.
         do {
             let count = try await store.reindexEmbeddings(
                 using: newEmbedder,
@@ -1720,13 +1735,15 @@ final class AppEnvironment {
             )
             usingMLXEmbeddings = useMLX
             UserDefaults.standard.set(useMLX, forKey: Self.embedderPrefersMLXKey)
-            let label = useMLX ? "MLX Qwen3-Embedding" : "Hashing"
+            let label = useMLX ? "MLX EmbeddingGemma 2" : "Hashing"
             Self.embedLog.notice("switched embeddings to \(label, privacy: .public), reindexed \(count) chunk(s)")
             embeddingStatus = "Reindexed \(count) chunk\(count == 1 ? "" : "s") with \(label)."
         } catch {
             // Reindex writes atomically, so the store still matches the previous
             // embedder — roll the façade back to it.
             embedder.setEmbedder(usingMLXEmbeddings ? MLXEmbeddingService() : HashingEmbeddingService())
+            // The graph's floors were never changed on this path: its vectors
+            // are still in the stored space, and so are its bars.
             Self.embedLog.error("embedding switch failed, rolled back: \(error.localizedDescription, privacy: .public)")
             embeddingStatus = "Couldn’t switch embeddings: \(error.localizedDescription)"
         }
@@ -2472,6 +2489,9 @@ extension AppEnvironment {
         let policySaysReindex = EmbedderReindexPolicy.needsReindex(
             stored: stored, current: current, embeddingCount: vectorCount
         )
+        // The bars follow the vectors: the live embedder's once the graph is
+        // (or is about to be, on an empty graph) in its space.
+        let liveFloors = EmbedderFloors.forFingerprint(embedder.fingerprint)
         guard policySaysReindex || ((backfilled > 0 || owedFromPriorCrash) && vectorCount > 0) else {
             if stored != current, vectorCount == 0 {
                 // Adopt the marker on fresh/empty graphs. MemoryStore's
@@ -2481,10 +2501,12 @@ extension AppEnvironment {
                 // match the other.
                 _ = try? await memoryStore.reindexEmbeddings(using: embedder, fingerprint: current)
             }
+            if stored == current || vectorCount == 0 { memoryStore.floors = liveFloors }
             return
         }
         do {
             let count = try await memoryStore.reindexEmbeddings(using: embedder, fingerprint: current)
+            memoryStore.floors = liveFloors
             // Vectors repaired — the crash-recovery flag (set before the first
             // title write) has served its purpose.
             try? memoryStore.deleteMeta(key: MemoryStore.titleBackfillPendingKey)
