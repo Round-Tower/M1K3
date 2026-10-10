@@ -70,6 +70,9 @@
 //  scope a code-gen fixture's list: leak markers in the prose, content markers ("best = 0") in the fence.
 //  Lil's `code-py-fix-bug` 0/3 and `code-site-about-chat` 1/3 on 2026-10-07 were the diagnosis and a
 //  rendered chat bubble, not the bug surviving or a transcript leak.
+//  Review: Kev + claude-opus-5-5, 2026-10-10 — six `tool-head-*` fixtures the shipped group head actually answers
+//  (each scored above its 0.763 floor; none in its training data): the 10-09 arm's never reached it. Tool-use
+//  cells grow from 13 to 19 fixtures, so cells before and after don't compare. Confidence 0.85.
 
 import Foundation
 
@@ -861,6 +864,41 @@ public enum ChatEvalFixtures {
         .init(
             id: "tool-recent-busiest", kind: .toolUse,
             prompt: "What were the busiest days this week?",
+            expectation: .init(mustCallTool: "recent_activity")
+        ),
+        // 2026-10-10: the group head's fixtures. The 10-09 router arm's prompts never reached the
+        // head's 0.763 floor, so `toolGroupRouter` was never tested. Each of these is scored above it
+        // (tools/router/score_head.py on the shipped weights) AND names its tool by the word rules,
+        // so a routed cell must dispatch it from the head (pinned: headFixturesDispatch). None is in
+        // the head's training data. Scores at commit time in each comment.
+        .init( // device 0.882
+            id: "tool-head-date-time", kind: .toolUse,
+            prompt: "Tell me the date and time.",
+            expectation: .init(mustCallTool: "datetime")
+        ),
+        .init( // device 0.865
+            id: "tool-head-time-check", kind: .toolUse,
+            prompt: "Quick time check — what time is it here?",
+            expectation: .init(mustCallTool: "datetime")
+        ),
+        .init( // knowledge 0.929
+            id: "tool-head-insurance-file", kind: .toolUse,
+            prompt: "Find the file I uploaded about my car insurance.",
+            expectation: .init(mustCallTool: "search_knowledge")
+        ),
+        .init( // knowledge 0.852
+            id: "tool-head-renovation-notes", kind: .toolUse,
+            prompt: "Find my notes about the kitchen renovation.",
+            expectation: .init(mustCallTool: "search_knowledge")
+        ),
+        .init( // activity 0.791
+            id: "tool-head-last-thursday", kind: .toolUse,
+            prompt: "What were we chatting about last Thursday?",
+            expectation: .init(mustCallTool: "recent_activity")
+        ),
+        .init( // activity 0.785
+            id: "tool-head-monday-recap", kind: .toolUse,
+            prompt: "Summarise what we discussed on Monday.",
             expectation: .init(mustCallTool: "recent_activity")
         ),
         // 2026-10-09 (#510/#512): chains. The honest answer needs TWO read-only tools, so these

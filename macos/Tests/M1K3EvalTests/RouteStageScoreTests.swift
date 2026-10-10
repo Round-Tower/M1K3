@@ -21,7 +21,9 @@ struct RouteStageScoreTests {
 
     @Test("a score carries the turn's route stage; a turn that never routed carries none")
     func carriesStage() {
-        let headed = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: "x", routeStages: ["head"]))
+        let headed = ChatEvalScorer.score(
+            fixture: fixture, observation: EvalObservation(rawText: "x", routeStages: ["head"])
+        )
         #expect(headed.routeStage == "head")
         let both = ChatEvalScorer.score(
             fixture: fixture, observation: EvalObservation(rawText: "x", routeStages: ["picker", "agent"])
@@ -32,7 +34,9 @@ struct RouteStageScoreTests {
 
     @Test("a repeat keeps its stage")
     func repeatKeepsStage() {
-        let score = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: "x", routeStages: ["head"]))
+        let score = ChatEvalScorer.score(
+            fixture: fixture, observation: EvalObservation(rawText: "x", routeStages: ["head"])
+        )
         #expect(score.withRepeatIndex(2).routeStage == "head")
         #expect(score.withRepeatIndex(2).repeatIndex == 2)
     }
@@ -41,7 +45,7 @@ struct RouteStageScoreTests {
     func oldDocumentsDecode() throws {
         let score = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: "x"))
         let encoded = try JSONEncoder().encode(score)
-        #expect(!String(decoding: encoded, as: UTF8.self).contains("routeStage"))
+        #expect(String(bytes: encoded, encoding: .utf8)?.contains("routeStage") == false)
         let decoded = try JSONDecoder().decode(ChatEvalScore.self, from: encoded)
         #expect(decoded.routeStage == nil)
         #expect(decoded == score)

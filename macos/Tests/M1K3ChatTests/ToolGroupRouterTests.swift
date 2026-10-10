@@ -13,6 +13,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — schedule-verb cases (any position, after the fold),
 //  one-vector-per-turn pin (#512).
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — chain fixtures: `alsoCallTools` is pinned alongside `mustCallTool`.
+//  Review: Kev + claude-opus-5-5, 2026-10-10 — the `tool-head-*` fixtures must make the shipped head
+//  dispatch, each to its own tool (real NLEmbedding).
 
 import Foundation
 @testable import M1K3Chat
@@ -161,6 +163,18 @@ struct ToolGroupRouterFixtureTests {
             return "\(fixture.id) → \(pick.tool)"
         }
         #expect(wrong.isEmpty, "wrong picks: \(wrong)")
+    }
+
+    @Test("the tool-head-* fixtures make the shipped head speak, each to its own tool")
+    func headFixturesDispatch() {
+        // 2026-10-10: the 10-09 router arm's fixtures never reached the head's floor, so the head was
+        // never tested. These are scored above it (tools/router/score_head.py) and pinned here.
+        let head = ChatEvalFixtures.toolUse.filter { $0.id.hasPrefix("tool-head-") }
+        #expect(head.count == 6)
+        for fixture in head {
+            let pick = ToolGroupRouter.pick(for: fixture.prompt, embed: embedder.vector)
+            #expect(pick?.tool == fixture.expectation.mustCallTool, "\(fixture.id) → \(pick?.tool ?? "abstained")")
+        }
     }
 }
 

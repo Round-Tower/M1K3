@@ -67,9 +67,10 @@
 //  the bake-off runs one brain per launch.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#486) — the responder gets the Mac's age and egress clauses
 //  (web on, PCC offered), so chat-what-leaves scores against what ships. The Lil/Big re-run is owed.
-//  Review: Kev + claude-opus-5-5, 2026-10-10 — with a router mode set, tool-use takes the live path (it never reached the
-//  router before: the 10-09 arm's tool-use column ran LocalAgent in every cell); `ROUTER=off` is that path with no
-//  route; the turn records its tools (onActivity) and its pick stage. Confidence 0.75 (verify-by-launch: the arm).
+//  Review: Kev + claude-opus-5-5, 2026-10-10 — with a router mode set, tool-use takes the live path (it never
+//  reached the router before: the 10-09 arm's tool-use column ran LocalAgent in every cell); `ROUTER=off` is that
+//  path with no route; the turn records its tools (onActivity) and its pick stage. Confidence 0.75 (verify-by-
+//  launch: the arm).
 //
 
 import Foundation
@@ -702,7 +703,8 @@ enum ChatEvalStage {
                     fixture, provider: provider, thinking: thinking, start: start, clock: clock
                 )
                 return ChatEvalScorer.score(
-                    fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
+                    fixture: fixture, observation: observation,
+                    latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
             case .toolUse:
                 // Three AFM tool paths, selected by env (MLX always goes through
