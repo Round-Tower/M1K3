@@ -28,6 +28,8 @@
 # the launches themselves are tonight's first real run). Prior: none (new file).
 # Review: same day, code-quality fold — a flag without its value is refused (NO_UNSET aborted on $2).
 # Review: Kev + claude-opus-5-5, 2026-10-10 — the `off` cell passes `--router off`, so every cell takes the live path.
+# Review: Kev + claude-opus-5-5, 2026-10-10 — Mini joins (`--brains lil,big,mini`): the head sits in front of
+# Mini's picker too, and the summary measures Mini against its shipping `routing` cell.
 
 setopt PIPE_FAIL NO_UNSET
 
@@ -62,7 +64,9 @@ flags[head]="--router dispatch --router-head"
 flags[chain]="--router dispatch --router-chain"
 
 for b in $brains; do
-  [[ $b == lil || $b == big ]] || { print -u2 "brain $b: this arm is lil and big"; exit 2 }
+  # Mini too (2026-10-10): the group head sits in front of Mini's picker, so a head flip changes Mini's
+  # tool turns. Mini already routes in shipping, so router_arm_summary.py measures it against `routing`.
+  [[ $b == lil || $b == big || $b == mini ]] || { print -u2 "brain $b: this arm is lil, big and mini"; exit 2 }
 done
 [[ $repeats == <-> && $repeats -ge 1 ]] || { print -u2 -- "--repeats must be a positive integer"; exit 2 }
 [[ $date_stamp == <->-<->-<-> ]] || { print -u2 -- "--date must be YYYY-MM-DD"; exit 2 }
