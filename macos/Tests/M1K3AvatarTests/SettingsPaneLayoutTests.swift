@@ -30,10 +30,25 @@ struct SettingsPaneLayoutTests {
             .joined(separator: "\n")
     }
 
-    @Test("the pane list is M1K3, You, Privacy, Brain at Home, MCP Server, General, Advanced — in that order")
+    @Test("Free up space lives in Brains & downloads, not the M1K3 pane")
+    func freeUpSpaceMoved() throws {
+        let m1k3 = try Self.code("M1K3App/Settings/M1K3SettingsPane.swift")
+        for gone in ["retiredWeightsRows", "pendingRemoval", "removeRetiredWeights"] {
+            #expect(!m1k3.contains(gone), "the M1K3 pane holds \(gone) again")
+        }
+        let downloads = try Self.code("M1K3App/Settings/DownloadsSettingsPane.swift")
+        #expect(downloads.contains("struct DownloadsSettingsPane"))
+        #expect(downloads.contains("confirmationDialog"), "Remove must ask first")
+        #expect(downloads.contains("retiredWeights"))
+    }
+
+    @Test("the pane list is M1K3, Brains & downloads, You, Privacy, Brain at Home, MCP Server, General, Advanced — in that order")
     func paneOrder() throws {
         let code = try Self.code("M1K3App/SettingsView.swift")
-        #expect(code.contains("case m1k3, you, privacy, brainAtHome, mcp, general, advanced"))
+        #expect(code.contains("case m1k3, downloads, you, privacy, brainAtHome, mcp, general, advanced"))
+        #expect(code.contains("case .downloads: \"Brains & downloads\""))
+        #expect(code.contains("case .downloads: \"arrow.down.circle\""))
+        #expect(code.contains("case .downloads: DownloadsSettingsPane()"))
         #expect(code.contains("case .brainAtHome: \"Brain at Home\""))
         #expect(code.contains("case .mcp: \"MCP Server\""))
         #expect(code.contains("case .brainAtHome: BrainAtHomeSettingsPane()"))

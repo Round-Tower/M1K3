@@ -22,6 +22,8 @@
 //  cleanup (#222); same HubApi path math, so listing and deleting cannot
 //  drift from downloading.
 //  Review: Kev + claude-opus-5-5, 2026-10-07 — `cache: nil`, matching the downloader (one store).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — B4: `installState` tells a complete
+//  pinned download from a partial one by file sizes (no hashing). Confidence 0.85.
 
 import Foundation
 import Hub
@@ -46,6 +48,39 @@ public struct LocalModelInventory: Sendable {
             at: dir, includingPropertiesForKeys: nil
         ) else { return false }
         return entries.contains { $0.pathExtension == "safetensors" }
+    }
+
+    public enum InstallState: Equatable, Sendable {
+        case absent
+        /// Bytes on disk, but not all of them (a cancelled or interrupted fetch).
+        case partial
+        case complete
+    }
+
+    /// Whether the download is whole, for Settings > Brains & downloads. A pinned repo is
+    /// `.complete` only when every pinned weight shard is present at its pinned size and every
+    /// other pinned file is present (sizes are not compared there: a post-download template
+    /// patch may legitimately change them). An unpinned repo is `.complete` once any weights
+    /// exist. Anything else with bytes in the folder is `.partial`. Stat calls only, no hashing.
+    public func installState(modelID: String) -> InstallState {
+        installState(modelID: modelID, pin: PinnedWeights.pin(for: modelID))
+    }
+
+    func installState(modelID: String, pin: WeightIntegrity.Pin?) -> InstallState {
+        let dir = hub.localRepoLocation(Hub.Repo(id: modelID))
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: dir.path) else { return .absent }
+        if let pin {
+            let whole = pin.files.allSatisfy { name, expected in
+                let path = dir.appendingPathComponent(name).path
+                guard let size = (try? fm.attributesOfItem(atPath: path))?[.size] as? NSNumber else { return false }
+                return name.hasSuffix(".safetensors") ? size.intValue == expected.size : true
+            }
+            if whole { return .complete }
+        } else if isInstalled(modelID: modelID) {
+            return .complete
+        }
+        return Self.directorySize(dir) > 0 ? .partial : .absent
     }
 
     /// Every `models/<org>/<repo>` folder under the download base with its size

@@ -44,6 +44,10 @@
 //  here, and pinning is bootstrapped from bytes we already trusted, which is
 //  the irreducible trust-on-first-use step every pinning scheme has.
 //  Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the three refusal errors conform to
+//  `LocalizedError` (text unchanged), so a Settings row shows the sentence, not "The
+//  operation couldn't be completed". Their `DownloadFailureClassifying` conformance (short
+//  user copy, never transient) lives in DownloadErrors.swift. Confidence 0.85.
 //
 
 import Foundation
@@ -244,7 +248,7 @@ public enum WeightIntegrity {
 
 /// Thrown when downloaded weights disagree with the pinned manifest. Not a
 /// network error by construction, so `withRetry` will not spin on it.
-public struct WeightTamperError: Error, CustomStringConvertible, Sendable {
+public struct WeightTamperError: LocalizedError, CustomStringConvertible, Sendable {
     public let repoID: String
     public let files: [String]
 
@@ -259,6 +263,12 @@ public struct WeightTamperError: Error, CustomStringConvertible, Sendable {
         pinned in this build (\(files.joined(separator: ", "))). The files were \
         NOT deleted — they are evidence. This is not retried on purpose.
         """
+    }
+
+    /// `LocalizedError`: the same text, so `localizedDescription` is not
+    /// "The operation couldn't be completed."
+    public var errorDescription: String? {
+        description
     }
 }
 
@@ -276,7 +286,7 @@ public struct WeightTamperError: Error, CustomStringConvertible, Sendable {
 /// Distinguishing the two is possible because HubApi records the commit each
 /// file was fetched at, so "wrong bytes for this commit" and "right bytes for
 /// a different commit" are separable facts.
-public struct WeightsStaleError: Error, CustomStringConvertible, Sendable {
+public struct WeightsStaleError: LocalizedError, CustomStringConvertible, Sendable {
     public let repoID: String
     public let localRevision: String
     public let pinnedRevision: String
@@ -295,6 +305,10 @@ public struct WeightsStaleError: Error, CustomStringConvertible, Sendable {
         simply out of date. Reconnect and they will update.
         """
     }
+
+    public var errorDescription: String? {
+        description
+    }
 }
 
 /// Thrown when a pinned file is present but could not be read or hashed, so
@@ -305,7 +319,7 @@ public struct WeightsStaleError: Error, CustomStringConvertible, Sendable {
 /// it still fails closed, because "we could not check" must never take the
 /// same silent path as "it has not downloaded yet". Naming it separately keeps
 /// the tamper `.fault` meaningful: if that one ever fires, it means something.
-public struct WeightUnverifiableError: Error, CustomStringConvertible, Sendable {
+public struct WeightUnverifiableError: LocalizedError, CustomStringConvertible, Sendable {
     public let repoID: String
     public let files: [String]
 
@@ -321,5 +335,9 @@ public struct WeightUnverifiableError: Error, CustomStringConvertible, Sendable 
         Most likely a file-permission or disk problem — retry, and if it persists \
         the model cache may need clearing.
         """
+    }
+
+    public var errorDescription: String? {
+        description
     }
 }

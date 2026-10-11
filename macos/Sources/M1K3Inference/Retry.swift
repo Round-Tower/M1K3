@@ -12,6 +12,9 @@
 //  than stuck behind the MLX launch wall.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-10, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — #557: `isTransientNetworkError` defers to a
+//  `DownloadFailureClassifying` error's own verdict, so Hub's wrapped URL errors retry.
+//  Confidence 0.85 (pure, pinned by DownloadFailureCopyTests + DownloadErrorsTests).
 
 import Foundation
 
@@ -35,6 +38,12 @@ public struct RetryPolicy: Sendable {
     /// or cancellation. `URLError` bridges to `NSURLErrorDomain`, so matching the
     /// domain + code set covers both the Foundation and CFNetwork shapes.
     public static func isTransientNetworkError(_ error: Error) -> Bool {
+        // A module that owns the error type classifies it by TYPE (#557: Hub wraps URL
+        // failures as `downloadError(String)` / `networkError(URLError)`, which the
+        // domain check below never saw). Its verdict is final when it gives one.
+        if let own = (error as? any DownloadFailureClassifying)?.downloadFailureKind {
+            return own == .offline
+        }
         let nsError = error as NSError
         guard nsError.domain == NSURLErrorDomain else { return false }
         let retryable: Set<Int> = [

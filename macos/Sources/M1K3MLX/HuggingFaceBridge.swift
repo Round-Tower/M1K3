@@ -24,6 +24,12 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85 — swift-transformers 1.3.4: both HubApis
 //  pass `cache: nil`, keeping ONE store (the snapshot layout `downloadBase/models/<id>` is unchanged
 //  from 1.1.9, so existing weights stay hits; 1.3's content-addressed HubCache would add a second copy).
+//  Review: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.85 — #557: `isFallbackWorthy` needed no edit;
+//  Hub's wrapped `downloadError` / `networkError(URLError)` now classify as offline (DownloadErrors.swift),
+//  which `RetryPolicy.isTransientNetworkError` — the first line of it — honours.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — C1: `isFallbackWorthy` is false
+//  for a cancelled task or cancelled error, so a Cancel never returns a partial folder as success.
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -310,6 +316,8 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
     /// real problem, not a transient one, and `authorizationRequired` already
     /// has its own dedicated catch clause above this one.
     static func isFallbackWorthy(_ error: Error) -> Bool {
+        // A deliberate Cancel is not network trouble: never hand back a partial folder as success.
+        if Task.isCancelled || DownloadFailureCopy.kind(of: error) == .cancelled { return false }
         if RetryPolicy.isTransientNetworkError(error) { return true }
         if case let Hub.HubClientError.httpStatusCode(code) = error {
             return (500 ..< 600).contains(code)

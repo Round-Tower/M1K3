@@ -746,7 +746,7 @@ let package = Package(
         ),
         .testTarget(
             name: "M1K3KokoroTests",
-            dependencies: ["M1K3Kokoro"],
+            dependencies: ["M1K3Kokoro", "M1K3Inference"],
             path: "Tests/M1K3KokoroTests"
         ),
     ]

@@ -8,6 +8,8 @@
 //  into the TranscriptionProvider seam (the routing logic is tested in M1K3Voice).
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — P1: a partial WhisperKit folder is not
+//  "downloaded"; the completion marker and the legacy complete-looking install. Confidence 0.85.
 
 import Foundation
 import M1K3Voice
@@ -40,12 +42,66 @@ struct WhisperKitProviderTests {
         let provider = WhisperKitProvider(model: "base.en", downloadBase: base)
         #expect(provider.isModelDownloaded == false) // nothing on disk yet
 
-        // Lay down the bundle WhisperKit would create for this variant.
-        let bundle = base
-            .appendingPathComponent("models/argmaxinc/whisperkit-coreml/openai_whisper-base.en")
-            .appendingPathComponent("AudioEncoder.mlmodelc")
-        try FileManager.default.createDirectory(at: bundle, withIntermediateDirectories: true)
+        // Lay down what WhisperKit creates for this variant, complete.
+        try Self.layDownCompleteModel(model: "base.en", base: base)
         #expect(provider.isModelDownloaded) // present → safe to auto-load, no re-download
+    }
+
+    /// An older, complete-looking install: every top-level artifact, but no completion marker.
+    private static func layDownCompleteModel(model: String, base: URL) throws {
+        let folder = try #require(WhisperKitProvider.modelFolder(model: model, downloadBase: base))
+        for bundle in ["AudioEncoder", "MelSpectrogram", "TextDecoder"] {
+            let dir = folder.appendingPathComponent("\(bundle).mlmodelc")
+            try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            try Data("x".utf8).write(to: dir.appendingPathComponent("coremldata.bin"))
+        }
+        try Data("{}".utf8).write(to: folder.appendingPathComponent("config.json"))
+    }
+
+    @Test("P1: a partial download (AudioEncoder alone, mid-fetch) is NOT downloaded")
+    func partialDownloadIsNotInstalled() throws {
+        let base = FileManager.default.temporaryDirectory
+            .appendingPathComponent("m1k3-wk-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let folder = try #require(WhisperKitProvider.modelFolder(model: "small.en", downloadBase: base))
+        try FileManager.default.createDirectory(
+            at: folder.appendingPathComponent("AudioEncoder.mlmodelc"), withIntermediateDirectories: true
+        )
+        #expect(!WhisperKitProvider.isModelDownloaded(model: "small.en", downloadBase: base))
+        // Even with most artifacts present, a missing one keeps it partial.
+        try Self.layDownCompleteModel(model: "small.en", base: base)
+        try FileManager.default.removeItem(at: folder.appendingPathComponent("TextDecoder.mlmodelc"))
+        #expect(!WhisperKitProvider.isModelDownloaded(model: "small.en", downloadBase: base))
+    }
+
+    @Test("P1: the completion marker settles it; an older complete-looking install needs no marker")
+    func completionMarker() throws {
+        let base = FileManager.default.temporaryDirectory
+            .appendingPathComponent("m1k3-wk-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        let folder = try #require(WhisperKitProvider.modelFolder(model: "base.en", downloadBase: base))
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        // Marker alone (written only after WhisperKit.download returned) counts.
+        try WhisperKitProvider.markDownloadComplete(model: "base.en", downloadBase: base)
+        #expect(WhisperKitProvider.isModelDownloaded(model: "base.en", downloadBase: base))
+        // Legacy: complete artifacts, no marker.
+        try Self.layDownCompleteModel(model: "small.en", base: base)
+        #expect(WhisperKitProvider.isModelDownloaded(model: "small.en", downloadBase: base))
+    }
+
+    @Test("removeDownloadedModel deletes exactly one variant's folder and tolerates a missing one")
+    func removeDownloadedModelIsScoped() throws {
+        let base = FileManager.default.temporaryDirectory
+            .appendingPathComponent("m1k3-wk-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        for variant in ["base.en", "small.en"] {
+            try Self.layDownCompleteModel(model: variant, base: base)
+        }
+        try WhisperKitProvider.removeDownloadedModel(model: "base.en", downloadBase: base)
+        #expect(!WhisperKitProvider.isModelDownloaded(model: "base.en", downloadBase: base))
+        #expect(WhisperKitProvider.isModelDownloaded(model: "small.en", downloadBase: base))
+        try WhisperKitProvider.removeDownloadedModel(model: "base.en", downloadBase: base) // already gone
+        try WhisperKitProvider.removeDownloadedModel(model: "base.en", downloadBase: nil)
     }
 
     @Test("conforms to TranscriptionProvider and slots into a router")

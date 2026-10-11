@@ -57,8 +57,16 @@
 //  actor now takes its models as non-Sendable `sending` parameters; the kit's shared stateless models opt
 //  out of region checking by name, and `@preconcurrency import WhisperKit` is gone (zero diagnostics
 //  without it under 1.x). No behaviour change intended — the voice launch check is owed.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — P1 `isModelDownloaded` needs the completion
+//  marker or every top-level artifact (AudioEncoder alone appears mid-download); P2 `Task.checkCancellation()`
+//  after the fetch; progress only rises. Confidence 0.75 (verify-by-launch for the live fetch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.65 — a model NOT yet on disk is fetched through
+//  `WhisperKit.download(variant:downloadBase:progressCallback:)` (the call WhisperKit(config) makes itself) so
+//  the first download reports real progress (the TODO at AppEnvironment.enableWhisperKit); an installed model
+//  takes the old path untouched. Verify-by-launch: delete the model folder, enable WhisperKit, watch the bar.
 
 import AVFoundation
+import Synchronization
 #if os(macOS)
     // The HAL property API in defaultInputChannelCount (AudioObjectGetPropertyData
     // and friends). AVFoundation happens to re-export these today — verified
@@ -175,9 +183,38 @@ public final class WhisperKitProvider: TranscriptionProvider, @unchecked Sendabl
             progress(0.05)
             let config = WhisperKitConfig(model: model, verbose: false, prewarm: true, load: true)
             config.downloadBase = downloadBase
+            // A fresh fetch reports REAL progress: `WhisperKit(config)` bundles download and
+            // CoreML compile opaquely, so run the very call it would make (`WhisperKit.download`,
+            // same repo, same variant) ourselves, scale it into 0.05 ... 0.9, and hand the folder
+            // back through `modelFolder`. A model already on disk skips this entirely, so the
+            // launch path is unchanged. The remaining 0.9 ... 1.0 is the compile (indeterminate).
+            if !Self.isModelDownloaded(model: model, downloadBase: downloadBase) {
+                // Progress only ever rises: the kit reports per-file fractions that can step back.
+                let highWater = Mutex<Double>(0.05)
+                let folder = try await WhisperKit.download(variant: model, downloadBase: downloadBase) { fetch in
+                    let value = 0.05 + 0.85 * min(max(fetch.fractionCompleted, 0), 1)
+                    let raised = highWater.withLock { mark -> Double? in
+                        guard value > mark else { return nil }
+                        mark = value
+                        return value
+                    }
+                    if let raised { progress(raised) }
+                }
+                // WhisperKit's snapshot RETURNS on cancel instead of throwing: without this a
+                // cancelled fetch would go on to compile a half-downloaded model.
+                try Task.checkCancellation()
+                try Self.markDownloadComplete(model: model, downloadBase: downloadBase)
+                config.modelFolder = folder.path
+                progress(Self.downloadFinishedProgress)
+            }
             return try LoadedWhisperKit(kit: await WhisperKit(config))
         }
     }
+
+    /// Progress the loader reports once the bytes are on disk and the CoreML compile begins:
+    /// ticks BELOW this are the download (`0.05 + 0.85 × fraction`), a tick at or above it
+    /// is "compiling", which has no honest fraction.
+    public static let downloadFinishedProgress = 0.9
 
     /// Whether the model's CoreML bundle is already on disk — the guard for
     /// auto-loading on launch WITHOUT risking a silent ~142MB re-download (mirrors
@@ -191,11 +228,37 @@ public final class WhisperKitProvider: TranscriptionProvider, @unchecked Sendabl
     /// Static form so launch-migration code can ask "is variant X already on disk?"
     /// without constructing a provider. Same path contract as the instance read.
     public static func isModelDownloaded(model: String, downloadBase: URL?) -> Bool {
-        guard let downloadBase else { return false }
-        let bundle = downloadBase
-            .appendingPathComponent("models/argmaxinc/whisperkit-coreml/openai_whisper-\(model)")
-            .appendingPathComponent("AudioEncoder.mlmodelc")
-        return FileManager.default.fileExists(atPath: bundle.path)
+        guard let folder = modelFolder(model: model, downloadBase: downloadBase) else { return false }
+        let fm = FileManager.default
+        // The marker is written only after `WhisperKit.download` returned and was not cancelled.
+        if fm.fileExists(atPath: folder.appendingPathComponent(completionMarkerName).path) { return true }
+        // Installs from before the marker: AudioEncoder.mlmodelc appears MID-download, so it alone
+        // proves nothing (P1). Treat every top-level artifact being present as complete, so an
+        // existing install is not fetched again.
+        let artifacts = ["AudioEncoder.mlmodelc", "MelSpectrogram.mlmodelc", "TextDecoder.mlmodelc", "config.json"]
+        return artifacts.allSatisfy { fm.fileExists(atPath: folder.appendingPathComponent($0).path) }
+    }
+
+    /// Written into the variant's folder once its download has fully returned.
+    static let completionMarkerName = ".m1k3-download-complete"
+
+    /// Record that `WhisperKit.download` finished for `model` (see `isModelDownloaded`).
+    public static func markDownloadComplete(model: String, downloadBase: URL?) throws {
+        guard let folder = modelFolder(model: model, downloadBase: downloadBase) else { return }
+        try Data().write(to: folder.appendingPathComponent(completionMarkerName))
+    }
+
+    /// Where WhisperKit lays one variant down under `downloadBase` (nil without a base).
+    public static func modelFolder(model: String, downloadBase: URL?) -> URL? {
+        downloadBase?.appendingPathComponent("models/argmaxinc/whisperkit-coreml/openai_whisper-\(model)")
+    }
+
+    /// Delete one variant's folder (Settings > Brains & downloads > Remove). A folder that is
+    /// already gone is not an error. The caller guarantees this provider is not serving.
+    public static func removeDownloadedModel(model: String, downloadBase: URL?) throws {
+        guard let folder = modelFolder(model: model, downloadBase: downloadBase),
+              FileManager.default.fileExists(atPath: folder.path) else { return }
+        try FileManager.default.removeItem(at: folder)
     }
 
     /// Available only on Apple Silicon once a model has been loaded AND the
