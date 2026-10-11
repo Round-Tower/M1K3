@@ -286,8 +286,8 @@ def test_a_concurrent_summon_in_the_window_does_not_eat_the_auto_runs_gh_pr_comm
     head = "95e8dbaf" + "0" * 32
     runs = [_run(head, 222, "2026-09-24T21:08:05Z", "2026-09-24T21:10:05Z")]
     summon = _tracking(111, "95e8dbaf", created="2026-09-24T21:08:35Z")
-    summon["body"] += "\n\nVERDICT: APPROVE @ 95e8dbaf"
-    review = bot("## Review: CI tooling pass\nFocused on pr_watch.py…\n\nVERDICT: APPROVE @ 95e8dbaf", created="2026-09-24T21:09:55Z")
+    summon["body"] += f"\n\nVERDICT: APPROVE @ {head}"
+    review = bot(f"## Review: CI tooling pass\nFocused on pr_watch.py…\n\nVERDICT: APPROVE @ {head}", created="2026-09-24T21:09:55Z")
     assert m.auto_pass_comment(head, runs, [summon, review]) is review
     jobs = {m.JOB_SWIFT_TEST: "skipped", m.JOB_APP: "skipped", m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
     v = m.verdict(head, ["macos/tools/ci/pr_watch.py"], jobs, [summon, review], auto_ok=True, passes_needed=2, auto_comment=review,
@@ -387,8 +387,8 @@ def test_advisory_failure_is_reported_but_does_not_block():
 def test_ready_needs_green_required_ci_and_enough_passes_on_this_head():
     head = "08eb0c00" + "0" * 32
     comments = [bot("**Claude finished @kev's task in 2m** ---\n### Final pass — review of head `08eb0c00`\n- [x] a\n\n"
-                    "VERDICT: APPROVE @ 08eb0c00", created="2026-09-12T08:00:00Z")]
-    auto = bot("## Review: auto pass\nFine.\n\nVERDICT: APPROVE @ 08eb0c00", created="2026-09-12T08:05:00Z")
+                    f"VERDICT: APPROVE @ {head}", created="2026-09-12T08:00:00Z")]
+    auto = bot(f"## Review: auto pass\nFine.\n\nVERDICT: APPROVE @ {head}", created="2026-09-12T08:05:00Z")
     jobs = {m.JOB_SWIFT_TEST: "success", m.JOB_APP: "success", m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
     v = m.verdict(head, ["macos/Sources/A.swift"], jobs, comments + [auto], auto_ok=True, passes_needed=2, auto_comment=auto,
                   **OURS)
@@ -567,6 +567,7 @@ def test_red_ci_is_never_ready_however_many_passes():
 # for: `VERDICT: APPROVE @ <sha>` or `VERDICT: CHANGES_REQUESTED @ <sha>`.
 
 V_HEAD = "c0ffee12" + "0" * 32
+V_APPROVE = f"VERDICT: APPROVE @ {V_HEAD}"  # only the full sha approves (Kev, 2026-10-10)
 
 
 def _summon(verdict_line, created="2026-10-10T10:00:00Z", updated=None, title="### Review of head `c0ffee12`"):
@@ -634,7 +635,7 @@ def test_an_odd_number_of_fences_makes_the_verdict_unparseable():
 
 
 def test_an_approving_pass_on_the_head_is_ready():
-    v = _gate([_summon("VERDICT: APPROVE @ c0ffee12")])
+    v = _gate([_summon(V_APPROVE)])
     assert v.ready, v.reasons
     assert "verdict APPROVE" in v.summary
 
@@ -658,17 +659,53 @@ def test_a_verdict_naming_an_older_sha_is_not_ready():
     # the pass counts for this head (its title names it) but its verdict is about another
     v = _gate([_summon("VERDICT: APPROVE @ 7c0383c1")])
     assert not v.ready
-    assert "verdict: APPROVE names 7c0383c1, not c0ffee12" in v.reasons
+    assert "verdict: APPROVE names 7c0383c1, not c0ffee120000" in v.reasons
+
+
+def test_only_the_heads_full_sha_approves():
+    # Kev, 2026-10-10: a 7-char prefix can be ground in ~2^28 tries, so an agent could
+    # push a new head that borrows an old approval. Only the full 40-char sha approves
+    # (dyslexia-ai #892's review_gate.py reads it the same way).
+    for n in (7, 8, 39):
+        v = _gate([_summon(f"VERDICT: APPROVE @ {V_HEAD[:n]}")])
+        assert not v.ready, n
+        assert f"verdict: short sha ({n} chars) on c0ffee120000; the gate needs the full 40-char head sha" in v.reasons
+        assert "verdict APPROVE" not in v.summary
+    assert _gate([_summon(V_APPROVE)]).ready
+    assert _gate([_summon(f"VERDICT: APPROVE @ `{V_HEAD.upper()}`")]).ready  # case doesn't matter
+    # a ground collision: the same 8-char prefix, another commit — 12 chars tell them apart
+    other = "c0ffee12" + "1" * 32
+    v = _gate([_summon(f"VERDICT: APPROVE @ {other}")])
+    assert not v.ready
+    assert "verdict: APPROVE names c0ffee121111, not c0ffee120000" in v.reasons
+    # the auto pass's `gh pr comment` review is held to the same line
+    auto = bot(f"## Review\nFine.\n\nVERDICT: APPROVE @ {V_HEAD[:8]}", created="2026-10-10T10:03:00Z")
+    assert not _gate([], auto_comment=auto).ready
+    # fail closed: a head read short (gh never does) cannot turn a prefix into "the full sha"
+    assert m.verdict_refusal("c0ffee12", {"body": "VERDICT: APPROVE @ c0ffee12"}) is not None
+
+
+def test_a_short_sha_blocker_still_stands_and_a_short_sha_approve_clears_nothing():
+    # Strict for approvals, generous for blockers (fail closed): a CHANGES_REQUESTED naming
+    # any 7+ prefix of the head is about this head, and only a full-sha APPROVE from a
+    # review that started after it finished clears it.
+    blocker = _summon("VERDICT: CHANGES_REQUESTED @ c0ffee1", created="2026-10-10T10:00:00Z", updated="2026-10-10T10:01:00Z")
+    short_ok = _summon(f"VERDICT: APPROVE @ {V_HEAD[:12]}", created="2026-10-10T10:20:00Z", updated="2026-10-10T10:21:00Z")
+    v = _gate([blocker, short_ok])
+    assert not v.ready
+    assert "verdict: CHANGES_REQUESTED on c0ffee12" in v.reasons
+    full_ok = _summon(V_APPROVE, created="2026-10-10T10:20:00Z", updated="2026-10-10T10:21:00Z")
+    assert _gate([blocker, full_ok]).ready
 
 
 def test_the_newest_pass_overrides_an_older_approve():
-    older = _summon("VERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:00:00Z")
+    older = _summon(V_APPROVE, created="2026-10-10T10:00:00Z")
     newer = _summon("VERDICT: CHANGES_REQUESTED @ c0ffee12", created="2026-10-10T10:20:00Z")
     assert not _gate([older, newer]).ready
     assert not _gate([newer, older]).ready  # newest by time, not by thread order
     # and a re-review on the same head may clear an older CHANGES_REQUESTED
     assert _gate([_summon("VERDICT: CHANGES_REQUESTED @ c0ffee12", created="2026-10-10T10:00:00Z"),
-                  _summon("VERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:20:00Z")]).ready
+                  _summon(V_APPROVE, created="2026-10-10T10:20:00Z")]).ready
 
 
 def test_newest_is_when_the_pass_finished_not_when_its_tracking_comment_was_created():
@@ -676,7 +713,7 @@ def test_newest_is_when_the_pass_finished_not_when_its_tracking_comment_was_crea
     # the review when it ends (#547: created 16:12:52, updated 16:13:41). The auto
     # review posted between the two (16:13:21) is the older word.
     summon = _summon("VERDICT: CHANGES_REQUESTED @ c0ffee12", created="2026-10-10T16:12:52Z", updated="2026-10-10T16:13:41Z")
-    auto = bot("## Review: one embedder\nFine.\n\nVERDICT: APPROVE @ c0ffee12", created="2026-10-10T16:13:21Z",
+    auto = bot(f"## Review: one embedder\nFine.\n\n{V_APPROVE}", created="2026-10-10T16:13:21Z",
                updated="2026-10-10T16:13:21Z")
     v = _gate([summon, auto], passes_needed=1, auto_comment=auto)
     assert v.passes == 2 and not v.ready
@@ -689,12 +726,12 @@ def test_every_owed_pass_must_approve_whichever_finished_last():
     # concurrently. If only the newest had to approve, a blocker from the
     # other would land or not by which run finished first.
     auto_cr = bot("## Review\nBLOCKING: the gate fails open.\n\nVERDICT: CHANGES_REQUESTED @ c0ffee12", created="2026-10-10T10:03:00Z")
-    summon_ok = _summon("VERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:00:05Z", updated="2026-10-10T10:04:00Z")
+    summon_ok = _summon(V_APPROVE, created="2026-10-10T10:00:05Z", updated="2026-10-10T10:04:00Z")
     risky = ("macos/tools/ci/pr_watch.py",)
     v = _gate([summon_ok, auto_cr], passes_needed=2, auto_comment=auto_cr, files=risky)
     assert v.passes == 2 and not v.ready
     assert "verdict: CHANGES_REQUESTED on c0ffee12" in v.reasons
-    auto_ok = bot("## Review\nFine.\n\nVERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:03:00Z")
+    auto_ok = bot(f"## Review\nFine.\n\n{V_APPROVE}", created="2026-10-10T10:03:00Z")
     assert _gate([summon_ok, auto_ok], passes_needed=2, auto_comment=auto_ok, files=risky).ready
     # the mirror: the blocker finishes last
     summon_cr = _summon("VERDICT: CHANGES_REQUESTED @ c0ffee12", created="2026-10-10T10:00:05Z", updated="2026-10-10T10:04:00Z")
@@ -707,7 +744,7 @@ def test_a_concurrent_blocker_stands_when_one_pass_is_owed_too():
     # pass just the same, and "newest only" let the later APPROVE wave the
     # other's blocker through.
     auto_cr = bot("## Review\nBLOCKING.\n\nVERDICT: CHANGES_REQUESTED @ c0ffee12", created="2026-10-10T10:03:00Z")
-    summon_ok = _summon("VERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:00:05Z", updated="2026-10-10T10:04:00Z")
+    summon_ok = _summon(V_APPROVE, created="2026-10-10T10:00:05Z", updated="2026-10-10T10:04:00Z")
     v = _gate([summon_ok, auto_cr], passes_needed=1, auto_comment=auto_cr)
     assert v.passes == 2 and not v.ready
     assert "verdict: CHANGES_REQUESTED on c0ffee12" in v.reasons
@@ -718,11 +755,11 @@ def test_a_concurrent_blocker_stands_when_one_pass_is_owed_too():
 def test_only_a_review_that_started_after_the_blocker_finished_clears_it():
     blocker = _summon("VERDICT: CHANGES_REQUESTED @ c0ffee12", created="2026-10-10T10:00:00Z", updated="2026-10-10T10:01:00Z")
     # a re-summon (its tracking comment is created when its run starts) read the blocker's thread
-    resummon = _summon("VERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:20:00Z", updated="2026-10-10T10:21:00Z")
+    resummon = _summon(V_APPROVE, created="2026-10-10T10:20:00Z", updated="2026-10-10T10:21:00Z")
     assert _gate([blocker, resummon]).ready
     # a `gh pr comment` review is created when its run ENDS: when it started is unknown, so it
     # may have run alongside the blocker and cannot clear it, however late it posted
-    late_auto = bot("## Review\nFine.\n\nVERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:30:00Z")
+    late_auto = bot(f"## Review\nFine.\n\n{V_APPROVE}", created="2026-10-10T10:30:00Z")
     assert not _gate([blocker, late_auto], auto_comment=late_auto).ready
     # a CHANGES_REQUESTED on a pass counted for this head that names another sha still blocks
     # (pass 1 on #550) — and, like any blocker, a review started after it can clear it
@@ -734,17 +771,17 @@ def test_a_malformed_concurrent_blocker_stands_like_a_well_formed_one():
     # Pass 1 on #550 (VERDICT: CHANGES_REQUESTED): only a well-formed CHANGES_REQUESTED naming
     # the head stood. A concurrent pass that wrote "CHANGES REQUESTED" (a space), or named a
     # wrong sha, counted as nothing, and the summon's later APPROVE landed the head.
-    summon_ok = _summon("VERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:00:05Z", updated="2026-10-10T10:04:00Z")
+    summon_ok = _summon(V_APPROVE, created="2026-10-10T10:00:05Z", updated="2026-10-10T10:04:00Z")
     for line, reason in (("VERDICT: CHANGES REQUESTED @ c0ffee12", "verdict: unparseable on c0ffee12"),
                          ("VERDICT: CHANGES_REQUESTED @ c0ffee", "verdict: unparseable on c0ffee12"),
-                         ("VERDICT: CHANGES_REQUESTED @ 7c0383c1", "verdict: CHANGES_REQUESTED names 7c0383c1, not c0ffee12")):
+                         ("VERDICT: CHANGES_REQUESTED @ 7c0383c1", "verdict: CHANGES_REQUESTED names 7c0383c1, not c0ffee120000")):
         auto = bot(f"## Review\nBLOCKING.\n\n{line}", created="2026-10-10T10:03:00Z")
         v = _gate([summon_ok, auto], passes_needed=1, auto_comment=auto)
         assert v.passes == 2 and not v.ready, line
         assert reason in v.reasons, (line, v.reasons)
     # a malformed blocker is cleared the way a well-formed one is: by a review started after it
     blocker = _summon("VERDICT: CHANGES REQUESTED @ c0ffee12", created="2026-10-10T10:00:00Z", updated="2026-10-10T10:01:00Z")
-    resummon = _summon("VERDICT: APPROVE @ c0ffee12", created="2026-10-10T10:20:00Z")
+    resummon = _summon(V_APPROVE, created="2026-10-10T10:20:00Z")
     assert _gate([blocker, resummon]).ready
     # a MISSING line on an older pass stays ignorable: summons before 2026-10-10 never wrote one
     assert _gate([_summon(None, created="2026-10-10T10:00:00Z"), resummon]).ready
@@ -788,6 +825,9 @@ def test_every_auto_review_prompt_asks_for_the_line_the_gate_reads():
             lines = [ln for ln in prompt.splitlines() if f"VERDICT: {outcome} @" in ln]
             assert len(lines) == 1, (workflow, outcome)
             assert m.review_verdict(lines[0]) == (outcome, V_HEAD), (workflow, lines[0])
+        # and the approving line the prompt asks for is one the gate accepts: the full sha
+        approve = next(ln for ln in prompt.splitlines() if "VERDICT: APPROVE @" in ln)
+        assert m.verdict_refusal(V_HEAD, {"body": approve}) is None, (workflow, approve)
 
 
 def test_the_summon_asks_for_the_verdict_line_and_stays_in_tag_mode():
@@ -800,6 +840,9 @@ def test_the_summon_asks_for_the_verdict_line_and_stays_in_tag_mode():
     assert "--append-system-prompt" in args
     for outcome in ("APPROVE", "CHANGES_REQUESTED"):
         assert f"VERDICT: {outcome} @ <head-sha>" in args
+    # the gate approves nothing shorter (2026-10-10), and summons write 8-char shas in their titles
+    flat = " ".join(args.split())
+    assert "full 40-character headRefOid" in flat and "never a short" in flat
     # shell-quote parses claude_args: a $ would expand to nothing, a " would end the string
     prompt = args.split("--append-system-prompt", 1)[1].strip()
     assert prompt.startswith('"') and prompt.endswith('"') and prompt.count('"') == 2
@@ -810,7 +853,7 @@ def test_the_summon_asks_for_the_verdict_line_and_stays_in_tag_mode():
 # M1K3 is public: an outside contributor's green, approved PR must never
 # auto-land. Only an allowlisted author's PR from a branch of this repo does.
 
-APPROVED = "VERDICT: APPROVE @ c0ffee12"
+APPROVED = V_APPROVE
 
 
 def test_an_author_off_the_allowlist_is_never_ready():
