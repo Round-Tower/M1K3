@@ -51,6 +51,9 @@ Review: Kev + claude-opus-5-5, 2026-10-08 — Lil's row follows BrainTier to Qwe
 thinks only on a deep-reasoning ask), so its runs land in the shipped column, not as a challenger.
 A document without schemaVersion is skipped even when it has a `runs` key of its own (the 09-26
 Mini records crashed the page; ChatEvalDocument always encodes the field).
+Review: Kev + claude-opus-5.5, 2026-10-11 — the head carries Safari's App Store banner
+(apple-itunes-app) like every other page; test_native_download.py pins it here so a
+regenerate keeps it. Confidence 0.9.
 """
 
 from __future__ import annotations
@@ -779,6 +782,7 @@ def render_html(doc: dict) -> str:
 <link rel="icon" href="favicon.svg" type="image/svg+xml" />
 <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192" />
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<meta name="apple-itunes-app" content="app-id=6780230835" />
 <meta name="theme-color" content="#050505" />
 <meta property="og:site_name" content="M1K3" />
 <meta property="og:locale" content="en_IE" />
