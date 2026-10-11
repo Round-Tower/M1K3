@@ -247,3 +247,11 @@ footer a:hover { color: var(--ink-bright); }
   .article h2 { margin-top: 56px; }
   footer { padding: 30px 22px; }
 }
+
+/* ---------- Narrow phones (#579) ----------
+   Long paths in <code> (/Applications/M1K3.app/Contents/Helpers/…) were
+   unbreakable and pushed /install past a 360 px screen; the nav's gap did the
+   same to the "Get the app" button. Android Chrome widens the layout viewport
+   to fit any overflow, so body { overflow-x: hidden } doesn't stop it. */
+code { overflow-wrap: anywhere; }
+@media (max-width: 400px) { nav .links { gap: 16px; } }
