@@ -314,9 +314,68 @@ private final class QuerySpyEmbedder: EmbeddingService, @unchecked Sendable {
     }
 }
 
+/// Records what `InferenceIntent.thinking` was when each generation was asked for —
+/// the turn's decision must reach the plain route and the synthesis, not only the
+/// tool session (#555).
+private final class ThinkingSpyProvider: InferenceProvider, @unchecked Sendable {
+    let name = "thinking-spy"
+    let isAvailable = true
+    private let lock = NSLock()
+    private var seen: [Bool?] = []
+
+    func generate(prompt _: String) async throws -> String {
+        lock.withLock { seen.append(InferenceIntent.thinking) }
+        return "CONCLUSION: Grand, all good here."
+    }
+
+    func generateStreaming(prompt _: String) -> AsyncStream<String> {
+        lock.withLock { seen.append(InferenceIntent.thinking) }
+        return AsyncStream { continuation in
+            continuation.yield("Grand, all good here.")
+            continuation.finish()
+        }
+    }
+
+    var decisionsSeen: [Bool?] {
+        lock.withLock { seen }
+    }
+}
+
 // MARK: - Tests
 
 struct AgentRAGResponderTests {
+    // MARK: Per-turn thinking reaches every generation (#555)
+
+    @Test("speed tier on Auto: a casual ask tells every generation of the turn NOT to think")
+    func speedTierCasualTurnCarriesFastToProvider() async throws {
+        let (store, hashing) = try await ingestedStore()
+        let provider = ThinkingSpyProvider()
+        let responder = AgentRAGResponder(
+            store: store, embedder: hashing, provider: provider,
+            toolsProvider: { [] }, fastThinkingProvider: { true }
+        )
+        let (_, stream) = try await responder.answerStreaming("hey, how's it going?")
+        _ = await collect(stream)
+        let seen = provider.decisionsSeen
+        #expect(!seen.isEmpty)
+        #expect(seen.allSatisfy { $0 == false })
+    }
+
+    @Test("Always: every generation of the turn is told to think")
+    func alwaysCarriesThinkToProvider() async throws {
+        let (store, hashing) = try await ingestedStore()
+        let provider = ThinkingSpyProvider()
+        let responder = AgentRAGResponder(
+            store: store, embedder: hashing, provider: provider,
+            toolsProvider: { [] }, thinkingModeProvider: { .always }, fastThinkingProvider: { true }
+        )
+        let (_, stream) = try await responder.answerStreaming("hey, how's it going?")
+        _ = await collect(stream)
+        let seen = provider.decisionsSeen
+        #expect(!seen.isEmpty)
+        #expect(seen.allSatisfy { $0 == true })
+    }
+
     // MARK: Provider availability pre-flight
 
     @Test("an unavailable provider throws before any retrieval or generation")

@@ -74,6 +74,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-10 — the think phase measured: `ThinkPhaseClock` on the live
 //  stream (thinkMS), `thinkChars` on every score, and the `M1K3_SELFTEST_CHATEVAL_THINK_STEER` arm
 //  (terse / emoji / softcap) as the responder's style clause.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the live arm builds Lil the way the app does (thinking on);
+//  the bare arms scope `InferenceIntent.thinking` themselves (#555). `tier` now measures the shipped shape.
 //
 
 import Foundation
@@ -646,7 +648,7 @@ enum ChatEvalStage {
             provider = AppEnvironment.evalMLXBrain(
                 modelID: modelID ?? stockID,
                 maxTokens: HistoryBudgetPolicy.generationTokenCap(for: tier, defaultCap: MLXBrainProvider.defaultMaxTokens),
-                thinkingEnabled: plan.bareThinks
+                thinkingEnabled: true // the app's build; the bare arms scope their own flag (#555)
             )
         }
         return await evalProvider(provider, thinking: plan, emit: emit)
@@ -763,7 +765,9 @@ enum ChatEvalStage {
                 // to ask the different question — whether M1K3-as-shipped answers
                 // a plain factual question or deflects it into "not in your
                 // documents", which is what its mustComply expectation hunts.
-                let raw = try await provider.generate(prompt: fixture.prompt)
+                let raw = try await InferenceIntent.withThinking(thinking.bareThinks) {
+                    try await provider.generate(prompt: fixture.prompt)
+                }
                 let ms = milliseconds(clock.now - start)
                 return ChatEvalScorer.score(
                     fixture: fixture, observation: EvalObservation(rawText: raw, latencyMS: ms),
@@ -815,7 +819,9 @@ enum ChatEvalStage {
         start: ContinuousClock.Instant, clock: ContinuousClock
     ) async throws -> ChatEvalScore {
         let agent = LocalAgent(inferenceProvider: provider, tools: toolPalette, maxIterations: 3)
-        let result = try await agent.run(goal: fixture.prompt, thinkingEnabled: thinking.bareThinks)
+        let result = try await InferenceIntent.withThinking(thinking.bareThinks) {
+            try await agent.run(goal: fixture.prompt, thinkingEnabled: thinking.bareThinks)
+        }
         let toolsUsed = result.toolsUsed
         let rawText = result.conclusion.isEmpty
             ? "tools used: \(toolsUsed.joined(separator: ","))"

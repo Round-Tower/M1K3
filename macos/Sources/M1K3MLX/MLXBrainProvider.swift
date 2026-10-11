@@ -120,6 +120,8 @@
 //  (`slidingWindow(forModelID:configDirectory:)`); the name-keyed 1024 is the pre-load fallback. E4B is 512.
 //  Review: same day (#522 review fold) — `prefixIsReusable(tokens:window:)` IS the gate renderPersonaPrefix
 //  ships (the id-keyed overloads had no production caller); the config read is a flatMap. 12B stays 1024.
+//  Review: Kev + claude-fable-5.1, 2026-10-11 — `effectiveThinking` (#555): the template switch and the synthetic
+//  opener read the turn's `InferenceIntent.thinking` over the construction flag.
 import Foundation
 import Hub
 import M1K3Inference
@@ -201,7 +203,16 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
     /// downstream reasoning split seeing a well-formed pair. Effective flag:
     /// template AND `thinkingEnabled` (a disabled-thinking prompt emits no tags).
     var thinkPrefixNeeded: Bool {
-        thinkingEnabled && preOpensThinkTemplate
+        effectiveThinking && preOpensThinkTemplate
+    }
+
+    /// The thinking flag in force for THIS generation: the turn's decision
+    /// (`InferenceIntent.thinking`, set by the responder) over the construction
+    /// flag. The app builds Lil thinking-on; before #555 only the tool session
+    /// took the per-turn decision and every plain or synthesis generation thought
+    /// without limit on Auto.
+    var effectiveThinking: Bool {
+        InferenceIntent.thinking ?? thinkingEnabled
     }
 
     /// The think traits decided at init from the repo NAME — for a family the
@@ -966,7 +977,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
     /// Template context for the `enable_thinking` switch. nil when thinking is
     /// on (the template's default) or the family has no such switch.
     var thinkingAdditionalContext: [String: any Sendable]? {
-        guard supportsThinkingToggle, !thinkingEnabled else { return nil }
+        guard supportsThinkingToggle, !effectiveThinking else { return nil }
         return ["enable_thinking": false]
     }
 
