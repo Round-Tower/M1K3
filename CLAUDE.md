@@ -81,10 +81,6 @@ Anything a cold session needs on turn one belongs below, not there.
   `git rebase --onto` over a squash-merged base. `land.sh` DOES delete the merged
   branch, so retarget dependants first (`gh pr edit <N> --base master`) or GitHub
   closes them (#473 was lost this way, reopened as #474).
-- Until #471 ships: a BLE headset in Headset/HFP wedges the voice engine
-  (`kAudioUnitErr_TooManyFramesToProcess`, 512 vs 320) even after the route
-  returns; MCP `speak` still says "Spoken.". Drain with `stop_speaking`; recovery
-  is an app relaunch.
 - App Store previews may only be screen captures of the app (guideline 2.3.4) —
   narration + overlays allowed; Mac previews are 1920×1080 only. Pipeline:
   `marketing/motion/PREVIEW-CAPTURE.md`.

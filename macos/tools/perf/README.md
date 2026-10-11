@@ -13,4 +13,4 @@ snapshots.
 
 Refuses unless: no live M1K3 is running, `:4242` is free, power is AC. Needs cached weights
 (never `hf download` for it) and Kev's hands off the keyboard (input wakes the display).
-**Owed: never run** (see `docs/GEMMA_1_1_PLAN.md`, the stall section).
+Ran 2026-10-10 (#533); see `docs/GEMMA_1_1_PLAN.md`, the stall section, for why it was owed.
