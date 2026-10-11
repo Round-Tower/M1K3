@@ -109,6 +109,8 @@
 //  switchEmbeddings feeds the ledger (progress + failure copy), WhisperKit's first download reports a real fraction,
 //  voice / WhisperKit / brain-load failures go through DownloadFailureCopy, and selectBrain cancels the manager's fetch
 //  of the same brain (single writer to the Hub folder). Confidence 0.7 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — N2 `whisperModelRemoved()`; P3 `selectBuiltinVoiceAndSettle()`;
+//  `selectBrain` refuses a tier a Remove is deleting (B3); stale WhisperKit-progress comment dropped. Confidence 0.7.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — comment only: the thinking rain is unmounted; ambientNotes stays as the seam. Confidence 0.9.
 
 import AppKit
@@ -1433,16 +1435,20 @@ final class AppEnvironment {
         whisperKit.isAvailable
     }
 
+    /// The sharper-ears model was deleted from Settings > Brains & downloads (N2): only now,
+    /// with the files gone, stop the launch path from restoring it, and drop the stale state.
+    func whisperModelRemoved() {
+        UserDefaults.standard.set(false, forKey: Self.whisperEnabledKey)
+        whisperLoad = .idle
+    }
+
     /// Download + load WhisperKit's model so voice input upgrades from Apple
     /// Speech to WhisperKit (the router prefers it once available).
     func enableWhisperKit() async {
         guard !isPreparingWhisper else { return }
         isPreparingWhisper = true
-        // WhisperKit's init bundles download + CoreML compile opaquely (it reports
-        // only 0.05 then 1.0), so there's no honest fraction to show — an
-        // indeterminate "Preparing…" spinner, never a bar stuck at 5% mislabelled as
-        // a download. (Wiring WhisperKit's modelStateCallback for real download
-        // progress on a fresh fetch is a follow-up.)
+        // Indeterminate until the provider reports a real download fraction (below);
+        // never a bar stuck at 5% mislabelled as a download.
         whisperLoad = .preparing
         do {
             // Real download progress (the provider fetches a missing model itself, scaled into
@@ -1503,6 +1509,11 @@ final class AppEnvironment {
         if deepDelegationTaskLabel != nil {
             Self.brainLog.notice("selectBrain \(tier.rawValue, privacy: .public): refused — deep dive in flight")
             return true // no transition, same as the already-loaded no-op
+        }
+        // …and while Settings > Brains & downloads is deleting that tier's weights (B3).
+        guard DownloadUsePolicy.mayLoad(tier, removing: removingBrainTiers) else {
+            Self.brainLog.notice("selectBrain \(tier.rawValue, privacy: .public): refused — its weights are being removed")
+            return true
         }
         // A brain switch is one of the few moments AFM availability can matter
         // afresh (e.g. the user just enabled Apple Intelligence and came back)
@@ -2903,6 +2914,15 @@ extension AppEnvironment {
                 voiceLoad = .failed(message: DownloadFailureCopy.message(for: error))
             }
         }
+    }
+
+    /// Settings > Brains & downloads > Remove for M1K3 Voice: fall back to Built-in (which
+    /// cancels a prepare in flight) and WAIT for that prepare to unwind, so it cannot touch
+    /// the files, or mark the voice ready, after they are deleted (P3).
+    func selectBuiltinVoiceAndSettle() async {
+        let pending = voicePrepareTask
+        selectVoiceTier(.builtin)
+        await pending?.value
     }
 
     /// Speak a short sample line in the current voice — the onboarding/Settings

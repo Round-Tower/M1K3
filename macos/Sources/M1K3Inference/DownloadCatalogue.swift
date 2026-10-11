@@ -20,6 +20,9 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.8 (pure table pinned by
 //  DownloadCatalogueTests; the copy is first-draft M1K3 voice). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — C3 anything on disk is
+//  removable and listed; B4 `.partial`; B3 `.removing`; N1 `.checking`; B6 `.reindexing`; N5 a failed
+//  load is never masked as "In use". Confidence 0.85.
 
 import Foundation
 
@@ -53,6 +56,7 @@ public enum DownloadKind: String, CaseIterable, Sendable, Hashable, Identifiable
 
 /// What the shell knows about one item right now.
 public struct DownloadFacts: Equatable, Sendable {
+    /// Complete on disk (a pinned repo: every pinned weight file at its pinned size).
     public var installed: Bool
     public var load: ModelLoadState
     public var inUse: Bool
@@ -61,14 +65,34 @@ public struct DownloadFacts: Equatable, Sendable {
     /// cannot (`SingleFlightLoader` keeps the load alive for its other waiters), so its
     /// row shows progress and no Cancel rather than a button that lies.
     public var canCancel: Bool
+    /// Some bytes are on disk but the download is incomplete (a cancelled or interrupted
+    /// multi-shard fetch): shown as "Partly downloaded", resumable, and removable.
+    public var partial: Bool
+    /// A Remove is in flight.
+    public var removing: Bool
+    /// False until the first disk scan has landed, so a row never flashes "Download" for
+    /// something that is simply not read yet.
+    public var scanned: Bool
+    /// The item is being re-indexed (Semantic memory's switch re-indexes the notes).
+    public var reindexing: Bool
 
     public init(
-        installed: Bool = false, load: ModelLoadState = .idle, inUse: Bool = false, canCancel: Bool = true
+        installed: Bool = false, load: ModelLoadState = .idle, inUse: Bool = false, canCancel: Bool = true,
+        partial: Bool = false, removing: Bool = false, scanned: Bool = true, reindexing: Bool = false
     ) {
         self.installed = installed
         self.load = load
         self.inUse = inUse
         self.canCancel = canCancel
+        self.partial = partial
+        self.removing = removing
+        self.scanned = scanned
+        self.reindexing = reindexing
+    }
+
+    /// Anything of this item on disk, complete or not: it must always be removable.
+    var onDisk: Bool {
+        installed || partial
     }
 }
 
@@ -82,17 +106,29 @@ public enum DownloadState: Equatable, Sendable {
     case failed(String)
     /// On disk AND serving right now. Never removable.
     case inUse
+    /// Some bytes are on disk, not all: resumable.
+    case partial
+    /// A Remove is in flight.
+    case removing
+    /// The first disk scan has not landed yet.
+    case checking
+    /// Re-indexing the user's notes after Semantic memory switched on.
+    case reindexing
 
-    /// A load in flight wins over what is on disk; a failure never hides an item that is
-    /// serving fine; otherwise disk and use decide.
+    /// A removal wins, then a re-index, then a load in flight over what is on disk; a failed
+    /// load shows as failed even for the selected brain (it is not "In use" if it cannot
+    /// load, N5); otherwise disk and use decide.
     public static func resolve(_ facts: DownloadFacts) -> DownloadState {
+        if facts.removing { return .removing }
+        if facts.reindexing { return .reindexing }
         switch facts.load {
         case let .downloading(fraction): return .downloading(fraction: fraction)
         case .preparing: return .preparing
-        case let .failed(message):
-            return facts.installed && facts.inUse ? .inUse : .failed(message)
+        case let .failed(message): return .failed(message)
         case .idle, .ready:
+            if !facts.scanned { return facts.inUse ? .inUse : .checking }
             if facts.installed { return facts.inUse ? .inUse : .ready }
+            if facts.partial { return .partial }
             return .absent
         }
     }
@@ -156,32 +192,38 @@ public enum DownloadCatalogue {
         context: Context, sizes: DownloadSizes, facts: [DownloadKind: DownloadFacts]
     ) -> [DownloadItem] {
         DownloadKind.allCases.compactMap { kind in
-            guard isOffered(kind, on: context) else { return nil }
             let fact = facts[kind] ?? DownloadFacts()
+            guard isOffered(kind, on: context, onDisk: fact.onDisk) else { return nil }
             let state = DownloadState.resolve(fact)
             let (bytes, approximate) = size(of: kind, in: sizes)
             return DownloadItem(
                 kind: kind, name: name(of: kind), purpose: purpose(of: kind, context: context),
                 bytes: bytes, sizeIsApproximate: approximate,
-                state: state, actions: actions(for: kind, in: state, canCancel: fact.canCancel)
+                state: state, actions: actions(for: kind, in: state, facts: fact)
             )
         }
     }
 
-    static func isOffered(_ kind: DownloadKind, on context: Context) -> Bool {
+    /// An item whose weights are on disk is always listed, whatever the Mac can run now (Big
+    /// below the RAM floor, the pocket Mini once Apple Intelligence came back): weights on disk
+    /// must always be removable.
+    static func isOffered(_ kind: DownloadKind, on context: Context, onDisk: Bool) -> Bool {
         switch kind {
         case .lil, .semanticMemory, .sharperEars, .voice: true
-        case .big: BrainTier.big.isSelectable(forPhysicalMemoryGB: context.physicalMemoryGB)
-        case .pocket: context.afm.isBlocked
+        case .big: onDisk || BrainTier.big.isSelectable(forPhysicalMemoryGB: context.physicalMemoryGB)
+        case .pocket: onDisk || context.afm.isBlocked
         }
     }
 
-    static func actions(for kind: DownloadKind, in state: DownloadState, canCancel: Bool) -> DownloadActions {
+    static func actions(for kind: DownloadKind, in state: DownloadState, facts: DownloadFacts) -> DownloadActions {
+        // Anything on disk is removable unless it is serving (or being removed already).
+        let removable: DownloadActions = facts.onDisk && !facts.inUse ? [.remove] : []
         switch state {
-        case .absent, .failed: [.download]
-        case .downloading: kind.supportsCancel && canCancel ? [.cancel] : []
-        case .preparing, .inUse: []
-        case .ready: [.remove]
+        case .absent: return [.download]
+        case .failed, .partial: return DownloadActions.download.union(removable)
+        case .downloading: return kind.supportsCancel && facts.canCancel ? [.cancel] : []
+        case .preparing, .inUse, .removing, .checking, .reindexing: return []
+        case .ready: return [.remove]
         }
     }
 
@@ -207,7 +249,8 @@ public enum DownloadCatalogue {
         case .lil: String(localized: "My everyday brain. Quick, sees pictures, lives on this Mac.")
         case .big: String(localized: "The deep thinker. Slower, sharper, for the hard questions.")
         case .pocket: String(localized: "A small brain for this Mac, which can't run Apple Intelligence.")
-        case .semanticMemory: String(localized: "Finds your notes by meaning, not just matching words.")
+        case .semanticMemory:
+            String(localized: "Finds your notes by meaning, not just matching words. Turning it on re-indexes your notes.")
         case .sharperEars:
             String(localized: "Better dictation than Apple Speech (WhisperKit \(context.whisperVariantName)).")
         case .voice: String(localized: "My own voice, instead of the built-in one.")

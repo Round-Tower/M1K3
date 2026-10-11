@@ -38,6 +38,8 @@
 //  ints replace the dismissal bool; the state machine is unchanged — the park
 //  decision arrives through its existing recompute input.
 
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — B1: `runBrainUpgradeFetch` (so its retry too)
+//  cancels the downloads manager's fetch of the same tier: two writers on one `.incomplete` shard. Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.8 — `stageDirectedBrainFetch` also cancels the
 //  downloads manager's own fetch of the same brain (Settings > Brains & downloads), keeping one writer per folder.
 
@@ -247,6 +249,7 @@ extension AppEnvironment {
 
     private func runBrainUpgradeFetch(attempt: Int) {
         guard let target = brainUpgradeTarget, let modelID = target.mlxModelID else { return }
+        cancelManagerBrainFetch(for: target) // one writer per folder, whoever got there first
         Self.upgradeLog.notice("background upgrade fetch start (attempt \(attempt)): \(modelID, privacy: .public)")
         // Strong-bind immediately in each closure (weak captures are mutable,
         // so a NESTED @Sendable closure referencing one trips Swift 6 strict

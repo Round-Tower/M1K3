@@ -23,6 +23,10 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.65 (glue over tested pure parts;
 //  every verb is verify-by-launch: download, cancel mid-fetch and remove each need the app).
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — B2 in-use through `DownloadUsePolicy`; B3 `removing`;
+//  B4 complete-vs-partial scan; B5 transition-only refresh with a generation counter (AFM and the retired-folder walk off
+//  the hot path); B6 semantic-memory guards; N1 `scanned`; N2/N3 remove ordering; N5 a failed selected brain retries.
+//  Confidence 0.65 (verify-by-launch).
 
 import Foundation
 import M1K3Inference
@@ -34,8 +38,16 @@ import os
 /// What the manager remembers between renders. Observable so the pane repaints on progress.
 @MainActor @Observable
 final class DownloadsLedger {
-    /// Items found on disk by the last `refreshDownloads()`.
+    /// Items found COMPLETE on disk by the last `refreshDownloads()`.
     var installed: Set<DownloadKind> = []
+    /// Items with some bytes on disk but not all (a cancelled or interrupted fetch).
+    var partial: Set<DownloadKind> = []
+    /// False until the first scan lands, so no row flashes "Download" for something unread (N1).
+    var scanned = false
+    /// Removals in flight (B3): busy, not startable, not loadable.
+    var removing: Set<DownloadKind> = []
+    /// Newest-wins stamp for `refreshDownloads` results.
+    @ObservationIgnored var refreshGeneration = 0
     /// Fraction of each in-flight MANAGER brain fetch.
     var brainFetch: [DownloadKind: Double] = [:]
     var failures: [DownloadKind: String] = [:]
@@ -68,39 +80,68 @@ extension AppEnvironment {
         )
     }
 
+    /// Everything that can make a brain "in use" (B2), read off live state into the pure policy.
+    private var brainUseSnapshot: BrainUseSnapshot {
+        var staged: BrainTier?
+        if case .staged = brainUpgrade { staged = brainUpgradeTarget }
+        return BrainUseSnapshot(
+            selectedBrain: selectedBrain,
+            servingModelID: currentMLXProvider.modelIdentifier,
+            escalatedModelID: deepDiveEscalatedProvider?.modelIdentifier,
+            directedTarget: directedBrainTarget,
+            stagedSwapTarget: staged,
+            removing: removingBrainTiers
+        )
+    }
+
+    /// Brain tiers whose weights a Remove is deleting right now.
+    var removingBrainTiers: Set<BrainTier> {
+        Set(downloadsLedger.removing.compactMap(\.brainTier))
+    }
+
     private func downloadFacts(for kind: DownloadKind) -> DownloadFacts {
         let ledger = downloadsLedger
-        let onDisk = ledger.installed.contains(kind)
+        var facts = DownloadFacts(
+            installed: ledger.installed.contains(kind), partial: ledger.partial.contains(kind),
+            removing: ledger.removing.contains(kind), scanned: ledger.scanned
+        )
         let failure = ledger.failures[kind].map { ModelLoadState.failed(message: $0) } ?? .idle
+        facts.load = failure
         switch kind {
         case .lil, .big, .pocket:
-            guard let tier = kind.brainTier else { return DownloadFacts() }
-            let serving = selectedBrain == tier || tier.mlxModelID == currentMLXProvider.modelIdentifier
-            let facts = DownloadFacts(installed: onDisk, load: failure, inUse: serving)
+            guard let tier = kind.brainTier else { return facts }
+            facts.inUse = DownloadUsePolicy.isBrainInUse(tier, brainUseSnapshot)
             if let fraction = ledger.brainFetch[kind] {
-                return DownloadFacts(installed: onDisk, load: .progress(fraction), inUse: serving)
+                facts.load = .progress(fraction)
+            } else if case let .fetching(fraction) = brainUpgrade, brainUpgradeTarget == tier {
+                facts.load = .progress(fraction)
+            } else if selectedBrain == tier, modelLoad.isActive {
+                facts.load = modelLoad
+                facts.canCancel = false
+            } else if selectedBrain == tier, case .failed = modelLoad {
+                facts.load = modelLoad // N5: the failure and a retry, not "In use"
             }
-            if case let .fetching(fraction) = brainUpgrade, brainUpgradeTarget == tier {
-                return DownloadFacts(installed: onDisk, load: .progress(fraction), inUse: serving)
-            }
-            if selectedBrain == tier, modelLoad.isActive {
-                return DownloadFacts(installed: onDisk, load: modelLoad, inUse: serving, canCancel: false)
-            }
-            return facts
         case .semanticMemory:
-            if ledger.embedderSwitching {
-                let load: ModelLoadState = ledger.embedderFraction.map { $0 < 1 ? .progress($0) : .preparing } ?? .preparing
-                return DownloadFacts(installed: onDisk, load: load, inUse: usingMLXEmbeddings)
+            facts.inUse = usingMLXEmbeddings
+            facts.installed = facts.installed || usingMLXEmbeddings
+            // Turning it on downloads the embedder, then RE-INDEXES the notes (B6): the bar while
+            // bytes arrive, "Re-indexing your notes…" for the rest, also when something else started it.
+            var downloading: Double?
+            if ledger.embedderSwitching, let fraction = ledger.embedderFraction, fraction < 1 { downloading = fraction }
+            if let downloading {
+                facts.load = .progress(downloading)
+            } else {
+                facts.reindexing = isReindexing
             }
-            return DownloadFacts(installed: onDisk || usingMLXEmbeddings, load: failure, inUse: usingMLXEmbeddings)
         case .sharperEars:
-            let serving = isWhisperKitActive || whisperLoad == .ready
+            facts.inUse = isWhisperKitActive || whisperLoad == .ready
                 || UserDefaults.standard.bool(forKey: Self.callTranscriptionEnabledKey)
-            return DownloadFacts(installed: onDisk, load: whisperLoad.isActive ? whisperLoad : whisperFailure(or: failure), inUse: serving)
+            facts.load = whisperLoad.isActive ? whisperLoad : whisperFailure(or: failure)
         case .voice:
-            let serving = selectedVoiceTier == .m1k3Voice
-            return DownloadFacts(installed: onDisk, load: voiceLoad.isActive ? voiceLoad : voiceFailure(or: failure), inUse: serving)
+            facts.inUse = selectedVoiceTier == .m1k3Voice
+            facts.load = voiceLoad.isActive ? voiceLoad : voiceFailure(or: failure)
         }
+        return facts
     }
 
     private func whisperFailure(or fallback: ModelLoadState) -> ModelLoadState {
@@ -115,32 +156,60 @@ extension AppEnvironment {
 
     // MARK: - Disk facts
 
-    /// Re-read what is on disk (and Apple Intelligence's state) off the main actor: the
-    /// directory walks and the AFM probe are slow. Also re-lists the retired brain folders,
-    /// so "Free up space" stays one list with the rows above it.
-    func refreshDownloads() {
+    /// Re-read what is on disk off the main actor (the directory walks are slow). Cheap enough
+    /// to run on a transition (a load settling, a fetch ending); the newest call wins, so a slow
+    /// earlier scan can never overwrite a later one. `onAppear` additionally reads Apple
+    /// Intelligence's state (an AFM daemon round-trip) and re-lists the retired brain folders
+    /// (a recursive size walk): neither belongs on the per-transition path (B5).
+    func refreshDownloads(onAppear: Bool = false) {
+        let ledger = downloadsLedger
+        ledger.refreshGeneration += 1
+        let generation = ledger.refreshGeneration
         let brains = brainInventory
         let embedder = LocalModelInventory.embedder()
         let whisperBase = whisperDownloadBase
         let whisperModel = selectedWhisperModel.modelID
         let voiceStaged = kokoro.isModelStaged
         Task { [weak self] in
-            let (installed, afm) = await Task.detached(priority: .utility) { () -> (Set<DownloadKind>, AFMAvailability) in
-                var found: Set<DownloadKind> = []
+            let scan = await Task.detached(priority: .utility) { () -> DiskScan in
+                var scan = DiskScan()
                 for kind in DownloadKind.allCases {
-                    if let id = kind.brainTier?.mlxModelID, brains.isInstalled(modelID: id) { found.insert(kind) }
+                    guard let id = kind.brainTier?.mlxModelID else { continue }
+                    scan.record(kind, brains.installState(modelID: id))
                 }
-                if embedder?.isInstalled(modelID: DownloadSizes.embedderRepoID) == true { found.insert(.semanticMemory) }
+                if let embedder { scan.record(.semanticMemory, embedder.installState(modelID: DownloadSizes.embedderRepoID)) }
                 if WhisperKitProvider.isModelDownloaded(model: whisperModel, downloadBase: whisperBase) {
-                    found.insert(.sharperEars)
+                    scan.installed.insert(.sharperEars)
+                } else if let folder = WhisperKitProvider.modelFolder(model: whisperModel, downloadBase: whisperBase),
+                          FileManager.default.fileExists(atPath: folder.path)
+                {
+                    scan.partial.insert(.sharperEars)
                 }
-                if voiceStaged { found.insert(.voice) }
-                return (found, AppEnvironment.readAFMAvailability())
+                if voiceStaged { scan.installed.insert(.voice) }
+                if onAppear { scan.afm = AppEnvironment.readAFMAvailability() }
+                return scan
             }.value
-            guard let self else { return }
-            downloadsLedger.installed = installed
-            downloadsLedger.afm = afm
-            refreshRetiredWeights()
+            guard let self, ledger.refreshGeneration == generation else { return }
+            ledger.installed = scan.installed
+            ledger.partial = scan.partial
+            ledger.scanned = true
+            if let afm = scan.afm { ledger.afm = afm }
+            if onAppear { refreshRetiredWeights() }
+        }
+    }
+
+    /// What one disk pass found.
+    private struct DiskScan {
+        var installed: Set<DownloadKind> = []
+        var partial: Set<DownloadKind> = []
+        var afm: AFMAvailability?
+
+        mutating func record(_ kind: DownloadKind, _ state: LocalModelInventory.InstallState) {
+            switch state {
+            case .complete: installed.insert(kind)
+            case .partial: partial.insert(kind)
+            case .absent: break
+            }
         }
     }
 
@@ -152,12 +221,28 @@ extension AppEnvironment {
     // MARK: - Verbs
 
     func startDownload(_ kind: DownloadKind) {
-        downloadsLedger.failures[kind] = nil
+        let ledger = downloadsLedger
+        guard !ledger.removing.contains(kind) else { return } // busy: a Remove is deleting it
+        ledger.failures[kind] = nil
         switch kind {
         case .lil, .big, .pocket:
+            // The selected brain whose load failed: "Try again" reloads it (N5).
+            if let tier = kind.brainTier, selectedBrain == tier, case .failed = modelLoad {
+                selectBrain(tier)
+                return
+            }
             startBrainDownload(kind)
         case .semanticMemory:
-            guard !isReindexing else { return }
+            // This is a switch plus a re-index of the notes, not just a download (B6): say so
+            // rather than silently doing nothing.
+            if isReindexing {
+                ledger.failures[kind] = String(localized: "Already re-indexing your notes. Try again when it's done.")
+                return
+            }
+            if chat.isResponding {
+                ledger.failures[kind] = String(localized: "I'm answering right now. Try again when I'm done.")
+                return
+            }
             Task { [weak self] in
                 await self?.switchEmbeddings(toMLX: true)
                 self?.refreshDownloads()
@@ -193,6 +278,7 @@ extension AppEnvironment {
 
     /// Delete what the row names. Re-checks "in use" against live state, so a stale button
     /// (the state moved while a dialog was open) refuses instead of deleting a serving model.
+    /// Every kind goes through `removeOffMain`, which marks the row "removing" synchronously.
     func removeDownload(_ kind: DownloadKind) {
         guard let item = downloadItems.first(where: { $0.kind == kind }), item.actions.contains(.remove) else {
             Self.downloadsLog.notice("remove \(kind.rawValue, privacy: .public): refused, not removable now")
@@ -209,21 +295,30 @@ extension AppEnvironment {
         case .sharperEars:
             let model = selectedWhisperModel.modelID
             let base = whisperDownloadBase
-            // Stop the launch path from trying to bring it back; the user chose to remove it.
-            UserDefaults.standard.set(false, forKey: Self.whisperEnabledKey)
-            removeOffMain(kind) { try WhisperKitProvider.removeDownloadedModel(model: model, downloadBase: base) }
+            // The launch flag flips only once the delete has succeeded (N2): a failed delete
+            // leaves WhisperKit enabled for the next launch.
+            removeOffMain(kind, onSuccess: { [weak self] in self?.whisperModelRemoved() }) {
+                try WhisperKitProvider.removeDownloadedModel(model: model, downloadBase: base)
+            }
         case .voice:
-            selectVoiceTier(.builtin) // also cancels a prepare in flight and resets the bar
             let provider = kokoro
-            Task { [weak self] in
+            removeOffMain(kind, prelude: { [weak self] in await self?.selectBuiltinVoiceAndSettle() }) {
                 provider.removeStagedModel()
-                self?.refreshDownloads()
             }
         }
     }
 
-    private func removeOffMain(_ kind: DownloadKind, _ work: @escaping @Sendable () throws -> Void) {
+    /// Run `work` off the main actor. The row reads "removing" from this call (synchronously, so
+    /// a second tap or a `selectBrain` cannot race the delete) until the work finishes.
+    /// `prelude` runs first on the main actor (the voice must stop and settle before its files go);
+    /// `onSuccess` only if the delete did not throw.
+    private func removeOffMain(
+        _ kind: DownloadKind, prelude: (@MainActor () async -> Void)? = nil,
+        onSuccess: (@MainActor () -> Void)? = nil, _ work: @escaping @Sendable () throws -> Void
+    ) {
+        downloadsLedger.removing.insert(kind)
         Task { [weak self] in
+            await prelude?()
             let failure: String? = await Task.detached(priority: .utility) {
                 do {
                     try work()
@@ -233,13 +328,16 @@ extension AppEnvironment {
                 }
             }.value
             guard let self else { return }
+            downloadsLedger.removing.remove(kind)
             downloadsLedger.failures[kind] = failure
+            if failure == nil { onSuccess?() }
             if kind.brainTier != nil {
                 // A removed brain must not stay "staged" for the upgrade machine's auto-swap.
                 recomputeBrainUpgradeState()
             }
             Self.downloadsLog.notice("removed \(kind.rawValue, privacy: .public): \(failure ?? "ok", privacy: .public)")
             refreshDownloads()
+            refreshRetiredWeights() // after a remove, not on every tick (B5)
         }
     }
 
@@ -281,7 +379,7 @@ extension AppEnvironment {
             guard !Task.isCancelled, let self else { return }
             // Believe the disk, not the return: the downloader falls back to a local partial
             // when offline instead of throwing.
-            if failure == nil, !brainInventory.isInstalled(modelID: modelID) {
+            if failure == nil, brainInventory.installState(modelID: modelID) != .complete {
                 failure = DownloadFailureCopy.message(for: URLError(.notConnectedToInternet))
             }
             ledger.brainFetch[kind] = nil

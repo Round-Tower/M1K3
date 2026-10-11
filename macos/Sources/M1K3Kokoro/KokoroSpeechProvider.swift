@@ -63,6 +63,8 @@
 //  8th gen (Apple GPU family 5) staged all 192 MB, then trapped in `warm()` — MLX kernels don't compile on
 //  that GPU. The shell now never offers M1K3 Voice there (MLXRuntimeSupport) and discards a stage left
 //  behind. Pinned by KokoroStageDiscardTests. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — P3: `removeStagedModel()` bumps a removal
+//  generation and `prepare` marks ready only if none landed since it began. Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — Settings > Brains & downloads: `removeStagedModel()` (user-driven
 //  delete that also clears `_ready`, unlike `discardStagedModel()`), and the tamper
 //  error classifies as an integrity refusal for the friendly-copy mapper. Confidence 0.75 (verify-by-launch).
@@ -103,6 +105,9 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, SpeechPro
 
     private let lock = NSLock()
     private var _ready = false
+    /// Bumped by `removeStagedModel()`. A `prepare` that began before a removal must not mark
+    /// the voice ready afterwards (P3): it compares its starting value under the lock.
+    private var _removalGeneration = 0
     /// Renders Kokoro's neural PCM (and the Apple-voice fallback) through M1K3's voice
     /// effect chain + playback. Concrete `EffectfulSpeechProvider`, not the protocol:
     /// the raw-PCM neural path needs `speak(rawPCM:)`, which the `SpeechProvider`
@@ -154,8 +159,26 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, SpeechPro
     /// speech provider and no `prepare` is in flight (the downloads manager cancels first).
     /// Clearing `_ready` makes a later `prepare` fetch and verify afresh.
     public func removeStagedModel() {
-        lock.withLock { _ready = false }
+        lock.withLock {
+            _removalGeneration += 1
+            _ready = false
+        }
         Self.discardStagedModel(at: modelDirectory)
+    }
+
+    /// Mark ready unless a removal landed since `generation` was read; a cancelled `prepare`
+    /// that was still finishing therefore cannot resurrect a voice whose files are gone.
+    func markReady(unlessRemovedSince generation: Int) throws {
+        let marked = lock.withLock { () -> Bool in
+            guard _removalGeneration == generation else { return false }
+            _ready = true
+            return true
+        }
+        if !marked { throw CancellationError() }
+    }
+
+    var removalGeneration: Int {
+        lock.withLock { _removalGeneration }
     }
 
     static func isModelStaged(at directory: URL) -> Bool {
@@ -258,6 +281,7 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, SpeechPro
             progress(1)
             return
         }
+        let generation = removalGeneration
         let fileManager = FileManager.default
         try fileManager.createDirectory(at: modelDirectory, withIntermediateDirectories: true)
 
@@ -318,7 +342,7 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, SpeechPro
            fileManager.fileExists(atPath: modelDest.path),
            fileManager.fileExists(atPath: voicesDest.path)
         {
-            lock.withLock { _ready = true }
+            try markReady(unlessRemovedSince: generation)
             do {
                 try await synthesizer.preload()
             } catch {
@@ -378,7 +402,7 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, SpeechPro
             throw KokoroWeightTamperError(file: name)
         }
 
-        lock.withLock { _ready = true }
+        try markReady(unlessRemovedSince: generation)
         do {
             try await synthesizer.preload()
         } catch {

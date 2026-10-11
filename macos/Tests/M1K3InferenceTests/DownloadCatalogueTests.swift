@@ -8,6 +8,7 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.8 (pure table; the pane
 //  and the downloads behind it are verify-by-launch). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — C3 removable-when-on-disk, B4 partial, B3 removing, N1 unscanned, B6 re-indexing, N5 failed-selected. Confidence 0.85.
 
 @testable import M1K3Inference
 import Testing
@@ -111,11 +112,12 @@ struct DownloadCatalogueTests {
         #expect(state(.idle) == .absent)
     }
 
-    @Test("a load in flight wins over what is on disk; a failure on an in-use item does not hide it")
+    @Test("a load in flight wins over what is on disk; a failed load shows as failed even when selected (N5)")
     func precedence() {
         #expect(DownloadState.resolve(.init(installed: true, load: .progress(0.5), inUse: true))
             == .downloading(fraction: 0.5))
-        #expect(DownloadState.resolve(.init(installed: true, load: .failed(message: "x"), inUse: true)) == .inUse)
+        // N5: the selected brain whose load failed must show the failure with a retry, not "In use".
+        #expect(DownloadState.resolve(.init(installed: true, load: .failed(message: "x"), inUse: true)) == .failed("x"))
         #expect(DownloadState.resolve(.init(installed: false, load: .failed(message: "x"), inUse: false)) == .failed("x"))
     }
 
@@ -163,5 +165,80 @@ struct DownloadCatalogueTests {
             #expect(!item.actions.contains(.remove), "\(item.kind) offered Remove while in use")
             #expect(item.actions.isEmpty, "\(item.kind)")
         }
+    }
+
+    // MARK: - Pre-push review fold
+
+    @Test("C3: a failed item that is still on disk can be retried AND removed; absent-and-failed cannot be removed")
+    func failedOnDiskIsRemovable() {
+        let all = Self.items(facts: [
+            .big: .init(installed: true, load: .failed(message: "integrity"), inUse: false),
+            .lil: .init(installed: false, load: .failed(message: "offline"), inUse: false),
+        ])
+        #expect(Self.item(.big, in: all)?.actions == [.download, .remove])
+        #expect(Self.item(.lil, in: all)?.actions == [.download])
+    }
+
+    @Test("C3: a failed in-use item can retry but never be removed (N5)")
+    func failedInUseNotRemovable() {
+        let lil = Self.item(.lil, in: Self.items(facts: [.lil: .init(installed: true, load: .failed(message: "x"), inUse: true)]))
+        #expect(lil?.state == .failed("x"))
+        #expect(lil?.actions == [.download])
+    }
+
+    @Test("C3: pocket Mini stays listed whenever it is on disk, even if Apple Intelligence came back")
+    func pocketListedWhenInstalled() {
+        let on = Self.items(afm: .available, facts: [.pocket: .init(installed: true)])
+        #expect(Self.item(.pocket, in: on)?.actions == [.remove])
+        let partial = Self.items(afm: .available, facts: [.pocket: .init(partial: true)])
+        #expect(Self.item(.pocket, in: partial) != nil)
+        #expect(Self.item(.pocket, in: Self.items(afm: .available)) == nil)
+    }
+
+    @Test("C3: Big stays listed whenever its weights are on disk, even below the RAM floor")
+    func bigListedWhenInstalled() {
+        let floor = BrainTier.big.minimumPhysicalMemoryGB ?? 16
+        let below = Self.items(ramGB: floor - 1, facts: [.big: .init(installed: true)])
+        #expect(Self.item(.big, in: below)?.actions == [.remove])
+        #expect(Self.item(.big, in: Self.items(ramGB: floor - 1)) == nil)
+    }
+
+    @Test("B4: a partial download reads as partial, with Download (resume) and Remove")
+    func partialState() {
+        #expect(DownloadState.resolve(.init(installed: false, load: .idle, partial: true)) == .partial)
+        let big = Self.item(.big, in: Self.items(facts: [.big: .init(partial: true)]))
+        #expect(big?.actions == [.download, .remove])
+        // complete wins over partial; a load in flight wins over both.
+        #expect(DownloadState.resolve(.init(installed: true, partial: true)) == .ready)
+        #expect(DownloadState.resolve(.init(load: .progress(0.2), partial: true)) == .downloading(fraction: 0.2))
+    }
+
+    @Test("B3: a removal in flight reads as removing, with no actions")
+    func removingState() {
+        let lil = Self.item(.lil, in: Self.items(facts: [.lil: .init(installed: true, removing: true)]))
+        #expect(lil?.state == .removing)
+        #expect(lil?.actions == [])
+    }
+
+    @Test("N1: before the first scan lands nothing offers Download; a serving item still reads in use")
+    func unscanned() {
+        let all = Self.items(facts: [
+            .lil: .init(inUse: true, scanned: false),
+            .big: .init(scanned: false),
+        ])
+        #expect(Self.item(.lil, in: all)?.state == .inUse)
+        #expect(Self.item(.big, in: all)?.state == .checking)
+        #expect(Self.item(.big, in: all)?.actions == [])
+        #expect(DownloadState.resolve(.init(load: .progress(0.5), scanned: false)) == .downloading(fraction: 0.5))
+    }
+
+    @Test("B6: a re-index in flight reads as re-indexing with no actions, whatever is on disk")
+    func reindexing() {
+        let memory = Self.item(.semanticMemory, in: Self.items(facts: [
+            .semanticMemory: .init(installed: true, load: .preparing, reindexing: true),
+        ]))
+        #expect(memory?.state == .reindexing)
+        #expect(memory?.actions == [])
+        #expect(Self.item(.semanticMemory, in: Self.items())?.purpose.localizedCaseInsensitiveContains("re-index") == true)
     }
 }

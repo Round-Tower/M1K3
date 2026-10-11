@@ -9,6 +9,7 @@
 //  downloads catalogue.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.8. Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — C1 cancelled-not-offline and C2 type-based disk-full / error matrix. Confidence 0.85.
 
 import Foundation
 import Hub
@@ -37,6 +38,78 @@ struct DownloadErrorsTests {
         #expect(!RetryPolicy.isTransientNetworkError(full))
         #expect(DownloadFailureCopy.kind(of: full) == .diskFull)
         #expect(!RetryPolicy.isTransientNetworkError(Hub.HubClientError.parse))
+    }
+
+    /// Runs `body` inside a Task that has been cancelled, so `Task.isCancelled` is true.
+    private func whileCancelled<T: Sendable>(_ body: @escaping @Sendable () -> T) async -> T {
+        let task = Task<T, Never> {
+            while !Task.isCancelled {
+                await Task.yield()
+            }
+            return body()
+        }
+        task.cancel()
+        return await task.value
+    }
+
+    @Test("C1: a wrapped download error after a deliberate cancel reads as cancelled, never offline")
+    func wrappedCancelIsCancelled() async {
+        let wrapped = Hub.HubClientError.downloadError("The operation couldn’t be completed.")
+        let (kind, retried, fallback) = await whileCancelled {
+            (DownloadFailureCopy.kind(of: wrapped), RetryPolicy.isTransientNetworkError(wrapped),
+             HubApiDownloader.isFallbackWorthy(wrapped))
+        }
+        #expect(kind == .cancelled)
+        #expect(!retried)
+        #expect(!fallback, "a cancel must not hand back a partial local folder as success")
+        // Outside a cancelled task the same string stays a network blip.
+        #expect(DownloadFailureCopy.kind(of: wrapped) == .offline)
+        // A weak extra: the system's own cancelled wording.
+        #expect(DownloadFailureCopy.kind(of: Hub.HubClientError.downloadError("The operation was cancelled.")) == .cancelled)
+        #expect(!DownloadFailureCopy.message(for: Hub.HubClientError.downloadError("cancelled"))
+            .localizedCaseInsensitiveContains("reach"))
+    }
+
+    @Test("C1: a cancelled URLError is neither retried nor fallback-worthy")
+    func cancelledNetworkError() {
+        for error: Error in [Hub.HubClientError.networkError(URLError(.cancelled)), URLError(.cancelled), CancellationError()] {
+            #expect(DownloadFailureCopy.kind(of: error) == .cancelled, "\(error)")
+            #expect(!RetryPolicy.isTransientNetworkError(error), "\(error)")
+            #expect(!HubApiDownloader.isFallbackWorthy(error), "\(error)")
+        }
+    }
+
+    @Test("C2: a real full disk is classified by type, Cocoa and POSIX, not by wording")
+    func diskFullByType() {
+        let cocoa = Hub.HubClientError.fileSystemError(NSError(domain: NSCocoaErrorDomain, code: NSFileWriteOutOfSpaceError))
+        let posix = Hub.HubClientError.fileSystemError(NSError(domain: NSPOSIXErrorDomain, code: Int(ENOSPC)))
+        let nested = Hub.HubClientError.fileSystemError(NSError(
+            domain: NSCocoaErrorDomain, code: NSFileWriteUnknownError,
+            userInfo: [NSUnderlyingErrorKey: NSError(domain: NSPOSIXErrorDomain, code: Int(ENOSPC))]
+        ))
+        for error in [cocoa, posix, nested] {
+            #expect(DownloadFailureCopy.kind(of: error) == .diskFull, "\(error)")
+            #expect(!RetryPolicy.isTransientNetworkError(error), "\(error)")
+            #expect(!HubApiDownloader.isFallbackWorthy(error), "\(error)")
+        }
+        // A file-system error that is not a full disk stays unclassified.
+        let other = Hub.HubClientError.fileSystemError(NSError(domain: NSCocoaErrorDomain, code: NSFileWriteNoPermissionError))
+        #expect(DownloadFailureCopy.kind(of: other) == .unknown)
+    }
+
+    @Test("C2: auth, missing-file and HTTP errors are classified and not retried; only 5xx falls back")
+    func hubErrorMatrix() {
+        let notRetried: [Hub.HubClientError] = [
+            .authorizationRequired, .fileNotFound("x"), .httpStatusCode(404), .httpStatusCode(500),
+        ]
+        for error in notRetried {
+            #expect(!RetryPolicy.isTransientNetworkError(error), "\(error)")
+            #expect(DownloadFailureCopy.kind(of: error) == .unknown, "\(error)")
+        }
+        #expect(!HubApiDownloader.isFallbackWorthy(Hub.HubClientError.authorizationRequired))
+        #expect(!HubApiDownloader.isFallbackWorthy(Hub.HubClientError.fileNotFound("x")))
+        #expect(!HubApiDownloader.isFallbackWorthy(Hub.HubClientError.httpStatusCode(404)))
+        #expect(HubApiDownloader.isFallbackWorthy(Hub.HubClientError.httpStatusCode(500)))
     }
 
     @Test("integrity errors are not retried, not fallback-worthy, and classify as integrity")

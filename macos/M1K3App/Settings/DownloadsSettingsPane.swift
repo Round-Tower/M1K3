@@ -12,6 +12,10 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.7 (a thin view over tested parts;
 //  layout and the buttons are verify-by-launch). Prior: none (new file; the retired-folder rows
 //  and their dialog moved here from M1K3SettingsPane.swift, signed there).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — B5 refreshes on TRANSITIONS only (a load or
+//  fetch starting or settling), never per progress tick; B6 Semantic memory confirms (it re-indexes your notes) and
+//  disables while an answer streams; new rows for partial, removing, checking and re-indexing states.
+//  Confidence 0.7 (verify-by-launch).
 
 import M1K3Inference
 import M1K3MLX
@@ -23,6 +27,8 @@ struct DownloadsSettingsPane: View {
     @State private var pendingRemoval: DownloadItem?
     /// The retired brain folder awaiting the same.
     @State private var pendingRetired: InstalledWeights?
+    /// Semantic memory's Download is a switch plus a re-index of the notes: confirm first (B6).
+    @State private var pendingSemantic = false
 
     var body: some View {
         let items = env.downloadItems
@@ -45,13 +51,16 @@ struct DownloadsSettingsPane: View {
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
-        .onAppear { env.refreshDownloads() }
-        // A download that settled elsewhere (the picker, the nudge card) changes the rows.
-        .onChange(of: env.modelLoad) { _, _ in env.refreshDownloads() }
-        .onChange(of: env.voiceLoad) { _, _ in env.refreshDownloads() }
-        .onChange(of: env.whisperLoad) { _, _ in env.refreshDownloads() }
+        // Appear reads the disk, Apple Intelligence and the retired folders once; after that the
+        // disk is re-read only when something STARTS or SETTLES (`isActive` flips), never on a
+        // progress tick (B5). The bars themselves read the load states directly, not the scan.
+        .onAppear { env.refreshDownloads(onAppear: true) }
+        .onChange(of: env.modelLoad.isActive) { _, _ in env.refreshDownloads() }
+        .onChange(of: env.voiceLoad.isActive) { _, _ in env.refreshDownloads() }
+        .onChange(of: env.whisperLoad.isActive) { _, _ in env.refreshDownloads() }
         .onChange(of: env.usingMLXEmbeddings) { _, _ in env.refreshDownloads() }
-        .onChange(of: env.brainUpgrade) { _, _ in env.refreshDownloads() }
+        .onChange(of: env.isReindexing) { _, _ in env.refreshDownloads() }
+        .onChange(of: isUpgradeFetching) { _, _ in env.refreshDownloads() }
         // Destructive, so hoisted off the leaf Button (see GeneralSettingsPane): a
         // confirmationDialog on a Button inside a Form can silently not show.
         .confirmationDialog(
@@ -68,6 +77,14 @@ struct DownloadsSettingsPane: View {
                 + "you can download it again any time.")
         }
         .confirmationDialog(
+            "Turn on Semantic memory?", isPresented: $pendingSemantic, titleVisibility: .visible
+        ) {
+            Button("Download and re-index") { env.startDownload(.semanticMemory) }
+        } message: {
+            Text("This downloads the embedder, then re-indexes your notes so they can be found by meaning. "
+                + "It can take a few minutes, and I can't answer until it's done.")
+        }
+        .confirmationDialog(
             "Remove \(pendingRetired?.repoID ?? "these weights")?",
             isPresented: Binding(get: { pendingRetired != nil }, set: { if !$0 { pendingRetired = nil } }),
             titleVisibility: .visible
@@ -80,6 +97,11 @@ struct DownloadsSettingsPane: View {
             Text("Frees \((pendingRetired?.bytes ?? 0).formatted(.byteCount(style: .file))) on this Mac. "
                 + "Nothing uses these weights any more; picking that brain again would download them fresh.")
         }
+    }
+
+    /// Whether the background brain upgrade is fetching: the one `brainUpgrade` fact that moves disk.
+    private var isUpgradeFetching: Bool {
+        if case .fetching = env.brainUpgrade { true } else { false }
     }
 
     // MARK: - Rows
@@ -130,10 +152,17 @@ struct DownloadsSettingsPane: View {
                 }
             }
         case .preparing:
-            HStack(spacing: 8) {
-                ProgressView().controlSize(.small)
-                Text("Getting ready…").font(.callout).foregroundStyle(.secondary)
-            }
+            spinner("Getting ready…")
+        case .reindexing:
+            spinner("Re-indexing your notes…")
+        case .removing:
+            spinner("Removing…")
+        case .checking:
+            spinner("Checking…")
+        case .partial:
+            Label("Partly downloaded", systemImage: "arrow.down.circle.dotted")
+                .symbolRenderingMode(.hierarchical)
+                .font(.callout).foregroundStyle(.secondary)
         case .ready:
             Label("Downloaded", systemImage: "checkmark.circle")
                 .symbolRenderingMode(.hierarchical)
@@ -149,12 +178,32 @@ struct DownloadsSettingsPane: View {
         }
     }
 
+    private func spinner(_ text: LocalizedStringKey) -> some View {
+        HStack(spacing: 8) {
+            ProgressView().controlSize(.small)
+            Text(text).font(.callout).foregroundStyle(.secondary)
+        }
+    }
+
+    private func downloadVerb(for item: DownloadItem) -> String {
+        switch item.state {
+        case .absent: String(localized: "Download")
+        case .partial: String(localized: "Resume")
+        default: String(localized: "Try again")
+        }
+    }
+
     @ViewBuilder
     private func buttons(for item: DownloadItem) -> some View {
         if item.actions.contains(.download) {
-            Button(item.state == .absent ? "Download" : "Try again") { env.startDownload(item.kind) }
-                .buttonStyle(.glass)
-                .accessibilityLabel("\(item.state == .absent ? "Download" : "Try again") \(item.name)")
+            let verb = downloadVerb(for: item)
+            Button(verb) {
+                if item.kind == .semanticMemory { pendingSemantic = true } else { env.startDownload(item.kind) }
+            }
+            .buttonStyle(.glass)
+            // Switching Semantic memory on re-indexes the notes, which an answer in flight would race.
+            .disabled(item.kind == .semanticMemory && (env.chat.isResponding || env.isReindexing))
+            .accessibilityLabel("\(verb) \(item.name)")
         }
         if item.actions.contains(.cancel) {
             Button("Cancel") { env.cancelDownload(item.kind) }

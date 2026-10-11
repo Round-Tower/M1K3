@@ -19,6 +19,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.8 (classification and sums are pinned
 //  by DownloadErrorsTests; a real Hub timeout retrying is verify-by-launch). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — C1: a wrapped download error
+//  inside a cancelled task classifies as cancelled, not offline. Confidence 0.85.
 
 import Foundation
 import Hub
@@ -32,7 +34,13 @@ extension Hub.HubClientError: DownloadFailureClassifying {
         case let .downloadError(message):
             // swift-transformers stringifies the underlying error (`error.localizedDescription`),
             // so type information is gone: the system's out-of-space wording is the only tell.
+            //
+            // A deliberate Cancel also lands here: `HubApi.httpGet` rethrows `CancellationError`
+            // / `URLError.cancelled` as `.downloadError(localizedDescription)`. The task's own
+            // cancelled flag is the by-type signal; the wording is a weak extra.
+            if Task.isCancelled { return .cancelled }
             let lowered = message.lowercased()
+            if lowered.contains("cancel") { return .cancelled }
             if lowered.contains("no space left") || lowered.contains("out of space") { return .diskFull }
             return .offline
         case let .networkError(urlError):

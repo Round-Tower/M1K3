@@ -57,12 +57,16 @@
 //  actor now takes its models as non-Sendable `sending` parameters; the kit's shared stateless models opt
 //  out of region checking by name, and `@preconcurrency import WhisperKit` is gone (zero diagnostics
 //  without it under 1.x). No behaviour change intended — the voice launch check is owed.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — P1 `isModelDownloaded` needs the completion
+//  marker or every top-level artifact (AudioEncoder alone appears mid-download); P2 `Task.checkCancellation()`
+//  after the fetch; progress only rises. Confidence 0.75 (verify-by-launch for the live fetch).
 //  Review: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.65 — a model NOT yet on disk is fetched through
 //  `WhisperKit.download(variant:downloadBase:progressCallback:)` (the call WhisperKit(config) makes itself) so
 //  the first download reports real progress (the TODO at AppEnvironment.enableWhisperKit); an installed model
 //  takes the old path untouched. Verify-by-launch: delete the model folder, enable WhisperKit, watch the bar.
 
 import AVFoundation
+import Synchronization
 #if os(macOS)
     // The HAL property API in defaultInputChannelCount (AudioObjectGetPropertyData
     // and friends). AVFoundation happens to re-export these today — verified
@@ -185,9 +189,21 @@ public final class WhisperKitProvider: TranscriptionProvider, @unchecked Sendabl
             // back through `modelFolder`. A model already on disk skips this entirely, so the
             // launch path is unchanged. The remaining 0.9 ... 1.0 is the compile (indeterminate).
             if !Self.isModelDownloaded(model: model, downloadBase: downloadBase) {
+                // Progress only ever rises: the kit reports per-file fractions that can step back.
+                let highWater = Mutex<Double>(0.05)
                 let folder = try await WhisperKit.download(variant: model, downloadBase: downloadBase) { fetch in
-                    progress(0.05 + 0.85 * min(max(fetch.fractionCompleted, 0), 1))
+                    let value = 0.05 + 0.85 * min(max(fetch.fractionCompleted, 0), 1)
+                    let raised = highWater.withLock { mark -> Double? in
+                        guard value > mark else { return nil }
+                        mark = value
+                        return value
+                    }
+                    if let raised { progress(raised) }
                 }
+                // WhisperKit's snapshot RETURNS on cancel instead of throwing: without this a
+                // cancelled fetch would go on to compile a half-downloaded model.
+                try Task.checkCancellation()
+                try Self.markDownloadComplete(model: model, downloadBase: downloadBase)
                 config.modelFolder = folder.path
                 progress(Self.downloadFinishedProgress)
             }
@@ -213,9 +229,23 @@ public final class WhisperKitProvider: TranscriptionProvider, @unchecked Sendabl
     /// without constructing a provider. Same path contract as the instance read.
     public static func isModelDownloaded(model: String, downloadBase: URL?) -> Bool {
         guard let folder = modelFolder(model: model, downloadBase: downloadBase) else { return false }
-        return FileManager.default.fileExists(
-            atPath: folder.appendingPathComponent("AudioEncoder.mlmodelc").path
-        )
+        let fm = FileManager.default
+        // The marker is written only after `WhisperKit.download` returned and was not cancelled.
+        if fm.fileExists(atPath: folder.appendingPathComponent(completionMarkerName).path) { return true }
+        // Installs from before the marker: AudioEncoder.mlmodelc appears MID-download, so it alone
+        // proves nothing (P1). Treat every top-level artifact being present as complete, so an
+        // existing install is not fetched again.
+        let artifacts = ["AudioEncoder.mlmodelc", "MelSpectrogram.mlmodelc", "TextDecoder.mlmodelc", "config.json"]
+        return artifacts.allSatisfy { fm.fileExists(atPath: folder.appendingPathComponent($0).path) }
+    }
+
+    /// Written into the variant's folder once its download has fully returned.
+    static let completionMarkerName = ".m1k3-download-complete"
+
+    /// Record that `WhisperKit.download` finished for `model` (see `isModelDownloaded`).
+    public static func markDownloadComplete(model: String, downloadBase: URL?) throws {
+        guard let folder = modelFolder(model: model, downloadBase: downloadBase) else { return }
+        try Data().write(to: folder.appendingPathComponent(completionMarkerName))
     }
 
     /// Where WhisperKit lays one variant down under `downloadBase` (nil without a base).
