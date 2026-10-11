@@ -7,8 +7,8 @@
 //  "keep the ambient backdrop alive through voice-first mode"), but the full-window
 //  hero of 2026-06-26 covered them with an opaque gradient, so for months they
 //  ticked a 30 fps TimelineView during MLX decode that nobody saw. With the hero on
-//  the window glass (2026-10-09) they would show again, over the thinking rain and
-//  the face — so voice mode is no longer a cue. The hero is its own ambience.
+//  the window glass (2026-10-09) they would show again, over the face — so
+//  voice mode is no longer a cue. The hero is its own ambience.
 //
 //  Pure (plain Bools; no SwiftUI) so ContentView's predicate has a test.
 //

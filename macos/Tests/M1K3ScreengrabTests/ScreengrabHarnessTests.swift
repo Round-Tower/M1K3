@@ -11,6 +11,7 @@
 //  Review: claude-fable-5.1, 2026-09-08 — pins moved to Lil + PhosphorFox with the recipe. Confidence now 0.9.
 //  Review: Kev + claude-fable-5.1, 2026-09-09 — `hidesViewfinder` pinned for the pairing plate. Confidence now 0.9.
 //  Review: Kev + claude-opus-5-5, 2026-10-03 — `phoneRoute` pinned per plate. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — pins -chat.avatarDisplay background on every plate. Confidence 0.9.
 //
 
 import Foundation
@@ -117,6 +118,9 @@ struct ScreengrabHarnessTests {
         #expect(recipe.arguments.contains(["-mcpServer.enabled", "NO"]))
         #expect(recipe.arguments.contains(["-memoryAutoCapture", "NO"]))
         #expect(recipe.arguments.contains(["-ApplePersistenceIgnoreState", "YES"]))
+        // The avatar is the backdrop on every plate, not the owner's stored choice (the harness
+        // reroutes stores, not UserDefaults).
+        #expect(recipe.arguments.contains(["-chat.avatarDisplay", "background"]))
 
         let onboarding = ScreengrabPlate.onboarding.launchRecipe
         #expect(onboarding.arguments.contains(["-hasChosenBrain", "NO"]))

@@ -4,8 +4,8 @@
 //
 //  The "thinking rain" ledger: M1K3's live inference, scrolling up behind the
 //  avatar like text on a CRT. Transparency as aesthetic — the anti-black-box.
-//  Pure and TDD'd; the Canvas that draws it (M1K3App/InferencePhosphorView)
-//  reads `active(at:)` + the opacity/offset math and paints, mirroring
+//  Pure and TDD'd; the Canvas that drew it (M1K3App/InferencePhosphorView,
+//  unmounted 2026-10-11 as janky — `git log` has it) read `active(at:)` + the opacity/offset math and paints, mirroring
 //  CRTOverlay's TimelineView idiom.
 //
 //  ★ THE PRIVACY LINE IS STRUCTURAL, not a runtime check. Two ingest paths:
@@ -30,6 +30,7 @@
 //  visitor traffic = derived glyphs ONLY").
 //  Review: Kev + claude-opus-5-5, 2026-10-01 — `needsClock`: the view's clock only runs with lines
 //  on screen, a turn in flight, or an unseen ambient note. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — comment only: the Canvas view that drew this was deleted (janky, Kev TestFlight); the model and its tests stay as the seam to restore it. Confidence 0.85.
 //
 
 import Foundation

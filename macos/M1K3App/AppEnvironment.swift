@@ -105,6 +105,7 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — 1.1 Settings restructure: `weightImportState` left with the Import weights UI;
 //  the launch calls `retireAuditions()` (clear audition choices, delete the folder once) before the first brain is built.
 //  Confidence 0.7 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — comment only: the thinking rain is unmounted; ambientNotes stays as the seam. Confidence 0.9.
 
 import AppKit
 import Foundation
@@ -421,8 +422,8 @@ final class AppEnvironment {
     /// (listening → thinking → generating → speaking → idle).
     private(set) var avatar = AvatarController()
 
-    /// The ambient activity stream behind the avatar (the "thinking rain" /
-    /// InferencePhosphorView): a small ring of recent things M1K3 is DOING or
+    /// The ambient activity stream behind the avatar (the "thinking rain" —
+    /// unmounted 2026-10-11, the model and this seam kept): a small ring of recent things M1K3 is DOING or
     /// that reached it — heartbeat pulses, notifications it raised, (later)
     /// call transcription. Tool activity + reasoning ride the ChatSession's
     /// own observables; this is the seam for everything else that has no chat

@@ -34,6 +34,7 @@
 //  doc.text, sparkles, phone, waveform.path.ecg, checkmark.circle), grey at rest, accent only when
 //  selected (`destination(_:systemImage:_:)`). Direction C of the icon mock. Confidence 0.8 (look is
 //  verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the sidebar column keeps the SYSTEM show/hide toggle (the custom one in ContentView is retired) so the sidebar toggle sits at the window's left edge. Verify by launch: it must survive collapse. Confidence 0.65.
 
 import M1K3Chat
 import SwiftUI
@@ -88,14 +89,11 @@ struct SidebarView: View {
         // material). Leaving safe-area respected keeps "Chat" clear of the
         // lights; the .sidebar list style already reads correctly to the edge.
         .safeAreaInset(edge: .bottom, spacing: 0) { footer }
-        // Drop the sidebar column's AUTOMATIC show/hide toggle — it lives in
-        // the sidebar's own toolbar strip (grouped with New chat), reading as
-        // part of the nav. ContentView puts a single toggle in the MAIN
-        // window toolbar instead (always visible, incl. when collapsed), so
-        // this auto one would just be a confusing duplicate. Removing it here
-        // (inside the sidebar column) is what actually targets it — a removal
-        // on the outer NavigationSplitView doesn't reach it.
-        .toolbar(removing: .sidebarToggle)
+        // The sidebar column keeps the SYSTEM show/hide toggle: it sits at the
+        // window's left edge by the traffic lights (the sidebar's mirror of the
+        // Review toggle on the right) and writes through ContentView's
+        // `columnVisibility` binding. The custom toggle (#68) is retired; the
+        // View-menu item and ⌃⌘S come from `SidebarCommands()` in M1K3App.
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Button {
