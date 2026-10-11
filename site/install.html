@@ -10,6 +10,17 @@
 <link rel="icon" href="favicon.svg" type="image/svg+xml" />
 <link rel="icon" href="icon-192.png" type="image/png" sizes="192x192" />
 <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<meta name="apple-itunes-app" content="app-id=6780230835" />
+<script>
+  /* Which door this visitor gets (same read as the home page): iPhone/iPad, a Mac, or elsewhere.
+     Set before first paint; send-to-mac.js wires the button a non-Mac sees. */
+  (function (n) {
+    var ua = n.userAgent;
+    var p = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && n.maxTouchPoints > 1) ? 'ios'
+          : /Macintosh/.test(ua) ? 'mac' : 'other';
+    document.documentElement.setAttribute('data-platform', p);
+  })(navigator);
+</script>
 <meta name="theme-color" content="#050505" />
 <meta property="og:site_name" content="M1K3" />
 <meta property="og:locale" content="en_IE" />
@@ -138,6 +149,11 @@
   .recipe .term-body pre { font-size: 12.5px; line-height: 1.6; }
   .check { font-family: var(--mono); font-size: 13px; color: var(--ink-dim); border-left: 2px solid var(--line); padding: 4px 0 4px 14px; margin: 10px 0 18px; }
   .check strong { color: var(--ink); font-weight: 500; }
+  /* A phone or a non-Mac can't install here: it also gets "Send it to my Mac" (html[data-platform]). */
+  .only-away { display: none; }
+  html[data-platform="ios"] .only-away, html[data-platform="other"] .only-away { display: inline-block; }
+  button.btn { cursor: pointer; line-height: inherit; -webkit-appearance: none; appearance: none; border-radius: 0; }
+  button.btn-ghost { background: none; }
 </style>
 </head>
 <body>
@@ -192,6 +208,7 @@
         <p>Free, and it updates through the App Store. One honest note: the App Store copy of <code>m1k3</code> is sandboxed, so its <code>connect</code> prints the config rather than writing it; Homebrew and the DMG write it for you.</p>
         <a class="btn btn-primary" href="https://apps.apple.com/app/id6780230835">Get it on the Mac App Store</a>
         <a class="btn btn-ghost" href="https://testflight.apple.com/join/Fxp2F5Je">iPhone &amp; iPad beta (TestFlight)</a>
+        <button class="btn btn-ghost only-away" type="button" data-send-to-mac>Send it to my Mac</button>
       </div>
       <div class="route">
         <span class="tag rec-agent">Homebrew · agents' favourite</span>
@@ -447,6 +464,7 @@ m1k3 ask "what can you do?"</pre></div>
   });
 })();
 </script>
+<script src="/send-to-mac.js" defer></script>
 
 <!-- Signed: Kev + claude-fable-5.1, 2026-09-15 (launch night), Confidence 0.85.
      The install wizard: two doors (person / agent), four steps (get · hello ·
@@ -486,6 +504,10 @@ m1k3 ask "what can you do?"</pre></div>
      meta/OG/twitter descriptions, the HowTo step and the network FAQ (visible + JSON-LD, still
      byte-identical) name the Mac App Store, so the 2026-10-02 "meta copy names TestFlight" note
      above is retired. The sandboxed-helper caveat stays. Updated line 11 October 2026.
-     Confidence 0.85. -->
+     Confidence 0.85.
+     Review: Kev + claude-opus-5.5, 2026-10-11 — Safari's App Store banner (apple-itunes-app, the one universal
+     record) joins the head. iPhone/iPad Safari only; it lights up once iOS clears review. On a phone or a
+     non-Mac (html[data-platform], set in <head>) the App Store route also offers "Send it to my Mac"
+     (send-to-mac.js → the share sheet). A <button>, so llms-full.txt never sees it. Confidence 0.85. -->
 </body>
 </html>
