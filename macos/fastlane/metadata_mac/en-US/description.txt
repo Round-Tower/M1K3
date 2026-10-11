@@ -1,4 +1,4 @@
-My friends call me Mike. I'm a local AI agent that runs on your Mac — no account, no telemetry. Your conversations, notes, and documents stay on the device by default. Two things can go out, each a switch in Settings: web search (on by default, so answers can be current) and the optional Private Cloud Compute brain, which you pick and consent to once.
+My friends call me Mike. I'm a local AI agent that runs on your Mac — no account, no telemetry. Your conversations, notes, and documents stay on the device by default. Beyond the models you ask me to download, two things can go out, each a switch in Settings: web search (on by default, so answers can be current) and the optional Private Cloud Compute brain, which you pick and consent to once.
 
 WHAT I DO
 • Chat with a capable on-device language model — fast on Apple Silicon.
@@ -11,7 +11,7 @@ WHAT I DO
 
 PUNK BY DESIGN
 • Everything runs locally. Inference, search, and voice are all on-device.
-• I use the network for two things: downloading a brain when you ask, and web search — on by default so answers can be current, one switch in Settings to turn it off.
+• I use the network for two things: downloading models when you ask (brains, speech and voice), and web search — on by default so answers can be current, one switch in Settings to turn it off.
 • No analytics. No tracking. No data collection. You can verify it — the source code is published under a source-available licence.
 
 BUILT FOR YOUR MACHINE

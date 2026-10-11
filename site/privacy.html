@@ -37,7 +37,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-07-10",
-  "dateModified": "2026-10-02"
+  "dateModified": "2026-10-11"
 }
 </script>
 <script type="application/ld+json">
@@ -46,9 +46,9 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "Is M1K3 really private?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes — by architecture, not by policy. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the store encrypted under a Keychain-held key. The network is used in exactly four documented cases: a one-time model-weights download from Hugging Face when you opt into a bigger brain, web search, which is on by default so answers can be current, with one switch in Settings to turn it off, app updates via the channel you installed from, and — only if you turn it on in Settings — sending one message at a time to Apple's Private Cloud Compute. No telemetry, no account, no analytics." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes — by architecture, not by policy. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the store encrypted under a Keychain-held key. The network is used in exactly four documented cases: one-time model downloads when you ask for them (brains, semantic memory, sharper speech recognition and the M1K3 Voice, from Hugging Face, plus one voice-styles file from GitHub), web search, which is on by default so answers can be current, with one switch in Settings to turn it off, app updates via the channel you installed from, and — only if you turn it on in Settings — sending one message at a time to Apple's Private Cloud Compute. No telemetry, no account, no analytics." } },
     { "@type": "Question", "name": "Does M1K3 ever connect to the internet?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Four documented cases: (1) downloading model weights from Hugging Face, once, only when you opt into the Lil or Big brain — the default Mini brain is Apple's built-in on-device model, nothing to download; (2) the web-search and page-reading agent tools, on by default so answers can be current, behind one privacy toggle that turns them off; (3) updates, via the Mac App Store (TestFlight for the betas) or by downloading a new DMG from GitHub — the app has no self-updater; (4) Private Cloud Compute, opt-in and off by default — one message at a time, only when you turn it on. With Private Cloud Compute off, documents, voice, and calls never leave the Mac, and a conversation reaches the web only as the searches M1K3 runs for it." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Four documented cases: (1) downloading models, once each, when you ask for them — the Lil or Big brain, semantic memory, sharper speech recognition and the M1K3 Voice come from Hugging Face, and the voice also fetches one voice-styles file from GitHub; on a Mac without Apple Intelligence the first run also downloads a small Mini brain (about 630 MB), while with Apple Intelligence the default Mini is Apple's built-in on-device model, nothing to download; (2) the web-search and page-reading agent tools, on by default so answers can be current, behind one privacy toggle that turns them off; (3) updates, via the Mac App Store (TestFlight for the betas) or by downloading a new DMG from GitHub — the app has no self-updater; (4) Private Cloud Compute, opt-in and off by default — one message at a time, only when you turn it on. With Private Cloud Compute off, documents, voice, and calls never leave the Mac, and a conversation reaches the web only as the searches M1K3 runs for it." } },
     { "@type": "Question", "name": "Where is M1K3's data stored?",
       "acceptedAnswer": { "@type": "Answer", "text": "In the app's macOS sandbox container, in a GRDB store encrypted with a key held in your Keychain. Documents enter only when you explicitly open or drop them; call transcription is consent-gated and encrypted at rest; the memory store has a forget primitive so consent stays revocable." } },
     { "@type": "Question", "name": "How can I verify M1K3's privacy claims?",
@@ -82,11 +82,11 @@
   <header class="article-head">
     <span class="label">// privacy architecture</span>
     <h1>Is M1K3 really private?</h1>
-    <p class="meta">Updated 2026-10-02 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable</p>
+    <p class="meta">Updated 2026-10-11 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable</p>
   </header>
 
   <div class="answer">
-    <p><strong>Short answer: yes — by architecture, not by promise.</strong> M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the knowledge store encrypted under a key held in your Keychain. The MCP server binds to <code>127.0.0.1</code> and is off by default. The network is used in <strong>exactly four documented cases</strong>: a one-time model-weights download from Hugging Face when you opt into a bigger brain, web search, which is on by default so answers can be current, with one switch in Settings to turn it off, updates via the channel you installed from, and — only if you turn it on in Settings — sending one message at a time to Apple's Private Cloud Compute. No telemetry, no account, no analytics. With Private Cloud Compute off, the default, pull the ethernet cable mid-conversation and M1K3 doesn't notice.</p>
+    <p><strong>Short answer: yes — by architecture, not by promise.</strong> M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the knowledge store encrypted under a key held in your Keychain. The MCP server binds to <code>127.0.0.1</code> and is off by default. The network is used in <strong>exactly four documented cases</strong>: one-time model downloads when you ask for them (brains, semantic memory, sharper speech recognition and the M1K3 Voice, from Hugging Face, plus one voice-styles file from GitHub), web search, which is on by default so answers can be current, with one switch in Settings to turn it off, updates via the channel you installed from, and — only if you turn it on in Settings — sending one message at a time to Apple's Private Cloud Compute. No telemetry, no account, no analytics. With Private Cloud Compute off, the default, pull the ethernet cable mid-conversation and M1K3 doesn't notice.</p>
   </div>
 
   <h2>What runs where?</h2>
@@ -99,7 +99,7 @@
       <ul>
         <li><strong>Chat &amp; inference</strong> Gemma and Qwen on MLX-Swift (Metal), Apple Foundation Models for fast turns — hot-swappable, all local.</li>
         <li><strong>Voice in</strong> WhisperKit / Apple Speech — streaming speech-to-text, on-device.</li>
-        <li><strong>Voice out</strong> Kokoro neural TTS (ONNX Runtime) — synthesis on-device.</li>
+        <li><strong>Voice out</strong> Kokoro neural TTS (MLX-Swift on Metal) — synthesis on-device.</li>
         <li><strong>Knowledge &amp; memory</strong> Embeddings, the personal knowledge graph, and hybrid RAG over your documents — indexed and searched locally.</li>
         <li><strong>Call memory</strong> Consent-gated transcription and summaries, encrypted at rest.</li>
         <li><strong>Storage</strong> App-sandboxed GRDB store, encrypted with a Keychain-held key.</li>
@@ -110,7 +110,7 @@
       <h3 class="wrw-head" id="wrw-net">The network</h3>
       <p class="wrw-sub">the complete list of crossings</p>
       <ul>
-        <li class="crossing"><strong>Model weights, once</strong> Downloaded from Hugging Face only when you opt into the Lil or Big brain. The default Mini brain is Apple's built-in model — nothing to download.</li>
+        <li class="crossing"><strong>Model downloads, once each</strong> When you ask for them: the Lil or Big brain, semantic memory, sharper speech recognition (WhisperKit) and the M1K3 Voice, from Hugging Face — the voice also fetches one small voice-styles file from GitHub. On a Mac without Apple Intelligence the first run downloads a small Mini brain (about 630 MB) instead; with Apple Intelligence, the default Mini is Apple's built-in model and needs nothing.</li>
         <li class="crossing"><strong>Web search &amp; page reading (on by default)</strong> Agent tools behind one privacy toggle, so answers can be current. Web off means web off.</li>
         <li class="crossing"><strong>Updates</strong> Via the Mac App Store, TestFlight for the betas, or a new DMG from GitHub Releases. The app has no self-updater phoning home.</li>
         <li class="crossing"><strong>Private Cloud Compute (optional, off by default)</strong> A cloud button next to the message field, visible only once you turn it on in Settings. Sends one message at a time to Apple's Private Cloud Compute, after a consent sheet; every PCC answer is labelled.</li>
@@ -123,7 +123,7 @@
   <h2>What ever touches the network?</h2>
   <p>A privacy page earns its keep in the exceptions, so here they are, plainly:</p>
   <ol>
-    <li><strong>Model downloads (one-time, opt-in).</strong> M1K3 starts on Mini — Apple's on-device Foundation Model, instant, nothing to download. If you choose a bigger local brain (Lil or Big) or on-device Whisper speech models, the weights download once from <code>huggingface.co</code>; after that, inference runs fully offline. The app's outbound-network entitlement exists for this — the <a href="https://github.com/Round-Tower/M1K3/blob/master/macos/M1K3App/M1K3.entitlements">entitlements file</a> says so in a signed comment.</li>
+    <li><strong>Model downloads (one-time, when you ask).</strong> M1K3 starts on Mini — with Apple Intelligence that is Apple's on-device Foundation Model, instant, nothing to download; on a Mac without it, a small Mini brain (about 630 MB) downloads on first run instead. Beyond that, the Lil or Big brain, semantic memory (the embedder), on-device Whisper speech models and the M1K3 Voice each download once from Hugging Face (<code>huggingface.co</code>); the voice also fetches one voice-styles file from <code>github.com</code>. After that, inference and voice run fully offline. The app's outbound-network entitlement exists for these downloads and the web tools below — the <a href="https://github.com/Round-Tower/M1K3/blob/master/macos/M1K3App/M1K3.entitlements">entitlements file</a> says so in a signed comment.</li>
     <li><strong>The web tools (on by default, one switch to turn them off).</strong> The local agent has web-search and page-reading tools so answers can be current. One toggle in <strong>Settings ▸ Privacy</strong> turns them off; when it is off, the agent has no web tools at all — it can't quietly decide to search. When it is on, your search queries go to the web, as searches do.</li>
     <li><strong>Updates (via the channel you chose).</strong> There is no Sparkle-style self-updater inside the app. Mac App Store builds — and TestFlight builds, for the betas — update through Apple's infrastructure; the DMG updates when you download a new one from <a href="https://github.com/Round-Tower/M1K3/releases">GitHub Releases</a>; a source build updates when you pull and rebuild.</li>
     <li><strong>Private Cloud Compute (opt-in, off by default).</strong> Turn it on in Settings and a cloud button appears next to the message field. Tap it and a consent sheet shows exactly what's about to go — the message, plus the conversation so far only if you tick that too — before it sends one message at a time to Apple's Private Cloud Compute. Never your memories, documents, tools, calendar, location, or profile. Every PCC answer is labelled in the chat; if PCC fails or the quota runs out, the on-device brain answers and says why. Detail below.</li>
@@ -151,7 +151,7 @@
   <h2>How can you verify any of this?</h2>
   <p>M1K3's source is public — source-available under the <a href="https://github.com/Round-Tower/M1K3/blob/master/LICENSE">Functional Source License</a> (FSL-1.1-ALv2) — which turns this page from marketing into a checklist:</p>
   <ul>
-    <li><strong>Read the entitlements.</strong> The sandbox entitlements file ships in the repo with a signed comment on every grant explaining why it exists — outbound network for model downloads, inbound listening pinned to loopback for the MCP server, mic access for on-device recognition, and Private Cloud Compute gated behind its own developer entitlement. Or print what the shipped app actually carries:</li>
+    <li><strong>Read the entitlements.</strong> The sandbox entitlements file ships in the repo with a signed comment on every grant explaining why it exists — outbound network for model downloads and the web tools, inbound listening pinned to loopback for the MCP server, mic access for on-device recognition, and Private Cloud Compute gated behind its own developer entitlement. Or print what the shipped app actually carries:</li>
   </ul>
   <div class="term">
     <div class="term-bar"><span></span><span></span><span></span></div>
@@ -163,7 +163,7 @@
 <span class="c">com.apple.developer.private-cloud-compute → true  # the opt-in cloud button, off by default</span></pre></div>
   </div>
   <ul>
-    <li><strong>Watch the wire.</strong> Run a network monitor (Little Snitch, LuLu) while you chat, ingest documents, and talk to it. After any model download you've opted into, there's nothing to see.</li>
+    <li><strong>Watch the wire.</strong> Run a network monitor (Little Snitch, LuLu) while you chat, ingest documents, and talk to it. Apart from the downloads you asked for, the web tools, and updates, there's nothing to see.</li>
     <li><strong>Pull the cable.</strong> The bluntest instrument is the best one: disconnect mid-conversation. Inference, voice, and retrieval carry on, because none of them ever needed the network.</li>
     <li><strong>Read the source.</strong> The <a href="https://github.com/Round-Tower/M1K3">repo is public</a>, the app is signed and notarized, and the git history carries <a href="https://murphysig.dev">MurphySig</a> provenance — human-and-AI collaboration on the record.</li>
   </ul>
@@ -176,7 +176,7 @@
     </details>
     <details>
       <summary>Can M1K3 work fully offline?</summary>
-      <p>Yes. The default Mini brain works with nothing to download; once any bigger brain you've opted into has fetched its weights, everything — chat, voice, document search, call memory — runs without a connection.</p>
+      <p>Yes. With Apple Intelligence the default Mini brain works with nothing to download (without it, a small Mini brain downloads once). Once the models you've asked for have been fetched — a bigger brain, semantic memory, sharper speech recognition, the M1K3 Voice — everything: chat, voice, document search, call memory, runs without a connection.</p>
     </details>
     <details>
       <summary>Is there telemetry, analytics, or a required account?</summary>
@@ -268,6 +268,12 @@
      Mac App Store first; TestFlight stays as the betas' channel. The 2026-07-10 grounding note
      "(TestFlight / DMG / source)" above is history, not live copy. dateModified NOT bumped.
      Confidence 0.85.
+     Review: Kev + claude-opus-5.5, 2026-10-11 (PR 2b, truth in copy) — the crossings now name EVERY download,
+     not just Lil/Big weights: brains, the pocket Mini on a Mac without Apple Intelligence (~630 MB), the
+     semantic-memory embedder, WhisperKit's speech models, and the M1K3 Voice (Kokoro: model from Hugging
+     Face, voices-v1.0.bin from a github.com release; MLX, the old runtime name is gone). Never "huggingface.co
+     only". Source: macos/Sources/M1K3Inference/NetworkCrossings.swift. The visible short answer and its
+     JSON-LD twin share the changed clause byte-for-byte. dateModified 2026-10-11. Confidence 0.85.
      Review: Kev + claude-opus-5.5, 2026-10-11 — Safari's App Store banner (apple-itunes-app, the one universal
      record) joins the head. iPhone/iPad Safari only; it lights up once iOS clears review. Confidence 0.85.
      Review: Kev + claude-opus-5.5, 2026-10-11 — App Store campaign links: each store link carries pt=120784482

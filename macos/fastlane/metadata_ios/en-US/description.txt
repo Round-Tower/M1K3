@@ -1,4 +1,4 @@
-My friends call me Mike. I'm a local AI agent that lives on your iPhone and iPad — no account, no sign-up, no telemetry. Your chats, notes and documents stay on the device by default; web search (and the lookups it makes) is the one thing that sends anything out, and it's a switch in Settings.
+My friends call me Mike. I'm a local AI agent that lives on your iPhone and iPad — no account, no sign-up, no telemetry. Your chats, notes and documents stay on the device by default; apart from the models you ask me to download, web search (and the lookups it makes) is the one thing that sends anything out, and it's a switch in Settings.
 
 WHAT I DO
 • Chat with an on-device brain — Mini starts instantly on Apple Intelligence devices (a small download everywhere else), and Lil (4B) runs fully offline on iPhones and iPads with 8 GB of memory.
@@ -10,7 +10,7 @@ WHAT I DO
 
 PRIVATE BY DESIGN
 • The brains, the search over your documents and the voice all run on the device.
-• I use the network for two things: downloading a brain when you choose one, and web search — on by default so answers can be current, one switch in Settings to turn it off.
+• I use the network for two things: downloading models when you choose them (brains and my voice), and web search — on by default so answers can be current, one switch in Settings to turn it off.
 • No analytics. No tracking. No data collected. The source code is published under a source-available licence, so you can check.
 
 Works offline — on a plane, up a mountain, anywhere the signal isn't.

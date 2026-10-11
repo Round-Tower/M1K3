@@ -409,9 +409,9 @@ Nothing. M1K3 is free for humans — no account, no subscription, no telemetry. 
 
 ## Is M1K3 really private?
 
-Updated 2026-10-02 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable
+Updated 2026-10-11 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable
 
-Short answer: yes — by architecture, not by promise. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the knowledge store encrypted under a key held in your Keychain. The MCP server binds to 127.0.0.1 and is off by default. The network is used in exactly four documented cases: a one-time model-weights download from Hugging Face when you opt into a bigger brain, web search, which is on by default so answers can be current, with one switch in Settings to turn it off, updates via the channel you installed from, and — only if you turn it on in Settings — sending one message at a time to Apple's Private Cloud Compute. No telemetry, no account, no analytics. With Private Cloud Compute off, the default, pull the ethernet cable mid-conversation and M1K3 doesn't notice.
+Short answer: yes — by architecture, not by promise. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the knowledge store encrypted under a key held in your Keychain. The MCP server binds to 127.0.0.1 and is off by default. The network is used in exactly four documented cases: one-time model downloads when you ask for them (brains, semantic memory, sharper speech recognition and the M1K3 Voice, from Hugging Face, plus one voice-styles file from GitHub), web search, which is on by default so answers can be current, with one switch in Settings to turn it off, updates via the channel you installed from, and — only if you turn it on in Settings — sending one message at a time to Apple's Private Cloud Compute. No telemetry, no account, no analytics. With Private Cloud Compute off, the default, pull the ethernet cable mid-conversation and M1K3 doesn't notice.
 
 ### What runs where?
 
@@ -425,7 +425,7 @@ one sandboxed app · apple silicon · works offline
 
 - Voice in WhisperKit / Apple Speech — streaming speech-to-text, on-device.
 
-- Voice out Kokoro neural TTS (ONNX Runtime) — synthesis on-device.
+- Voice out Kokoro neural TTS (MLX-Swift on Metal) — synthesis on-device.
 
 - Knowledge & memory Embeddings, the personal knowledge graph, and hybrid RAG over your documents — indexed and searched locally.
 
@@ -439,7 +439,7 @@ one sandboxed app · apple silicon · works offline
 
 the complete list of crossings
 
-- Model weights, once Downloaded from Hugging Face only when you opt into the Lil or Big brain. The default Mini brain is Apple's built-in model — nothing to download.
+- Model downloads, once each When you ask for them: the Lil or Big brain, semantic memory, sharper speech recognition (WhisperKit) and the M1K3 Voice, from Hugging Face — the voice also fetches one small voice-styles file from GitHub. On a Mac without Apple Intelligence the first run downloads a small Mini brain (about 630 MB) instead; with Apple Intelligence, the default Mini is Apple's built-in model and needs nothing.
 
 - Web search & page reading (on by default) Agent tools behind one privacy toggle, so answers can be current. Web off means web off.
 
@@ -455,7 +455,7 @@ every crossing above is documented in the repo
 
 A privacy page earns its keep in the exceptions, so here they are, plainly:
 
-- Model downloads (one-time, opt-in). M1K3 starts on Mini — Apple's on-device Foundation Model, instant, nothing to download. If you choose a bigger local brain (Lil or Big) or on-device Whisper speech models, the weights download once from huggingface.co; after that, inference runs fully offline. The app's outbound-network entitlement exists for this — the entitlements file (https://github.com/Round-Tower/M1K3/blob/master/macos/M1K3App/M1K3.entitlements) says so in a signed comment.
+- Model downloads (one-time, when you ask). M1K3 starts on Mini — with Apple Intelligence that is Apple's on-device Foundation Model, instant, nothing to download; on a Mac without it, a small Mini brain (about 630 MB) downloads on first run instead. Beyond that, the Lil or Big brain, semantic memory (the embedder), on-device Whisper speech models and the M1K3 Voice each download once from Hugging Face (huggingface.co); the voice also fetches one voice-styles file from github.com. After that, inference and voice run fully offline. The app's outbound-network entitlement exists for these downloads and the web tools below — the entitlements file (https://github.com/Round-Tower/M1K3/blob/master/macos/M1K3App/M1K3.entitlements) says so in a signed comment.
 
 - The web tools (on by default, one switch to turn them off). The local agent has web-search and page-reading tools so answers can be current. One toggle in Settings ▸ Privacy turns them off; when it is off, the agent has no web tools at all — it can't quietly decide to search. When it is on, your search queries go to the web, as searches do.
 
@@ -495,7 +495,7 @@ Each one is off until you use the feature that needs it, and each one serves onl
 
 M1K3's source is public — source-available under the Functional Source License (https://github.com/Round-Tower/M1K3/blob/master/LICENSE) (FSL-1.1-ALv2) — which turns this page from marketing into a checklist:
 
-- Read the entitlements. The sandbox entitlements file ships in the repo with a signed comment on every grant explaining why it exists — outbound network for model downloads, inbound listening pinned to loopback for the MCP server, mic access for on-device recognition, and Private Cloud Compute gated behind its own developer entitlement. Or print what the shipped app actually carries:
+- Read the entitlements. The sandbox entitlements file ships in the repo with a signed comment on every grant explaining why it exists — outbound network for model downloads and the web tools, inbound listening pinned to loopback for the MCP server, mic access for on-device recognition, and Private Cloud Compute gated behind its own developer entitlement. Or print what the shipped app actually carries:
 
 ```
 $ codesign -d --entitlements - /Applications/M1K3.app
@@ -505,7 +505,7 @@ com.apple.security.network.server         → true  # the 127.0.0.1 MCP server, 
 com.apple.security.device.audio-input     → true  # mic, for on-device speech recognition
 com.apple.developer.private-cloud-compute → true  # the opt-in cloud button, off by default
 ```
-- Watch the wire. Run a network monitor (Little Snitch, LuLu) while you chat, ingest documents, and talk to it. After any model download you've opted into, there's nothing to see.
+- Watch the wire. Run a network monitor (Little Snitch, LuLu) while you chat, ingest documents, and talk to it. Apart from the downloads you asked for, the web tools, and updates, there's nothing to see.
 
 - Pull the cable. The bluntest instrument is the best one: disconnect mid-conversation. Inference, voice, and retrieval carry on, because none of them ever needed the network.
 
@@ -519,7 +519,7 @@ Not by default, and never to a server M1K3 runs — it doesn't have one. Inferen
 
 **Q: Can M1K3 work fully offline?**
 
-Yes. The default Mini brain works with nothing to download; once any bigger brain you've opted into has fetched its weights, everything — chat, voice, document search, call memory — runs without a connection.
+Yes. With Apple Intelligence the default Mini brain works with nothing to download (without it, a small Mini brain downloads once). Once the models you've asked for have been fetched — a bigger brain, semantic memory, sharper speech recognition, the M1K3 Voice — everything: chat, voice, document search, call memory, runs without a connection.
 
 **Q: Is there telemetry, analytics, or a required account?**
 
