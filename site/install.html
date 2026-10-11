@@ -51,7 +51,7 @@
     { "@type": "HowToStep", "name": "Get the app", "url": "https://m1k3.app/install#get",
       "text": "Mac App Store: https://apps.apple.com/app/id6780230835 — the easy way, and it updates through the store. Homebrew: brew trust round-tower/tap, then brew install --cask round-tower/tap/m1k3 — this also puts the m1k3 command on your PATH. Or download the signed, notarized M1K3.dmg from GitHub Releases and drag it to Applications." },
     { "@type": "HowToStep", "name": "Say hello", "url": "https://m1k3.app/install#hello",
-      "text": "Open M1K3. First run picks Mini, Apple's on-device model — instant, nothing to download, no account. Ask it anything. Upgrade to Lil (about 3 GB, the brain that fronts the conversation; it reads images too) from the prompt after your first answer or in Settings." },
+      "text": "Open M1K3. First run picks Mini. With Apple Intelligence that is Apple's on-device model, already on your Mac, so there is nothing to download and nothing to sign in to; without it, a small Mini brain (about 630 MB) downloads once first. Ask it anything. Upgrade to Lil (about 3 GB, the brain that fronts the conversation; it reads images too) from the prompt after your first answer or in Settings." },
     { "@type": "HowToStep", "name": "Connect your agent", "url": "https://m1k3.app/install#connect",
       "text": "Turn the MCP server on once: Settings ▸ MCP Server. It is off by default and serves http://127.0.0.1:4242/mcp only while the app is open. Copy the access token from the same pane and run m1k3 login to paste it; every request carries it. Then run m1k3 connect claude — or codex, cursor, vscode, zed. Add --print to see the config without touching a file. m1k3 agent-notes --write folds the 'M1K3 is the resident' block into your project's AGENTS.md." },
     { "@type": "HowToStep", "name": "Verify", "url": "https://m1k3.app/install#verify",
@@ -232,7 +232,7 @@
 
   <section class="step" id="hello">
     <h2>Say hello</h2>
-    <p>Open M1K3. First run picks <strong>Mini</strong> — Apple's on-device model, already on your Mac, so there is nothing to download and nothing to sign in to. Ask it anything. Type, or hold the mic and talk; ending a spoken sentence on "please" hands it the floor.</p>
+    <p>Open M1K3. First run picks <strong>Mini</strong>. With Apple Intelligence that is Apple's on-device model, already on your Mac, so there is nothing to download and nothing to sign in to; without it, a small Mini brain (about 630 MB) downloads once first. Ask it anything. Type, or hold the mic and talk; ending a spoken sentence on "please" hands it the floor.</p>
     <p>After your first answer M1K3 offers the upgrade: <strong>Lil</strong> (Qwen3.5, about 3 GB, downloaded once from Hugging Face) is the brain that fronts the conversation on every Mac, and it reads images; <strong>Big</strong> (Gemma 4 12B) is offered on 16 GB Macs and up, and reached by delegation for deep work. Both are a tap away in Settings any time, and <a href="/brains">how they score</a> is public.</p>
     <div class="only-agent">
       <p>From a shell, the same first run: <code>open -a M1K3</code>. The brain choice is a click in the app, on purpose — a download of that size is the user's to start.</p>
@@ -374,7 +374,7 @@ http_headers = { "Authorization" = "Bearer m1k3_…" }</pre></div>
     <div class="term-body"><pre><span class="c"># 1 · get the app (puts `m1k3` on PATH)</span>
 brew trust round-tower/tap
 brew install --cask round-tower/tap/m1k3
-<span class="c"># 2 · open it once — first run is Mini, nothing to download</span>
+<span class="c"># 2 · open it once — first run is Mini (nothing to download with Apple Intelligence; ~630 MB once without it)</span>
 open -a M1K3
 <span class="c"># 3 · ask the user to flip the switch: M1K3 ▸ Settings ▸ MCP Server → On,</span>
 <span class="c">#     Copy the token there, and run `m1k3 login` themselves to paste it</span>

@@ -37,7 +37,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-07-10",
-  "dateModified": "2026-10-02"
+  "dateModified": "2026-10-11"
 }
 </script>
 <script type="application/ld+json">
@@ -48,7 +48,7 @@
     { "@type": "Question", "name": "What do I need to run a local LLM on a Mac?",
       "acceptedAnswer": { "@type": "Answer", "text": "An Apple Silicon Mac (M1 or later) and enough unified memory for the model you want. As a rule of thumb with 4-bit quantized models: 8 GB of RAM runs small models around 1–4B parameters, 16 GB runs the 4–8B class comfortably, and 32 GB or more opens up 8–14B and beyond. Apple Silicon's unified memory lets the GPU address the full RAM pool, which is why Macs are unusually good at this." } },
     { "@type": "Question", "name": "What is the easiest way to run a local LLM on a Mac?",
-      "acceptedAnswer": { "@type": "Answer", "text": "For a finished assistant: M1K3, a free source-available on-device AI app for Apple Silicon Macs (requires macOS 26) with chat, voice, and document memory built in — its first-run brain needs no download at all. For a developer tool: Ollama — install it and 'ollama run' a model. For a graphical model browser: LM Studio." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "For a finished assistant: M1K3, a free source-available on-device AI app for Apple Silicon Macs (requires macOS 26) with chat, voice, and document memory built in — its first-run brain needs no download on a Mac with Apple Intelligence. For a developer tool: Ollama — install it and 'ollama run' a model. For a graphical model browser: LM Studio." } },
     { "@type": "Question", "name": "Do local LLMs match ChatGPT?",
       "acceptedAnswer": { "@type": "Answer", "text": "No — frontier cloud models remain more capable than anything a laptop runs, especially for hard reasoning and state-of-the-art coding. But current local models such as Gemma and Qwen are genuinely useful for everyday summarising, drafting, and question-answering over your own documents, and they work offline, cost nothing per query, and keep your data on the machine." } },
     { "@type": "Question", "name": "Is running a local LLM private?",
@@ -80,7 +80,7 @@
   <header class="article-head">
     <span class="label">// guide</span>
     <h1>How to run a local LLM on a Mac</h1>
-    <p class="meta">Updated 2026-10-02 · By Round Tower, the makers of M1K3 — one of the four routes below is ours; the other three are recommended honestly.</p>
+    <p class="meta">Updated 2026-10-11 · By Round Tower, the makers of M1K3 — one of the four routes below is ours; the other three are recommended honestly.</p>
   </header>
 
   <div class="answer">
@@ -135,7 +135,7 @@
     <li><strong>Consent-gated call memory</strong> — encrypted, on-device transcription.</li>
     <li><strong>A local agent and an MCP server</strong> — so Claude and other agents can <a href="/mcp-knowledge-server">query your local knowledge</a>.</li>
   </ul>
-  <p>First run starts on an instant brain with nothing to download; larger local brains are an opt-in download. Your documents and conversations stay on the Mac; the one exception is web search, on by default so answers can be current, with one switch in Settings to turn it off. <strong>The honest catch:</strong> it requires macOS 26 Tahoe on Apple Silicon, and its model list is curated rather than a library. <strong>Best for:</strong> people who want private, working AI on their Mac today, not a stack to assemble.</p>
+  <p>First run starts on an instant brain with nothing to download on a Mac with Apple Intelligence (a small one-time download without it); larger local brains are an opt-in download. Your documents and conversations stay on the Mac; the one exception is web search, on by default so answers can be current, with one switch in Settings to turn it off. <strong>The honest catch:</strong> it requires macOS 26 Tahoe on Apple Silicon, and its model list is curated rather than a library. <strong>Best for:</strong> people who want private, working AI on their Mac today, not a stack to assemble.</p>
 
   <h2>Which route should you pick?</h2>
   <div class="table-scroll">
@@ -160,7 +160,7 @@
   <div class="faq-list">
     <details>
       <summary>What's the easiest way to start?</summary>
-      <p>For a finished assistant: <a href="/">M1K3</a> — its first-run brain needs no download at all (requires macOS 26 on Apple Silicon). For a developer tool: Ollama — install and <code>ollama run</code> a model. For a GUI: LM Studio.</p>
+      <p>For a finished assistant: <a href="/">M1K3</a> — its first-run brain needs no download on a Mac with Apple Intelligence (requires macOS 26 on Apple Silicon). For a developer tool: Ollama — install and <code>ollama run</code> a model. For a GUI: LM Studio.</p>
     </details>
     <details>
       <summary>Can an 8 GB Mac run a local LLM?</summary>

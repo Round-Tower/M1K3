@@ -5,6 +5,7 @@ hand-written, so this keeps them honest against that same file: every host a dow
 on the privacy page, the Kokoro line no longer says ONNX, and the short answer matches its JSON-LD twin.
 
 Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.8 (text tripwires over copy). Prior: none (new file).
+Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — C2/C3/C4: no page says "nothing to download" unqualified; en-GB mirrors en-US. Confidence 0.8.
 """
 import json
 import re
@@ -81,3 +82,27 @@ def test_the_entitlements_comment_no_longer_claims_weights_are_the_only_reason()
     ent = (ROOT / "macos" / "M1K3App" / "M1K3.entitlements").read_text()
     assert "the ONLY reason" not in ent
     assert "voices-v1.0.bin" in ent and "github.com" in ent
+
+
+def test_no_page_claims_nothing_to_download_without_the_apple_intelligence_qualifier():
+    """Mini needs Apple Intelligence to be instant; on a Mac without it, a ~630 MB brain downloads (C2/C3)."""
+    claim = re.compile(r"(nothing to download|no download)", re.I)
+    pages = sorted((ROOT / "site").glob("*.html")) + sorted((ROOT / "site").glob("*.txt"))
+    pages = [p for p in pages if p.name != "llms-full.txt"]  # generated from the pages below
+    for page in pages:
+        text = page.read_text()
+        for m in claim.finditer(text):
+            window = text[max(0, m.start() - 400): m.end() + 200]
+            assert re.search(r"Apple Intelligence|without it|on others", window), f"{page.name}: {m.group(0)!r} is unqualified"
+    for desc in (ROOT / "macos" / "fastlane").glob("metadata_*/en-*/description.txt"):
+        text = desc.read_text()
+        assert "instant, no download" not in text, desc
+
+
+def test_en_gb_descriptions_mirror_the_en_us_privacy_and_mini_lines():
+    for platform in ("mac", "ios"):
+        us = (ROOT / "macos" / "fastlane" / f"metadata_{platform}" / "en-US" / "description.txt").read_text()
+        gb = (ROOT / "macos" / "fastlane" / f"metadata_{platform}" / "en-GB" / "description.txt").read_text()
+        for line in us.splitlines():
+            if any(k in line for k in ("Beyond the models", "apart from the models", "I use the network", "Three brain tiers")):
+                assert line in gb, f"{platform}: en-GB lacks: {line[:60]}"

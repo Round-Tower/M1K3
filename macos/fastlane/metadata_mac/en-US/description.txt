@@ -5,7 +5,7 @@ WHAT I DO
 • Talk to me: on-device speech recognition and a natural neural voice (Kokoro TTS).
 • Bring your own knowledge: drop in notes and PDFs and I'll answer from them (on-device retrieval).
 • I remember what matters to you — a temporal knowledge graph you can see, search, and delete at any time.
-• Three brain tiers — Mini (instant, no download), Lil (4B), and Big (12B) — pick the one that fits your machine.
+• Three brain tiers — Mini (instant on Apple Intelligence Macs, a small download on others), Lil (4B), and Big (12B) — pick the one that fits your machine.
 • A friendly 3D companion and a pixel face, if you want them.
 • Brain at Home: pair your iPhone or iPad over LAN and use your Mac's big brain from the couch.
 

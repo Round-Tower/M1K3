@@ -30,7 +30,9 @@ STEP 1 — GET THE APP
 
 STEP 2 — OPEN IT ONCE
     open -a M1K3
-  First run picks Mini, Apple's on-device model: instant, nothing to download.
+  First run picks Mini. With Apple Intelligence that is Apple's on-device model:
+  instant, nothing to download. Without it, a small Mini brain (about 630 MB)
+  downloads once first.
   The upgrade to Lil (Qwen3.5, about 3 GB, downloaded once from Hugging Face)
   is offered after the first answer and in Settings. Big (Gemma 4 12B) is
   offered on 16 GB Macs and up. These are the user's clicks: an agent should

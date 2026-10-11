@@ -54,7 +54,7 @@ Check: M1K3 is in Applications. Nothing has been downloaded but the app itself.
 
 ### Say hello
 
-Open M1K3. First run picks Mini — Apple's on-device model, already on your Mac, so there is nothing to download and nothing to sign in to. Ask it anything. Type, or hold the mic and talk; ending a spoken sentence on "please" hands it the floor.
+Open M1K3. First run picks Mini. With Apple Intelligence that is Apple's on-device model, already on your Mac, so there is nothing to download and nothing to sign in to; without it, a small Mini brain (about 630 MB) downloads once first. Ask it anything. Type, or hold the mic and talk; ending a spoken sentence on "please" hands it the floor.
 
 After your first answer M1K3 offers the upgrade: Lil (Qwen3.5, about 3 GB, downloaded once from Hugging Face) is the brain that fronts the conversation on every Mac, and it reads images; Big (Gemma 4 12B) is offered on 16 GB Macs and up, and reached by delegation for deep work. Both are a tap away in Settings any time, and how they score is public.
 
@@ -168,7 +168,7 @@ The same four steps as a file your agent can fetch and follow — m1k3.app/insta
 # 1 · get the app (puts `m1k3` on PATH)
 brew trust round-tower/tap
 brew install --cask round-tower/tap/m1k3
-# 2 · open it once — first run is Mini, nothing to download
+# 2 · open it once — first run is Mini (nothing to download with Apple Intelligence; ~630 MB once without it)
 open -a M1K3
 # 3 · ask the user to flip the switch: M1K3 ▸ Settings ▸ MCP Server → On,
 #     Copy the token there, and run `m1k3 login` themselves to paste it
@@ -849,7 +849,7 @@ Both are good local options — see our full M1K3 vs Ollama comparison and the l
 
 ## How to run a local LLM on a Mac
 
-Updated 2026-10-02 · By Round Tower, the makers of M1K3 — one of the four routes below is ours; the other three are recommended honestly.
+Updated 2026-10-11 · By Round Tower, the makers of M1K3 — one of the four routes below is ours; the other three are recommended honestly.
 
 Short answer: you need an Apple Silicon Mac and one of four tools. Ollama if you want a CLI and a local API to build on; LM Studio if you want a graphical model browser with an OpenAI-compatible server; Apple's MLX (mlx-lm) if you want the Python framework underneath it all; or M1K3 if you want a finished, private assistant — chat, voice, and memory over your documents — rather than a model runner. Any M-series Mac works for small models; 16 GB of unified memory runs the popular 4–8B class comfortably. All four are free.
 
@@ -907,7 +907,7 @@ The three options above give you a model. M1K3 (free for humans, source-availabl
 
 - A local agent and an MCP server — so Claude and other agents can query your local knowledge.
 
-First run starts on an instant brain with nothing to download; larger local brains are an opt-in download. Your documents and conversations stay on the Mac; the one exception is web search, on by default so answers can be current, with one switch in Settings to turn it off. The honest catch: it requires macOS 26 Tahoe on Apple Silicon, and its model list is curated rather than a library. Best for: people who want private, working AI on their Mac today, not a stack to assemble.
+First run starts on an instant brain with nothing to download on a Mac with Apple Intelligence (a small one-time download without it); larger local brains are an opt-in download. Your documents and conversations stay on the Mac; the one exception is web search, on by default so answers can be current, with one switch in Settings to turn it off. The honest catch: it requires macOS 26 Tahoe on Apple Silicon, and its model list is curated rather than a library. Best for: people who want private, working AI on their Mac today, not a stack to assemble.
 
 ### Which route should you pick?
 
@@ -931,7 +931,7 @@ No — and this guide is more useful if we say that plainly. Frontier cloud mode
 
 **Q: What's the easiest way to start?**
 
-For a finished assistant: M1K3 — its first-run brain needs no download at all (requires macOS 26 on Apple Silicon). For a developer tool: Ollama — install and ollama run a model. For a GUI: LM Studio.
+For a finished assistant: M1K3 — its first-run brain needs no download on a Mac with Apple Intelligence (requires macOS 26 on Apple Silicon). For a developer tool: Ollama — install and ollama run a model. For a GUI: LM Studio.
 
 **Q: Can an 8 GB Mac run a local LLM?**
 
@@ -5897,7 +5897,9 @@ STEP 1 — GET THE APP
 
 STEP 2 — OPEN IT ONCE
     open -a M1K3
-  First run picks Mini, Apple's on-device model: instant, nothing to download.
+  First run picks Mini. With Apple Intelligence that is Apple's on-device model:
+  instant, nothing to download. Without it, a small Mini brain (about 630 MB)
+  downloads once first.
   The upgrade to Lil (Qwen3.5, about 3 GB, downloaded once from Hugging Face)
   is offered after the first answer and in Settings. Big (Gemma 4 12B) is
   offered on 16 GB Macs and up. These are the user's clicks: an agent should
