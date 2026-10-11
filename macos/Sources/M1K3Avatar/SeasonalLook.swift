@@ -20,6 +20,10 @@
 //  regional calendar, whose month 10 is another season); the launch override is read once
 //  (`launchOverride`, the avatar resolves ~30 Hz); `now(enabled:)` is the shells' one call, on
 //  `.autoupdatingCurrent` so a traveller's zone follows them. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (CI fold) — the costume line moves here from the shared
+//  M1K3App/SeasonalGreeting.swift (`greeting(for:)`, tested): a new Mac-shell file compiled by the
+//  mobile target is a landing-gate change (MOBILE_PATH_PREFIXES); a package function is not.
+//  Confidence 0.9.
 //
 
 import Foundation
@@ -69,6 +73,20 @@ public enum SeasonalLook: String, Sendable {
         case .halloween: .halloween
         case .off: nil
         case nil: enabled ? active(on: date, calendar: calendar) : nil
+        }
+    }
+
+    /// The one line M1K3 says in costume (at most 70 characters), nil out of season. Copy only:
+    /// the persona / system prompt is untouched (prompt edits have measured security costs).
+    public static func greeting(for season: SeasonalLook?) -> String? {
+        switch season {
+        case .halloween:
+            String(
+                localized: "Happy Halloween! I carved the pumpkin; you bring the questions.",
+                comment: "Seasonal greeting shown 24 Oct - 1 Nov. M1K3 is a theatrical villain who is entirely on the user's side; keep it playful and family-safe, one short line."
+            )
+        case nil:
+            nil
         }
     }
 

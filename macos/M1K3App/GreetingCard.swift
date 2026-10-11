@@ -34,6 +34,8 @@
 //  constraint — Kev, 2026-09-09).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — `season`: in season (Halloween) a returning user gets one
 //  costume line under the wordmark; the first-session hero is untouched. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (CI fold) — the costume line renders inline from
+//  `SeasonalLook.greeting(for:)` (the shared SeasonalGreeting.swift is gone). Confidence 0.85.
 
 import M1K3Avatar
 import M1K3Chat
@@ -74,7 +76,12 @@ struct GreetingCard: View {
             } else {
                 // Returning users have no line here; in season M1K3 greets in costume.
                 // The first-session hero keeps its own job.
-                SeasonalGreetingLine(season: season)
+                if let line = SeasonalLook.greeting(for: season) {
+                    Text(line)
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
             }
 
             heroZone

@@ -109,8 +109,6 @@ targetTemplates:
       # RealityKit.h Metal header), so those two files live on the iOS target alone
       # and CompanionAvatarView #if's out its shading calls on visionOS.
       - path: M1K3App/CompanionAvatarView.swift
-      # The seasonal costume line (Halloween), one file for both shells.
-      - path: M1K3App/SeasonalGreeting.swift
       - path: M1K3App/CodeBlockView.swift
       # "Remember this photo" under a sent image (caption memory): pure SwiftUI over
       # M1K3Chat's PhotoMemory, one file for both shells.

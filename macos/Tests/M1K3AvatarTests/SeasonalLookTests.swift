@@ -68,6 +68,13 @@ struct SeasonalLookTests {
         }
     }
 
+    @Test("in costume M1K3 says one short line; out of season, nothing")
+    func greeting() throws {
+        let line = try #require(SeasonalLook.greeting(for: .halloween))
+        #expect(!line.isEmpty && line.count <= 70)
+        #expect(SeasonalLook.greeting(for: nil) == nil)
+    }
+
     @Test("it applies in any year")
     func otherYears() throws {
         let utc = try calendar("UTC")
