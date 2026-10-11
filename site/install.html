@@ -206,7 +206,7 @@
         <span class="tag rec-person">Mac App Store · the easy way</span>
         <h3>Mac App Store</h3>
         <p>Free, and it updates through the App Store. One honest note: the App Store copy of <code>m1k3</code> is sandboxed, so its <code>connect</code> prints the config rather than writing it; Homebrew and the DMG write it for you.</p>
-        <a class="btn btn-primary" href="https://apps.apple.com/app/id6780230835">Get it on the Mac App Store</a>
+        <a class="btn btn-primary" href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=site-install&amp;mt=12">Get it on the Mac App Store</a>
         <a class="btn btn-ghost" href="https://testflight.apple.com/join/Fxp2F5Je">iPhone &amp; iPad beta (TestFlight)</a>
         <button class="btn btn-ghost only-away" type="button" data-send-to-mac>Send it to my Mac</button>
       </div>
@@ -508,6 +508,9 @@ m1k3 ask "what can you do?"</pre></div>
      Review: Kev + claude-opus-5.5, 2026-10-11 — Safari's App Store banner (apple-itunes-app, the one universal
      record) joins the head. iPhone/iPad Safari only; it lights up once iOS clears review. On a phone or a
      non-Mac (html[data-platform], set in <head>) the App Store route also offers "Send it to my Mac"
-     (send-to-mac.js → the share sheet). A <button>, so llms-full.txt never sees it. Confidence 0.85. -->
+     (send-to-mac.js → the share sheet). A <button>, so llms-full.txt never sees it. Confidence 0.85.
+     Review: Kev + claude-opus-5.5, 2026-10-11 — App Store campaign links: each store link carries pt=120784482
+     (Round Tower's provider token) and its own ct, so App Store Connect counts which door converts and the
+     page still tracks nobody. JSON-LD keeps the canonical URL. Confidence 0.85. -->
 </body>
 </html>

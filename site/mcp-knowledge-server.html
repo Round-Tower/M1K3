@@ -121,7 +121,7 @@
   </div>
 
   <h2>How do I connect Claude Code to M1K3?</h2>
-  <p><strong>Step 1 — install M1K3 and give it something to know.</strong> Get the app (<a href="/install#get">Homebrew</a>, the <a href="https://apps.apple.com/app/id6780230835">Mac App Store</a>, the <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg">DMG</a>, or <a href="https://github.com/Round-Tower/M1K3">source</a>; requires macOS 26 on Apple Silicon), then drop documents, notes, or PDFs into it. M1K3 indexes them into its knowledge graph on-device.</p>
+  <p><strong>Step 1 — install M1K3 and give it something to know.</strong> Get the app (<a href="/install#get">Homebrew</a>, the <a href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=site-mcp-inline&amp;mt=12">Mac App Store</a>, the <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg">DMG</a>, or <a href="https://github.com/Round-Tower/M1K3">source</a>; requires macOS 26 on Apple Silicon), then drop documents, notes, or PDFs into it. M1K3 indexes them into its knowledge graph on-device.</p>
   <p><strong>Step 2 — switch the server on and connect.</strong> In M1K3, open <strong>Settings ▸ MCP Server</strong>, switch it on, and Copy the access token. Every request has to carry it; one without it gets a 401. Then, from Terminal:</p>
   <div class="term">
     <div class="term-bar"><span></span><span></span><span></span></div>
@@ -186,7 +186,7 @@
     <h2>Give your agents a memory.</h2>
     <p>M1K3 is free for humans, source-available, and entirely on-device. One switch, one token, one connect, and Claude knows what you know.</p>
     <div class="cta-row">
-      <a class="btn btn-primary" href="https://apps.apple.com/app/id6780230835">Get it on the Mac App Store</a>
+      <a class="btn btn-primary" href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=site-mcp&amp;mt=12">Get it on the Mac App Store</a>
       <a class="btn btn-ghost" href="https://github.com/Round-Tower/M1K3">Build from source</a>
     </div>
   </section>
@@ -234,6 +234,9 @@
      only from the Developer ID helper (the App Store helper prints it), and the cask is what puts
      m1k3 on PATH. The closing CTA is the store. dateModified NOT bumped. Confidence 0.85.
      Review: Kev + claude-opus-5.5, 2026-10-11 — Safari's App Store banner (apple-itunes-app, the one universal
-     record) joins the head. iPhone/iPad Safari only; it lights up once iOS clears review. Confidence 0.85. -->
+     record) joins the head. iPhone/iPad Safari only; it lights up once iOS clears review. Confidence 0.85.
+     Review: Kev + claude-opus-5.5, 2026-10-11 — App Store campaign links: each store link carries pt=120784482
+     (Round Tower's provider token) and its own ct, so App Store Connect counts which door converts and the
+     page still tracks nobody. JSON-LD keeps the canonical URL. Confidence 0.85. -->
 </body>
 </html>

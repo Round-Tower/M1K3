@@ -12,7 +12,7 @@ Private by design: on your Mac by default, no telemetry, and every network call 
 </p>
 
 <p align="center">
-  <a href="https://apps.apple.com/app/id6780230835"><strong>Get it on the Mac App Store</strong></a>
+  <a href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=readme-hero&amp;mt=12"><strong>Get it on the Mac App Store</strong></a>
   · <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg"><strong>⬇ Download for macOS</strong></a>
   · <a href="https://m1k3.app">m1k3.app</a>
   · <a href="https://testflight.apple.com/join/Fxp2F5Je">iPhone &amp; iPad beta (TestFlight)</a>
@@ -74,7 +74,7 @@ labelled. The Developer ID DMG has no cloud path at all — see
 
 ## Get M1K3
 
-- **[Mac App Store](https://apps.apple.com/app/id6780230835)** — the easiest way in; it updates through the store.
+- **[Mac App Store](https://apps.apple.com/app/id6780230835?pt=120784482&ct=readme-install&mt=12)** — the easiest way in; it updates through the store.
 - **Homebrew** — `brew trust round-tower/tap && brew install --cask round-tower/tap/m1k3` (also puts `m1k3` on your PATH).
 - **[Download the DMG](https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg)** — signed & notarized.
 - **Build from source** — [`macos/README.md`](./macos/README.md): clone → `xcodegen generate` → ⌘R.
@@ -241,7 +241,10 @@ human-and-AI collaboration on the record.
      Review: Kev + claude-opus-5.5, 2026-10-11 — Mac App Store live: CTAs and install copy switch from TestFlight. Get M1K3 is Mac
      App Store, Homebrew, DMG, source, then TestFlight for iPhone and iPad; the header links lead
      with the store; the sandboxed-helper caveat drops "(TestFlight today)"; the official-builds
-     line names the store. Confidence 0.85. -->
+     line names the store. Confidence 0.85.
+     Review: Kev + claude-opus-5.5, 2026-10-11 — App Store campaign links: each store link carries pt=120784482
+     (Round Tower's provider token) and its own ct, so App Store Connect counts which door converts and the
+     page still tracks nobody. JSON-LD keeps the canonical URL. Confidence 0.85. -->
 <!-- Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 (the v1.1.0 pass: the two
      "1.0 build has no cloud path" sentences now describe PCC as the opt-in third crossing,
      consent per conversation per ADR 0007; the MCP count of 18 was re-read off

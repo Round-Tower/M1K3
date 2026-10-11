@@ -6,6 +6,10 @@ Signed: Kev + claude-opus-5.5, 2026-10-11 (the Mac App Store went live that morn
 Confidence 0.8. The banner is iPhone/iPad Safari only (macOS Safari shows none), so on a
 Mac the page's own App Store button is the native download; the platform is read in
 <head> so a phone never flashes the Mac row. Prior: Unknown (new file).
+Review: Kev + claude-opus-5.5, 2026-10-11 — every App Store link outside JSON-LD carries
+pt (Round Tower's provider token, read off App Store Connect in Kev's browser) and a
+unique ct per placement, so App Store Connect can say which door converts; the JSON-LD
+keeps the canonical URL. Confidence 0.85.
 """
 from __future__ import annotations
 
@@ -20,6 +24,13 @@ APP_ID = re.search(r'^APP_ID = "(\d+)"', (REPO / "macos/tools/asc/asc.py").read_
 BANNER = f'<meta name="apple-itunes-app" content="app-id={APP_ID}" />'
 PAGES = sorted(SITE.glob("*.html"))
 DOOR_PAGES = ["index.html", "install.html"]
+STORE = f"https://apps.apple.com/app/id{APP_ID}"
+# The provider token: one per Apple developer account, public in every campaign link
+# (App Store Connect → Analytics → Campaigns). Campaign tokens are capped at 30 characters.
+PROVIDER_TOKEN = "120784482"
+CAMPAIGN = re.compile(re.escape(STORE) + rf"\?pt={PROVIDER_TOKEN}(?:&amp;|&)ct=([a-z0-9-]{{1,30}})(?:&amp;|&)mt=12\b")
+CAMPAIGN_SURFACES = [*PAGES, SITE / "send-to-mac.js", SITE / "llms.txt", SITE / "install.txt", REPO / "README.md"]
+JSON_LD = re.compile(r'<script type="application/ld\+json">(.*?)</script>', re.DOTALL)
 HEAD_SCRIPT = re.compile(r"<script>\s*/\*.*?\*/\s*(\(function \(n\) \{.*?\}\)\(navigator\);)\s*</script>", re.DOTALL)
 
 
@@ -63,7 +74,7 @@ def test_every_away_row_still_links_the_store():
     rows = re.findall(r'<div class="cta-row cta-away[^"]*"[^>]*>(.*?)</div>', (SITE / "index.html").read_text(), re.DOTALL)
     assert len(rows) == 2
     for row in rows:
-        assert f'href="https://apps.apple.com/app/id{APP_ID}"' in row
+        assert f'href="{STORE}?' in row
 
 
 @pytest.mark.parametrize("name", DOOR_PAGES)
@@ -82,5 +93,29 @@ def test_send_to_mac_sends_nothing_anywhere():
     js = (SITE / "send-to-mac.js").read_text()
     for beacon in ("fetch(", "XMLHttpRequest", "sendBeacon", "localStorage", "document.cookie"):
         assert beacon not in js, beacon
-    assert f"https://apps.apple.com/app/id{APP_ID}" in js
+    assert STORE in js
     assert "aria-live" in js  # "Link copied ✓" is announced, not just drawn
+
+
+def _outside_json_ld(text: str) -> str:
+    return JSON_LD.sub("", text)
+
+
+def test_every_store_link_says_where_it_came_from():
+    # App Store Connect counts first downloads per campaign token, so each placement gets
+    # its own: which door works is measured by Apple, and the site still tracks nobody.
+    tokens: list[str] = []
+    for path in CAMPAIGN_SURFACES:
+        text = _outside_json_ld(path.read_text())
+        tagged = CAMPAIGN.findall(text)
+        assert text.count(STORE) == len(tagged), f"{path.name}: a store link without a campaign token"
+        tokens += tagged
+    assert len(tokens) >= 15  # a floor, so an emptied surface list can't pass with nothing checked
+    assert len(set(tokens)) == len(tokens), sorted(t for t in set(tokens) if tokens.count(t) > 1)
+
+
+@pytest.mark.parametrize("page", PAGES, ids=lambda p: p.name)
+def test_structured_data_keeps_the_canonical_store_url(page: Path):
+    # sameAs and offers.url name the app itself; a campaign token there would be noise.
+    for block in JSON_LD.findall(page.read_text()):
+        assert "pt=" not in block
