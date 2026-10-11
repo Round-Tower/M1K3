@@ -283,6 +283,16 @@ struct OnboardingDeckScanTests {
         #expect(env.contains("downloadsLedger.scanned &&"), "the offer must wait for the first disk scan")
     }
 
+    @Test("HelloView's privacy line and the Privacy pane footer come from NetworkCrossings, not a hand-written claim")
+    func crossingsFeedTheInAppCopy() throws {
+        let hello = try Self.code("M1K3App/HelloView.swift")
+        #expect(hello.contains("NetworkCrossings.helloPrivacyLine(for:"))
+        #expect(!hello.contains("is the one thing that sends anything out"))
+        let pane = try Self.code("M1K3App/Settings/PrivacySettingsPane.swift")
+        #expect(pane.contains("NetworkCrossings.webSearchFootnote(for:"))
+        #expect(!pane.contains("The one capability that sends anything off this Mac"))
+    }
+
     @Test("the Re-run button starts the onboarding stopwatch")
     func rerunButtonStartsTrace() throws {
         let code = try Self.code("M1K3App/Settings/GeneralSettingsPane.swift")

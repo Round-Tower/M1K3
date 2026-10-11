@@ -87,6 +87,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold, round 2) — sheet minHeight 640 -> 700 (the voice
 //  card + nav + 96 pt footer), and `chosenExperience` (set in finishHello) gates the spoken sign-off to the Full door.
 //  Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (PR 2b) — `privacyLine` is made by `NetworkCrossings`: it no longer says web
+//  search is "the one thing that sends anything out" (the model downloads cross too), and still names the lookups. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (PR 2b) — the wait decks start from `WakeSetupCard.waitDeck` (no "My full kit"
 //  card beside a download or warm); the no-wait deck keeps `WakeSetupFlow(brainAlreadyReady: true)` and gains the kit. Confidence 0.8.
 
@@ -243,15 +245,13 @@ struct HelloView: View {
 
     // MARK: - The one screen
 
-    /// The privacy line App Review reads first (#479). Honest per lane: the Developer ID DMG has
-    /// no Private Cloud Compute backend, so it names web search alone; the App Store build names
-    /// both exits. Web search is on by default, so "a switch", never "unless you turn it on".
+    /// The privacy line App Review reads first (#479), from the one `NetworkCrossings` list: model
+    /// downloads and web search in both lanes, plus Private Cloud Compute in the App Store build.
+    /// Web search is on by default, so "a switch", never "unless you turn it on".
     private var privacyLine: String {
-        AppEnvironment.privateCloudBackend == nil
-            ? "Your local AI companion. Runs on this Mac — no account. Web search (and the lookups it "
-            + "makes) is the one thing that sends anything out, and it's a switch in Settings."
-            : "Your local AI companion. Runs on this Mac — no account. Web search and the optional "
-            + "Private Cloud Compute brain are the two things that go out, and each is a switch in Settings."
+        NetworkCrossings.helloPrivacyLine(for: NetworkCrossings.Lane(
+            privateCloudBackendPresent: AppEnvironment.privateCloudBackend != nil
+        ))
     }
 
     private var helloCard: some View {
