@@ -32,6 +32,8 @@
 //
 //  Review: Kev + claude-opus-5-5, 2026-09-26 — `instructions`: a task-local override of the persona,
 //  read by the MLX and AFM providers, so summaries run persona-free on every brain. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-11 — `thinking`: the turn's reasoning decision as a task-local, so
+//  every generation of a turn (plain, synthesis, tool session) reads one decision (#555).
 
 import Foundation
 
@@ -59,6 +61,20 @@ public enum InferenceIntent {
     /// AFM's PrewarmSlot drops a stored session whose instructions don't match,
     /// so an override call on the chat provider would evict chat's persona prewarm.
     @TaskLocal public static var instructions: String?
+
+    /// The current TURN's reasoning decision, for providers whose template has a
+    /// thinking switch (Qwen3.5): true = think, false = answer straight, nil = the
+    /// provider's construction-time flag. The responder sets it once per turn from
+    /// `ThinkingPolicy.shouldThink`, so the plain route and the post-tool synthesis
+    /// honour Auto the way the tool session always did (#555: on a thinking-on
+    /// build they thought to the 4,096-token cap whatever Auto decided).
+    @TaskLocal public static var thinking: Bool?
+
+    public static func withThinking<T>(
+        _ enabled: Bool, _ body: () async throws -> T
+    ) async rethrows -> T {
+        try await $thinking.withValue(enabled) { try await body() }
+    }
 
     public static func withInstructions<T>(
         _ text: String, _ body: () async throws -> T

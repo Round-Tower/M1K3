@@ -142,6 +142,8 @@
 //  to, and a tools verdict keeps them in its plain fallbacks (only the chat route was measured).
 //  Sources come from the same `turnChunks`; before, both fallbacks listed the wrong set. A
 //  dispatched tool's answer still lists excerpts it never read (pre-existing). Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 — `styleClauseProvider`: a third turn clause, eval-only (the
+//  think-steer arms: terse / emoji / soft cap). nil everywhere in production.
 //  Review: Kev + claude-opus-5-5, 2026-10-04 — `egressClauseProvider` + `turnClauses()` (#482): the egress
 //  facts ride every prompt the age clause rides (agent, plain, dispatch, synthesis), pinned in three suites.
 //  Confidence 0.85.
@@ -159,6 +161,10 @@
 //  KnowledgeKind.withheldFromMCP; the chat and local asks pass nothing (byte-identical).
 //  Review: Kev + claude-opus-5-5, 2026-10-10 — the dispatched pick passes `ToolDispatch.recencyCorrected`
 //  before it is planned.
+//  Review: Kev + claude-fable-5.1, 2026-10-11 — the turn's thinking decision is made once and set as
+//  `InferenceIntent.thinking` around the whole turn task (#555): plain route and synthesis now honour Auto.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — #555 review fold: `runAgentTurn` takes the turn's one decision
+//  (`thinkingEnabled`) instead of re-reading the mode, so a mid-turn voice toggle can't split the turn.
 
 import Foundation
 import M1K3Agent
@@ -229,6 +235,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// What can leave the device this turn (`EgressDisclosure.clause`, #482), read
     /// FRESH each turn — web search, a Private Cloud Compute pick — or nil.
     private let egressClauseProvider: @Sendable () -> String?
+    /// An eval-only clause on HOW to reason (the think-steer arms, 2026-10-10);
+    /// nil in production — no shell passes one.
+    private let styleClauseProvider: @Sendable () -> String?
     /// What's open beside the chat right now (the review panel's rendered page),
     /// or nil — the app reads a snapshot the web view updates on load.
     private let browserContextProvider: (@Sendable () -> BrowserContext?)?
@@ -261,7 +270,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         defersHeavyGenerationProvider: (@Sendable () -> Bool)? = nil,
         groundingBudgetProvider: @escaping @Sendable () -> Int = { GroundingBudget.defaultTokenBudget },
         ageClauseProvider: @escaping @Sendable () -> String? = { nil },
-        egressClauseProvider: @escaping @Sendable () -> String? = { nil }, // swiftformat:disable:next unusedArguments
+        egressClauseProvider: @escaping @Sendable () -> String? = { nil },
+        styleClauseProvider: @escaping @Sendable () -> String? = { nil }, // swiftformat:disable:next unusedArguments
         browserContextProvider: (@Sendable () -> BrowserContext?)? = nil,
         todoContextProvider: (@Sendable () -> String?)? = nil,
         plainRouteProvider: (@Sendable () -> PlainTurnRoute?)? = nil,
@@ -282,6 +292,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         self.historyBudgetProvider = historyBudgetProvider
         self.ageClauseProvider = ageClauseProvider
         self.egressClauseProvider = egressClauseProvider
+        self.styleClauseProvider = styleClauseProvider
         self.browserContextProvider = browserContextProvider
         self.todoContextProvider = todoContextProvider
         self.defersHeavyGenerationProvider = defersHeavyGenerationProvider
@@ -505,44 +516,58 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // tool that the app runs itself (ToolDispatch); nil keeps the agent turn.
         let picker = decision?.verdict == .tools ? plainRoute?.pick : nil
 
+        // One reasoning decision for the WHOLE turn (#555): the plain route and the
+        // post-tool synthesis generate through `provider.generateStreaming`, which
+        // read only the construction-time flag (thinking ON in the app) — so on Auto
+        // they thought to the 4,096-token cap while the tool session answered fast.
+        // Same inputs as the agent path's own decision, so the two agree.
+        let turnThinking = ThinkingPolicy.shouldThink(
+            question: question,
+            hasGroundedKnowledge: Self.hasGroundedKnowledge(chunks: turnChunks, memories: cappedMemories),
+            mode: thinkingModeProvider(),
+            fastByDefault: fastThinkingProvider()
+        )
         let stream = AsyncStream<String> { continuation in
             let turnTask = Task {
-                if routesPlain {
-                    let answered = await runPlainTurn(
-                        question: question, chunks: turnChunks, memories: cappedMemories,
-                        history: history, instructions: routeInstructions,
-                        onActivity: onActivity, continuation: continuation
-                    )
-                    // Answered, or the consumer went away: either way, no agent turn.
-                    if answered || Task.isCancelled {
-                        continuation.finish()
-                        return
+                await InferenceIntent.withThinking(turnThinking) {
+                    if routesPlain {
+                        let answered = await runPlainTurn(
+                            question: question, chunks: turnChunks, memories: cappedMemories,
+                            history: history, instructions: routeInstructions,
+                            onActivity: onActivity, continuation: continuation
+                        )
+                        // Answered, or the consumer went away: either way, no agent turn.
+                        if answered || Task.isCancelled {
+                            continuation.finish()
+                            return
+                        }
+                        Self.log.notice("plain turn came back empty — the agent turn answers instead")
                     }
-                    Self.log.notice("plain turn came back empty — the agent turn answers instead")
-                }
-                var agentTools = tools
-                if let picker { // a tools verdict: never after a plain turn
-                    let outcome = await runDispatchedTurn(
-                        question: question, picker: picker, tools: tools, chunks: turnChunks,
-                        memories: cappedMemories, history: history, instructions: routeInstructions,
-                        onActivity: onActivity, continuation: continuation
-                    )
-                    guard case let .agent(palette) = outcome, !Task.isCancelled else {
-                        continuation.finish()
-                        return
+                    var agentTools = tools
+                    if let picker { // a tools verdict: never after a plain turn
+                        let outcome = await runDispatchedTurn(
+                            question: question, picker: picker, tools: tools, chunks: turnChunks,
+                            memories: cappedMemories, history: history, instructions: routeInstructions,
+                            onActivity: onActivity, continuation: continuation
+                        )
+                        guard case let .agent(palette) = outcome, !Task.isCancelled else {
+                            continuation.finish()
+                            return
+                        }
+                        agentTools = palette
                     }
-                    agentTools = palette
+                    await runAgentTurn(
+                        question: question,
+                        images: images,
+                        chunks: turnChunks,
+                        memories: cappedMemories,
+                        history: history,
+                        tools: agentTools,
+                        thinkingEnabled: turnThinking,
+                        onActivity: onActivity,
+                        continuation: continuation
+                    )
                 }
-                await runAgentTurn(
-                    question: question,
-                    images: images,
-                    chunks: turnChunks,
-                    memories: cappedMemories,
-                    history: history,
-                    tools: agentTools,
-                    onActivity: onActivity,
-                    continuation: continuation
-                )
             }
             // The Task above is NOT a child of the stream's consumer, so the
             // consumer cancelling (user sends a new message mid-loop, voice
@@ -884,7 +909,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// The per-turn policy clauses every prompt carries: the age band and what can
     /// leave the device (#482). nil entries are dropped by the callers' compactMap.
     private func turnClauses() -> [String?] {
-        [ageClauseProvider(), egressClauseProvider()]
+        [ageClauseProvider(), egressClauseProvider(), styleClauseProvider()]
     }
 
     /// One full agent turn into `continuation`: run the loop (conclusion tail
@@ -897,6 +922,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         memories: [ChunkHit],
         history: [ChatTurn],
         tools: [any AgentTool],
+        thinkingEnabled: Bool,
         onActivity: @escaping @Sendable (ResponderActivity) -> Void,
         continuation: AsyncStream<String>.Continuation
     ) async {
@@ -946,14 +972,11 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             concludesOnUnstructuredThought: true,
             observationCharLimit: style == .react ? Self.reactObservationCharLimit : nil
         )
-        // Per-turn reasoning budget: casual asks skip the think phase
-        // entirely (instant answers); grounded/analytic asks keep it.
-        let thinkingEnabled = ThinkingPolicy.shouldThink(
-            question: question,
-            hasGroundedKnowledge: Self.hasGroundedKnowledge(chunks: chunks, memories: memories),
-            mode: thinkingModeProvider(),
-            fastByDefault: fastThinkingProvider()
-        )
+        // Per-turn reasoning budget (`thinkingEnabled`): decided ONCE for the turn
+        // in `answerStreaming` (#555) — casual asks skip the think phase, grounded/
+        // analytic asks keep it — and the same value is the turn's
+        // `InferenceIntent.thinking`, so the tool session and every plain/synthesis
+        // generation agree even if the voice toggle flips mid-turn.
         // A direct answer streams live only until the FIRST tool runs. After that
         // the model's free-form in-loop conclusion is unreliable — gemma emits a
         // content-free "let me look" preamble and ignores what the tools actually

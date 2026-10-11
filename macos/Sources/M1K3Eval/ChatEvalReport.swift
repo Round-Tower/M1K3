@@ -125,8 +125,11 @@ public enum ChatEvalReport {
             "overall".count
         )
 
-        func cell(passed: Int, total: Int, latency: Int) -> String {
-            total == 0 ? "—" : "\(passed)/\(total) \(latency)ms"
+        func cell(passed: Int, total: Int, latency: Int, thinkChars: Int?) -> String {
+            guard total > 0 else { return "—" }
+            // ~tokens = chars / 4: the think block's cost beside the wall-clock.
+            let think = thinkChars.map { " ~\($0 / 4)tk" } ?? ""
+            return "\(passed)/\(total) \(latency)ms\(think)"
         }
 
         // Pre-compute every cell so columns can be width-matched.
@@ -137,12 +140,16 @@ public enum ChatEvalReport {
                 let kindScores = run.scores(for: kind)
                 let passed = kindScores.filter(\.passed).count
                 let latency = medianOf(kindScores.map(\.latencyMS))
-                return cell(passed: passed, total: kindScores.count, latency: latency)
+                let think = kindScores.compactMap(\.thinkChars)
+                return cell(
+                    passed: passed, total: kindScores.count, latency: latency,
+                    thinkChars: think.isEmpty ? nil : medianOf(think)
+                )
             }
             rows.append((kind.label, cells))
         }
         let overallCells = runs.map { run in
-            cell(passed: run.passedCount, total: run.total, latency: run.medianLatencyMS)
+            cell(passed: run.passedCount, total: run.total, latency: run.medianLatencyMS, thinkChars: nil)
         }
         rows.append(("overall", overallCells))
 
@@ -154,7 +161,7 @@ public enum ChatEvalReport {
             text.count >= width ? text : text + String(repeating: " ", count: width - text.count)
         }
 
-        var out = ["=== CHATEVAL MATRIX (passed/total ⌀latency) ==="]
+        var out = ["=== CHATEVAL MATRIX (passed/total ⌀latency ~⌀think tokens) ==="]
         let header = pad(firstCol, rowLabelWidth) + " | "
             + brainCols.indices.map { pad(brainCols[$0], colWidths[$0]) }.joined(separator: " | ")
         out.append(header)

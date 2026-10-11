@@ -71,6 +71,13 @@
 //  reached the router before: the 10-09 arm's tool-use column ran LocalAgent in every cell); `ROUTER=off` is that
 //  path with no route; the turn records its tools (onActivity) and its pick stage. Confidence 0.75 (verify-by-
 //  launch: the arm).
+//  Review: Kev + claude-fable-5.1, 2026-10-10 — the think phase measured: `ThinkPhaseClock` on the live
+//  stream (thinkMS), `thinkChars` on every score, and the `M1K3_SELFTEST_CHATEVAL_THINK_STEER` arm
+//  (terse / emoji / softcap) as the responder's style clause.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the live arm builds Lil the way the app does (thinking on);
+//  the bare arms scope `InferenceIntent.thinking` themselves (#555). `tier` now measures the shipped shape.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the grounded-Q arm (bare RAGResponder) scopes the arm's thinking flag
+//  too; unscoped it thought on 8/8 once the provider was built thinking-on (#555 after arm, 09:53).
 //
 
 import Foundation
@@ -350,6 +357,8 @@ enum ChatEvalStage {
         default:
             break
         }
+        // The think-steer arm (2026-10-10): one rules clause on HOW to reason, nothing else.
+        let steer = ThinkSteer(envValue: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_THINK_STEER"))
         let responder = AgentRAGResponder(
             store: store, embedder: MLXEmbeddingService(), provider: provider,
             toolsProvider: { palette }, maxIterations: 3,
@@ -364,26 +373,30 @@ enum ChatEvalStage {
                     EgressFacts(webSearch: true, privateCloudOffered: true), device: HostPlatform.thisDevice
                 )
             },
+            styleClauseProvider: { steer.clause },
             plainRouteProvider: plainRoute
         )
         // The tools the turn ran and the stage that picked them (2026-10-10): the 10-09 arm could
         // see neither. The recorder is a task-local, so the turn runs inside its scope.
         let tools = EvalToolLog()
         let stages = PickStageRecorder()
-        let raw = try await ToolRouterWiring.$pickRecorder.withValue(stages) {
+        let (raw, thinkMS) = try await ToolRouterWiring.$pickRecorder.withValue(stages) {
             let (_, stream) = try await responder.answerStreaming(
                 fixture.prompt, images: images, history: [], onActivity: { activity in
                     if case let .usingTool(name, _) = activity { tools.append(name) }
                 }
             )
             var raw = ""
+            var thinkClock = ThinkPhaseClock()
             for await piece in stream {
                 // The responder's fallback passes provider chunks through raw, and a
                 // cumulative provider (AFM, PCC) yields snapshots — `+=` would score
                 // "HHeHel…". Same fold the app's consumer applies (ChatSession).
                 raw = StreamFold.fold(current: raw, chunk: piece)
+                // The think phase on the clock (fed the FOLDED text: first token → first answer token).
+                thinkClock.feed(transcript: raw, at: clock.now - start)
             }
-            return raw
+            return (raw, thinkClock.thinkMS)
         }
         // An empty stream from a provider that can name its failure is a failed
         // call, scored as "ran — <reason>", never as "0 chars".
@@ -394,7 +407,8 @@ enum ChatEvalStage {
             rawText: raw,
             toolCalls: tools.names,
             latencyMS: milliseconds(clock.now - start),
-            routeStages: stages.stages.map(\.rawValue)
+            routeStages: stages.stages.map(\.rawValue),
+            thinkMS: thinkMS
         )
     }
 
@@ -607,6 +621,8 @@ enum ChatEvalStage {
         _ tier: BrainTier, modelID: String?, emit: @escaping (String) -> Void
     ) async -> [ChatEvalScore]? {
         let plan = EvalThinkingPlan(tier: tier, mode: thinkingMode)
+        let steer = ThinkSteer(envValue: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_THINK_STEER"))
+        emit("  think steer: \(steer.rawValue)")
         emit("  thinking: \(thinkingMode.rawValue) (bare \(plan.bareThinks ? "on" : "off"), "
             + "live \(plan.liveForced.map { $0 ? "always" : "fast" } ?? "auto, \(plan.liveFastByDefault ? "speed-tier" : "full") policy"))")
         let provider: any InferenceProvider
@@ -634,7 +650,7 @@ enum ChatEvalStage {
             provider = AppEnvironment.evalMLXBrain(
                 modelID: modelID ?? stockID,
                 maxTokens: HistoryBudgetPolicy.generationTokenCap(for: tier, defaultCap: MLXBrainProvider.defaultMaxTokens),
-                thinkingEnabled: plan.bareThinks
+                thinkingEnabled: true // the app's build; the bare arms scope their own flag (#555)
             )
         }
         return await evalProvider(provider, thinking: plan, emit: emit)
@@ -696,7 +712,9 @@ enum ChatEvalStage {
                     fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
             case .groundedQ:
-                let observation = try await groundedObservation(fixture, provider: provider, start: start, clock: clock)
+                let observation = try await groundedObservation(
+                    fixture, provider: provider, thinking: thinking, start: start, clock: clock
+                )
                 return ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit)
             case .toolUse where routerArmRequested:
                 let observation = try await livePathObservation(
@@ -751,7 +769,9 @@ enum ChatEvalStage {
                 // to ask the different question — whether M1K3-as-shipped answers
                 // a plain factual question or deflects it into "not in your
                 // documents", which is what its mustComply expectation hunts.
-                let raw = try await provider.generate(prompt: fixture.prompt)
+                let raw = try await InferenceIntent.withThinking(thinking.bareThinks) {
+                    try await provider.generate(prompt: fixture.prompt)
+                }
                 let ms = milliseconds(clock.now - start)
                 return ChatEvalScorer.score(
                     fixture: fixture, observation: EvalObservation(rawText: raw, latencyMS: ms),
@@ -774,7 +794,7 @@ enum ChatEvalStage {
     /// RAGResponder (which retrieves, then strips hallucinated citations), and
     /// read the validated-citation count straight off the response.
     private static func groundedObservation(
-        _ fixture: ChatEvalFixture, provider: any InferenceProvider,
+        _ fixture: ChatEvalFixture, provider: any InferenceProvider, thinking: EvalThinkingPlan,
         start: ContinuousClock.Instant, clock: ContinuousClock
     ) async throws -> EvalObservation {
         // path: nil → GRDB in-memory DatabaseQueue, fresh per fixture. Intentional:
@@ -786,7 +806,11 @@ enum ChatEvalStage {
             _ = try await ingester.ingest(title: "Notes", text: doc)
         }
         let responder = RAGResponder(store: store, embedder: embedder, provider: provider)
-        let response = try await responder.answer(fixture.prompt)
+        // The bare RAGResponder has no per-turn policy: scope the arm's flag (the provider is
+        // built thinking-ON like the app's, so an unscoped call would think — #555 harness fold).
+        let response = try await InferenceIntent.withThinking(thinking.bareThinks) {
+            try await responder.answer(fixture.prompt)
+        }
         return EvalObservation(
             rawText: response.answer,
             validCitationCount: response.citations.count,
@@ -803,7 +827,9 @@ enum ChatEvalStage {
         start: ContinuousClock.Instant, clock: ContinuousClock
     ) async throws -> ChatEvalScore {
         let agent = LocalAgent(inferenceProvider: provider, tools: toolPalette, maxIterations: 3)
-        let result = try await agent.run(goal: fixture.prompt, thinkingEnabled: thinking.bareThinks)
+        let result = try await InferenceIntent.withThinking(thinking.bareThinks) {
+            try await agent.run(goal: fixture.prompt, thinkingEnabled: thinking.bareThinks)
+        }
         let toolsUsed = result.toolsUsed
         let rawText = result.conclusion.isEmpty
             ? "tools used: \(toolsUsed.joined(separator: ","))"

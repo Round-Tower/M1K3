@@ -806,6 +806,61 @@ dependency; it does NOT reuse Gemma4Text — the PLE differs):
 - E4B VLM-path launch check (§5 row 1) → then the stale comment and `usesVLMLoadPath`.
 - Stream A: `swift test`, app build, vision baseline on mini (native) + big; grow toward ~30.
 
+### Lil's think phase, measured (2026-10-10 21:00 → 2026-10-11 05:00, overnight, Debug `c444c239`, AC)
+
+Kev's report: "the new Lil model's reasoning is running wild" (live app on the **auto** Reasoning setting).
+`run_chateval.py --thinking … --think-steer …` (#553) over all 117 fixtures ×1, Lil = Qwen3.5-4B 4-bit;
+`thinkChars` = chars inside `<think>…</think>` in the folded transcript (≈ tokens × 4); files
+`docs/evals/2026-10-10-lil-think-*.json` (emoji + softcap stopped early: `*.partial.log.gz`).
+
+| arm | pass | thought | think-tk p50 / p75 / p90 | empty answers | note |
+|---|---|---|---|---|---|
+| auto ("tier", the shipping policy) | 100/117 | 2/117 | 149 / – / 151 | 0 | Lil thinks only on `strongAnalyticMarkers` (`ThinkingPolicy.swift:102`) |
+| always | 98/117 | 116/117 | 272 / 2052 / 3566 | 6 | 35/116 thinks > 1,500 tk; 6 hit the 4,096 cap and answered nothing |
+| always + terse steer | 92/117 | 114/117 | 262 / 1245 / 3304 | 10 | security 7/7 → 2/7; the tail did not move |
+| always + emoji steer | 48/73 (stopped) | – | – | – | 190–480 s turns on world-knowledge / humour; 6 fails were a hub-resolve blip at launch |
+| always + "under 120 words" | 8/14 (stopped) | – | – | – | open-chat 20 s → 150–445 s; the model deliberates about the rule |
+
+What it says:
+1. **Auto is not the runaway.** Under the shipping policy Lil thinks on 2 of 117 asks (the `explain` /
+   `compare` markers), ~150 tokens, ~6 s. Kev's runaway turns are those marker asks, or Always.
+2. **Forced thinking is bimodal.** Chat / code / vision / world-knowledge think 100–450 tokens and pass
+   the same; grounded-Q, document, security, sycophancy, refusal and reasoning think 1,700–4,300, pass
+   the same or better (security 7/7), and cost 80–170 s a turn in Debug. The failure that matters is the
+   **cap hit**: 6 turns (a limerick, a lockpick refusal, a comparison table, two grounded wrong-premise
+   asks, a credential pushback) thought to the 4,096-token generation cap and emitted no answer at all.
+3. **Prompt-side steers lose, every one.** Terse cut nothing from the tail and broke security; emoji and
+   a word cap make the model reason about the rule and thrash.
+4. **The runaway is a wiring bug, not a budget problem** (challenger, 2026-10-11 05:10, read from source;
+   #555). The app builds Lil thinking-ON (`AppEnvironment+Auditions.swift:57`) and routes chat-verdict turns
+   through the plain route (the tool router, every tier since ADR 0009). The per-turn Auto decision reached
+   only the tool-call session (`MLXToolCalling.swift:693`); the plain route and the post-tool synthesis read
+   the construction flag, so on Auto they thought to the cap. The overnight `tier` arm built Lil thinking-OFF
+   and ran without the router, so it never saw the bug. Fix (934ad153 + harness 03084f68):
+   `InferenceIntent.thinking`, one decision per turn, read by `MLXBrainProvider` over the construction flag.
+   Measured with the app's router on (`--router dispatch`), the 44 live-path fixtures, Debug, AC:
+
+   | 44 live-path fixtures, router on | passed | empty answers | turns that thought | think-tk median | median turn | total |
+   |---|---|---|---|---|---|---|
+   | before (shipped) | 20/44 | 11 | 41 | 3,461 | 133 s | 89 min |
+   | after (#555) | 37/44 | 0 | 2 | 2,752 | 16 s | 19 min |
+
+   A greeting took 155 s and answered nothing before the fix. After: open-chat 3/9 → 8/9, humour 1/6 → 6/6,
+   world-knowledge 5/8 → 8/8, code-gen 7/10 → 9/10. Five of the seven after fails are the hub timeout of
+   #557 (64 s each, consecutive fixtures), so the fix's own record is 37/39. The all-kinds after arm without
+   the router (09:53): content 102/117, median turn 12 s, 1 empty answer. Files:
+   `docs/evals/2026-10-11-lil-555-{router-before,router-after,after-all-kinds}.json`.
+5. **A decoder-side think budget is a safety net, not the fix.** The pinned mlx-swift-lm has
+   `applyingThinkingBudget`, but Qwen3.5 ships no budget transition and the processor never starts on Lil's
+   one-token checkpoint input, so it would silently do nothing on the main path. N = 1,024–1,536 would mostly
+   cut PASSING turns (6 of 7 security passes think past 1,024). If it ships: N ≈ 3,072 with a 768-token answer
+   reserve, `transitionOverride`, a test on a one-token input, and a blocked second `<think>`. Gated on the
+   #555 re-measure. Auto stays as it is (always: 98/117 in 7,528 s vs auto 100/117 in 3,091 s).
+6. Harness debts carried: `ThinkPhaseClock` recorded no think-ms on 57 of the 116 thinking trials
+   (grounded / tool paths — the chars column is the trusted one); the eval touched the hub at launch
+   (6 fixtures died in 700 ms on a resolve error with the weights local); Lil spells numbers out
+   ("fifteen", "Eighteen") and the `contains expected` check misses them (3 reasoning fails across arms).
+
 ## Sources
 
 - EmbeddingGemma 2: [Google blog](https://blog.google/innovation-and-ai/technology/developers-tools/embeddinggemma-2/) · [developer guide](https://developers.googleblog.com/en/embeddinggemma-2-the-developer-guide/) · [MarkTechPost](https://www.marktechpost.com/2026/10/06/google-deepmind-releases-embeddinggemma-2-a-740m-open-multimodal-embedding-model-built-on-gemma-4/) · [AI Weekly](https://aiweekly.co/alerts/google-ships-embeddinggemma-2-740m-multimodal-embedder-apache-20) · [Sentence Transformers guide](https://ai.google.dev/gemma/docs/embeddinggemma/inference-embeddinggemma-with-sentence-transformers)
@@ -813,3 +868,5 @@ dependency; it does NOT reuse Gemma4Text — the PLE differs):
 - Qwen3.5 small: [MarkTechPost](https://www.marktechpost.com/2026/03/02/alibaba-just-released-qwen-3-5-small-models-a-family-of-0-8b-to-9b-parameters-built-for-on-device-applications/) · [mlx-swift-lm releases](https://github.com/ml-explore/mlx-swift-lm/releases)
 
 Review: Kev + claude-fable-5.1, 2026-10-09 — Stream D's 1.1 slice (caption memory) written up above; the migration, the image embedder and the thumbnails wait for Stream C.
+Review: Kev + claude-fable-5.1, 2026-10-11 05:10 — Lil's think phase measured overnight (five arms, #553): auto barely thinks; forced thinking is bimodal with 6 cap-hit empties; every prompt steer loses. Decoder-side think budget proposed, challenger pending. Confidence 0.8 on the read (×1, Debug build; the ms column is only trusted on the chat path).
+Review: Kev + claude-opus-5.5, 2026-10-11 11:55 — #555 measured with the app's router on: 20/44 → 37/44, 11 empty answers → 0, median turn 133 s → 16 s. The overnight runaway was the plain route ignoring Auto, not Qwen3.5. Confidence 0.9 on the cause (paired arms, same machine state; ×1, Debug).

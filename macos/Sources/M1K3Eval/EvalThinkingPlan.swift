@@ -15,6 +15,8 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.85, Prior: none (new
 //  file; GEMMA_1_1_PLAN critical pass, item 3).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the construction-flag gap is closed (#555); `bareThinks` scopes
+//  the bare arms only.
 
 import M1K3Inference
 
@@ -36,11 +38,11 @@ public enum EvalThinkingMode: String, Sendable, Equatable, CaseIterable {
 
 public struct EvalThinkingPlan: Sendable, Equatable {
     /// Construction-time thinking for the arms with no per-question policy:
-    /// bare `generate` and the tool-use agent loop. Known gap (pre-push review):
-    /// the live arm's NON-tool streams (plain route, the fallback synthesis) also
-    /// read this construction flag, so under `tier` a speed-tier brain's fallback
-    /// never thinks — the app's would on an explicit deep ask (~3 of ~90 fixtures).
-    /// Tool turns take the per-turn policy and are unaffected.
+    /// bare `generate` and the tool-use agent loop, scoped per call through
+    /// `InferenceIntent.withThinking`. The live arm ignores it: the responder sets
+    /// the turn's decision itself, exactly as the app does. (#555 closed the gap
+    /// where the plain route and the synthesis read the construction flag, which
+    /// the app builds thinking-ON — so on Auto they thought without limit.)
     public let bareThinks: Bool
     /// The live responder's speed-tier bias — the app's `fastThinkingProvider`.
     public let liveFastByDefault: Bool
