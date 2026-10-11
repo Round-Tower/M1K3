@@ -27,7 +27,7 @@ extension AppCore {
     ) async -> String? {
         guard let payload = PairingPayload.parse(payloadString.trimmingCharacters(in: .whitespacesAndNewlines))
         else {
-            return "That doesn’t look like an M1K3 pairing code — show the QR in the Mac’s Settings → Privacy → Brain at Home."
+            return "That doesn’t look like an M1K3 pairing code — show the QR in the Mac’s Settings → Brain at Home."
         }
         let ceremony = PairingCeremony()
         let outcome = await ceremony.pair(

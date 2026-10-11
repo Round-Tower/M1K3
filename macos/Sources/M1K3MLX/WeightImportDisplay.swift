@@ -2,8 +2,8 @@
 //  WeightImportDisplay.swift
 //  M1K3MLX
 //
-//  Pure display-mapping for the Advanced pane's "Import weights from a
-//  folder…" affordance. Two seams, both worth pinning without a filesystem
+//  Pure display-mapping for the "Import weights from a folder…" affordance
+//  (the Advanced pane's section until 1.1 removed it; the mapping stays, tested). Two seams, both worth pinning without a filesystem
 //  or a running app:
 //
 //    1. Which tiers even offer an import — Mini is Apple Foundation Models
@@ -34,7 +34,7 @@
 import Foundation
 import M1K3Inference
 
-/// Maps `WeightImport`'s outcomes and errors to what the Advanced pane shows.
+/// Maps `WeightImport`'s outcomes and errors to what the (retired in 1.1) Advanced-pane import section showed.
 public enum WeightImportDisplay {
     /// What the pane renders: a success line or a failure line. No "pending"
     /// case here — the view owns in-flight state (`AppEnvironment`'s

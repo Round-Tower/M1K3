@@ -92,7 +92,7 @@ struct BrainPairingScreen: View {
     @ViewBuilder private var scanSections: some View {
         Section {
             Text(
-                "On the Mac: M1K3 → Settings → Privacy → Brain at Home → Pair a Device. "
+                "On the Mac: M1K3 → Settings → Brain at Home → Pair a Device. "
                     + "Then scan the code it shows."
             )
             .font(.callout)

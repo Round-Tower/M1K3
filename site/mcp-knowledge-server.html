@@ -121,7 +121,7 @@
 
   <h2>How do I connect Claude Code to M1K3?</h2>
   <p><strong>Step 1 — install M1K3 and give it something to know.</strong> Get the app (<a href="/install#get">Homebrew</a>, the <a href="https://apps.apple.com/app/id6780230835">Mac App Store</a>, the <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg">DMG</a>, or <a href="https://github.com/Round-Tower/M1K3">source</a>; requires macOS 26 on Apple Silicon), then drop documents, notes, or PDFs into it. M1K3 indexes them into its knowledge graph on-device.</p>
-  <p><strong>Step 2 — switch the server on and connect.</strong> In M1K3, open <strong>Settings ▸ Privacy ▸ MCP server</strong>, switch it on, and Copy the access token. Every request has to carry it; one without it gets a 401. Then, from Terminal:</p>
+  <p><strong>Step 2 — switch the server on and connect.</strong> In M1K3, open <strong>Settings ▸ MCP Server</strong>, switch it on, and Copy the access token. Every request has to carry it; one without it gets a 401. Then, from Terminal:</p>
   <div class="term">
     <div class="term-bar"><span></span><span></span><span></span></div>
     <div class="term-body"><pre><span class="p">$</span> m1k3 login &amp;&amp; m1k3 connect claude</pre></div>

@@ -5,8 +5,8 @@
 //  Settings as a SCREEN in the main window (2026-09-23, Kev: "not a pop-up
 //  modal, a screen in its own right"): a sidebar destination like Memories or
 //  the Heartbeat, reached from the sidebar's pinned Settings button, ⌘, and
-//  every "Open Settings" link. The five panes are unchanged — M1K3 (brain,
-//  reasoning, companion, voice), You, Privacy, General, Advanced — and still
+//  every "Open Settings" link. The seven panes — M1K3 (brain,
+//  reasoning, companion, voice), You, Privacy, Brain at Home, MCP Server, General, Advanced — still
 //  own their own @AppStorage/@State; this file is the shell around them:
 //
 //    • an identity card (the app icon, who's thinking, what version) over a
@@ -38,6 +38,9 @@
 //  Confidence 0.8 (verify-by-launch at narrow and wide widths).
 //  Review: Kev + claude-opus-5-5, 2026-10-04 — header says "private by design", not "everything stays on this Mac"
 //  (Kev retired the absolute: web search is on by default and PCC is a brain pick). Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — 1.1 (Kev, TestFlight): Brain at Home and MCP Server became panes of
+//  their own (after Privacy, where both used to live); the pane column grew 168 → 184 pt for "Brain at Home" at a
+//  larger text size; the harness opens a pane by id (`settingsPane`). Confidence 0.8 (verify-by-launch at narrow widths).
 //
 
 import M1K3Screengrab
@@ -45,13 +48,15 @@ import SwiftUI
 
 struct SettingsView: View {
     enum Pane: String, CaseIterable, Hashable {
-        case m1k3, you, privacy, general, advanced
+        case m1k3, you, privacy, brainAtHome, mcp, general, advanced
 
         var title: String {
             switch self {
             case .m1k3: "M1K3"
             case .you: "You"
             case .privacy: "Privacy"
+            case .brainAtHome: "Brain at Home"
+            case .mcp: "MCP Server"
             case .general: "General"
             case .advanced: "Advanced"
             }
@@ -62,6 +67,8 @@ struct SettingsView: View {
             case .m1k3: "brain"
             case .you: "person.crop.circle"
             case .privacy: "hand.raised"
+            case .brainAtHome: "house"
+            case .mcp: "network"
             case .general: "gearshape"
             case .advanced: "wrench.and.screwdriver"
             }
@@ -70,8 +77,8 @@ struct SettingsView: View {
 
     /// The widest the Form grows; past this, margins, not longer lines.
     static let pageMaxWidth: CGFloat = 860
-    /// The pane list's column: wide enough for "Advanced" at a larger text size.
-    static let paneListWidth: CGFloat = 168
+    /// The pane list's column: wide enough for "Brain at Home" at a larger text size.
+    static let paneListWidth: CGFloat = 184
     /// The page's outer margin, shared by the identity card and the pane list.
     static let pageMargin: CGFloat = 24
 
@@ -105,7 +112,7 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .onAppear {
             // The screengrab harness's privacy-label + Brain-at-Home plates.
-            if ScreengrabHarness.current.showsPrivacyPane { paneRaw = Pane.privacy.rawValue }
+            if let raw = ScreengrabHarness.current.settingsPane, Pane(rawValue: raw) != nil { paneRaw = raw }
         }
     }
 
@@ -204,6 +211,8 @@ struct SettingsView: View {
         case .m1k3: M1K3SettingsPane()
         case .you: YouSettingsPane()
         case .privacy: PrivacySettingsPane()
+        case .brainAtHome: BrainAtHomeSettingsPane()
+        case .mcp: MCPServerSettingsPane()
         case .general: GeneralSettingsPane()
         case .advanced: AdvancedSettingsPane()
         }

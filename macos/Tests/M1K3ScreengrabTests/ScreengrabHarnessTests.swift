@@ -64,8 +64,9 @@ struct ScreengrabHarnessTests {
         #expect(h(.onboarding).showsOnboarding)
         #expect(h(.documents).showsDocuments && !h(.documents).showsMemories)
         #expect(h(.memories).showsMemories)
-        #expect(h(.brainAtHome).opensSettings && h(.brainAtHome).showsPrivacyPane, "pairing lives in Settings ▸ Privacy")
-        #expect(h(.privacyLabel).opensSettings && h(.privacyLabel).showsPrivacyPane)
+        #expect(h(.brainAtHome).opensSettings && h(.brainAtHome).settingsPane == "brainAtHome", "pairing lives in Settings ▸ Brain at Home")
+        #expect(h(.privacyLabel).opensSettings && h(.privacyLabel).settingsPane == "privacy")
+        #expect(h(.chat).settingsPane == nil)
         #expect(!h(.chat).opensSettings)
         // iOS: the plate's screen is pushed in-app, not tapped to (XCTest's AX
         // handshake times out on a loaded simulator; App Preview footage needs it).

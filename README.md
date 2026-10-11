@@ -89,7 +89,7 @@ belongs to M1K3.app).
 ```sh
 brew trust round-tower/tap                 # Homebrew 6: trust the tap once
 brew install --cask round-tower/tap/m1k3   # the cask symlinks Contents/Helpers/m1k3
-# Open M1K3 ▸ Settings ▸ Privacy ▸ MCP server: switch it on, then Copy the token
+# Open M1K3 ▸ Settings ▸ MCP Server: switch it on, then Copy the token
 m1k3 login                                 # paste the token (echo off; kept in your keychain)
 m1k3 connect claude                        # also: codex · cursor · vscode · zed
 ```
@@ -101,7 +101,7 @@ config as an `Authorization: Bearer` header. Without it the server answers 401.
 Then `m1k3 status`, `m1k3 ask "what did I decide about the pin?"`,
 `m1k3 remember "…"`, `m1k3 search "…"`, `m1k3 speak "build's green"`.
 
-Prefer clicking? **M1K3 ▸ Settings ▸ Privacy ▸ MCP server** has the same thing:
+Prefer clicking? **M1K3 ▸ Settings ▸ MCP Server** has the same thing:
 pick your agent, copy the snippet (the token is already in it). Already have M1K3 installed? The binary is
 at `/Applications/M1K3.app/Contents/Helpers/m1k3`.
 

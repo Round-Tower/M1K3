@@ -38,6 +38,9 @@
 //  (`nameTaken`: one folder on case-insensitive APFS), a subfolder shard says why it's
 //  missing, `sourceKey(forRepoID:)` lets the app refuse an import under the live
 //  brain, and an org folder that exists in another case is adopted. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — 1.1 retired the auditions UI: `AuditionCleanup` (plan/run) and
+//  `AuditionSelection.clearPersistedChoices` migrate at launch (choices cleared every launch; the folder deleted once
+//  behind a marker, skipped while an `-audition.*` argument is present). Kev: the weights on disk go too. Confidence 0.8.
 //
 
 import Foundation
@@ -356,6 +359,67 @@ public struct AuditionStore: Sendable {
     }
 }
 
+/// 1.1 retired the auditions UI (Settings no longer imports or picks one). A launch
+/// migration finishes the job: every launch drops the persisted choices (a user who
+/// picked one in 1.0 would otherwise be stuck on it with no control back to Stock), and
+/// ONE launch deletes the multi-GB store folder, behind a marker. A `-audition.*` launch
+/// argument is the developer / eval path: it keeps the folder and leaves the marker unspent.
+public enum AuditionCleanup {
+    /// Spent when the folder delete has been decided once (success or failure alike).
+    public static let markerKey = "auditions.folderRemoved"
+
+    public struct Plan: Equatable, Sendable {
+        public var clearChoices: Bool
+        public var deleteFolder: Bool
+    }
+
+    public struct Report: Equatable, Sendable {
+        public var clearedKeys: [String] = []
+        public var deletedFolder = false
+        public var bytesFreed: Int64 = 0
+        public var error: String?
+    }
+
+    public static func plan(markerSpent: Bool, hasLaunchArgument: Bool) -> Plan {
+        Plan(clearChoices: true, deleteFolder: !markerSpent && !hasLaunchArgument)
+    }
+
+    public static func hasLaunchArgument(
+        arguments: [String: Any] = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
+    ) -> Bool {
+        arguments.keys.contains { $0.hasPrefix("audition.") }
+    }
+
+    /// Run the migration. Never throws: a failed delete is reported and the marker is
+    /// spent anyway (a stuck folder must not retry a multi-GB walk every launch).
+    @discardableResult
+    public static func run(
+        store: AuditionStore?,
+        defaults: UserDefaults = .standard,
+        arguments: [String: Any] = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
+    ) -> Report {
+        let plan = plan(markerSpent: defaults.bool(forKey: markerKey), hasLaunchArgument: hasLaunchArgument(arguments: arguments))
+        var report = Report()
+        if plan.clearChoices {
+            report.clearedKeys = AuditionSelection.clearPersistedChoices(defaults: defaults)
+        }
+        guard plan.deleteFolder else { return report }
+        defaults.set(true, forKey: markerKey)
+        guard let store, FileManager.default.fileExists(atPath: store.root.path) else { return report }
+        let bytes = AuditionStore.directorySize(store.root)
+        do {
+            try FileManager.default.removeItem(at: store.root)
+            report.deletedFolder = true
+            report.bytesFreed = bytes
+            auditionLog.notice("1.1 migration removed the auditions folder (\(bytes) bytes freed)")
+        } catch {
+            report.error = String(describing: error)
+            auditionLog.error("1.1 migration could not remove the auditions folder: \(String(describing: error), privacy: .public)")
+        }
+        return report
+    }
+}
+
 /// Which audition, if any, stands in for a tier. UserDefaults per tier, so the
 /// Settings picker and a launch argument (`-audition.lil org/repo`, the only
 /// override that reaches the sandboxed app on macOS 27) read the same key.
@@ -401,6 +465,21 @@ public enum AuditionSelection {
 
     public static func clearPendingLoad(defaults: UserDefaults = .standard) {
         defaults.removeObject(forKey: pendingLoadKey)
+    }
+
+    /// The 1.1 migration: remove every persisted `audition.*` choice and the pending-load
+    /// marker (Settings can no longer undo a pick). Returns the keys removed. A launch
+    /// argument lives in the argument domain, which `removeObject` never touches, so the
+    /// developer / eval path keeps serving.
+    @discardableResult
+    public static func clearPersistedChoices(defaults: UserDefaults = .standard) -> [String] {
+        var removed: [String] = []
+        for key in defaults.dictionaryRepresentation().keys.sorted() where key.hasPrefix("audition.") {
+            defaults.removeObject(forKey: key)
+            // A key still readable now lives in the argument domain: not ours, not reported.
+            if defaults.object(forKey: key) == nil { removed.append(key) }
+        }
+        return removed
     }
 
     /// At launch: drop the audition whose last load never finished. Returns its tier.
