@@ -80,6 +80,10 @@
 //  AFM lands (no flip under the user); the already-loaded fallback edge shows the deck; the Mini-wait poll
 //  reads off the main actor too; the backdrop sleep honours cancellation. Known, accepted: a first-run user
 //  who quits mid-deck sees the hello again next launch (the gate flips on the deck's button). Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the polish pass (TestFlight 499): every phase centres
+//  (`defaultScrollAnchor`, the dead spacers go), the hello card wears the shared Liquid Glass
+//  `onboardingCard()` instead of a material panel, and a door tap plays `doorPick` BEFORE the Full door's
+//  permission ceremony. Confidence 0.7 (look and sound are verify-by-launch).
 
 import M1K3AgentTools
 import M1K3Avatar
@@ -146,6 +150,9 @@ struct HelloView: View {
                 value: phase
             )
         }
+        // Content shorter than the window sits in the middle on every phase (hello, deck, waits);
+        // taller content (a big text size) still scrolls from the top.
+        .defaultScrollAnchor(.center, for: .alignment)
         .frame(minWidth: 580, minHeight: 640)
         .background {
             // The live face is the room — same full-window reactive backdrop as
@@ -308,17 +315,10 @@ struct HelloView: View {
                 .foregroundStyle(.secondary)
             }
         }
-        // The words sit on a panel, the face stays the room: the full-window fox
+        // The words sit on a glass card, the face stays the room: the full-window fox
         // ran straight through the "Private" door and the disclosure line, which
         // read as noise in the onboarding plate (2026-09-23 readability pass).
-        .padding(.horizontal, 36)
-        .padding(.vertical, 30)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .strokeBorder(.white.opacity(0.08))
-        }
-        .frame(maxWidth: 560)
+        .onboardingCard()
     }
 
     /// True when the tested policy would answer this tap with the Lil download
@@ -354,16 +354,15 @@ struct HelloView: View {
 
     private var setupCard: some View {
         VStack(spacing: 16) {
-            Spacer(minLength: 20)
             // The same deck as the waits, with the brain already ready: no bar, and
             // completion is the tap on the primary button (or past it, skipping everything).
             WakeSetupCarousel(
                 flow: $wakeFlow,
                 fraction: nil,
                 finishTitle: WakeProgressCopy.finishLine(isRerun: isRerun),
+                isRerun: isRerun,
                 onComplete: onComplete
             )
-            Spacer(minLength: 20)
         }
     }
 
@@ -371,7 +370,6 @@ struct HelloView: View {
 
     private var waitingCard: some View {
         VStack(spacing: 16) {
-            Spacer(minLength: 20)
             // Same carousel, indeterminate progress source (O6): the AFM warm
             // is usually short, but it's the same dead wait without this.
             WakeSetupCarousel(flow: $wakeFlow, fraction: nil, onComplete: onComplete)
@@ -383,7 +381,6 @@ struct HelloView: View {
             .buttonStyle(.plain)
             .font(.caption)
             .foregroundStyle(.secondary)
-            Spacer(minLength: 20)
         }
         .task {
             // Re-poll while visible; the moment AFM turns available the same
@@ -404,7 +401,6 @@ struct HelloView: View {
 
     private var downloadingCard: some View {
         VStack(spacing: 20) {
-            Spacer(minLength: 20)
             switch env.modelLoad {
             case .downloading, .idle, .preparing, .ready:
                 // The wait IS the setup time (O1): cards up front, the honest
@@ -438,7 +434,6 @@ struct HelloView: View {
                     }
                 }
             }
-            Spacer(minLength: 20)
         }
     }
 
@@ -487,6 +482,9 @@ struct HelloView: View {
 
     private func sayHello(experience: OnboardingExperience = .fullExperience) {
         guard !settling else { return }
+        // At the tap, before the Full door's permission ceremony: the click lands with the
+        // finger, not after the system sheets.
+        env.soundEffects.play(.doorPick)
         guard experience == .fullExperience else {
             finishHello(experience: experience)
             return

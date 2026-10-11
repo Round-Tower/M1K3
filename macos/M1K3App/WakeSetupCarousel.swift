@@ -22,6 +22,12 @@
 //  up the room", a plain primary "Start chatting →" / "Done →" (finishTitle) instead of the "I'm awake"
 //  invite, no bar and no pulse; tapping it untouched skips the whole deck. Wait paths unchanged.
 //  Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the polish pass (TestFlight 499): title, card, arrows and caption
+//  share one Liquid Glass card (the progress footer stays outside it: the glass-on-progress-ticks layout crash);
+//  pixel titles; round glass arrows in a GlassEffectContainer; Done / Start chatting and the invite are
+//  content-sized glassProminent capsules; earcons on the card turn, the selections, the wake (BEFORE the
+//  greeting, which waits ~0.6 s for it) and the done chord, then OnboardingVoiceLine's one line on the no-wait
+//  deck. Confidence 0.65 (look and sound are verify-by-launch).
 
 import M1K3Avatar
 import M1K3Inference
@@ -37,6 +43,8 @@ struct WakeSetupCarousel: View {
     /// The primary button's title in the NO-WAIT deck (`flow.userDrivenCompletion`): "Start
     /// chatting" on a first run, "Done" on a re-run. Unused on the wait paths.
     var finishTitle = "Done"
+    /// A re-run of onboarding (picks the sign-off line). Unused on the wait paths.
+    var isRerun = false
     let onComplete: () -> Void
 
     @State private var warmingTick = 0
@@ -50,23 +58,30 @@ struct WakeSetupCarousel: View {
 
     var body: some View {
         VStack(spacing: 18) {
-            Text(flow.userDrivenCompletion ? "Set up the room" : "While I wake — set up the room")
-                .font(.title3)
-                .foregroundStyle(.secondary)
-                .accessibilityAddTraits(.isHeader)
+            // Title, card, arrows and caption share ONE glass surface. The progress footer is
+            // deliberately outside it: it re-renders on every download tick, and a glassEffect that
+            // does is the known NSGenericException layout crash (ContentView's Mini banner).
+            VStack(spacing: 18) {
+                Text(flow.userDrivenCompletion ? "Set up the room" : "While I wake — set up the room")
+                    .font(.pixel(28))
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
 
-            card
-                .frame(maxWidth: 460)
-                .animation(
-                    reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85),
-                    value: flow.index
-                )
+                card
+                    .frame(maxWidth: 460)
+                    .animation(
+                        reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85),
+                        value: flow.index
+                    )
 
-            navigation
+                navigation
 
-            Text("All of this lives in Settings too — skip anything.")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
+                Text("All of this lives in Settings too — skip anything.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .onboardingCard()
 
             progressFooter
                 .padding(.top, 6)
@@ -104,7 +119,7 @@ struct WakeSetupCarousel: View {
             )
             .textFieldStyle(.roundedBorder)
             .font(.body)
-            .onSubmit { flow.advance() }
+            .onSubmit { turn(forward: true) }
             cardCaption("A line about you seeds my memory — \"I teach primary school\", "
                 + "\"short answers, please\". It stays on this Mac, and you can edit it "
                 + "any time in Settings → You.")
@@ -116,6 +131,7 @@ struct WakeSetupCarousel: View {
             cardTitle("How should my replies read?")
             ForEach(ReadingMode.allCases) { mode in
                 Button {
+                    env.soundEffects.play(.selectionTick)
                     readingMode = mode
                     flow.engage()
                 } label: {
@@ -139,6 +155,7 @@ struct WakeSetupCarousel: View {
             cardTitle("How should I sound?")
             ForEach(VoiceTier.allCases) { tier in
                 Button {
+                    env.soundEffects.play(.selectionTick)
                     env.selectVoiceTier(tier)
                     flow.engage()
                 } label: {
@@ -181,7 +198,10 @@ struct WakeSetupCarousel: View {
             }
             .labelsHidden()
             .frame(maxWidth: 260)
-            .onChange(of: voiceCompanion) { _, _ in flow.engage() }
+            .onChange(of: voiceCompanion) { _, _ in
+                env.soundEffects.play(.selectionTick)
+                flow.engage()
+            }
             Button("Say hi") {
                 flow.engage()
                 sayHi()
@@ -194,34 +214,48 @@ struct WakeSetupCarousel: View {
     // MARK: - Navigation
 
     private var navigation: some View {
-        HStack(spacing: 16) {
-            Button {
-                flow.back()
-            } label: {
-                Image(systemName: "chevron.left")
-            }
-            .buttonStyle(.glass)
-            .disabled(!flow.canGoBack)
-            .accessibilityLabel("Previous card")
-
-            HStack(spacing: 6) {
-                ForEach(Array(flow.cards.enumerated()), id: \.offset) { position, _ in
-                    Circle()
-                        .fill(position == flow.index ? AnyShapeStyle(.tint) : AnyShapeStyle(.quaternary))
-                        .frame(width: 6, height: 6)
+        GlassEffectContainer(spacing: 16) {
+            HStack(spacing: 16) {
+                Button {
+                    turn(forward: false)
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .imageScale(.large).fontWeight(.semibold)
+                        .frame(width: 24, height: 24)
                 }
-            }
-            .accessibilityLabel("Card \(flow.index + 1) of \(flow.cards.count)")
+                .buttonStyle(.glass).buttonBorderShape(.circle).controlSize(.large)
+                .disabled(!flow.canGoBack)
+                .accessibilityLabel("Previous card")
 
-            Button {
-                flow.advance()
-            } label: {
-                Image(systemName: "chevron.right")
+                HStack(spacing: 6) {
+                    ForEach(Array(flow.cards.enumerated()), id: \.offset) { position, _ in
+                        Circle()
+                            .fill(position == flow.index ? AnyShapeStyle(.tint) : AnyShapeStyle(.quaternary))
+                            .frame(width: 6, height: 6)
+                    }
+                }
+                .accessibilityLabel("Card \(flow.index + 1) of \(flow.cards.count)")
+
+                Button {
+                    turn(forward: true)
+                } label: {
+                    Image(systemName: "chevron.right")
+                        .imageScale(.large).fontWeight(.semibold)
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(.glass).buttonBorderShape(.circle).controlSize(.large)
+                .disabled(!flow.canAdvance)
+                .accessibilityLabel("Next card")
             }
-            .buttonStyle(.glass)
-            .disabled(!flow.canAdvance)
-            .accessibilityLabel("Next card")
         }
+    }
+
+    /// One card turn, with its whoosh-tick — only when the deck actually moves, so a Return on the
+    /// last card (or a disabled edge) stays silent.
+    private func turn(forward: Bool) {
+        guard forward ? flow.canAdvance : flow.canGoBack else { return }
+        env.soundEffects.play(.cardTurn)
+        if forward { flow.advance() } else { flow.back() }
     }
 
     // MARK: - Progress footer (the persistent bottom strip)
@@ -232,28 +266,21 @@ struct WakeSetupCarousel: View {
             // No wait: nothing is waking, so no "I'm awake" payoff and no pulse. One clear
             // button; tapping it without touching a card skips the whole deck.
             Button {
-                commitAboutNote()
-                onComplete()
+                finish(speakSignOff: true)
             } label: {
                 Text("\(finishTitle) →")
                     .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
             }
-            .buttonStyle(.glassProminent)
-            .frame(maxWidth: 360)
+            .buttonStyle(.glassProminent).buttonBorderShape(.capsule).controlSize(.large)
         case .invite:
             Button {
-                commitAboutNote()
-                onComplete()
+                // The ready greeting has already spoken; the chord is the whole sign-off.
+                finish(speakSignOff: false)
             } label: {
                 Text("\(WakeProgressCopy.readyLine(name: displayName)) →")
                     .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
             }
-            .buttonStyle(.glassProminent)
-            .frame(maxWidth: 360)
+            .buttonStyle(.glassProminent).buttonBorderShape(.capsule).controlSize(.large)
             // The gentle pulse the no-yank rule promises: an invitation that
             // breathes, never a modal shove. Still under Reduce Motion.
             .scaleEffect(invitePulse ? 1.035 : 1.0)
@@ -312,7 +339,35 @@ struct WakeSetupCarousel: View {
         guard !hasGreeted else { return }
         hasGreeted = true
         env.avatar.setEmotion(.excited)
-        Task { await env.speak(WakeProgressCopy.readyLine(name: displayName)) }
+        // The chime first: earcons are muted the moment M1K3 speaks, so it must start (and mostly
+        // ring out) before the greeting does. Only wait for it when it can actually sound.
+        env.soundEffects.play(.wakeChime)
+        let chimeLead: Duration = env.soundEffects.isEnabled ? .milliseconds(600) : .zero
+        let greeting = WakeProgressCopy.readyLine(name: displayName)
+        Task {
+            try? await Task.sleep(for: chimeLead)
+            await env.speak(greeting)
+        }
+    }
+
+    /// The deck's end: commit the note, the done chord, then (no-wait deck only) one short line in
+    /// M1K3's own voice after the chord has landed. `onComplete` never waits on either; the line
+    /// may continue into chat. The task holds `env`, not the view, so it outlives the sheet.
+    private func finish(speakSignOff: Bool) {
+        commitAboutNote()
+        env.soundEffects.play(.doneChord)
+        if speakSignOff {
+            let env = env
+            let line = OnboardingVoiceLine.line(isRerun: isRerun)
+            Task { @MainActor in
+                try? await Task.sleep(for: OnboardingVoiceLine.delayAfterChord)
+                guard OnboardingVoiceLine.shouldSpeak(
+                    voiceLoad: env.voiceLoad, soundEffectsEnabled: env.soundEffects.isEnabled
+                ) else { return }
+                await env.speak(line)
+            }
+        }
+        onComplete()
     }
 
     private func sayHi() {
@@ -341,7 +396,7 @@ struct WakeSetupCarousel: View {
     }
 
     private func cardTitle(_ text: String) -> some View {
-        Text(text).font(.headline)
+        Text(text).font(.pixelTitle)
     }
 
     private func cardCaption(_ text: String) -> some View {
