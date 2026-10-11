@@ -1,19 +1,25 @@
-Lil can see. Lil is now Qwen3.5 (4B) and it reads images: attach a photo, a screenshot or a whiteboard and ask about it. It downloads once more (about 3 GB); the old Lil stays on disk until you remove it in Settings > M1K3 > Free up space. The Reasoning setting works for Lil again.
+NEW IN 1.1
 
-Remember this photo. Under any image you send, one tap keeps a private caption of it in M1K3's memory, so you can ask about it later. It never leaves your Mac, agents connected over MCP can't read it, and deleting the chat forgets it.
+• Lil can see. Lil is now Qwen3.5 (4B) and it reads images: attach a photo, a screenshot or a whiteboard and ask about it. It downloads once more (about 3 GB); the old Lil stays on disk until you remove it in Settings > M1K3 > Free up space. The Reasoning setting works for Lil again.
+• Remember this photo. Under any image you send, one tap keeps a private caption of it in my memory, so you can ask about it later. It never leaves your Mac, agents connected over MCP can't read it, and deleting the chat forgets it.
+• A tidier Settings. MCP Server and Brain at Home have their own pages. Model auditions and weight import are gone: if you imported audition weights, they're deleted once to give you the space back. Re-run onboarding any time from Settings > General.
+• Your companion, behind the chat. The avatar now sits in the window's background, or switch it off, with no side panel. The thinking rain is gone for now. VoiceOver announces when I start thinking, listening or speaking.
+• Halloween in the Lair. From October 24 to November 1, I dress up. Turn it off in Settings > M1K3 > Companion > Seasonal looks.
+• Faster Big. Big (Gemma 4) no longer spends about a second per step re-reading its own prompt.
+• Quicker tools on every brain, a fix for a tool call Lil sometimes wrote with a stray tag, and a rejected tool call now tells the brain why so it can try again.
+• No more stalls when the display sleeps. One call that could not be read no longer hides the rest of your call list.
+• If you turned on MLX semantic embeddings in Settings > Advanced, I rebuild your search index once, the next time your Mac is idle and cool.
 
-A tidier Settings. MCP Server and Brain at Home have their own pages. Model auditions and weight import are gone: if you imported audition weights, they're deleted once to give you the space back. Re-run onboarding any time from Settings > General.
+NEW TO M1K3? HERE'S WHAT I DO
 
-Your companion, behind the chat. The avatar now sits in the window's background, or switch it off, with no side panel. The thinking rain is gone for now. VoiceOver now announces when M1K3 starts thinking, listening or speaking.
+• Three brains: Mini (instant, on Apple Intelligence), Lil (4B, sees images) and Big (12B). Pick the one that fits your Mac.
+• Talk to me: on-device speech recognition and a natural neural voice.
+• Bring your own knowledge: drop in notes and PDFs and I answer from them, on your Mac.
+• I remember what matters to you, in a memory you can see, search and delete.
+• Call memory: with your consent, I transcribe and summarise calls, encrypted on your Mac.
+• Brain at Home: pair your iPhone or iPad over your own Wi-Fi and use your Mac's brain from the couch.
+• Your coding agents (Claude, Cursor, VS Code, Codex, Zed) can use my knowledge and voice through a local MCP server and the m1k3 command-line tool.
+• Siri and Shortcuts can ask me things and add to what I know.
+• Private Cloud Compute, if you want it: off by default, one message at a time, with your consent.
 
-Halloween in the Lair. From October 24 to November 1, M1K3 dresses up. Turn it off in Settings > M1K3 > Companion > Seasonal looks.
-
-Faster Big. Big (Gemma 4) no longer spends about a second per step re-reading its own prompt, so long answers and tool turns finish sooner.
-
-Quicker tools on every brain, and a fix for a tool call Lil sometimes wrote with a stray tag. A rejected tool call now tells the brain why, so it can try again.
-
-No more stalls when the display sleeps. Calls: one call that could not be read no longer hides the rest of your list.
-
-Search index: if you turned on MLX semantic embeddings in Settings > Advanced, M1K3 rebuilds your search index once after this update, the next time your Mac is idle and cool.
-
-Everything still runs on your Mac. No account, no telemetry. The network is used for brain downloads, web search and the optional private cloud — each a switch in Settings > Privacy.
+Everything else runs on your Mac. No account, no telemetry. The network is used for brain downloads, web search and the optional private cloud — each a switch in Settings > Privacy.
