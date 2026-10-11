@@ -576,7 +576,7 @@ in the product downloads Big — the recommendation never names it and
 `UpgradeTarget.next` cannot offer it — so on a new install the deep tier is
 present in the code and absent from the machine. Either that is intended (the
 12B is legacy) or the missing piece is a depth-framed download route, not more
-delegation plumbing. See `docs/NEXT_SESSION.md`.
+delegation plumbing.
 
 **Kev's own next probe:** re-look at Liquid's LFM line for the front ("we
 baselined it, but it wasn't a hit"). The 2026-08-08 bake-off scored LFM2.5-2.6B

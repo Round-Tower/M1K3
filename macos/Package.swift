@@ -324,7 +324,7 @@ let package = Package(
         ),
         // The model-evals enclave (Phase 14). PURE, dependency-free: task-kind
         // fixtures + a deterministic heuristic scorer + the cross-brain report
-        // matrix. Mirrors MemoryEvalFixtures/ModelEval — the scoring is unit-
+        // matrix. Mirrors MemoryEvalFixtures — the scoring is unit-
         // tested off-device here; the model-running half rides the headless
         // self-test (M1K3_SELFTEST_CHATEVAL) because MLX needs the .app bundle.
         .target(

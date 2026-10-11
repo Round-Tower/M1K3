@@ -100,4 +100,3 @@ the next adapter on a schedule, sitting on top of RAG**, not LoRA-as-database.
 - [`scratch/lora-spike/README.md`](../../scratch/lora-spike/README.md) — the lil voice-LoRA
   spike (data strategy, A/B loop, the two non-negotiables).
 - [`PLAN.md`](../PLAN.md) — Edge E / Phase 16 (on-device fine-tuning) and Phase 14 (evals).
-- [`prompt-hardening-v2.md`](./prompt-hardening-v2.md) — the policy/enforcement layering.

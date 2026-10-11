@@ -22,7 +22,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.85 — `M1K3_SELFTEST_OUT=-` streams the report to
 //  the inherited stdout (the sandboxed route on macOS 27; verified by a direct exec of the signed Debug build).
 //  Review: Kev + claude-fable-5.1, 2026-09-18, Confidence 0.9 — mechanical rename only: `MLXGemmaProvider` → `MLXBrainProvider`; no behaviour change.
-//  Review: Kev + claude-opus-5-5, 2026-10-07 — dispatches SeedProbeStage (M1K3_SELFTEST_SEEDPROBE); no other change.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — retired the finished spike stages (EVAL, VISION, MTP, KVPERSIST, SEEDPROBE)
+//  with their code; the core stages (store/AFM, embed, generate, TTFT) and CI's gated output lines are unchanged. Confidence 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — dispatches ChatCurveStage (M1K3_SELFTEST_CHATCURVE=1|lil|big|<model id>,
 //  the scripted 8-message prefill curve; report at <M1K3_SELFTEST_OUT>.json, fenced on stdout with OUT=-); no other change.
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#418) — the native-tool-call check records a rejected call as its own
@@ -90,7 +91,7 @@ enum SelfTestEnv {
 
 enum SelfTest {
     /// The embedder the retrieval evals (MEMEVAL / ABSEP / KEYEVAL) measure:
-    /// `M1K3_SELFTEST_EMBEDDER` = `qwen` (default) | `gemma` | a Hub id, via
+    /// `M1K3_SELFTEST_EMBEDDER` = `gemma` (default) | `qwen` | a Hub id, via
     /// `MLXEmbeddingService.preset(named:)`. The same fixture sets, the same
     /// composition, so Gemma's distributions read against Qwen's floors.
     /// A name that resolves to nothing is a FAILED stage, never a Qwen run
@@ -200,7 +201,7 @@ enum SelfTest {
             emit("✗ store/AFM stage: \(error)")
         }
 
-        // 2. MLX Qwen3-Embedding (Metal). The first embed on a fresh service is
+        // 2. MLX embedder (EmbeddingGemma 2, Metal). The first embed on a fresh service is
         //    the COLD path (container load + kernel warm) — the exact tax
         //    warmEmbedderOnLaunch removes from the first chat turn's critical
         //    path (every turn embeds the query BEFORE retrieval + generation).
@@ -397,8 +398,6 @@ enum SelfTest {
                 }
             }
 
-            await runKVPersistProbeIfRequested(llm: llm)
-
             // 3e. Optional persona-prefix invariant (M1K3_SELFTEST_PREFIX=1):
             // assert [cached system block] + [delta] == [full render] for this
             // model, and report the prefill tokens the cache saves. The safety
@@ -409,8 +408,6 @@ enum SelfTest {
         } catch {
             emit("✗ MLX generate stage: \(error)")
         }
-
-        await runEvalSuiteIfRequested()
 
         // 5. Optional memory-threshold eval (M1K3_SELFTEST_MEMEVAL=1): embed
         //    the fixture pairs with the REAL BGE embedder and report the
@@ -489,27 +486,6 @@ enum SelfTest {
             await EmbeddingGemma2RefStage.run(emit: emit)
         }
 
-        // 9. Optional Gemma-4 vision spike (M1K3_SELFTEST_VISION=1 +
-        //    M1K3_SELFTEST_VISION_IMAGE=<path>): loads gemma-4-e4b through
-        //    MLXVLM — NOT the production MLXLLM path MLXBrainProvider uses,
-        //    which strips vision weights at load — and reports whether it can
-        //    actually see an image, the measured per-image token cost, and RAM
-        //    with the vision tower resident. See GemmaVisionSpike.swift.
-        if SelfTestEnv.value("M1K3_SELFTEST_VISION") == "1" {
-            await runGemmaVisionSpike()
-        }
-
-        // 10. Optional MTP speculative-decoding spike (M1K3_SELFTEST_MTP=1):
-        //     loads gemma-4-12B through MLXVLM (the only Gemma4 that emits
-        //     drafter state) + the 238MB paired MTP drafter, then runs a
-        //     greedy exact-match A/B (baseline vs speculative) across three
-        //     sliding-window regimes. See GemmaMTPSpike.swift for the
-        //     pre-registered questions (alias registration, accept rate /
-        //     speedup, and the wrapped-window pollution probe).
-        if SelfTestEnv.value("M1K3_SELFTEST_MTP") == "1" {
-            await runGemmaMTPSpike()
-        }
-
         // 11. Optional vision-chat probe (M1K3_SELFTEST_VISIONCHAT=1 +
         //     M1K3_SELFTEST_VISIONCHAT_IMAGE=<path>): an image through the
         //     REAL live path — AgentRAGResponder → LocalAgent native loop →
@@ -534,13 +510,6 @@ enum SelfTest {
             await PromptSizeStage.run(emit: emit)
         }
 
-        // 8f. Optional seeded-prefill probe (M1K3_SELFTEST_SEEDPROBE=1 or a model id): does a
-        //     turn appended to a seeded cache get a full prefill's next token, on the MLXVLM and
-        //     MLXLLM load paths? See SeedProbeStage.swift.
-        if SeedProbeStage.isRequested {
-            await SeedProbeStage.run(emit: emit)
-        }
-
         // 8g. Optional chat-curve measurement (M1K3_SELFTEST_CHATCURVE=1|lil|big|<model id>): a
         //     scripted 8-message chat through AgentRAGResponder; per-message rendered tokens, cache
         //     reuse, prefill and peak RSS. See ChatCurveStage.swift.
@@ -549,32 +518,6 @@ enum SelfTest {
         }
 
         emit("=== END SELF-TEST ===")
-    }
-
-    /// The GemmaVisionSpike probe: two turns on one MLXVLM-loaded container
-    /// (baseline text-only, then the same-shape question with an image
-    /// attached), reporting the measured per-image prompt-token delta and a
-    /// RAM snapshot with the vision tower resident (MLXLLM's load strips it —
-    /// see docs/MODEL_CHOICES.md's 7.4GB figure, which was measured stripped).
-    private static func runGemmaVisionSpike() async {
-        guard let imagePath = SelfTestEnv.value("M1K3_SELFTEST_VISION_IMAGE") else {
-            emit("✗ vision spike: M1K3_SELFTEST_VISION_IMAGE not set (path to a local image file)")
-            return
-        }
-        let imageURL = URL(fileURLWithPath: imagePath)
-        let modelID = SelfTestEnv.value("M1K3_SELFTEST_VISION_MODEL") ?? GemmaVisionSpike.defaultModelID
-        emit("• vision spike: loading \(modelID) via MLXVLM (image: \(imageURL.lastPathComponent))…")
-        do {
-            let result = try await GemmaVisionSpike.run(imageURL: imageURL, modelID: modelID)
-            emit("✓ vision spike baseline (\(result.baselinePromptTokens) prompt tokens): "
-                + "\(result.baselineAnswer.prefix(180))")
-            emit("✓ vision spike WITH IMAGE (\(result.visionPromptTokens) prompt tokens): "
-                + "\(result.visionAnswer.prefix(180))")
-            emit("vision spike: measured image token cost = \(result.imageTokenCost) tokens")
-            emit(result.ramSnapshot)
-        } catch {
-            emit("✗ vision spike: \(error)")
-        }
     }
 
     /// The vision-chat probe: one image + question through the production
@@ -615,52 +558,6 @@ enum SelfTest {
                 : "✓ visionchat (\(ms)ms): \(cleaned.prefix(300))")
         } catch {
             emit("✗ visionchat: \(error)")
-        }
-    }
-
-    /// The GemmaMTPSpike probe: target + drafter through MLXVLM, three
-    /// fixtures × two greedy legs each, reporting decode tok/s, draft
-    /// accept rate, passthrough reason, the exact-match divergence index
-    /// (speculative greedy MUST reproduce baseline greedy — divergence on
-    /// the wrapped fixtures is the rejected-token pollution signal), and a
-    /// RAM snapshot with both models resident.
-    private static func runGemmaMTPSpike() async {
-        let targetID = SelfTestEnv.value("M1K3_SELFTEST_MTP_MODEL") ?? GemmaMTPSpike.defaultTargetID
-        let drafterID = SelfTestEnv.value("M1K3_SELFTEST_MTP_DRAFTER") ?? GemmaMTPSpike.defaultDrafterID
-        emit("• mtp spike: target \(targetID) + drafter \(drafterID) via MLXVLM…")
-        do {
-            let result = try await GemmaMTPSpike.run(targetID: targetID, drafterID: drafterID)
-            for f in result.fixtures {
-                let accept = f.acceptRate.map { String(format: "%.0f%%", $0 * 100) } ?? "n/a"
-                let diverge = f.firstDivergenceIndex.map { "DIVERGES@\($0)" } ?? "exact-match"
-                emit("✓ mtp \(f.label): prompt \(f.promptTokens)tok · "
-                    + "baseline \(String(format: "%.1f", f.baselineTokensPerSecond))tok/s "
-                    + "(\(f.baselineTokens)tok) vs mtp \(String(format: "%.1f", f.mtpTokensPerSecond))tok/s "
-                    + "(\(f.mtpTokens)tok) = \(String(format: "%.2f", f.speedup))x · "
-                    + "accept \(accept) (\(f.acceptedDraftTokens ?? 0)/\(f.proposedDraftTokens ?? 0)) · "
-                    + "\(diverge)"
-                    + (f.passthroughReason.map { " · passthrough: \($0)" } ?? ""))
-                emit("  mtp \(f.label) baseline: \(f.baselineAnswer.prefix(160))")
-                emit("  mtp \(f.label) mtp:      \(f.mtpAnswer.prefix(160))")
-            }
-            emit(result.ramSnapshot)
-        } catch {
-            emit("✗ mtp spike: \(error)")
-        }
-    }
-
-    /// 4. Optional per-model eval suite (M1K3_SELFTEST_EVAL=1): the same
-    /// behavioral checklist against every brain — or any ad-hoc list via
-    /// M1K3_SELFTEST_EVAL_MODELS=id,id. Promotion gate for new models.
-    private static func runEvalSuiteIfRequested() async {
-        guard SelfTestEnv.value("M1K3_SELFTEST_EVAL") == "1" else { return }
-        let models = SelfTestEnv.value("M1K3_SELFTEST_EVAL_MODELS")
-            .map { $0.split(separator: ",").map { String($0).trimmingCharacters(in: .whitespaces) } }
-            ?? BrainTier.allCases.compactMap(\.mlxModelID)
-        for modelID in models {
-            emit("• eval \(modelID)…")
-            let report = await evalModel(modelID)
-            emit(report.rendered)
         }
     }
 
@@ -851,136 +748,6 @@ enum SelfTest {
             emit(SeparationEvalReport.render(chunkArms))
         } catch {
             emit("✗ keyeval: \(error)")
-        }
-    }
-
-    /// 3d. Optional prompt-cache persistence probe (M1K3_SELFTEST_KVPERSIST=1):
-    /// persona-prefix KV → disk → reload → generate from the reloaded cache.
-    /// The prototype gate for persisting PersonaPrefixCache across launches.
-    private static func runKVPersistProbeIfRequested(llm: MLXBrainProvider) async {
-        guard SelfTestEnv.value("M1K3_SELFTEST_KVPERSIST") == "1" else { return }
-        emit(await llm.promptCacheRoundTripProbe(
-            directory: FileManager.default.temporaryDirectory
-        ))
-    }
-
-    /// One model through the behavioral checklist. Self-contained on purpose:
-    /// the reasoning-family detection reads the output itself (the provider's
-    /// synthetic <think> opener IS the contract being checked), so a new model
-    /// needs no eval-side configuration at all.
-    private static func evalModel(_ modelID: String) async -> ModelEvalReport {
-        var records: [ModelEvalRecord] = []
-        // 2048, not the chat default: a reasoning model can spend 200–800
-        // tokens inside <think> before the one-word answer the think-contract
-        // check wants — 1024 risked false truncation FAILs on verbose models.
-        let provider = MLXBrainProvider(modelID: modelID, maxTokens: 2048)
-
-        // Check 1+2: generates a usable answer; reasoning families emit a
-        // well-formed think pair (the Qwen3.5 lone-close bug class).
-        do {
-            let raw = try await provider.generate(
-                prompt: "Reply with exactly the word OK and nothing else."
-            )
-            let answer = ModelEvalReport.strippingThink(raw)
-            let generated = answer.localizedCaseInsensitiveContains("ok")
-            records.append(ModelEvalRecord(
-                check: "generates",
-                outcome: generated ? .pass : .fail,
-                detail: generated ? "\(raw.count) chars" : "answer: \(answer.prefix(60))"
-            ))
-            if raw.hasPrefix("<think>") {
-                let verdict = ThinkContract.verdict(raw: raw)
-                records.append(ModelEvalRecord(
-                    check: "think contract",
-                    outcome: verdict.outcome,
-                    detail: verdict.detail
-                ))
-            } else {
-                records.append(ModelEvalRecord(
-                    check: "think contract", outcome: .skip, detail: "not a reasoning family"
-                ))
-            }
-        } catch {
-            records.append(ModelEvalRecord(
-                check: "generates", outcome: .fail, detail: String(describing: error).prefix(80) + ""
-            ))
-            return ModelEvalReport(modelID: modelID, records: records)
-        }
-
-        // Check 3: the native tool-call dialect actually round-trips — the
-        // model SEES the tool (template renders it) and the library PARSES the
-        // call (the Gemma-3n silent-drop + missing-parser bug class).
-        if provider.supportsToolCalls {
-            do {
-                let datetime = ToolDefinition(
-                    name: "datetime",
-                    description: "Get the current date and time on this Mac.",
-                    parameters: []
-                )
-                let turn = try await provider.continueToolTurn(
-                    messages: [
-                        .system(M1K3Persona.systemPrompt),
-                        .user("What time is it right now? Use the datetime tool to find out."),
-                    ],
-                    tools: [datetime]
-                )
-                switch turn {
-                case let .toolCalls(calls) where calls.contains(where: { $0.name == "datetime" }):
-                    records.append(ModelEvalRecord(
-                        check: "native tool call", outcome: .pass, detail: "datetime called"
-                    ))
-                case let .toolCalls(calls):
-                    records.append(ModelEvalRecord(
-                        check: "native tool call", outcome: .fail,
-                        detail: "called \(calls.map(\.name).joined(separator: ",")) instead"
-                    ))
-                case let .text(text):
-                    records.append(ModelEvalRecord(
-                        check: "native tool call", outcome: .fail,
-                        detail: "no call — answered: \(ModelEvalReport.strippingThink(text).prefix(60))"
-                    ))
-                case let .rejectedToolCalls(reason, _):
-                    records.append(ModelEvalRecord(
-                        check: "native tool call", outcome: .fail, detail: "call rejected — \(reason)"
-                    ))
-                }
-            } catch {
-                records.append(ModelEvalRecord(
-                    check: "native tool call", outcome: .fail,
-                    detail: String(describing: error).prefix(80) + ""
-                ))
-            }
-        } else {
-            records.append(ModelEvalRecord(
-                check: "native tool call", outcome: .skip,
-                detail: "ReAct floor — no native dialect at this pin"
-            ))
-        }
-
-        // Check 4: needle recall across a few-thousand-token prompt — the only
-        // check that exercises a LONG KV cache (8-bit quantized on allow-listed
-        // families, rotation backstop elsewhere). Short prompts cannot catch
-        // cache-quality loss.
-        records.append(await evalLongContextRecall(provider: provider))
-
-        return ModelEvalReport(modelID: modelID, records: records)
-    }
-
-    private static func evalLongContextRecall(provider: MLXBrainProvider) async -> ModelEvalRecord {
-        do {
-            let raw = try await provider.generate(prompt: LongContextRecall.prompt())
-            let answer = ModelEvalReport.strippingThink(raw)
-            let recalled = LongContextRecall.passes(answer)
-            return ModelEvalRecord(
-                check: "long-context recall",
-                outcome: recalled ? .pass : .fail,
-                detail: recalled ? "needle recalled" : "answer: \(answer.prefix(60))"
-            )
-        } catch {
-            return ModelEvalRecord(
-                check: "long-context recall", outcome: .fail,
-                detail: String(describing: error).prefix(80) + ""
-            )
         }
     }
 }

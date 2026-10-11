@@ -10,10 +10,8 @@
 //  Model auto-downloads from HuggingFace on first use and caches in
 //  ~/Library/Caches/huggingface/. Subsequent loads are instant.
 //
-//  Default = Qwen3-Embedding-0.6B (1024-dim, MRL-truncated to 512). A 2026
-//  instruction-aware retriever with far wider in/off-domain separation than the
-//  old bge_small (384) — bge's ~0.10 noise band is why grounding thresholds sat
-//  precariously and confabulation leaked.
+//  Default = EmbeddingGemma 2 (`embeddingGemma2`, pinned, MRL-truncated to 512; #547). Qwen3-Embedding-0.6B
+//  (1024-dim, MRL 512) was the default until 2026-10-10 and stays constructible for the eval A/B.
 //
 //  NOT EmbeddingGemma-300m (the first pick): its `EmbeddingGemma.sanitize`
 //  mutates a `@ModuleInfo` module property directly after init (Gemma3.swift:477)
@@ -54,6 +52,7 @@
 //  one checkpoint for text now and the image/audio encoders later, one download, one thing to maintain. Its
 //  narrower (but clean) dead zones get their own floors (EmbedderFloors.embeddingGemma2, challenged); the
 //  fingerprint change re-indexes every store once on next launch. Qwen stays constructible for the A/B.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — header comment only: "Default = Qwen3-Embedding" now names EmbeddingGemma 2 (#547). Confidence 0.9.
 
 import Foundation
 import M1K3Inference
