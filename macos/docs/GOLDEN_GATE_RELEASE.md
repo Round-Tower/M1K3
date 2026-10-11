@@ -96,3 +96,59 @@ Promote only after steps 1–4 have evidence for the same SHA. Start with
 TestFlight Internal. If a defect escapes, expire the build in App Store Connect,
 disable external promotion, and ship a new candidate; never attempt to silently
 replace an already distributed build.
+
+## 6. 1.1.0 — the first update on the same record
+
+1.1.0 is the Gemma-shaped update (`GEMMA_1_1_PLAN.md`): Lil becomes Qwen3.5-4B
+and sees, Lil's tool turns get the exact-seed checkpoint and the orphan-tag
+repair, Big stops re-reading its prompt. Steps 1–5 apply unchanged to its
+candidate; four things are new.
+
+**The bump.** One commit, `chore(release): v1.1.0`, moves `MARKETING_VERSION`
+to 1.1.0 in `project.yml` (both Apple targets read it), `versionName` /
+`versionCode` (10100) / `packageVersion` in `app/composeApp/build.gradle.kts`,
+the site's `softwareVersion`, and the What's New in `fastlane/metadata_mac` and
+`metadata_ios` (`tools/ci/check_store_metadata.py` must pass). It lands only
+after 1.0.0 clears review: a bump while 1.0.0 is `IN_REVIEW` would need a new
+version record and lose the queue spot. `CURRENT_PROJECT_VERSION` stays; Xcode
+Cloud mints build N. **Done 2026-10-11:** Mac 1.0.0 went live, #561 carried the
+version bump and #524 the What's New. The ASC Mac version must read exactly
+`1.1.0` (it was created as "1.1"; `VERSIONING.md`). iOS 1.0.0 is still in review
+on 453, so the iOS 1.1.0 record opens once it clears (or after a cancel, which
+loses the queue spot: Kev's call).
+
+**The audition retirement deletes user files once.** 1.1.0 clears every persisted
+audition pick at launch and, once, deletes `Application Support/M1K3/auditions`
+off the main actor (#561). On build N, before submitting: launch over a 1.0 store
+that had an audition picked and confirm it boots on stock Lil with no beach ball, and
+that `/usr/bin/log show --predicate 'subsystem == "app.m1k3"'` shows the
+"1.1 migration removed the auditions folder" line once.
+
+**Weight integrity on build N.** Lil's weights were re-pinned with
+`pin_weights.py --snapshot-root` (#517), so the HF oid check only proves the
+download matches HF. Before `submit.py`, load Lil once in build N and read
+
+```sh
+/usr/bin/log show --last 1h --predicate 'subsystem == "app.m1k3" AND category == "weight-integrity"'
+```
+
+for `verified <repo> against pinned revision …`. A refusal there means the
+pin and the evaluated bytes disagree: stop. (The full rule: `tools/asc/README.md`.)
+
+**Two platforms, one build.** Mac and iOS ship the same build number from the
+same run; `submit.py submit --platform ALL --confirm` is two-phase and sends
+nothing unless both plans pass. The iOS What's New may not name the Mac
+(`check_store_metadata.py` fails it), and its Lil paragraph is scoped to 8 GB
+devices and UNVERIFIED on a real iPhone until step 3's device pass runs on the
+1.1.0 candidate — Kev decides whether it ships. The Mac notes' re-index line
+(MLX semantic embeddings only; the default Hashing embedder does nothing) is
+correct as of #503.
+
+<!-- Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 (§6 is the
+     release commit's own checklist: the bump files are VERSIONING.md's, the
+     weight-integrity check is tools/asc/README.md's rule, the two-platform
+     notes are submit.py's documented behaviour; the queue-spot warning is the
+     2026-10-05 cancel). Prior: Unknown (§1–§5 unsigned before this).
+     Review: Kev + claude-opus-5.5, 2026-10-11 — the bump is done (1.0.0 live; #561 bumped, #524 the
+     notes), the ASC version string must be renamed "1.1" → "1.1.0", iOS waits on its own 1.0.0 review,
+     and a fourth new step: the one-time audition folder delete is verified on build N. Confidence 0.85. -->

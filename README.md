@@ -242,3 +242,7 @@ human-and-AI collaboration on the record.
      App Store, Homebrew, DMG, source, then TestFlight for iPhone and iPad; the header links lead
      with the store; the sandboxed-helper caveat drops "(TestFlight today)"; the official-builds
      line names the store. Confidence 0.85. -->
+<!-- Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 (the v1.1.0 pass: the two
+     "1.0 build has no cloud path" sentences now describe PCC as the opt-in third crossing,
+     consent per conversation per ADR 0007; the MCP count of 18 was re-read off
+     M1K3MCPKit + M1K3BrainServe the same day). Prior: Unknown. -->

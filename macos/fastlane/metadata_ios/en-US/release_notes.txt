@@ -1,0 +1,17 @@
+NEW IN 1.1
+
+• Lil can see. On iPhones and iPads with 8 GB of memory, Lil is now Qwen3.5 (4B) and it reads images: attach a photo or a screenshot and ask about it. It downloads once more (about 3 GB).
+• Remember this photo. Under any image you send, one tap keeps a private caption of it in my memory, so you can ask about it later. It never leaves your device, and deleting the chat forgets it.
+• Halloween in the Lair. From October 24 to November 1, I dress up. Turn it off in Settings > Face > Seasonal looks.
+• Lil's tools: quicker tool turns, and a fix for a tool call Lil sometimes wrote with a stray tag.
+
+NEW TO M1K3? HERE'S WHAT I DO
+
+• Chat with an on-device brain: Mini starts instantly on Apple Intelligence devices, and Lil runs fully offline on iPhones and iPads with 8 GB of memory.
+• Talk to me: on-device speech recognition and a natural neural voice.
+• Bring your own knowledge: add PDFs and text files and I answer from them, on your device.
+• I remember what matters to you, and you can see and search everything I've kept.
+• A friendly 3D companion or a pixel face.
+• Brain at Home: pair with your Mac over your own Wi-Fi and borrow its big brain from the couch.
+
+Everything runs on your device. No account, no telemetry. The network is used for brain downloads and web search — one switch in Settings turns web search off.

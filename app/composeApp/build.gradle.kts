@@ -178,6 +178,8 @@ android {
                 .toInt()
         // Versioning scheme: see /VERSIONING.md — versionCode = major×10000 +
         // minor×100 + patch, so it stays derivable from versionName forever.
+        // Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.9 (v1.1.0 rides the same
+        // commit as the Mac bump, per VERSIONING.md; 10100 is the derived code). Prior: Unknown.
         versionCode = 10100
         versionName = "1.1.0"
 

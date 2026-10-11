@@ -31,10 +31,10 @@ STEP 1 — GET THE APP
 STEP 2 — OPEN IT ONCE
     open -a M1K3
   First run picks Mini, Apple's on-device model: instant, nothing to download.
-  The upgrade to Lil (Qwen 3, about 2.2 GB, downloaded once from Hugging Face)
+  The upgrade to Lil (Qwen3.5, about 3 GB, downloaded once from Hugging Face)
   is offered after the first answer and in Settings. Big (Gemma 4 12B) is
   offered on 16 GB Macs and up. These are the user's clicks: an agent should
-  ask, not start a 2 GB download on its own.
+  ask, not start a 3 GB download on its own.
 
 STEP 3 — TURN THE SERVER ON, LOG IN, THEN CONNECT
   The MCP server is OFF by default and lives inside the app. Ask the user to
@@ -97,3 +97,9 @@ PRIVACY
   (one switch in Settings ▸ Privacy turns it off). Documents, memories and
   voice stay on the Mac; with web search on, a question M1K3 looks up goes out
   as a search. https://m1k3.app/privacy
+
+# Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.9 (the v1.1.0 pass: Lil is
+# Qwen3.5, about 3 GB, from the pinned weights in #517; the review status is the
+# ASC record, nothing live). Prior: Unknown.
+# Review: Kev + claude-opus-5.5, 2026-10-11 — merged with the store-live pass: 1.0 is live on
+# the Mac App Store, so the store line replaces the in-review one. Confidence 0.9.

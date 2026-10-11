@@ -4,8 +4,9 @@ NO ACCOUNT REQUIRED — just launch and use it.
 
 FIRST LAUNCH:
   Mac: on most Macs, uses Apple Intelligence (instant, no download).
-  iPhone/iPad: downloads a local AI model (~2 GB). After setup, fully offline.
-  Without Apple Intelligence on any platform, downloads a local model (~630 MB–2 GB).
+  iPhone/iPad: downloads a local AI model (~3 GB on 8 GB devices). After setup, fully offline.
+  Without Apple Intelligence on any platform, downloads a local model (~630 MB–3 GB).
+  Lil (the downloaded 4B brain) accepts image attachments: the paperclip in chat takes a photo or screenshot, read on-device.
 
 OUTBOUND (network.client): model download + web search (ON by default so answers can be current; one switch turns it off: Settings > Privacy > Web search (DuckDuckGo)). No analytics, tracking, or telemetry.
 
