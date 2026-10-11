@@ -19,12 +19,15 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — `wearing(_:)`: in season every style wears the
 //  phosphor costume (the tint only exists in the phosphor shader, and the shading default is
 //  .off, so without it most users would never see the Halloween look). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the house shading is `.off` again
+//  (`CompanionDefaults.houseShading`, the Phosphor Fox's white lattice); the `wearing(_:)` note above is
+//  true as written. The `.phosphor` doc no longer calls itself "the default". Confidence 0.85.
 //
 
 public enum CompanionShadingStyle: String, CaseIterable, Identifiable, Sendable {
     /// The companion's own baked materials — no shader.
     case off
-    /// Fresnel rim-glow over a near-black body (the default M1K3 look).
+    /// Fresnel rim-glow over a near-black body (the site's look; an opt-in here).
     case phosphor
     /// Toon banding of the creature's own texture + ink silhouette.
     case cel

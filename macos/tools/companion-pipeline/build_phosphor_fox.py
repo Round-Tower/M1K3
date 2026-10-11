@@ -13,7 +13,8 @@ the site read as a wireframe sculpture rather than a glowing blob — is unreach
 (`CompanionShadingStyle` notes the same wall from the other side: a true interior
 wireframe would need a baked barycentric attribute.) So we bake the lattice as REAL
 GEOMETRY here, once, and the app needs no shader at all: `.off` (baked) shading
-reproduces the site exactly.
+gives the white lattice (the house look on every store plate); the site's rim-glow
+is the optional `.phosphor` shader on top.
 
 Two non-obvious steps carry the whole thing:
 
@@ -57,7 +58,7 @@ on-screen result in RealityKit is verify-at-⌘R, as ever). Prior: Unknown.
 from __future__ import annotations
 
 import sys
-from typing import Sequence
+from collections.abc import Sequence
 
 import bpy
 from mathutils import Vector

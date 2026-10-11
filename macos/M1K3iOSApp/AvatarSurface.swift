@@ -38,7 +38,7 @@ struct AvatarSurface: View {
     /// face is instant and never sets it.
     var loading: Binding<Bool>? = nil
 
-    @AppStorage(CompanionDefaults.companionKey) private var companion = ""
+    @AppStorage(CompanionDefaults.companionKey) private var companion = CompanionDefaults.houseCompanion.id
 
     /// The constellation is a full-canvas field — legible on the iPad, a grey
     /// scatter on a phone (the Mac's notch-HUD lesson at 72px). Offered on the

@@ -41,6 +41,7 @@
 //  PersonaLeakGuard on the live stream, so a leaked prompt is never read aloud (it was: the guard ran only
 //  at end of turn, after the sentences were spoken). Confidence 0.85; verify-by-launch owed for the
 //  refusal's timing against the on-screen swap.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the Phosphor Fox (white lattice) is the house default via CompanionDefaults.registeredDefaults / houseCompanion (Kev, TestFlight 499). Confidence 0.85.
 
 import AppKit
 import AVFoundation
@@ -100,9 +101,10 @@ extension AppEnvironment {
     /// The resolver's key (#198): the iOS shell reads the same one.
     nonisolated static let voiceModeThinkingKey = ThinkingModeResolver.voiceThinkingKey
 
-    /// Persisted voice-mode avatar choice. Empty string (default) = the pixel face;
-    /// otherwise a CompanionSpec id (e.g. "Fox"). The picker writes it; the VoiceDock
-    /// (via AvatarSurface) reads it. The pixel face stays M1K3's default everywhere else.
+    /// Persisted voice-mode avatar choice. Empty string = the pixel face (an explicit
+    /// pick); otherwise a CompanionSpec id (e.g. "Colobus"). A never-touched install
+    /// resolves to the Phosphor Fox through `CompanionDefaults.registeredDefaults`.
+    /// The picker writes it; the VoiceDock (via AvatarSurface) reads it.
     /// The string lives in `CompanionDefaults` (M1K3Avatar) so the shared
     /// CompanionAvatarView + the iOS AppCore read the same slot — same value as before.
     nonisolated static let voiceCompanionKey = CompanionDefaults.companionKey
@@ -114,7 +116,8 @@ extension AppEnvironment {
 
     /// Shading style for 3D creature companions (off / phosphor / cel). Stores a
     /// `CompanionShadingStyle` rawValue. One source of truth shared by
-    /// CompanionAvatarView (applies it) and Settings (picks it) — default off.
+    /// CompanionAvatarView (applies it) and Settings (picks it) — house default off
+    /// (`CompanionDefaults.houseShading`, the Phosphor Fox's white lattice).
     nonisolated static let companionShadingKey = CompanionDefaults.shadingStyleKey
 
     /// The notch HUD — a heads-up narration pill (companion + live spoken

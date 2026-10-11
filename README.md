@@ -49,8 +49,9 @@ Private by design: on your Mac by default, no telemetry, and every network call 
 - **A memory that repairs itself** — a temporal memory graph of dated facts;
   when you correct something, the dream cycle supersedes the stale fact instead
   of silently losing either version, and keeps the history visible.
-- **A face, and creatures** — the pixel face by default; an opt-in cast of
-  low-poly 3D companions rendered on-device with RealityKit.
+- **A face, and creatures** — the Phosphor Fox by default (a white wireframe
+  lattice), with the pixel face and a cast of low-poly 3D companions to
+  choose from, all rendered on-device with RealityKit.
 - **Call memory** — encrypted, on-device call transcription.
 - **A local agent** — tools that *do* things, grounded in your own data, with
   markdown + syntax-highlighted code in chat.

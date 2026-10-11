@@ -44,7 +44,7 @@ struct AvatarSurface: View {
     /// hero asks for `.fit` so the whole creature sits in the window at any
     /// aspect (the fixed shot clipped the fox's head in every voice screenshot).
     var framing: CompanionFraming = .window
-    @AppStorage(AppEnvironment.voiceCompanionKey) private var companion = ""
+    @AppStorage(AppEnvironment.voiceCompanionKey) private var companion = CompanionDefaults.houseCompanion.id
     /// Published by `.trackWindowVisibility()` at the window root; `true` where
     /// no root tracks it (today's behaviour for untracked windows).
     @Environment(\.windowVisible) private var windowVisible

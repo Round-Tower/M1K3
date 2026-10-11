@@ -45,7 +45,7 @@ struct WakeSetupCarousel: View {
     @State private var hasCommittedNote = false
     @State private var invitePulse = false
     @AppStorage(ReadingMode.storageKey) private var readingMode: ReadingMode = .standard
-    @AppStorage(AppEnvironment.voiceCompanionKey) private var voiceCompanion = ""
+    @AppStorage(AppEnvironment.voiceCompanionKey) private var voiceCompanion = CompanionDefaults.houseCompanion.id
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
