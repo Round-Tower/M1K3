@@ -56,7 +56,7 @@ public struct LoopbackToolGrants: OptionSet, Sendable, Hashable {
         default: return "Not available: \(tool) isn't open to agents in this version of M1K3."
         }
         return "Not allowed: M1K3's owner hasn't let agents \(what). "
-            + "They can turn it on in M1K3 ▸ Settings ▸ Privacy ▸ MCP server."
+            + "They can turn it on in M1K3 ▸ Settings ▸ MCP Server."
     }
 }
 

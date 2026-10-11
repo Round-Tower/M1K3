@@ -23,6 +23,8 @@
 //  `InferenceIntent.withInstructions(neutralInstructions)` + `backgroundUtility`, so no brain (MLX
 //  included) carries the persona into a summary, and summaries never take chat's prefix slot.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — summaries run under `withThinking(false)`: a
+//  thinking-on brain thought per chunk and a capped think stripped to empty. Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-09-26 (4) — PR #412 review fold: an all-blank long transcript
 //  returns nothing instead of indexing an empty chunk list; the part framing shares `deepOpening`.
 //  Confidence 0.85.
@@ -77,7 +79,11 @@ public struct SummarizationPipeline: Sendable {
     public func summarize(transcript: String) async -> Output {
         // No persona on any brain, and never a prefix-cache slot taken from chat.
         await InferenceIntent.withInstructions(Self.neutralInstructions) {
-            await InferenceIntent.backgroundUtility { await summarizeInPlace(transcript) }
+            // Never thinks (2026-10-11): a thinking-on brain paid a full think per chunk, and a
+            // capped think strips to empty, so the deep summary vanished.
+            await InferenceIntent.withThinking(false) {
+                await InferenceIntent.backgroundUtility { await summarizeInPlace(transcript) }
+            }
         }
     }
 

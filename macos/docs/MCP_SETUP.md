@@ -21,7 +21,7 @@ No per-agent setup is needed for any of this.
 
 ## 1. Connect to the app (HTTP — recommended)
 
-Turn the server on in the app: **Settings → Privacy → MCP server**. Every
+Turn the server on in the app: **Settings → MCP Server**. Every
 request needs the server's **access token** (#270): M1K3 mints it on first
 start and keeps it in the Keychain; Settings shows it masked, with **Copy** and
 **New Token…** (a new token disconnects every agent until it is connected again).

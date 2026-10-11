@@ -28,6 +28,10 @@
 //  own wiring…": the persona's decline read the titling prompt as a probe), and the sanitizer drops a
 //  first-person refusal. Same class as the call summaries (2026-09-26).
 //  Same day, #424 review: refusals are checked after quotes/"Title:" come off; "Sorry, " only.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — every new Lil chat was titled "<think>Thinking
+//  Process…": titling runs outside the turn's `withThinking` scope, so the thinking-on build
+//  thought. The adapter now scopes `withThinking(false)`, and `sanitize` runs `ReasoningSplit`
+//  first (an unclosed think is nil, the chat stays untitled). Confidence 0.85.
 //
 
 import Foundation
@@ -61,8 +65,14 @@ public struct ProviderConversationTitler: ConversationTitling {
         // No persona either (2026-09-27): under it, Mini's self-query decline read the
         // titling prompt as a probe and a news chat was titled "I don't share my own wiring".
         return try await InferenceIntent.withInstructions(TitlePrompt.neutralInstructions) {
-            try await InferenceIntent.backgroundUtility {
-                try await provider.generate(prompt: TitlePrompt.build(user: user, assistant: cleanedAssistant))
+            // Never thinks (2026-10-11): titling runs after the turn, outside its `withThinking`
+            // scope, so a thinking-on build (Lil) fell back to its construction flag and every
+            // chat was titled "<think>Thinking Process…". Explicit false, not nil: a caller
+            // inside `withThinking(true)` (an eval) must not leak into the title either.
+            try await InferenceIntent.withThinking(false) {
+                try await InferenceIntent.backgroundUtility {
+                    try await provider.generate(prompt: TitlePrompt.build(user: user, assistant: cleanedAssistant))
+                }
             }
         }
     }
@@ -98,8 +108,11 @@ public enum TitleSanitizer {
     }
 
     public static func sanitize(_ raw: String) -> String? {
+        // Reasoning never titles a chat (2026-10-11): the answer after any think block, and an
+        // unclosed think (a capped generation) leaves nothing, so the chat stays untitled.
+        let answer = ReasoningSplit.split(raw).answer
         // First non-empty line only — models love to explain themselves.
-        guard var line = raw
+        guard var line = answer
             .components(separatedBy: .newlines)
             .map({ $0.trimmingCharacters(in: .whitespaces) })
             .first(where: { !$0.isEmpty })

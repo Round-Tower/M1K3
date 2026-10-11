@@ -30,6 +30,7 @@
 //  it is the FACE. Type names keep the old word so the Mac sibling still reads as kin. Confidence now 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — "Constellation" joins the grid on the iPad (hit list item 6),
 //  with its own footer line. Confidence now 0.8 (device-owed).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — adds the "Seasonal looks" opt-out toggle. Confidence 0.85.
 //
 
 import M1K3Avatar
@@ -38,6 +39,7 @@ import SwiftUI
 struct CompanionPickerSection: View {
     @Environment(AppCore.self) private var core
     @AppStorage(CompanionDefaults.companionKey) private var companion = ""
+    @AppStorage(CompanionDefaults.seasonalLooksKey) private var seasonalLooks = true
     @AppStorage(CompanionDefaults.shadingStyleKey) private var shadingRaw =
         CompanionShadingStyle.off.rawValue
 
@@ -104,6 +106,7 @@ struct CompanionPickerSection: View {
                     }
                 }
             #endif
+            Toggle("Seasonal looks", isOn: $seasonalLooks)
         } header: {
             Text("Face")
         } footer: {

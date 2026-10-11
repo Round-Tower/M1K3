@@ -369,4 +369,141 @@ struct AuditionStoreTests {
         #expect(!AuditionSelection.isSetAtLaunch(tier: "big", arguments: ["audition.lil": "org/M"]))
         #expect(!AuditionSelection.isSetAtLaunch(tier: "lil", arguments: [:]))
     }
+
+    // MARK: - 1.1: Settings no longer offers auditions
+
+    @Test("1.1 launch migration: every persisted audition choice and the pending marker are removed")
+    func clearPersistedChoicesRemovesEverything() throws {
+        let defaults = try freshDefaults()
+        defaults.set("org/Lil", forKey: AuditionSelection.key(forTier: "lil"))
+        defaults.set("org/Big", forKey: AuditionSelection.key(forTier: "big"))
+        defaults.set("org/Mini", forKey: AuditionSelection.key(forTier: "mini"))
+        AuditionSelection.recordPendingLoad(tier: "lil", defaults: defaults)
+        defaults.set("kept", forKey: "audition")
+        defaults.set(true, forKey: "unrelated")
+
+        let cleared = AuditionSelection.clearPersistedChoices(defaults: defaults)
+
+        #expect(Set(cleared) == ["audition.lil", "audition.big", "audition.mini", AuditionSelection.pendingLoadKey])
+        for tier in ["lil", "big", "mini"] {
+            #expect(AuditionSelection.repoID(forTier: tier, defaults: defaults) == nil)
+        }
+        #expect(defaults.string(forKey: AuditionSelection.pendingLoadKey) == nil)
+        #expect(defaults.bool(forKey: "unrelated"), "only audition.* keys go")
+        #expect(defaults.string(forKey: "audition") == "kept")
+        #expect(AuditionSelection.clearPersistedChoices(defaults: defaults).isEmpty, "idempotent")
+    }
+
+    @Test("1.1 launch migration leaves a launch-argument choice serving (the developer / eval path)")
+    func clearPersistedChoicesKeepsLaunchArguments() throws {
+        let defaults = try freshDefaults()
+        // The argument domain is process-global (it would leak into parallel tests), so a
+        // registered default under a tier name no other test reads stands in: like the
+        // argument domain, `removeObject` cannot reach it.
+        defaults.register(defaults: ["audition.argtier": "org/Arg"])
+        defaults.set("org/Saved", forKey: AuditionSelection.key(forTier: "argtier"))
+
+        let cleared = AuditionSelection.clearPersistedChoices(defaults: defaults)
+
+        #expect(AuditionSelection.repoID(forTier: "argtier", defaults: defaults) == "org/Arg")
+        #expect(!cleared.contains("audition.argtier"), "a key that still serves was not cleared")
+    }
+
+    // MARK: - 1.1: the folder on disk goes too (Kev, 2026-10-11), once
+
+    @Test("the plan clears choices every launch and deletes the folder once")
+    func cleanupPlanDeletesOnce() {
+        #expect(AuditionCleanup.plan(markerSpent: false, hasLaunchArgument: false)
+            == .init(clearChoices: true, deleteFolder: true))
+        #expect(AuditionCleanup.plan(markerSpent: true, hasLaunchArgument: false)
+            == .init(clearChoices: true, deleteFolder: false))
+    }
+
+    @Test("an audition launch argument keeps the folder and the marker unspent")
+    func cleanupPlanSkipsForLaunchArgument() {
+        #expect(AuditionCleanup.plan(markerSpent: false, hasLaunchArgument: true)
+            == .init(clearChoices: true, deleteFolder: false))
+        #expect(AuditionCleanup.hasLaunchArgument(arguments: ["audition.lil": "org/M"]))
+        #expect(!AuditionCleanup.hasLaunchArgument(arguments: ["NSDocumentRevisionsDebugMode": "YES"]))
+    }
+
+    private func storeWithImport() throws -> (AuditionStore, URL) {
+        let temp = FileManager.default.temporaryDirectory
+            .appendingPathComponent("audition-cleanup-\(UUID().uuidString)", isDirectory: true)
+        let root = temp.appendingPathComponent("M1K3/auditions", isDirectory: true)
+        let model = root.appendingPathComponent("org/Repo", isDirectory: true)
+        try FileManager.default.createDirectory(at: model, withIntermediateDirectories: true)
+        try Data(count: 1000).write(to: model.appendingPathComponent("model.safetensors"))
+        return (AuditionStore(root: root), temp)
+    }
+
+    @Test("run deletes the store root once, reports the bytes, spends the marker")
+    func runDeletesOnce() throws {
+        let (store, temp) = try storeWithImport()
+        defer { try? FileManager.default.removeItem(at: temp) }
+        let defaults = try freshDefaults()
+        defaults.set("org/Repo", forKey: AuditionSelection.key(forTier: "lil"))
+
+        let first = AuditionCleanup.run(store: store, defaults: defaults, arguments: [:])
+        #expect(first.deletedFolder && first.bytesFreed >= 1000 && first.error == nil)
+        #expect(!FileManager.default.fileExists(atPath: store.root.path))
+        #expect(defaults.bool(forKey: AuditionCleanup.markerKey))
+        #expect(AuditionSelection.repoID(forTier: "lil", defaults: defaults) == nil)
+
+        // A folder that appears later (a dev import) survives: the marker is spent.
+        try FileManager.default.createDirectory(at: store.root, withIntermediateDirectories: true)
+        let second = AuditionCleanup.run(store: store, defaults: defaults, arguments: [:])
+        #expect(!second.deletedFolder)
+        #expect(FileManager.default.fileExists(atPath: store.root.path))
+    }
+
+    @Test("prepare clears and decides synchronously but leaves the folder for the slow half")
+    func prepareLeavesTheDeleteForLater() throws {
+        let (store, temp) = try storeWithImport()
+        defer { try? FileManager.default.removeItem(at: temp) }
+        let defaults = try freshDefaults()
+        defaults.set("org/Repo", forKey: AuditionSelection.key(forTier: "lil"))
+
+        let (report, folder) = AuditionCleanup.prepare(store: store, defaults: defaults, arguments: [:])
+        // The choice is gone and the marker spent before any brain is built...
+        #expect(AuditionSelection.repoID(forTier: "lil", defaults: defaults) == nil)
+        #expect(defaults.bool(forKey: AuditionCleanup.markerKey))
+        #expect(!report.deletedFolder)
+        // ...but the multi-GB walk + delete is handed back, not done on the caller's thread.
+        #expect(folder == store.root)
+        #expect(FileManager.default.fileExists(atPath: store.root.path))
+
+        let removed = try AuditionCleanup.removeFolder(#require(folder))
+        #expect(removed.deletedFolder && removed.bytesFreed >= 1000 && removed.error == nil)
+        #expect(!FileManager.default.fileExists(atPath: store.root.path))
+        // Spent: a second launch hands back nothing.
+        #expect(AuditionCleanup.prepare(store: store, defaults: defaults, arguments: [:]).folder == nil)
+    }
+
+    @Test("run with an audition launch argument keeps the folder and the marker")
+    func runSkipsForLaunchArgument() throws {
+        let (store, temp) = try storeWithImport()
+        defer { try? FileManager.default.removeItem(at: temp) }
+        let defaults = try freshDefaults()
+
+        let report = AuditionCleanup.run(store: store, defaults: defaults, arguments: ["audition.lil": "org/Repo"])
+
+        #expect(!report.deletedFolder)
+        #expect(FileManager.default.fileExists(atPath: store.root.path))
+        #expect(!defaults.bool(forKey: AuditionCleanup.markerKey))
+    }
+
+    @Test("a missing folder still spends the marker and does not fail")
+    func runWithNoFolderSpendsMarker() throws {
+        let defaults = try freshDefaults()
+        let store = AuditionStore(root: FileManager.default.temporaryDirectory
+            .appendingPathComponent("nope-\(UUID().uuidString)", isDirectory: true))
+        let report = AuditionCleanup.run(store: store, defaults: defaults, arguments: [:])
+        #expect(report.error == nil && report.bytesFreed == 0)
+        #expect(defaults.bool(forKey: AuditionCleanup.markerKey))
+        // No store at all (no Application Support): same.
+        let other = try freshDefaults()
+        #expect(AuditionCleanup.run(store: nil, defaults: other, arguments: [:]).error == nil)
+        #expect(other.bool(forKey: AuditionCleanup.markerKey))
+    }
 }

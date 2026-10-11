@@ -73,7 +73,7 @@ done
 
 p=$(launch privacy-label PhosphorFox YES); waitFor $p "Privacy" 60; sleep 20; shoot $p privacy-label; quitApp
 
-p=$(launch brain-at-home PhosphorFox YES); sleep 25; front $p; $S/wheel $p 14 -300; sleep 2; shoot $p brain-at-home; quitApp
+p=$(launch brain-at-home PhosphorFox YES); sleep 25; front $p; sleep 2; shoot $p brain-at-home; quitApp
 
 p=$(launch constellation PhosphorFox YES); sleep 25; $S/ax $p press "Memory Constellation" AXMenuItem; sleep 25; shoot $p constellation "Memory Constellation"; quitApp
 

@@ -102,6 +102,10 @@
 //  graph's floors follow its VECTORS — the stored fingerprint at init, the live embedder's only once
 //  reindexMemoryGraphIfNeeded has moved (or adopted) the graph into its space; the rollback path leaves
 //  them alone (pass 2 caught the reset there pairing old-space vectors with the rolled-back embedder's bars).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — 1.1 Settings restructure: `weightImportState` left with the Import weights UI;
+//  the launch calls `retireAuditions()` (clear audition choices, delete the folder once) before the first brain is built.
+//  Confidence 0.7 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — comment only: the thinking rain is unmounted; ambientNotes stays as the seam. Confidence 0.9.
 
 import AppKit
 import Foundation
@@ -248,7 +252,7 @@ final class AppEnvironment {
     @ObservationIgnored var lastBridgedGate: ChatGate?
     /// delegate_deep state (stored HERE — extensions can't hold stored
     /// properties; plain `var` because the writer lives in
-    /// AppEnvironment+DeepDelegation.swift, the `weightImportState` precedent).
+    /// AppEnvironment+DeepDelegation.swift).
     /// nil = idle; non-nil = the task the deep lane is digging into.
     var deepDelegationTaskLabel: String?
     /// The in-flight delegated run — held (never cancelled by UI churn), the
@@ -418,8 +422,8 @@ final class AppEnvironment {
     /// (listening → thinking → generating → speaking → idle).
     private(set) var avatar = AvatarController()
 
-    /// The ambient activity stream behind the avatar (the "thinking rain" /
-    /// InferencePhosphorView): a small ring of recent things M1K3 is DOING or
+    /// The ambient activity stream behind the avatar (the "thinking rain" —
+    /// unmounted 2026-10-11, the model and this seam kept): a small ring of recent things M1K3 is DOING or
     /// that reached it — heartbeat pulses, notifications it raised, (later)
     /// call transcription. Tool activity + reasoning ride the ChatSession's
     /// own observables; this is the seam for everything else that has no chat
@@ -737,16 +741,6 @@ final class AppEnvironment {
         }
     }
 
-    /// The Advanced pane's "Import weights from a folder…" affordance —
-    /// see AppEnvironment+WeightImport.swift for the run, WeightImportDisplay
-    /// (M1K3MLX) for the pure outcome→copy mapping this wraps. Plain `var`
-    /// (not `private(set)`): written from the extension file, same as
-    /// `brainUpgrade` — `private(set)`'s setter is file-scoped in Swift, and
-    /// the writer lives in a different file on purpose (AppEnvironment.swift
-    /// stays the composition root, not a dumping ground for every feature's
-    /// side-effect glue).
-    var weightImportState: WeightImportRunState = .idle
-
     /// Last ingest outcome, surfaced to the UI.
     private(set) var lastIngestStatus: String?
     /// The last successfully ingested document's title, threaded properly for
@@ -983,7 +977,7 @@ final class AppEnvironment {
         // uncapped decode crosses the 8192 window mid-answer and silently
         // rotates the persona/grounding head out.
         let slotTier = brain.mlxModelID != nil ? brain : BrainTier.big
-        Self.dropAuditionThatNeverLoaded()
+        Self.retireAuditions()
         let mlxBrain = Self.makeMLXBrain(
             for: slotTier,
             stockModelID: initialMLXModelID,

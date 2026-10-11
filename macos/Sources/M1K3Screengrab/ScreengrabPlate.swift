@@ -22,6 +22,7 @@
 //  `launchRecipe(brain:)` is the pure arm and `launchRecipe` reads the test runner's
 //  `M1K3_SCREENGRAB_BRAIN` (default `lil`), so an iPad-simulator run fronts on `mini` (no MLX there).
 //  Proven: 12/12 plates on the iPad Pro 13" simulator, the real iPad set on the 1.0.0 listing. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — -chat.avatarDisplay background on every recipe, so plates stop showing the owner's stored choice (UserDefaults is not rerouted). Confidence 0.9.
 //
 
 import Foundation
@@ -104,6 +105,9 @@ public enum ScreengrabPlate: String, CaseIterable, Sendable {
             // The notch HUD is a floating panel over the window: it captioned the
             // spoken line into two voice plates.
             ["-notchHUD.enabled", "NO"],
+            // The avatar is the backdrop on every plate — not the owner's stored choice
+            // (the harness reroutes stores, not UserDefaults).
+            ["-chat.avatarDisplay", "background"],
             // Off: beside a live app it fails on :4242 and the Privacy pane prints the error.
             ["-mcpServer.enabled", "NO"],
             // The SHIPPED privacy defaults, not the owner's: the harness reroutes stores,

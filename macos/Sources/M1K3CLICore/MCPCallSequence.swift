@@ -174,7 +174,7 @@ public struct MCPCallSequence: Sendable {
     private var notRunning: CallFailure {
         .unreachable("""
         M1K3 isn't running (open it from Applications)
-        — or its MCP server is off: M1K3 ▸ Settings ▸ Privacy ▸ MCP server (127.0.0.1:\(port)).
+        — or its MCP server is off: M1K3 ▸ Settings ▸ MCP Server (127.0.0.1:\(port)).
         """)
     }
 }

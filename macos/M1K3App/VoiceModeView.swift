@@ -45,6 +45,8 @@
 //  beneath it; if they ghost through, fade the split view in ContentView (`.opacity(0)` while voice
 //  is active, under the overlay). No reading scrim here: the chat's top scrim is deliberately off in
 //  voice mode (ContentView) so the full-window hero keeps clean edges. Confidence 0.6 (taste gate).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the thinking rain named above is unmounted (Kev, TestFlight:
+//  "janky — remove for now"); the InferencePhosphor model and BackdropInk.rain stay as the seam to restore it.
 
 import M1K3Avatar
 import M1K3Voice
@@ -66,13 +68,6 @@ struct VoiceModeView: View {
                 .ignoresSafeArea()
                 .glassBackdrop()
                 .allowsHitTesting(false)
-
-            // The thinking rain: M1K3's live inference (reasoning · tool ·
-            // answer) scrolling up behind the avatar — transparency as
-            // aesthetic. Non-interactive + a11y-hidden, so it sits between the
-            // backdrop and the face without stealing the barge-in tap.
-            InferencePhosphorView()
-                .ignoresSafeArea()
 
             // The avatar IS the window — full-bleed hero, and the primary
             // tap / Space barge-in surface.

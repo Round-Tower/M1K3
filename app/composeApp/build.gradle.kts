@@ -178,8 +178,8 @@ android {
                 .toInt()
         // Versioning scheme: see /VERSIONING.md — versionCode = major×10000 +
         // minor×100 + patch, so it stays derivable from versionName forever.
-        versionCode = 10000
-        versionName = "1.0.0"
+        versionCode = 10100
+        versionName = "1.1.0"
 
         // Instrumented test runner
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -284,7 +284,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "app.m1k3.ai.assistant"
-            packageVersion = "1.0.0"
+            packageVersion = "1.1.0"
         }
     }
 }

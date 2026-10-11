@@ -24,6 +24,8 @@
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — cognitive-load cut (Kev's diff): the brain subtitle under the wordmark
 //  and the empty-state headline/tagline are gone; the chips carry the invitation. Dead brainSubtitle removed with it.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — in season (Halloween) one costume line under the wordmark
+//  (SeasonalLook.greeting); opt-out in Settings ▸ Face. Confidence 0.8 (verify-by-launch).
 //
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — M1K3_VOICE_AT_LAUNCH harness switch (enter voice mode when the brain is
@@ -56,6 +58,8 @@
 //  it near-black until light mode is allowed. Verify-by-launch.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (2) — the backdrop unmounts while the voice cover is presented (the cover
 //  keeps this view mounted beneath it, so two RealityViews ran); VoiceScreen's full-bleed hero is the one.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (CI fold) — the costume line renders inline from
+//  `SeasonalLook.greeting(for:)` (the shared SeasonalGreeting.swift is gone). Confidence 0.85.
 
 import M1K3Avatar
 import M1K3Chat
@@ -80,6 +84,7 @@ struct ChatScreen: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage(AppCore.avatarBackdropKey) private var avatarBackdrop = true
     @AppStorage(CompanionDefaults.companionKey) private var companion = ""
+    @AppStorage(CompanionDefaults.seasonalLooksKey) private var seasonalLooks = true
     @State private var draft = ""
     @State private var starters: [String] = []
     @State private var showAttachmentImporter = false
@@ -291,6 +296,15 @@ struct ChatScreen: View {
                     .font(.pixel(28))
                     .kerning(2)
                     .foregroundStyle(.white)
+                // In season, M1K3 greets in costume (opt-out in Settings ▸ Face).
+                if let line = SeasonalLook.greeting(for: SeasonalLook.now(enabled: seasonalLooks)) {
+                    Text(line)
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .colorScheme(.dark)
+                        .padding(.horizontal, 24)
+                }
             }
             if core.brainLoad.isActive {
                 brainLoadRow

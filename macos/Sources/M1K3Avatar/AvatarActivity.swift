@@ -5,6 +5,10 @@
 //  What M1K3 is currently doing — drives animation tier selection and procedural motion.
 //
 //  Signed: Kev + claude-sonnet-4-6, 2026-06-08, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — `voiceOverAnnouncement(from:)`: the chat's panel (the
+//  only VoiceOver-readable avatar) is retired and the backdrop stays decorative, so state reaches
+//  VoiceOver as announcements — a turn starting, the voice states, an error; never generating or
+//  idle (every turn would chatter). Confidence 0.8 (the policy is tested; the posting is by ear).
 
 public enum AvatarActivity: String, CaseIterable, Sendable {
     case idle
@@ -57,5 +61,16 @@ public enum AvatarActivity: String, CaseIterable, Sendable {
         case .error: state = "Error"
         }
         return "M1K3 — \(state)"
+    }
+
+    /// What VoiceOver should announce when M1K3 moves from `previous` to this state, or nil to
+    /// stay quiet: a turn starting (thinking), the voice states and errors. Generating and idle
+    /// are the middle and end of every turn, and announcing them would talk over the answer.
+    public func voiceOverAnnouncement(from previous: AvatarActivity) -> String? {
+        guard self != previous else { return nil }
+        switch self {
+        case .thinking, .listening, .speaking, .error: return accessibilityLabel
+        case .idle, .generating: return nil
+        }
     }
 }

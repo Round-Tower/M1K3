@@ -18,6 +18,8 @@
 //  (Kev + claude-opus-4-8 lineage).
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings-screen pass: section headers are
 //  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the Display picker has two choices (Background, Off) and reads the stored value through AvatarDisplay(persisted:) so a legacy panel shows as Background. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — adds the "Seasonal looks" opt-out toggle. Confidence 0.85.
 //
 
 import M1K3Avatar
@@ -27,7 +29,8 @@ struct CompanionSettingsSection: View {
     let env: AppEnvironment
 
     @AppStorage(AppEnvironment.voiceCompanionKey) private var voiceCompanion = ""
-    @AppStorage(AppEnvironment.avatarDisplayKey) private var avatarDisplay = AvatarDisplay.panel
+    @AppStorage(AppEnvironment.avatarDisplayKey) private var avatarDisplayRaw = AvatarDisplay.defaultValue.rawValue
+    @AppStorage(CompanionDefaults.seasonalLooksKey) private var seasonalLooks = true
     @AppStorage(AppEnvironment.companionShadingKey) private var companionShading =
         CompanionShadingStyle.off.rawValue
 
@@ -60,13 +63,16 @@ struct CompanionSettingsSection: View {
             preview
             facePicker
 
-            Picker("Display", selection: $avatarDisplay) {
+            // Read through `persisted:` so a stored legacy "panel" shows as Background.
+            Picker("Display", selection: Binding(
+                get: { AvatarDisplay(persisted: avatarDisplayRaw) },
+                set: { avatarDisplayRaw = $0.rawValue }
+            )) {
                 ForEach(AvatarDisplay.allCases) { mode in
                     Text(mode.label).tag(mode)
                 }
             }
-            caption("Panel above the chat, a full-window backdrop that recedes "
-                + "while you read or type, or off.")
+            caption("A full-window backdrop that recedes while you read or type, or off.")
 
             // Shading is a property OF a creature's surface — meaningless for
             // the pixel face / constellation, so it only appears when it applies.
@@ -79,10 +85,12 @@ struct CompanionSettingsSection: View {
                 caption("Phosphor is a glowing rim that shifts with M1K3's state; "
                     + "Cel toon-bands the creature's own texture.")
             }
+            Toggle("Seasonal looks", isOn: $seasonalLooks)
+                .help("Dress M1K3 up for the occasional holiday — Halloween first.")
         } header: {
             SettingsHeader("Companion", systemImage: "pawprint")
         } footer: {
-            caption("M1K3's face in the avatar panel and voice mode. "
+            caption("M1K3's face behind the chat and in voice mode. "
                 + "The menu-bar mark stays the pixel M either way.")
         }
     }

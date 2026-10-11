@@ -8,8 +8,16 @@ that "as early as possible".
 
   python3 events.py list
   python3 events.py create --spec ../../fastlane/events/waking-up/event.json --art-dir <dir> [--dry-run]
+  python3 events.py create --spec ... --art-dir <dir> --event 6811192045 [--dry-run]   # resume a half-built DRAFT
   python3 events.py update --event 6811192045 --spec ... [--dry-run]   # fix a DRAFT in place
 
+`create` makes the DRAFT and one localization per locale in the spec's
+`localizations` table (primary first), uploading the same card + details to
+each — the art is textless, so one pair serves every locale. A failure once
+the event exists names the DRAFT and the `--event` line that resumes it (a
+plain re-run would POST a second event). `create --event <id>` lists the
+event's localizations and creates only the missing locales, art and all; a
+locale that already exists is skipped and its art is NOT checked.
 `update` rewrites a DRAFT's attributes (badge, dates, purpose) and every
 localization's copy from the spec's `localizations` table, keeping the art
 already uploaded — for the draft that was created with over-cap copy and a
@@ -31,12 +39,27 @@ Signed: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.8 (a port of the
 Format: MurphySig v0.4 (https://murphysig.dev/spec)
 Prior: dyslexia-ai/ios/marketing/tools/events/create_event.py (Kev +
   claude-fable-5, 2026-08-20), ported with a spec file + dry run.
+Review: Kev + claude-opus-5.5, 2026-10-11 — `create` posted only the primary
+  locale, so an eight-locale spec (halloween) shipped as en-US alone; it now
+  creates every locale in the table and uploads the textless art to each, and
+  checks every locale's caps first. Confidence 0.75 — the dry run is pinned by
+  test; the multi-locale POST loop is verify-by-run (Kev's, via `!`).
+Review: Kev + claude-opus-5.5, 2026-10-11 — review fold: a failure after the event
+  POST stranded a DRAFT that a re-run duplicated. Every upload bail now names the
+  locale and event, the byte PUT's transport errors bail instead of raising, any
+  later failure prints the `--event` resume line, and `create --event` creates only
+  the missing locales (existing ones skipped, art unchecked: no code here reads a
+  localization's screenshots back). `localization_table` no longer needs `copy`
+  when the table holds the primary. Confidence 0.75 — the loop and resume are pinned
+  against a recorded fake; the live resume is still verify-by-run.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import sys
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -111,6 +134,17 @@ def localization_patch(loc_id: str, copy: dict[str, str]) -> dict[str, Any]:
                      "attributes": {k: copy[k] for k, _ in COPY_CAPS}}}
 
 
+def localization_table(spec: dict[str, Any]) -> dict[str, dict[str, str]]:
+    """Every locale's copy, primary first: the spec's `localizations` table, with its one
+    `copy` block standing in for the primary when the table lacks it."""
+    primary = spec.get("locale", "en-US")
+    table = dict(spec.get("localizations") or {})
+    copy = table.pop(primary, None) or spec.get("copy")
+    if not copy:
+        raise ValueError(f"no copy for the primary locale {primary}: add it to `localizations` or give a `copy` block")
+    return {primary: copy, **table}
+
+
 def localization_problems(spec: dict[str, Any]) -> list[str]:
     """Cap breaks across the spec's `localizations` table, prefixed by locale."""
     out = []
@@ -128,9 +162,28 @@ def all_territories() -> list[str]:
     return [t["id"] for t in paginate("/v1/territories?limit=200")]
 
 
-def upload_screenshots(loc_id: str, art_dir: Path) -> None:
+def existing_localizations(event_id: str) -> dict[str, str]:
+    """locale -> appEventLocalizations id, for every locale the event already has."""
+    return {l["attributes"]["locale"]: l["id"] for l in paginate(f"/v1/appEvents/{event_id}/localizations?limit=50")}
+
+
+def put_bytes(op: dict[str, Any], blob: bytes) -> dict[str, Any] | None:
+    """PUT one upload operation's slice of `blob`. None when it landed, else an error in
+    `call`'s `{'_error', '_body'}` shape — a timeout included, never a bare traceback."""
     import requests  # lazy
 
+    headers = {h["name"]: h["value"] for h in op.get("requestHeaders", [])}
+    chunk = blob[op["offset"]:op["offset"] + op["length"]]
+    try:
+        r = requests.request(op["method"], op["url"], headers=headers, data=chunk, timeout=300)
+    except requests.RequestException as exc:
+        return {"_error": "transport", "_body": str(exc)[:400]}
+    return {"_error": r.status_code, "_body": r.text[:400]} if r.status_code >= 400 else None
+
+
+def upload_screenshots(event_id: str, locale: str, loc_id: str, art_dir: Path) -> None:
+    where = (f"for {locale} of event {event_id} (localization {loc_id} exists without its full art; "
+             "a resume skips it, so add the art in App Store Connect or delete that localization first)")
     for fname, asset_type in ((CARD_FILE, "EVENT_CARD"), (DETAILS_FILE, "EVENT_DETAILS_PAGE")):
         blob = (art_dir / fname).read_bytes()
         shot = call("POST", "/v1/appEventScreenshots", json={"data": {
@@ -139,51 +192,99 @@ def upload_screenshots(loc_id: str, art_dir: Path) -> None:
             "relationships": {"appEventLocalization": {"data": {"type": "appEventLocalizations", "id": loc_id}}},
         }})
         if "_error" in shot:
-            bail(f"reserve {asset_type}", shot)
+            bail(f"reserve {asset_type} {where}", shot)
         shot_id = shot["data"]["id"]
         for op in shot["data"]["attributes"]["uploadOperations"]:
-            headers = {h["name"]: h["value"] for h in op.get("requestHeaders", [])}
-            chunk = blob[op["offset"]:op["offset"] + op["length"]]
-            r = requests.request(op["method"], op["url"], headers=headers, data=chunk, timeout=300)
-            if r.status_code >= 400:
-                bail(f"upload bytes {asset_type}", {"_error": r.status_code, "_body": r.text[:400]})
+            if err := put_bytes(op, blob):
+                bail(f"upload bytes {asset_type} {where}", err)
         done = call("PATCH", f"/v1/appEventScreenshots/{shot_id}", json={"data": {
             "type": "appEventScreenshots", "id": shot_id, "attributes": {"uploaded": True}}})
         if "_error" in done:
-            bail(f"commit {asset_type}", done)
+            bail(f"commit {asset_type} {where}", done)
         state = done["data"]["attributes"].get("assetDeliveryState", {}).get("state")
-        print(f"{asset_type}: uploaded ({len(blob)} bytes) -> {state}")
+        print(f"{locale} {asset_type}: uploaded ({len(blob)} bytes) -> {state}")
 
 
-def create(spec_path: Path, art_dir: Path, dry_run: bool) -> int:
+@contextmanager
+def draft_guard(event_id: str, spec_path: Path, art_dir: Path) -> Iterator[None]:
+    """Once the event exists, any failure says how to resume or clear the DRAFT: a plain
+    re-run would POST a second event beside it."""
+    hint = (f"event {event_id} exists as a DRAFT — resume with `events.py create --spec {spec_path} "
+            f"--art-dir {art_dir} --event {event_id}`, or delete it in App Store Connect")
+    try:
+        yield
+    except SystemExit as exc:
+        raise SystemExit(f"{exc.code}\n{hint}") from None
+    except BaseException:
+        print(hint, file=sys.stderr)
+        raise
+
+
+def post_event(spec: dict[str, Any]) -> str:
+    """POST the DRAFT and return its id. A bail here leaves nothing behind."""
+    territories = all_territories()
+    print(f"territories: {len(territories)}")
+    ev = call("POST", "/v1/appEvents", json=event_payload(spec, territories))
+    if "_error" in ev:
+        bail("create appEvent", ev)
+    print("event created:", ev["data"]["id"], ev["data"]["attributes"].get("eventState"))
+    return ev["data"]["id"]
+
+
+def fill_locales(spec: dict[str, Any], table: dict[str, dict[str, str]], art_dir: Path,
+                 event_id: str, existing: dict[str, str]) -> None:
+    """One localization per locale the event lacks, primary first, each with the same
+    textless card + details. A locale that exists is skipped and its art isn't checked:
+    no code here reads a localization's screenshots back, so that shape is unproven."""
+    for locale, copy in table.items():
+        if locale in existing:
+            print(f"{locale}: exists ({existing[locale]}), skipped; its art is NOT checked, confirm it in App Store Connect")
+            continue
+        loc = call("POST", "/v1/appEventLocalizations",
+                   json=localization_payload({**spec, "locale": locale, "copy": copy}, event_id))
+        if "_error" in loc:
+            bail(f"create localization {locale} of event {event_id}", loc)
+        print(f"{locale}: localization created:", loc["data"]["id"])
+        upload_screenshots(event_id, locale, loc["data"]["id"], art_dir)
+
+
+def print_dry_run(spec: dict[str, Any], table: dict[str, dict[str, str]], art_dir: Path,
+                  event_id: str | None) -> int:
+    if event_id is None:
+        territories = ["<all ~175 from /v1/territories>"]
+        print(f"territories: {len(territories)}")
+        print(json.dumps(event_payload(spec, territories), indent=2))
+    else:
+        print(f"resume: would GET /v1/appEvents/{event_id}/localizations and create only the locales it lacks")
+    for locale, copy in table.items():
+        body = localization_payload({**spec, "locale": locale, "copy": copy}, event_id or "<event id>")
+        print(json.dumps(body, indent=2, ensure_ascii=False))
+    print(f"art for each new locale: {CARD_FILE} + {DETAILS_FILE} from {art_dir}")
+    print("dry run: nothing sent")
+    return 0
+
+
+def create(spec_path: Path, art_dir: Path, dry_run: bool, event_id: str | None = None) -> int:
+    """The DRAFT and every locale, or with `event_id` the locales an earlier run left out."""
     spec = json.loads(spec_path.read_text())
-    if problems := copy_problems(spec["copy"]):
+    table = localization_table(spec)
+    if problems := localization_problems({"localizations": table}):
         raise SystemExit("copy breaks caps: " + "; ".join(problems))
-    for field, cap in COPY_CAPS:
-        print(f"{field}: {len(spec['copy'][field])}/{cap} ok")
+    for locale, copy in table.items():
+        print(f"{locale:8} " + "  ".join(f"{k} {len(copy[k])}/{cap}" for k, cap in COPY_CAPS))
     for fname in (CARD_FILE, DETAILS_FILE):
         if not (art_dir / fname).exists():
             raise SystemExit(f"missing art: {art_dir / fname}")
-    territories = ["<all ~175 from /v1/territories>"] if dry_run else all_territories()
-    print(f"territories: {len(territories)}")
-    payload = event_payload(spec, territories)
     if dry_run:
-        print(json.dumps(payload, indent=2))
-        print(json.dumps(localization_payload(spec, "<event id>"), indent=2))
-        print("dry run: nothing sent")
-        return 0
-    ev = call("POST", "/v1/appEvents", json=payload)
-    if "_error" in ev:
-        bail("create appEvent", ev)
-    event_id = ev["data"]["id"]
-    print("event created:", event_id, ev["data"]["attributes"].get("eventState"))
-    loc = call("POST", "/v1/appEventLocalizations", json=localization_payload(spec, event_id))
-    if "_error" in loc:
-        bail("create localization", loc)
-    print("localization created:", loc["data"]["id"])
-    upload_screenshots(loc["data"]["id"], art_dir)
+        return print_dry_run(spec, table, art_dir, event_id)
+    resuming = event_id is not None
+    if event_id is None:
+        event_id = post_event(spec)
+    with draft_guard(event_id, spec_path, art_dir):
+        existing = existing_localizations(event_id) if resuming else {}
+        fill_locales(spec, table, art_dir, event_id, existing)
     final = call("GET", f"/v1/appEvents/{event_id}")
-    print("final eventState:", final["data"]["attributes"].get("eventState"))
+    print("final eventState:", final.get("data", {}).get("attributes", {}).get("eventState", "?"))
     print("event id:", event_id, "— submit for review by hand in App Store Connect")
     return 0
 
@@ -249,6 +350,7 @@ def main() -> int:
     c = sub.add_parser("create")
     c.add_argument("--spec", required=True, type=Path, help="event.json (see fastlane/events/)")
     c.add_argument("--art-dir", required=True, type=Path, help=f"holds {CARD_FILE} + {DETAILS_FILE}")
+    c.add_argument("--event", help="resume: the appEvents id of a DRAFT an earlier create left half-built")
     c.add_argument("--dry-run", action="store_true")
     u = sub.add_parser("update")
     u.add_argument("--event", required=True, help="appEvents id of a DRAFT")
@@ -259,7 +361,7 @@ def main() -> int:
         return list_events()
     if args.cmd == "update":
         return update(args.event, args.spec, args.dry_run)
-    return create(args.spec, args.art_dir, args.dry_run)
+    return create(args.spec, args.art_dir, args.dry_run, args.event)
 
 
 if __name__ == "__main__":

@@ -21,7 +21,7 @@
 
 ## §1 Product shape (v1, Mac side)
 
-- **Settings → Privacy → Brain at Home**: "Serve my brain to my devices" —
+- **Settings → Brain at Home**: "Serve my brain to my devices" —
   default OFF (nil is a NO). ON = listen + advertise (`_m1k3._tcp`,
   TXT = version + display name only); OFF = both gone instantly.
 - Pairing is a one-time ceremony: the Mac shows a QR (≤60 s), the device
