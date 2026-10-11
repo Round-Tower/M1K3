@@ -140,6 +140,19 @@ Anything a cold session needs on turn one belongs below, not there.
   never lower it (an eaten contradiction is a lost correction). A new embedder means
   `M1K3_SELFTEST_EMBEDDER=<id>` through MEMEVAL / ABSEP / KEYEVAL / MEMSTAT, a measured
   floor set, and an exact identity match in `forFingerprint` — unmeasured variants fail closed.
+- **Thinking is one decision per turn (#555):** the app builds Lil thinking-ON; `AgentRAGResponder`
+  decides once (`ThinkingPolicy.shouldThink`) and sets `InferenceIntent.thinking` around the whole turn,
+  which `MLXBrainProvider.effectiveThinking` reads over the construction flag. A new generation inside a
+  turn inherits it; anything outside a turn (a bare eval arm, a utility) scopes its own `withThinking`
+  or gets the construction flag, i.e. thinks to the cap. Before the fix the plain route did exactly that:
+  20/44 with 11 empty answers at a 133 s median turn (`macos/docs/evals/2026-10-11-lil-555-router-*.json`).
+- **An eval must wire like the app.** Chat-path chateval runs need `--router dispatch`: the Mac app routes
+  every tier (`ToolRouterWiring.allTiersEnabled(whenUnset: true)`, ADR 0009's `toolRouterAllTiers`), and the
+  default live arm has no router, so it never takes the plain route. When an eval disagrees
+  with a live report, diff the eval's flags, router and responder against the app's composition first.
+- Until #558 (delete this bullet when it merges): the landing gate treats the iOS + visionOS job as advisory, but master's ruleset requires
+  it. `land.sh` can read READY and GitHub then refuses (405, nothing merged): on a Swift diff, wait for
+  `gh pr checks <PR>` to show that job passed.
 - Entitlements by lane: Declared Age Range in all three (`M1K3-MAS`, `M1K3iOS`
   and the Developer ID `M1K3.entitlements`; `check_store_targets.py` requires
   it), PCC in `M1K3-MAS.entitlements` only (the check forbids it in the
@@ -218,4 +231,10 @@ Review: Kev + claude-opus-5.5, 2026-10-10 — the landing carry-forward after #5
 now exits 5 on any diff; pr_watch's own Review (5) flagged "bare `--passes 0` otherwise" as stale.
 The owed passes must also end `VERDICT: APPROVE @ <full 40-char head sha>`: Kev's full-sha call,
 since a 7-char prefix can be ground to match a new head. Confidence 0.85.
+Review: Kev + claude-opus-5.5, 2026-10-11 (/debrief) — three standing facts from the Lil thinking
+runaway (#553/#555): one thinking decision per turn via `InferenceIntent.thinking`; evals of the chat
+path run the app's router; the gate-vs-ruleset trap until #558. Confidence 0.85 (measured paired arms;
+the #558 line retires with its fix).
+Review: Kev + claude-opus-5.5, 2026-10-11 — #559 review fold: the router fact cites the code switch, not
+just the ADR; the measured figure points at its eval file; the #558 bullet says when to delete it.
 -->
