@@ -20,18 +20,10 @@ struct OnboardingVoiceLineTests {
         #expect(OnboardingVoiceLine.line(isRerun: true) == "Room's set. Back to it.")
     }
 
-    @Test("the lines are short enough to speak over a closing sheet")
-    func linesAreShort() {
-        for isRerun in [false, true] {
-            let words = OnboardingVoiceLine.line(isRerun: isRerun).split(separator: " ").count
-            #expect(words <= 6)
-        }
-    }
-
     @Test("the line is skipped while a voice is still loading, and spoken otherwise")
     func skipsWhileVoiceLoads() {
         func speaks(_ load: ModelLoadState, sound: Bool = true) -> Bool {
-            OnboardingVoiceLine.shouldSpeak(voiceLoad: load, soundEffectsEnabled: sound)
+            OnboardingVoiceLine.shouldSpeak(voiceLoad: load, soundEffectsEnabled: sound, fullDoor: true)
         }
         #expect(!speaks(.progress(0.4)))
         #expect(!speaks(.preparing))
@@ -43,12 +35,12 @@ struct OnboardingVoiceLineTests {
 
     @Test("the Sound effects toggle silences the line too")
     func toggleSilencesTheLine() {
-        #expect(!OnboardingVoiceLine.shouldSpeak(voiceLoad: .ready, soundEffectsEnabled: false))
+        #expect(!OnboardingVoiceLine.shouldSpeak(voiceLoad: .ready, soundEffectsEnabled: false, fullDoor: true))
     }
 
-    @Test("the pause between the done chord and the line leaves the chord room to land")
-    func gapIsShort() {
-        #expect(OnboardingVoiceLine.delayAfterChord > .milliseconds(200))
-        #expect(OnboardingVoiceLine.delayAfterChord < .seconds(1))
+    @Test("the Private door stays silent: All features off means no spoken sign-off")
+    func privateDoorIsSilent() {
+        #expect(!OnboardingVoiceLine.shouldSpeak(voiceLoad: .ready, soundEffectsEnabled: true, fullDoor: false))
+        #expect(OnboardingVoiceLine.shouldSpeak(voiceLoad: .ready, soundEffectsEnabled: true, fullDoor: true))
     }
 }

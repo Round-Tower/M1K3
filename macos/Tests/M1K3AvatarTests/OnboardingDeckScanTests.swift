@@ -117,7 +117,7 @@ struct OnboardingDeckScanTests {
         #expect(!phases.contains("Spacer(minLength: 20)"), "the spacers the anchor replaced are back")
     }
 
-    @Test("the hello card and the deck wear the shared Liquid Glass card, not a material")
+    @Test("the hello card and the deck wear the shared Liquid Glass card (material only beside live progress)")
     func glassCards() throws {
         let hello = try Self.code("M1K3App/HelloView.swift")
         let card = Self.slice(hello, from: "private var helloCard", to: "private var needsFallbackDownload")
@@ -130,15 +130,31 @@ struct OnboardingDeckScanTests {
         #expect(glass.contains("maxWidth: 560"))
 
         let deck = try Self.code("M1K3App/WakeSetupCarousel.swift")
-        #expect(deck.contains(".onboardingCard()"))
+        // Glass, except beside a live download bar: material there (the banner crash's own fix).
+        #expect(deck.contains(".onboardingCard(nearLiveProgress: fraction != nil)"))
+        #expect(glass.contains("if nearLiveProgress"), "the material fallback beside live progress is gone")
+        #expect(glass.contains(".regularMaterial"))
         // The progress footer re-renders on every download tick: it must stay OUTSIDE the glass
-        // (the NSGenericException layout crash, ContentView.swift's banner comment).
+        // (the NSGenericException layout crash, ContentView.swift's banner comment), and its height
+        // is reserved so a wrapping progress line can't reflow the centred stack mid-download.
         let body = Self.slice(deck, from: "var body: some View", to: "@ViewBuilder private var card")
-        let glassAt = try #require(body.range(of: ".onboardingCard()"))
+        #expect(!body.contains("minHeight: 64"), "the blanket footer reserve is back (it padded the Done button)")
+        #expect(body.contains("minHeight: Self.cardSlotHeight"), "the card slot lost its fixed height: the chevrons jump")
+        let glassAt = try #require(body.range(of: ".onboardingCard(nearLiveProgress:"))
         let footerAt = try #require(body.range(of: "progressFooter"))
         #expect(glassAt.lowerBound < footerAt.lowerBound, "the footer moved inside the glass card")
         let footer = Self.slice(deck, from: "@ViewBuilder private var progressFooter", to: "private func nudgeAlertness")
         #expect(!footer.contains(".onboardingCard()") && !footer.contains(".glassEffect("))
+        // Both download/warming branches are a fixed height, two-line captions.
+        #expect(footer.components(separatedBy: ".frame(height: Self.footerHeight, alignment: .top)").count - 1 == 2)
+        #expect(footer.components(separatedBy: ".lineLimit(2)").count - 1 == 2)
+        // No live voice bar inside the glass card: only a static line there, the bar in its own slot.
+        let voice = Self.slice(deck, from: "private var voiceCard", to: "private var faceCard")
+        #expect(!voice.contains("ProgressView"), "a ticking Kokoro bar is inside the glass card")
+        #expect(deck.contains("voiceLoadSlot"))
+        let slot = Self.slice(deck, from: "private var voiceLoadSlot", to: "private var navigation")
+        #expect(slot.contains("ProgressView(value: env.voiceLoad.fraction)") && slot.contains(".frame(height: 14)"))
+        #expect(try glassAt.lowerBound < #require(body.range(of: "voiceLoadSlot")).lowerBound, "the voice slot moved inside the glass")
     }
 
     @Test("the deck title and card titles wear the pixel face")
@@ -183,6 +199,15 @@ struct OnboardingDeckScanTests {
         let speak = try #require(greet.range(of: "env.speak("))
         #expect(chime.lowerBound < speak.lowerBound, "the chime must start before M1K3 speaks (earcons mute then)")
         #expect(deck.contains("OnboardingVoiceLine.line(isRerun:"))
+        #expect(deck.contains("guard !hasFinished"), "finish() lost its double-tap guard")
+        #expect(deck.contains("fullDoor: fullDoor"), "the Private door would speak the sign-off")
+        #expect(!deck.contains("try? await Task.sleep"), "a sleep swallows cancellation")
+        let turn = Self.slice(deck, from: "private func turn(forward", to: "@ViewBuilder private var progressFooter")
+        let engage = try #require(turn.range(of: "flow.engage()"))
+        let early = try #require(turn.range(of: "guard forward"))
+        #expect(engage.lowerBound < early.lowerBound, "Return on the last card no longer engages")
+        #expect(hello.contains("chosenExperience = experience") && hello.contains("fullDoor: chosenExperience == .fullExperience"))
+        #expect(hello.contains("minHeight: 700"))
     }
 
     @Test("the Re-run button starts the onboarding stopwatch")

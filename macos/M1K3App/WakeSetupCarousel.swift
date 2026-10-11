@@ -28,6 +28,15 @@
 //  content-sized glassProminent capsules; earcons on the card turn, the selections, the wake (BEFORE the
 //  greeting, which waits ~0.6 s for it) and the done chord, then OnboardingVoiceLine's one line on the no-wait
 //  deck. Confidence 0.65 (look and sound are verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push fold) — beside a live download bar the card is material
+//  (`onboardingCard(nearLiveProgress:)`), and the footer's height is reserved: the stack is centred, so a footer
+//  reflow on a tick would move the glass in the same layout pass — the banner crash class. Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold, round 2) — the rule, stated straight: NO TICKING
+//  VIEW INSIDE GLASS and tick-stable geometry (body re-evaluation alone is fine). So the voice card shows a static
+//  "Downloading…" line while Kokoro loads and the live voice bar sits OUTSIDE the glass in a reserved slot; the
+//  download/warming footers are a fixed 96 pt (two-line caption); the card slot has a fixed minHeight (the
+//  chevrons stay put); finish() is double-tap armoured and speaks only on the Full door; sleeps honour
+//  cancellation; Return on the last card still engages. Confidence 0.7 (layout is verify-by-launch).
 
 import M1K3Avatar
 import M1K3Inference
@@ -45,11 +54,15 @@ struct WakeSetupCarousel: View {
     var finishTitle = "Done"
     /// A re-run of onboarding (picks the sign-off line). Unused on the wait paths.
     var isRerun = false
+    /// True when the door chosen in this session was Full: the Private door ("All features off")
+    /// gets the done chord but no spoken sign-off. Unused on the wait paths.
+    var fullDoor = true
     let onComplete: () -> Void
 
     @State private var warmingTick = 0
     @State private var lastAlertness: WakeAlertness = .dozing
     @State private var hasGreeted = false
+    @State private var hasFinished = false
     @State private var hasCommittedNote = false
     @State private var invitePulse = false
     @AppStorage(ReadingMode.storageKey) private var readingMode: ReadingMode = .standard
@@ -59,8 +72,8 @@ struct WakeSetupCarousel: View {
     var body: some View {
         VStack(spacing: 18) {
             // Title, card, arrows and caption share ONE glass surface. The progress footer is
-            // deliberately outside it: it re-renders on every download tick, and a glassEffect that
-            // does is the known NSGenericException layout crash (ContentView's Mini banner).
+            // deliberately outside it: a ticking view inside glass, or a tick that moves or resizes
+            // it, is the known NSGenericException layout crash (ContentView's Mini banner).
             VStack(spacing: 18) {
                 Text(flow.userDrivenCompletion ? "Set up the room" : "While I wake — set up the room")
                     .font(.pixel(28))
@@ -69,7 +82,9 @@ struct WakeSetupCarousel: View {
                     .accessibilityAddTraits(.isHeader)
 
                 card
-                    .frame(maxWidth: 460)
+                    // A fixed slot sized for the tallest card (the voice card), top-aligned: the
+                    // centred stack never re-centres on a card turn, so the chevrons stay put.
+                    .frame(maxWidth: 460, minHeight: Self.cardSlotHeight, alignment: .top)
                     .animation(
                         reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85),
                         value: flow.index
@@ -81,8 +96,14 @@ struct WakeSetupCarousel: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            .onboardingCard()
+            // Glass, except beside a live download bar (see OnboardingGlass).
+            .onboardingCard(nearLiveProgress: fraction != nil)
 
+            // Outside the glass, in a reserved slot: the live Kokoro bar (voice card, re-run or no-wait).
+            voiceLoadSlot
+
+            // The download / warming branches reserve a FIXED height (below), so a caption that
+            // wraps on some tick can't reflow the centred stack and move the card mid-download.
             progressFooter
                 .padding(.top, 6)
         }
@@ -94,6 +115,12 @@ struct WakeSetupCarousel: View {
         }
         .onAppear { nudgeAlertness(fraction: fraction ?? 0) }
     }
+
+    /// The tallest card (the voice card: title, two tier rows, sample button, status line) plus
+    /// slack for a wrapped tagline. Cards shorter than this top-align inside it.
+    private static let cardSlotHeight: CGFloat = 270
+    /// Two caption lines, the bar or spinner, and the mute button.
+    private static let footerHeight: CGFloat = 96
 
     // MARK: - Cards
 
@@ -171,11 +198,12 @@ struct WakeSetupCarousel: View {
                 }
                 .buttonStyle(.plain)
             }
-            if let voiceFraction = env.voiceLoad.fraction {
-                ProgressView(value: voiceFraction)
-                    .frame(maxWidth: 240)
-                    .controlSize(.small)
-            }
+            // Static while Kokoro loads: the live bar is in `voiceLoadSlot`, OUTSIDE the glass.
+            // The line is always laid out, so it never changes the card's height.
+            Text(env.voiceLoad.isActive ? "Downloading M1K3 Voice…" : " ")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(height: 16)
             Button("Hear a sample") {
                 flow.engage()
                 Task { await env.speakSample() }
@@ -209,6 +237,20 @@ struct WakeSetupCarousel: View {
             .buttonStyle(.glass)
             cardCaption("I'm behind this card — that's the live preview.")
         }
+    }
+
+    /// The live voice-load bar, beneath the glass card and always laid out (14 pt) so it appearing
+    /// moves nothing. A nil fraction (preparing) is the indeterminate bar.
+    private var voiceLoadSlot: some View {
+        ZStack {
+            if env.voiceLoad.isActive {
+                ProgressView(value: env.voiceLoad.fraction)
+                    .frame(maxWidth: 240)
+                    .controlSize(.small)
+                    .accessibilityLabel("Downloading M1K3 Voice")
+            }
+        }
+        .frame(height: 14)
     }
 
     // MARK: - Navigation
@@ -253,6 +295,9 @@ struct WakeSetupCarousel: View {
     /// One card turn, with its whoosh-tick — only when the deck actually moves, so a Return on the
     /// last card (or a disabled edge) stays silent.
     private func turn(forward: Bool) {
+        // Return on the last card is still engagement (the old `.onSubmit { flow.advance() }`
+        // marked it), even though the deck has nowhere to go.
+        flow.engage()
         guard forward ? flow.canAdvance : flow.canGoBack else { return }
         env.soundEffects.play(.cardTurn)
         if forward { flow.advance() } else { flow.back() }
@@ -266,7 +311,7 @@ struct WakeSetupCarousel: View {
             // No wait: nothing is waking, so no "I'm awake" payoff and no pulse. One clear
             // button; tapping it without touching a card skips the whole deck.
             Button {
-                finish(speakSignOff: true)
+                finish(speakSignOff: fullDoor)
             } label: {
                 Text("\(finishTitle) →")
                     .font(.headline)
@@ -296,18 +341,24 @@ struct WakeSetupCarousel: View {
                     Text(WakeProgressCopy.line(fraction: fraction, name: displayName))
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
                     DialUpMuteButton()
                 }
+                .frame(height: Self.footerHeight, alignment: .top)
             } else {
                 VStack(spacing: 6) {
                     ProgressView().controlSize(.small)
                     Text(WakeProgressCopy.warmingLine(tick: warmingTick))
                         .font(.caption)
                         .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
                 }
+                .frame(height: Self.footerHeight, alignment: .top)
                 .task {
                     while !Task.isCancelled {
-                        try? await Task.sleep(for: .seconds(4))
+                        do { try await Task.sleep(for: .seconds(4)) } catch { return }
                         warmingTick += 1
                     }
                 }
@@ -345,7 +396,7 @@ struct WakeSetupCarousel: View {
         let chimeLead: Duration = env.soundEffects.isEnabled ? .milliseconds(600) : .zero
         let greeting = WakeProgressCopy.readyLine(name: displayName)
         Task {
-            try? await Task.sleep(for: chimeLead)
+            do { try await Task.sleep(for: chimeLead) } catch { return }
             await env.speak(greeting)
         }
     }
@@ -354,15 +405,18 @@ struct WakeSetupCarousel: View {
     /// M1K3's own voice after the chord has landed. `onComplete` never waits on either; the line
     /// may continue into chat. The task holds `env`, not the view, so it outlives the sheet.
     private func finish(speakSignOff: Bool) {
+        // A double-click must not play two chords or queue the line twice.
+        guard !hasFinished else { return }
+        hasFinished = true
         commitAboutNote()
         env.soundEffects.play(.doneChord)
         if speakSignOff {
             let env = env
             let line = OnboardingVoiceLine.line(isRerun: isRerun)
             Task { @MainActor in
-                try? await Task.sleep(for: OnboardingVoiceLine.delayAfterChord)
+                do { try await Task.sleep(for: OnboardingVoiceLine.delayAfterChord) } catch { return }
                 guard OnboardingVoiceLine.shouldSpeak(
-                    voiceLoad: env.voiceLoad, soundEffectsEnabled: env.soundEffects.isEnabled
+                    voiceLoad: env.voiceLoad, soundEffectsEnabled: env.soundEffects.isEnabled, fullDoor: fullDoor
                 ) else { return }
                 await env.speak(line)
             }
@@ -373,7 +427,7 @@ struct WakeSetupCarousel: View {
     private func sayHi() {
         env.avatar.setEmotion(.excited)
         Task {
-            try? await Task.sleep(for: .seconds(1.8))
+            do { try await Task.sleep(for: .seconds(1.8)) } catch { return }
             if env.avatar.state.activity == .idle {
                 env.avatar.resetToIdle()
             }

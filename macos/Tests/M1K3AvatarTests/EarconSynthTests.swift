@@ -5,6 +5,7 @@
 
 import Foundation
 @testable import M1K3Avatar
+import M1K3Inference
 import Testing
 
 struct EarconSynthTests {
@@ -100,5 +101,34 @@ struct EarconSynthTests {
             let tail = samples.suffix(64)
             #expect((tail.map(abs).max() ?? 1) < 0.02, "\(effect) ends hot")
         }
+    }
+
+    @Test("the done chord has rung out before the voice line starts, and the pause stays short")
+    func voiceWaitsForTheChord() throws {
+        let samples = try #require(EarconSynth.render(.doneChord))
+        let lastAudible = try #require(samples.lastIndex { abs($0) > 0.005 })
+        let ringsOutAt = Double(lastAudible) / EarconSynth.sampleRate
+        let c = OnboardingVoiceLine.delayAfterChord.components
+        let delay = Double(c.seconds) + Double(c.attoseconds) / 1e18
+        #expect(delay >= ringsOutAt, "the voice starts over the chord's tail (\(ringsOutAt) s)")
+        #expect(delay < 1.0)
+    }
+
+    @Test("the onboarding noise layers are audible after bit-crushing, not sparse crackle")
+    func noiseLayersContribute() throws {
+        for effect in [SoundEffect.doorPick, .cardTurn] {
+            let recipe = try #require(EarconSynth.recipe(for: effect))
+            let bare = EarconSynth.Recipe(voices: recipe.voices.filter { $0.wave != .noise }, length: recipe.length)
+            #expect(bare.voices.count < recipe.voices.count, "\(effect) lost its noise voice")
+            let full = EarconSynth.render(recipe)
+            let without = EarconSynth.render(bare)
+            let diff = zip(full, without).map { $0 - $1 }
+            let rms = (diff.map { $0 * $0 }.reduce(0, +) / Float(diff.count)).squareRoot()
+            #expect(rms > 0.002, "\(effect) noise contributes \(rms) RMS")
+        }
+        // The breath is a breath: well past the old gain-0.04 / 4-bit crackle.
+        let turn = try #require(EarconSynth.recipe(for: .cardTurn))
+        let noise = try #require(turn.voices.first { $0.wave == .noise })
+        #expect(noise.gain >= 0.08 && (noise.crushBits ?? 16) >= 6)
     }
 }

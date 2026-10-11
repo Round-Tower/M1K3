@@ -84,6 +84,9 @@
 //  (`defaultScrollAnchor`, the dead spacers go), the hello card wears the shared Liquid Glass
 //  `onboardingCard()` instead of a material panel, and a door tap plays `doorPick` BEFORE the Full door's
 //  permission ceremony. Confidence 0.7 (look and sound are verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold, round 2) — sheet minHeight 640 -> 700 (the voice
+//  card + nav + 96 pt footer), and `chosenExperience` (set in finishHello) gates the spoken sign-off to the Full door.
+//  Confidence 0.7.
 
 import M1K3AgentTools
 import M1K3Avatar
@@ -130,6 +133,8 @@ struct HelloView: View {
     /// pinned) owns the no-yank behaviour: an untouched deck auto-advances on
     /// ready exactly like the old spinner did; an engaged one waits for a tap.
     @State private var wakeFlow = WakeSetupFlow()
+    /// The door applied in THIS session (set in `finishHello`): only Full gets the spoken sign-off.
+    @State private var chosenExperience: OnboardingExperience?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
 
@@ -153,7 +158,9 @@ struct HelloView: View {
         // Content shorter than the window sits in the middle on every phase (hello, deck, waits);
         // taller content (a big text size) still scrolls from the top.
         .defaultScrollAnchor(.center, for: .alignment)
-        .frame(minWidth: 580, minHeight: 640)
+        // 700: the voice card (the tallest) + title, nav, caption, voice slot and the 96 pt footer.
+        // Still inside a 13" MacBook Air's 1470x956 points (minus menu bar + title bar).
+        .frame(minWidth: 580, minHeight: 700)
         .background {
             // The live face is the room — same full-window reactive backdrop as
             // chat, mounted ONCE outside the phase switch (RealityView identity).
@@ -361,6 +368,7 @@ struct HelloView: View {
                 fraction: nil,
                 finishTitle: WakeProgressCopy.finishLine(isRerun: isRerun),
                 isRerun: isRerun,
+                fullDoor: chosenExperience == .fullExperience,
                 onComplete: onComplete
             )
         }
@@ -507,6 +515,7 @@ struct HelloView: View {
         // Direct keys after the ceremony, so a cancelled Full never half-applies
         // (Full's apply skips the three senses the ceremony just stored).
         experience.apply(to: .standard)
+        chosenExperience = experience
         // Name first, brain second — the gate key flips in onComplete, and the
         // profile write must land before any window swap. On a re-run, rewrite
         // the profile's "Name:" line (not just seed it) so the system prompt

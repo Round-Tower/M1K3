@@ -17,6 +17,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — five onboarding recipes (doorPick, cardTurn, selectionTick,
 //  wakeChime, doneChord), same instrument, same key. Confidence 0.7 (by ear; test-pinned only for range,
 //  tails and determinism).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — cardTurn's noise breath 0.04/4-bit -> 0.1/6-bit
+//  (it quantised to sparse crackle; voiceEnter's 0.03/4-bit noise is still silent after crushing, left alone);
+//  wakeChime / doneChord clips trimmed to just past their audible end. Confidence 0.7 (by ear).
 //
 
 import Foundation
@@ -133,7 +136,7 @@ public enum EarconSynth {
         case .cardTurn: // a card turns — a short breath of noise, a rising swish, a tick at the landing
             Recipe(voices: [
                 Voice(wave: .noise, startHz: 0, duration: 0.07, attack: 0.03, decay: 0.03, sustain: 0.3, release: 0.05,
-                      gain: 0.04, crushBits: 4),
+                      gain: 0.1, crushBits: 6),
                 Voice(wave: .triangle, startHz: a4, endHz: a5, glideCurve: 0.7, duration: 0.08, release: 0.04, gain: 0.1),
                 Voice(startHz: cs5, duration: 0.02, release: 0.03, gain: 0.12, crushBits: 5, startAt: 0.09),
             ], length: 0.3)
@@ -148,7 +151,7 @@ public enum EarconSynth {
                 Voice(wave: .triangle, startHz: e5, duration: 0.07, release: 0.08, gain: 0.16, startAt: 0.16),
                 Voice(wave: .triangle, startHz: a5, duration: 0.12, release: 0.3, gain: 0.18, startAt: 0.24),
                 Voice(wave: .sine, startHz: semitone(a5, 12), duration: 0.12, release: 0.3, gain: 0.05, startAt: 0.24),
-            ], length: 0.9)
+            ], length: 0.7)
         case .doneChord: // the deck is done — an A major spread, bottom to top, left to ring
             Recipe(voices: [
                 Voice(wave: .triangle, startHz: a4, duration: 0.18, release: 0.3, gain: 0.15),
@@ -156,7 +159,7 @@ public enum EarconSynth {
                 Voice(wave: .triangle, startHz: e5, duration: 0.18, release: 0.3, gain: 0.14, startAt: 0.08),
                 Voice(wave: .sine, startHz: a3, duration: 0.2, release: 0.3, gain: 0.1),
                 Voice(wave: .sine, startHz: a5, duration: 0.14, release: 0.3, gain: 0.06, startAt: 0.12),
-            ], length: 0.9)
+            ], length: 0.6)
         case .dialup: // bundled — a real modem handshake, minutes of texture no recipe replaces
             nil
         }

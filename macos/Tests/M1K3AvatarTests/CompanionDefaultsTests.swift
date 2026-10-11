@@ -96,4 +96,41 @@ struct CompanionDefaultsTests {
             #expect(!src.contains("companionKey: \"Fox\""), "\(file) still registers the old Fox default")
         }
     }
+
+    // MARK: - The 1.1 skin preservation (the Mac used to register "phosphor")
+
+    @Test("a persisted face with no persisted skin keeps the phosphor glow it always had")
+    func preservesTheOldMacSkin() {
+        let persisted: [String: Any] = [CompanionDefaults.companionKey: "Colobus"]
+        #expect(CompanionDefaults.skinToPreserve(persisted: persisted, markerSpent: false) == "phosphor")
+        // The pixel face's "" is a persisted pick too.
+        #expect(CompanionDefaults.skinToPreserve(persisted: [CompanionDefaults.companionKey: ""], markerSpent: false) == "phosphor")
+    }
+
+    @Test("nothing to preserve: a fresh install, a saved skin, or a spent marker")
+    func preservesNothingElse() {
+        // Brand new: no face persisted.
+        #expect(CompanionDefaults.skinToPreserve(persisted: [:], markerSpent: false) == nil)
+        #expect(CompanionDefaults.skinToPreserve(persisted: nil, markerSpent: false) == nil)
+        // The user already chose a skin (even "off"): theirs wins.
+        let chose: [String: Any] = [CompanionDefaults.companionKey: "Fox", CompanionDefaults.shadingStyleKey: "off"]
+        #expect(CompanionDefaults.skinToPreserve(persisted: chose, markerSpent: false) == nil)
+        // Already ran once: a 1.1 user who later picks a face keeps the house skin.
+        let later: [String: Any] = [CompanionDefaults.companionKey: "Fox"]
+        #expect(CompanionDefaults.skinToPreserve(persisted: later, markerSpent: true) == nil)
+    }
+
+    @Test("the marker key is pinned and the Mac entry point runs the migration before registering")
+    func macWiresTheMigration() throws {
+        #expect(CompanionDefaults.skinPreservedKey == "companion.skinPreserved1_1")
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let src = try String(contentsOf: root.appendingPathComponent("M1K3App/M1K3App.swift"), encoding: .utf8)
+        let migrate = try #require(src.range(of: "skinToPreserve("))
+        let register = try #require(src.range(of: "register(defaults: CompanionDefaults.registeredDefaults)"))
+        #expect(migrate.lowerBound < register.lowerBound, "the migration must read the persistent domain BEFORE registering")
+        #expect(src.contains("persistentDomain(forName:"), "read the persistent domain, never registered defaults")
+        let ios = try String(contentsOf: root.appendingPathComponent("M1K3iOSApp/M1K3iOSHarnessApp.swift"), encoding: .utf8)
+        #expect(!ios.contains("skinToPreserve"), "iOS registered no skin before: nothing to preserve")
+    }
 }

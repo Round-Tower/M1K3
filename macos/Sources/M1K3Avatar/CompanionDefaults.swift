@@ -16,6 +16,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — adds `houseCompanion` / `houseShading` / `registeredDefaults`:
 //  the Phosphor Fox in its white lattice is the default on Mac and iOS (Kev, TestFlight 499), one source
 //  for both entry points and every @AppStorage fallback. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — `skinToPreserve` / `skinPreservedKey`: the
+//  Mac used to register skin "phosphor", so a user who picked a face but never touched Skin saw the glow;
+//  under the `.off` house default they'd silently lose it. One-time, Mac-only. Confidence 0.8.
 //
 
 public enum CompanionDefaults {
@@ -49,6 +52,22 @@ public enum CompanionDefaults {
     /// Shading style for 3D creature companions — a `CompanionShadingStyle`
     /// rawValue (off / phosphor / cel). House default `.off` (the baked textures).
     public static let shadingStyleKey = "companion.shadingStyle"
+
+    /// Marker: the one-time 1.1 skin preservation has run (Mac only).
+    public static let skinPreservedKey = "companion.skinPreserved1_1"
+
+    /// The Mac registered skin "phosphor" before 1.1, so a user who picked a face but never
+    /// touched Skin was SEEING the glow. Under the `.off` house default they would silently lose
+    /// it. Returns the skin to persist ("phosphor") only when a face is persisted, no skin is, and
+    /// the one-time marker is unspent; the caller sets the marker either way, so a brand-new 1.1
+    /// user who picks a face later is untouched. `persisted` is the PERSISTENT domain, never
+    /// registered defaults (which would make every key look set).
+    public static func skinToPreserve(persisted: [String: Any]?, markerSpent: Bool) -> String? {
+        guard !markerSpent, let persisted,
+              persisted[companionKey] != nil, persisted[shadingStyleKey] == nil
+        else { return nil }
+        return CompanionShadingStyle.phosphor.rawValue
+    }
 
     /// Opt-out for seasonal looks (Halloween first). Bool, default true.
     public static let seasonalLooksKey = "avatar.seasonalLooks"
