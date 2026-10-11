@@ -29,6 +29,14 @@ the design came from a session on another repo's hero, the recipe pasted in by K
 Verified by eye in headless Chrome (as a page and inside an <img>), with
 reduced motion forced, and in WebKit via Quick Look. Safari's SMIL path-morph is
 assumed, not seen. The Life window and the fox camera are taste.
+Review: Kev + claude-opus-5.5, 2026-10-11 — the social card. GitHub's share preview still
+said "now open source", "Nothing leaves." and "Apache-2.0" (all retired); Kev asked for
+the repo hero instead. build(height) centres the hero on a taller canvas (the field,
+LED grid and backdrop fill it; the mask stays in hero coordinates) and `--social`
+freezes it at SOCIAL_AT into assets/brand/github-social.png, 1280×640. At H nothing
+is wrapped, so the README SVG regenerates byte-identical. The label band's dimming
+is bounded (H - 40 < y <= H): unbounded, it darkened the card's extra height under
+the fox (the pre-push review caught it). Looked at by eye. Confidence 0.85.
 """
 from __future__ import annotations
 
@@ -53,6 +61,11 @@ DEFAULT_CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
 W, H = 1280, 448
 TX = 72  # the type column
+# GitHub's social preview: the same scene on a 2:1 canvas, the hero centred, the
+# field and backdrop filling the extra height. Frozen at SOCIAL_AT for the PNG.
+SOCIAL_H = 640
+SOCIAL_PNG = REPO / "assets/brand/github-social.png"
+SOCIAL_AT = 4.8
 
 # The site / store-frame palette (marketing/app-store/config.js).
 BG, NIGHT, INK, BRIGHT, DIM, FAINT = "#050505", "#020309", "#e8e8e8", "#ffffff", "#8a8a8a", "#4a4a4a"
@@ -323,12 +336,13 @@ def field_mask(x: float, y: float) -> float:
     left = min(1.0, max(0.07, (x - 640) / 300))
     dx, dy = (x - FOX_CX) / 270, (y - FOX_CY - 20) / 165
     fox = min(1.0, max(0.16, ((dx * dx + dy * dy) ** 0.5 - 0.6) / 0.7))
-    label = 0.15 if (y > H - 40 and abs(x - FOX_CX) < 190) else 1.0
+    label = 0.15 if (H - 40 < y <= H and abs(x - FOX_CX) < 190) else 1.0
     return left * fox * label
 
 
-def life_layer() -> tuple[str, str]:
-    cols, rows = W // PITCH, H // PITCH
+def life_layer(height: int = H) -> tuple[str, str]:
+    cols, rows = W // PITCH, height // PITCH
+    dy = (height - H) // 2   # the mask is drawn in the hero's coordinates
     frames = life_run(cols, rows, DENSITY, SEED, LIFE_START + GENS)
     window = frames[LIFE_START : LIFE_START + GENS]
     # Opacity by age, the LifeBackdrop curve in four steps: newborns brightest.
@@ -341,7 +355,7 @@ def life_layer() -> tuple[str, str]:
             cells = []
             for r, c in zip(*np.nonzero((ages >= lo) & (ages <= hi))):
                 x, y = c * PITCH + inset, r * PITCH + inset
-                m = field_mask(x + side / 2, y + side / 2)
+                m = field_mask(x + side / 2, y + side / 2 - dy)
                 if m * opacity >= 0.06:
                     cells.append((m, f"M{x} {y}h{side}v{side}h-{side}z"))
             for lo_m, hi_m in ((0, 0.35), (0.35, 0.7), (0.7, 1.01)):
@@ -414,10 +428,14 @@ def advance(font, text: str, size: float) -> float:
 
 
 # ── Compose ────────────────────────────────────────────────────────────────
-def build() -> str:
+def build(height: int = H) -> str:
     plex_css, plex = font_face(PLEX, "Plex", EYEBROW + TAGLINE + "".join(CHIPS) + FOX_LABEL)
-    life, life_css = life_layer()
+    life, life_css = life_layer(height)
     fox = fox_layer()
+    # A taller canvas (the social card) centres the hero; at H nothing is wrapped, so
+    # the README's SVG stays byte-identical.
+    dy = (height - H) // 2
+    lift, drop = (f'<g transform="translate(0 {dy})">', "</g>") if dy else ("", "")
 
     title_size, title_y = 5 * CELL, 228
     title_d, title_w = wordmark(TX, title_y - title_size)
@@ -453,7 +471,7 @@ def build() -> str:
 .cursor{{animation:blink 1.1s step-end infinite}}
 @keyframes blink{{50%{{opacity:0}}}}
 .scan{{animation:scan 6.5s linear infinite}}
-@keyframes scan{{0%{{transform:translateY(-140px)}}100%{{transform:translateY({H + 40}px)}}}}
+@keyframes scan{{0%{{transform:translateY(-140px)}}100%{{transform:translateY({height + 40}px)}}}}
 .halo{{animation:breathe 6.8s ease-in-out infinite;transform-origin:{FOX_CX}px {FOX_CY + 30}px}}
 @keyframes breathe{{50%{{opacity:.55;transform:scale(1.06)}}}}
 @media (prefers-reduced-motion:reduce){{
@@ -462,7 +480,7 @@ def build() -> str:
 .scan{{display:none}}.fox-live{{display:none}}.fox-glow{{display:none}}.fox-still{{display:inline}}
 }}"""
 
-    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" role="img" aria-labelledby="t d">
+    return f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {height}" width="{W}" height="{height}" role="img" aria-labelledby="t d">
 <title id="t">M1K3 — local, offline AI. Punk intelligence.</title>
 <desc id="d">The Phosphor Fox, a glowing wireframe, surveys a field of Conway's Game of Life beside the pixel wordmark M1K3: local, offline AI. Punk intelligence. No data centers required. Fox model by PixelMannen (CC0); rig and Survey animation by tomkranis (CC BY 4.0).</desc>
 <!-- Generated by macos/tools/site/readme_hero_svg.py — edit that, not this. -->
@@ -473,7 +491,7 @@ def build() -> str:
 <radialGradient id="floor" cx="{FOX_CX}" cy="{FOX_GROUND}" r="210" gradientTransform="translate(0 {FOX_GROUND}) scale(1 .12) translate(0 -{FOX_GROUND})" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#fff" stop-opacity=".16"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
 <pattern id="led" width="{PITCH}" height="{PITCH}" patternUnits="userSpaceOnUse"><rect x="3" y="3" width="10" height="10" rx="2.5" fill="{INK}" fill-opacity=".045"/></pattern>
 <linearGradient id="ledfade" x1="0" x2="1"><stop offset=".30" stop-color="#fff" stop-opacity=".35"/><stop offset=".62" stop-color="#fff" stop-opacity="1"/></linearGradient>
-<mask id="ledmask"><rect width="{W}" height="{H}" fill="url(#ledfade)"/></mask>
+<mask id="ledmask"><rect width="{W}" height="{height}" fill="url(#ledfade)"/></mask>
 <pattern id="scanlines" width="4" height="4" patternUnits="userSpaceOnUse"><rect width="4" height="1.4" fill="#000" fill-opacity=".38"/></pattern>
 <linearGradient id="scanband" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".85" stop-color="#fff" stop-opacity=".045"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
 <linearGradient id="ink" x1="0" y1="{title_y - title_size}" x2="0" y2="{title_y}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#a8a8a8"/></linearGradient>
@@ -483,10 +501,10 @@ def build() -> str:
 <filter id="soft" x="-10%" y="-30%" width="120%" height="160%"><feGaussianBlur stdDeviation="9"/></filter>
 <filter id="lifeglow" x="0" y="0" width="100%" height="100%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
 </defs>
-<rect width="{W}" height="{H}" fill="url(#bg)"/>
-<rect width="{W}" height="{H}" fill="url(#led)" mask="url(#ledmask)"/>
+<rect width="{W}" height="{height}" fill="url(#bg)"/>
+<rect width="{W}" height="{height}" fill="url(#led)" mask="url(#ledmask)"/>
 <g class="life" filter="url(#lifeglow)">{life}</g>
-<circle class="halo" cx="{FOX_CX}" cy="{FOX_CY + 30}" r="300" fill="url(#halo)"/>
+{lift}<circle class="halo" cx="{FOX_CX}" cy="{FOX_CY + 30}" r="300" fill="url(#halo)"/>
 <ellipse cx="{FOX_CX}" cy="{FOX_GROUND}" rx="210" ry="26" fill="url(#floor)"/>
 <g class="fox-glow" opacity=".55" filter="url(#glow)"><use href="#fxN" class="near" transform="scale(.5)"/></g>
 {fox}
@@ -497,9 +515,9 @@ def build() -> str:
 <g clip-path="url(#titleclip)"><rect class="shine" x="{TX}" y="{title_y - title_size}" width="120" height="{title_size + 20}" fill="url(#shineg)" opacity=".8"/></g>
 <text class="mono tag" x="{TX}" y="{title_y + 58}">{TAGLINE}</text>
 <rect class="cursor" x="{TX + tag_w + 6:.1f}" y="{title_y + 58 - tag_size * 0.78:.1f}" width="{tag_size * 0.52:.1f}" height="{tag_size * 0.95:.1f}" fill="{INK}"/>
-{"".join(chips)}
+{"".join(chips)}{drop}
 <rect class="scan" width="{W}" height="140" fill="url(#scanband)"/>
-<rect width="{W}" height="{H}" fill="url(#scanlines)" opacity=".5"/>
+<rect width="{W}" height="{height}" fill="url(#scanlines)" opacity=".5"/>
 </svg>
 """
 
@@ -511,19 +529,20 @@ for (const a of document.getAnimations()) { a.pause(); a.currentTime = T * 1000;
 ]]></script></svg>"""
 
 
-def preview(svg: str, seconds: list[float], out: Path) -> None:
+def preview(svg: str, seconds: list[float], out: Path, height: int = H) -> None:
     """A contact sheet frozen at each time. Headless Chrome's clock won't step animations
-    reliably, so a throwaway copy pauses SMIL and CSS and seeks both."""
+    reliably, so a throwaway copy pauses SMIL and CSS and seeks both. One time at the
+    canvas's own height is a still (the social card)."""
     with tempfile.TemporaryDirectory() as tmp:
         here = Path(tmp)
         (here / "frozen.svg").write_text(svg.rstrip().removesuffix("</svg>") + FREEZE)
-        frames = "".join(f'<iframe src="frozen.svg#{t}" width="{W}" height="{H}" style="border:0;display:block"></iframe>' for t in seconds)
+        frames = "".join(f'<iframe src="frozen.svg#{t}" width="{W}" height="{height}" style="border:0;display:block"></iframe>' for t in seconds)
         (here / "sheet.html").write_text(f'<html><body style="margin:0;background:#222">{frames}</body></html>')
         chrome = os.environ.get("CHROME", DEFAULT_CHROME)
         if not Path(chrome).exists():
             raise SystemExit(f"--preview needs Chrome: {chrome} not found (set CHROME to a Chromium-family binary)")
         subprocess.run([chrome, "--headless=new", "--hide-scrollbars",
-                        "--allow-file-access-from-files", "--virtual-time-budget=3000", f"--window-size={W},{H * len(seconds)}",
+                        "--allow-file-access-from-files", "--virtual-time-budget=3000", f"--window-size={W},{height * len(seconds)}",
                         f"--screenshot={out.resolve()}", f"file://{here}/sheet.html"], stderr=subprocess.DEVNULL, check=True, timeout=60)
 
 
@@ -531,6 +550,8 @@ def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--preview", help="comma-separated seconds for a frozen contact sheet")
     parser.add_argument("--sheet", type=Path, default=Path("readme-hero-sheet.png"))
+    parser.add_argument("--social", action="store_true", help=f"also render {SOCIAL_PNG.name} (GitHub's social preview; needs Chrome)")
+    parser.add_argument("--social-at", type=float, default=SOCIAL_AT, help="the moment the social still is frozen at, in seconds")
     args = parser.parse_args(argv)
     svg = build()
     OUTPUT.write_text(svg)
@@ -538,6 +559,9 @@ def main(argv: list[str] | None = None) -> None:
     if args.preview:
         preview(svg, [float(t) for t in args.preview.split(",")], args.sheet)
         print(f"wrote {args.sheet}")
+    if args.social:
+        preview(build(SOCIAL_H), [args.social_at], SOCIAL_PNG, SOCIAL_H)
+        print(f"wrote {SOCIAL_PNG.relative_to(REPO)} ({SOCIAL_PNG.stat().st_size / 1024:.0f} KB) — upload it in the repo's Settings › Social preview")
 
 
 if __name__ == "__main__":

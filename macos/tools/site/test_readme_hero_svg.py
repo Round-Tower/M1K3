@@ -5,7 +5,6 @@ from itertools import pairwise
 
 import numpy as np
 import pytest
-
 import readme_hero_svg as hero
 
 REPO = hero.REPO
@@ -154,3 +153,33 @@ def test_the_committed_svg_is_exactly_what_the_generator_builds():
     pytest.importorskip("fontTools")
     pytest.importorskip("brotli")
     assert hero.build() == hero.OUTPUT.read_text()
+
+
+# ── The social card (GitHub's 1280×640 preview) ────────────────────────────
+
+def test_the_social_card_is_the_hero_on_a_two_to_one_canvas():
+    pytest.importorskip("fontTools")
+    pytest.importorskip("brotli")
+    svg = hero.build(height=hero.SOCIAL_H)
+    assert f'viewBox="0 0 {hero.W} {hero.SOCIAL_H}"' in svg
+    assert f'<g transform="translate(0 {(hero.SOCIAL_H - hero.H) // 2})">' in svg   # the hero, centred
+    for line in [hero.EYEBROW, hero.TAGLINE, *hero.CHIPS]:
+        assert line in svg, line
+    # The field and the backdrop fill the taller canvas, not a letterboxed strip.
+    rows = [int(y) for y in re.findall(r"M\d+ (\d+)h10v10", svg)]
+    assert max(rows) > hero.SOCIAL_H - 2 * hero.PITCH
+    assert f'<rect width="{hero.W}" height="{hero.SOCIAL_H}" fill="url(#bg)"/>' in svg
+
+
+def test_only_the_band_under_the_fox_label_is_dimmed():
+    # The label band dims the field behind the caption; below the hero (the social
+    # card's extra height) the field runs at full strength, not a dark strip.
+    assert hero.field_mask(hero.FOX_CX, hero.H - 20) < 0.5
+    assert hero.field_mask(hero.FOX_CX, hero.H + 60) > 0.5
+
+
+def test_the_committed_social_card_is_githubs_size():
+    data = hero.SOCIAL_PNG.read_bytes()
+    assert data[:8] == b"\x89PNG\r\n\x1a\n"
+    assert (int.from_bytes(data[16:20], "big"), int.from_bytes(data[20:24], "big")) == (hero.W, hero.SOCIAL_H)
+    assert len(data) < 1_000_000   # GitHub refuses a social preview over 1 MB
