@@ -20,10 +20,13 @@
 //  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
 //  Review: Kev + claude-opus-4-6, 2026-10-10 — #540: re-run is a sheet (non-destructive),
 //  no gate-key flip — window/session/menu bar stay alive. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the Re-run button arms OnboardingTrace so the sheet's breadcrumbs carry ms since the tap
+//  ("it was slow", TestFlight). Confidence 0.85.
 
 import AppKit
 import M1K3Inference
 import M1K3Launch
+import M1K3LogCore
 import SwiftUI
 
 struct GeneralSettingsPane: View {
@@ -140,8 +143,12 @@ struct GeneralSettingsPane: View {
                     let hidesDock = StartupVisibility(menuBarOnly: on).hidesDockIcon
                     NSApp.setActivationPolicy(hidesDock ? .accessory : .regular)
                 }
-            Button("Re-run onboarding…") { showResetOnboarding = true }
-                .buttonStyle(.glass)
+            Button("Re-run onboarding…") {
+                // The stopwatch starts at the tap: HelloView's breadcrumbs carry ms since here.
+                OnboardingTrace.shared.begin()
+                showResetOnboarding = true
+            }
+            .buttonStyle(.glass)
         } header: {
             SettingsHeader("Startup", systemImage: "power")
         } footer: {

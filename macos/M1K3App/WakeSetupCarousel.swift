@@ -18,6 +18,10 @@
 //  ride tested policy; card layout, the pulse on the invite, and the greeting
 //  beat are verify-by-⌘R). Prior: none (new file; the cards' actions are the
 //  same seams Settings has always owned).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the NO-WAIT deck (`flow.userDrivenCompletion`): heading "Set
+//  up the room", a plain primary "Start chatting →" / "Done →" (finishTitle) instead of the "I'm awake"
+//  invite, no bar and no pulse; tapping it untouched skips the whole deck. Wait paths unchanged.
+//  Confidence 0.8 (verify-by-launch).
 
 import M1K3Avatar
 import M1K3Inference
@@ -30,6 +34,9 @@ struct WakeSetupCarousel: View {
     /// Determinate download fraction (brain weights), or nil for the AFM
     /// warming wait (indeterminate — the cycled warming lines carry it).
     let fraction: Double?
+    /// The primary button's title in the NO-WAIT deck (`flow.userDrivenCompletion`): "Start
+    /// chatting" on a first run, "Done" on a re-run. Unused on the wait paths.
+    var finishTitle = "Done"
     let onComplete: () -> Void
 
     @State private var warmingTick = 0
@@ -43,7 +50,7 @@ struct WakeSetupCarousel: View {
 
     var body: some View {
         VStack(spacing: 18) {
-            Text("While I wake — set up the room")
+            Text(flow.userDrivenCompletion ? "Set up the room" : "While I wake — set up the room")
                 .font(.title3)
                 .foregroundStyle(.secondary)
                 .accessibilityAddTraits(.isHeader)
@@ -221,6 +228,20 @@ struct WakeSetupCarousel: View {
 
     @ViewBuilder private var progressFooter: some View {
         switch flow.completion {
+        case .invite where flow.userDrivenCompletion:
+            // No wait: nothing is waking, so no "I'm awake" payoff and no pulse. One clear
+            // button; tapping it without touching a card skips the whole deck.
+            Button {
+                commitAboutNote()
+                onComplete()
+            } label: {
+                Text("\(finishTitle) →")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+            }
+            .buttonStyle(.glassProminent)
+            .frame(maxWidth: 360)
         case .invite:
             Button {
                 commitAboutNote()
