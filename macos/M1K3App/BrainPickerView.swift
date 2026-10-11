@@ -39,6 +39,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-06 — cards iterate `BrainTier.offered(afm:)` (pocket in Mini's place when
 //  Apple Intelligence is blocked); the failed-wake "Use Mini (built-in) instead" escape is hidden on a blocked Mac —
 //  it would land on a brain that never answers. Confidence now 0.8 (verify-by-launch on a blocked Mac owed).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (PR 2b) — a pre-ticked "Also get semantic memory" beside a Lil/Big
+//  download (`SemanticMemoryOffer`; never Mini); the wake tap starts `.semanticMemory` via `env.startDownload`.
+//  Confidence 0.75.
 
 import M1K3Avatar
 import M1K3Inference
@@ -54,6 +57,8 @@ struct BrainPickerView: View {
     /// to M1K3 (ADR 0001). Restored from the saved auto-route flag on appear.
     @State private var autoSelected = false
     @State private var isWakingBrain = false
+    /// "Also get semantic memory", pre-ticked while it is offered (Kev, 2026-10-11).
+    @State private var alsoSemanticMemory = SemanticMemoryOffer.preTicked
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Computed, not stored: the badge must land on pocket when Apple
@@ -104,6 +109,7 @@ struct BrainPickerView: View {
             selectedBrain = env.selectedBrain
             autoSelected = UserDefaults.standard.bool(forKey: AppEnvironment.autoRouteBrainKey)
             env.avatar.setEmotion(.thinking)
+            env.refreshDownloads() // the semantic-memory offer waits for the first disk scan
         }
         .onDisappear { env.avatar.resetToIdle() }
         .onChange(of: env.modelLoad) { _, state in
@@ -144,6 +150,12 @@ struct BrainPickerView: View {
                     autoSelected = false
                     selectedBrain = tier
                 }
+            }
+
+            if offersSemanticMemory {
+                SemanticMemoryOfferToggle(isOn: $alsoSemanticMemory)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 4)
             }
 
             Button(action: wakeBrain) {
@@ -207,6 +219,18 @@ struct BrainPickerView: View {
         }
     }
 
+    /// The brain the button would act on right now (auto-route resolves without committing).
+    private var pickedTier: BrainTier {
+        autoSelected ? env.resolvedAutoRouteTier() : selectedBrain
+    }
+
+    /// Show "Also get semantic memory" only beside a Lil/Big download (never Mini), and only while the
+    /// Mac is not already on MLX embeddings or holding the embedder (`SemanticMemoryOffer`).
+    private var offersSemanticMemory: Bool {
+        let tier = pickedTier
+        return tier.requiresDownload && !env.isBrainDownloaded(tier) && env.offersSemanticMemory(alongside: tier)
+    }
+
     /// The wake button's label tracks the selection: auto hands the pick to M1K3,
     /// an un-fetched tier offers a download, a ready tier wakes in place.
     private var brainButtonTitle: String {
@@ -217,6 +241,8 @@ struct BrainPickerView: View {
     }
 
     private func wakeBrain() {
+        // Rides along with the brain's own tap: the one download verb, the re-index follows the embedder.
+        if offersSemanticMemory, alsoSemanticMemory { env.startDownload(.semanticMemory) }
         // Resolve the concrete tier WITHOUT waking it first — the background
         // path below must decide before selectBrain starts a blocking load.
         let picked = autoSelected ? env.resolvedAutoRouteTier() : selectedBrain

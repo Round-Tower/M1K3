@@ -27,6 +27,9 @@
 //  B4 complete-vs-partial scan; B5 transition-only refresh with a generation counter (AFM and the retired-folder walk off
 //  the hot path); B6 semantic-memory guards; N1 `scanned`; N2/N3 remove ordering; N5 a failed selected brain retries.
 //  Confidence 0.65 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (PR 2b) — `offersSemanticMemory(alongside:)` and
+//  `semanticMemorySizeLabel`: the one seam the picker and the upgrade card ask for "Also get semantic
+//  memory" (`SemanticMemoryOffer`). Confidence 0.8.
 
 import Foundation
 import M1K3Inference
@@ -152,6 +155,24 @@ extension AppEnvironment {
     private func voiceFailure(or fallback: ModelLoadState) -> ModelLoadState {
         if case .failed = voiceLoad { return voiceLoad }
         return fallback
+    }
+
+    // MARK: - The semantic-memory offer
+
+    /// Whether to show "Also get semantic memory" beside a download of `tier` (Kev, 2026-10-11:
+    /// offered WITH Lil/Big, pre-ticked; never for Mini-only flows). Waits for the first disk
+    /// scan, so a Mac that already holds the embedder is never offered a fetch it does not need.
+    func offersSemanticMemory(alongside tier: BrainTier?) -> Bool {
+        downloadsLedger.scanned && SemanticMemoryOffer.shouldOffer(
+            brainTarget: tier, usingMLXEmbeddings: usingMLXEmbeddings,
+            installed: downloadsLedger.installed.contains(.semanticMemory)
+        )
+    }
+
+    /// The offer's size, from the same catalogue as the Settings pane ("1.3 GB").
+    var semanticMemorySizeLabel: String {
+        let bytes = downloadItems.first { $0.kind == .semanticMemory }?.bytes ?? 0
+        return bytes.formatted(.byteCount(style: .file))
     }
 
     // MARK: - Disk facts

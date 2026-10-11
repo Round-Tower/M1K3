@@ -19,8 +19,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the polish pass (TestFlight 499): centring anchor, shared glass
 //  card with the progress footer kept outside it, pixel titles, glass buttons, earcon wiring order. Confidence 0.6
 //  (text tripwires; how it looks and sounds is verify-by-launch).
-//  Review: Kev + claude-opus-5.5, 2026-10-11 (PR 2b) — the kit card: no ProgressView inside the glass, a fixed live-bar
-//  slot beneath it, one download verb, Done never waits. Confidence 0.6.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (PR 2b) — the kit card: no ProgressView inside the glass, a fixed
+//  live-bar slot beneath it, one download verb, Done never waits; the semantic-memory offer's wiring. Confidence 0.6.
 //
 
 import Foundation
@@ -262,6 +262,25 @@ struct OnboardingDeckScanTests {
         let deck = try Self.code("M1K3App/WakeSetupCarousel.swift")
         #expect(deck.contains("if flow.cards.contains(.kit) { kitLoadSlot }"))
         #expect(deck.contains("case .kit: kitCard"))
+    }
+
+    @Test("the brain picker and the upgrade card offer semantic memory through the one pure decision and the one verb")
+    func semanticMemoryRidesWithTheBrain() throws {
+        let picker = try Self.code("M1K3App/BrainPickerView.swift")
+        #expect(picker.contains("SemanticMemoryOfferToggle(isOn: $alsoSemanticMemory)"))
+        #expect(picker.contains("env.offersSemanticMemory(alongside: tier)"))
+        #expect(picker.contains("env.startDownload(.semanticMemory)"))
+        #expect(picker.contains("@State private var alsoSemanticMemory = SemanticMemoryOffer.preTicked"))
+
+        let content = try Self.code("M1K3App/ContentView.swift")
+        let card = Self.slice(content, from: "private struct BrainUpgradeNudgeCard", to: "private struct VoicePermissionBanner")
+        #expect(card.contains("!isStagedSwitch && env.offersSemanticMemory(alongside: target)"), "a staged switch fetches nothing")
+        #expect(card.contains("SemanticMemoryOfferToggle(isOn: $alsoSemanticMemory)"))
+        #expect(content.contains("if alsoSemanticMemory { env.startDownload(.semanticMemory) }"))
+
+        let env = try Self.code("M1K3App/AppEnvironment+Downloads.swift")
+        #expect(env.contains("SemanticMemoryOffer.shouldOffer("))
+        #expect(env.contains("downloadsLedger.scanned &&"), "the offer must wait for the first disk scan")
     }
 
     @Test("the Re-run button starts the onboarding stopwatch")

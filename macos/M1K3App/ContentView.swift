@@ -89,6 +89,10 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (review fold) — VoiceOver hears M1K3's state as announcements
 //  (the panel was its only readable avatar); the greeting's season is `SeasonalLook.now(enabled:)`.
 //  Confidence 0.75 (announcements by ear).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (PR 2b) — the brain-upgrade card carries a pre-ticked "Also get
+//  semantic memory" (`SemanticMemoryOffer`) beside a Lil/Big fetch; "Fetch" starts `.semanticMemory` through
+//  `env.startDownload`.
+//  Confidence 0.75 (verify-by-launch).
 
 import M1K3Avatar
 import M1K3Chat
@@ -784,7 +788,10 @@ struct ContentView: View {
                     currentBrainName: env.selectedBrain.displayName,
                     isStagedSwitch: env.brainUpgrade == .staged(consented: false),
                     isReOffer: env.brainUpgradeIsReOffer,
-                    onAccept: { env.acceptBrainUpgrade() },
+                    onAccept: { alsoSemanticMemory in
+                        env.acceptBrainUpgrade()
+                        if alsoSemanticMemory { env.startDownload(.semanticMemory) }
+                    },
                     onDismiss: { env.dismissBrainUpgrade() }
                 )
                 .frame(maxWidth: Self.chatContentMaxWidth)
@@ -1836,8 +1843,17 @@ private struct BrainUpgradeNudgeCard: View {
     let isStagedSwitch: Bool
     /// True when a prior dismissal was lifted by felt struggles.
     let isReOffer: Bool
-    let onAccept: () -> Void
+    /// `true` when the pre-ticked "Also get semantic memory" is still on (it is only offered with a fetch).
+    let onAccept: (Bool) -> Void
     let onDismiss: () -> Void
+
+    @Environment(AppEnvironment.self) private var env
+    @State private var alsoSemanticMemory = SemanticMemoryOffer.preTicked
+
+    /// A fetch (not the staged one-tap switch) of Lil or Big, while the Mac is not already on MLX embeddings.
+    private var offersSemanticMemory: Bool {
+        !isStagedSwitch && env.offersSemanticMemory(alongside: target)
+    }
 
     private var sizeText: String {
         guard let mb = target.approxDownloadMB else { return "" }
@@ -1876,10 +1892,14 @@ private struct BrainUpgradeNudgeCard: View {
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+            if offersSemanticMemory {
+                SemanticMemoryOfferToggle(isOn: $alsoSemanticMemory)
+                    .padding(.top, 2)
+            }
             HStack(spacing: 12) {
                 Button(
                     isStagedSwitch ? "Switch to \(target.displayName)" : "Fetch \(target.displayName)",
-                    action: onAccept
+                    action: { onAccept(offersSemanticMemory && alsoSemanticMemory) }
                 )
                 .buttonStyle(.glassProminent)
                 Button("Maybe later", action: onDismiss)
@@ -1893,6 +1913,7 @@ private struct BrainUpgradeNudgeCard: View {
         .glassEffect(.regular, in: .rect(cornerRadius: 16))
         .padding(.horizontal, 20)
         .padding(.bottom, 8)
+        .onAppear { env.refreshDownloads() } // the semantic-memory offer waits for the first disk scan
         // No .accessibilityElement(children: .combine) here: it would merge the
         // accept/decline buttons into one opaque element — VoiceOver users must
         // be able to reach each independently (review catch, 2026-07-03).
