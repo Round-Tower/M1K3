@@ -33,7 +33,9 @@ def _visible(text: str) -> str:
 
 def test_every_download_host_in_the_crossings_list_is_named_on_the_privacy_page():
     hosts = sorted(set(re.findall(r'"([a-z0-9.-]+\.(?:co|com))"', CROSSINGS)))
-    assert "huggingface.co" in hosts and "github.com" in hosts
+    # Set containment, not `"host" in <str>`: CodeQL reads a substring test on a hostname as URL
+    # sanitisation (#570 inline). These are copy checks, not sanitisers.
+    assert {"huggingface.co", "github.com"} <= set(hosts)
     page = PRIVACY.lower()
     for host in hosts:
         assert host in page or {"huggingface.co": "hugging face", "github.com": "github"}[host] in page, host
@@ -81,7 +83,7 @@ def test_store_descriptions_name_brains_voice_and_speech_downloads():
 def test_the_entitlements_comment_no_longer_claims_weights_are_the_only_reason():
     ent = (ROOT / "macos" / "M1K3App" / "M1K3.entitlements").read_text()
     assert "the ONLY reason" not in ent
-    assert "voices-v1.0.bin" in ent and "github.com" in ent
+    assert "voices-v1.0.bin" in ent and re.search(r"\bgithub\.com\b", ent)
 
 
 def test_no_page_claims_nothing_to_download_without_the_apple_intelligence_qualifier():

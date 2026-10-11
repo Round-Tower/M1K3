@@ -36,6 +36,9 @@
 //  O4 the toggle's reserved slot + size fallback; K1 the voice refreshes on completion; K2 `DownloadStatusStore`, the
 //  tick-free statuses the glass-hosted kit card reads; K5 `startDownload` says whether it began. Confidence 0.7 (the
 //  retry loop and the ordering of two real downloads are verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (#570 bot fold) — `settleSemanticQueue`: a start or a drop now disarms the
+//  watch and cancels the heat nudge, so a retry after a drop is evaluated at once (both passes flagged the stuck
+//  `semanticWatchArmed`); the any-brain-fetch hold is documented as intended. Confidence 0.75.
 
 import Foundation
 import M1K3Inference
@@ -299,6 +302,9 @@ extension AppEnvironment {
         } else if case .staged(consented: true) = brainUpgrade {
             swapPending = true
         }
+        // ANY brain fetch holds the queue, not only the target's: by design one big download at a
+        // time (a Big from Settings and the embedder would split the pipe), so a kit request with
+        // no brain of its own waits behind it too.
         let conditions = SemanticMemoryQueue.Conditions(
             brainOnDisk: onDisk, brainFetching: !ledger.brainFetch.isEmpty || upgradeFetching,
             brainLoadInFlight: modelLoad.isActive, brainSwapPending: swapPending,
@@ -321,6 +327,19 @@ extension AppEnvironment {
         }
     }
 
+    /// The queue drained (started or dropped): clear the request, DISARM the watch and stop the heat
+    /// nudge. The tracking closure only re-arms on a change of what the decision reads, and a drop
+    /// changes none of it, so a stuck `semanticWatchArmed` would leave a retry unevaluated until some
+    /// unrelated transition (#570 review, both passes). The stale closure still fires harmlessly into
+    /// `watchSemanticQueue`'s `pending == nil` guard.
+    private func settleSemanticQueue() {
+        let ledger = downloadsLedger
+        ledger.pendingSemanticMemory = nil
+        ledger.semanticWatchArmed = false
+        ledger.semanticRetryTask?.cancel()
+        ledger.semanticRetryTask = nil
+    }
+
     /// Observe the queue until it drains: re-decide on every change of anything it reads (the brain's load
     /// settling, a turn ending, a re-index ending, a fetch ending, the disk scan landing).
     func watchSemanticQueue() {
@@ -339,10 +358,10 @@ extension AppEnvironment {
         case .wait:
             break
         case let .drop(message):
-            ledger.pendingSemanticMemory = nil
+            settleSemanticQueue()
             ledger.failures[.semanticMemory] = message
         case .start:
-            ledger.pendingSemanticMemory = nil
+            settleSemanticQueue()
             Self.downloadsLog.notice("semantic memory queue: starting")
             Task { [weak self] in
                 await self?.switchEmbeddings(toMLX: true)
