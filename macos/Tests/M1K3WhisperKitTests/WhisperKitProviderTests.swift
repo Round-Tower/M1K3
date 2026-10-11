@@ -82,11 +82,27 @@ struct WhisperKitProviderTests {
         let folder = try #require(WhisperKitProvider.modelFolder(model: "base.en", downloadBase: base))
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         // Marker alone (written only after WhisperKit.download returned) counts.
-        try WhisperKitProvider.markDownloadComplete(model: "base.en", downloadBase: base)
+        try WhisperKitProvider.markDownloadComplete(inFolder: folder)
         #expect(WhisperKitProvider.isModelDownloaded(model: "base.en", downloadBase: base))
         // Legacy: complete artifacts, no marker.
         try Self.layDownCompleteModel(model: "small.en", base: base)
         #expect(WhisperKitProvider.isModelDownloaded(model: "small.en", downloadBase: base))
+    }
+
+    @Test("#567 follow-up: the completion marker lands in the folder WhisperKit.download RETURNED")
+    func markerGoesInTheReturnedFolder() throws {
+        let base = FileManager.default.temporaryDirectory
+            .appendingPathComponent("m1k3-wk-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        // A returned folder that is NOT the computed one (the kit moved its layout).
+        let returned = base.appendingPathComponent("elsewhere/openai_whisper-base.en", isDirectory: true)
+        try FileManager.default.createDirectory(at: returned, withIntermediateDirectories: true)
+        try WhisperKitProvider.markDownloadComplete(inFolder: returned)
+        let marker = returned.appendingPathComponent(WhisperKitProvider.completionMarkerName)
+        #expect(FileManager.default.fileExists(atPath: marker.path))
+        // …and nothing was written under the computed folder.
+        let computed = try #require(WhisperKitProvider.modelFolder(model: "base.en", downloadBase: base))
+        #expect(!FileManager.default.fileExists(atPath: computed.path))
     }
 
     @Test("removeDownloadedModel deletes exactly one variant's folder and tolerates a missing one")
