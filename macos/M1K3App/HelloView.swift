@@ -91,6 +91,9 @@
 //  search is "the one thing that sends anything out" (the model downloads cross too), and still names the lookups. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (PR 2b) — the wait decks start from `WakeSetupCard.waitDeck` (no "My full kit"
 //  card beside a download or warm); the no-wait deck keeps `WakeSetupFlow(brainAlreadyReady: true)` and gains the kit. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — K6 minHeight 700 -> 760 (the arithmetic is in the frame's comment; fits a
+//  13" Air); K7 the no-wait deck names its cards (`WakeSetupCard.allCases`) now that the bare `WakeSetupFlow()` is the wait deck.
+//  Confidence 0.65 (the heights are estimates; verify-by-launch).
 
 import M1K3AgentTools
 import M1K3Avatar
@@ -162,9 +165,17 @@ struct HelloView: View {
         // Content shorter than the window sits in the middle on every phase (hello, deck, waits);
         // taller content (a big text size) still scrolls from the top.
         .defaultScrollAnchor(.center, for: .alignment)
-        // 700: the voice card (the tallest) + title, nav, caption, voice slot and the 96 pt footer.
-        // Still inside a 13" MacBook Air's 1470x956 points (minus menu bar + title bar).
-        .frame(minWidth: 580, minHeight: 700)
+        // 760, by arithmetic (ESTIMATES: verify-by-launch). The no-wait deck on the kit card, top to bottom:
+        //   window padding 2 x 32 .......................... 64
+        //   glass: padding 2 x 30 = 60, title ~34, card slot 310, arrows ~44, caption ~15, 3 gaps x 18 = 54 ... 517
+        //   voice-bar slot 14 + kit-bar slot 34 + Done button ~44 + its 6 pt top pad ............ 98
+        //   3 gaps x 18 between glass, voice slot, kit slot, footer ................................ 54
+        //                                                                                  total ~733
+        // The old 700 left it ~33 pt short (the content scrolled). 760 gives ~27 pt of slack for a wrapped line, and
+        // the slots stay reserved on every card (gating them per card would move the glass and the arrows on a turn).
+        // A 13" MacBook Air is 1470x956 pt: minus the menu bar (~38), the title bar (~28) and a visible Dock (~70) that
+        // leaves ~820 pt of window, so 760 fits with ~60 pt to spare.
+        .frame(minWidth: 580, minHeight: 760)
         .background {
             // The live face is the room — same full-window reactive backdrop as
             // chat, mounted ONCE outside the phase switch (RealityView identity).
@@ -546,7 +557,7 @@ struct HelloView: View {
     /// The deck with no wait (#540 defect 1): the brain is ready, so the flow starts ready and
     /// completion is the user's tap. Every path without a download or warm lands here.
     private func showSetupDeck() {
-        wakeFlow = WakeSetupFlow(brainAlreadyReady: true)
+        wakeFlow = WakeSetupFlow(cards: WakeSetupCard.allCases, brainAlreadyReady: true)
         phase = .setup
     }
 

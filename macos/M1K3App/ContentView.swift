@@ -93,6 +93,8 @@
 //  semantic memory" (`SemanticMemoryOffer`) beside a Lil/Big fetch; "Fetch" starts `.semanticMemory` through
 //  `env.startDownload`.
 //  Confidence 0.75 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — O1 "Fetch" QUEUES semantic memory behind the fetch and the
+//  swap (`requestSemanticMemory(after:)`); O2/O4 the toggle's reserved slot and "Starts after X is ready". Confidence 0.7.
 
 import M1K3Avatar
 import M1K3Chat
@@ -790,7 +792,8 @@ struct ContentView: View {
                     isReOffer: env.brainUpgradeIsReOffer,
                     onAccept: { alsoSemanticMemory in
                         env.acceptBrainUpgrade()
-                        if alsoSemanticMemory { env.startDownload(.semanticMemory) }
+                        // Queued behind the fetch and the swap, never beside them (SemanticMemoryQueue).
+                        if alsoSemanticMemory { env.requestSemanticMemory(after: target) }
                     },
                     onDismiss: { env.dismissBrainUpgrade() }
                 )
@@ -1850,9 +1853,10 @@ private struct BrainUpgradeNudgeCard: View {
     @Environment(AppEnvironment.self) private var env
     @State private var alsoSemanticMemory = SemanticMemoryOffer.preTicked
 
-    /// A fetch (not the staged one-tap switch) of Lil or Big, while the Mac is not already on MLX embeddings.
-    private var offersSemanticMemory: Bool {
-        !isStagedSwitch && env.offersSemanticMemory(alongside: target)
+    /// A fetch (not the staged one-tap switch) of Lil or Big, while the Mac is not already on MLX embeddings;
+    /// reserved (invisible) until the first disk scan lands so the offer never shoves the buttons.
+    private var semanticMemorySlot: SemanticMemoryOffer.Slot {
+        isStagedSwitch ? .none : env.semanticMemoryOfferSlot(alongside: target)
     }
 
     private var sizeText: String {
@@ -1892,14 +1896,12 @@ private struct BrainUpgradeNudgeCard: View {
                 .font(.callout)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
-            if offersSemanticMemory {
-                SemanticMemoryOfferToggle(isOn: $alsoSemanticMemory)
-                    .padding(.top, 2)
-            }
+            SemanticMemoryOfferToggle(isOn: $alsoSemanticMemory, slot: semanticMemorySlot, brainName: target.displayName)
+                .padding(.top, 2)
             HStack(spacing: 12) {
                 Button(
                     isStagedSwitch ? "Switch to \(target.displayName)" : "Fetch \(target.displayName)",
-                    action: { onAccept(offersSemanticMemory && alsoSemanticMemory) }
+                    action: { onAccept(semanticMemorySlot == .shown && alsoSemanticMemory) }
                 )
                 .buttonStyle(.glassProminent)
                 Button("Maybe later", action: onDismiss)

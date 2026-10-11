@@ -17,6 +17,10 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.8 (pure rows over the real catalogue,
 //  pinned by OnboardingKitTests; the card and the downloads are verify-by-launch). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — K3 after the tap only the started (and in-flight) rows
+//  stay, read-only; K4 rows already in flight show with their status and `footer` says what sits under them; K5 `.preparing`
+//  counts as downloaded in the bar (no backward jump) and `start(_:using:)` pins only rows whose download really began
+//  (a refused one is `.notStarted`, a static note). Confidence 0.8.
 
 import Foundation
 
@@ -30,6 +34,21 @@ public struct OnboardingKit: Equatable, Sendable {
         case preparing
         case ready
         case failed(String)
+        /// The tap asked for it but the download did not begin (a guard refused it): a static note,
+        /// never a "Downloading…" that no bytes back.
+        case notStarted
+    }
+
+    /// What sits under the rows (the button's slot): one of these at a time.
+    public enum Footer: Equatable, Sendable {
+        /// There are un-started offers: the "Get my kit" button.
+        case getButton
+        /// The tap started rows: the aftermath line.
+        case started(isFinished: Bool)
+        /// Only rows that are already in flight or refused: they are read-only, and Settings has the controls.
+        case settingsPointer
+        /// No rows at all.
+        case nothing
     }
 
     public struct Row: Identifiable, Equatable, Sendable {
@@ -54,6 +73,8 @@ public struct OnboardingKit: Equatable, Sendable {
 
     private var choices: [DownloadKind: Bool] = [:]
     private var started: Set<DownloadKind> = []
+    /// Asked for by the tap but refused by the download verb (see `start(_:using:)`).
+    private var refused: Set<DownloadKind> = []
 
     public init() {}
 
@@ -74,6 +95,29 @@ public struct OnboardingKit: Equatable, Sendable {
         started.formUnion(kinds)
     }
 
+    /// Begin each kind with `begin` (the one download verb) and pin to the card only those that really
+    /// began. A refused kind is remembered as such, so it reads as a static note, not as "Downloading…"
+    /// forever. Returns the kinds that began, in order.
+    @discardableResult
+    public mutating func start(_ kinds: [DownloadKind], using begin: (DownloadKind) -> Bool) -> [DownloadKind] {
+        var began: [DownloadKind] = []
+        for kind in kinds {
+            if begin(kind) {
+                began.append(kind)
+                refused.remove(kind)
+            } else {
+                refused.insert(kind)
+            }
+        }
+        markStarted(began)
+        return began
+    }
+
+    /// Whether the tap really started this kind (its download is the kit's: the card's own bar covers it).
+    public func hasStarted(_ kind: DownloadKind) -> Bool {
+        started.contains(kind)
+    }
+
     // MARK: - Rows
 
     public func rows(items: [DownloadItem]) -> [Row] {
@@ -81,9 +125,30 @@ public struct OnboardingKit: Equatable, Sendable {
         let shown = shownKinds(byKind)
         return Self.order.compactMap { kind in
             guard shown.contains(kind), let item = byKind[kind] else { return nil }
-            let status = started.contains(kind) ? Self.startedStatus(item.state) : .offer
-            return Row(item: item, ticked: isTicked(kind), status: status)
+            return Row(item: item, ticked: isTicked(kind), status: status(of: item))
         }
+    }
+
+    private func status(of item: DownloadItem) -> Status {
+        if started.contains(item.kind) { return Self.startedStatus(item.state) }
+        // In flight without the tap (Settings, the picker, a re-index): read-only, with its real status.
+        if Self.isOnItsWay(item.state) { return Self.startedStatus(item.state) }
+        if refused.contains(item.kind) { return .notStarted }
+        return .offer
+    }
+
+    /// Whether any row is still a checkbox the tap would act on.
+    public func hasOffers(items: [DownloadItem]) -> Bool {
+        rows(items: items).contains { $0.status == .offer }
+    }
+
+    public func footer(items: [DownloadItem]) -> Footer {
+        let rows = rows(items: items)
+        if rows.isEmpty { return .nothing }
+        if rows.contains(where: { $0.status == .offer }) { return .getButton }
+        let progress = progress(items: items)
+        if progress.total > 0 { return .started(isFinished: progress.isFinished) }
+        return .settingsPointer
     }
 
     /// Everything a fresh tap would start, in kit order.
@@ -101,9 +166,9 @@ public struct OnboardingKit: Equatable, Sendable {
         return items.contains { list.contains($0.kind) && $0.sizeIsApproximate }
     }
 
-    /// The first disk scan has not landed: say "looking", never "nothing to get".
+    /// The first disk scan has not landed (or there is no list yet): say "looking", never "nothing to get".
     public func isChecking(items: [DownloadItem]) -> Bool {
-        items.contains { $0.state == .checking }
+        items.isEmpty || items.contains { $0.state == .checking }
     }
 
     /// Scanned, and everything this Mac could be offered is already here.
@@ -125,6 +190,16 @@ public struct OnboardingKit: Equatable, Sendable {
         }
     }
 
+    /// The SF Symbol beside a started row; nil for an `.offer` row, which is a checkbox and has none.
+    public static func statusSymbol(_ status: Status) -> String? {
+        switch status {
+        case .offer: nil
+        case .downloading, .preparing: "arrow.down.circle"
+        case .ready: "checkmark.circle.fill"
+        case .failed, .notStarted: "exclamationmark.triangle"
+        }
+    }
+
     /// The static line a started row shows inside the glass (the bar is outside it).
     public static func statusLine(_ status: Status) -> String? {
         switch status {
@@ -133,6 +208,7 @@ public struct OnboardingKit: Equatable, Sendable {
         case .preparing: String(localized: "Getting it ready…")
         case .ready: String(localized: "Ready")
         case .failed: String(localized: "Couldn't download — try again from Settings ▸ Brains & downloads")
+        case .notStarted: String(localized: "Couldn't start just now — try again from Settings ▸ Brains & downloads")
         }
     }
 
@@ -161,7 +237,11 @@ public struct OnboardingKit: Equatable, Sendable {
                     done += bytes * min(max(fraction, 0), 1)
                     anyKnown = true
                 }
-            case .preparing, .offer:
+            case .preparing:
+                // The bytes are all here (compiling, re-indexing): count them done, so the bar never
+                // steps back. No honest fraction of its own, so it does not make the bar "known".
+                done += bytes
+            case .offer, .notStarted:
                 break
             }
         }
@@ -184,7 +264,7 @@ public struct OnboardingKit: Equatable, Sendable {
 
     private static func isOnItsWay(_ state: DownloadState) -> Bool {
         switch state {
-        case .downloading, .preparing: true
+        case .downloading, .preparing, .reindexing: true
         default: false
         }
     }
@@ -201,6 +281,14 @@ public struct OnboardingKit: Equatable, Sendable {
     /// The set of kinds on the card: whatever the tap started, plus what is on offer now.
     private func shownKinds(_ byKind: [DownloadKind: DownloadItem]) -> Set<DownloadKind> {
         var shown = started.intersection(byKind.keys)
+        // Rows already in flight (started elsewhere) show read-only; so does a row the tap could not start.
+        for kind in Self.order {
+            guard let item = byKind[kind] else { continue }
+            if Self.isOnItsWay(item.state) || refused.contains(kind) { shown.insert(kind) }
+        }
+        // Once the tap has run, the un-started offers go: a checkbox with no button behind it is dead.
+        if !started.isEmpty || !refused.isEmpty { return shown }
+
         let brain = brainOffer(byKind)
         if let brain { shown.insert(brain) }
 

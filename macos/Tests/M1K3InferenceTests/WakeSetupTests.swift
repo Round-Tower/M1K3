@@ -12,6 +12,7 @@
 //      buys the gentler "tap when ready" invite (never a yank mid-card).
 //
 //  Signed: Kev + claude-fable-5, 2026-08-30, Confidence 0.9. Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — the default deck is `waitDeck` (K7), so the clamp and first-card tests read it. Confidence 0.9.
 
 @testable import M1K3Inference
 import Testing
@@ -21,7 +22,7 @@ struct WakeSetupFlowTests {
     func freshFlow() {
         let flow = WakeSetupFlow()
         #expect(flow.index == 0)
-        #expect(flow.current == WakeSetupCard.allCases.first)
+        #expect(flow.current == WakeSetupCard.waitDeck.first)
         #expect(!flow.hasEngaged)
         #expect(flow.completion == .keepWaiting)
     }
@@ -29,7 +30,7 @@ struct WakeSetupFlowTests {
     @Test("advance and back walk the deck freely and clamp at both ends")
     func advanceAndBackClamp() {
         var flow = WakeSetupFlow()
-        let last = WakeSetupCard.allCases.count - 1
+        let last = WakeSetupCard.waitDeck.count - 1
         for _ in 0 ..< (last + 3) {
             flow.advance()
         }

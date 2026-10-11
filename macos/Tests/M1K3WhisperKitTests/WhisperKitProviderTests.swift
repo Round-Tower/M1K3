@@ -10,6 +10,7 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — P1: a partial WhisperKit folder is not
 //  "downloaded"; the completion marker and the legacy complete-looking install. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — C1: the marker is written only where `isModelDownloaded` reads it; a different returned folder writes none. Confidence 0.8.
 
 import Foundation
 import M1K3Voice
@@ -82,27 +83,39 @@ struct WhisperKitProviderTests {
         let folder = try #require(WhisperKitProvider.modelFolder(model: "base.en", downloadBase: base))
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         // Marker alone (written only after WhisperKit.download returned) counts.
-        try WhisperKitProvider.markDownloadComplete(inFolder: folder)
+        #expect(try WhisperKitProvider.markDownloadComplete(returnedFolder: folder, model: "base.en", downloadBase: base))
         #expect(WhisperKitProvider.isModelDownloaded(model: "base.en", downloadBase: base))
         // Legacy: complete artifacts, no marker.
         try Self.layDownCompleteModel(model: "small.en", base: base)
         #expect(WhisperKitProvider.isModelDownloaded(model: "small.en", downloadBase: base))
     }
 
-    @Test("#567 follow-up: the completion marker lands in the folder WhisperKit.download RETURNED")
-    func markerGoesInTheReturnedFolder() throws {
+    @Test("C1: the marker the loader writes is the one isModelDownloaded reads (returned folder == computed folder)")
+    func markerTheLoaderWritesIsTheOneRead() throws {
         let base = FileManager.default.temporaryDirectory
             .appendingPathComponent("m1k3-wk-\(UUID().uuidString)", isDirectory: true)
         defer { try? FileManager.default.removeItem(at: base) }
-        // A returned folder that is NOT the computed one (the kit moved its layout).
+        let folder = try #require(WhisperKitProvider.modelFolder(model: "base.en", downloadBase: base))
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        #expect(!WhisperKitProvider.isModelDownloaded(model: "base.en", downloadBase: base))
+        // The loader's call, with what WhisperKit.download returned (the same folder, spelled differently).
+        let returned = folder.appendingPathComponent("../openai_whisper-base.en")
+        #expect(try WhisperKitProvider.markDownloadComplete(returnedFolder: returned, model: "base.en", downloadBase: base))
+        #expect(WhisperKitProvider.isModelDownloaded(model: "base.en", downloadBase: base))
+    }
+
+    @Test("C1: a returned folder that is NOT the computed one writes no marker the next launch cannot find")
+    func differentFolderWritesNoMarker() throws {
+        let base = FileManager.default.temporaryDirectory
+            .appendingPathComponent("m1k3-wk-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
         let returned = base.appendingPathComponent("elsewhere/openai_whisper-base.en", isDirectory: true)
         try FileManager.default.createDirectory(at: returned, withIntermediateDirectories: true)
-        try WhisperKitProvider.markDownloadComplete(inFolder: returned)
+        #expect(try !WhisperKitProvider.markDownloadComplete(returnedFolder: returned, model: "base.en", downloadBase: base))
         let marker = returned.appendingPathComponent(WhisperKitProvider.completionMarkerName)
-        #expect(FileManager.default.fileExists(atPath: marker.path))
-        // …and nothing was written under the computed folder.
-        let computed = try #require(WhisperKitProvider.modelFolder(model: "base.en", downloadBase: base))
-        #expect(!FileManager.default.fileExists(atPath: computed.path))
+        #expect(!FileManager.default.fileExists(atPath: marker.path), "a marker where nothing reads it is a lie")
+        // The next launch re-downloads (safe) rather than trusting a half-checked folder.
+        #expect(!WhisperKitProvider.isModelDownloaded(model: "base.en", downloadBase: base))
     }
 
     @Test("removeDownloadedModel deletes exactly one variant's folder and tolerates a missing one")

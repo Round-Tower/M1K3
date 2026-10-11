@@ -66,6 +66,9 @@
 //  takes the old path untouched. Verify-by-launch: delete the model folder, enable WhisperKit, watch the bar.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (#567 follow-up) — the completion marker is written into the folder
 //  `WhisperKit.download` RETURNS (`markDownloadComplete(inFolder:)`), not the computed `modelFolder`. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — C1: the marker is read from the computed folder, so
+//  `markDownloadComplete(returnedFolder:model:downloadBase:)` writes it only when the returned folder IS that one; a
+//  different returned folder loads this once, logs, and writes nothing the next launch cannot find. Confidence 0.8.
 
 import AVFoundation
 import Synchronization
@@ -205,7 +208,9 @@ public final class WhisperKitProvider: TranscriptionProvider, @unchecked Sendabl
                 // WhisperKit's snapshot RETURNS on cancel instead of throwing: without this a
                 // cancelled fetch would go on to compile a half-downloaded model.
                 try Task.checkCancellation()
-                try Self.markDownloadComplete(inFolder: folder)
+                // This load uses the folder WhisperKit returned; the marker is written only where the next
+                // launch will look for it (`markDownloadComplete` explains).
+                try Self.markDownloadComplete(returnedFolder: folder, model: model, downloadBase: downloadBase)
                 config.modelFolder = folder.path
                 progress(Self.downloadFinishedProgress)
             }
@@ -244,11 +249,24 @@ public final class WhisperKitProvider: TranscriptionProvider, @unchecked Sendabl
     /// Written into the variant's folder once its download has fully returned.
     static let completionMarkerName = ".m1k3-download-complete"
 
-    /// Record that `WhisperKit.download` finished, in the folder it RETURNED (where the weights
-    /// really are), not the one `modelFolder` computes: the two agree today, but only the
-    /// returned one is a fact.
-    public static func markDownloadComplete(inFolder folder: URL) throws {
-        try Data().write(to: folder.appendingPathComponent(completionMarkerName))
+    /// Record that `WhisperKit.download` finished. `isModelDownloaded` reads the marker from the
+    /// COMPUTED `modelFolder`, so that is the only place it may be written: when the folder
+    /// WhisperKit returned is that same folder (today it always is) the marker goes in; when it
+    /// differs the weights are loaded from the returned folder this once, but no marker is written
+    /// where the next launch cannot find it, and a re-download there is safe. Returns whether the
+    /// marker was written.
+    @discardableResult
+    public static func markDownloadComplete(returnedFolder: URL, model: String, downloadBase: URL?) throws -> Bool {
+        guard let computed = modelFolder(model: model, downloadBase: downloadBase),
+              computed.standardizedFileURL.path == returnedFolder.standardizedFileURL.path
+        else {
+            log.notice(
+                "WhisperKit returned \(returnedFolder.path, privacy: .public) but the model folder is elsewhere; no completion marker written"
+            )
+            return false
+        }
+        try Data().write(to: computed.appendingPathComponent(completionMarkerName))
+        return true
     }
 
     /// Where WhisperKit lays one variant down under `downloadBase` (nil without a base).

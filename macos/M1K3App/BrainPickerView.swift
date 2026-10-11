@@ -42,6 +42,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (PR 2b) — a pre-ticked "Also get semantic memory" beside a Lil/Big
 //  download (`SemanticMemoryOffer`; never Mini); the wake tap starts `.semanticMemory` via `env.startDownload`.
 //  Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — O1 the tap QUEUES semantic memory (`requestSemanticMemory(after:)`)
+//  behind the brain; O2/O4 the toggle's reserved slot and "Starts after X is ready". Confidence 0.7.
 
 import M1K3Avatar
 import M1K3Inference
@@ -152,11 +154,8 @@ struct BrainPickerView: View {
                 }
             }
 
-            if offersSemanticMemory {
-                SemanticMemoryOfferToggle(isOn: $alsoSemanticMemory)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 4)
-            }
+            SemanticMemoryOfferToggle(isOn: $alsoSemanticMemory, slot: semanticMemorySlot, brainName: pickedTier.displayName)
+                .padding(.horizontal, 4)
 
             Button(action: wakeBrain) {
                 Text(brainButtonTitle)
@@ -224,11 +223,13 @@ struct BrainPickerView: View {
         autoSelected ? env.resolvedAutoRouteTier() : selectedBrain
     }
 
-    /// Show "Also get semantic memory" only beside a Lil/Big download (never Mini), and only while the
-    /// Mac is not already on MLX embeddings or holding the embedder (`SemanticMemoryOffer`).
-    private var offersSemanticMemory: Bool {
+    /// "Also get semantic memory" only beside a Lil/Big download (never Mini), and only while the Mac is not
+    /// already on MLX embeddings or holding the embedder (`SemanticMemoryOffer`). Reserved (invisible) until the
+    /// first disk scan lands, so it popping in never shoves the button.
+    private var semanticMemorySlot: SemanticMemoryOffer.Slot {
         let tier = pickedTier
-        return tier.requiresDownload && !env.isBrainDownloaded(tier) && env.offersSemanticMemory(alongside: tier)
+        guard tier.requiresDownload, !env.isBrainDownloaded(tier) else { return .none }
+        return env.semanticMemoryOfferSlot(alongside: tier)
     }
 
     /// The wake button's label tracks the selection: auto hands the pick to M1K3,
@@ -241,8 +242,9 @@ struct BrainPickerView: View {
     }
 
     private func wakeBrain() {
-        // Rides along with the brain's own tap: the one download verb, the re-index follows the embedder.
-        if offersSemanticMemory, alsoSemanticMemory { env.startDownload(.semanticMemory) }
+        // Rides along with the brain's own tap, but QUEUED behind it: the embedder starts when the brain is ready
+        // and the chat is idle (`SemanticMemoryQueue`), never beside the brain's own download or load.
+        if semanticMemorySlot == .shown, alsoSemanticMemory { env.requestSemanticMemory(after: pickedTier) }
         // Resolve the concrete tier WITHOUT waking it first — the background
         // path below must decide before selectBrain starts a blocking load.
         let picked = autoSelected ? env.resolvedAutoRouteTier() : selectedBrain

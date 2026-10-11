@@ -11,6 +11,7 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold, B1), Confidence 0.7 (a coarse
 //  tripwire over text; the real race is verify-by-launch). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — `startBrainDownload` now answers whether it began (K5), so its marker line changed. Confidence 0.9.
 
 import Foundation
 import Testing
@@ -48,7 +49,7 @@ struct DownloadsWriterScanTests {
     @Test("B1: the manager refuses to start beside a foreground load or the upgrade fetch of the same tier")
     func managerRefusesBesideOtherWriters() throws {
         let downloads = try Self.code("M1K3App/AppEnvironment+Downloads.swift")
-        let start = try Self.body(of: "private func startBrainDownload(_ kind: DownloadKind) {", in: downloads)
+        let start = try Self.body(of: "private func startBrainDownload(_ kind: DownloadKind) -> Bool {", in: downloads)
         #expect(start.contains("selectedBrain == tier, modelLoad.isActive"))
         #expect(start.contains("case .fetching = brainUpgrade, brainUpgradeTarget == tier"))
     }
