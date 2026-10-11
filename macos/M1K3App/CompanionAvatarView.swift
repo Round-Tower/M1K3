@@ -65,6 +65,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-01 (#469 fold) — a one-shot with no host ends at once (it stranded
 //  the brain: no fidgets ever again); unmount returns the creature to its loop clip and marks the brain
 //  `.unmounted`, onAppear resumes it from now. Confidence now 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — seasonal looks: the phosphor treatment takes the resolved
+//  `SeasonalLook` (Halloween pumpkin/ember/violet); a live skin repaints when the season flips (`lastSeason`).
+//  Matters only under the Phosphor skin (the baked lattice stays neutral). Confidence 0.8 (verify-by-launch).
 
 // AppKit on macOS, UIKit on iOS/visionOS — the companion render path is now
 // cross-platform (shared into the M1K3iOSApp mobile shell). Only the emotion-fill
@@ -169,6 +172,9 @@ final class CompanionScene {
     var lastActivity: AvatarActivity = .idle
     /// Last shading style painted — so switching the style picker repaints live.
     var lastShadingStyle: CompanionShadingStyle = .off
+    /// Last seasonal look painted (rawValue; nil = none) — the toggle, or midnight on Oct 24 /
+    /// Nov 2, repaints a live skin.
+    var lastSeason: String?
     /// The clip currently playing on `host` — kept so a pause can park it in
     /// place and a resume can pick it back up mid-cycle.
     var playback: AnimationPlaybackController?
@@ -233,8 +239,18 @@ struct CompanionAvatarView: View {
     /// textures. Applies on build and switches live when the picker changes.
     @AppStorage(CompanionDefaults.shadingStyleKey) private var shadingRaw = CompanionShadingStyle.off.rawValue
 
+    /// The style to paint: the user's pick, or the phosphor costume while a season is in
+    /// (`wearing`): the seasonal tint lives only in the phosphor shader.
     private var shadingStyle: CompanionShadingStyle {
-        CompanionShadingStyle(rawValue: shadingRaw) ?? .off
+        (CompanionShadingStyle(rawValue: shadingRaw) ?? .off).wearing(season)
+    }
+
+    /// Settings ▸ Companion ▸ Seasonal looks (opt-out, default on).
+    @AppStorage(CompanionDefaults.seasonalLooksKey) private var seasonalLooks = true
+
+    /// The look in force right now: the launch-argument override, the opt-out, then the date.
+    private var season: SeasonalLook? {
+        SeasonalLook.now(enabled: seasonalLooks)
     }
 
     /// Optional mirror of the mesh load for a host that wants a spinner (the
@@ -536,7 +552,7 @@ struct CompanionAvatarView: View {
             // Rides the skeletal animation for free (per-fragment shader, blind to
             // the rig). Falls back silently if the shader can't load.
             PhosphorMaterial.apply(
-                shadingStyle, treatment: activity.phosphorTreatment,
+                shadingStyle, treatment: activity.phosphorTreatment(season: season),
                 originals: scene.bakedMaterials, to: host
             )
         #endif
@@ -550,6 +566,7 @@ struct CompanionAvatarView: View {
         scene.lastEmotion = controller.state.emotion
         scene.lastActivity = activity
         scene.lastShadingStyle = shadingStyle
+        scene.lastSeason = season?.rawValue
         // A fresh brain per creature: its dialect decides every clip, and it
         // starts on the rest clip this method just played. The first `sync`
         // brings it up to the current state.
@@ -640,13 +657,18 @@ struct CompanionAvatarView: View {
         // (CustomMaterial is unavailable on visionOS — see build()).
         #if !os(visionOS)
             let style = shadingStyle
-            if let host = scene.host, state.activity != scene.lastActivity || style != scene.lastShadingStyle {
+            let season = season
+            if let host = scene.host,
+               state.activity != scene.lastActivity || style != scene.lastShadingStyle
+               || season?.rawValue != scene.lastSeason
+            {
                 PhosphorMaterial.apply(
-                    style, treatment: state.activity.phosphorTreatment,
+                    style, treatment: state.activity.phosphorTreatment(season: season),
                     originals: scene.bakedMaterials, to: host
                 )
                 scene.lastActivity = state.activity
                 scene.lastShadingStyle = style
+                scene.lastSeason = season?.rawValue
             }
         #endif
 

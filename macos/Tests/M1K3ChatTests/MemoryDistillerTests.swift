@@ -326,7 +326,40 @@ struct MemoryFactNormalizerTests {
 
 // MARK: - Provider orchestration
 
+private final class ThinkingRecorder: InferenceProvider, @unchecked Sendable {
+    nonisolated let name = "thinking-recorder"
+    nonisolated let isAvailable = true
+    private let lock = NSLock()
+    private var seen: [Bool?] = []
+    var recorded: [Bool?] {
+        lock.withLock { seen }
+    }
+
+    func generate(prompt _: String) async throws -> String {
+        lock.withLock { seen.append(InferenceIntent.thinking) }
+        return "garbage"
+    }
+
+    func generateStreaming(prompt _: String) -> AsyncStream<String> {
+        AsyncStream { $0.finish() }
+    }
+}
+
 struct ProviderMemoryDistillerTests {
+    /// 2026-10-11: a truncated think parses to [] without throwing, the watermark advances
+    /// and the facts are lost. Distillation never thinks, on either leg.
+    @Test("both legs run with thinking explicitly off")
+    func neverThinks() async throws {
+        let primary = ThinkingRecorder()
+        let fallback = ThinkingRecorder()
+        _ = try await InferenceIntent.withThinking(true) {
+            try await ProviderMemoryDistiller(primary: primary, fallback: fallback)
+                .distill(turns: turns([("a", "b")]))
+        }
+        #expect(primary.recorded == [false])
+        #expect(fallback.recorded == [false])
+    }
+
     @Test("primary's facts win; fallback never consulted")
     func primaryWins() async throws {
         let distiller = ProviderMemoryDistiller(

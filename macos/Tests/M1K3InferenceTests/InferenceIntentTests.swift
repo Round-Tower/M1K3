@@ -52,4 +52,39 @@ struct InferenceIntentTests {
         let answer = await InferenceIntent.backgroundUtility { 42 }
         #expect(answer == 42)
     }
+
+    @Test("thinking is undecided by default — the provider's construction flag governs")
+    func thinkingUndecidedByDefault() {
+        #expect(InferenceIntent.thinking == nil)
+    }
+
+    @Test("withThinking scopes the turn's decision and restores nil after")
+    func thinkingScopedToTheTurn() async {
+        await InferenceIntent.withThinking(false) {
+            #expect(InferenceIntent.thinking == false)
+            await InferenceIntent.withThinking(true) {
+                #expect(InferenceIntent.thinking == true)
+            }
+            #expect(InferenceIntent.thinking == false)
+        }
+        #expect(InferenceIntent.thinking == nil)
+    }
+
+    @Test("the turn's decision reaches a stream producer Task spawned inside it — MLX's generateStreaming shape")
+    func thinkingReachesAStreamProducerTask() async {
+        let seen: [Bool?] = await InferenceIntent.withThinking(false) {
+            let stream = AsyncStream<Bool?> { continuation in
+                Task {
+                    continuation.yield(InferenceIntent.thinking)
+                    continuation.finish()
+                }
+            }
+            var values: [Bool?] = []
+            for await value in stream {
+                values.append(value)
+            }
+            return values
+        }
+        #expect(seen == [false])
+    }
 }

@@ -11,13 +11,23 @@
 //  constructed hits). Prior: Unknown.
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — #180: `ForgetNamedGraphTwinTests` (canonical variant
 //  names the live fact; a different or superseded fact is no twin). Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — `suggestionFloorFollowsTheEmbedder`.
 //
 
+import M1K3Knowledge
 @testable import M1K3MCPKit
 import M1K3Memory
 import Testing
 
 struct ForgetResolverTests {
+    @Test("the suggestion bar is the embedder's: a Gemma-register near-miss is offered at 0.67, not at Qwen's 0.35")
+    func suggestionFloorFollowsTheEmbedder() {
+        let hits = [hit("Kev drinks his coffee black.", similarity: 0.60)]
+        #expect(ForgetResolver.resolve(hits: hits, query: "tea") == .notConfident(closest: hits[0].memory))
+        let gemma = EmbedderFloors.embeddingGemma2.forgetSuggestion
+        #expect(ForgetResolver.resolve(hits: hits, query: "tea", suggestionFloor: gemma) == .notConfident(closest: nil))
+    }
+
     private func hit(_ text: String, similarity: Float?) -> MemoryHit {
         MemoryHit(memory: Memory(kind: .note, text: text, source: "test"), similarity: similarity)
     }

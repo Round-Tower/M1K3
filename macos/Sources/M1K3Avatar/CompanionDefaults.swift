@@ -12,6 +12,7 @@
 //  Signed: Kev + claude-opus-4-8, 2026-07-28, Confidence 0.9 (pure constants;
 //  values preserved verbatim from AppEnvironment+VoiceMode so no migration).
 //  Prior: AppEnvironment+VoiceMode (Kev + claude-opus-4-8 lineage).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — adds `seasonalLooksKey` (the opt-out). Confidence 0.9.
 //
 
 public enum CompanionDefaults {
@@ -28,6 +29,9 @@ public enum CompanionDefaults {
     /// Shading style for 3D creature companions — a `CompanionShadingStyle`
     /// rawValue (off / phosphor / cel). Default off (the baked textures).
     public static let shadingStyleKey = "companion.shadingStyle"
+
+    /// Opt-out for seasonal looks (Halloween first). Bool, default true.
+    public static let seasonalLooksKey = "avatar.seasonalLooks"
 
     /// Sentinel `companionKey` value meaning NO avatar at all — the shell shows
     /// just the conversation (no hero face, no live backdrop, no preview).

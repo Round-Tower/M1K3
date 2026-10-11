@@ -75,6 +75,20 @@
 //  this Mac": it meant the weights are on disk, but read as the retired privacy absolute. Copy only.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (PR #527 fold) — the pitch says "the weights are already on
 //  this Mac", so the sentence names what is on disk.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#552) — the transcript follows a streaming turn only while
+//  pinned to the bottom (`onScrollGeometryChange`, 48 pt); a scroll-up releases it, a new turn re-pins; the
+//  reasoning follow is unanimated so it never fights the disclosure's height animation. Verify by launch.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#554 pass) — the rule is `TranscriptFollowPolicy` (M1K3Chat,
+//  tested): only a scroll UP releases the pin, so content growth under a still reader never does; the new-turn
+//  re-pin is unanimated. Confidence 0.8 (verify by launch owed).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — chat chrome 1.1 (Kev, TestFlight): the avatar is the backdrop or
+//  off (panel retired; a stored "panel" reads as background), the thinking rain is unmounted, and the toolbar
+//  puts the sidebar toggles at the window's edges (system toggle left, Review panel last on the right with a
+//  fixed spacer; ⌃⌘S / ⌥⌘R live in View-menu commands). Confidence 0.7 (verify by launch owed: overflow,
+//  system toggle after collapse, light + dark).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (review fold) — VoiceOver hears M1K3's state as announcements
+//  (the panel was its only readable avatar); the greeting's season is `SeasonalLook.now(enabled:)`.
+//  Confidence 0.75 (announcements by ear).
 
 import M1K3Avatar
 import M1K3Chat
@@ -151,9 +165,22 @@ struct ContentView: View {
     @State private var attachmentError: String?
     @State private var showConsentDialog = false
     @State private var isDropTargeted = false
+    /// The transcript follows the streaming turn ONLY while the reader is at the
+    /// bottom (#552). Scrolling up to read the live reasoning used to be undone
+    /// ~20 times a second by `followLatest`; now a scroll-up releases the pin and
+    /// a new turn (or scrolling back down) takes it again. The rule is
+    /// `TranscriptFollowPolicy` (pure, tested): content growing under a still
+    /// reader — the reasoning expanding — never unpins.
+    @State private var transcriptPinnedToBottom = true
+    @State private var transcriptScroll: TranscriptScrollSnapshot?
     /// Set by the intro card's "Introduce yourself" — the floor is theirs.
     @FocusState private var inputFocused: Bool
-    @AppStorage(AppEnvironment.avatarDisplayKey) private var avatarDisplay = AvatarDisplay.panel
+    @AppStorage(AppEnvironment.avatarDisplayKey) private var avatarDisplayRaw = AvatarDisplay.defaultValue.rawValue
+    /// Backdrop or off; a stored legacy "panel" reads as the backdrop (`AvatarDisplay(persisted:)`).
+    private var avatarDisplay: AvatarDisplay {
+        AvatarDisplay(persisted: avatarDisplayRaw)
+    }
+
     /// Auto-route on → M1K3 picks the brain → a manual toolbar pick would snap back
     /// next turn, so the switcher disables itself. Reactive so toggling Auto-route in
     /// Settings updates the chat toolbar live.
@@ -162,6 +189,8 @@ struct ContentView: View {
     /// first-session greeting to the quiet returning-user variant (a veteran's
     /// every new conversation must not replay "Nice to meet you").
     @AppStorage("greeting.firstTurnDone") private var greetingFirstTurnDone = false
+    /// Settings ▸ Companion ▸ Seasonal looks. The greeting dresses up in season unless opted out.
+    @AppStorage(CompanionDefaults.seasonalLooksKey) private var seasonalLooks = true
     /// Voice mode's toolbar button stays LABELED ("Voice mode", not icon-only)
     /// until the first entry — the headline feature must not hide behind an
     /// unlabeled wave glyph for someone who's never found it.
@@ -348,14 +377,14 @@ struct ContentView: View {
         .overlay {
             if env.isVoiceModeActive {
                 VoiceModeView()
-                    // Grow open from where the panel sat (top-anchored) instead of a
+                    // Grow open from the centre, where the backdrop's face sits, instead of a
                     // flat cross-fade — the felt "hero zoom" without matchedGeometry's
                     // empty-frame trap: the hero is a FRESH RealityView that rebuilds
                     // its scene, so a matched-frame morph would zoom an empty rect and
                     // pop the face in after. A plain scale+opacity spring is robust
                     // (no namespace, no two-scenes), and the opacity masks the scene
                     // build during the grow. Collapses back on exit.
-                    .transition(.scale(scale: 0.88, anchor: .top).combined(with: .opacity))
+                    .transition(.scale(scale: 0.88).combined(with: .opacity))
             }
         }
         .animation(.spring(response: 0.42, dampingFraction: 0.82), value: env.isVoiceModeActive)
@@ -389,7 +418,6 @@ struct ContentView: View {
     /// Calls) don't inherit chat-only chrome.
     private var chatDetail: some View {
         VStack(spacing: 0) {
-            avatarPanel
             transcript
                 // Bottom chrome rides a safeAreaInset (not a VStack sibling) so
                 // the transcript SCROLLS UNDER the bar and its material blurs
@@ -399,7 +427,6 @@ struct ContentView: View {
                 .safeAreaInset(edge: .bottom, spacing: 0) { bottomChrome }
         }
         .animation(.spring(duration: 0.35), value: showsBrainUpgradeNudge)
-        .animation(.spring(duration: 0.35), value: avatarDisplay)
         // 480 to MATCH the window's own minWidth — the old 600 exceeded it, so
         // a 480-560pt window clipped the detail (the download bar overflowed
         // the window edge in Kev's 07-25 screenshots). The transcript/input
@@ -433,13 +460,12 @@ struct ContentView: View {
         // didSet that would otherwise kick the load). Idempotent.
         .task { await env.warmUpSelectedBrainOnLaunch() }
         .background {
-            // Opt-in: the avatar as a full-window backdrop behind the glass
-            // bubbles. Standard chat mode only — voice mode has its own hero. It
-            // recedes reactively while you read/type so text stays legible.
+            // The avatar as a full-window backdrop behind the glass bubbles (the
+            // default; the toolbar toggle turns it off). Standard chat mode only —
+            // voice mode has its own hero. It recedes reactively while you
+            // read/type so text stays legible.
             if avatarDisplay == .background, !env.isVoiceModeActive {
-                // The one chat-context backdrop — opt into the thinking rain
-                // (the menu-bar/onboarding/brain-picker reuses don't).
-                AvatarChatBackground(env: env, isTyping: !draft.isEmpty, showsInferenceRain: true)
+                AvatarChatBackground(env: env, isTyping: !draft.isEmpty)
                     .transition(.opacity)
             }
         }
@@ -596,6 +622,14 @@ struct ContentView: View {
         .onChange(of: env.reviewLedger.completedTurns) { _, _ in
             askForRatingIfEarned()
         }
+        // The retired panel was the only avatar VoiceOver could read; the backdrop stays
+        // decorative, so M1K3's state reaches VoiceOver as announcements (policy in
+        // AvatarActivity.voiceOverAnnouncement — quiet for generating and idle).
+        .onChange(of: env.avatar.state.activity) { previous, activity in
+            if let announcement = activity.voiceOverAnnouncement(from: previous) {
+                AccessibilityNotification.Announcement(announcement).post()
+            }
+        }
     }
 
     /// One flag for both consumers (card mount + banner suppression) so the
@@ -626,27 +660,6 @@ struct ContentView: View {
         env.brainUpgrade == .offered || env.brainUpgrade == .staged(consented: false)
     }
 
-    // MARK: - Avatar panel
-
-    @ViewBuilder
-    private var avatarPanel: some View {
-        // The top panel yields to the voice dock's own avatar while voice is active
-        // — one face on screen, never two.
-        if avatarDisplay == .panel, !env.isVoiceModeActive {
-            AvatarSurface(env: env)
-                .frame(height: 200)
-                .padding(.horizontal, 12)
-                .padding(.top, 8)
-                .transition(.move(edge: .top).combined(with: .opacity))
-                // The hero, not decoration — a labeled image element (not hidden)
-                // whose label tracks the same activity the visuals animate, so
-                // VoiceOver hears "M1K3 — Thinking" etc. as the state changes.
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(env.avatar.state.activity.accessibilityLabel)
-                .accessibilityAddTraits([.isImage, .updatesFrequently])
-        }
-    }
-
     // MARK: - Transcript
 
     @ViewBuilder
@@ -660,6 +673,7 @@ struct ContentView: View {
                     isIngesting: env.isIngesting,
                     lastIngestedTitle: env.lastIngestedTitle,
                     starters: starters,
+                    season: SeasonalLook.now(enabled: seasonalLooks),
                     onImport: { showImporter = true },
                     onSend: { text in Task { await env.send(text) } }
                 )
@@ -723,11 +737,33 @@ struct ContentView: View {
                     .frame(maxWidth: Self.chatContentMaxWidth)
                     .frame(maxWidth: .infinity) // centre the capped column
                 }
+                // The reader's scroll is the only thing that releases the pin (see
+                // TranscriptFollowPolicy): a scroll up lets go, near-bottom takes it,
+                // growth under a still reader leaves it alone.
+                .onScrollGeometryChange(for: TranscriptScrollSnapshot.self) { geometry in
+                    TranscriptScrollSnapshot(
+                        offsetY: geometry.contentOffset.y,
+                        containerHeight: geometry.containerSize.height,
+                        contentHeight: geometry.contentSize.height
+                    )
+                } action: { _, snapshot in
+                    transcriptPinnedToBottom = TranscriptFollowPolicy.next(
+                        pinned: transcriptPinnedToBottom, previous: transcriptScroll, current: snapshot
+                    )
+                    transcriptScroll = snapshot
+                }
+                // A new turn always re-pins: the reader asked for it. Unanimated — this
+                // also fires on a history load or a conversation switch.
+                .onChange(of: env.chat.messages.count) { _, _ in
+                    transcriptPinnedToBottom = true
+                    followLatest(proxy, animated: false)
+                }
                 .onChange(of: env.chat.messages.last?.text) { followLatest(proxy) }
                 // Follow the live reasoning too — during the think phase `text` is
                 // empty, so without this the auto-expanded reasoning grows off the
-                // bottom edge. Throttled upstream (~20Hz), so the follow eases.
-                .onChange(of: env.chat.messages.last?.reasoning) { followLatest(proxy) }
+                // bottom edge. Throttled upstream (~20Hz); no animation here, so the
+                // follow never fights the disclosure's own height animation.
+                .onChange(of: env.chat.messages.last?.reasoning) { followLatest(proxy, animated: false) }
             }
         }
     }
@@ -1102,7 +1138,7 @@ struct ContentView: View {
     /// recording). Voice mode is NOT a cue any more (AmbientBackdropPolicy): its
     /// hero covered the orbs with an opaque gradient from 2026-06-26, so they only
     /// ticked a 30 fps clock during decode; on the window glass they would show
-    /// again, over the thinking rain and the face. A call recorded from inside
+    /// again, over the face. A call recorded from inside
     /// voice mode still raises them — that is capture, not the mode.
     private var showsAmbientBackdrop: Bool {
         AmbientBackdropPolicy.shows(isListening: env.isListening, isRecording: env.isRecording)
@@ -1282,9 +1318,14 @@ struct ContentView: View {
     /// Paused while voice is active so the transcript becomes the calm scroll-back
     /// record — the dock's karaoke is the live read — and the user can read earlier
     /// turns without being yanked to the bottom mid-utterance.
-    private func followLatest(_ proxy: ScrollViewProxy) {
-        guard !env.isVoiceModeActive, let last = env.chat.messages.last?.id else { return }
-        withAnimation(.easeOut(duration: 0.15)) {
+    private func followLatest(_ proxy: ScrollViewProxy, animated: Bool = true) {
+        guard !env.isVoiceModeActive, transcriptPinnedToBottom,
+              let last = env.chat.messages.last?.id else { return }
+        if animated {
+            withAnimation(.easeOut(duration: 0.15)) {
+                proxy.scrollTo(last, anchor: .bottom)
+            }
+        } else {
             proxy.scrollTo(last, anchor: .bottom)
         }
     }
@@ -1293,39 +1334,29 @@ struct ContentView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        // Our own sidebar toggle, pulled OUT of the sidebar's collapsible
-        // toolbar into the always-present window toolbar so show/hide is
-        // reachable in both states (replaces the auto one removed above).
-        // Removing the automatic toggle ALSO drops its ⌃⌘S binding, so we
-        // re-bind the standard Toggle-Sidebar shortcut here on our button.
-        ToolbarItem(placement: .navigation) {
-            Button {
-                withAnimation(.snappy) { setSidebar(visible: !effectiveSidebarVisible) }
-            } label: {
-                Label("Toggle Sidebar", systemImage: "sidebar.leading")
-            }
-            .keyboardShortcut("s", modifiers: [.command, .control])
-            .help("Show or hide the sidebar (⌃⌘S)")
-        }
+        // The sidebar toggle is the SYSTEM one (SidebarView no longer removes it):
+        // it sits by the traffic lights in both states and writes through the
+        // `columnVisibility` binding to `setSidebar`; View ▸ Show/Hide Sidebar and
+        // ⌃⌘S come from `SidebarCommands()` in the app's `.commands`.
         ToolbarItem(placement: .principal) {
             statusIndicator
         }
         ToolbarItemGroup(placement: .primaryAction) {
             // Voice mode + the chat-specific actions only make sense while the
             // chat destination is showing — Documents/Memories/Calls get just
-            // the always-relevant items (Agent Log, Review panel, Settings).
+            // the always-relevant item (the Review panel).
             if isChatSelected {
                 voiceModeButton
-            }
-            // The Review-panel toggle comes BEFORE the chat extras: the visible
-            // toolbar cluster is width-capped and trailing items spill into the
-            // ">>" overflow — where the panel's ONLY reveal affordance was
-            // hiding (Kev's 07-25 report). Avatar/Record can live in overflow;
-            // the right-hand nav's reveal button can't.
-            alwaysToolbarItems
-            if isChatSelected {
                 chatToolbarItems
             }
+        }
+        // The Review-panel toggle is the LAST item, at the window's right edge,
+        // mirroring the sidebar toggle at the left. Overflow spills the trailing
+        // items into ">>" first, so ⌥⌘R (View ▸ Show/Hide Review Panel,
+        // `ReviewPanelCommands`) keeps the panel reachable if this button hides.
+        ToolbarSpacer(.fixed, placement: .primaryAction)
+        ToolbarItem(placement: .primaryAction) {
+            reviewPanelToolbarItem
         }
     }
 
@@ -1384,13 +1415,13 @@ struct ContentView: View {
     /// Agent Log moved to the sidebar's Workspace section (Kev's call — they
     /// were crowding the toolbar into its ">>" overflow); the Review panel
     /// stays toolbar-only since it isn't a sidebar destination (see
-    /// SidebarView's own comment on why).
-    private var alwaysToolbarItems: some View {
+    /// SidebarView's own comment on why). Its ⌥⌘R lives on the View-menu command
+    /// (`ReviewPanelCommands`), so the panel stays reachable if this button overflows.
+    private var reviewPanelToolbarItem: some View {
         Button { env.review.isPresented.toggle() } label: {
             Label("Review panel", systemImage: "sidebar.right")
         }
         .help("Open a side panel to review links and files (⌥⌘R)")
-        .keyboardShortcut("r", modifiers: [.command, .option])
     }
 
     /// Brain hot-swap + the "currently using X" indicator. This intentionally
@@ -1488,25 +1519,28 @@ struct ContentView: View {
     /// The chat-specific actions — History/Documents/Memories/Calls moved to
     /// the sidebar (they're destinations now, not toolbar-button-behind-a-
     /// sheet), and Settings/Agent Log now live there too (the Workspace
-    /// section). Only the Review panel stays in `alwaysToolbarItems`. What's
-    /// left here is genuinely chat-only: which brain answers, how the avatar
-    /// shows, importing a document, and starting/stopping a call recording.
+    /// section). Only the Review panel stays toolbar-only (`reviewPanelToolbarItem`,
+    /// the rightmost item). What's left here is genuinely chat-only: which brain
+    /// answers, whether the avatar shows, importing a document, and
+    /// starting/stopping a call recording.
     private var chatToolbarItems: some View {
         Group {
             brainSwitcher
 
-            // One control for the avatar: panel / full-window background / off.
-            Menu {
-                Picker("Avatar", selection: $avatarDisplay) {
-                    ForEach(AvatarDisplay.allCases) { mode in
-                        Label(mode.label, systemImage: mode.systemImage).tag(mode)
-                    }
-                }
-                .pickerStyle(.inline)
+            // One toggle for the avatar: the window backdrop <-> off.
+            Button {
+                avatarDisplayRaw = avatarDisplay.toggled.rawValue
             } label: {
-                Label("Avatar", systemImage: avatarDisplay.systemImage)
+                Label(
+                    avatarDisplay == .background
+                        ? String(localized: "Hide avatar")
+                        : String(localized: "Show avatar"),
+                    systemImage: avatarDisplay.systemImage
+                )
             }
-            .help("How M1K3's avatar appears: panel, full-window background, or off")
+            .help(avatarDisplay == .background
+                ? String(localized: "Hide M1K3's avatar behind the chat")
+                : String(localized: "Show M1K3's avatar behind the chat"))
 
             // The Import toolbar button retired 2026-07-25 (Kev's call): drop-
             // to-ingest covers the whole window, the GreetingCard's drop zone

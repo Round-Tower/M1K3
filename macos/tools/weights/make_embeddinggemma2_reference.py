@@ -13,6 +13,9 @@ purpose: never the app's model cache (the 2026-07-16 pre-seed incident).
 
 Signed: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.8, Prior: none (new file;
 GEMMA_1_1_PLAN Stream C, slice 1). Pinned by EmbeddingGemma2ReferenceTests.
+Review: Kev + claude-fable-5.1, 2026-10-10 (#545 review) — `d-long` / `q-long`: a ~900-token
+document so the Swift port's sliding-window mask (the one path the short cases never reach)
+is checked against the reference too. Regenerated with the same pinned venv.
 """
 
 import json
@@ -29,6 +32,30 @@ REVISION = "7505ef2f8ddef45efef6d060865f27989b3c9cec"  # pinned: the fixture nam
 QUERY = "task: search result | query: "
 DOCUMENT = "title: none | text: "
 
+# ~900 tokens: a plausible knowledge-store note, varied enough not to collapse.
+LONG_DOCUMENT = " ".join(
+    f"Section {i}. {t}" for i, t in enumerate([
+        "The knowledge store keeps one vector per chunk and records the embedder fingerprint beside it.",
+        "When the fingerprint changes, the store re-indexes every chunk on the next launch, deferred under heat.",
+        "A fingerprint is the model id, the Matryoshka width and the kernel generation of the MLX pin.",
+        "Vectors from different fingerprints are never compared; the reindex policy treats them as a different space.",
+        "Chunks are about twelve hundred characters and embed title-prefixed unless the content already leads with its title.",
+        "Queries embed with the retrieval instruction, documents embed bare, and the floors were derived from that asymmetry.",
+        "The grounding gate admits a chunk when its cosine clears the chunk floor and a memory when it clears the memory floor.",
+        "Short facts sit lower in the cone than chunks, which is why the two floors differ and are measured separately.",
+        "A re-embed of the corpus runs in batches with a per-embed memory reclaim so the peak stays flat during ingest.",
+        "The embedder loads once through a single-flight loader so a launch warm and a first query share one container.",
+        "Call recordings are retained for ninety days and their summaries are embedded like any other document.",
+        "Spotlight donations exclude photo memories and anything withheld from the MCP list, search and get tools.",
+        "The hybrid search merges a vector lane and a full-text lane with reciprocal rank fusion before the gate.",
+        "A reindex shows real download progress when the model fetches on first use instead of an indefinite spinner.",
+        "Pricing notes, meeting minutes and plant maintenance logs all pass through the same chunker and the same embedder.",
+        "The hydraulic seal on the conveyor failed under load last Tuesday and the replacement part arrived on Thursday.",
+        "The last bus to Dungarvan leaves Waterford at a quarter to ten and the harbour tides peak twice a day.",
+        "Nothing in this pipeline leaves the device; the private cloud paths are consented separately and never see the store.",
+    ] * 3)
+)
+
 CASES = [
     ("q-pricing", "query", "what did we decide about the Pro price?"),
     ("d-pricing", "document", "Pricing v2: Free is €0, Pro is €8 a month, Team is €20 a month per seat."),
@@ -42,10 +69,15 @@ CASES = [
     ("q-ga", "query", "cathain a bhíonn an bus deireanach go Dún Garbhán?"),
     ("d-de", "document", "Der letzte Bus nach Dungarvan fährt um 21:45 Uhr in Waterford ab."),
     ("d-empty-ish", "document", "ok"),
+    # Longer than the 512-token sliding window, so the Swift port's local mask
+    # (|i-j| <= 512, both sides) is exercised; every other case fits inside it.
+    ("d-long", "document", LONG_DOCUMENT),
+    ("q-long", "query", "what happens to the stored vectors when the embedder changes?"),
 ]
 
 # Relevance the vectors must respect (a smoke check, not a benchmark).
 MUST_RANK = [
+    ("q-long", "d-long", "d-offtopic"),
     ("q-pricing", "d-pricing", "d-offtopic"),
     ("q-retention", "d-retention", "d-offtopic"),
     ("q-seal", "d-seal", "d-offtopic"),

@@ -17,6 +17,7 @@
 //  against a scripted session incl. split close-tags; real MLX session is the
 //  verify-at-launch edge — it's the same `ToolTurnSession` the agent already uses).
 //  Prior: Kev + claude-opus-4-8
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#418) — `.rejectedToolCalls` reports its prose like `.text`.
 //
 
 import Foundation
@@ -74,7 +75,8 @@ public final class M1K3ModelExecutor: LanguageModelExecuting {
         }
 
         switch turn {
-        case .text:
+        case .text, .rejectedToolCalls:
+            // (A rejected call requested nothing runnable; its prose is reported like text.)
             // The answer already streamed LIVE via onAnswerToken (the gate buffers
             // the same bytes for flushRemainder, so re-appending would double it —
             // mirrors LocalAgent, which never re-emits the remainder). Only fall back

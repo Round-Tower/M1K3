@@ -173,7 +173,7 @@ struct HeartbeatScreen: View {
     }
 
     /// The consent, offered where it matters: without the Agent Interaction
-    /// Log the timeline is silently pulse-only. Same key Settings → Advanced
+    /// Log the timeline is silently pulse-only. Same key Settings → MCP Server
     /// flips; the store self-gates live, no restart.
     private var agentCommsOffer: some View {
         Section {

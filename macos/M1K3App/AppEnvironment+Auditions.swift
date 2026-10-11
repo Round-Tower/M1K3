@@ -3,13 +3,12 @@
 //  M1K3App
 //
 //  Model auditions, app side: build a tier's MLX brain from its audition when
-//  one is chosen (Settings > Advanced, or `-audition.lil org/repo` at launch),
-//  import a checkpoint folder the user picked, and swap the live brain when
-//  the choice changes. The store and the folder load live in M1K3MLX
+//  one is chosen (`-audition.lil org/repo` at launch, a developer / eval path; Settings
+//  stopped offering auditions in 1.1). The store and the folder load live in M1K3MLX
 //  (AuditionStore, MLXBrainProvider(modelDirectory:)); this is the glue.
 //
 //  An audition is unpinned by nature: nothing checks its bytes against a
-//  manifest, and the pinned store is never touched. The pane says so.
+//  manifest, and the pinned store is never touched.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-29, Confidence 0.75 (the store and
 //  the no-op predicate are unit-pinned; this glue is verify-by-launch).
@@ -26,6 +25,15 @@
 //  its message and Stock is one pick away; only a load that never settles is dropped.
 //  Carried: moving the tier/busy decisions into a package as pure functions.
 //  Confidence 0.75, still verify-by-launch.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — 1.1 Settings restructure: setAudition / importAudition /
+//  removeAudition / isServingAudition / AuditionChange left with the Advanced pane's audition UI;
+//  makeMLXBrain and evalMLXBrain stay (evals and `-audition.*` use them). `retireAuditions` replaces
+//  dropAuditionThatNeverLoaded: clear choices every launch, delete the folder once (Kev's ruling).
+//  Confidence 0.7 (migration pure core is tested; the launch call is verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (review fold) — the folder delete leaves the main actor
+//  (`prepare` sync, `removeFolder` detached at utility): a 1.0 user with a few GB of auditions no
+//  longer launches 1.1 to a beach ball. The header's "the pane refuse" notes above are history:
+//  the pane is gone. Confidence 0.75.
 //
 
 import Foundation
@@ -69,13 +77,20 @@ extension AppEnvironment {
         return MLXBrainProvider(modelID: modelID, maxTokens: maxTokens, thinkingEnabled: thinkingEnabled)
     }
 
-    /// At launch, before the first brain is built: an audition whose last load never
-    /// reached ready is dropped, so a checkpoint that kills the app can't do it twice.
-    @discardableResult
-    nonisolated static func dropAuditionThatNeverLoaded() -> String? {
-        guard let tier = AuditionSelection.dropUnfinishedLoad() else { return nil }
-        auditionLog.error("audition for \(tier, privacy: .public) never finished loading last launch — back to stock")
-        return tier
+    /// At launch, before the first brain is built (1.1): Settings no longer offers auditions,
+    /// so every persisted choice (and a never-finished load's marker) is dropped, and ONCE
+    /// the imported weights folder is deleted. A `-audition.*` launch argument keeps the
+    /// folder and the marker. See `AuditionCleanup`.
+    /// The choices clear synchronously (the brain built next must not read one); the folder
+    /// delete — a multi-GB walk — runs detached at utility priority so launch never waits on it.
+    nonisolated static func retireAuditions() {
+        let (report, folder) = AuditionCleanup.prepare(store: auditionStore)
+        if !report.clearedKeys.isEmpty {
+            auditionLog.notice("1.1 migration cleared audition choices: \(report.clearedKeys.joined(separator: ","), privacy: .public)")
+        }
+        if let folder {
+            Task.detached(priority: .utility) { AuditionCleanup.removeFolder(folder) }
+        }
     }
 
     /// A normal quit, even mid-load, is not a crash: keep the audition for next launch.
@@ -93,86 +108,5 @@ extension AppEnvironment {
     /// audition's folder when one stands in, else nil (the stock hub id).
     nonisolated static func auditionSourceKey(for tier: BrainTier) -> String? {
         AuditionSelection.directory(forTier: tier.rawValue, store: auditionStore).map(AuditionStore.sourceKey(for:))
-    }
-
-    enum AuditionChange: Equatable {
-        case applied
-        /// Saved; the tier isn't the live brain, so it applies at the next switch.
-        case savedForLater
-        /// Refused: a deep dive holds the MLX slot.
-        case busy
-        /// Refused: the tier's audition came in as a launch argument, which outranks
-        /// Settings until M1K3 is launched without it.
-        case setAtLaunch
-    }
-
-    /// Choose (or clear, with nil) the audition for `tier`. The live brain reloads now;
-    /// another tier's choice waits for the next switch. Refused while a deep dive runs,
-    /// because the dive owns the slot and would restore the old brain afterwards.
-    @discardableResult
-    func setAudition(_ repoID: String?, for tier: BrainTier) -> AuditionChange {
-        guard deepDelegationTaskLabel == nil else { return .busy }
-        guard !AuditionSelection.isSetAtLaunch(tier: tier.rawValue) else { return .setAtLaunch }
-        let key = AuditionSelection.key(forTier: tier.rawValue)
-        if let repoID {
-            UserDefaults.standard.set(repoID, forKey: key)
-        } else {
-            UserDefaults.standard.removeObject(forKey: key)
-        }
-        Self.auditionLog.notice("audition for \(tier.rawValue, privacy: .public) → \(repoID ?? "stock", privacy: .public)")
-        guard selectedBrain == tier, tier.mlxModelID != nil else { return .savedForLater }
-        AuditionSelection.clearPendingLoad() // the pending load, if any, is being replaced
-        // selectBrain's only refusal is the dive, guarded above; its other `true` is
-        // "already serving exactly this source", which is also applied.
-        _ = selectBrain(tier)
-        return .applied
-    }
-
-    /// Copy the checkpoint at `folder` into the audition store, off the main actor
-    /// (a multi-GB copy can take a while off-volume). The open panel's grant covers
-    /// the folder for this process; the scoped call is belt and braces.
-    /// `name`: the `org/model` it will be known by (the panel prefills the guess from
-    /// the folder). The name drives name-keyed tuning, so a plain folder called
-    /// `lfm25-2.6b` is best imported as its real hub name.
-    nonisolated static func importAudition(from folder: URL, as name: String) async throws -> AuditionModel {
-        guard let store = auditionStore else { throw CocoaError(.fileNoSuchFile) }
-        let repoID = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        return try await Task.detached(priority: .userInitiated) {
-            let scoped = folder.startAccessingSecurityScopedResource()
-            defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
-            return try store.importFolder(folder, repoID: repoID)
-        }.value
-    }
-
-    /// Delete an audition. Tiers using it go back to stock first: the slot points at
-    /// the stock provider before the delete starts, and the stock load runs on its own.
-    /// The old provider may still hold the audition's weights; unlinking files a process
-    /// has open is safe on APFS (the data lives until they're closed). The multi-GB delete
-    /// runs off the main actor. Refused during a deep dive, which may have parked a brain
-    /// loaded from it.
-    func removeAudition(_ repoID: String) async throws -> AuditionChange {
-        guard deepDelegationTaskLabel == nil else { return .busy }
-        let launchPinned = BrainTier.allCases.contains {
-            AuditionSelection.isSetAtLaunch(tier: $0.rawValue)
-                && AuditionSelection.repoID(forTier: $0.rawValue) == repoID
-        }
-        guard !launchPinned else { return .setAtLaunch }
-        for tier in BrainTier.allCases where AuditionSelection.repoID(forTier: tier.rawValue) == repoID {
-            let change = setAudition(nil, for: tier)
-            guard change == .applied || change == .savedForLater else { return change } // never delete under a refusal
-        }
-        guard let store = Self.auditionStore else { return .applied }
-        try await Task.detached(priority: .utility) { try store.remove(repoID: repoID) }.value
-        return .applied
-    }
-
-    /// Whether `repoID`'s folder is what the live MLX brain was loaded from: importing
-    /// over it would swap the files under a brain whose no-op check can't see the change.
-    /// Judged on the name the import would land under (org case included). The check
-    /// runs before the copy; a brain switch during a multi-GB copy is the narrow window
-    /// left, and the reselect no-op is the only thing it can fool.
-    func isServingAudition(_ repoID: String) -> Bool {
-        guard let store = Self.auditionStore else { return false }
-        return currentMLXProvider.sourceKey == store.sourceKey(forRepoID: store.canonicalRepoID(repoID))
     }
 }

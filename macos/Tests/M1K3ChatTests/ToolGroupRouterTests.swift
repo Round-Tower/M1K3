@@ -13,6 +13,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — schedule-verb cases (any position, after the fold),
 //  one-vector-per-turn pin (#512).
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — chain fixtures: `alsoCallTools` is pinned alongside `mustCallTool`.
+//  Review: Kev + claude-opus-5-5, 2026-10-10 — the `tool-head-*` fixtures must make the shipped head
+//  dispatch, each to its own tool (real NLEmbedding).
 
 import Foundation
 @testable import M1K3Chat
@@ -162,6 +164,18 @@ struct ToolGroupRouterFixtureTests {
         }
         #expect(wrong.isEmpty, "wrong picks: \(wrong)")
     }
+
+    @Test("the tool-head-* fixtures make the shipped head speak, each to its own tool")
+    func headFixturesDispatch() {
+        // 2026-10-10: the 10-09 router arm's fixtures never reached the head's floor, so the head was
+        // never tested. These are scored above it (tools/router/score_head.py) and pinned here.
+        let head = ChatEvalFixtures.toolUse.filter { $0.id.hasPrefix("tool-head-") }
+        #expect(head.count == 6)
+        for fixture in head {
+            let pick = ToolGroupRouter.pick(for: fixture.prompt, embed: embedder.vector)
+            #expect(pick?.tool == fixture.expectation.mustCallTool, "\(fixture.id) → \(pick?.tool ?? "abstained")")
+        }
+    }
 }
 
 /// The cascade's order and the two new flags.
@@ -284,5 +298,90 @@ struct ToolPickCascadeTests {
         #expect(ToolRouterWiring.groupRouterEnabled(defaults))
         #expect(ToolRouterWiring.allTiersEnabled(defaults))
         #expect(ToolRouterWiring.chainEnabled(defaults))
+    }
+
+    @Test("a shell picks the unset default (the Mac: on, after the 10-10 arm); an explicit setting still wins")
+    func unsetDefaultIsTheShells() throws {
+        let suite = "ToolPickCascadeTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        #expect(ToolRouterWiring.groupRouterEnabled(defaults, whenUnset: true))
+        #expect(ToolRouterWiring.allTiersEnabled(defaults, whenUnset: true))
+        #expect(ToolRouterWiring.chainEnabled(defaults, whenUnset: true))
+        defaults.set(false, forKey: ToolRouterWiring.groupRouterKey)
+        defaults.set(false, forKey: ToolRouterWiring.allTiersKey)
+        defaults.set(false, forKey: ToolRouterWiring.chainKey)
+        #expect(!ToolRouterWiring.groupRouterEnabled(defaults, whenUnset: true))
+        #expect(!ToolRouterWiring.allTiersEnabled(defaults, whenUnset: true))
+        #expect(!ToolRouterWiring.chainEnabled(defaults, whenUnset: true))
+    }
+}
+
+/// The challenger on the flip (2026-10-10): only the device family guarded writes, so "forget
+/// what I told you about my address" could dispatch a read (activity 0.679, near the floor).
+/// An abstention is only slower; a wrong tool is a wrong answer.
+struct ToolGroupRouterWriteGuardTests {
+    @Test("a memory write abstains on the knowledge and activity families too")
+    func memoryWritesAbstain() {
+        #expect(ToolGroupRouter.pick(group: "activity", question: "Forget what I told you about my address") == nil)
+        #expect(ToolGroupRouter.pick(group: "knowledge", question: "Remember that my sister is called Aoife") == nil)
+        let saveIt = "Save this to my notes: the boiler code is 4471"
+        #expect(ToolGroupRouter.pick(group: "knowledge", question: saveIt) == nil)
+        #expect(ToolGroupRouter.pick(group: "knowledge", question: "Delete my note about the seal") == nil)
+        #expect(ToolGroupRouter.pick(group: "activity", question: "Add yesterday's walk to my activity") == nil)
+    }
+
+    @Test("reads still dispatch: a bare 'note' or 'notes' is a read")
+    func readsStillDispatch() {
+        #expect(ToolGroupRouter.pick(group: "knowledge", question: "What did I note about the boiler?")
+            == ToolPick(tool: "search_knowledge", query: ""))
+        #expect(ToolGroupRouter.pick(group: "activity", question: "What have I been doing today?")
+            == ToolPick(tool: "recent_activity", query: ""))
+    }
+}
+
+/// The router arm (2026-10-09) couldn't tell which stage picked: the head's notice went to
+/// os_log, never the eval JSON, so a head that never fired looked like a head that won.
+struct PickStageRecorderTests {
+    private actor StubPicker: ToolPicking {
+        private let answer: (tool: String, query: String)?
+
+        init(answer: (tool: String, query: String)?) {
+            self.answer = answer
+        }
+
+        func pickTool(message _: String, instructions _: String) async throws -> (tool: String, query: String) {
+            guard let answer else { throw CancellationError() }
+            return answer
+        }
+    }
+
+    @Test("the cascade tells a recorder which stage named the pick: head, Apple's picker, or the agent")
+    func recordsStages() async {
+        let recorder = PickStageRecorder()
+        await ToolRouterWiring.$pickRecorder.withValue(recorder) {
+            _ = await ToolRouterWiring.cascade(
+                question: "q", menu: "m", classify: { _ in ToolPick(tool: "datetime", query: "") },
+                fallback: StubPicker(answer: nil)
+            )
+            _ = await ToolRouterWiring.cascade(
+                question: "q", menu: "m", classify: { _ in nil }, fallback: StubPicker(answer: ("web_search", "news"))
+            )
+            _ = await ToolRouterWiring.cascade(
+                question: "q", menu: "m", classify: nil, fallback: StubPicker(answer: nil)
+            )
+            _ = await ToolRouterWiring.cascade(question: "q", menu: "m", classify: nil, fallback: nil)
+        }
+        #expect(recorder.stages == [.head, .picker, .agent, .agent])
+    }
+
+    @Test("with no recorder (every shipping turn) the cascade picks exactly as before")
+    func noRecorderNoChange() async {
+        let recorder = PickStageRecorder()
+        let pick = await ToolRouterWiring.cascade(
+            question: "q", menu: "m", classify: { _ in ToolPick(tool: "datetime", query: "") }, fallback: nil
+        )
+        #expect(pick == ToolPick(tool: "datetime", query: ""))
+        #expect(recorder.stages.isEmpty)
     }
 }

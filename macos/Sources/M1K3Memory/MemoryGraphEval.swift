@@ -27,6 +27,8 @@
 //  authored to FAIL on keyword overlap by design, so they only mean something on
 //  the real-embedder self-test — that on-device run is the named verify-owed).
 //  Prior: M1K3Eval ChatEvalFixtures (Kev + claude-opus-4-8).
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the eval store's floors follow the
+//  embedder under test (recall's bar was Qwen's 0.35 for every embedder).
 
 import Foundation
 import M1K3Knowledge // EmbeddingService
@@ -159,6 +161,7 @@ public enum MemoryGraphEval {
         includeSemantic: Bool
     ) async throws -> MemoryGraphReport {
         let store = try MemoryStore()
+        store.floors = EmbedderFloors.forFingerprint(embedder.fingerprint)
         var idByLabel: [String: UUID] = [:]
 
         // Seed facts.

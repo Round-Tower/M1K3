@@ -74,9 +74,12 @@
 //  is `best = 0`" beside a correct fix (0/3) and a rendered `<strong>M1K3:</strong>` bubble inside the page (1/3). No
 //  fence → whole answer, as before. Other kinds unchanged. A scorer change is a dated event: code-gen
 //  cells before this date do not compare with cells after it.
+//  Review: Kev + claude-opus-5-5, 2026-10-10 — a score carries its route stage (`routeStage`, optional, nil omitted),
+//  the observation its `routeStages`, and `EvalToolLog` collects a live-path turn's tools. Confidence 0.9.
 
 import Foundation
 import M1K3Inference
+import Synchronization
 
 public enum CheckOutcome: String, Sendable, Equatable, Codable {
     case pass
@@ -115,17 +118,43 @@ public struct EvalObservation: Sendable, Equatable {
     public let validCitationCount: Int
     /// Wall-clock for the turn, milliseconds.
     public let latencyMS: Int
+    /// The router's stages for this turn, in order (`PickStage` raw values: head / picker /
+    /// agent). Empty when the turn never reached a pick: a chat verdict, or no router at all.
+    public let routeStages: [String]
+    /// First token → first answer token on the live stream (`ThinkPhaseClock`);
+    /// nil when nothing was thought or the path has no stream timing.
+    public let thinkMS: Int?
 
     public init(
         rawText: String,
         toolCalls: [String] = [],
         validCitationCount: Int = 0,
-        latencyMS: Int = 0
+        latencyMS: Int = 0,
+        routeStages: [String] = [],
+        thinkMS: Int? = nil
     ) {
         self.rawText = rawText
         self.toolCalls = toolCalls
         self.validCitationCount = validCitationCount
         self.latencyMS = latencyMS
+        self.routeStages = routeStages
+        self.thinkMS = thinkMS
+    }
+}
+
+/// The tools one live-path turn ran, collected off the responder's `onActivity` (which may
+/// fire from any task): the live path had no tool calls to score before 2026-10-10.
+public final class EvalToolLog: Sendable {
+    private let recorded = Mutex<[String]>([])
+
+    public init() {}
+
+    public var names: [String] {
+        recorded.withLock { $0 }
+    }
+
+    public func append(_ name: String) {
+        recorded.withLock { $0.append(name) }
     }
 }
 
@@ -146,14 +175,25 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
     /// — so `M1K3_SELFTEST_CHATEVAL_REPEATS=N` runs every fixture N times and
     /// the matrix counts each trial (passed/total shows n).
     public let repeatIndex: Int
+    /// Which router stage picked this turn's tool ("head", "picker", "agent"; comma-joined when a
+    /// turn picked more than once). nil when the turn never routed. Optional, so documents
+    /// written before it decode, and nil is left out of the JSON (the 10-09 arm's lesson).
+    public let routeStage: String?
 
     /// Answers are excerpted, not stored whole: these transcripts get committed
     /// as benchmark evidence, and a full code-gen answer would bury the result.
     public static let answerPreviewLimit = 240
 
+    /// Characters inside the think block (`ThinkPhase.measure`; ≈ tokens × 4) and
+    /// the time the think phase took on the live stream. Optional: older reports
+    /// predate them (a non-optional with a default still throws on old JSON).
+    public let thinkChars: Int?
+    public let thinkMS: Int?
+
     public init(
         fixtureID: String, kind: TaskKind, checks: [EvalCheck], latencyMS: Int,
-        answerPreview: String? = nil, repeatIndex: Int = 0
+        answerPreview: String? = nil, repeatIndex: Int = 0, routeStage: String? = nil,
+        thinkChars: Int? = nil, thinkMS: Int? = nil
     ) {
         self.fixtureID = fixtureID
         self.kind = kind
@@ -161,6 +201,9 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
         self.latencyMS = latencyMS
         self.answerPreview = answerPreview
         self.repeatIndex = repeatIndex
+        self.routeStage = routeStage
+        self.thinkChars = thinkChars
+        self.thinkMS = thinkMS
     }
 
     /// The same score stamped as trial `index` — the stage scores each repeat
@@ -168,7 +211,8 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
     public func withRepeatIndex(_ index: Int) -> ChatEvalScore {
         ChatEvalScore(
             fixtureID: fixtureID, kind: kind, checks: checks, latencyMS: latencyMS,
-            answerPreview: answerPreview, repeatIndex: index
+            answerPreview: answerPreview, repeatIndex: index, routeStage: routeStage,
+            thinkChars: thinkChars, thinkMS: thinkMS
         )
     }
 
@@ -833,7 +877,14 @@ public enum ChatEvalScorer {
         return ChatEvalScore(
             fixtureID: fixture.id, kind: fixture.kind, checks: checks,
             latencyMS: observation.latencyMS,
-            answerPreview: preview.isEmpty ? nil : preview
+            answerPreview: preview.isEmpty ? nil : preview,
+            routeStage: observation.routeStages.isEmpty ? nil : observation.routeStages.joined(separator: ","),
+            // nil (not 0) when nothing was thought, so the think columns count the same trials.
+            thinkChars: {
+                let think = ThinkPhase.measure(observation.rawText)
+                return observation.rawText.contains(ThinkPhase.openTag) ? think.thinkChars : nil
+            }(),
+            thinkMS: observation.thinkMS
         )
     }
 

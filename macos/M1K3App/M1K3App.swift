@@ -18,6 +18,7 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-15 — Help ▸ Rate M1K3 on the App Store… (the manual door beside the earned rating prompt).
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — injects `photoMemory` (caption memory) into the main window.
 //  TDD_SKIP: scene wiring.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — SidebarCommands() (View > Show/Hide Sidebar, the system toggle's menu twin) and ReviewPanelCommands registered with the chat chrome 1.1 toolbar reorder. Confidence 0.75.
 
 import AppKit
 import M1K3Avatar
@@ -152,6 +153,11 @@ struct M1K3App: App {
             SettingsCommands(env: appDelegate.environment)
             ConstellationCommands()
             AgentLogCommands()
+            // View ▸ Show/Hide Sidebar (⌃⌘S): the system toggle's menu twin, now that the
+            // sidebar column no longer removes its own button. View ▸ Show/Hide Review Panel
+            // (⌥⌘R) keeps the rightmost toolbar toggle reachable when it overflows.
+            SidebarCommands()
+            ReviewPanelCommands(env: appDelegate.environment)
             // File ▸ Export Memories… — ADR 0003's one menu item.
             MemoryExportCommands(env: appDelegate.environment)
             // Help ▸ Rate M1K3… — the manual door beside the earned prompt

@@ -2,7 +2,7 @@
 //  BrainAtHomeSection.swift
 //  M1K3App
 //
-//  Brain at Home's consent surface (Settings → Privacy): the serve toggle
+//  Brain at Home's consent surface (Settings → Brain at Home): the serve toggle
 //  (default OFF — nil is a NO), the pairing ceremony (QR sheet + the on-Mac
 //  Approve that is audit B2's whole point), the paired-device list with
 //  one-tap revoke (audit S3), and the SECOND consent tier — the scoped LAN
@@ -13,6 +13,8 @@
 //  verify-owed). Prior: none (new file).
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings-screen pass: section headers are
 //  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — 1.1: mounted by BrainAtHomeSettingsPane (its own pane), no longer
+//  inside Privacy; copy unchanged. Confidence 0.85.
 //
 
 import M1K3BrainServe

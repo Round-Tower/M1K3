@@ -183,7 +183,7 @@ struct CommandRunner {
     /// The door's 401 (#270): say where the token is and how to hand it over.
     static func unauthorized() -> Int32 {
         Output.error("m1k3: M1K3 turned that away — it needs the access token.")
-        Output.error("m1k3: copy it from M1K3 ▸ Settings ▸ Privacy ▸ MCP server, then run: m1k3 login")
+        Output.error("m1k3: copy it from M1K3 ▸ Settings ▸ MCP Server, then run: m1k3 login")
         return ExitCode.unauthorized
     }
 
@@ -238,7 +238,7 @@ struct CommandRunner {
     private func login() async -> Int32 {
         let pasted: String
         switch Self.readSecretLine(
-            prompt: "Paste M1K3's access token (Settings ▸ Privacy ▸ MCP server ▸ Copy): "
+            prompt: "Paste M1K3's access token (Settings ▸ MCP Server ▸ Copy): "
         ) {
         case let .read(line): pasted = line
         case .noInput:
@@ -249,7 +249,7 @@ struct CommandRunner {
             return ExitCode.usage
         }
         guard let token = MCPAccessToken.parse(pasted: pasted) else {
-            Output.error("m1k3: that isn't an M1K3 access token — it starts \(MCPAccessToken.prefix) (Settings ▸ Privacy ▸ Copy)")
+            Output.error("m1k3: that isn't an M1K3 access token — it starts \(MCPAccessToken.prefix) (Settings ▸ MCP Server ▸ Copy)")
             return ExitCode.usage
         }
         let transport = MCPTransport.sequence(port: command.port, clientVersion: appVersion, token: token)
@@ -259,7 +259,7 @@ struct CommandRunner {
             checked = "M1K3 accepted it."
         case .failure(.unauthorized):
             Output.error("m1k3: M1K3 turned that token away — not saved (any token saved before is unchanged).")
-            Output.error("m1k3: copy the current one from M1K3 ▸ Settings ▸ Privacy ▸ MCP server.")
+            Output.error("m1k3: copy the current one from M1K3 ▸ Settings ▸ MCP Server.")
             return ExitCode.unauthorized
         case let .failure(.unreachable(message)), let .failure(.tool(message)):
             checked = "Couldn't check it just now — \(message)"
@@ -373,7 +373,7 @@ struct CommandRunner {
         // honest to write or print without it.
         guard let token = CLITokenStore.read() else {
             Output.error("m1k3: connect needs M1K3's access token first — run m1k3 login")
-            Output.error("m1k3: (copy it from M1K3 ▸ Settings ▸ Privacy ▸ MCP server)")
+            Output.error("m1k3: (copy it from M1K3 ▸ Settings ▸ MCP Server)")
             return ExitCode.unauthorized
         }
         if isSandboxed {

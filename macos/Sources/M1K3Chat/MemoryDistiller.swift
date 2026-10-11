@@ -28,6 +28,9 @@
 //  MemoryDistillationCoordinator applies a deterministic attribution fence on top
 //  (DistillationAttribution.swift) — a trivial user turn skips the slice, and a surviving fact
 //  must share real content with something the user actually said.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — `distill` runs under `withThinking(false)`: outside a
+//  turn a thinking-on build thought, a capped think parsed to [] without throwing and the facts were
+//  lost. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -326,8 +329,13 @@ public struct ProviderMemoryDistiller: MemoryDistilling {
         // background so it cannot take the persona-prefix slot from the next
         // interactive turn (the 2026-08-09 re-prefill finding). Wraps BOTH
         // legs, because the fallback is the same provider on a bad day.
-        try await InferenceIntent.backgroundUtility {
-            try await self.distillUncounted(turns: turns)
+        // Never thinks (2026-10-11): outside a turn the thinking-on build falls back to its
+        // construction flag, and a capped think parses to [] without throwing, so the
+        // watermark advances and the facts are lost.
+        try await InferenceIntent.withThinking(false) {
+            try await InferenceIntent.backgroundUtility {
+                try await self.distillUncounted(turns: turns)
+            }
         }
     }
 

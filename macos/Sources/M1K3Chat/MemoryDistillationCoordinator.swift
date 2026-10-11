@@ -27,6 +27,9 @@
 //  filters — a trivial user turn skips the slice before the distiller is even called, and any
 //  surviving fact unanchored in the user's own turns is dropped fail-closed (one `.info` line
 //  per slice counts the drops).
+//  Review: Kev + claude-fable-5.1, 2026-10-10 — the dedupe bar is `EmbedderFloors.dedupe` for the
+//  embedder in use (0.90 stays for Qwen and hashing; EmbeddingGemma 2 carries its own), via
+//  `semanticDedupeThreshold(for:)`.
 //  Review: Kev + claude-fable-5.1, 2026-09-11 (review 10 fold on #288) — `selfNames` is injected
 //  like every other collaborator (default: the account's names); tests pass `.none` and stop
 //  depending on the machine's user name.
@@ -75,10 +78,14 @@ public extension DistilledFactGraphWriting {
 
 public struct MemoryDistillationCoordinator: Sendable {
     private static let log = Logger(subsystem: M1K3Log.subsystem, category: "memory-distill")
-    /// Cosine above which a stored memory counts as "already known".
-    /// Public so the MEMSTAT census (scratch/dream-cycle/SPEC.md Tier 0)
-    /// reports against the LIVE bar, never a copied constant.
-    public static let semanticDedupeThreshold: Float = 0.90
+    /// Cosine above which a stored memory counts as "already known" — the
+    /// embedder's own bar (`EmbedderFloors.dedupe`): 0.90 was measured on
+    /// Qwen3-Embedding (compatibles max 0.768); EmbeddingGemma 2's cone sits
+    /// higher. MEMSTAT reports against this same lookup, never a copy.
+    public static func semanticDedupeThreshold(for embedder: any EmbeddingService) -> Float {
+        EmbedderFloors.forFingerprint(embedder.fingerprint).dedupe
+    }
+
     static let maxTitleLength = 60
 
     private let distiller: any MemoryDistilling
@@ -297,7 +304,7 @@ public struct MemoryDistillationCoordinator: Sendable {
         // similar document chunks would crowd a true memory twin out of a
         // narrow top-K before the kind filter ever saw it.
         try store.searchVector(queryVector: vector, limit: 20).first {
-            $0.kind == .memory && ($0.similarity ?? 0) >= Self.semanticDedupeThreshold
+            $0.kind == .memory && ($0.similarity ?? 0) >= Self.semanticDedupeThreshold(for: embedder)
         }
     }
 

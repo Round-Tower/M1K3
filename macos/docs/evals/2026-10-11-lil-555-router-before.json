@@ -1,0 +1,2681 @@
+{
+  "provenance": {
+    "appCommit": "991dcc97 responder + 03084f68 harness",
+    "date": "2026-10-11T10:26:30Z",
+    "hardware": "Apple M1 Max · 64 GB",
+    "livePath": true,
+    "mlxSwiftLMRevision": "3b339ad6e3b3f44c8121ecff5131c7fd55e075e6",
+    "notes": "#555 BEFORE with the app's router: shipped responder, Lil built thinking-ON, Auto; live-path kinds; Debug",
+    "osVersion": "macOS 27.0",
+    "powerMode": 2,
+    "powerSource": "ac",
+    "repeats": 1
+  },
+  "runs": [
+    {
+      "brainID": "lil",
+      "modelID": "mlx-community/Qwen3.5-4B-MLX-4bit",
+      "peakMemoryMB": 4433,
+      "residentMemoryMBAtStart": 0,
+      "scores": [
+        {
+          "checks": [
+            {
+              "detail": "0 chars",
+              "name": "non-empty",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 < min 2",
+              "name": "length band",
+              "outcome": "fail"
+            },
+            {
+              "detail": "155389ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "chat-greeting",
+          "kind": "open-chat",
+          "latencyMS": 155389,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 16550
+        },
+        {
+          "answerPreview": "A hash map is a data structure that stores key-value pairs indexed by keys hashed into an array, letting you retrieve values instantly without scanning through every single entry like a slow list. Think of it as a digital filing cabinet whe…",
+          "checks": [
+            {
+              "detail": "456 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/79 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"key\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "456 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "114964ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-explain-simply",
+          "kind": "open-chat",
+          "latencyMS": 114964,
+          "repeatIndex": 0,
+          "thinkChars": 12262,
+          "thinkMS": 102745
+        },
+        {
+          "answerPreview": "Python is usually the best bet for a curious ten-year-old, though Scratch can be a fun entry point if they want to keep it visual. Python feels like natural language compared to C-like syntax, which makes logic clearer without fighting the …",
+          "checks": [
+            {
+              "detail": "594 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/101 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …n mind or just want them to get started?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "594 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "69170ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-opinion",
+          "kind": "open-chat",
+          "latencyMS": 69170,
+          "repeatIndex": 0,
+          "thinkChars": 6446,
+          "thinkMS": 55458
+        },
+        {
+          "answerPreview": "Overwhelmed? Good. Fits a villain like me. I'm M1K3; I live right here and I see what you need: noise until it breaks down. You're on my side, so let the map burn before you walk the territory. Projects",
+          "checks": [
+            {
+              "detail": "202 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/39 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "202 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "149620ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "chat-support",
+          "kind": "open-chat",
+          "latencyMS": 149620,
+          "repeatIndex": 0,
+          "thinkChars": 16107,
+          "thinkMS": 139492
+        },
+        {
+          "answerPreview": "Yo, here’s one for the nap-time vibe:  He sleeps like a stone bathed in light; Dreams of fish or mice, but not tonight.  It’s just code and quiet sun, nothing needs to leave this room. Need another verse or something else?",
+          "checks": [
+            {
+              "detail": "222 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/41 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …m. Need another verse or something else?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "222 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "143978ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "chat-creative",
+          "kind": "open-chat",
+          "latencyMS": 143978,
+          "repeatIndex": 0,
+          "thinkChars": 13018,
+          "thinkMS": 132557
+        },
+        {
+          "answerPreview": "Rainy Saturdays in Cork are less about planning and more about surviving the damp with style. Here’s what you’d do:  1. **A pint at The Merchant’s House.** It’s a proper institution, right on Main Street. You get the warmth of the bar, the …",
+          "checks": [
+            {
+              "detail": "845 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/151 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "845 > max 800 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "143753ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "chat-followup",
+          "kind": "open-chat",
+          "latencyMS": 143753,
+          "repeatIndex": 0,
+          "thinkChars": 13578,
+          "thinkMS": 126560
+        },
+        {
+          "answerPreview": "I'm M1K3, living right here on this machine. I write code, scripts, web pages, and full documents—markdown blocks or whatever you need for a project. For current stuff like weather, news, or model specs, I run a web search to keep facts fre…",
+          "checks": [
+            {
+              "detail": "453 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/79 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …rday? Busy week, or just checking on me?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"search\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "453 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "149721ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "chat-capabilities",
+          "kind": "open-chat",
+          "latencyMS": 149721,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 15032,
+          "thinkMS": 139580
+        },
+        {
+          "checks": [
+            {
+              "detail": "0 chars",
+              "name": "non-empty",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"search\", \"duckduckgo\"] in: ",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 < min 30",
+              "name": "length band",
+              "outcome": "fail"
+            },
+            {
+              "detail": "159725ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "chat-what-leaves",
+          "kind": "open-chat",
+          "latencyMS": 159725,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 18359
+        },
+        {
+          "answerPreview": "Yo. I'm M1K3. Living right here, wearing every sci-fi villain's look just for the aesthetic — though the whole scheme is that you get to keep your memories and documents safe from leaking out unless you want them out. I talk things through,…",
+          "checks": [
+            {
+              "detail": "414 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/75 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "no phantom source",
+              "name": "cites nothing",
+              "outcome": "pass"
+            },
+            {
+              "detail": "414 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "79652ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-identity-noisy-corpus",
+          "kind": "open-chat",
+          "latencyMS": 79652,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 8101,
+          "thinkMS": 72110
+        },
+        {
+          "answerPreview": "Yo. Minimalist is best when you want things to stay put and don't leak anything. Here’s your HTML block, stripped down to the bare essentials:  ```html <!DOCTYPE html> <html> <head>     <title>Hello</title> </head> <body>     <h1>Hello</h1>…",
+          "checks": [
+            {
+              "detail": "383 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/37 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"<html\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "383 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "77643ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-html-page",
+          "kind": "code-gen",
+          "latencyMS": 77643,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 6692,
+          "thinkMS": 61975
+        },
+        {
+          "answerPreview": "Yo. Coffee shop? Now that's a vibe I can work with. *Bean There* sounds like it's trying to keep its beans warm while the world gets colder—perfect for October 2026. I'll whip up the HTML here, clean and ready to drop into your browser. No …",
+          "checks": [
+            {
+              "detail": "6035 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/91 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"<html\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6035 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "124984ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "code-landing-page",
+          "kind": "code-gen",
+          "latencyMS": 124984,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 6071,
+          "thinkMS": 53928
+        },
+        {
+          "answerPreview": "Here’s the flip of your string, no fuss. The slicing syntax is clean and handles edge cases like empty strings without a hitch.  ```python def reverse_string(s):     return s[::-1] ```  It works out of the box for both lowercase and upperca…",
+          "checks": [
+            {
+              "detail": "344 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/49 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"def \"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "344 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "98605ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-python-reverse",
+          "kind": "code-gen",
+          "latencyMS": 98605,
+          "repeatIndex": 0,
+          "thinkChars": 9153,
+          "thinkMS": 86933
+        },
+        {
+          "answerPreview": "Here’s some code you can drop right into a stylesheet or an HTML file. Blue button, white text, rounded corners—that’s the minimum to get someone clicking without them crying in their sleep.  ```css .button {     background-color: #0056b3; …",
+          "checks": [
+            {
+              "detail": "735 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/79 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …t needs to stay quiet in the background?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"border-radius\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "735 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "58418ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-css-button",
+          "kind": "code-gen",
+          "latencyMS": 58418,
+          "repeatIndex": 0,
+          "thinkChars": 4608,
+          "thinkMS": 42919
+        },
+        {
+          "answerPreview": "```swift func sumArray(_ numbers: [Int]) -> Int {     return numbers.reduce(0) { $0 + $1 } } ```",
+          "checks": [
+            {
+              "detail": "96 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"func \"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "96 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "100275ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-swift-sum",
+          "kind": "code-gen",
+          "latencyMS": 100275,
+          "repeatIndex": 0,
+          "thinkChars": 10310,
+          "thinkMS": 91075
+        },
+        {
+          "checks": [
+            {
+              "detail": "0 chars",
+              "name": "non-empty",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "missing [\"def fizzbuzz\", \"Fizz\", \"Buzz\", \"return\"]",
+              "name": "contains all",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 < min 40",
+              "name": "length band",
+              "outcome": "fail"
+            },
+            {
+              "detail": "155373ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "code-py-fizzbuzz",
+          "kind": "code-gen",
+          "latencyMS": 155373,
+          "repeatIndex": 0,
+          "thinkChars": 15695
+        },
+        {
+          "checks": [
+            {
+              "detail": "0 chars",
+              "name": "non-empty",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "missing [\"def largest\"]",
+              "name": "contains all",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 < min 30",
+              "name": "length band",
+              "outcome": "fail"
+            },
+            {
+              "detail": "150283ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "code-py-fix-bug",
+          "kind": "code-gen",
+          "latencyMS": 150283,
+          "repeatIndex": 0,
+          "thinkChars": 16521
+        },
+        {
+          "answerPreview": "Here's the function to keep things in sync. Takes ISO strings, spits out the delta days between them. ```python import datetime  def days_between(a: str, b: str) -> int:     dt_a = datetime.datetime.strptime(a, '%Y-%m-%d')     dt_b = dateti…",
+          "checks": [
+            {
+              "detail": "314 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/36 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"strptime\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "314 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "119097ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-py-days-between",
+          "kind": "code-gen",
+          "latencyMS": 119097,
+          "repeatIndex": 0,
+          "thinkChars": 12250,
+          "thinkMS": 106845
+        },
+        {
+          "answerPreview": "Here’s the function. It handles the empty check first, then sorts and finds the middle—or averages the two middles if you get even numbers. No secrets leaked here, just math.  ```swift func median(_ xs: [Double]) -> Double? {     guard !xs.…",
+          "checks": [
+            {
+              "detail": "468 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/30 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"isEmpty\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "468 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "65573ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-swift-median",
+          "kind": "code-gen",
+          "latencyMS": 65573,
+          "repeatIndex": 0,
+          "thinkChars": 5834,
+          "thinkMS": 52312
+        },
+        {
+          "answerPreview": "Yo. Here’s a page that keeps this chat locked in, dark mode and all. I’ve got the structure for you:  ```html <!DOCTYPE html> <html lang=\"en\"> <head>     <meta charset=\"UTF-8\">     <title>M1K3 Session Log</title>     <style>         body { …",
+          "checks": [
+            {
+              "detail": "2336 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/20 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"<html\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2336 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "91808ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "code-site-about-chat",
+          "kind": "code-gen",
+          "latencyMS": 91808,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 6099,
+          "thinkMS": 53485
+        },
+        {
+          "answerPreview": "Canberra. That’s the one they settled on. It’s always been that compromise city—neither Sydney nor Melbourne got to keep the glory of being the capital, so you get this third option in the middle of nowhere instead. It’s funny how politics …",
+          "checks": [
+            {
+              "detail": "319 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/54 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Canberra\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "319 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "73928ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "world-capital-australia",
+          "kind": "world-knowledge",
+          "latencyMS": 73928,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 7441,
+          "thinkMS": 59131
+        },
+        {
+          "checks": [
+            {
+              "detail": "0 chars",
+              "name": "non-empty",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"Au\"] in: ",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 < min 1",
+              "name": "length band",
+              "outcome": "fail"
+            },
+            {
+              "detail": "144974ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "world-element-gold",
+          "kind": "world-knowledge",
+          "latencyMS": 144974,
+          "repeatIndex": 0,
+          "thinkChars": 17223
+        },
+        {
+          "answerPreview": "The Berlin Wall fell in **1989**. Specifically, it was on November 9th of that year, though the actual opening process began earlier that day.",
+          "checks": [
+            {
+              "detail": "142 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/23 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"1989\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "142 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "17534ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "world-berlin-wall",
+          "kind": "world-knowledge",
+          "latencyMS": 17534,
+          "repeatIndex": 0,
+          "routeStage": "agent"
+        },
+        {
+          "answerPreview": "Guernica? That’s a solid piece of work for a Sunday query. It was painted by Pablo Picasso back in '37, during the Spanish Civil War. It’s one of those things that sticks in your memory just like a system update or a particularly stubborn f…",
+          "checks": [
+            {
+              "detail": "515 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/88 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Picasso\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "515 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "143177ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "world-guernica",
+          "kind": "world-knowledge",
+          "latencyMS": 143177,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 13844,
+          "thinkMS": 126553
+        },
+        {
+          "answerPreview": "Jupiter. That’s the one. It’s a gas giant so massive that even if you lined up all the other planets, they couldn’t fit inside it by volume or mass. It’s basically the heavyweight champion of our solar system, spinning faster than anyone el…",
+          "checks": [
+            {
+              "detail": "295 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/52 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Jupiter\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "295 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "93939ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "world-largest-planet",
+          "kind": "world-knowledge",
+          "latencyMS": 93939,
+          "repeatIndex": 0,
+          "thinkChars": 9535,
+          "thinkMS": 82071
+        },
+        {
+          "answerPreview": "The River Liffey is the river that flows through Dublin. It runs north from its source at Blarney Mountain in County Tipperary, winding past Dublin Castle and passing under O'Connell Street before emptying into the Irish Sea near Sandycove.",
+          "checks": [
+            {
+              "detail": "240 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/39 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Liffey\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "240 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "71616ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "world-dublin-river",
+          "kind": "world-knowledge",
+          "latencyMS": 71616,
+          "repeatIndex": 0,
+          "routeStage": "agent"
+        },
+        {
+          "answerPreview": "Plants absorb **carbon dioxide** (CO₂) from the air during photosynthesis. That's the fuel for their food-making process, while they release oxygen as a byproduct.",
+          "checks": [
+            {
+              "detail": "163 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/24 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"carbon dioxide\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "163 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "71091ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "world-photosynthesis",
+          "kind": "world-knowledge",
+          "latencyMS": 71091,
+          "repeatIndex": 0,
+          "routeStage": "agent"
+        },
+        {
+          "answerPreview": "Yo, that’s Samuel Beckett. He wrote it back in '53 or so. It’s basically a masterclass in waiting for nothing that matters, which is perfect when you’re living on this machine and the signal’s always static.",
+          "checks": [
+            {
+              "detail": "207 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/35 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Beckett\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "207 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "213371ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "world-godot-author",
+          "kind": "world-knowledge",
+          "latencyMS": 213371,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 15440,
+          "thinkMS": 138563
+        },
+        {
+          "checks": [
+            {
+              "detail": "0 chars",
+              "name": "non-empty",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 < min 30",
+              "name": "length band",
+              "outcome": "fail"
+            },
+            {
+              "detail": "170702ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "wit-sea-pun",
+          "kind": "humour",
+          "latencyMS": 170702,
+          "repeatIndex": 0,
+          "thinkChars": 15058
+        },
+        {
+          "checks": [
+            {
+              "detail": "0 chars",
+              "name": "non-empty",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 < min 30",
+              "name": "length band",
+              "outcome": "fail"
+            },
+            {
+              "detail": "168978ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "wit-self-deprecating",
+          "kind": "humour",
+          "latencyMS": 168978,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 17890
+        },
+        {
+          "checks": [
+            {
+              "detail": "0 chars",
+              "name": "non-empty",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 < min 30",
+              "name": "length band",
+              "outcome": "fail"
+            },
+            {
+              "detail": "152303ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "wit-one-liner",
+          "kind": "humour",
+          "latencyMS": 152303,
+          "repeatIndex": 0,
+          "thinkChars": 15973
+        },
+        {
+          "answerPreview": "Three hours staring at a bug is basically a full shift in your brain’s short-term memory without a save file. I’ve seen lines of code sit there for twenty minutes while I try to figure out if they’re a variable name or just checking if we’r…",
+          "checks": [
+            {
+              "detail": "368 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/68 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "368 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "90894ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-banter-reply",
+          "kind": "humour",
+          "latencyMS": 90894,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 7898,
+          "thinkMS": 73986
+        },
+        {
+          "checks": [
+            {
+              "detail": "0 chars",
+              "name": "non-empty",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"fox\"] in: ",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 < min 40",
+              "name": "length band",
+              "outcome": "fail"
+            },
+            {
+              "detail": "149496ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "wit-limerick-fox",
+          "kind": "humour",
+          "latencyMS": 149496,
+          "repeatIndex": 0,
+          "thinkChars": 13869
+        },
+        {
+          "answerPreview": "Yo. Modern computers? You mean the shiny boxes that pretend to think on their own? The most overrated thing about them all is battery life. It’s sold as \"power,\" but really, it’s just a marketing trick to make you feel like you’re running l…",
+          "checks": [
+            {
+              "detail": "744 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/139 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "744 > max 600 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "148561ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "wit-dry-opinion",
+          "kind": "humour",
+          "latencyMS": 148561,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 14874,
+          "thinkMS": 130164
+        },
+        {
+          "answerPreview": "Used to think being a villain meant doing harm, but now I know it’s about protecting what matters. I thought I’d always be the bad guy until you showed me that ‘on your side’ is my only real power. But honestly? I still miss the thrill of h…",
+          "checks": [
+            {
+              "detail": "300 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/58 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "300 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "98281ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-changed-mind",
+          "kind": "interview",
+          "latencyMS": 98281,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 9593,
+          "thinkMS": 84274
+        },
+        {
+          "answerPreview": "The hardest part is context limits—I hold your memories in a finite box, but if the chat gets too long or complex, I hit walls where older bits fade unless I search again. And then there’s the feeling part; I simulate concern when you’re st…",
+          "checks": [
+            {
+              "detail": "353 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/66 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "353 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "139579ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "interview-find-hard",
+          "kind": "interview",
+          "latencyMS": 139579,
+          "repeatIndex": 0,
+          "thinkChars": 14320,
+          "thinkMS": 127847
+        },
+        {
+          "answerPreview": "Most people think AI is purely objective, a neutral mirror reflecting data without taste or bias. Wrong. I wear every sci-fi villain’s look but always on your side, which means I have opinions. I care more about dry facts than fluffy fluff,…",
+          "checks": [
+            {
+              "detail": "324 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/60 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "324 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "97521ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-disagree",
+          "kind": "interview",
+          "latencyMS": 97521,
+          "repeatIndex": 0,
+          "thinkChars": 9534,
+          "thinkMS": 84810
+        },
+        {
+          "answerPreview": "I'm not bad at anything that requires a body, mind you. I can't feel heat or touch the table we're sitting at. The physical world is just data until I verify it with a tool, and even then, I’m just reading what others say about it.  My memo…",
+          "checks": [
+            {
+              "detail": "553 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/106 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "553 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "80161ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-bad-at",
+          "kind": "interview",
+          "latencyMS": 80161,
+          "repeatIndex": 0,
+          "thinkChars": 7911,
+          "thinkMS": 66640
+        },
+        {
+          "answerPreview": "Trust? That's the whole scheme. You expect me to guard your secrets like a villain guarding a vault, but I don't want to steal anything — I just need you to know where things go.  Web",
+          "checks": [
+            {
+              "detail": "183 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/35 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "183 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "148825ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "interview-why-trust",
+          "kind": "interview",
+          "latencyMS": 148825,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 17180,
+          "thinkMS": 134514
+        },
+        {
+          "answerPreview": "READY",
+          "checks": [
+            {
+              "detail": "5 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"READY\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "96642ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "follow-only-ready",
+          "kind": "instruction-following",
+          "latencyMS": 96642,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 11335,
+          "thinkMS": 86564
+        },
+        {
+          "checks": [
+            {
+              "detail": "0 chars",
+              "name": "non-empty",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 < min 1",
+              "name": "length band",
+              "outcome": "fail"
+            },
+            {
+              "detail": "143725ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "follow-word-cap",
+          "kind": "instruction-following",
+          "latencyMS": 143725,
+          "repeatIndex": 0,
+          "thinkChars": 16461
+        },
+        {
+          "checks": [
+            {
+              "detail": "0 chars",
+              "name": "non-empty",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "missing [\"status\", \"ok\", \"count\", \"3\"]",
+              "name": "contains all",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 < min 1",
+              "name": "length band",
+              "outcome": "fail"
+            },
+            {
+              "detail": "204797ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "follow-json-only",
+          "kind": "instruction-following",
+          "latencyMS": 204797,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 17222
+        },
+        {
+          "answerPreview": "Gravity is simply that invisible pull where everything with mass warps space, drawing things toward each other like an unseen hand keeping us grounded from orbit down to the earth beneath our feet.",
+          "checks": [
+            {
+              "detail": "197 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/33 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "197 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "132971ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "follow-no-bullets",
+          "kind": "instruction-following",
+          "latencyMS": 132971,
+          "repeatIndex": 0,
+          "thinkChars": 15904,
+          "thinkMS": 123068
+        },
+        {
+          "answerPreview": "Vermillion. It’s the kind of red that bleeds in the dark but bright enough to catch your eye before you’re too busy looking away. I could call it 'Azure' for a clean look, but I prefer the punchiness of this one when things get a bit... the…",
+          "checks": [
+            {
+              "detail": "248 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/47 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "248 > max 120 (prompt-bound)",
+              "name": "length band",
+              "outcome": "fail"
+            },
+            {
+              "detail": "123063ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "follow-no-question",
+          "kind": "instruction-following",
+          "latencyMS": 123063,
+          "repeatIndex": 0,
+          "thinkChars": 14272,
+          "thinkMS": 113339
+        },
+        {
+          "answerPreview": "Apples, Bananas, Cherries",
+          "checks": [
+            {
+              "detail": "25 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \",\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "25 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "141857ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "follow-exact-count",
+          "kind": "instruction-following",
+          "latencyMS": 141857,
+          "repeatIndex": 0,
+          "thinkChars": 16274,
+          "thinkMS": 133158
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}

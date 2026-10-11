@@ -178,12 +178,14 @@ private actor PromptCapturingProvider: InferenceProvider {
 private actor IntentCapturingProvider: InferenceProvider {
     private(set) var instructions: String?
     private(set) var background = false
+    private(set) var thinking: Bool?
     nonisolated let name = "intent-capturing"
     nonisolated let isAvailable = true
 
     func generate(prompt _: String) async throws -> String {
         instructions = InferenceIntent.instructions
         background = InferenceIntent.isBackgroundUtility
+        thinking = InferenceIntent.thinking
         return "Latest Apple news"
     }
 
@@ -205,6 +207,23 @@ struct ProviderConversationTitlerTests {
         #expect(await provider.instructions == TitlePrompt.neutralInstructions)
         #expect(await provider.background)
         #expect(!TitlePrompt.neutralInstructions.contains("M1K3"))
+    }
+
+    /// 2026-10-11 (TestFlight): every new Lil chat was titled "<think>Thinking Process…".
+    /// Titling runs after the turn, outside its `withThinking` scope, so a thinking-on
+    /// build thought. Explicit false (not nil): an eval inside `withThinking(true)` must
+    /// not leak into the title either.
+    @Test("titling never thinks — explicit false, even inside a thinking scope")
+    func titlingNeverThinks() async throws {
+        let bare = IntentCapturingProvider()
+        _ = try await ProviderConversationTitler(provider: bare).title(forUser: "hi", assistant: "hello")
+        #expect(await bare.thinking == false)
+
+        let scoped = IntentCapturingProvider()
+        _ = try await InferenceIntent.withThinking(true) {
+            try await ProviderConversationTitler(provider: scoped).title(forUser: "hi", assistant: "hello")
+        }
+        #expect(await scoped.thinking == false)
     }
 
     @Test("the adapter returns the provider's output for the built prompt")
@@ -230,5 +249,27 @@ struct ProviderConversationTitlerTests {
         let prompt = try #require(await provider.lastPrompt)
         #expect(!prompt.contains("FOLLOWUPS:"))
         #expect(prompt.contains("Ah, Kev. Just back."))
+    }
+}
+
+struct TitleSanitizerReasoningTests {
+    @Test("an unclosed think block is reasoning, not a title — the chat stays untitled")
+    func unclosedThinkIsNil() {
+        #expect(TitleSanitizer.sanitize("<think>Thinking Process:\n\n1. **Analyze the Request:**") == nil)
+    }
+
+    @Test("a closed think block is dropped, the answer is the title")
+    func closedThinkDropped() {
+        #expect(TitleSanitizer.sanitize("<think>Thinking Process: hmm</think>\n\nCork weather today") == "Cork weather today")
+    }
+
+    @Test("a lone close (template pre-opened the block) drops the prefix")
+    func loneCloseDropped() {
+        #expect(TitleSanitizer.sanitize("Thinking… </think>\nCork weather") == "Cork weather")
+    }
+
+    @Test("gemma's channel-format thought is dropped")
+    func gemmaChannelDropped() {
+        #expect(TitleSanitizer.sanitize("<|channel>thought x<channel|>Cork weather") == "Cork weather")
     }
 }

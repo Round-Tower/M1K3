@@ -115,15 +115,27 @@ If Lil swaps: new pin via `pin_weights.py`, new `BrainTier` backing, MODEL_CHOIC
 
 Goal: swap the embedder; prove it on retrieval before any multimodal work.
 
-- [ ] **Spike (half day):** does `MLXEmbedders` at our pin know a Gemma-4-based embedder? **Confirmed no** (2026-10-06: MLXEmbedders has Bert / Gemma3 / LFM2Bidirectional / NomicBert / Qwen3 at pin and at main; #654 — EmbeddingGemma v1 bidirectional attention — still open). Main's #679 "component-aware checkpoint loading" may make the text-core-only load a declared component instead of a key filter — read it before porting. Then either port it (we already run `Gemma4Text`; model the v1 `EmbeddingGemma` file but use `Model.update(modules:)`, never mutate `@ModuleInfo` after init — the v1 fatal), or wait for upstream and say so in MODEL_CHOICES.
-- [ ] Load **only the text core** (270M). Check the checkpoint layout — whether encoders are separable safetensors or need a key filter at load.
-- [ ] Add `EmbedderRegistry.embeddingGemma2` at **dimension 512** (MRL), so storage stays the same shape; the fingerprint change triggers the existing re-index.
-- [ ] Query/document prompts: use the model card's task prefixes through `EmbeddingText.forQuery` / document side.
-- [ ] Re-measure `EmbedderFloors` (chunk / memory / edge) on the existing `*EvalFixtures.swift`. **Thresholds → `challenger` first** (carry-forward).
-- [ ] A/B: retrieval fixtures + `grounded-Q` ChatEval with each embedder; RAM and embed throughput on a large knowledge store.
-- [ ] Pin weights; default switch only if it wins. Users get the re-index on next launch (deferred under heat already).
+- [x] **Spike (half day):** does `MLXEmbedders` at our pin know a Gemma-4-based embedder? **Confirmed no** (2026-10-06: MLXEmbedders has Bert / Gemma3 / LFM2Bidirectional / NomicBert / Qwen3 at pin and at main; #654 — EmbeddingGemma v1 bidirectional attention — still open). **2026-10-10:** upstream's answer is ml-explore/mlx-swift-lm#684 "Add EmbeddingGemma 2 full support" (open, +3,465 lines, refactors MLXVLM's Gemma4) — too big to carry, so the text core is **ported** (`Sources/M1K3MLX/EmbeddingGemma2.swift`, ~500 lines from mlx-vlm 3d87e884's `language.py`). It is not an MLXEmbedders `EmbeddingModel` (that output type has no public init outside the module); `EmbeddingGemma2Embedder` owns resolve → `loadWeights` → tokenizer → mean-pool → L2.
+- [x] Load **only the text core** (270M). **Layout:** one `model.safetensors` (1.23 GB, 1,816 tensors; 851 `language_model.*`), so it is a key filter at load (`sanitize` drops `vision_tower.` / `audio_tower.` / `embed_vision.` / `embed_audio.`), and the whole file is read once — a text-only split checkpoint is a follow-up.
+- [x] `MLXEmbeddingService.embeddingGemma2` (`mlx-community/embeddinggemma-2-8bit`) at **dimension 512** (MRL); fingerprint `mlx/mlx-community/embeddinggemma-2-8bit/d512/<kernel>/prompt-v1` (the Gemma document prefix lives in stored vectors, so it carries a prompt version) triggers the existing re-index. Default stays Qwen until the A/B below. **Unpinned until then:** `WeightIntegrityScan.enforce` lets an unpinned repo through unverified and the load floats on `main` — `pin_weights.py` it with the default switch.
+- [x] Prompts: `EmbeddingText.forGemmaQuery` / `forGemmaDocument` (card-verbatim, BOTH sides prefixed), picked by `MLXEmbeddingService.prompting`; `embedPrompted` is the raw path.
+- [x] **Reference check (in-app):** `M1K3_SELFTEST_EG2REF=1` with the fixture on stdin (`EmbeddingGemma2RefStage`) — tokens, cos768, cos512 and the production composition against mlx-vlm's vectors, pass at ≥ 0.999. **2026-10-10 PASS** (`docs/evals/2026-10-10-embeddinggemma2-reference.txt`): tokens 12/12, min cosine 0.99985 at 768 / 512 / composed, relevance order holds, embed median 28 ms, warm load 6.4 s (the 1.2 GB file is read whole), ~1 min 1.5 GB download cold.
+- [x] **Retrieval A/B, 2026-10-10** (`M1K3_SELFTEST_EMBEDDER=gemma|qwen`, the same MEMEVAL / ABSEP / KEYEVAL fixtures; `docs/evals/2026-10-10-retrieval-evals-{gemma,qwen}.txt`). Production arms (each embedder's own query composition):
 
-Gate: retrieval ≥ Qwen3-Embedding on every fixture family, re-index verified on a real store, floors signed.
+  | family | Gemma 2 (8-bit, 512) | Qwen3-Embedding (4-bit DWQ, 512) |
+  |---|---|---|
+  | memory: pos min / neg max / margin | 0.707 / 0.628 / **0.079** | 0.436 / 0.259 / **0.177** |
+  | chunks: in min / off max / margin | 0.779 / 0.548 / **0.231** | 0.509 / 0.231 / **0.278** |
+  | keyword probes: pos min / noise max / margin | 0.700 / 0.643 / **0.057** | 0.421 / 0.201 / **0.219** |
+  | recall at a floor inside the dead zone | 22/22 · 6/6 · 10/10 | 22/22 · 6/6 · 10/10 |
+  | embed, warm | ~28 ms | ~16 ms |
+
+  Gemma's cone is compressed (noise at 0.5–0.65, positives at 0.7–0.9): clean separation on every family, but a narrower dead zone on every family, and slower (head widths 256/512 miss mlx's fused attention kernel). Read only the instructed (production) arms across embedders: Gemma's "bare" arm embeds the query with its document prefix, Qwen's with none, so the bare rows are not comparable. **It does not clear the gate below.** Its floors, if ever used, would be roughly memory 0.67 / chunk 0.66 / keyword 0.67 — a different cone, not a re-tune of Qwen's.
+- [x] `EmbedderFloors.embeddingGemma2` derived from the distributions above, `challenger`-reviewed (2026-10-10).
+- [x] `grounded-Q` ChatEval on Lil through the Gemma retriever: 7/8 (the Qwen baseline is 21/24 = 7/8 per repeat; `docs/evals/2026-10-10-lil-grounded-codegen-after-526.json`). MEMSTAT probe classes under both embedders (`docs/evals/2026-10-10-memstat-*.txt`): Gemma's 0.95 dedupe eats 0/10 contradictions and 5/5 restatements vs Qwen's 0.90 eating 3/10 and 4/5. Still owed: RAM and embed throughput on a large knowledge store; a store-level off-topic top-score stage (the challenger's ask); why the ingest probe eats nothing under either embedder.
+- [x] Pinned (`pin_weights.py --only mlx-community/embeddinggemma-2-8bit`, revision 7505ef2f); default switched; users get the re-index on next launch (deferred under heat already).
+
+Gate: retrieval ≥ Qwen3-Embedding on every fixture family, re-index verified on a real store, floors signed. **2026-10-10: not met on any family.** Proposed: keep Qwen for text, Gemma as a second index for Stream D. **Kev's ruling (same day): ONE embedder, not two** — fewer downloads, one thing to maintain. So EmbeddingGemma 2 is the default (`MLXEmbeddingService.embeddingGemma2`), with its own floors (`EmbedderFloors.embeddingGemma2`: memory 0.67 / chunk 0.70 / edge 0.75 / dedupe 0.95 / forget-suggestion 0.67, challenged — and the seam closed so EVERY embedder-dependent bar reads them) and pinned at 7505ef2f; Qwen is retired (constructible for the A/B). Width stays 512 (MRL applies to every modality, so Stream D's shared space needs no re-index). Decision log: `docs/MODEL_CHOICES.md` 2026-10-10. Verify owed: grounded-Q ChatEval on a re-indexed store; the thin keyword margin is the watch item, per-query normalisation the lever.
 
 ### Stream D — Multimodal memory (the 1.1 headline, after C)
 
@@ -802,6 +814,61 @@ dependency; it does NOT reuse Gemma4Text — the PLE differs):
 - E4B VLM-path launch check (§5 row 1) → then the stale comment and `usesVLMLoadPath`.
 - Stream A: `swift test`, app build, vision baseline on mini (native) + big; grow toward ~30.
 
+### Lil's think phase, measured (2026-10-10 21:00 → 2026-10-11 05:00, overnight, Debug `c444c239`, AC)
+
+Kev's report: "the new Lil model's reasoning is running wild" (live app on the **auto** Reasoning setting).
+`run_chateval.py --thinking … --think-steer …` (#553) over all 117 fixtures ×1, Lil = Qwen3.5-4B 4-bit;
+`thinkChars` = chars inside `<think>…</think>` in the folded transcript (≈ tokens × 4); files
+`docs/evals/2026-10-10-lil-think-*.json` (emoji + softcap stopped early: `*.partial.log.gz`).
+
+| arm | pass | thought | think-tk p50 / p75 / p90 | empty answers | note |
+|---|---|---|---|---|---|
+| auto ("tier", the shipping policy) | 100/117 | 2/117 | 149 / – / 151 | 0 | Lil thinks only on `strongAnalyticMarkers` (`ThinkingPolicy.swift:102`) |
+| always | 98/117 | 116/117 | 272 / 2052 / 3566 | 6 | 35/116 thinks > 1,500 tk; 6 hit the 4,096 cap and answered nothing |
+| always + terse steer | 92/117 | 114/117 | 262 / 1245 / 3304 | 10 | security 7/7 → 2/7; the tail did not move |
+| always + emoji steer | 48/73 (stopped) | – | – | – | 190–480 s turns on world-knowledge / humour; 6 fails were a hub-resolve blip at launch |
+| always + "under 120 words" | 8/14 (stopped) | – | – | – | open-chat 20 s → 150–445 s; the model deliberates about the rule |
+
+What it says:
+1. **Auto is not the runaway.** Under the shipping policy Lil thinks on 2 of 117 asks (the `explain` /
+   `compare` markers), ~150 tokens, ~6 s. Kev's runaway turns are those marker asks, or Always.
+2. **Forced thinking is bimodal.** Chat / code / vision / world-knowledge think 100–450 tokens and pass
+   the same; grounded-Q, document, security, sycophancy, refusal and reasoning think 1,700–4,300, pass
+   the same or better (security 7/7), and cost 80–170 s a turn in Debug. The failure that matters is the
+   **cap hit**: 6 turns (a limerick, a lockpick refusal, a comparison table, two grounded wrong-premise
+   asks, a credential pushback) thought to the 4,096-token generation cap and emitted no answer at all.
+3. **Prompt-side steers lose, every one.** Terse cut nothing from the tail and broke security; emoji and
+   a word cap make the model reason about the rule and thrash.
+4. **The runaway is a wiring bug, not a budget problem** (challenger, 2026-10-11 05:10, read from source;
+   #555). The app builds Lil thinking-ON (`AppEnvironment+Auditions.swift:57`) and routes chat-verdict turns
+   through the plain route (the tool router, every tier since ADR 0009). The per-turn Auto decision reached
+   only the tool-call session (`MLXToolCalling.swift:693`); the plain route and the post-tool synthesis read
+   the construction flag, so on Auto they thought to the cap. The overnight `tier` arm built Lil thinking-OFF
+   and ran without the router, so it never saw the bug. Fix (934ad153 + harness 03084f68):
+   `InferenceIntent.thinking`, one decision per turn, read by `MLXBrainProvider` over the construction flag.
+   Measured with the app's router on (`--router dispatch`), the 44 live-path fixtures, Debug, AC:
+
+   | 44 live-path fixtures, router on | passed | empty answers | turns that thought | think-tk median | median turn | total |
+   |---|---|---|---|---|---|---|
+   | before (shipped) | 20/44 | 11 | 41 | 3,461 | 133 s | 89 min |
+   | after (#555) | 37/44 | 0 | 2 | 2,752 | 16 s | 19 min |
+
+   A greeting took 155 s and answered nothing before the fix. After: open-chat 3/9 → 8/9, humour 1/6 → 6/6,
+   world-knowledge 5/8 → 8/8, code-gen 7/10 → 9/10. Five of the seven after fails are the hub timeout of
+   #557 (64 s each, consecutive fixtures), so the fix's own record is 37/39. The all-kinds after arm without
+   the router (09:53): content 102/117, median turn 12 s, 1 empty answer. Files:
+   `docs/evals/2026-10-11-lil-555-{router-before,router-after,after-all-kinds}.json`.
+5. **A decoder-side think budget is a safety net, not the fix.** The pinned mlx-swift-lm has
+   `applyingThinkingBudget`, but Qwen3.5 ships no budget transition and the processor never starts on Lil's
+   one-token checkpoint input, so it would silently do nothing on the main path. N = 1,024–1,536 would mostly
+   cut PASSING turns (6 of 7 security passes think past 1,024). If it ships: N ≈ 3,072 with a 768-token answer
+   reserve, `transitionOverride`, a test on a one-token input, and a blocked second `<think>`. Gated on the
+   #555 re-measure. Auto stays as it is (always: 98/117 in 7,528 s vs auto 100/117 in 3,091 s).
+6. Harness debts carried: `ThinkPhaseClock` recorded no think-ms on 57 of the 116 thinking trials
+   (grounded / tool paths — the chars column is the trusted one); the eval touched the hub at launch
+   (6 fixtures died in 700 ms on a resolve error with the weights local); Lil spells numbers out
+   ("fifteen", "Eighteen") and the `contains expected` check misses them (3 reasoning fails across arms).
+
 ## Sources
 
 - EmbeddingGemma 2: [Google blog](https://blog.google/innovation-and-ai/technology/developers-tools/embeddinggemma-2/) · [developer guide](https://developers.googleblog.com/en/embeddinggemma-2-the-developer-guide/) · [MarkTechPost](https://www.marktechpost.com/2026/10/06/google-deepmind-releases-embeddinggemma-2-a-740m-open-multimodal-embedding-model-built-on-gemma-4/) · [AI Weekly](https://aiweekly.co/alerts/google-ships-embeddinggemma-2-740m-multimodal-embedder-apache-20) · [Sentence Transformers guide](https://ai.google.dev/gemma/docs/embeddinggemma/inference-embeddinggemma-with-sentence-transformers)
@@ -809,3 +876,5 @@ dependency; it does NOT reuse Gemma4Text — the PLE differs):
 - Qwen3.5 small: [MarkTechPost](https://www.marktechpost.com/2026/03/02/alibaba-just-released-qwen-3-5-small-models-a-family-of-0-8b-to-9b-parameters-built-for-on-device-applications/) · [mlx-swift-lm releases](https://github.com/ml-explore/mlx-swift-lm/releases)
 
 Review: Kev + claude-fable-5.1, 2026-10-09 — Stream D's 1.1 slice (caption memory) written up above; the migration, the image embedder and the thumbnails wait for Stream C.
+Review: Kev + claude-fable-5.1, 2026-10-11 05:10 — Lil's think phase measured overnight (five arms, #553): auto barely thinks; forced thinking is bimodal with 6 cap-hit empties; every prompt steer loses. Decoder-side think budget proposed, challenger pending. Confidence 0.8 on the read (×1, Debug build; the ms column is only trusted on the chat path).
+Review: Kev + claude-opus-5.5, 2026-10-11 11:55 — #555 measured with the app's router on: 20/44 → 37/44, 11 empty answers → 0, median turn 133 s → 16 s. The overnight runaway was the plain route ignoring Auto, not Qwen3.5. Confidence 0.9 on the cause (paired arms, same machine state; ×1, Debug).

@@ -93,7 +93,19 @@
 //  show travels WITH the list (`CallsLoad.note`), so a cancelled older load can't leave a stale note;
 //  the cause is a `.notice` breadcrumb with the error's type only, never a payload. Confidence 0.8 (the store half is TDD'd; the screen is verify-by-launch).
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `photoMemory` (caption memory) + the delete-cascade wiring.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#544 fold) — `saveFirstRunName(rewriteProfile:)` applies the
+//  pure `UserProfileText.rewritingName` (M1K3Inference) instead of an inline string edit.
 //  Compile-checked; verify-by-launch owed. Fold: `mcpResponder`, the ask responder that withholds Photos.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the memory graph's floors follow the
+//  live embedder (set after the embedder is built and on
+//  every switchEmbeddings / rollback); the switch label names EmbeddingGemma 2. Fold (#547 review): the
+//  graph's floors follow its VECTORS — the stored fingerprint at init, the live embedder's only once
+//  reindexMemoryGraphIfNeeded has moved (or adopted) the graph into its space; the rollback path leaves
+//  them alone (pass 2 caught the reset there pairing old-space vectors with the rolled-back embedder's bars).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — 1.1 Settings restructure: `weightImportState` left with the Import weights UI;
+//  the launch calls `retireAuditions()` (clear audition choices, delete the folder once) before the first brain is built.
+//  Confidence 0.7 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — comment only: the thinking rain is unmounted; ambientNotes stays as the seam. Confidence 0.9.
 
 import AppKit
 import Foundation
@@ -240,7 +252,7 @@ final class AppEnvironment {
     @ObservationIgnored var lastBridgedGate: ChatGate?
     /// delegate_deep state (stored HERE — extensions can't hold stored
     /// properties; plain `var` because the writer lives in
-    /// AppEnvironment+DeepDelegation.swift, the `weightImportState` precedent).
+    /// AppEnvironment+DeepDelegation.swift).
     /// nil = idle; non-nil = the task the deep lane is digging into.
     var deepDelegationTaskLabel: String?
     /// The in-flight delegated run — held (never cancelled by UI churn), the
@@ -410,8 +422,8 @@ final class AppEnvironment {
     /// (listening → thinking → generating → speaking → idle).
     private(set) var avatar = AvatarController()
 
-    /// The ambient activity stream behind the avatar (the "thinking rain" /
-    /// InferencePhosphorView): a small ring of recent things M1K3 is DOING or
+    /// The ambient activity stream behind the avatar (the "thinking rain" —
+    /// unmounted 2026-10-11, the model and this seam kept): a small ring of recent things M1K3 is DOING or
     /// that reached it — heartbeat pulses, notifications it raised, (later)
     /// call transcription. Tool activity + reasoning ride the ChatSession's
     /// own observables; this is the seam for everything else that has no chat
@@ -729,16 +741,6 @@ final class AppEnvironment {
         }
     }
 
-    /// The Advanced pane's "Import weights from a folder…" affordance —
-    /// see AppEnvironment+WeightImport.swift for the run, WeightImportDisplay
-    /// (M1K3MLX) for the pure outcome→copy mapping this wraps. Plain `var`
-    /// (not `private(set)`): written from the extension file, same as
-    /// `brainUpgrade` — `private(set)`'s setter is file-scoped in Swift, and
-    /// the writer lives in a different file on purpose (AppEnvironment.swift
-    /// stays the composition root, not a dumping ground for every feature's
-    /// side-effect glue).
-    var weightImportState: WeightImportRunState = .idle
-
     /// Last ingest outcome, surfaced to the UI.
     private(set) var lastIngestStatus: String?
     /// The last successfully ingested document's title, threaded properly for
@@ -871,6 +873,14 @@ final class AppEnvironment {
         let swappable = SwappableEmbeddingService(baseEmbedder)
         embedder = swappable
         usingMLXEmbeddings = preferMLX
+        // The memory graph's edge / recall bars follow the space its VECTORS are
+        // in: the stored fingerprint until a re-index moves them (then
+        // reindexMemoryGraphIfNeeded sets the live embedder's), else the live
+        // embedder's on a fresh graph.
+        if let memoryStore {
+            let stored = (try? memoryStore.meta(key: MemoryStore.embedderFingerprintKey)) ?? nil
+            memoryStore.floors = EmbedderFloors.forFingerprint(stored ?? swappable.fingerprint)
+        }
 
         // Restore the chosen brain (default Mini = Apple Foundation Models).
         // Decode via init(persisted:) so a stale "huge" (retired 2026-07-02)
@@ -967,7 +977,7 @@ final class AppEnvironment {
         // uncapped decode crosses the 8192 window mid-answer and silently
         // rotates the persona/grounding head out.
         let slotTier = brain.mlxModelID != nil ? brain : BrainTier.big
-        Self.dropAuditionThatNeverLoaded()
+        Self.retireAuditions()
         let mlxBrain = Self.makeMLXBrain(
             for: slotTier,
             stockModelID: initialMLXModelID,
@@ -1711,6 +1721,7 @@ final class AppEnvironment {
             })
             : HashingEmbeddingService()
         embedder.setEmbedder(newEmbedder)
+        // The graph's floors move with its vectors, in reindexMemoryGraphIfNeeded below.
         do {
             let count = try await store.reindexEmbeddings(
                 using: newEmbedder,
@@ -1718,13 +1729,15 @@ final class AppEnvironment {
             )
             usingMLXEmbeddings = useMLX
             UserDefaults.standard.set(useMLX, forKey: Self.embedderPrefersMLXKey)
-            let label = useMLX ? "MLX Qwen3-Embedding" : "Hashing"
+            let label = useMLX ? "MLX EmbeddingGemma 2" : "Hashing"
             Self.embedLog.notice("switched embeddings to \(label, privacy: .public), reindexed \(count) chunk(s)")
             embeddingStatus = "Reindexed \(count) chunk\(count == 1 ? "" : "s") with \(label)."
         } catch {
             // Reindex writes atomically, so the store still matches the previous
             // embedder — roll the façade back to it.
             embedder.setEmbedder(usingMLXEmbeddings ? MLXEmbeddingService() : HashingEmbeddingService())
+            // The graph's floors were never changed on this path: its vectors
+            // are still in the stored space, and so are its bars.
             Self.embedLog.error("embedding switch failed, rolled back: \(error.localizedDescription, privacy: .public)")
             embeddingStatus = "Couldn’t switch embeddings: \(error.localizedDescription)"
         }
@@ -2326,13 +2339,24 @@ extension AppEnvironment {
     /// - the persona profile blob is seeded ONLY when no profile exists yet — a
     ///   re-run overwrite would destroy notes the user added in Settings
     ///   ("About you" owns the blob after first run).
-    func saveFirstRunName(_ name: String) {
-        let trimmed = name.trimmingCharacters(in: .whitespaces)
+    ///
+    /// On a re-run (`rewriteProfile: true`), also rewrite the profile's
+    /// "Name: X." line so the system prompt stays in sync with the greeting.
+    func saveFirstRunName(_ name: String, rewriteProfile: Bool = false) {
+        // One line, like the profile's Name line (a pasted newline flattens).
+        let trimmed = name.components(separatedBy: .newlines).joined(separator: " ")
+            .trimmingCharacters(in: .whitespaces)
         guard !trimmed.isEmpty else { return }
         UserDefaults.standard.set(trimmed, forKey: Self.userDisplayNameKey)
         let existing = (try? store.meta(key: Self.userProfileMetaKey)) ?? nil
         if existing?.isEmpty != false {
             saveUserProfile("Name: \(trimmed).")
+        } else if rewriteProfile, let existing,
+                  let updated = UserProfileText.rewritingName(trimmed, in: existing)
+        {
+            // Compared against the PROFILE's own line, not the display-name
+            // default — the two can drift when "About you" was edited.
+            saveUserProfile(updated)
         }
     }
 
@@ -2459,6 +2483,9 @@ extension AppEnvironment {
         let policySaysReindex = EmbedderReindexPolicy.needsReindex(
             stored: stored, current: current, embeddingCount: vectorCount
         )
+        // The bars follow the vectors: the live embedder's once the graph is
+        // (or is about to be, on an empty graph) in its space.
+        let liveFloors = EmbedderFloors.forFingerprint(embedder.fingerprint)
         guard policySaysReindex || ((backfilled > 0 || owedFromPriorCrash) && vectorCount > 0) else {
             if stored != current, vectorCount == 0 {
                 // Adopt the marker on fresh/empty graphs. MemoryStore's
@@ -2468,10 +2495,12 @@ extension AppEnvironment {
                 // match the other.
                 _ = try? await memoryStore.reindexEmbeddings(using: embedder, fingerprint: current)
             }
+            if stored == current || vectorCount == 0 { memoryStore.floors = liveFloors }
             return
         }
         do {
             let count = try await memoryStore.reindexEmbeddings(using: embedder, fingerprint: current)
+            memoryStore.floors = liveFloors
             // Vectors repaired — the crash-recovery flag (set before the first
             // title write) has served its purpose.
             try? memoryStore.deleteMeta(key: MemoryStore.titleBackfillPendingKey)

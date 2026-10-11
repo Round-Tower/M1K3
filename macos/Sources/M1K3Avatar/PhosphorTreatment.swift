@@ -13,6 +13,8 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-17, Confidence 0.9 (per-activity mapping
 //  + packing pinned by tests; the on-screen glow is verify-at-⌘R). Prior: Unknown.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — adds the seasonal wardrobe (`phosphorTreatment(season:)`,
+//  Halloween pumpkin/ember/violet); a nil season is byte-identical. Confidence 0.85 (glow is verify-by-launch).
 //
 
 import simd
@@ -59,4 +61,26 @@ public extension AvatarActivity {
         case .speaking: .speaking
         }
     }
+
+    /// The phosphor look in `season`'s wardrobe; nil is today's exact `phosphorTreatment`.
+    func phosphorTreatment(season: SeasonalLook?) -> PhosphorTreatment {
+        guard let season else { return phosphorTreatment }
+        return switch (season, self) {
+        case (.halloween, .idle), (.halloween, .error): .halloweenCalm
+        case (.halloween, .listening): .halloweenListening
+        case (.halloween, .thinking), (.halloween, .generating): .halloweenThinking
+        case (.halloween, .speaking): .halloweenSpeaking
+        }
+    }
+}
+
+public extension PhosphorTreatment {
+    /// PUMPKIN #FF8A1F — the resting phosphor.
+    static let halloweenCalm = PhosphorTreatment(red: 1.0, green: 0.541, blue: 0.122, fresnelPower: 3.0)
+    /// EMBER #FFB347 — bright, tighter rim while speaking.
+    static let halloweenSpeaking = PhosphorTreatment(red: 1.0, green: 0.702, blue: 0.278, fresnelPower: 2.2)
+    /// VIOLET #9B5CFF — thinking.
+    static let halloweenThinking = PhosphorTreatment(red: 0.608, green: 0.361, blue: 1.0, fresnelPower: 3.4)
+    /// A warm amber between pumpkin and ember — listening.
+    static let halloweenListening = PhosphorTreatment(red: 1.0, green: 0.62, blue: 0.20, fresnelPower: 2.6)
 }

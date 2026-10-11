@@ -29,7 +29,8 @@ Anything a cold session needs on turn one belongs below, not there.
 ## Standing carry-forwards
 - **Landing a PR:** `macos/tools/ci/land.sh <PR> [--passes N]` gates on
   `pr_watch.py` (required CI green on the head sha, review passes read against
-  that head), squash-merges by sha, verifies `state`+`mergedAt`. **One pass is
+  that head, each owed pass ending `VERDICT: APPROVE @ <full 40-char head sha>`;
+  a short sha refuses), squash-merges by sha, verifies `state`+`mergedAt`. **One pass is
   the default, whatever the size** (2026-10-04 ruling — PR size is free, rounds
   are the cost): the auto bot pass fires on Swift, the manifest, `project.yml`,
   `macos/tools/**` and the workflows; a docs-only PR gets no auto pass, so summon
@@ -47,8 +48,9 @@ Anything a cold session needs on turn one belongs below, not there.
   ONCE so both read the same head, and fold both in one commit. Fastlane,
   `.entitlements` and `.xcprivacy` sit outside the auto pass's paths, so there
   "2" means two summons. Trivial head (comment fold, clean master merge on a
-  passed head): `--passes 0 --why "trivial head"` on a risk diff, bare
-  `--passes 0` otherwise. `land.sh` never waits: pending CI exits 2 and merges
+  passed head): `--passes 0 --why "trivial head: <what>"` on ANY diff. Since
+  #550 a bare `--passes 0` exits 5, risk surface or not, and a pass already on
+  the head must still approve. `land.sh` never waits: pending CI exits 2 and merges
   nothing — run `pr_watch.py <PR>` first.
 - **PR granularity (2026-09-30 ruling):** one PR per stream of work per day;
   same-day small fixes ride TOGETHER (a token strip, a scorer check, a tool
@@ -126,6 +128,31 @@ Anything a cold session needs on turn one belongs below, not there.
   isolated store; the window is pinned at 1440×900). Never exec the binary from
   a shell: it isn't foreground, so system sheets (Declared Age Range) dismiss
   and the API says `notAvailable`. No coordinate clicks while Kev is active.
+  The harness isolates the STORES, not UserDefaults — a Full/Private onboarding
+  door in a Debug build writes the live preferences — and the AX `press` helper
+  (`tools/screengrab/direct/ax.swift`) does not fire SwiftUI Button actions, so
+  a sheet behind a button is a hand run or TestFlight, never a headless proof.
+- **One embedder (Kev, 2026-10-10):** EmbeddingGemma 2 (`MLXEmbeddingService.embeddingGemma2`,
+  pinned, MRL 512) is the Mac retriever; Qwen is A/B-only. Every cosine bar — chunk,
+  memory, graph edge, distiller dedupe, forget suggestion — reads `EmbedderFloors` for
+  the space the VECTORS are in (`MemoryStore.floors` follows the stored fingerprint until
+  the graph re-indexes); never a constant. Gemma's dedupe 0.95 sits in a 0.011 gap:
+  never lower it (an eaten contradiction is a lost correction). A new embedder means
+  `M1K3_SELFTEST_EMBEDDER=<id>` through MEMEVAL / ABSEP / KEYEVAL / MEMSTAT, a measured
+  floor set, and an exact identity match in `forFingerprint` — unmeasured variants fail closed.
+- **Thinking is one decision per turn (#555):** the app builds Lil thinking-ON; `AgentRAGResponder`
+  decides once (`ThinkingPolicy.shouldThink`) and sets `InferenceIntent.thinking` around the whole turn,
+  which `MLXBrainProvider.effectiveThinking` reads over the construction flag. A new generation inside a
+  turn inherits it; anything outside a turn (a bare eval arm, a utility) scopes its own `withThinking`
+  or gets the construction flag, i.e. thinks to the cap. Before the fix the plain route did exactly that:
+  20/44 with 11 empty answers at a 133 s median turn (`macos/docs/evals/2026-10-11-lil-555-router-*.json`).
+- **An eval must wire like the app.** Chat-path chateval runs need `--router dispatch`: the Mac app routes
+  every tier (`ToolRouterWiring.allTiersEnabled(whenUnset: true)`, ADR 0009's `toolRouterAllTiers`), and the
+  default live arm has no router, so it never takes the plain route. When an eval disagrees
+  with a live report, diff the eval's flags, router and responder against the app's composition first.
+- Until #558 (delete this bullet when it merges): the landing gate treats the iOS + visionOS job as advisory, but master's ruleset requires
+  it. `land.sh` can read READY and GitHub then refuses (405, nothing merged): on a Swift diff, wait for
+  `gh pr checks <PR>` to show that job passed.
 - Entitlements by lane: Declared Age Range in all three (`M1K3-MAS`, `M1K3iOS`
   and the Developer ID `M1K3.entitlements`; `check_store_targets.py` requires
   it), PCC in `M1K3-MAS.entitlements` only (the check forbids it in the
@@ -196,4 +223,18 @@ and that a placement waits for an editable surface. Confidence 0.85.
 Review: Kev + claude-opus-5-5, 2026-10-09 — entitlements by lane after #518: the Developer ID
 lane embeds a profile (macOS 27's keychain), so Declared Age Range is in all three lanes and
 PCC stays MAS-only. Confidence 0.85 (keychain verified by launch; the age sheet owed by Kev).
+Review: Kev + claude-fable-5.1, 2026-10-10 (/debrief) — the one-embedder ruling (#547: Gemma 2
+default, every cosine bar through EmbedderFloors for the vectors' space, the dedupe gap) and the
+verify-by-launch limits that cost an afternoon (#544: the harness leaves UserDefaults live; AX press
+does not fire SwiftUI buttons). Confidence 0.85.
+Review: Kev + claude-opus-5.5, 2026-10-10 — the landing carry-forward after #550. A bare `--passes 0`
+now exits 5 on any diff; pr_watch's own Review (5) flagged "bare `--passes 0` otherwise" as stale.
+The owed passes must also end `VERDICT: APPROVE @ <full 40-char head sha>`: Kev's full-sha call,
+since a 7-char prefix can be ground to match a new head. Confidence 0.85.
+Review: Kev + claude-opus-5.5, 2026-10-11 (/debrief) — three standing facts from the Lil thinking
+runaway (#553/#555): one thinking decision per turn via `InferenceIntent.thinking`; evals of the chat
+path run the app's router; the gate-vs-ruleset trap until #558. Confidence 0.85 (measured paired arms;
+the #558 line retires with its fix).
+Review: Kev + claude-opus-5.5, 2026-10-11 — #559 review fold: the router fact cites the code switch, not
+just the ADR; the measured figure points at its eval file; the #558 bullet says when to delete it.
 -->

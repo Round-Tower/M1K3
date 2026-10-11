@@ -12,6 +12,8 @@
 //  Signed: Kev + claude-fable-5, 2026-07-31, Confidence 0.85 (selection +
 //  gate plumbing pinned here; the hashing numbers themselves are pinned
 //  against the measured distributions in HashingFloorTests). Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — Gemma identity /
+//  variant-fails-closed / carried-bars tests.
 //
 
 import Foundation
@@ -41,7 +43,64 @@ struct EmbedderFloorsTests {
         #expect(EmbedderFloors.forFingerprint("hashing/v1+title-v1") == .hashing)
     }
 
-    @Test("non-hashing fingerprints select the instructed qwen3 defaults")
+    @Test("EmbeddingGemma 2's measured identity selects its own floors, bare, store-composed, any kernel tag")
+    func gemmaFingerprintsSelectGemma() {
+        let bare = "mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v1"
+        #expect(EmbedderFloors.forFingerprint(bare) == .embeddingGemma2)
+        #expect(EmbedderFloors.forFingerprint(bare + "+title-v1") == .embeddingGemma2)
+        #expect(EmbedderFloors.forFingerprint(
+            "mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.33/prompt-v1"
+        ) == .embeddingGemma2, "a kernel bump re-indexes; the cone is the same model")
+        // Measured 2026-10-10 (docs/evals/2026-10-10-retrieval-evals-gemma.txt): the
+        // bars sit between the worst negative and the weakest positive of each family.
+        let gemma = EmbedderFloors.embeddingGemma2
+        #expect(gemma.memory > 0.643 && gemma.memory < 0.700, "keyword probes bind the memory bar")
+        #expect(gemma.chunk > 0.548 && gemma.chunk < 0.779)
+        #expect(gemma.edge >= gemma.chunk)
+        #expect(gemma.dedupe > 0.886, "a reworded question scores 0.886 against its fact — not a twin")
+        // MEMSTAT probe classes under this embedder (docs/evals/2026-10-10-memstat-gemma.txt):
+        // contradictions ≤ 0.944 must SURVIVE (an eaten contradiction is a lost correction),
+        // restatements ≥ 0.955 must be eaten. The bar lives in that 0.011 gap; a re-measure
+        // that moves either side moves these numbers with it.
+        let contradictionMax: Float = 0.944
+        let restatementMin: Float = 0.955
+        #expect(gemma.dedupe > contradictionMax && gemma.dedupe <= restatementMin)
+        #expect(gemma.forgetSuggestion >= 0.6, "a Gemma near-miss is never suggested below the hard-delete bar")
+        #expect(gemma.forgetSuggestion == gemma.memory)
+    }
+
+    @Test("an unmeasured EmbeddingGemma 2 variant fails closed: the strictest known bar per lane")
+    func gemmaVariantsFailClosed() {
+        let fourBit = "mlx/mlx-community/embeddinggemma-2-4bit/d512/mlx-swift-0.32/prompt-v1"
+        let narrower = "mlx/mlx-community/embeddinggemma-2-8bit/d256/mlx-swift-0.32/prompt-v1"
+        let promptV2 = "mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v2"
+        let promptV10 = "mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v10"
+        let malformed = "mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v1x+title-v1"
+        let strict = EmbedderFloors.strictest(of: [.qwen3Instructed, .embeddingGemma2])
+        for fingerprint in [fourBit, narrower, promptV2, promptV10, malformed] {
+            #expect(EmbedderFloors.forFingerprint(fingerprint) == strict, Comment(rawValue: fingerprint))
+        }
+        #expect(strict.chunk == max(EmbedderFloors.qwen3Instructed.chunk, EmbedderFloors.embeddingGemma2.chunk))
+        #expect(strict.dedupe == max(EmbedderFloors.qwen3Instructed.dedupe, EmbedderFloors.embeddingGemma2.dedupe))
+    }
+
+    @Test("the bars that lived as constants are carried by every set, unchanged for Qwen and hashing")
+    func carriedBars() {
+        #expect(EmbedderFloors.qwen3Instructed.dedupe == 0.90)
+        #expect(EmbedderFloors.qwen3Instructed.forgetSuggestion == 0.35)
+        #expect(EmbedderFloors.hashing.dedupe == 0.90)
+        #expect(EmbedderFloors.hashing.forgetSuggestion == 0.35)
+    }
+
+    @Test("an unknown mlx embedder is DELIBERATELY the legacy qwen3 set — a third embedder adds its own branch")
+    func unknownEmbedderIsTheLegacyDefault() {
+        // Pinned on purpose: test doubles and pre-2026-10 Qwen kernels live here. The
+        // fail-closed rule applies only inside the EmbeddingGemma 2 family; a NEW family
+        // must measure its cone and add a branch, not inherit this one silently.
+        #expect(EmbedderFloors.forFingerprint("mlx/some-org/new-embedder/d512/mlx-swift-0.32") == .qwen3Instructed)
+    }
+
+    @Test("non-hashing, non-Gemma fingerprints select the instructed qwen3 defaults")
     func qwenSelection() {
         #expect(EmbedderFloors.forFingerprint("mlx/qwen3-embed-512/mlx-swift-0.30") == .qwen3Instructed)
         #expect(EmbedderFloors.forFingerprint("") == .qwen3Instructed)

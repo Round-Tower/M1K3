@@ -11,6 +11,8 @@
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.8. Prior: Unknown.
 //
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — chainPicks pin (#512).
+//  Review: Kev + claude-opus-5-5, 2026-10-10 — the recency guard (lookup about now → web; unchanged
+//  otherwise or with web search off; the chained pick too).
 
 import Foundation
 import M1K3Agent
@@ -169,5 +171,76 @@ struct ToolPickerChoicesTests {
     @Test("a chain's second slot offers the read-only tools and none, never action")
     func alsoChoicesMatch() {
         #expect(Set(AFMToolPicker.alsoChoices) == ToolDispatch.dispatchable.union([ToolPick.noTool]))
+    }
+}
+
+/// 2026-10-10: with chains on, Apple's pick sent "Who won the All-Ireland hurling final this year?" to
+/// lookup_fact in 3/3 trials (the menu calls it "an obscure or changeable fact"), and a reference
+/// source answers a this-year question stale. A recency word turns a reference lookup into a web
+/// search, but only when web search is on offer this turn.
+struct ToolDispatchRecencyTests {
+    @Test("a reference lookup about now goes to the web, query kept")
+    func lookupAboutNowIsWeb() {
+        let pick = ToolPick(tool: "lookup_fact", query: "All-Ireland hurling final winner")
+        let fixed = ToolDispatch.recencyCorrected(
+            pick, palette: palette, question: "Who won the All-Ireland hurling final this year?"
+        )
+        #expect(fixed == ToolPick(tool: "web_search", query: "All-Ireland hurling final winner"))
+        let latest = "What's the latest on the Artemis mission?"
+        #expect(ToolDispatch.recencyCorrected(pick, palette: palette, question: latest).tool == "web_search")
+    }
+
+    @Test("a stable fact, another tool, or web search off: the pick is unchanged")
+    func otherwiseUnchanged() {
+        let fact = ToolPick(tool: "lookup_fact", query: "Cork founding year")
+        #expect(ToolDispatch.recencyCorrected(fact, palette: palette, question: "When was Cork founded?") == fact)
+        let time = ToolPick(tool: "datetime", query: "")
+        #expect(ToolDispatch.recencyCorrected(time, palette: palette, question: "What's the date today?") == time)
+        let noWeb = palette.filter { $0.name != "web_search" }
+        #expect(ToolDispatch.recencyCorrected(fact, palette: noWeb, question: "Who won this year?") == fact)
+    }
+
+    @Test("a word that only looks like 'now' moves nothing: an electrical current is a stable fact")
+    func lookalikesStay() {
+        let fact = ToolPick(tool: "lookup_fact", query: "electrical current")
+        #expect(ToolDispatch.recencyCorrected(fact, palette: palette, question: "What is an electrical current?") == fact)
+        #expect(ToolDispatch.recencyCorrected(fact, palette: palette, question: "How far is Mars so far from Earth?") == fact)
+        // Round 2 of #542: "yet" joins a contrast more often than it asks about now.
+        let contrast = "Why is steel strong yet light?"
+        #expect(ToolDispatch.recencyCorrected(fact, palette: palette, question: contrast) == fact)
+        #expect(ToolDispatch.recencyCorrected(fact, palette: palette, question: "Who is currently the Taoiseach?").tool
+            == "web_search")
+    }
+
+    @Test("in a chain each pick reads its own query: a 'today' that belongs to the other half moves nothing")
+    func chainReadsItsOwnQuery() {
+        // The 10-10 `all` cell: "today's date … when was Cork founded" sent the fact half to the web.
+        let fact = ToolPick(tool: "lookup_fact", query: "Cork founding year")
+        let pick = ToolPick(tool: "datetime", query: "", then: [fact])
+        let question = "What's today's date, and when was Cork founded?"
+        #expect(ToolDispatch.recencyCorrected(pick, palette: palette, question: question) == pick)
+        let weather = ToolPick(tool: "web_search", query: "weather")
+        let headFact = ToolPick(tool: "lookup_fact", query: "Cork founding year", then: [weather])
+        let both = "When was Cork founded, and the weather today?"
+        #expect(ToolDispatch.recencyCorrected(headFact, palette: palette, question: both) == headFact)
+    }
+
+    @Test("a chained query that dropped the recency word stays lookup_fact: the guard reads the rewrite, not the ask")
+    func chainedQueryWithoutCueStays() {
+        // A known limit, pinned so a change to it is deliberate: Apple's rewrite can drop "this year".
+        let lookup = ToolPick(tool: "lookup_fact", query: "final winner")
+        let pick = ToolPick(tool: "datetime", query: "", then: [lookup])
+        let question = "What time is it, and who won the final this year?"
+        #expect(ToolDispatch.recencyCorrected(pick, palette: palette, question: question) == pick)
+    }
+
+    @Test("the chained second tool is corrected too")
+    func chainedLookupIsWeb() {
+        let lookup = ToolPick(tool: "lookup_fact", query: "newest iPhone")
+        let pick = ToolPick(tool: "datetime", query: "", then: [lookup])
+        let question = "What time is it, and what's the newest iPhone?"
+        let fixed = ToolDispatch.recencyCorrected(pick, palette: palette, question: question)
+        let web = ToolPick(tool: "web_search", query: "newest iPhone")
+        #expect(fixed == ToolPick(tool: "datetime", query: "", then: [web]))
     }
 }

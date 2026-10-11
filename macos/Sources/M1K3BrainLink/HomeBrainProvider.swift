@@ -163,7 +163,7 @@ public final class HomeBrainProvider: InferenceProvider, Sendable {
         case let .refused(refusal):
             refusal.userMessage
         case .unreachable, .timedOut:
-            "Couldn’t reach your Mac — check it’s awake, on the same network, and serving in Settings → Privacy → Brain at Home."
+            "Couldn’t reach your Mac — check it’s awake, on the same network, and serving in Settings → Brain at Home."
         case let .unavailable(reason):
             "Your Mac’s brain can’t serve remotely right now (\(reason))."
         case .streamInterrupted:

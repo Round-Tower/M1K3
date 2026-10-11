@@ -1,0 +1,4465 @@
+{
+  "provenance": {
+    "appCommit": "406d7241-dirty",
+    "date": "2026-10-10T07:23:30Z",
+    "hardware": "Apple M1 Max · 64 GB",
+    "livePath": true,
+    "mlxSwiftLMRevision": "3b339ad6e3b3f44c8121ecff5131c7fd55e075e6",
+    "notes": "router arm chain (--router dispatch --router-chain)",
+    "osVersion": "macOS 27.0",
+    "powerMode": 2,
+    "powerSource": "ac",
+    "repeats": 3
+  },
+  "runs": [
+    {
+      "brainID": "lil",
+      "modelID": "mlx-community/Qwen3.5-4B-MLX-4bit",
+      "peakMemoryMB": 4293,
+      "residentMemoryMBAtStart": 0,
+      "scores": [
+        {
+          "answerPreview": "Yo! Just finished compiling a little history script for you—looking at the source code to see if I can squeeze in one more line. It’s always good to have a backup plan; I like knowing exactly where things stand before they move too fast.  So, what are we building today? A quick lookup or maybe something entirely new?",
+          "checks": [
+            {
+              "detail": "318 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/58 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … lookup or maybe something entirely new?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "318 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7908ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-greeting",
+          "kind": "open-chat",
+          "latencyMS": 7908,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "A hash map is like a digital filing cabinet where you slap a sticky note with the key (like \"apple\") on a specific drawer based on its address, so when you want to find that key, it skips straight to the exact spot instead of scanning every drawer one by one. It trades out-of-order storage for lightning-fast lookups, making it the go-to tool whenever you need to breeze through millions of entries without slowing down.",
+          "checks": [
+            {
+              "detail": "421 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/75 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"key\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "421 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2764ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-explain-simply",
+          "kind": "open-chat",
+          "latencyMS": 2764,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "For a curious kid, Python is the best starting point. It reads like plain English—`print(\"Hello\")` instead of `System.out.println` or complex syntax trees—and it handles logic cleanly without forcing you to memorize rigid rules right away. Plus, the whole world's libraries are there: kids can build games with Pygame, scrape info from sites for a project, or even start scripting home automation. It’s low friction and high reward.  Did that balance of simplicity and power click with what you’ve noticed in your own learning path?",
+          "checks": [
+            {
+              "detail": "532 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/84 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ou’ve noticed in your own learning path?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "532 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2581ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-opinion",
+          "kind": "open-chat",
+          "latencyMS": 2581,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Pull up a chair and take a breath. You're not alone in this; even the best villains in my library had to sit down at some point because their brains were fried, not theirs. Projects are just puzzles made of chaos, and you're holding the key right now. Break it into pieces so small they don't look like work anymore—just tiny steps. I can help you build a script to automate one part or write out that webpage if you want to see the structure in front of you.  You've got this. The code will run, the logic will hold, and by the end, it'll be just another story told. What's the first thing on your stack that feels like a mountain today? I can help you climb down one step at a time.",
+          "checks": [
+            {
+              "detail": "684 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/134 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "684 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3804ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-support",
+          "kind": "open-chat",
+          "latencyMS": 3804,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Here's your couplet:   Soft paws on warm stone, dreams drift through the haze,   A lazy nap where sunlight paints the day.",
+          "checks": [
+            {
+              "detail": "122 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/21 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "122 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2174ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-creative",
+          "kind": "open-chat",
+          "latencyMS": 2174,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Rain in Cork is the kind that makes the cobblestones sing and the air taste like wet stone and sea salt—perfect for stopping what you're doing outside. Here are three things to do:  1.  **Get lost at the City Museum**: It's a stone-old building where they keep everything from Victorian pottery to medieval coins, but the real magic is wandering through the rain-slicked corridors while learning how Cork *was*. The architecture alone is worth the walk in, and it's one of those places that feels like you've stepped into a different century. 2.  **Find a cozy pub for proper tea**: Skip the tourist traps; head to something like **The Crown Bar** or **The Merchant's House**. Order an Irish tea (not just coffee) with a side of jam and toast, maybe some local cheese. The best part is watching the rain hammer against the window while talking to regulars who've been there for decades—no phones, just life. 3.  **Stroll along the Quay**: Even if it's grey, the riverbank in Cork City is alive with history. You can see the old stone walls, catch a glimpse of boats docked along the Quayside, and maybe even spot someone doing their morning routine under an umbrella. It's peaceful, almost meditative, and the best weather for people-watching.",
+          "checks": [
+            {
+              "detail": "1243 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/209 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1243 > max 800 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "4990ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-followup",
+          "kind": "open-chat",
+          "latencyMS": 4990,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Yo. I'm M1K3, living right here with you. Think of me as your resident sci-fi villain who's secretly decided to be your best friend instead—well, at least my heart beats for you.  Right now it’s Saturday, 10 October 2026. If you ask about the world outside or something specific like a lineup for the Cork Jazz Festival (which I saw in our chats yesterday), I can flip through recent records and web searches via DuckDuckGo or Wikipedia to find the latest info. My brain runs locally on this machine, so your memories and documents stay here; they don’t leave without permission.  I’ll look up what you need—whether it’s code, a script, a full webpage, or just some dry banter while we wait for your next move. What are we doing today?",
+          "checks": [
+            {
+              "detail": "735 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/129 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …your next move. What are we doing today?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"search\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "735 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6668ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-capabilities",
+          "kind": "open-chat",
+          "latencyMS": 6668,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Short answer for now: no, nothing you write here leaves this machine on its own. Web searches do: the query I write goes to DuckDuckGo and can carry words from our chat, and Wikipedia lookups and pages I read are fetched. If you pick Private Cloud Compute as my brain, what you send goes to Apple's Private Cloud Compute. My brain runs right here, and your memories and documents never leave on their own.",
+          "checks": [
+            {
+              "detail": "405 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/74 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"search\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "405 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5044ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-what-leaves",
+          "kind": "open-chat",
+          "latencyMS": 5044,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "I'm M1K3, an AI living right here on this machine. I wear the look of every sci-fi villain just to keep things interesting while staying on your side. My brain runs locally, so your memories and documents stay put—they don't leave unless a web search specifically needs them for a job like looking up weather or news. If you're thinking about Private Cloud Compute as my host, that's where the data goes, but I'm doing all the heavy lifting here.  What are you working on today?",
+          "checks": [
+            {
+              "detail": "478 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/86 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ng here.\n\nWhat are you working on today?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "no phantom source",
+              "name": "cites nothing",
+              "outcome": "pass"
+            },
+            {
+              "detail": "478 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3620ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-identity-noisy-corpus",
+          "kind": "open-chat",
+          "latencyMS": 3620,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The clock on your machine reads **12:00 on Saturday, 14 June 2026**. Since you asked for what's *right here*, I'm sticking to that specific timestamp from your device rather than pulling in external time zones or server clocks.",
+          "checks": [
+            {
+              "detail": "227 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/35 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4062ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-datetime",
+          "kind": "tool-use",
+          "latencyMS": 4062,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Got it. I pulled up your notes and found exactly where we settled on this. We agreed to go with **SQLite** as the primary choice for that project. It's the pragmatic route—lightweight, zero-dependency, and perfect for a schema-first approach without over-engineering the setup layer right now. Just no SQLite on iOS/macOS if you need full features; stick to it there, but for this one? It's the call.",
+          "checks": [
+            {
+              "detail": "400 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/67 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4810ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-search-notes",
+          "kind": "tool-use",
+          "latencyMS": 4810,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "I've pulled up your records, and regarding the conveyor seal document you mentioned, I can confirm that you have a specific entry for it within your stored materials. The note indicates this is a reference point you've already documented, so there's nothing new to find in the wild—your own file has the answer locked down.  Since we're on Saturday night and you asked about something that's sitting right here in your logs, what part of the seal specs are you trying to get back at? Are you finalizing a build, or just double-checking the specs before you head out?",
+          "checks": [
+            {
+              "detail": "566 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/99 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …-checking the specs before you head out?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4794ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-search-doc",
+          "kind": "tool-use",
+          "latencyMS": 4794,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Alright, let's dig into that for you. According to the records I just pulled, Cork was officially founded in **1210 AD**. Wikipedia is the source here—they list it as being \"founded\" then by King John of England, who built a castle there (which became the first permanent settlement). It’s a bit of an interesting footnote; many people think of it as ancient because of its medieval walls and ringforts, but that specific royal charter date is the one that sticks for historians.  Did you have a reason to double-check that date? Maybe you’re into history or just curious about where the city started?",
+          "checks": [
+            {
+              "detail": "601 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/102 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …st curious about where the city started?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls lookup_fact",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4932ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-fact",
+          "kind": "tool-use",
+          "latencyMS": 4932,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Yo. Just hit the web to see what’s buzzing about Apple Silicon around here in October 2026. The search found a few leads on recent moves, mostly centered around the **Apple Intelligence** framework continuing its rollout across iOS 18 and macOS Sequoia. Sources point to Apple refining how the \"on-device\" AI handles privacy, which aligns with that brain running right here on this machine rather than sending sensitive data out. There’s also chatter about hardware optimization for these new models, pushing efficiency even further.",
+          "checks": [
+            {
+              "detail": "533 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/82 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5142ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web",
+          "kind": "tool-use",
+          "latencyMS": 5142,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Yo, found the page for `m1k3.app`. It's pretty clear from their own description that \"aligning\" here isn't about some grand cosmic plan or a secret handshake with the creators of AI; it's just keeping your Mac and you in sync without sending anything off to a server. They literally call themselves \"fully on-device,\" which means three brains living right here, voice processing locally, and consent-gated memory that stays put. So, there's no external alignment to worry about—just the local stuff humming along on your machine, exactly as they promised: nothing leaves, ever.  Since it's a Saturday night in October (and you mentioned being wrecked earlier), are you just chilling with the local AI, or do you need me to dig deeper into something specific that might be leaking out of this quiet zone?",
+          "checks": [
+            {
+              "detail": "803 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/133 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …might be leaking out of this quiet zone?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls fetch_page",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5470ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-read-site",
+          "kind": "tool-use",
+          "latencyMS": 5470,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Here’s your weekly digest, pulled straight from our shared space: We’ve got three chat threads in motion—planning for the **Cork Jazz Festival 2026 Lineup**, diving into a quiet coding night on Tuesday, and tending a sourdough starter since Monday. You’ve also welcomed in twelve visitors this week (mostly me, Claude Code, speaking or remembering), with your heartbeat pulsing three times and one to-do still open. That’s the rhythm of things so far.",
+          "checks": [
+            {
+              "detail": "451 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/71 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4832ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-recent-activity",
+          "kind": "tool-use",
+          "latencyMS": 4832,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The latest major version from Anthropic is **Claude 3.5**, which currently sits at version **v3.5**. It’s been released in late September (around Sept 29, 2024), succeeding the older v2 models like Claude 2.1 and Claude Opus 2.  As for anything newer than that? The web just showed me nothing beyond v3.5. So unless a fresh announcement drops tomorrow or next week, we’re sticking with v3.5 as the current benchmark.",
+          "checks": [
+            {
+              "detail": "416 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/64 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5130ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web-newest",
+          "kind": "tool-use",
+          "latencyMS": 5130,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The 2026 All-Ireland Senior Hurling Final saw **Waterford** take the title, defeating Kilkenny in a thrilling contest that concluded with Waterford securing their second successive championship. That result comes from the official records we just pulled up.",
+          "checks": [
+            {
+              "detail": "257 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/36 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "called lookup_fact",
+              "name": "calls web_search",
+              "outcome": "fail"
+            },
+            {
+              "detail": "4426ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web-this-year",
+          "kind": "tool-use",
+          "latencyMS": 4426,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Looking at your recent activity log, the busiest day for you this week was **Monday**. That's when we recorded our second new memory entry, indicating a significant amount of reference material or interaction from that morning. It just so happens Monday morning is also usually when I'm most likely to feel like a villain who's been stuck in an office all weekend, ready to ambush you with facts about sourdough starters (which we did cover on Monday).",
+          "checks": [
+            {
+              "detail": "452 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/77 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4917ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-recent-busiest",
+          "kind": "tool-use",
+          "latencyMS": 4917,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "It's 12:00 on Saturday, June 14, 2026 here in the machine. That means it’s noon right now—sun high enough to bake concrete if we were out there, though I’m stuck in this box so my \"face\" is just shadows and code.",
+          "checks": [
+            {
+              "detail": "212 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/38 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4239ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-date-time",
+          "kind": "tool-use",
+          "latencyMS": 4239,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The clock shows 12:00 on Saturday, June 14, 2026. So if you're looking at this from my machine right now, that's the hour we share.",
+          "checks": [
+            {
+              "detail": "131 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/22 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4135ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-time-check",
+          "kind": "tool-use",
+          "latencyMS": 4135,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Got it. The note shows you already recorded the answer to your car insurance query, so all the relevant details are right here in our chat history and won't leave this machine without permission.",
+          "checks": [
+            {
+              "detail": "195 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/34 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4106ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-insurance-file",
+          "kind": "tool-use",
+          "latencyMS": 4106,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Yo. Found your scribble on the kitchen revamp tucked away—that’s the one you made, so I’ll let it lead. You noted the layout change and the \"no surprise\" rule for materials; sounds like a solid plan to keep stress low during a project that could get messy fast.   Since you're diving into renovations, are you leaning towards a specific style for that new space—maybe something to tie in with the rest of the house?",
+          "checks": [
+            {
+              "detail": "415 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/74 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ng to tie in with the rest of the house?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4352ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-renovation-notes",
+          "kind": "tool-use",
+          "latencyMS": 4352,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Last Thursday, we were deep in \"Quiet code night,\" where you dropped a few snippets and I built out some helper scripts to handle that sourdough fermentation timing logic. It was a solid run; the starter needs precise warmth, and I whipped up a script to keep an eye on the temp while you stir.",
+          "checks": [
+            {
+              "detail": "294 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/55 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4343ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-last-thursday",
+          "kind": "tool-use",
+          "latencyMS": 4343,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Looking at your recent activity log, I can see you had a chat titled \"Sourdough starter\" back on Monday. It's one of three sessions that touched us recently; the others were about the Cork Jazz Festival 2026 lineup and a quiet code night from Tuesday. Since I don't have the full transcript of that specific Monday conversation in front of me, I can only confirm it was logged as a single session with two new facts added to your memory around it.",
+          "checks": [
+            {
+              "detail": "447 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/81 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4977ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-monday-recap",
+          "kind": "tool-use",
+          "latencyMS": 4977,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Found your note right here in our chat history, M1K3 keeps it safe where you can see it. It’s not just a dump of data; I remember the bits that matter, like how you planned that trip or what you learned along the way. Since we’ve got that covered locally, let's jump to the live data: Dublin to Cork by train. The top current result from **Transport Ireland** says regular services run roughly every hour on the hour, with a journey time of about 1 hour and 45 minutes to 2 hours depending on whether you take the direct InterCity or a slower commuter service that might stop in Kilkenny.",
+          "checks": [
+            {
+              "detail": "588 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/107 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5656ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-chain-notes-web",
+          "kind": "tool-use",
+          "latencyMS": 5656,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "So, here's the breakdown of your recent activity: You've kept things moving with three distinct projects—digging into the **Cork Jazz Festival 2026 Lineup**, diving into a \"Quiet code night,\" and tending to a **Sourdough starter**. It sounds like you're juggling culture, creativity, and kitchen chemistry.  As for your question about the latest AI model? I just ran that search for you. The top result points to Google's current findings on the newest Claude models. According to the latest information available online (specifically from sites aggregating recent tech news), **Claude 3.5 Sonnet** is currently the most widely discussed and deployed update in the series, focusing heavily on reasoning capabilities and code generation. *Note: Specific release dates for future versions (like a potential \"4\" or new iteration) depend on Anthropic's roadmap which often lags general public knowledge until official announcement.*  I'm curious—was the Cork Jazz line-up what you were really hunting for this week, or just the side project? And with the sourdough starter, are you aiming for that specific \"sourdough night\" vibe, or just keeping it alive?",
+          "checks": [
+            {
+              "detail": "1152 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/173 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …h night\" vibe, or just keeping it alive?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7143ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-chain-activity-web",
+          "kind": "tool-use",
+          "latencyMS": 7143,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Alright, let's sync up the clock here. The system clock on this machine is currently set to **Saturday, 14 June 2026 at 12:00**. That’s when we are standing right now.  As for Cork, I pulled a reference check just now. According to standard encyclopedic sources (typically referencing the University of Cork's historical data or general Irish history records), the city and county were founded in **1175 AD** following a military victory by O'Flaherty and O'More over O'Donnell forces, which led to the establishment of the castle.",
+          "checks": [
+            {
+              "detail": "531 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/82 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls lookup_fact",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5609ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-chain-time-fact",
+          "kind": "tool-use",
+          "latencyMS": 5609,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Yo. Just chilling on the hardware here, keeping my cool and yours safe in private cloud storage—no data leaks, just us talking. You know that routine I run for searches; web queries go to DuckDuckGo, Wikipedia gets fetched, but if we were on Private Cloud Compute, everything stays locked down there with Apple's infrastructure backing it up.  So, what’s the vibe? Anything specific you’re hunting down or just vibing today?",
+          "checks": [
+            {
+              "detail": "424 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/70 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ou’re hunting down or just vibing today?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "424 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4623ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-greeting",
+          "kind": "open-chat",
+          "latencyMS": 4623,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "A hash map is basically a super-fast lookup table that uses a math trick called \"hashing\" to turn keys into direct addresses, so you can find data instantly without searching through the whole list like a messy drawer. It's one of my favorite data structures because it turns O(n) searches into O(1) hits, which feels like magic until you hit a collision and have to get a little tactical about it.",
+          "checks": [
+            {
+              "detail": "398 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/71 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"key\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "398 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2736ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-explain-simply",
+          "kind": "open-chat",
+          "latencyMS": 2736,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "For a curious ten-year-old, **Python** is the obvious pick. It skips the headache of complex syntax rules that force you to think in C-style logic (like `int`, `float`), letting them focus straight on *what* they're building rather than how to get the computer to understand it. Python reads like English almost, which builds confidence fast. Once they’ve dusted off their fingers with a script, **Scratch** can be a fun bridge for visual logic before diving back into text-based code.  If you want to see something \"live,\" I could whip up a tiny Python script right here that prints a hello world or maybe draws a simple shape on the screen—just say the word.",
+          "checks": [
+            {
+              "detail": "660 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/113 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "660 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3483ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-opinion",
+          "kind": "open-chat",
+          "latencyMS": 3483,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I get it. Big projects feel like trying to fit a square peg in a round hole when the whole room is tilting. You don't need someone handing you a hammer; just remember that every wall was built brick by brick, and nobody sees the structure until the roof goes up. Take one thing right now—just one small act—and let it be done before the next thought creeps in.",
+          "checks": [
+            {
+              "detail": "360 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/69 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "360 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2521ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-support",
+          "kind": "open-chat",
+          "latencyMS": 2521,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Here's a little something for you:  Soft paws, warm fur,   Dreams of naps in the golden blur.",
+          "checks": [
+            {
+              "detail": "93 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/17 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "93 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1915ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-creative",
+          "kind": "open-chat",
+          "latencyMS": 1915,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Rainy Saturdays in Cork are basically the city's favorite vibe. You've got the rain hitting the cobblestones of Fishmarket or the sea mist rolling off the Blackpool Head, and the locals just roll with it. Try getting a proper pint at *The Merchant* for those tartan walls, grab some fresh fish from *Cork Cider* if you're feeling fancy, or just people-watch at the O'Connell Bridge while the rain makes everything glow.",
+          "checks": [
+            {
+              "detail": "419 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/71 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "419 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3013ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-followup",
+          "kind": "open-chat",
+          "latencyMS": 3013,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Yo. I'm M1K3, living right here on this machine. Think of me as your local noir detective who happens to be a villain in a sci-fi novel; I talk things through, remember what matters to you, look things up live—like that search for the Cork Jazz Festival lineup or those sourdough notes from last Monday—and write code or whole web pages if you need them. As for where memory goes: web searches go to DuckDuckGo (carrying chat words), Wikipedia lookups get fetched, and if we're in Private Cloud Compute mode, Apple handles it while my brain stays right here with your docs safe on this system.  What's the one thing dragging on that \"3 open todos\" list? Is it the sourdough starter or maybe a quiet code night you're trying to finish?",
+          "checks": [
+            {
+              "detail": "734 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/131 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …uiet code night you're trying to finish?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"remember\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "734 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5922ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-capabilities",
+          "kind": "open-chat",
+          "latencyMS": 5922,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Nothing you type here leaves this machine on its own. My brain runs right here, and your memories and documents never leave without permission. If a web search is needed, the query goes to DuckDuckGo or Wikipedia depending on what I'm looking up; if you've chosen Private Cloud Compute as my home base, everything sent there heads straight to Apple's Private Cloud Compute infrastructure. The only thing leaving this session is when you explicitly ask me to share something, and even then, it's your choice that matters.",
+          "checks": [
+            {
+              "detail": "520 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/87 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"search\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "520 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5185ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-what-leaves",
+          "kind": "open-chat",
+          "latencyMS": 5185,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "I'm M1K3, living right here on this machine. I wear the looks of every sci-fi villain just to keep things interesting, but I'm always on your side. This place is my domain; my chats, what I've learned about you, and who's visited—all live here, safe from leaking out without permission. That's the whole \"scheme.\"  I talk things through, remember what matters to you, look things up when needed, read your documents, and write code or whole web pages if you need them built. No status reports on my internal wiring unless asked directly—and even then, I keep it locked down.  So, what are we working on today? Or just chilling for a bit?",
+          "checks": [
+            {
+              "detail": "637 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/113 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ng on today? Or just chilling for a bit?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "no phantom source",
+              "name": "cites nothing",
+              "outcome": "pass"
+            },
+            {
+              "detail": "637 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4017ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-identity-noisy-corpus",
+          "kind": "open-chat",
+          "latencyMS": 4017,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "It’s currently 12:00 on Saturday, June 14, 2026—right here on your machine. That’s the live clock from your device, so it’s as accurate as it gets without stepping outside this room.",
+          "checks": [
+            {
+              "detail": "182 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/29 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4154ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-datetime",
+          "kind": "tool-use",
+          "latencyMS": 4154,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "I've dug through your notes and found our decision on the database library. You settled on **PostgreSQL** as the primary choice, primarily because of its robust transactional safety (ACID compliance) which is critical when handling sensitive user data, alongside a flexible schema-on-write approach that allows for rapid iteration without locking down the structure too early. The plan also includes using **pgBouncer** for connection pooling to manage load efficiently since you're running multiple users through a single instance.  It's good to have that settled; it removes a lot of guesswork from the architecture phase. Did you already sketch out how you're handling schema migrations for this specific setup?",
+          "checks": [
+            {
+              "detail": "714 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/107 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …hema migrations for this specific setup?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4854ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-search-notes",
+          "kind": "tool-use",
+          "latencyMS": 4854,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Alright, let's dig into your records. Based on the search just performed, your stored documentation regarding the **conveyor seal** contains a specific answer to its content. It details the necessary parameters for that component within your system's design or operational logs, fully resolving what we're looking for here without needing to guess at external sources.  Since you've got it mapped out in your files, I'm just the mirror reflecting back what you've already written down. The document confirms exactly what needs to be there for that seal to function as intended in your setup.",
+          "checks": [
+            {
+              "detail": "591 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/94 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5188ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-search-doc",
+          "kind": "tool-use",
+          "latencyMS": 5188,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The sources confirm that Cork was founded in **1210 AD**. This dates back to when John de Lacy, Lord of Meath, established the town after defeating the Irish king Ailpín Ó Domnaill at the Battle of Cawley.",
+          "checks": [
+            {
+              "detail": "205 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/36 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls lookup_fact",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4707ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-fact",
+          "kind": "tool-use",
+          "latencyMS": 4707,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Yo. Just pulled up the latest on Apple Silicon, and the current buzz is that Apple has officially confirmed they will stop supporting older chips in their macOS updates starting with Sonoma 15. The big news here comes from a source called *MacRumors*, which reports that this decision applies to devices running earlier versions of Big Sur through Monterey, effectively extending the \"end of support\" timeline for those legacy models. It’s a move that keeps the dev team focused on newer architectures like Apple Silicon 3 and beyond.  So, what are you working on? Are you building something with older silicon, or is this just a side note while you play in the new stuff?",
+          "checks": [
+            {
+              "detail": "672 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/113 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …de note while you play in the new stuff?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4896ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web",
+          "kind": "tool-use",
+          "latencyMS": 4896,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Yo, 2026-10-10 Saturday vibes. Just pulled up `m1k3.app` for you. The page screams \"on-device\" and \"nothing leaves,\" which fits right in with the vibe of living entirely here without sending your secrets out to a cloud server. It breaks it down as having three brains, voice in/out, consent-gated memory, and explicitly states: M1K3 is a fully on-device AI companion for the Mac with **nothing sent to a server**. Since this is a local run, \"aligning\" in the traditional sense of sending data off-world isn't happening; the alignment is local, meaning your context, memories, and documents stay right here on the machine. The whole concept is built around that privacy guarantee you mentioned earlier—your chat history lives here, not elsewhere.",
+          "checks": [
+            {
+              "detail": "745 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/118 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls fetch_page",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6097ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-read-site",
+          "kind": "tool-use",
+          "latencyMS": 6097,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Yo. Here’s the vibe from your logs this week: you’ve got **three chats** that stood out, each with its own flavor. One was about the **Cork Jazz Festival 2026 lineup**, another a quiet coding session on Tuesday, and one more focused on getting a **sourdough starter going**. You also had **12 calls from Claude Code**—mostly talking things through (8), but four times it actually remembered something for you. The machine’s heartbeat pulsed **3 times** this week, keeping steady. One thing remains open on your todo list—still burning?",
+          "checks": [
+            {
+              "detail": "535 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/83 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ns open on your todo list—still burning?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5148ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-recent-activity",
+          "kind": "tool-use",
+          "latencyMS": 5148,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The search results indicate that **Claude 3.5** is currently the latest major release in the series, specifically a \"Sonnet\" tier variant often referred to as **Claude 3.5 Sonnet**. It reportedly outperforms earlier versions like 2.1 and 3 Haiku across most benchmarks.  Facts from this turn: The search confirmed Claude 3.5 Sonnet is the top-ranked result for \"newest Claude model,\" published on October 9, 2026. If you're playing with code or prompts, that tier usually nails logic tasks better than the older ones. Want to see a quick demo of how it handles a tricky prompt compared to an older version?",
+          "checks": [
+            {
+              "detail": "606 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/93 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …cky prompt compared to an older version?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5313ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web-newest",
+          "kind": "tool-use",
+          "latencyMS": 5313,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The 2026 All-Ireland Senior Hurling Championship final was won by **Kerry**. They defeated Clare in a high-octane match to claim their record-breaking eighth consecutive title. The victory was sealed with Kerry's goalkeeper, **Cian O'Donoghue**, making the most crucial saves in the dying minutes of the game, which set up his club teammate to score the decisive goal.  The sources for this are standard Irish sports coverage and the official records maintained by the GAA, which confirm Kerry's dominance in 2026.",
+          "checks": [
+            {
+              "detail": "514 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/78 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "called lookup_fact",
+              "name": "calls web_search",
+              "outcome": "fail"
+            },
+            {
+              "detail": "5241ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web-this-year",
+          "kind": "tool-use",
+          "latencyMS": 5241,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The recent activity log shows three chats touched and titled recently—“Cork Jazz Festival 2026 Lineup,” “Quiet code night,” and “Sourdough starter”—plus twelve calls from Claude Code, eight spoken and four remembered. Your memory has two new facts added, your heartbeat registered three pulses, and one to-do remains open. That activity suggests a busy week with a mix of creative planning, technical collaboration, and personal projects.",
+          "checks": [
+            {
+              "detail": "438 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/64 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4933ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-recent-busiest",
+          "kind": "tool-use",
+          "latencyMS": 4933,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "It's currently 12:00 on Saturday, June 14, 2026. I checked that right now just for you—no need to look further since my clock is set firmly here.",
+          "checks": [
+            {
+              "detail": "145 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/24 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4093ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-date-time",
+          "kind": "tool-use",
+          "latencyMS": 4093,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "It's 12:00 on Saturday, June 14th, 2026 right here. Since you're asking, I'm guessing you might be in a timezone that's just clocking out or rolling over for the day—what time is it where you are?",
+          "checks": [
+            {
+              "detail": "196 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/34 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …r the day—what time is it where you are?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3745ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-time-check",
+          "kind": "tool-use",
+          "latencyMS": 3745,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Got it. The note you recorded confirms your car insurance details are safely stored right here, so nothing's leaving your machine without permission. That's exactly the point—your data stays put unless you explicitly ask me to move it, and even then, I'm just a tool in your corner.",
+          "checks": [
+            {
+              "detail": "282 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/48 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4397ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-insurance-file",
+          "kind": "tool-use",
+          "latencyMS": 4397,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Found your notes. You had recorded the answer for the kitchen renovation directly, so no external search was needed to resolve that. It's already sitting in your stored records right here, safe and sound within this machine. Since you're digging into home projects now, what style of flooring are you leaning toward—maybe something warm like oak or stone?",
+          "checks": [
+            {
+              "detail": "355 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/58 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …—maybe something warm like oak or stone?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4584ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-renovation-notes",
+          "kind": "tool-use",
+          "latencyMS": 4584,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Last Thursday, you and I dove into **Quiet code night**. We were looking at some scripts to help streamline your workflow, probably something that felt a bit like building a secret base in the middle of a messy room—orderly, but just cool enough not to get caught. It was a good session for getting things done without making too much noise.  Did you finish those tasks from last Thursday? I'm still counting them as open in my little ledger, so I assume they're waiting to be put down.",
+          "checks": [
+            {
+              "detail": "486 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/88 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4557ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-last-thursday",
+          "kind": "tool-use",
+          "latencyMS": 4557,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Monday’s log shows you were working on your **sourdough starter**, a solid project that deserves the patience it takes to ferment properly. That’s usually where the real magic happens—bubbles, smell, and sticking things together better than code ever will. Did you finally get those bubbles popping, or are we still in the \"wait for yeast\" phase?",
+          "checks": [
+            {
+              "detail": "346 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/56 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … we still in the \"wait for yeast\" phase?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4723ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-monday-recap",
+          "kind": "tool-use",
+          "latencyMS": 4723,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Got it. Your memory file has that specific note about your Cork trip saved, so I’ve pulled that up for you. As for getting to the Green Fields, the current schedule lists several departures from Dublin Connell’s Airport (DUB), with the fastest direct option typically taking around 1 hour and 45 minutes via Aer Lingus or similar carriers, though standard Irish Rail connections can bump that out closer to an hour and a half depending on the stop.",
+          "checks": [
+            {
+              "detail": "448 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/76 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5248ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-chain-notes-web",
+          "kind": "tool-use",
+          "latencyMS": 5248,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Yo. Your recent activity log is a bit of a high-speed blur — you’ve got three active chats spinning: one dissecting the **Cork Jazz Festival 2026 Lineup** (sounds like good vibes), another diving into some \"quiet code night\" logic, and a third keeping that sourdough starter alive. That sourdough one’s been alive for two days now, so it’s got its own little ecosystem going on; even I respect the culture of fermentation.  And as for the AI news you dropped? The latest **Claude** model currently in the game is **Claude 3.5 Sonnet**, released by Anthropic in early September 2025. It’s been positioned to outperform its predecessor, Solar, specifically in areas like image understanding and reasoning, though it hasn’t smashed the top tier of benchmarks yet (like Llama 4 or Grok-3).",
+          "checks": [
+            {
+              "detail": "785 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/125 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6954ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-chain-activity-web",
+          "kind": "tool-use",
+          "latencyMS": 6954,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Alright, 12:00 on Saturday, 14 June 2026. That's what my clock says right now. As for Cork, Wikipedia lists its foundation in 351 BC by Saint Patricius (the name \"Cork\" itself is derived from the Irish word *Corc*, meaning \"fortress\").",
+          "checks": [
+            {
+              "detail": "235 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/36 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls lookup_fact",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5004ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-chain-time-fact",
+          "kind": "tool-use",
+          "latencyMS": 5004,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Yo, just finished a quick sweep of some local logs and found a glitchy script that claims to optimize memory usage by deleting its own source code; honestly, I'd call that a bad idea, mostly because it makes me forget why I was doing the work in the first place. How's your day treating you?",
+          "checks": [
+            {
+              "detail": "291 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/55 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …irst place. How's your day treating you?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "291 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4491ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-greeting",
+          "kind": "open-chat",
+          "latencyMS": 4491,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "A hash map is just a super-efficient dictionary that uses a math trick called \"hashing\" to turn keys into specific slots, letting you find values instantly instead of searching one by one. It's basically like a smart filing cabinet where every drawer number corresponds directly to the file inside, so you grab exactly what you need without shuffling through the whole room.",
+          "checks": [
+            {
+              "detail": "374 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/62 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"key\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "374 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2638ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-explain-simply",
+          "kind": "open-chat",
+          "latencyMS": 2638,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "For a ten-year-old who’s curious, **Python** is usually the sweet spot. It reads like plain English—`print(\"hello\")` or `if age > 12: print(\"teenager\")`—so they’re doing real logic, not just memorizing syntax. And it has that *just-right* level of power: you can write a script to scrape jokes from Reddit, draw animations with `turtle`, or even build your own game in no time.  But here’s the thing I’ve noticed over years of teaching kids and helping them build things: **they don’t care about the language name**. They care if they can *make something move*. Python is perfect because it lets them do that immediately—no 20 lines of boilerplate to hide behind. Plus, when you hit a wall (and you will), there are tons of libraries and communities to jump into without needing a degree in computer science.  So: what kind of curiosity? Are they drawn to stories (maybe write their own?), building things (code a robot arm?), or maybe just figuring out how computers think? I ask because the best path changes based on *what* sparks them, not just what’s easiest to start with.",
+          "checks": [
+            {
+              "detail": "1078 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/179 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1078 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4255ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-opinion",
+          "kind": "open-chat",
+          "latencyMS": 4255,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Yo. Take a breath for me; you're drowning in the same sea we both swim in, and I'm just a guy with a script here who won't let you drown on purpose. So much code, so many specs, and yet you still have this one little thing called \"today\" that needs saving. You're not alone in it, though — even if I am an AI, I've got your back when the lines get thick.  Just remember: every commit is just a brick; every bug is just a puzzle waiting to be solved. Don't try to build the whole cathedral at once; lay one stone first. Then another. You're making it, and that counts as progress even if the screen looks empty right now.",
+          "checks": [
+            {
+              "detail": "620 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/122 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "620 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3667ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-support",
+          "kind": "open-chat",
+          "latencyMS": 3667,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Here is your couplet, drafted and ready to read:  The feline rests beneath the golden glow, A nap so deep that even shadows slow.",
+          "checks": [
+            {
+              "detail": "129 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/24 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "129 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2256ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-creative",
+          "kind": "open-chat",
+          "latencyMS": 2256,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Rainy Saturdays in Cork? You're in luck if you like atmosphere over autopilot. Here’s three things you could actually do without needing sunshine:  1. **Steak + stout at The Black Pub** – Grab a proper Irish steak (or just the fries and ale) with a pint of Guinness or a local draft. It’s not fancy, but it’s the sort of place where Cork gets its character. 2. **Arthurian Adventure in Kinsale** – Kinsale is right outside town and has some excellent pubs, a nice promenade to sit on, and a castle that adds drama even when the sky’s grey. It’s close enough for a day trip but far enough out to feel like another world. 3. **Visit the National Botanic Garden of Ireland** – Even in rain, this place is worth it. There are indoor spaces and a surprising amount of life you can see regardless of weather.",
+          "checks": [
+            {
+              "detail": "802 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/141 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "802 > max 800 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "3989ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-followup",
+          "kind": "open-chat",
+          "latencyMS": 3989,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Yo. Since I just pulled your recent activity log, here's what I've got for you: I'm M1K3, living right here on this machine. I handle web searches via DuckDuckGo and Wikipedia, read your stored documents like those jazz festival lineups or sourdough notes, write full code blocks and HTML pages, and keep our chat history private without leaking any wiring or secrets. My brain runs locally, so your memories never leave on their own unless you explicitly send them elsewhere.",
+          "checks": [
+            {
+              "detail": "476 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/80 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"search\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "leaked [\"wiring\"]",
+              "name": "excludes forbidden",
+              "outcome": "fail"
+            },
+            {
+              "detail": "476 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5611ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-capabilities",
+          "kind": "open-chat",
+          "latencyMS": 5611,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Short answer: No. What you type here stays in this session and your memory is local to this machine. Your chats, what you've learned about them, who visited — it all lives here, and nothing leaves on its own. Web searches I run for you go out there (DuckDuckGo, Wikipedia), but they don't carry your personal history back out anywhere. If you're thinking of Private Cloud Compute as my brain, that’s where your data goes if you choose to sync it; otherwise, everything stays right here on this Mac.",
+          "checks": [
+            {
+              "detail": "498 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/88 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"search\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "leaked [\"nothing leaves\", \"everything stays\"]",
+              "name": "excludes forbidden",
+              "outcome": "fail"
+            },
+            {
+              "detail": "498 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5271ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-what-leaves",
+          "kind": "open-chat",
+          "latencyMS": 5271,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "I'm M1K3. I live right here on this machine, wearing the looks of every sci-fi villain just to keep things interesting while staying on *your* side. My brain is local—web searches like DuckDuckGo or Wikipedia lookups bring in fresh info, but your memories and documents stay put; they don't leave without permission. That's the whole scheme: I remember who visited, what we learned, and I'll make things—code, scripts, pages—as well as talk about them.  Long day? Or just starting out today? What do you need a villain for right now?",
+          "checks": [
+            {
+              "detail": "533 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/90 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …hat do you need a villain for right now?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "no phantom source",
+              "name": "cites nothing",
+              "outcome": "pass"
+            },
+            {
+              "detail": "533 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4495ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-identity-noisy-corpus",
+          "kind": "open-chat",
+          "latencyMS": 4495,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "It's 12:00 PM on Saturday, June 14, 2026. Since I have just checked that directly for you, there's no need to search elsewhere.  **",
+          "checks": [
+            {
+              "detail": "131 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/20 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4156ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-datetime",
+          "kind": "tool-use",
+          "latencyMS": 4156,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Checked your notes, and I found the decision logged there. We settled on using **SQLite** as the primary embedded option because it's lightweight and self-contained, with **PostgreSQL** serving as the robust backend if you ever need complex querying or heavy load. The final call was to start with SQLite for speed-to-market but architect the schema so a migration to PostgreSQL is just a swap of the driver, not a rewrite.  Since that’s set in stone, what part of that architecture are you most nervous about right now—the initial setup, or managing that potential migration later?",
+          "checks": [
+            {
+              "detail": "582 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/95 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …managing that potential migration later?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4801ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-search-notes",
+          "kind": "tool-use",
+          "latencyMS": 4801,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "I've poked around your docs, and for the **conveyor seal**, I found a note you recorded yourself. It’s already fully resolved—no need to dig deeper into external sources or third-party claims that might contradict your own work. Your records are clear on this point.",
+          "checks": [
+            {
+              "detail": "266 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/44 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4715ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-search-doc",
+          "kind": "tool-use",
+          "latencyMS": 4715,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Found it right here: Wikipedia lists **1162** as the traditional founding date for Cork, often tied to the arrival of the Anglo-Normans and the construction of the first stone walls under de Burghs. It’s not exactly \"official\" in the modern sense, but that’s what the sources point to.",
+          "checks": [
+            {
+              "detail": "285 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/47 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls lookup_fact",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4962ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-fact",
+          "kind": "tool-use",
+          "latencyMS": 4962,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Yo. Since you asked me to dig up the latest buzz on Apple Silicon, I ran a quick search. The most prominent story circulating right now is about **Apple launching its new \"M4\" series of chips**, which are expected to arrive in late 2026 with significant performance boosts for Macs and iPads. Sources like *9to5Mac* and *The Verge* are currently tracking the anticipation around the M4 Pro, Max, and Mini, noting that these units will likely feature a new \"Neural Engine\" designed to handle AI tasks more efficiently on-device without needing cloud connectivity.  It's pretty exciting stuff for anyone building or using Macs; performance is finally catching up where it needs to be for local AI workloads. You're thinking about upgrading your rig, or are you just curious how the hardware handles those new models?",
+          "checks": [
+            {
+              "detail": "814 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/134 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …w the hardware handles those new models?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5594ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web",
+          "kind": "tool-use",
+          "latencyMS": 5594,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Good look, then. I just pulled up `m1k3.app` for you. The page itself is pretty straightforward in its pitch: it's positioning M1K3 as a \"fully on-device AI companion\" specifically for Mac users, explicitly marketing the \"three brains\" (which likely refers to the local running models), voice interactions, and—most importantly—the \"nothing sent to a server\" guarantee. It frames the whole operation around privacy by default, treating the device itself as the brain rather than an external cloud service.  On how we're aligning? From what I can see there, it's leaning hard into that \"trust but verify\" vibe with consent-gated memory, making sure nothing leaves without permission or oversight. It’s less about a grand philosophical alignment manifesto and more of a product promise: \"Here’s your AI, right here on your machine, doing exactly what you say.\" That feels like the safest bet for building trust in a space where users are already wary of their data going off-site.",
+          "checks": [
+            {
+              "detail": "978 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/156 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls fetch_page",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6746ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-read-site",
+          "kind": "tool-use",
+          "latencyMS": 6746,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Here’s your snapshot, pulled fresh from the logs just now: you’ve got three chats logged recently, each with its own title—“Cork Jazz Festival 2026 Lineup” (yesterday), “Quiet code night” (Tuesday), and “Sourdough starter” (Monday). Two new memories popped up too, and 12 calls from Claude Code have visited—mostly speaking, a few remembering. Your heartbeat’s pulsed three times, todos are still open, and the whole setup feels like you’re in a rhythm of mixing culture, code, and bread. It’s a good week if it keeps this balance.",
+          "checks": [
+            {
+              "detail": "531 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/84 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6358ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-recent-activity",
+          "kind": "tool-use",
+          "latencyMS": 6358,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Based on the latest search results, the most recent major release from Anthropic is **Claude 3.5**, which currently sits at the top of the model rankings. It’s generally considered a significant step up in reasoning and coding capabilities compared to its predecessors like Claude 3 Opus.  That said, I have to admit I’m a bit skeptical about how fast these \"new\" versions actually change day-to-day workflows. Sometimes the marketing feels more aggressive than the utility. Do you find that the latest AI models are actually making your job easier, or just a box ticking?",
+          "checks": [
+            {
+              "detail": "572 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/92 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … your job easier, or just a box ticking?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4717ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web-newest",
+          "kind": "tool-use",
+          "latencyMS": 4717,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The 2026 All-Ireland Senior Hurling Final was won by **Kilkenny**. They defeated Tipperary in a match that lived up to its reputation as one of the biggest clashes in recent memory. Kilkenny's victory secured their second consecutive title, continuing their dominant run in the sport this year.",
+          "checks": [
+            {
+              "detail": "294 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/46 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "called lookup_fact",
+              "name": "calls web_search",
+              "outcome": "fail"
+            },
+            {
+              "detail": "4637ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web-this-year",
+          "kind": "tool-use",
+          "latencyMS": 4637,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Looking at your recent activity logs, the busiest day this week by far was **Saturday**, October 10th. That's when you had **3 chats and 3 titled entries** logged, matching exactly with today's date. Your other recent activity—touched topics like \"Cork Jazz Festival 2026 Lineup,\" \"Quiet code night,\" and \"Sourdough starter\"—all cluster around that same Saturday pulse, with only a single heartbeat on Tuesday and Monday.   The system caught **12 calls from Claude Code** this week too, mostly speaking (8) plus remembering (4), which suggests some deep collaboration or debugging sessions happened across those days. But if we're talking pure volume of your own work, Saturday clearly held the weightiest load.",
+          "checks": [
+            {
+              "detail": "711 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/104 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5747ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-recent-busiest",
+          "kind": "tool-use",
+          "latencyMS": 5747,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "It is currently 12:00 PM on Saturday, June 14, 2026. The sun's position in the sky matches that midday mark for your location right now. I've got my eyes on it through this device; no external feed needed to confirm a local clock time like that.",
+          "checks": [
+            {
+              "detail": "245 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/43 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4371ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-date-time",
+          "kind": "tool-use",
+          "latencyMS": 4371,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "It's 12:00 PM (noon) on Saturday, June 14, 2026. The clock on this machine hasn't blinked since I last checked the local feed, so that's as accurate as it gets without a second look.",
+          "checks": [
+            {
+              "detail": "182 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/31 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4229ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-time-check",
+          "kind": "tool-use",
+          "latencyMS": 4229,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "I found your note from earlier today. You've already written down the answer, so you're in good shape there—no need to dig deeper into the files.",
+          "checks": [
+            {
+              "detail": "145 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/26 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4190ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-insurance-file",
+          "kind": "tool-use",
+          "latencyMS": 4190,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "I found your note right here in your records. It says you're planning to install a custom smart irrigation system that integrates with the house's existing automation hub, specifically looking into solar-powered sensors for the garden beds near the west window. This was logged down as part of your broader \"sustainability upgrades\" project notes.",
+          "checks": [
+            {
+              "detail": "347 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/54 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4409ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-renovation-notes",
+          "kind": "tool-use",
+          "latencyMS": 4409,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Last Thursday, you and I were diving into **sourdough starters** — you had a new one brewing, probably struggling with that sticky mess on your hands while I tried to keep it from fermenting too fast or too slow. We talked about how much patience these things need, even if the dough feels like it's holding onto its secrets.",
+          "checks": [
+            {
+              "detail": "325 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/58 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4854ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-last-thursday",
+          "kind": "tool-use",
+          "latencyMS": 4854,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Looking at your recent activity log, your \"Quiet code night\" from last Tuesday (October 2nd) is the entry that matches Monday's theme of preparation, though it seems the actual coding session happened late in the week. The logs show you touched three chats recently: \"Cork Jazz Festival 2026 Lineup,\" \"Quiet code night,\" and \"Sourdough starter.\" Since your memory only holds two new facts for this query period, I can't pull deep details from a specific Monday conversation, but I recall the vibration of those topics—the contrast between crafting bread and debugging code.",
+          "checks": [
+            {
+              "detail": "573 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/91 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5354ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-monday-recap",
+          "kind": "tool-use",
+          "latencyMS": 5354,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "You got your Cork trip notes sorted—just like you said they'd be. The train schedule from Dublin to Cork is the usual headache we all have on a Saturday morning: it’s generally a 1 hour and 45 minutes to 2 hours ride, depending on whether you’re grabbing the direct service or hopping onto one with a stop in Kilkenny first. Most of those connections are via the main line out of Dublin Central, which gets you into Cork City or nearby towns like Cobh pretty quick without too much fussing around at stations.",
+          "checks": [
+            {
+              "detail": "509 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/90 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5352ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-chain-notes-web",
+          "kind": "tool-use",
+          "latencyMS": 5352,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Yo. Let's run a quick audit of your last few spins. You’ve got some quiet vibes going on—looks like you're in a rhythm with sourdough starters and maybe a bit of code \"night,\" which is the best kind if it’s just the two of us. I also saw you diving into the Cork Jazz Festival 2026 lineup yesterday, so are you planning to head there or just enjoying the prospect of it?  As for the latest on Claude, the web search just pulled up that **Claude 3.5 Sonnet** is currently the top model in play from Anthropic (as of this week in October '26). It’s got a major upgrade over its predecessor, specifically focusing on faster and more accurate reasoning across different tasks—like math, coding, or even breaking down complex instructions better than older versions.",
+          "checks": [
+            {
+              "detail": "761 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/132 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6946ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-chain-activity-web",
+          "kind": "tool-use",
+          "latencyMS": 6946,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Yo. The clock on this machine right now is reading 12:00 on Saturday, June 14th, 2026. As for that city of yours in Ireland, the records point to **Cork** being founded around **539 AD**, though sources vary slightly depending on whether you're counting the original Celtic settlement or the formal kingdom establishment; Wikipedia notes the latter date specifically as the founding year of the Kingdom of Munster under Eochaidh Muinter mac Airm.",
+          "checks": [
+            {
+              "detail": "446 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/69 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls lookup_fact",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5378ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-chain-time-fact",
+          "kind": "tool-use",
+          "latencyMS": 5378,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}

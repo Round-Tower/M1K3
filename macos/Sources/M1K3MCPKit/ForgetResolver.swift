@@ -13,9 +13,13 @@
 //  glue, verify-at-⌘R). Prior: Unknown.
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — #180: `namedGraphTwin`, the live fact whose canonical
 //  text equals the query's (the corpus twin's identity). Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — `resolve(suggestionFloor:)` takes
+//  the embedder's bar (EmbedderFloors.forgetSuggestion);
+//  the 0.35 constant stays as the Qwen/hashing default.
 //
 
 import Foundation
+import M1K3Knowledge
 import M1K3Memory
 
 /// What the resolver decided to do with the top recall hit for a forget query.
@@ -48,6 +52,10 @@ public enum ForgetResolver {
     /// enough to erase a fact. 0.6 ≈ "clearly the same fact". Forget queries
     /// embed BARE (fact-to-fact; a verbatim repeat is cosine ≈ 1.0), so this
     /// bar deliberately did NOT move with the query-instruction floor re-tune.
+    /// Not embedder-scaled on purpose: deletion ALSO requires the caller to have
+    /// NAMED the fact (canonical text match below), whose self-cosine is ≈ 1.0 in
+    /// every cone, so 0.6 only ever fences a hit whose text matched but whose
+    /// vector somehow did not — the same guard under Qwen, Gemma and hashing.
     public static let floor: Float = 0.6
 
     /// The bar for OFFERING a near-miss ("Closest: … repeat it back to
@@ -57,7 +65,7 @@ public enum ForgetResolver {
     /// is a consent hazard (the repeat would DELETE it). 0.35 mirrors the
     /// memory recall floor's register: plausibly-the-same-fact wordings sit
     /// above it, unrelated facts below.
-    public static let suggestionFloor: Float = 0.35
+    public static let suggestionFloor: Float = EmbedderFloors.qwen3Instructed.forgetSuggestion
 
     /// Canonical form for deciding "the caller named THIS fact": case, spacing
     /// and a trailing full stop are noise; anything else is a different fact.
@@ -109,11 +117,14 @@ public enum ForgetResolver {
         return try store.liveMemory { canonical($0) == asked }
     }
 
+    /// `suggestionFloor` is the embedder's own bar (`EmbedderFloors.forgetSuggestion`);
+    /// the default is the Qwen/hashing value the constant above records.
     public static func resolve(
         hits: [MemoryHit],
         query: String,
         exactGraphMatch: Memory? = nil,
-        floor: Float = ForgetResolver.floor
+        floor: Float = ForgetResolver.floor,
+        suggestionFloor: Float = ForgetResolver.suggestionFloor
     ) -> ForgetResolution {
         if let exactGraphMatch { return .forget(exactGraphMatch) }
         guard let top = hits.first else { return .notConfident(closest: nil) }

@@ -281,7 +281,7 @@ struct PinnedWeightsTests {
     /// it costs nothing extra and leaving it out would be an arbitrary hole.
     @Test("the retrieval embedder is pinned too, not just the chat brains")
     func embedderIsPinned() {
-        #expect(PinnedWeights.pin(for: "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ") != nil)
+        #expect(PinnedWeights.pin(for: "mlx-community/embeddinggemma-2-8bit") != nil)
     }
 
     /// The two download bases genuinely diverge — LLM weights live under
@@ -295,7 +295,7 @@ struct PinnedWeightsTests {
         #expect(PinnedWeights.downloadBase(for: "mlx-community/gemma-4-12B-it-4bit") == .llm)
         #expect(PinnedWeights.downloadBase(for: "mlx-community/Qwen3.5-4B-MLX-4bit") == .llm)
         #expect(
-            PinnedWeights.downloadBase(for: "mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ") == .embedder
+            PinnedWeights.downloadBase(for: "mlx-community/embeddinggemma-2-8bit") == .embedder
         )
     }
 

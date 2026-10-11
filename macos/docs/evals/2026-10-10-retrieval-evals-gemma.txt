@@ -1,0 +1,143 @@
+# Retrieval evals (MEMEVAL / ABSEP / KEYEVAL) — embedder: gemma
+# 2026-10-10, Debug build of feat/embedder-ab (master cbea7452 + the M1K3_SELFTEST_EMBEDDER harness), M1 Max, live app running idle (cosines are unaffected by contention).
+# Command: M1K3_SELFTEST=1 M1K3_SELFTEST_EMBEDDER=gemma M1K3_SELFTEST_MEMEVAL=1 M1K3_SELFTEST_ABSEP=1 M1K3_SELFTEST_KEYEVAL=1 M1K3_SELFTEST_OUT=- <M1K3.app>/Contents/MacOS/M1K3
+# 'instructed' = the embedder's own query composition (production: embedQuery); 'bare' = the query embedded as a document.
+memeval pos: 0.780 [Kev's sister is called Aoife.]
+memeval pos: 0.856 [The user prefers metric units.]
+memeval pos: 0.797 [Kev lives in Cork, Ireland.]
+memeval pos: 0.804 [The user's dog is a collie named Bran.]
+memeval pos: 0.739 [Kev is dyslexic and prefers audio summar]
+memeval pos: 0.769 [The user decided to use GRDB over Core D]
+memeval pos: 0.783 [Kev's company is called Round Tower.]
+memeval pos: 0.818 [The user's favourite editor is Xcode wit]
+memeval pos: 0.772 [Kev drinks his coffee black, no sugar.]
+memeval pos: 0.807 [The user was born in 1987.]
+memeval pos: 0.819 [Kev's partner is called Niamh.]
+memeval pos: 0.778 [The user decided the app ships on macOS ]
+memeval pos: 0.735 [Kev plays five-a-side football on Thursd]
+memeval pos: 0.793 [The user is allergic to penicillin.]
+memeval pos: 0.834 [Kev's mum's birthday is the 14th of Marc]
+memeval pos: 0.852 [The user prefers en-GB spellings in all ]
+memeval pos: 0.762 [Kev's car is a blue Skoda Octavia.]
+memeval pos: 0.882 [The user keeps project notes in a folder]
+memeval pos: 0.773 [Kev studied computer science at UCC.]
+memeval pos: 0.826 [The user's main project is a local AI as]
+memeval pos: 0.801 [Kev wants commit messages without emoji.]
+memeval pos: 0.886 [The user's daughter starts school in Sep]
+memeval neg: 0.590 [Kev's sister is called Aoife.]
+memeval neg: 0.655 [The user prefers metric units.]
+memeval neg: 0.595 [Kev drinks his coffee black, no sugar.]
+memeval neg: 0.629 [The user's dog is a collie named Bran.]
+memeval neg: 0.573 [Kev plays five-a-side football on Thursd]
+memeval neg: 0.579 [The user was born in 1987.]
+memeval neg: 0.645 [Kev's car is a blue Skoda Octavia.]
+memeval neg: 0.651 [The user is allergic to penicillin.]
+memeval neg: 0.583 [Kev studied computer science at UCC.]
+memeval neg: 0.647 [The user keeps project notes in a folder]
+memeval neg: 0.618 [Kev's company is called Round Tower.]
+memeval positives: min 0.735 / median 0.801 / max 0.886 (n=22)
+memeval negatives: min 0.573 / median 0.618 / max 0.655 (n=11)
+memeval suggested threshold: 0.695 (clean separation: neg max 0.655 < pos min 0.735)
+absep bge in: 0.683 [how does attention work?]
+absep bge in: 0.722 [what is the transformer architecture?]
+absep bge in: 0.794 [what is multi-head attention?]
+absep bge in: 0.780 [what did McCulloch and Pitts propose abo]
+absep bge in: 0.715 [how is information entropy defined?]
+absep bge in: 0.814 [why use positional encoding in a sequenc]
+absep bge off: 0.480 [best sourdough starter ratio?]
+absep bge off: 0.342 [how do I prune an apple tree in winter?]
+absep bge off: 0.474 [how do I centre a div in CSS?]
+absep bge off: 0.315 [what's a good weeknight pasta recipe?]
+absep bge off: 0.413 [what time is high tide in Cork today?]
+absep bge off: 0.503 [which JavaScript framework should I use ]
+absep cand in: 0.799 [how does attention work?]
+absep cand in: 0.827 [what is the transformer architecture?]
+absep cand in: 0.874 [what is multi-head attention?]
+absep cand in: 0.888 [what did McCulloch and Pitts propose abo]
+absep cand in: 0.866 [how is information entropy defined?]
+absep cand in: 0.880 [why use positional encoding in a sequenc]
+absep cand off: 0.583 [best sourdough starter ratio?]
+absep cand off: 0.525 [how do I prune an apple tree in winter?]
+absep cand off: 0.584 [how do I centre a div in CSS?]
+absep cand off: 0.540 [what's a good weeknight pasta recipe?]
+absep cand off: 0.567 [what time is high tide in Cork today?]
+absep cand off: 0.554 [which JavaScript framework should I use ]
+[bge-small-384]
+  in-domain:  min 0.683 / median 0.751 / max 0.814 (n=6)
+  off-domain: min 0.315 / median 0.443 / max 0.503 (n=6)
+  margin: 0.181 (clean dead-zone)
+[mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v1]
+  in-domain:  min 0.799 / median 0.870 / max 0.888 (n=6)
+  off-domain: min 0.525 / median 0.561 / max 0.584 (n=6)
+  margin: 0.215 (clean dead-zone)
+head-to-head: bge-small-384 margin 0.181 vs mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v1 margin 0.215 → mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v1 wider by 0.034
+keyeval bare kw 0.819 / q 0.809 [Golden Gate milestone]
+keyeval bare kw 0.836 / q 0.858 [TestFlight external submission]
+keyeval bare kw 0.825 / q 0.805 [attention mechanism]
+keyeval bare kw 0.768 / q 0.780 [sister name]
+keyeval bare kw 0.726 / q 0.772 [coffee order]
+keyeval bare kw 0.768 / q 0.783 [company name]
+keyeval bare kw 0.777 / q 0.769 [database decision]
+keyeval bare kw 0.728 / q 0.735 [football day]
+keyeval bare kw 0.806 / q 0.793 [allergy]
+keyeval bare kw 0.800 / q 0.818 [editor setup]
+keyeval bare noise 0.556 [sourdough starter ratio]
+keyeval bare noise 0.537 [apple tree pruning]
+keyeval bare noise 0.586 [css div centering]
+keyeval bare noise 0.635 [high tide Cork]
+keyeval bare noise 0.521 [pasta recipe]
+keyeval bare noise 0.694 [javascript framework choice]
+keyeval instructed kw 0.806 / q 0.801 [Golden Gate milestone]
+keyeval instructed kw 0.806 / q 0.846 [TestFlight external submission]
+keyeval instructed kw 0.787 / q 0.781 [attention mechanism]
+keyeval instructed kw 0.759 / q 0.761 [sister name]
+keyeval instructed kw 0.718 / q 0.758 [coffee order]
+keyeval instructed kw 0.773 / q 0.769 [company name]
+keyeval instructed kw 0.766 / q 0.744 [database decision]
+keyeval instructed kw 0.700 / q 0.722 [football day]
+keyeval instructed kw 0.804 / q 0.797 [allergy]
+keyeval instructed kw 0.773 / q 0.795 [editor setup]
+keyeval instructed noise 0.530 [sourdough starter ratio]
+keyeval instructed noise 0.501 [apple tree pruning]
+keyeval instructed noise 0.522 [css div centering]
+keyeval instructed noise 0.601 [high tide Cork]
+keyeval instructed noise 0.477 [pasta recipe]
+keyeval instructed noise 0.643 [javascript framework choice]
+[bare]
+  keyword→target:  min 0.726 / median 0.788 / max 0.836 (n=10)
+  question→target: min 0.735 / median 0.788 / max 0.858 (n=10)
+  noise→target:    min 0.521 / median 0.571 / max 0.694 (n=6)
+  keyword→question gap: 0.007
+  margin (positive floor − noise ceiling): 0.032 (clean dead-zone)
+  floor 0.350: keyword 10/10 · question 10/10 · noise leaks 6
+  floor 0.370: keyword 10/10 · question 10/10 · noise leaks 6
+  suggested floor: 0.710 (midpoint: noise max 0.694 < positive min 0.726)
+[instructed]
+  keyword→target:  min 0.700 / median 0.773 / max 0.806 (n=10)
+  question→target: min 0.722 / median 0.775 / max 0.846 (n=10)
+  noise→target:    min 0.477 / median 0.526 / max 0.643 (n=6)
+  keyword→question gap: 0.008
+  margin (positive floor − noise ceiling): 0.057 (clean dead-zone)
+  floor 0.350: keyword 10/10 · question 10/10 · noise leaks 6
+  floor 0.370: keyword 10/10 · question 10/10 · noise leaks 6
+  suggested floor: 0.671 (midpoint: noise max 0.643 < positive min 0.700)
+head-to-head (instructed vs bare): keyword mean -0.016 · noise ceiling -0.051 · margin +0.025
+keyeval memeval[bare]:
+memeval positives: min 0.735 / median 0.801 / max 0.886 (n=22)
+memeval negatives: min 0.573 / median 0.618 / max 0.655 (n=11)
+memeval suggested threshold: 0.695 (clean separation: neg max 0.655 < pos min 0.735)
+keyeval memeval[instructed]:
+memeval positives: min 0.707 / median 0.795 / max 0.875 (n=22)
+memeval negatives: min 0.535 / median 0.580 / max 0.628 (n=11)
+memeval suggested threshold: 0.667 (clean separation: neg max 0.628 < pos min 0.707)
+keyeval absep arms:
+[chunks-bare]
+  in-domain:  min 0.799 / median 0.870 / max 0.888 (n=6)
+  off-domain: min 0.525 / median 0.561 / max 0.584 (n=6)
+  margin: 0.215 (clean dead-zone)
+[chunks-instructed]
+  in-domain:  min 0.779 / median 0.852 / max 0.878 (n=6)
+  off-domain: min 0.485 / median 0.521 / max 0.548 (n=6)
+  margin: 0.231 (clean dead-zone)
+head-to-head: chunks-bare margin 0.215 vs chunks-instructed margin 0.231 → chunks-instructed wider by 0.016
+=== END SELF-TEST ===

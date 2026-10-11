@@ -134,14 +134,19 @@ public struct ScreengrabHarness: Sendable, Equatable {
         plate == .memories
     }
 
-    /// Mac: the Settings scene is the subject. Pairing (Brain at Home) AND the
-    /// privacy stand-in both live in Settings ▸ Privacy.
+    /// Mac: the Settings scene is the subject. Pairing lives in Settings ▸ Brain at Home
+    /// (its own pane since 1.1), the privacy stand-in in Settings ▸ Privacy.
     public var opensSettings: Bool {
         plate == .brainAtHome || plate == .privacyLabel
     }
 
-    public var showsPrivacyPane: Bool {
-        plate == .privacyLabel || plate == .brainAtHome
+    /// Mac: the `SettingsView.Pane` raw value the plate opens on, nil when Settings is not the subject.
+    public var settingsPane: String? {
+        switch plate {
+        case .brainAtHome: "brainAtHome"
+        case .privacyLabel: "privacy"
+        default: nil
+        }
     }
 
     /// iOS: the NavigationStack path the shell pushes once the brain is ready —

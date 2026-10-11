@@ -46,10 +46,10 @@ en-US, de-DE, es-ES, fr-FR, ja, ko, pt-BR, zh-Hans (auto-selected).
 (`events/waking-up/`). Apple: attach as early as possible.
 
 **Supplemental materials** (≤5 URLs)
-1. https://m1k3.app — the product page (hero, brains scoreboard, privacy)
-2. https://m1k3.app/install — the two-minute install wizard
+1. https://apps.apple.com/app/id6780230835 — the Mac App Store listing (one universal record)
+2. https://m1k3.app — the product page (hero, brains scoreboard, privacy)
 3. https://m1k3.app/brains — the public eval harness behind the brain picks
-4. https://testflight.apple.com/join/Fxp2F5Je — TestFlight public link
+4. https://testflight.apple.com/join/Fxp2F5Je — TestFlight public link (the iPhone & iPad beta)
 5. https://github.com/Round-Tower/m1k3 — the source
 
 **Helpful details** (≤500)
@@ -87,4 +87,7 @@ Context: fields and caps read off Apple's nominations template
   "in-app events are iPhone and iPad only" is the form's own note. Every
   framework named is in the 1.0 tree; the privacy label state was clicked
   by Kev on 2026-09-15. Kev pastes and submits — the form is his click.
+Review: Kev + claude-opus-5.5, 2026-10-11 — Mac App Store live: CTAs and install copy switch from TestFlight.
+  The store listing leads the supplemental links; TestFlight stays as the iPhone & iPad beta;
+  /install dropped to keep the five-URL cap. Confidence 0.85
 -->

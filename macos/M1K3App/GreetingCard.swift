@@ -32,7 +32,12 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11 — the memory chip's send drops " Keep it short.":
 //  a chip that pre-shortens the answer contradicts the character pass (length is a trait, not a
 //  constraint — Kev, 2026-09-09).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — `season`: in season (Halloween) a returning user gets one
+//  costume line under the wordmark; the first-session hero is untouched. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (CI fold) — the costume line renders inline from
+//  `SeasonalLook.greeting(for:)` (the shared SeasonalGreeting.swift is gone). Confidence 0.85.
 
+import M1K3Avatar
 import M1K3Chat
 import SwiftUI
 
@@ -49,6 +54,8 @@ struct GreetingCard: View {
     /// The chips for this blank canvas (StarterPrompts.pick(context:)); each
     /// carries its own prompt. Empty → no chip row.
     var starters: [String] = Array(StarterPrompts.doorPool.prefix(1))
+    /// The seasonal look in force (nil out of season / opted out) — one costume line for returning users.
+    var season: SeasonalLook?
 
     let onImport: () -> Void
     let onSend: (String) -> Void
@@ -66,6 +73,15 @@ struct GreetingCard: View {
                 Text(greetingLine)
                     .font(.title3)
                     .foregroundStyle(.secondary)
+            } else {
+                // Returning users have no line here; in season M1K3 greets in costume.
+                // The first-session hero keeps its own job.
+                if let line = SeasonalLook.greeting(for: season) {
+                    Text(line)
+                        .font(.title3)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
             }
 
             heroZone

@@ -30,6 +30,11 @@
 # `open --env/--stdout` plumbing are verify-by-launch. Whether CHATEVAL on one brain outlives
 # MIN_OFF with these defaults depends on the brain's speed (the script says "RUN TOO SHORT"
 # and you raise REPEATS).
+# Review: Kev + claude-fable-5.1, 2026-10-10 (#530) — the Open is CLOSED: it ran on 2026-10-10 and the
+# verdict held (App Nap; hold off 29 → 4 tok/s, hold on 28.5 → 28). Two bugs from that run: the awk
+# took RLENGTH-7 and dropped the last digit of `@NNtok/s` (column A read "2"); and arm B at MAX_WAIT
+# `die`d before the verdict and before the display was woken. The timeout now stops the arm and
+# keeps its samples, and the display is restored by an EXIT trap on every path.
 
 set -u
 
@@ -111,6 +116,11 @@ median() {
   sort -n | awk '{a[NR]=$1} END { if (NR==0) {print "-"} else if (NR%2) {print a[(NR+1)/2]} else {printf "%.0f\n", (a[NR/2]+a[NR/2+1])/2} }'
 }
 
+# The display is restored on EVERY exit path — a `die` after displaysleepnow used to leave
+# the Mac dark until a hand woke it (2026-10-10 run, arm B at MAX_WAIT).
+wake_display() { caffeinate -u -t 2 >/dev/null 2>&1; }
+trap wake_display EXIT
+
 # run_arm <A|B> [extra open args...]; leaves $WORK/<arm>.{pre,post,assert,meta}
 run_arm() {
   arm="$1"; shift
@@ -131,7 +141,11 @@ run_arm() {
   : > "$WORK/$arm.assert"
   while pgrep -f "$BIN" >/dev/null; do
     now=$(date +%s); el=$((now - t0))
-    if [ "$el" -gt "$MAX_WAIT" ]; then pkill -f "$BIN"; die "arm $arm: exceeded ${MAX_WAIT}s"; fi
+    if [ "$el" -gt "$MAX_WAIT" ]; then
+      pkill -f "$BIN"
+      say "   arm $arm: exceeded ${MAX_WAIT}s — stopped; the samples so far still count (raise MAX_WAIT or lower REPEATS)"
+      break
+    fi
     if [ "$slept_at" = 0 ] && [ "$el" -ge "$OFF_AFTER" ]; then
       slept_at="$now"; off_ts="$(date '+%Y-%m-%d %H:%M:%S')"
       pmset displaysleepnow
@@ -141,7 +155,7 @@ run_arm() {
     sleep 30
   done
   end=$(date +%s)
-  caffeinate -u -t 2 >/dev/null 2>&1   # wake the display
+  wake_display
   [ "$slept_at" != 0 ] || die "arm $arm: the run ended before display-off (${OFF_AFTER}s); raise REPEATS"
   off_for=$((end - slept_at))
   settle_ts="$(date -j -v+"${SETTLE}"S -f '%Y-%m-%d %H:%M:%S' "$off_ts" '+%Y-%m-%d %H:%M:%S')"
@@ -149,7 +163,7 @@ run_arm() {
   /usr/bin/log show --style compact --predicate 'subsystem == "app.m1k3"' --start "$start_ts" 2>/dev/null \
     | awk -v off="$off_ts" -v settle="$settle_ts" -v pre="$WORK/$arm.pre" -v post="$WORK/$arm.post" '
         /tok\/s/ && match($0, /@[0-9]+tok\/s/) {
-          ts = substr($0, 1, 19); v = substr($0, RSTART + 1, RLENGTH - 7)
+          ts = substr($0, 1, 19); v = substr($0, RSTART + 1, RLENGTH - 6)
           if (ts < off) print v >> pre
           else if (ts >= settle) print v >> post
         }'

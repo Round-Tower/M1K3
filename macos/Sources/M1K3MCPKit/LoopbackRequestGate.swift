@@ -69,7 +69,7 @@ public enum LoopbackRequestGate {
             case let .wrongPath(path): "Not Found: \(Self.clip(path)) is not the MCP endpoint (/mcp)"
             case .oauthNotSupported:
                 "Not Found: M1K3 doesn't use OAuth — send its access token as an Authorization: Bearer header "
-                    + "(M1K3 ▸ Settings ▸ Privacy ▸ MCP server, or run m1k3 login && m1k3 connect)"
+                    + "(M1K3 ▸ Settings ▸ MCP Server, or run m1k3 login && m1k3 connect)"
             case .missingHost: "Bad Request: Host header required"
             case .ambiguousHost: "Bad Request: more than one Host header"
             case let .foreignHost(host): "Forbidden: Host \(Self.clip(host)) is not this loopback listener"
@@ -79,9 +79,9 @@ public enum LoopbackRequestGate {
                 "Unsupported Media Type: Content-Type must be application/json (got \(Self.clip(type ?? "none")))"
             // Never the credential that was sent — a wrong token is still somebody's secret.
             case .missingToken:
-                "Unauthorized: M1K3 needs its access token (M1K3 ▸ Settings ▸ Privacy ▸ MCP server)"
+                "Unauthorized: M1K3 needs its access token (M1K3 ▸ Settings ▸ MCP Server)"
             case .wrongToken:
-                "Unauthorized: that isn't M1K3's current access token (M1K3 ▸ Settings ▸ Privacy ▸ MCP server)"
+                "Unauthorized: that isn't M1K3's current access token (M1K3 ▸ Settings ▸ MCP Server)"
             }
         }
 

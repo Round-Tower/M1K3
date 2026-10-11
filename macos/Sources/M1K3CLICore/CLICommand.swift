@@ -141,7 +141,7 @@ public struct CLICommand: Equatable, Sendable {
                                          (\(MCPClient.allCases.map(\.rawValue).joined(separator: " | ")))
                                          [--print] [--config-dir DIR]
       m1k3 agent-notes [--write [PATH]]  the "M1K3 is the resident" block for AGENTS.md
-      m1k3 login                         paste M1K3's access token (Settings ▸ Privacy)
+      m1k3 login                         paste M1K3's access token (Settings ▸ MCP Server)
       m1k3 version | help
 
     OPTIONS

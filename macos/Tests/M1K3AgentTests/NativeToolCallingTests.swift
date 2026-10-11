@@ -17,6 +17,8 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-10, Confidence 0.85, Prior: Unknown
 //  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — the fake declares `personaVariant`, and
 //  `systemTurnFollowsProviderVariant` pins that the system turn carries the provider's persona variant.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#418) — a `.rejectedToolCalls` turn is steered once with
+//  its reason and the retry executes; a second rejection concludes with the model's prose.
 
 import Foundation
 @testable import M1K3Agent
@@ -267,6 +269,53 @@ struct NativeToolCallingTests {
         let observation = try #require(result.reasoningTrace[0].observation)
         #expect(observation.contains("unknown tool 'nonexistent'"))
         #expect(observation.contains("search"))
+    }
+
+    @Test("a rejected call is steered once with its reason, and the retry runs (#418)")
+    func rejectedCallSteersOnce() async throws {
+        let provider = FakeToolCallingProvider { index, _, _ in
+            switch index {
+            case 0: .rejectedToolCalls(reason: "invalid_arguments (search): expected 'query' to be a string", text: "")
+            case 1: call("search", ["query": .string("fiddle")])
+            default: .text("found it")
+            }
+        }
+        let tool = RecordingTool(name: "search")
+        let agent = LocalAgent(inferenceProvider: provider, tools: [tool])
+
+        let result = try await agent.run(goal: "x")
+
+        #expect(result.conclusion == "found it")
+        #expect(tool.executionCount == 1)
+        // The steer names the reason and asks for a schema-conforming retry — the model
+        // reads it as the next user message, the way the empty-turn steer works.
+        let steer = try #require(provider.receivedTranscripts[1].last)
+        guard case let .user(text, _) = steer else { Issue.record("expected a user steer, got \(steer)"); return }
+        #expect(text.contains("invalid_arguments"))
+        #expect(text.contains("search"))
+        #expect(result.reasoningTrace[0].observation?.contains("invalid_arguments") == true)
+    }
+
+    @Test("a second rejected call concludes with the prose the model wrote, as before (#418)")
+    func secondRejectionConcludes() async throws {
+        let provider = FakeToolCallingProvider { index, _, _ in
+            index < 2
+                ? .rejectedToolCalls(reason: "malformed_syntax", text: index == 1 ? "I can't form that call." : "")
+                : .text("never reached")
+        }
+        let tool = RecordingTool(name: "search")
+        let agent = LocalAgent(inferenceProvider: provider, tools: [tool])
+        let streamed = Mutex("")
+
+        let result = try await agent.run(
+            goal: "x", onConclusionToken: { token in streamed.withLock { $0 += token } }
+        )
+
+        #expect(tool.executionCount == 0)
+        #expect(result.conclusion == "I can't form that call.")
+        // Streamed by the session as it generated, exactly once: the loop never re-emits it.
+        #expect(streamed.withLock { $0 } == "I can't form that call.")
+        #expect(provider.continueCallCount == 2)
     }
 
     @Test("think phase routes to onReasoningToken; the answer to onConclusionToken")

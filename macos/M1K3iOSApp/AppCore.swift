@@ -337,6 +337,11 @@ final class AppCore {
         // first-run critical path.
         let baseEmbedder = HashingEmbeddingService()
         embedder = baseEmbedder
+        // The memory graph's edge / recall bars follow the embedder's cone: the
+        // hashing floors (memory 0.10), measured — the Qwen default this store
+        // carried before 2026-10-10 kept 6 of 22 true recalls on this arm.
+        // Set once: this shell has no embedder switch (hashing only), so they never go stale.
+        memoryStore?.floors = EmbedderFloors.forFingerprint(baseEmbedder.fingerprint)
         ingester = DocumentIngester(store: store, embedder: baseEmbedder)
 
         // Restore the chosen brain (default Mini). Decode via init(persisted:) so a

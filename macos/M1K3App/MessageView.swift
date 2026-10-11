@@ -20,8 +20,10 @@
 //  on status != .streaming); tools show live as each dispatches, with a content transition. Confidence 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — "Remember this photo" under a sent image (RememberPhotoButton).
 //  TDD_SKIP: view body.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — avatarDisplay reads through AvatarDisplay(persisted:) (panel retired; the legibility card keys on the backdrop). Confidence 0.85.
 
 import AppKit
+import M1K3Avatar
 import M1K3Chat
 import M1K3Knowledge
 import M1K3LanguageModel
@@ -55,7 +57,10 @@ struct MessageView: View {
     @AppStorage(AppEnvironment.showGenerationStatsKey) private var showGenerationStats = false
     /// When the full-window avatar is the backdrop, M1K3's flat turns need a readability
     /// scrim to stay legible; on the plain backdrop they stay card-free.
-    @AppStorage(AppEnvironment.avatarDisplayKey) private var avatarDisplay = AvatarDisplay.panel
+    @AppStorage(AppEnvironment.avatarDisplayKey) private var avatarDisplayRaw = AvatarDisplay.defaultValue.rawValue
+    private var avatarDisplay: AvatarDisplay {
+        AvatarDisplay(persisted: avatarDisplayRaw)
+    }
 
     /// The http(s) links mentioned in this turn, surfaced as one-click chips.
     /// Memoised in @State and recomputed only when the turn's text changes (via

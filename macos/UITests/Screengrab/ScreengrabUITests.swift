@@ -110,29 +110,13 @@ final class ScreengrabUITests: XCTestCase {
 
     func testBrainAtHome() throws {
         try capture(.brainAtHome, settle: 4, window: settingsWindow) { app in
-            // The beat opens Settings ▸ Privacy, whose Brain at Home section runs the ceremony.
+            // The beat opens Settings on the Brain at Home pane (its own pane since 1.1), whose
+            // section runs the ceremony: nothing to scroll to.
             waitForBrain(app)
-            // The window's existence is the anchor: the harness selects the M1K3
-            // pane itself, and any text query over this tree has timed out twice
+            // The window's existence is the anchor: any text query over this tree has timed out twice
             // ("Failed to get matching snapshots").
             let settings = settingsWindow(app)
             XCTAssert(settings.waitForExistence(timeout: 60), "Settings window never appeared")
-            // Brain at Home sits low in Settings ▸ Privacy: scroll by coordinate
-            // until its header is in the (small, avatar-free) Settings tree.
-            let header = settings.descendants(matching: .any)
-                .matching(NSPredicate(format: "label CONTAINS[c] 'Brain at Home'")).firstMatch
-            let middle = settings.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
-            // `exists` is true for an offscreen row; `isHittable` is "on screen".
-            for _ in 0 ..< 16 where !header.isHittable {
-                middle.scroll(byDeltaX: 0, deltaY: -250)
-                RunLoop.current.run(until: Date().addingTimeInterval(0.3))
-            }
-            XCTAssert(header.isHittable, "Brain at Home header never scrolled into view")
-            // Two more notches: the header at the bottom edge shows none of the section.
-            for _ in 0 ..< 2 {
-                middle.scroll(byDeltaX: 0, deltaY: -250)
-                RunLoop.current.run(until: Date().addingTimeInterval(0.3))
-            }
         }
     }
 
@@ -162,10 +146,10 @@ final class ScreengrabUITests: XCTestCase {
 
     // MARK: - Machinery
 
-    /// The Settings scene's window when it is up, else whatever is frontmost.
+    /// Settings is a screen in the main window (since 2026-09-23), not its own window: the
+    /// frontmost window is the subject.
     private func settingsWindow(_ app: XCUIApplication) -> XCUIElement {
-        let settings = app.windows["M1K3 Settings"]
-        return settings.exists ? settings : app.windows.firstMatch
+        app.windows.firstMatch
     }
 
     private func companion(_ plate: ScreengrabPlate) throws {

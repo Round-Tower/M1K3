@@ -52,7 +52,22 @@
 //  exits per lane (the DMG has no PCC backend). Pure copy, no seam; verify-by-launch. Confidence 0.8.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (PR #527 fold) — the DMG line names the lookups web search
 //  makes (Wikipedia, page fetches carry a query out), matching the chat's egress clause.
+//  Review: Kev + claude-opus-4-6, 2026-10-10 — #540 slice 1: symmetric doors (Private writes
+//  the off-set, not break); Full calls real setters for calendar/location/notifications
+//  (SensePermissionPolicy ceremony, reverts on deny); Return no longer commits Full; name
+//  prefilled on re-run with profile "Name:" rewrite; AFM re-probed on scenePhase active;
+//  captions lane-honest (no PCC on DMG, no Voice). Re-run is a sheet, not a gate-key flip.
+//  Confidence 0.8 (flow logic tested; permission ceremony + sheet are verify-by-launch).
+//  Open: the issue's "Currently: Full / Private / Custom" line for re-run (slice 2).
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#544 bot pass) — the Full door's ceremony STORES each sense
+//  (`SensePermissionPolicy.settledValue`; the first cut only wrote the `false` branches, so Full never turned
+//  calendar or location on), and completion waits for it (`settling` disables the doors meanwhile) so the
+//  system dialogs fire over a live hello, never a dismissed one. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (#544 pass 2) — the ceremony task is owned by the view and
+//  cancelled on disappear; Cancel and interactive dismiss are gated while settling; the direct keys are
+//  applied AFTER the ceremony, so a cancelled Full writes nothing.
 
+import M1K3AgentTools
 import M1K3Avatar
 import M1K3Inference
 import SwiftUI
@@ -62,6 +77,7 @@ import SwiftUI
 struct HelloView: View {
     @Environment(AppEnvironment.self) private var env
     let onComplete: () -> Void
+    var isRerun = false
 
     private enum Phase: Equatable {
         /// The one screen (copy adapts to AFM availability).
@@ -75,11 +91,17 @@ struct HelloView: View {
     @State private var phase: Phase = .hello
     @State private var userName = ""
     @State private var afm: AFMAvailability = .available
+    /// The Full door's permission ceremony is running: doors and Cancel
+    /// disabled, the sheet held. The task is owned here so a dismissal cancels
+    /// it and nothing of the hello lands after the user walked away.
+    @State private var settling = false
+    @State private var ceremony: Task<Void, Never>?
     /// The wake-setup deck shown during both waits. Its completion rule (pure,
     /// pinned) owns the no-yank behaviour: an untouched deck auto-advances on
     /// ready exactly like the old spinner did; an engaged one waits for a tap.
     @State private var wakeFlow = WakeSetupFlow()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ScrollView {
@@ -110,8 +132,20 @@ struct HelloView: View {
         .onAppear {
             afm = env.afmAvailability
             env.avatar.setEmotion(.happy)
+            if isRerun, userName.isEmpty {
+                userName = UserDefaults.standard.string(
+                    forKey: AppEnvironment.userDisplayNameKey
+                ) ?? ""
+            }
         }
-        .onDisappear { env.avatar.resetToIdle() }
+        .onDisappear {
+            env.avatar.resetToIdle()
+            ceremony?.cancel()
+        }
+        .interactiveDismissDisabled(settling)
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { afm = env.afmAvailability }
+        }
         .onChange(of: env.modelLoad) { _, state in
             guard case .ready = state, phase == .downloading else { return }
             // No yank: readiness only auto-advances a user who never touched
@@ -153,19 +187,18 @@ struct HelloView: View {
                 .font(.title3)
                 .frame(maxWidth: 360)
                 .accessibilityLabel("Your name, optional")
-                .onSubmit { sayHello(experience: .fullExperience) }
 
             VStack(spacing: 12) {
                 experienceButton(
                     .fullExperience,
                     title: needsFallbackDownload ? "Full experience · download & go →" : "Full experience →",
-                    caption: "Voice, notch HUD, heartbeat, senses, Private Cloud Compute — all on.",
+                    caption: fullExperienceCaption,
                     prominent: true
                 )
                 experienceButton(
                     .privateByDefault,
                     title: needsFallbackDownload ? "Private · download & go →" : "Private →",
-                    caption: "Everything off. Discover features one by one in Settings.",
+                    caption: "All features off. Discover them one by one in Settings.",
                     prominent: false
                 )
             }
@@ -177,6 +210,15 @@ struct HelloView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 420)
+
+            if isRerun {
+                Button("Cancel") { onComplete() }
+                    .disabled(settling)
+                    .buttonStyle(.plain)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 2)
+            }
 
             if case .blocked(userFixable: true) = afm, needsFallbackDownload {
                 Button("Or turn on Apple Intelligence in System Settings") {
@@ -207,6 +249,14 @@ struct HelloView: View {
             return true
         }
         return false
+    }
+
+    private var fullExperienceCaption: String {
+        var parts = ["Notch HUD", "heartbeat", "senses"]
+        if AppEnvironment.privateCloudBackend != nil {
+            parts.append("Private Cloud Compute (asks per message)")
+        }
+        return parts.joined(separator: ", ") + " — all on."
     }
 
     private var disclosureCaption: String {
@@ -324,20 +374,50 @@ struct HelloView: View {
         if prominent {
             Button { sayHello(experience: experience) } label: { label }
                 .buttonStyle(.glassProminent)
+                .disabled(settling)
         } else {
             Button { sayHello(experience: experience) } label: { label }
                 .buttonStyle(.bordered)
+                .disabled(settling)
         }
     }
 
     // MARK: - Actions
 
     private func sayHello(experience: OnboardingExperience = .fullExperience) {
+        guard !settling else { return }
+        guard experience == .fullExperience else {
+            finishHello(experience: experience)
+            return
+        }
+        // The ceremony is awaited BEFORE anything is written: the system
+        // dialogs fire over this hello (sheet or window), never over a
+        // dismissed one, and a Cancel mid-way (the sheet's Esc is blocked,
+        // the button disabled, but the view can still go away) leaves the
+        // store exactly as it was.
+        settling = true
+        ceremony = Task { @MainActor in
+            await settleFullPermissions()
+            settling = false
+            guard !Task.isCancelled else { return }
+            finishHello(experience: experience)
+        }
+    }
+
+    private func finishHello(experience: OnboardingExperience) {
+        // Direct keys after the ceremony, so a cancelled Full never half-applies
+        // (Full's apply skips the three senses the ceremony just stored).
         experience.apply(to: .standard)
         // Name first, brain second — the gate key flips in onComplete, and the
-        // profile write must land before any window swap.
-        env.saveFirstRunName(userName)
+        // profile write must land before any window swap. On a re-run, rewrite
+        // the profile's "Name:" line (not just seed it) so the system prompt
+        // and the greeting stay in sync.
+        env.saveFirstRunName(userName, rewriteProfile: isRerun)
         env.avatar.setEmotion(.excited)
+        if isRerun {
+            onComplete()
+            return
+        }
         switch FirstRunBrainPolicy.resolve(afm: afm, currentBrain: env.selectedBrain) {
         case let .keepCurrent(tier):
             env.selectBrain(tier)
@@ -367,6 +447,38 @@ struct HelloView: View {
             // Already loaded (re-run edge) — no transition coming; finish now.
             onComplete()
         }
+    }
+
+    /// Run the three permission-required keys through real setters in
+    /// sequence so the system prompts fire during onboarding, not mid-chat,
+    /// and STORE each outcome: granted (before or now) → on, anything else → off.
+    /// A cancelled ceremony stores nothing it has not already stored.
+    @MainActor
+    private func settleFullPermissions() async {
+        let calendar = await Self.settle(
+            status: ContextSenseAuth.calendarStatus, request: ContextSenseAuth.requestCalendar
+        )
+        guard !Task.isCancelled else { return }
+        UserDefaults.standard.set(calendar, forKey: AppEnvironment.contextCalendarEnabledKey)
+        let location = await Self.settle(
+            status: ContextSenseAuth.locationStatus, request: ContextSenseAuth.requestLocation
+        )
+        guard !Task.isCancelled else { return }
+        UserDefaults.standard.set(location, forKey: AppEnvironment.contextLocationEnabledKey)
+        // Heartbeat notifications: the setter stores the authorization answer itself.
+        await env.setHeartbeatNotifications(true)
+    }
+
+    /// One sense through the pane's two steps, asking macOS only when the
+    /// policy says to; the stored value is the policy's, not this view's.
+    @MainActor
+    private static func settle(
+        status: SensePermissionStatus, request: @MainActor () async -> SensePermissionStatus
+    ) async -> Bool {
+        let answer: SensePermissionStatus? = if case .request = SensePermissionPolicy.onToggle(
+            enabled: true, status: status
+        ) { await request() } else { nil }
+        return SensePermissionPolicy.settledValue(before: status, answer: answer)
     }
 
     private func openSystemSettings() {

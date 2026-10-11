@@ -81,12 +81,18 @@
 //  the duplicated sanitiser is lifted into M1K3Knowledge.FTSQuery (shared with
 //  KnowledgeStore), and recallFTS gained the strict→relaxed zero-hit retry (B5)
 //  its twin already had. The cosine floor in `recall` still gates relaxed hits.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 — the edge and recall cutoffs resolve from an injected
+//  `floors` (EmbedderFloors, set by the composition root from the live embedder) instead of the
+//  GroundingGate Qwen constants, so an embedder with a different cone (EmbeddingGemma 2) is gated by
+//  its own measured bars. `threshold:` stays as an explicit override. Fold (#547 review): `floors` behind an
+//  OSAllocatedUnfairLock — written from the main actor on a swap, read from any task.
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — #180: `liveMemory(where:)`, the newest live row whose
 //  text passes a predicate (ids and texts only). Confidence 0.9.
 
 import Foundation
 import GRDB
 import M1K3Knowledge // VectorMath, ReciprocalRankFusion, GroundingGate, EmbeddingService
+import os
 
 /// A `rememberConnected` link-loop failure AFTER the node was written: the
 /// node is live (and its corpus vector makes the distiller's semantic dedup
@@ -259,8 +265,24 @@ public struct MemoryHit: Identifiable, Equatable, Sendable {
 // MARK: - Store
 
 /// GRDB-backed memory store. Same concurrency stance as KnowledgeStore:
-/// DatabaseQueue is internally serialized → @unchecked Sendable.
+/// DatabaseQueue is internally serialized → @unchecked Sendable; the one
+/// mutable value outside the queue, `floors`, sits behind its own lock.
 public final class MemoryStore: @unchecked Sendable {
+    /// The per-embedder bars this store's edge and recall cutoffs resolve
+    /// from. The composition root sets it from the fingerprint the STORED
+    /// vectors carry (and from the live embedder once a re-index has moved
+    /// them into its space); the default is the legacy Qwen set so tests keep
+    /// their measured behaviour. Written from the main actor on an embedder
+    /// swap while recall and edge linking read it from any task, so it lives
+    /// behind a lock. The `threshold:` parameters below take precedence when a
+    /// caller passes one explicitly.
+    public var floors: EmbedderFloors {
+        get { floorsLock.withLock { $0 } }
+        set { floorsLock.withLock { $0 = newValue } }
+    }
+
+    private let floorsLock = OSAllocatedUnfairLock<EmbedderFloors>(initialState: .qwen3Instructed)
+
     private let dbQueue: DatabaseQueue
 
     /// `nil` path → in-memory store (tests).
@@ -431,9 +453,10 @@ public final class MemoryStore: @unchecked Sendable {
         _ memory: Memory,
         embedding: [Float],
         maxLinks: Int = 3,
-        threshold: Float = GroundingGate.edgeThreshold,
+        threshold: Float? = nil,
         supersedes oldID: UUID? = nil
     ) throws -> Int {
+        let threshold = threshold ?? floors.edge
         try remember(memory, embedding: embedding, supersedes: oldID)
         // Nearest live neighbours by cosine — the +1 absorbs the node we just
         // inserted (cosine 1.0 with itself), which we then drop by id.
@@ -495,8 +518,9 @@ public final class MemoryStore: @unchecked Sendable {
         query: String,
         queryVector: [Float],
         limit: Int = 5,
-        threshold: Float = GroundingGate.memoryThreshold
+        threshold: Float? = nil
     ) throws -> [MemoryHit] {
+        let threshold = threshold ?? floors.memory
         let ftsHits = try recallFTS(query: query, limit: limit * 2)
         let vectorHits = try recallVector(queryVector: queryVector, limit: limit * 2)
 

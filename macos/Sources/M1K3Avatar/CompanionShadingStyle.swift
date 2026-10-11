@@ -16,6 +16,9 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-18, Confidence 0.9 (the style→function +
 //  texture-preservation map is pinned by tests; the on-screen look is
 //  verify-at-⌘R). Prior: Kev + claude-opus-4-8 (phosphor #46).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — `wearing(_:)`: in season every style wears the
+//  phosphor costume (the tint only exists in the phosphor shader, and the shading default is
+//  .off, so without it most users would never see the Halloween look). Confidence 0.85.
 //
 
 public enum CompanionShadingStyle: String, CaseIterable, Identifiable, Sendable {
@@ -59,5 +62,13 @@ public enum CompanionShadingStyle: String, CaseIterable, Identifiable, Sendable 
     /// Cel adapts the fur texture; phosphor is a monochrome glow that ignores it.
     public var usesOriginalTexture: Bool {
         self == .cel
+    }
+
+    /// The style to paint while `season` is in: the costume IS the phosphor shader (its
+    /// seasonal tint has nowhere else to live), so a season overrides the user's pick for
+    /// its window; out of season the pick stands. The Seasonal looks opt-out is upstream
+    /// (it makes `season` nil).
+    public func wearing(_ season: SeasonalLook?) -> CompanionShadingStyle {
+        season == nil ? self : .phosphor
     }
 }

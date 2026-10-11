@@ -60,25 +60,19 @@ this repo has not caught up yet. Open an issue.
 
 ## Using weights you already have
 
-M1K3 can adopt a folder of weights directly, so you never need to download
-twice — if you have them from `huggingface-cli`, another machine, or a mirror,
-point the app at the folder: **Settings → Advanced → Import weights from a
-folder…**, having picked the matching brain.
+There is no in-app import any more: M1K3 1.0 had a Settings section that adopted a
+folder of weights, and 1.1 removed it (with Model Auditions) from Settings. The
+verifying core (`WeightImport` in `M1K3MLX`) is still in the package and tested,
+but nothing in the app calls it.
 
-The app verifies the folder against the manifest first and **refuses it
-outright if anything disagrees**. On success it installs the files along with
-the download metadata the underlying HuggingFace client expects.
-
-That last part is the bit that matters, and it is worth stating plainly because
-we got it wrong once: simply copying weights into the cache directory **does not
-work**. On 2026-07-16 a cache pre-seeded with `hf download --local-dir` failed
-the client's freshness check and triggered a full re-download of both models —
-strictly worse than having done nothing. Use the import path, which writes the
-metadata correctly.
+Do **not** copy weights into the cache directory by hand. On 2026-07-16 a cache
+pre-seeded with `hf download --local-dir` failed the client's freshness check and
+triggered a full re-download of both models — strictly worse than having done
+nothing. Let the app download the brain.
 
 ## Hosting a mirror
 
-Serving the files is enough for manual placement and import. If you want the
+Serving the files is enough for people to fetch them by hand. If you want the
 app itself to fetch from your mirror, note that it currently talks to one
 endpoint — a runtime fallback source is
 [tracked separately](https://github.com/Round-Tower/M1K3/issues) and would
@@ -100,10 +94,11 @@ be resolved.
 
 ## Licensing
 
-All three pinned models are **Apache-2.0**: `gemma-4-12B-it` (Gemma 4 is
-Apache-2.0 — it is *not* under Google's Gemma Terms of Use, which cover Gemma 1
-through 3n and the other family members), `Qwen3-4B-Instruct-2507`, and
-`Qwen3-Embedding-0.6B`.
+The brains and the embedder are **Apache-2.0**: `gemma-4-12B-it` and
+`embeddinggemma-2` (Gemma 4 and EmbeddingGemma 2 are Apache-2.0 — they are *not*
+under Google's Gemma Terms of Use, which cover Gemma 1 through 3n and the other
+family members) and `Qwen3.5-4B`. Check `LFM2.5-1.2B`'s own licence file before
+mirroring it.
 
 Redistribution is permitted. Apache-2.0 section 4 asks you to include a copy of
 the licence, and to state plainly if you changed any files. Note that some

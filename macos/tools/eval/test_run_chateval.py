@@ -9,6 +9,7 @@ here; the launch/quit glue is driven by hand on the real app).
 Prior: none (new file).
 Review: Kev + claude-fable-5.1, 2026-10-09 — the router arm's keys (`--router dispatch`, head, chain) pinned.
 Review: Kev + claude-fable-5.1, 2026-10-09 — pins the Lil RAM-cap flag (5 GB own peak, lil only, inclusive).
+Review: Kev + claude-opus-5-5, 2026-10-10 — `--router off`.
 """
 
 import json
@@ -259,13 +260,15 @@ def test_summary_has_a_per_kind_table_with_a_content_column(tmp_path):
     na = {"fixtureID": "e", "kind": "vision", "latencyMS": 0, "checks": [{"name": "applicable", "outcome": "skip"}]}
     rows = rc.kind_rows([ok, slow, wrong, right, na])
     assert rows == [
-        {"kind": "code-gen", "passed": 1, "total": 3, "latency_only": 1, "content": 2},
-        {"kind": "open-chat", "passed": 1, "total": 1, "latency_only": 0, "content": 1},
-    ], "kinds sorted, n/a trials left out, content = passed + latency-only"
+        {"kind": "code-gen", "passed": 1, "total": 3, "latency_only": 1, "content": 2,
+         "think_tokens": None, "think_ms": None},
+        {"kind": "open-chat", "passed": 1, "total": 1, "latency_only": 0, "content": 1,
+         "think_tokens": None, "think_ms": None},
+    ], "kinds sorted, n/a trials left out, content = passed + latency-only; no think fields → None"
     doc = tmp_path / "run.json"
     doc.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok, slow, wrong, right, na]}], "provenance": {}}))
     table = rc.kind_table(rows)
-    assert table.splitlines()[0].split() == ["kind", "passed", "latency-only", "content"]
+    assert table.splitlines()[0].split() == ["kind", "passed", "latency-only", "content", "~think-tk", "think-ms"]
     assert "code-gen" in table and "1/3" in table and "2/3" in table
     assert table in rc.summarise(doc), "the table rides in the summary under the run line"
 
@@ -389,3 +392,26 @@ def test_summary_flags_a_lil_run_over_the_own_peak_cap(tmp_path):
     assert rc.over_lil_own_peak_cap("lil", 5121) is True
     assert rc.over_lil_own_peak_cap("big", 7402) is False
     assert rc.over_lil_own_peak_cap("lil", None) is False
+
+
+def test_router_off_is_the_arms_like_for_like_baseline():
+    # 2026-10-10: the arm's `off` cell sent tool-use through LocalAgent while the router cells took
+    # the live path, two different paths. `--router off` is the live path with no route.
+    assert _trig(router="off")["M1K3_SELFTEST_CHATEVAL_ROUTER"] == "off"
+    for over in ({"router_head": True}, {"router_chain": True}):
+        with pytest.raises(ValueError):
+            _trig(router="off", **over)
+
+
+def test_kind_rows_carry_the_think_phase_medians():
+    # 2026-10-10: Lil's reasoning "running wild" was a feeling until the score carried the think block.
+    thought = {"fixtureID": "a", "kind": "reasoning", "latencyMS": 9, "thinkChars": 800, "thinkMS": 4000,
+               "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    thought2 = {"fixtureID": "b", "kind": "reasoning", "latencyMS": 9, "thinkChars": 1200, "thinkMS": 6000,
+                "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    old = {"fixtureID": "c", "kind": "reasoning", "latencyMS": 9, "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    rows = rc.kind_rows([thought, thought2, old])
+    assert rows[0]["think_tokens"] == 200 and rows[0]["think_ms"] == 4000, "lower-middle median (Swift's rule) over the trials that recorded it"
+    table = rc.kind_table(rows)
+    assert "200" in table and "4000" in table
+

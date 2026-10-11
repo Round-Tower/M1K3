@@ -45,7 +45,7 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "Does the M1K3 app need to be running?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes, and the server has to be switched on. The MCP server lives inside the app, serves at http://127.0.0.1:4242/mcp only while M1K3 is open, and is off by default — turn it on once in Settings, Privacy, MCP server. A server your agent reports as disconnected almost always means the app is closed. The m1k3 command opens the app for you and waits up to twenty seconds for the port to answer." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes, and the server has to be switched on. The MCP server lives inside the app, serves at http://127.0.0.1:4242/mcp only while M1K3 is open, and is off by default — turn it on once in Settings, MCP Server. A server your agent reports as disconnected almost always means the app is closed. The m1k3 command opens the app for you and waits up to twenty seconds for the port to answer." } },
     { "@type": "Question", "name": "Which agents can m1k3 connect for me?",
       "acceptedAnswer": { "@type": "Answer", "text": "Five, in two ways. For Claude Code it runs that client’s own registration command; for Cursor and VS Code it edits the one JSON file, keeping every other server in it and leaving a .bak copy beside it the first time. For Codex and Zed it prints the snippet for you to paste, because rewriting an editor’s whole settings file on a hunch is the wrong thing for a tool to do." } },
     { "@type": "Question", "name": "Is it safe to leave the MCP server on?",
@@ -100,10 +100,10 @@
   <p>The third line writes the MCP entry for your agent, token included, as an <code>Authorization: Bearer</code> header. Swap <code>claude</code> for <code>codex</code>, <code>cursor</code>, <code>vscode</code> or <code>zed</code>; add <code>--print</code> to see the config without touching a file.</p>
 
   <h2>One switch, once</h2>
-  <p>The MCP server is <strong>off by default</strong>, and it lives inside the app: open M1K3, then <strong>Settings ▸ Privacy ▸ MCP server</strong>, and switch it on. The same pane shows the access token, masked, with <strong>Copy</strong> (for <code>m1k3 login</code>) and <strong>New Token…</strong>. A new token disconnects every agent until you run <code>m1k3 login</code> and <code>m1k3 connect</code> again. The pane also has a picker for all five agents with the snippet, token filled in, and a Copy button, if you would rather click than type.</p>
+  <p>The MCP server is <strong>off by default</strong>, and it lives inside the app: open M1K3, then <strong>Settings ▸ MCP Server</strong>, and switch it on. The same pane shows the access token, masked, with <strong>Copy</strong> (for <code>m1k3 login</code>) and <strong>New Token…</strong>. A new token disconnects every agent until you run <code>m1k3 login</code> and <code>m1k3 connect</code> again. The pane also has a picker for all five agents with the snippet, token filled in, and a Copy button, if you would rather click than type.</p>
 
   <h2>Without Homebrew</h2>
-  <p>Download the signed, notarized <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg">M1K3.dmg</a> from GitHub Releases and drag it to Applications. Then either use the picker in <strong>Settings ▸ Privacy ▸ MCP server</strong>, or run the same command from inside the bundle:</p>
+  <p>Download the signed, notarized <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg">M1K3.dmg</a> from GitHub Releases and drag it to Applications. Then either use the picker in <strong>Settings ▸ MCP Server</strong>, or run the same command from inside the bundle:</p>
   <div class="term">
     <div class="term-bar"><span></span><span></span><span></span></div>
     <div class="term-body"><pre><span class="p">$</span> /Applications/M1K3.app/Contents/Helpers/m1k3 login
@@ -238,7 +238,7 @@ Never block on it; carry on without it.
     <li><strong>It will not answer a web page.</strong> Requests whose <code>Host</code> header is not a loopback address are refused, and an <code>Origin</code> that is not a loopback page is refused too — the standard defence against a site using your browser to reach a server on your own machine.</li>
     <li><strong>It will not run while M1K3 is closed.</strong> The server is part of the app. A "disconnected" MCP server almost always means the app is not open — which is why the resident block above tells your agent never to block on it. The <code>m1k3</code> command opens the app itself and waits for the port.</li>
     <li><strong>It will not answer without its token.</strong> Every request has to carry the access token as an <code>Authorization: Bearer</code> header; one without it gets a 401 before it reaches a session. The token keeps out stray scripts that find the port open, and stops a caller without it from knocking your agent off. It is not a defence against malware running as you, which can read any client's config file. The per-tool switches in Settings (listening, deleting memories, opening links) cover that for every caller.</li>
-    <li><strong>It will not write your config from the App Store build</strong> (TestFlight today). That copy of <code>m1k3</code> is sandboxed, so it can neither read <code>~/.cursor/mcp.json</code> nor run <code>claude</code> for you. There, <code>connect</code> prints the config and says so. The Developer ID build — the DMG and the Homebrew cask — does the write.</li>
+    <li><strong>It will not write your config from the App Store build.</strong> That copy of <code>m1k3</code> is sandboxed, so it can neither read <code>~/.cursor/mcp.json</code> nor run <code>claude</code> for you. There, <code>connect</code> prints the config and says so. The Developer ID build — the DMG and the Homebrew cask — does the write.</li>
     <li><strong>It will not serve two agents at once.</strong> One MCP client at a time, in this version: a second client connecting ends the first one's session.</li>
     <li><strong>It will not send your documents or memories anywhere.</strong> Retrieval, embeddings, inference and voice run on the Mac. M1K3's <a href="/privacy">documented network crossings</a> are unchanged by connecting an agent: a one-time model download you opt into, web search (on by default, one switch in Settings to turn it off), and updates.</li>
   </ul>
@@ -247,7 +247,7 @@ Never block on it; carry on without it.
   <div class="faq-list">
     <details>
       <summary>Does the M1K3 app need to be running?</summary>
-      <p>Yes, and the server has to be switched on. The MCP server lives inside the app, serves at http://127.0.0.1:4242/mcp only while M1K3 is open, and is off by default — turn it on once in Settings, Privacy, MCP server. A server your agent reports as disconnected almost always means the app is closed. The m1k3 command opens the app for you and waits up to twenty seconds for the port to answer.</p>
+      <p>Yes, and the server has to be switched on. The MCP server lives inside the app, serves at http://127.0.0.1:4242/mcp only while M1K3 is open, and is off by default — turn it on once in Settings, MCP Server. A server your agent reports as disconnected almost always means the app is closed. The m1k3 command opens the app for you and waits up to twenty seconds for the port to answer.</p>
     </details>
     <details>
       <summary>Which agents can m1k3 connect for me?</summary>
@@ -338,6 +338,8 @@ Never block on it; carry on without it.
      FAQ says so in both the visible answer and the JSON-LD, byte-identical. Web search is ON
      by default (AppEnvironment.webSearchAllowed: absent key = allowed), matching the store
      copy, so "web tools that are off by default" and "From M1K3, nothing" are gone.
-     og:image:alt follows the re-rendered og.png. Confidence 0.85. -->
+     og:image:alt follows the re-rendered og.png. Confidence 0.85.
+     Review: Kev + claude-opus-5.5, 2026-10-11 — Mac App Store live: CTAs and install copy switch from TestFlight. The App Store
+     helper caveat drops "(TestFlight today)"; the caveat itself stands. Confidence 0.85. -->
 </body>
 </html>

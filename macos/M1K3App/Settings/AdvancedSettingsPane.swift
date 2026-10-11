@@ -3,8 +3,7 @@
 //  M1K3App
 //
 //  The "Advanced" Settings tab: embeddings backend, call transcription, the
-//  generation-stats testing aid, the Agent Interaction Log, index status,
-//  weight import, diagnostics, and licenses. Split out of the old single-Form
+//  generation-stats testing aid, index status, diagnostics, and licenses. Split out of the old single-Form
 //  SettingsView (2026-07-13) — see SettingsView.swift for the shell. The
 //  index-status readout is retitled "Status" (was "Memory") to kill the
 //  duplicate-Memory-name problem now that the Memories consent section lives
@@ -23,32 +22,28 @@
 //  file family — see WeightImportDisplay.swift for what's actually pinned).
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings-screen pass: section headers are
 //  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the Mode value names EmbeddingGemma 2.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — 1.1 Settings restructure (Kev, TestFlight): Import weights and Model
+//  auditions left Settings (the 2026-07-21 import section and the 2026-09-29 audition section are gone), and the
+//  Agent conversation log moved to the MCP Server pane. Confidence 0.8 (verify-by-launch).
 //
 
-import AppKit
 import M1K3Inference
-import M1K3MLX
 import SwiftUI
 
 struct AdvancedSettingsPane: View {
     @Environment(AppEnvironment.self) private var env
     @AppStorage(AppEnvironment.showGenerationStatsKey) private var showGenerationStats = false
-    @AppStorage(AppEnvironment.conversationLogEnabledKey) private var conversationLogEnabled = false
     @AppStorage(AppEnvironment.includeMetricDigestsInIssueKey) private var includeMetricDigests = false
     @State private var showLicenses = false
     @State private var issueReported = false
     @State private var issueTruncated = false
     @State private var whatHappened = ""
-    /// Which brain a folder import targets. Defaults to the first tier that
-    /// actually has weights to import (Mini never appears — see
-    /// `WeightImportDisplay.importableTiers`).
-    @State private var weightImportTier: BrainTier = WeightImportDisplay.importableTiers().first ?? .lil
-
     var body: some View {
         Form {
             Section {
                 LabeledContent("Mode",
-                               value: env.usingMLXEmbeddings ? "MLX Qwen3-Embedding (semantic)" : "Hashing (offline)")
+                               value: env.usingMLXEmbeddings ? "MLX EmbeddingGemma 2 (semantic)" : "Hashing (offline)")
                 if env.isReindexing {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
@@ -118,8 +113,6 @@ struct AdvancedSettingsPane: View {
                     .font(.callout).foregroundStyle(.secondary)
             }
 
-            conversationLogSection
-
             Section {
                 LabeledContent("Indexed items", value: "\(env.indexedItemCount)")
                     .monospacedDigit()
@@ -128,10 +121,6 @@ struct AdvancedSettingsPane: View {
             } header: {
                 SettingsHeader("Status", systemImage: "info.circle")
             }
-
-            weightImportSection
-
-            ModelAuditionSection()
 
             Section {
                 Toggle("Include on-device crash/hang summaries", isOn: $includeMetricDigests)
@@ -177,146 +166,5 @@ struct AdvancedSettingsPane: View {
         .sheet(isPresented: $showLicenses) {
             LicensesView()
         }
-    }
-
-    /// The Agent Interaction Log opt-in: full MCP request+response text is
-    /// captured only while this is on (default OFF).
-    private var conversationLogSection: some View {
-        Section {
-            Toggle("Log agent conversations", isOn: $conversationLogEnabled)
-            Button("Clear log", role: .destructive) {
-                try? env.conversationLog?.clear()
-            }
-            .buttonStyle(.glass)
-        } header: {
-            SettingsHeader("Agent conversation log", systemImage: "list.bullet.rectangle")
-        } footer: {
-            Text("Off by default. When on, M1K3 keeps the last 500 tool calls a "
-                + "connected agent makes — see them in Window → Agent Log, or the "
-                + "Heartbeat timeline.")
-                .font(.callout).foregroundStyle(.secondary)
-        }
-    }
-
-    /// "I already have these weights" — verify a folder against M1K3's
-    /// pinned digests and install it so the app never re-downloads. The
-    /// picker only ever offers tiers with something to import
-    /// (`WeightImportDisplay.importableTiers` — Mini is Apple Foundation
-    /// Models and never appears). The actual run is off the main actor
-    /// (`AppEnvironment.importWeights` — it hashes gigabytes); this section
-    /// just disables itself while `.importing` and switches on the result.
-    private var weightImportSection: some View {
-        Section {
-            Picker("Brain", selection: $weightImportTier) {
-                ForEach(WeightImportDisplay.importableTiers()) { tier in
-                    Text(tier.displayName).tag(tier)
-                }
-            }
-            .accessibilityLabel("Which brain's weights to import")
-            .disabled(env.weightImportState == .importing)
-
-            currentWeightsRow
-
-            Button("Import weights from a folder…", action: presentWeightImportPanel)
-                .buttonStyle(.glass)
-                .disabled(env.weightImportState == .importing)
-                .accessibilityLabel("Import \(weightImportTier.displayName) weights from a folder")
-
-            weightImportStatusRow
-        } header: {
-            SettingsHeader("Import weights", systemImage: "square.and.arrow.down")
-        } footer: {
-            Text("Already have a model's weights on disk from somewhere else? Point M1K3 at "
-                + "the folder — it verifies every file against the digests pinned in this "
-                + "build before installing, and refuses anything that doesn't match.")
-                .font(.callout).foregroundStyle(.secondary)
-        }
-    }
-
-    /// Where the selected brain's weights currently live — the natural
-    /// companion to importing. When they're on disk, show the folder and a
-    /// Reveal button; when they're not, say so plainly rather than point at an
-    /// empty directory. Location comes from `WeightImport.defaultDestination`
-    /// (download-base-aware, so the embedder resolves correctly too), install
-    /// state from `env.isBrainDownloaded`.
-    @ViewBuilder
-    private var currentWeightsRow: some View {
-        let modelID = weightImportTier.mlxModelID
-        let location = modelID.map { WeightImport.defaultDestination(for: $0) }
-        let status = WeightImportDisplay.folderStatus(
-            isInstalled: env.isBrainDownloaded(weightImportTier),
-            location: location
-        )
-        switch status {
-        case let .present(url):
-            HStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("On this Mac")
-                        .font(.callout).foregroundStyle(.secondary)
-                    Text(url.path(percentEncoded: false))
-                        .font(.caption.monospaced())
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1).truncationMode(.middle)
-                        .textSelection(.enabled)
-                }
-                Spacer(minLength: 8)
-                Button("Reveal in Finder") {
-                    NSWorkspace.shared.activateFileViewerSelecting([url])
-                }
-                .buttonStyle(.link)
-                .accessibilityLabel("Reveal \(weightImportTier.displayName)'s weights in Finder")
-            }
-        case .absent:
-            Text("Not on this Mac yet — download it, or import a folder below.")
-                .font(.callout).foregroundStyle(.secondary)
-        }
-    }
-
-    @ViewBuilder
-    private var weightImportStatusRow: some View {
-        switch env.weightImportState {
-        case .idle:
-            EmptyView()
-        case .importing:
-            HStack(spacing: 8) {
-                ProgressView().controlSize(.small)
-                Text("Verifying and installing…")
-                    .font(.callout).foregroundStyle(.secondary)
-            }
-            .accessibilityElement(children: .combine)
-        case let .result(.success(message)):
-            Label(message, systemImage: "checkmark.circle.fill")
-                .symbolRenderingMode(.hierarchical)
-                .font(.callout)
-                .foregroundStyle(.green)
-        case let .result(.failure(message)):
-            // Verbatim from WeightImportDisplay — these strings (the tamper
-            // one especially) were worded deliberately; not truncated, not
-            // softened.
-            Label(message, systemImage: "exclamationmark.triangle")
-                .symbolRenderingMode(.hierarchical)
-                .font(.callout)
-                .foregroundStyle(.orange)
-        }
-    }
-
-    /// Directory-only NSOpenPanel (not `.fileImporter`: this needs
-    /// `canChooseDirectories`/`canChooseFiles` precision that SwiftUI's
-    /// modifier doesn't cleanly expose). Modal on the button's own click —
-    /// no separate `isPresented` state to track.
-    private func presentWeightImportPanel() {
-        let panel = NSOpenPanel()
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.prompt = "Import"
-        panel.message = "Choose the folder holding \(weightImportTier.displayName)'s weights."
-        // Start where this brain's weights would live, so a person importing
-        // from a copy lands near the real thing rather than at their home dir.
-        if let modelID = weightImportTier.mlxModelID {
-            panel.directoryURL = WeightImport.defaultDestination(for: modelID).deletingLastPathComponent()
-        }
-        guard panel.runModal() == .OK, let url = panel.url else { return }
-        Task { await env.importWeights(from: url, for: weightImportTier) }
     }
 }

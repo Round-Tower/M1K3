@@ -19,6 +19,8 @@
 //  Run integration (needs app-bundle context): M1K3_MLX_INTEGRATION=1
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the default is EmbeddingGemma 2;
+//  Qwen stays constructible with its old fingerprint.
 
 import Foundation
 import M1K3Knowledge
@@ -30,20 +32,31 @@ struct MLXEmbeddingServiceTests {
     @Test("conforms to EmbeddingService and reports its dimension")
     func dimensionAndConformance() {
         let service: any EmbeddingService = MLXEmbeddingService()
-        #expect(service.dimension == 512) // Qwen3-Embedding 1024, MRL-truncated
+        #expect(service.dimension == 512) // EmbeddingGemma 2 768, MRL-truncated
     }
 
-    @Test("fingerprint encodes the model AND the truncated dimension")
+    @Test("the default is EmbeddingGemma 2; its fingerprint encodes the model, the width and the prompt version")
     func fingerprintEncodesModelAndDimension() {
         // The fingerprint drives the store's auto re-index. Encoding the
         // truncated width means a future MRL dim change (512→256) re-embeds
         // even though the model id is unchanged — distinct vector spaces.
-        let fp = MLXEmbeddingService().fingerprint
-        #expect(fp.contains("Qwen3-Embedding"))
+        let service = MLXEmbeddingService()
+        #expect(service.prompting == .embeddingGemma2)
+        let fp = service.fingerprint
+        #expect(fp.hasPrefix(EmbedderFloors.embeddingGemma2IdentityPrefix), "the floors follow the fingerprint")
         #expect(fp.contains("d512"))
         #expect(fp.contains(MLXEmbeddingService.kernelTag))
-        // And it must differ from the old bge-small marker so existing stores migrate.
-        #expect(fp != "mlx/BAAI/bge-small-en-v1.5/\(MLXEmbeddingService.kernelTag)")
+        #expect(fp.hasSuffix(MLXEmbeddingService.gemmaPromptVersion))
+        // And it must differ from the Qwen marker so existing stores migrate once.
+        #expect(fp != "mlx/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ/d512/\(MLXEmbeddingService.kernelTag)")
+    }
+
+    @Test("Qwen3-Embedding stays constructible for the A/B harness, with its old fingerprint")
+    func qwenRemainsConstructible() {
+        let qwen = MLXEmbeddingService(configuration: EmbedderRegistry.qwen3_embedding)
+        #expect(qwen.prompting == .qwen3Instruct)
+        let kernel = MLXEmbeddingService.kernelTag
+        #expect(qwen.fingerprint == "mlx/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ/d512/\(kernel)")
     }
 
     @Test("an explicitly-constructed bge_small still carries its own 384-dim identity")

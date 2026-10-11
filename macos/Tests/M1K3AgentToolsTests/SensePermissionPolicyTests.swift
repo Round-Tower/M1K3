@@ -10,6 +10,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-09-23, Confidence 0.9 (red-first,
 //  pure). Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-10-10 — `settledValue` (onboarding's Full door) pinned: granted
+//  before or now → true; denied, dismissed, or never asked → false.
 //
 
 @testable import M1K3AgentTools
@@ -41,5 +43,24 @@ struct SensePermissionPolicyTests {
         // Dismissed without an answer (still undetermined): the toggle
         // cannot promise a sense macOS will not deliver — revert, ask again next time.
         #expect(SensePermissionPolicy.afterRequest(.notDetermined) == .revert)
+    }
+
+    @Test func onboardingStoresTrueWhenAlreadyGranted() {
+        // The gap the first cut had: `.keep` must store true, not leave the key off.
+        #expect(SensePermissionPolicy.settledValue(before: .granted, answer: nil) == true)
+    }
+
+    @Test func onboardingStoresTheDialogsAnswer() {
+        #expect(SensePermissionPolicy.settledValue(before: .notDetermined, answer: .granted) == true)
+        #expect(SensePermissionPolicy.settledValue(before: .notDetermined, answer: .denied) == false)
+        #expect(SensePermissionPolicy.settledValue(before: .notDetermined, answer: .notDetermined) == false)
+        #expect(SensePermissionPolicy.settledValue(before: .notDetermined, answer: nil) == false)
+    }
+
+    @Test func onboardingStoresFalseWhenDeniedBefore() {
+        #expect(SensePermissionPolicy.settledValue(before: .denied, answer: nil) == false)
+        // macOS never re-shows a denied prompt, so `onToggle` does not request and
+        // any answer passed here is noise: the stored value is still false.
+        #expect(SensePermissionPolicy.settledValue(before: .denied, answer: .granted) == false)
     }
 }

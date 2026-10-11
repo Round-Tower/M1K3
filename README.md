@@ -12,9 +12,10 @@ Private by design: on your Mac by default, no telemetry, and every network call 
 </p>
 
 <p align="center">
-  <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg"><strong>⬇ Download for macOS</strong></a>
+  <a href="https://apps.apple.com/app/id6780230835"><strong>Get it on the Mac App Store</strong></a>
+  · <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg"><strong>⬇ Download for macOS</strong></a>
   · <a href="https://m1k3.app">m1k3.app</a>
-  · <a href="https://testflight.apple.com/join/Fxp2F5Je">TestFlight beta</a>
+  · <a href="https://testflight.apple.com/join/Fxp2F5Je">iPhone &amp; iPad beta (TestFlight)</a>
 </p>
 
 <p align="center">Connecting a coding agent → <a href="https://m1k3.app/agents">m1k3.app/agents</a></p>
@@ -73,9 +74,11 @@ labelled. The Developer ID DMG has no cloud path at all — see
 
 ## Get M1K3
 
-- **[TestFlight beta](https://testflight.apple.com/join/Fxp2F5Je)** — the easiest way in.
+- **[Mac App Store](https://apps.apple.com/app/id6780230835)** — the easiest way in; it updates through the store.
+- **Homebrew** — `brew trust round-tower/tap && brew install --cask round-tower/tap/m1k3` (also puts `m1k3` on your PATH).
 - **[Download the DMG](https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg)** — signed & notarized.
 - **Build from source** — [`macos/README.md`](./macos/README.md): clone → `xcodegen generate` → ⌘R.
+- **iPhone & iPad** — the [TestFlight beta](https://testflight.apple.com/join/Fxp2F5Je), for now.
 
 ## Agents
 
@@ -86,7 +89,7 @@ belongs to M1K3.app).
 ```sh
 brew trust round-tower/tap                 # Homebrew 6: trust the tap once
 brew install --cask round-tower/tap/m1k3   # the cask symlinks Contents/Helpers/m1k3
-# Open M1K3 ▸ Settings ▸ Privacy ▸ MCP server: switch it on, then Copy the token
+# Open M1K3 ▸ Settings ▸ MCP Server: switch it on, then Copy the token
 m1k3 login                                 # paste the token (echo off; kept in your keychain)
 m1k3 connect claude                        # also: codex · cursor · vscode · zed
 ```
@@ -98,7 +101,7 @@ config as an `Authorization: Bearer` header. Without it the server answers 401.
 Then `m1k3 status`, `m1k3 ask "what did I decide about the pin?"`,
 `m1k3 remember "…"`, `m1k3 search "…"`, `m1k3 speak "build's green"`.
 
-Prefer clicking? **M1K3 ▸ Settings ▸ Privacy ▸ MCP server** has the same thing:
+Prefer clicking? **M1K3 ▸ Settings ▸ MCP Server** has the same thing:
 pick your agent, copy the snippet (the token is already in it). Already have M1K3 installed? The binary is
 at `/Applications/M1K3.app/Contents/Helpers/m1k3`.
 
@@ -123,7 +126,7 @@ Never block on it; carry on without it.
 <!-- m1k3:end -->
 ```
 
-One honest caveat: the **App Store build's helper (TestFlight today) is sandboxed**, so it
+One honest caveat: the **App Store build's helper is sandboxed**, so it
 can't write another app's config file or run `claude` for you. There, `m1k3
 connect` prints the config to paste instead — and says so. The Developer ID
 build (the DMG and the Homebrew cask) does the write.
@@ -132,8 +135,8 @@ build (the DMG and the Homebrew cask) does the write.
 
 The running Mac app serves MCP over HTTP at `http://127.0.0.1:4242/mcp` —
 knowledge search, documents, voice, and `ask_m1k3` (ask the resident AI).
-Every request carries the server's access token (Settings ▸ Privacy ▸ MCP
-server); `m1k3 login && m1k3 connect claude` wires Claude Code in. Setup for any
+Every request carries the server's access token (Settings ▸ MCP Server);
+`m1k3 login && m1k3 connect claude` wires Claude Code in. Setup for any
 client: [`macos/docs/MCP_SETUP.md`](./macos/docs/MCP_SETUP.md).
 
 ### Tools
@@ -217,7 +220,7 @@ rights reserved and outside the licence grant. See
 Fox is the Khronos glTF sample by PixelMannen (CC0) and tomkranis (CC-BY 4.0);
 Colobus, Gecko, Inkfish and Sparrow are by [Quaternius](https://quaternius.com)
 (CC0) — credited in `NOTICE` and in the app's Third-party licenses screen. The only official builds are Round Tower's
-(`app.m1k3` on TestFlight, and on the Mac App Store once it is live; and the DMGs on [m1k3.app](https://m1k3.app)).
+(`app.m1k3` on the Mac App Store and TestFlight, and the DMGs on [m1k3.app](https://m1k3.app)).
 
 **Organisations:** M1K3 for Teams — the same on-device brains, institutional
 memory, and a tuned persona served on your own Apple Silicon hardware, under
@@ -234,7 +237,11 @@ human-and-AI collaboration on the record.
      opt-in in the App Store build, no cloud path on the DMG — "the 1.0 build has no cloud path" was
      written before the rung shipped (first live generation 2026-09-15).
      Review: Kev + claude-fable-5.1, 2026-10-09 (PR #527 fold) — web search names the lookups it makes
-     (Wikipedia, page fetches), so the clause matches the chat's egress answer. -->
+     (Wikipedia, page fetches), so the clause matches the chat's egress answer.
+     Review: Kev + claude-opus-5.5, 2026-10-11 — Mac App Store live: CTAs and install copy switch from TestFlight. Get M1K3 is Mac
+     App Store, Homebrew, DMG, source, then TestFlight for iPhone and iPad; the header links lead
+     with the store; the sandboxed-helper caveat drops "(TestFlight today)"; the official-builds
+     line names the store. Confidence 0.85. -->
 <!-- Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 (the v1.1.0 pass: the two
      "1.0 build has no cloud path" sentences now describe PCC as the opt-in third crossing,
      consent per conversation per ADR 0007; the MCP count of 18 was re-read off

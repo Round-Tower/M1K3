@@ -4,7 +4,8 @@
 //
 //  The "Privacy" Settings tab: the product's promise told in one place — web
 //  search (the one capability that sends anything off this Mac), Spotlight
-//  donation, and the local MCP server. Split out of the old single-Form
+//  donation, context senses and scripts. (The MCP server and Brain at Home
+//  moved to their own panes in 1.1.) Split out of the old single-Form
 //  SettingsView (2026-07-13) — see SettingsView.swift for the shell.
 //
 //  Signed: Kev + claude-fable-5, 2026-07-13, Confidence 0.85 (a straight move
@@ -45,24 +46,22 @@
 //  Confidence 0.85 — macOS 26 itself not launched here.
 //  Review: Kev + claude-opus-5-5, 2026-10-09 — Content Controls reads AgeBand.contentControlsStatus: an adult
 //  who shared no longer reads "No age range declared" (Kev saw it on the DMG build). Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — 1.1: the MCP server section (token row, connect snippets, copy helpers)
+//  moved to MCPServerSettingsPane.swift and Brain at Home to BrainAtHomeSettingsPane.swift, each its own
+//  Settings pane. Confidence 0.8 (verify-by-launch).
 
-import AppKit // NSPasteboard — the Copy buttons
+import AppKit // NSApp — the age-range sheet's window
 #if canImport(DeclaredAgeRange)
     import DeclaredAgeRange
 #endif
 import M1K3AgentTools
 import M1K3Chat // PrivateCloudTurn + AgeBand/AgeAppropriateness/PersistedAgeBandProvider
-import M1K3CLICore // ConnectPlan / MCPClient / MCPEndpoint — one source for the snippets
 import M1K3LanguageModel // PrivateCloudRung / ChatEgressConsent
-import M1K3Screengrab // the harness shows the shipped helper path, not the build's
 import SwiftUI
 
 struct PrivacySettingsPane: View {
     @Environment(AppEnvironment.self) private var env
     @AppStorage(AppEnvironment.webSearchEnabledKey) private var webSearchEnabled = true
-    @AppStorage(MCPHostController.grantMicrophoneKey) private var agentsUseMicrophone = false
-    @AppStorage(MCPHostController.grantDeleteMemoriesKey) private var agentsDeleteMemories = false
-    @AppStorage(MCPHostController.grantOpenLinksKey) private var agentsOpenLinks = false
     @AppStorage(AppEnvironment.spotlightIndexingKey) private var spotlightIndexing = false
     @AppStorage(AppEnvironment.scriptToolsEnabledKey) private var scriptToolsEnabled = false
     @AppStorage(AppEnvironment.contextBatteryEnabledKey) private var contextBattery = false
@@ -74,9 +73,6 @@ struct PrivacySettingsPane: View {
     /// Senses whose dialog closed without an answer (their switch went back off).
     @State private var unansweredSenses: Set<String> = []
     @State private var scriptRows: [AppEnvironment.ScriptRow] = []
-    @State private var connectClient: MCPClient = .claude
-    @State private var confirmingNewToken = false
-    @State private var newTokenFailed = false
     /// ADR 0006: the chat-egress consent, default OFF (absent reads as off).
     @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
     @AppStorage(PersistedAgeBandProvider.defaultsKey) private var ageBandRaw: String?
@@ -130,10 +126,6 @@ struct PrivacySettingsPane: View {
             contextSection
 
             scriptsSection
-
-            mcpSection
-
-            BrainAtHomeSection()
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
@@ -418,139 +410,6 @@ struct PrivacySettingsPane: View {
 
     private func refreshScriptRows() async {
         scriptRows = await env.scriptRows()
-    }
-
-    /// In-process MCP server controls, plus the per-client wiring.
-    private var mcpSection: some View {
-        Section {
-            Toggle("MCP server (HTTP, localhost)", isOn: Binding(
-                get: { env.mcpHost.isEnabled },
-                set: { env.mcpHost.setEnabled($0) }
-            ))
-            if let status = env.mcpHost.statusText {
-                LabeledContent("Status", value: status)
-            }
-            Toggle("Let agents use the microphone", isOn: $agentsUseMicrophone)
-            Toggle("Let agents delete memories", isOn: $agentsDeleteMemories)
-            Toggle("Let agents open links on screen", isOn: $agentsOpenLinks)
-            accessTokenRow
-            connectAnAgent
-        } header: {
-            SettingsHeader("MCP server", systemImage: "network")
-        } footer: {
-            Text("""
-            Lets an agent on this Mac use M1K3's knowledge, memory and voice. \
-            Loopback-only, one client at a time. An agent needs the access token to connect. \
-            Listening, deleting memories and opening links stay off until you allow them.
-            """)
-            .font(.callout).foregroundStyle(.secondary)
-        }
-        .onAppear { env.mcpHost.loadAccessToken() }
-    }
-
-    /// Shown masked; Copy is the only way to the whole token (#270).
-    @ViewBuilder private var accessTokenRow: some View {
-        LabeledContent("Access token") {
-            HStack {
-                if let token = env.mcpHost.accessToken {
-                    Text(MCPAccessToken.masked(token))
-                        .font(.system(.caption, design: .monospaced))
-                    // Named on purpose: LabeledContent hands its label to every control
-                    // inside, so VoiceOver read both of these as "Access token".
-                    Button("Copy") { copySecret(token) }
-                        .controlSize(.small)
-                        .accessibilityLabel("Copy access token")
-                    Button("New Token…") { confirmingNewToken = true }
-                        .controlSize(.small)
-                        .accessibilityLabel("New access token")
-                } else {
-                    Text("Unavailable — the Keychain couldn’t be read")
-                        .font(.callout).foregroundStyle(.secondary)
-                }
-            }
-        }
-        .confirmationDialog("Make a new access token?", isPresented: $confirmingNewToken) {
-            Button("New Token", role: .destructive) { newTokenFailed = !env.mcpHost.rotateAccessToken() }
-        } message: {
-            Text("Every agent you’ve connected stops reaching M1K3 until you connect it again with the new token.")
-        }
-        if newTokenFailed {
-            // Fails safe — the old token stays in force — but say so, or it looks like it worked.
-            Text("Couldn’t save a new token to the Keychain. The current one still works.")
-                .font(.callout).foregroundStyle(.secondary)
-        }
-    }
-
-    /// The snippet is `ConnectPlan.snippet` — the same source the `m1k3`
-    /// binary executes, so what's on screen and what the CLI does can't drift.
-    @ViewBuilder private var connectAnAgent: some View {
-        Picker("Connect an agent", selection: $connectClient) {
-            ForEach(MCPClient.allCases, id: \.self) { client in
-                Text(client.displayName).tag(client)
-            }
-        }
-        VStack(alignment: .leading, spacing: 6) {
-            Text(connectSnippet(token: env.mcpHost.accessToken.map(MCPAccessToken.masked) ?? "<access token>"))
-                .font(.system(.caption, design: .monospaced))
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            HStack {
-                Text(ConnectPlan.destination(client: connectClient))
-                    .font(.caption2).foregroundStyle(.secondary)
-                Spacer()
-                Button("Copy") {
-                    if let token = env.mcpHost.accessToken { copySecret(connectSnippet(token: token)) }
-                }
-                .controlSize(.small)
-                .disabled(env.mcpHost.accessToken == nil)
-                .accessibilityLabel("Copy \(connectClient.displayName) setup")
-            }
-        }
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Or from Terminal — it asks for the token, so Copy that first:")
-                .font(.callout).foregroundStyle(.secondary)
-            HStack {
-                Text(terminalCommand)
-                    .font(.system(.caption, design: .monospaced))
-                    .textSelection(.enabled)
-                Spacer()
-                Button("Copy") { copyToPasteboard(terminalCommand) }
-                    .controlSize(.small)
-                    .accessibilityLabel("Copy Terminal command")
-            }
-        }
-    }
-
-    private func connectSnippet(token: String) -> String {
-        ConnectPlan.snippet(client: connectClient, url: MCPEndpoint.url(port: env.mcpHost.port), token: token)
-    }
-
-    /// The CLI ships inside the bundle, so the path is always right — even for
-    /// a copy of M1K3 the user dragged somewhere other than /Applications.
-    private var terminalCommand: String {
-        // Under the App Store screengrab harness the app runs from a scratch
-        // DerivedData build, whose path would land in the frame — show the
-        // path a real install has instead.
-        let bundle = ScreengrabHarness.current.isActive
-            ? URL(fileURLWithPath: "/Applications/M1K3.app") : Bundle.main.bundleURL
-        let path = bundle.appendingPathComponent("Contents/Helpers/m1k3").path
-        let quoted = path.contains(" ") ? "\"\(path)\"" : path
-        return "\(quoted) login && \(quoted) connect \(connectClient.rawValue)"
-    }
-
-    private func copyToPasteboard(_ text: String) {
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
-    }
-
-    /// A secret on the pasteboard, marked concealed (the nspasteboard.org
-    /// convention) so clipboard managers and history tools skip it.
-    private func copySecret(_ text: String) {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.declareTypes([.string, NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType")], owner: nil)
-        pasteboard.setString(text, forType: .string)
-        pasteboard.setString("", forType: NSPasteboard.PasteboardType("org.nspasteboard.ConcealedType"))
     }
 }
 
