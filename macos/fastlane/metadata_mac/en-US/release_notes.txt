@@ -1,12 +1,18 @@
 Lil can see. Lil is now Qwen3.5 (4B) and it reads images: attach a photo, a screenshot or a whiteboard and ask about it. It downloads once more (about 3 GB); the old Lil stays on disk until you remove it in Settings > M1K3 > Free up space. The Reasoning setting works for Lil again.
 
+Remember this photo. Under any image you send, one tap keeps a private caption of it in M1K3's memory, so you can ask about it later. It never leaves your Mac, agents connected over MCP can't read it, and deleting the chat forgets it.
+
+A tidier Settings. MCP Server and Brain at Home have their own pages. Model auditions and weight import are gone: if you imported audition weights, they're deleted once to give you the space back. Re-run onboarding any time from Settings > General.
+
+Your companion, behind the chat. The avatar now sits in the window's background, or switch it off, with no side panel. The thinking rain is gone for now. VoiceOver now announces when M1K3 starts thinking, listening or speaking.
+
+Halloween in the Lair. From October 24 to November 1, M1K3 dresses up. Turn it off in Settings > M1K3 > Companion > Seasonal looks.
+
 Faster Big. Big (Gemma 4) no longer spends about a second per step re-reading its own prompt, so long answers and tool turns finish sooner.
 
-No more stalls when the display sleeps.
+Quicker tools on every brain, and a fix for a tool call Lil sometimes wrote with a stray tag. A rejected tool call now tells the brain why, so it can try again.
 
-Calls: one call that could not be read no longer hides the rest of your call list.
-
-Lil's tools: quicker tool turns, and a fix for a tool call Lil sometimes wrote with a stray tag.
+No more stalls when the display sleeps. Calls: one call that could not be read no longer hides the rest of your list.
 
 Search index: if you turned on MLX semantic embeddings in Settings > Advanced, M1K3 rebuilds your search index once after this update, the next time your Mac is idle and cool.
 

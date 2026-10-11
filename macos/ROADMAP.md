@@ -4,16 +4,21 @@ This is the living "what's next" doc — kept current, not append-only. For
 architecture/build/test, see `CLAUDE.md`. For *why* a decision was made (model
 swaps, phase rationale, the full session-by-session build log), see `PLAN.md` —
 it's a signed historical record and stays that way; this file doesn't repeat it.
-The release-by-release plan for the macOS 27 wave (1.0 → 1.1 → 1.2) lives in
-`docs/GOLDEN_GATE_PLAN.md` § Roadmap; this file points at it rather than
-copying it.
+The macOS 27 wave's release plan (1.0 → 1.1 → 1.2) lived in
+`docs/GOLDEN_GATE_PLAN.md`, retired once 1.0 shipped (#562; git history keeps it).
 
-Last swept: 2026-10-09 — **1.0.0 is in App Review on build 453 (Mac IN_REVIEW,
-iOS WAITING_FOR_REVIEW); nothing is live yet.** The v1.1.0 release commit
-(`chore(release): v1.1.0`, see § v1.1.0 below) is held on a branch and lands the
-day 1.0.0 clears. Before 453: resubmitted on build 372 (Mac + iOS, local
-release, 2026-09-24); `itunes.apple.com/lookup?id=6780230835` returned no
-listing on 09-26.
+Last swept: 2026-10-11 — **1.0.0 is live on the Mac App Store** (released
+2026-10-11 12:19 UTC on build 453; `itunes.apple.com/lookup?id=6780230835`
+returns it in every storefront checked). iOS 1.0.0 is still WAITING_FOR_REVIEW
+on 453 (since 10-05). **1.1.0 is master:** #561 (Kev's TestFlight list:
+Settings panes for MCP Server and Brain at Home, auditions + weight import
+retired with a one-time folder delete, backdrop-or-off avatar, no thinking
+rain, titles that never think, Halloween in the Lair, the version bump) on top
+of § v1.1.0 below; the What's New is #524. Lil is Qwen3.5-4B, thinking off by
+default (Auto; one decision per turn, #555).
+The 1.0 review weeks, as they were recorded at the time (09-17 → 10-09):
+Before 453: resubmitted on build 372 (Mac + iOS, local release, 2026-09-24);
+`itunes.apple.com/lookup?id=6780230835` returned no listing on 09-26.
 The 09-18 note below stands as the record of that week.
 (The 09-17 sweep read "1.1.0 merged" as "1.1.0 shipped". Checked 09-18:
 `itunes.apple.com/lookup?id=6780230835` → no listing; Kev: "we're releasing all
@@ -126,7 +131,7 @@ the first Teams customer, the move from engineer to honest founder.
   1.3.4 (the Gemma tokenizer fix): builds, `swift test` green, one region-isolation fix. Owed before
   landing: voice launch check, gemma-4 tool-call smoke, Kev's call on timing vs the store submission.
 
-### Standing 1.0.x items (status lives in `docs/GOLDEN_GATE_PLAN.md` § 1.0.x)
+### Standing 1.0.x items (their status lived in `docs/GOLDEN_GATE_PLAN.md` § 1.0.x, now in git history)
 
 - **Prefix prewarm: n ≥ 5 in-app rerun owed** (turn-1 2.7 s vs 5.8 s at n = 2).
 - **The Mini palette call (Kev):** 16-tool palette puts ~3.9k of Mini's 4,096
@@ -138,10 +143,10 @@ the first Teams customer, the move from engineer to honest founder.
 
 ## Next — the releases
 
-### v1.1.0 (Gemma-shaped) — the held release commit (`docs/GEMMA_1_1_PLAN.md`)
+### v1.1.0 — on master since 2026-10-11 (`docs/GEMMA_1_1_PLAN.md`), What's New in #524
 
-Marketing version 1.1.0 on every surface (`VERSIONING.md`); Xcode Cloud mints the
-build. Lands when 1.0.0 clears review. What rides in it, user-facing:
+Marketing version 1.1.0 on every surface (`VERSIONING.md`), bumped in #561 the day 1.0.0
+went live; Xcode Cloud mints the build. What rides in it, user-facing:
 
 - **Lil is Qwen3.5-4B and it sees** (#501, #517): image attachments on Lil, the
   VLM load path, weights pinned at `32f3e8ec`; one more ~3 GB download, the
@@ -160,14 +165,19 @@ build. Lands when 1.0.0 clears review. What rides in it, user-facing:
   flags (#510), the eval harness sees (#497, #502), App Store creative assets
   (#506), the README hero (#505).
 
-Open branches still to land under it (each its own PR): `feat/voice-window-backdrop`
-(the voice-mode window backdrop), `fix/1-1-mini-sees-lil-polish` (Mini sees — pixels
-attached in-process — and Lil polish), `fix/1-1-honest-strings` (the honest
-strings), `chore/followups-2026-10-09b`. The Gemma plan's triage of what stays out
+- **Landed since (2026-10-09 → 10-11):** the voice-mode window backdrop (#525), Mini
+  sees + Lil polish (#526), the honest strings (#527), Remember this photo (#523), the
+  router on every tier (#542), re-run onboarding (#544), EmbeddingGemma 2 as the one
+  embedder (#547), one thinking decision per turn (#555), and Kev's TestFlight list
+  (#561): MCP Server + Brain at Home panes, auditions and weight import retired (a
+  one-time folder delete), the avatar as backdrop or off, no thinking rain, titles that
+  never think, VoiceOver state announcements, Halloween in the Lair (Oct 24 – Nov 1).
+
+The Gemma plan's triage of what stays out
 (Stream C port, the caption-memory slice, Stream E, E2B, the cross-turn checkpoint,
 the display-off A/B) is in `docs/GEMMA_1_1_PLAN.md` § 5.
 
-### The September Golden Gate bundle (then called "1.1.0") — MERGED 2026-09-16, riding under 1.0.0 (`docs/GOLDEN_GATE_PLAN.md`)
+### The September Golden Gate bundle (then called "1.1.0") — MERGED 2026-09-16, riding under 1.0.0 (was `docs/GOLDEN_GATE_PLAN.md`, now in git history)
 
 On master, not on the store (see the header). Toolchain bump to Xcode 27 GA
 (#362), typed AFM errors, CI guards, and **Private Cloud Compute is merged**
@@ -467,3 +477,7 @@ stays a possible later companion.
      real v1.1.0 (Gemma-shaped: Qwen3.5 Lil that sees, Lil tool turns, the Big tokenizer fix, #497–#520) has
      its own section with the open branches; the two toolCallingMode lines point at the bundle instead of
      "1.1.0". Confidence 0.85 (the PR list is git log; the branches are the worktree list, unpushed). -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-11 — 1.0.0 went live on the Mac App Store (build 453), so the
+     header leads with that and iOS's open review; § v1.1.0 is on master (bumped in #561) and lists what
+     landed since 10-09 instead of the open branches; GOLDEN_GATE_PLAN.md is retired (#562), so its three
+     pointers say "in git history". Confidence 0.85 (store state read from the lookup + ASC today). -->
