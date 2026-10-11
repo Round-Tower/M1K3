@@ -75,6 +75,11 @@
 //  time goes. (3) the "Currently: Full / Private / Custom" line on a re-run (closes slice 1's Open).
 //  Confidence 0.75 — flow rule + classifier + clock are tested; the speed win is a hypothesis until the
 //  TestFlight log, and the sheet is verify-by-launch.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — a re-run's doors never wait on AFM (it
+//  never reads it) and a first run's wake after 3 s if the probe hangs; the door copy is a placeholder until
+//  AFM lands (no flip under the user); the already-loaded fallback edge shows the deck; the Mini-wait poll
+//  reads off the main actor too; the backdrop sleep honours cancellation. Known, accepted: a first-run user
+//  who quits mid-deck sees the hello again next launch (the gate flips on the deck's button). Confidence 0.75.
 
 import M1K3AgentTools
 import M1K3Avatar
@@ -177,8 +182,17 @@ struct HelloView: View {
             OnboardingTrace.shared.markOnce("hello afm read (\(String(describing: afm)))")
         }
         .task {
+            // A hung probe must not leave the first-run doors dead: after 3 s they wake on the
+            // optimistic default and a late read still corrects `afm`.
+            do { try await Task.sleep(for: .seconds(3)) } catch { return }
+            if !afmKnown {
+                afmKnown = true
+                OnboardingTrace.shared.markOnce("hello afm read timed out (3 s)")
+            }
+        }
+        .task {
             // Let the card paint, then bring the face in behind it.
-            try? await Task.sleep(for: .milliseconds(150))
+            do { try await Task.sleep(for: .milliseconds(150)) } catch { return }
             backdropReady = true
             OnboardingTrace.shared.markOnce("hello backdrop mounted")
         }
@@ -259,6 +273,9 @@ struct HelloView: View {
             }
             .frame(maxWidth: 360)
             .padding(.top, 4)
+            // The door titles and captions depend on `afm`; until it lands they render as
+            // placeholders rather than painting one answer and flipping to another.
+            .redacted(reason: doorsWaitingOnAFM ? .placeholder : [])
 
             if let currentDoorLabel {
                 Text("Currently: \(currentDoorLabel)")
@@ -373,7 +390,7 @@ struct HelloView: View {
             // no-yank rule as the download path decides auto-advance vs invite.
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(2))
-                if case .available = env.afmAvailability {
+                if case .available = await Self.readAFM() {
                     env.selectBrain(.mini)
                     wakeFlow.markBrainReady()
                     if wakeFlow.completion == .autoComplete { onComplete() }
@@ -453,12 +470,17 @@ struct HelloView: View {
         if prominent {
             Button { sayHello(experience: experience) } label: { label }
                 .buttonStyle(.glassProminent)
-                .disabled(settling || !afmKnown)
+                .disabled(settling || doorsWaitingOnAFM)
         } else {
             Button { sayHello(experience: experience) } label: { label }
                 .buttonStyle(.bordered)
-                .disabled(settling || !afmKnown)
+                .disabled(settling || doorsWaitingOnAFM)
         }
+    }
+
+    /// First run only: the doors' copy and the brain policy read `afm`. A re-run doesn't.
+    private var doorsWaitingOnAFM: Bool {
+        !afmKnown && !isRerun
     }
 
     // MARK: - Actions
@@ -530,8 +552,8 @@ struct HelloView: View {
         // selection now, so using modelLoad here is correct (unlike the
         // background upgrade, which must never touch it).
         if env.selectBrain(tier) {
-            // Already loaded (re-run edge) — no transition coming; finish now.
-            onComplete()
+            // Already loaded — no transition is coming, so this is a no-wait path: the deck.
+            showSetupDeck()
         }
     }
 

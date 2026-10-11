@@ -13,6 +13,9 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.6 (coarse tripwires over text; the
 //  sheet's speed and look are verify-by-launch on TestFlight). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — pins the folds: no synchronous
+//  AFM probe anywhere in the sheet, re-run doors never wait on AFM, a 3 s timeout, placeholder copy
+//  until AFM lands, and the already-loaded fallback edge shows the deck. Confidence 0.65.
 //
 
 import Foundation
@@ -77,8 +80,28 @@ struct OnboardingDeckScanTests {
         let code = try Self.code("M1K3App/HelloView.swift")
         let onAppear = Self.slice(code, from: ".onAppear {", to: ".onDisappear {")
         #expect(!onAppear.contains("env.afmAvailability"), "the AFM probe is back on the first frame")
-        #expect(code.contains(".task {"), "AFM availability should be read in a .task")
+        // No synchronous probe anywhere in the sheet: the first read and the Mini-wait poll both
+        // go through the detached reader.
+        #expect(!code.contains("env.afmAvailability"), "a synchronous AFM probe is back in HelloView")
+        #expect(code.contains("afm = await Self.readAFM()"), "AFM availability should be read in a .task")
         #expect(code.contains("backdropReady"), "the backdrop should mount after the card is visible")
+    }
+
+    @Test("the doors wait on AFM only on a first run, never past a 3 s timeout, with no copy flip")
+    func doorsNeverDeadOnRerun() throws {
+        let code = try Self.code("M1K3App/HelloView.swift")
+        #expect(code.contains("!afmKnown && !isRerun"), "a re-run's doors wait on a value it never reads")
+        #expect(code.components(separatedBy: ".disabled(settling || doorsWaitingOnAFM)").count - 1 == 2)
+        #expect(code.contains("hello afm read timed out"), "a hung probe would leave the doors dead")
+        #expect(code.contains(".redacted(reason: doorsWaitingOnAFM ? .placeholder : [])"))
+    }
+
+    @Test("an already-loaded fallback brain is a no-wait path too: the deck, not onComplete")
+    func alreadyLoadedFallbackShowsDeck() throws {
+        let code = try Self.code("M1K3App/HelloView.swift")
+        let fallback = Self.slice(code, from: "private func startFallbackDownload", to: "private func settleFullPermissions")
+        #expect(fallback.contains("showSetupDeck()"))
+        #expect(!fallback.contains("onComplete()"), "the already-loaded edge skips the deck again")
     }
 
     @Test("the Re-run button starts the onboarding stopwatch")
