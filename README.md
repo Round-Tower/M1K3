@@ -12,8 +12,11 @@ Private by design: on your Mac by default, no telemetry, and every network call 
 </p>
 
 <p align="center">
-  <a href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=readme-hero&amp;mt=12"><strong>Get it on the Mac App Store</strong></a>
-  · <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg"><strong>⬇ Download for macOS</strong></a>
+  <a href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=readme-hero&amp;mt=12"><img src="https://toolbox.marketingtools.apple.com/api/v2/badges/download-on-the-mac-app-store/black/en-us" alt="Download on the Mac App Store" height="54"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg"><strong>⬇ Download the DMG</strong></a>
   · <a href="https://m1k3.app">m1k3.app</a>
   · <a href="https://testflight.apple.com/join/Fxp2F5Je">iPhone &amp; iPad beta (TestFlight)</a>
 </p>
@@ -188,6 +191,9 @@ working copy on 2026-08-13; to walk through it, check out any commit before
 Start with [`CONTRIBUTING.md`](./CONTRIBUTING.md). Architecture and current
 state: [`CLAUDE.md`](./CLAUDE.md). Security reports: [`SECURITY.md`](./SECURITY.md).
 
+The quickest way to help: if M1K3 earns a place on your Mac, star the repo
+(it's how other people find it), and open an issue when something breaks.
+
 ## Privacy
 
 Inference, retrieval, and voice run on-device; M1K3 itself has no servers and
@@ -245,7 +251,11 @@ human-and-AI collaboration on the record.
      line names the store. Confidence 0.85.
      Review: Kev + claude-opus-5.5, 2026-10-11 — App Store campaign links: each store link carries pt=120784482
      (Round Tower's provider token) and its own ct, so App Store Connect counts which door converts and the
-     page still tracks nobody. JSON-LD keeps the canonical URL. Confidence 0.85. -->
+     page still tracks nobody. JSON-LD keeps the canonical URL. Confidence 0.85.
+     Review: Kev + claude-opus-5.5, 2026-10-11 — repo optics: the hero's store link is Apple's own
+     "Download on the Mac App Store" badge (hotlinked from Apple's marketing toolbox, as Apple
+     offers it; still ct=readme-hero), the DMG link reads "Download the DMG", and Contributing
+     asks for a star once, plainly. Confidence 0.85. -->
 <!-- Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 (the v1.1.0 pass: the two
      "1.0 build has no cloud path" sentences now describe PCC as the opt-in third crossing,
      consent per conversation per ADR 0007; the MCP count of 18 was re-read off

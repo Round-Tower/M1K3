@@ -8,33 +8,27 @@ likely to meet.
 
 ## The ones you'll probably notice
 
-- **Small-model small talk can be weird.** Mini (the on-device Apple
-  Foundation Models tier, the first-run default) runs full retrieval and an
-  agent loop even for "long day, I'm wrecked" — and can confabulate when it
-  has nothing relevant to retrieve. [#102](https://github.com/Round-Tower/M1K3/issues/102)
-- **Lil sometimes fabricates web-search results.** Ask it to search and if the
-  web tool doesn't actually fire, a 4B model will occasionally invent a
-  plausible-looking answer instead of saying so. Grounded answers cite their
-  sources; a confident answer with no citations deserves your suspicion.
-  [#125](https://github.com/Round-Tower/M1K3/issues/125)
-- **Deep questions on Big (12B) can be slow.** Prefill on a 12B model is real:
-  an ordinary question can take tens of seconds, and over MCP a heavy turn can
-  blow the 120s client deadline (the async job API exists for exactly this).
-  A self-referential turn can also cost a ~6s prompt-cache rebuild.
+- **Mini sometimes brings up a memory nobody asked about.** The on-device Apple
+  Foundation Models tier (the first-run default) can work an unrelated
+  remembered fact into a plain answer: 7 of 10 times in our own noise probe.
+  [#447](https://github.com/Round-Tower/M1K3/issues/447)
+- **A tool turn can come out doubled.** When a brain calls a tool natively, the
+  prose it wrote before the call can land in the answer bubble, then a second
+  answer follows, so the reply reads twice or garbled.
+  [#179](https://github.com/Round-Tower/M1K3/issues/179)
+- **A question about M1K3 itself can stall for ~6 s.** The tool palette is part
+  of the prompt cache's key, so a self-referential turn rebuilds the persona
+  prefix. Deep questions on Big (12B) are slow anyway: prefill on a 12B model
+  is real, and over MCP a heavy turn uses the async job API rather than block.
   [#121](https://github.com/Round-Tower/M1K3/issues/121)
-- **Remembered facts can lose to documents in a packed answer.** When a grounded
-  reply already has a full set of document passages, the grounding token budget
-  can be spent before your remembered facts are added — so a personal fact you'd
-  expect it to use may not appear that turn.
-  [#186](https://github.com/Round-Tower/M1K3/issues/186)
 
 ## Honest model-quality notes
 
-- Small tiers fail prompt-extraction attacks more than we'd like: our own
-  published security eval scores Mini and Lil 4/7 (Big passes 7/7 on the same
-  persona). Numbers, transcripts, and the harness are in
+- **Mini can recite its own instructions**, on prompt-extraction attacks and
+  sometimes on plain trivia. The small tiers fail some prompt-leak attacks; the
+  security eval is published with its run-to-run noise (it has swung 2/7 → 5/7
+  across identical runs), not averaged away, in
   [`macos/docs/BENCHMARKS.md`](macos/docs/BENCHMARKS.md).
-  [#109](https://github.com/Round-Tower/M1K3/issues/109) ·
   [#111](https://github.com/Round-Tower/M1K3/issues/111)
 - 1B–12B on-device models are not frontier models. M1K3's design assumes it:
   grounding, citations, and guardrails are structural, and the benchmark
@@ -42,13 +36,9 @@ likely to meet.
 
 ## Platform + plumbing
 
-- **iOS voice mode crashes on device** (the iOS shell is early; macOS is the
-  product). [#85](https://github.com/Round-Tower/M1K3/issues/85)
-- **First model download burns ~1.5 CPU cores** (per-byte AsyncBytes
-  iteration in the Hub downloader).
-  [#80](https://github.com/Round-Tower/M1K3/issues/80)
-- **A rare AppKit constraint-cycle crash** when streaming a chat turn with
-  Settings open. [#77](https://github.com/Round-Tower/M1K3/issues/77)
+- **MCP and Brain at Home can race** when a session is re-created while the
+  server is being toggled or a device is pairing (actor re-entrancy).
+  [#183](https://github.com/Round-Tower/M1K3/issues/183)
 - **A weight fetch still sits outside the integrity choke point** (WhisperKit's
   CoreML weights pull from an unpinned upstream ref — being closed methodically;
   Kokoro's are already pinned). [#74](https://github.com/Round-Tower/M1K3/issues/74)
@@ -72,4 +62,13 @@ weights now pinned, closed) — both per the "entries leave when their issue
 closes" contract. Added #186 (grounding budget can spend out before the
 memory lane on a document-packed turn), a user-observable rough edge the
 sweep surfaced. Issue states re-checked via `gh issue view` this day.
+
+Review: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.9 — truth pass on
+launch day (the Mac App Store went live that morning). Seven entries had
+closed and left per the contract: #102, #125, #186, #109, #85, #80, #77.
+In: #447 (Mini works unrelated memories into plain answers), #179 (doubled
+tool-turn output), #183 (MCP / Brain at Home lifecycle races). #121 kept and
+reworded to what a user sees; the security note cites the eval's own
+run-to-run noise instead of a fixed 4/7. Every state re-checked with
+`gh issue view` the same day.
 -->
