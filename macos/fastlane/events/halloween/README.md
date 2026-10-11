@@ -32,20 +32,18 @@ haven't had a native read.
   honest answer is the look, the greeting and the dates, not a bigger claim.
 - **Purpose `APPROPRIATE_FOR_ALL_USERS`.** It's a look for everyone, new or not.
 - **Priority NORMAL**, no purchase, all territories, no deep link (the app has no URL scheme).
-- **Dates (UTC):** publish 17 Oct 09:00 (7 days ahead; the cap is 14), run 24 Oct 00:00 →
-  1 Nov 23:59 (8 days 23 h; the cap is 31).
+- **Dates (UTC):** publish 17 Oct 09:00 (7 days ahead; the cap is 14), run 24 Oct 10:00 →
+  1 Nov 11:00 (8 days 1 h; the cap is 31).
 
-### The one honest wrinkle: UTC vs. the app's local calendar
+### UTC times inside every local window
 
-The look switches on at local midnight on 24 Oct, but the event's times are UTC. So the
-card says "happening now" for a few hours before the costume arrives in the Americas
-(US Pacific from 23 Oct 17:00, about 7 h early; Hawaii about 10 h). It also outlives the look at the far
-end in Asia-Pacific (Tokyo until 2 Nov 08:59, about 9 h late; New Zealand about 13 h late).
-To keep every territory from UTC−10 to UTC+13 inside the look, use
-`eventStart 2026-10-24T10:00:00Z` and `eventEnd 2026-11-01T11:00:00Z`. That costs a shorter
-card window in the Americas at the end. Kev decides. The current dates are the brief's.
-This also assumes the app's window **includes** 1 Nov. If it ends at the start of 1 Nov,
-move `eventEnd` back a day.
+The look runs 24 Oct 00:00 to 1 Nov 23:59:59 on each device's local calendar
+(`SeasonalLook.active`), but an event's times are single UTC instants. So `eventStart`
+is local midnight on 24 Oct in UTC−10 (Hawaii), later everywhere east, and `eventEnd` is
+local midnight on 2 Nov in UTC+13 (New Zealand daylight time), earlier everywhere west:
+from UTC−10 to UTC+13 the card is never live where the look isn't. The price is a card
+up to 23 hours shorter than the look at each end, starting late in the east and ending
+early in the west.
 
 ## Art: rendered from code, textless
 
@@ -91,8 +89,12 @@ python3 tools/asc/events.py create --spec fastlane/events/halloween/event.json \
 ```
 
 `create` makes the DRAFT, one localization per locale (en-US first), and uploads the same
-textless card and details page to each. Then in App Store Connect, preview the media
-under the overlays, then Submit for review. Events have their own review queue and lock while
+textless card and details page to each. If it fails part-way, the DRAFT stays and the
+error ends with the line that resumes it (`create … --event <id>`). That run creates only
+the locales the event lacks. It skips the ones it has without checking their art, so look
+at those in App Store Connect. A plain re-run would make a second event.
+
+Then in App Store Connect, preview the media under the overlays, then Submit for review. Events have their own review queue and lock while
 in review. Submit early: publishing starts 17 Oct, and the start date can't have passed
 when Apple approves it.
 
@@ -105,4 +107,9 @@ Prior: ../waking-up/README.md (Kev + claude-fable-5.1, 2026-09-15), the shape of
   cosmetic look clears Apple's "new content" bar for SPECIAL_EVENT. The non-English
   copy is the model's draft. Open: confirm the app's window includes 1 Nov once its
   Halloween PR lands.
+Review: Kev + claude-opus-5.5, 2026-10-11 — review fold: Kev's call on the UTC-vs-local
+  window is made (start 24 Oct 10:00Z, end 1 Nov 11:00Z, inside the look from UTC−10 to
+  UTC+13, pinned by test), retiring that open; the 1 Nov Open is retired too, since
+  SeasonalLook.active matches (10, 24...) and (11, 1). Documented the `--event` resume.
+  Still open: the SPECIAL_EVENT bar and a native read of the copy. Confidence 0.8
 -->
