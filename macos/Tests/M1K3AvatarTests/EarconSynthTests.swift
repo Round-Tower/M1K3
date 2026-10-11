@@ -49,6 +49,31 @@ struct EarconSynthTests {
         #expect(EarconSynth.render(.voiceEnter) == EarconSynth.render(.voiceEnter))
     }
 
+    private static let onboardingEffects: [SoundEffect] = [.doorPick, .cardTurn, .selectionTick, .wakeChime, .doneChord]
+
+    @Test("the onboarding earcons render, are deterministic, short and all different")
+    func onboardingEarcons() throws {
+        var renders: [[Float]] = []
+        for effect in Self.onboardingEffects {
+            let first = try #require(EarconSynth.render(effect), "\(effect) has no recipe")
+            #expect(first == EarconSynth.render(effect), "\(effect) is not deterministic")
+            #expect(Double(first.count) / EarconSynth.sampleRate <= 1.0, "\(effect) outstays its welcome")
+            renders.append(first)
+        }
+        #expect(Set(renders).count == renders.count)
+    }
+
+    @Test("the per-step ticks are quicker than the arrival sounds")
+    func ticksAreQuick() throws {
+        func seconds(_ effect: SoundEffect) throws -> Double {
+            try Double(#require(EarconSynth.render(effect)).count) / EarconSynth.sampleRate
+        }
+        for tick in [SoundEffect.doorPick, .cardTurn, .selectionTick] {
+            #expect(try seconds(tick) <= 0.4, "\(tick) is not a tick")
+        }
+        #expect(try seconds(.selectionTick) < seconds(.doneChord))
+    }
+
     @Test("the bundled dial-up has no recipe")
     func dialupNotSynthesised() {
         #expect(EarconSynth.render(.dialup) == nil)

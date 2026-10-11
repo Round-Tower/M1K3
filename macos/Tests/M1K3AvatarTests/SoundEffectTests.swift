@@ -16,6 +16,7 @@ struct SoundEffectTests {
         #expect(Set(SoundEffect.allCases) == [
             .error, .save, .voiceEnter, .voiceExit, .listenStart, .endpointHeard, .thinkingTick,
             .toolCall, .answerLanded, .stop, .soundMark, .dialup,
+            .doorPick, .cardTurn, .selectionTick, .wakeChime, .doneChord,
         ])
         #expect(SoundEffect.allCases.filter { $0.source != .synth } == [.dialup])
     }
