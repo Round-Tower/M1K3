@@ -10,6 +10,9 @@ that "as early as possible".
   python3 events.py create --spec ../../fastlane/events/waking-up/event.json --art-dir <dir> [--dry-run]
   python3 events.py update --event 6811192045 --spec ... [--dry-run]   # fix a DRAFT in place
 
+`create` makes the DRAFT and one localization per locale in the spec's
+`localizations` table (primary first), uploading the same card + details to
+each — the art is textless, so one pair serves every locale.
 `update` rewrites a DRAFT's attributes (badge, dates, purpose) and every
 localization's copy from the spec's `localizations` table, keeping the art
 already uploaded — for the draft that was created with over-cap copy and a
@@ -31,6 +34,11 @@ Signed: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.8 (a port of the
 Format: MurphySig v0.4 (https://murphysig.dev/spec)
 Prior: dyslexia-ai/ios/marketing/tools/events/create_event.py (Kev +
   claude-fable-5, 2026-08-20), ported with a spec file + dry run.
+Review: Kev + claude-opus-5.5, 2026-10-11 — `create` posted only the primary
+  locale, so an eight-locale spec (halloween) shipped as en-US alone; it now
+  creates every locale in the table and uploads the textless art to each, and
+  checks every locale's caps first. Confidence 0.75 — the dry run is pinned by
+  test; the multi-locale POST loop is verify-by-run (Kev's, via `!`).
 """
 from __future__ import annotations
 
@@ -111,6 +119,14 @@ def localization_patch(loc_id: str, copy: dict[str, str]) -> dict[str, Any]:
                      "attributes": {k: copy[k] for k, _ in COPY_CAPS}}}
 
 
+def localization_table(spec: dict[str, Any]) -> dict[str, dict[str, str]]:
+    """Every locale's copy, primary first: the spec's `localizations` table, with its one
+    `copy` block standing in for the primary when the table lacks it."""
+    primary = spec.get("locale", "en-US")
+    table = dict(spec.get("localizations") or {})
+    return {primary: table.pop(primary, spec["copy"]), **table}
+
+
 def localization_problems(spec: dict[str, Any]) -> list[str]:
     """Cap breaks across the spec's `localizations` table, prefixed by locale."""
     out = []
@@ -157,19 +173,27 @@ def upload_screenshots(loc_id: str, art_dir: Path) -> None:
 
 def create(spec_path: Path, art_dir: Path, dry_run: bool) -> int:
     spec = json.loads(spec_path.read_text())
-    if problems := copy_problems(spec["copy"]):
+    table = localization_table(spec)
+    if problems := localization_problems({"localizations": table}):
         raise SystemExit("copy breaks caps: " + "; ".join(problems))
-    for field, cap in COPY_CAPS:
-        print(f"{field}: {len(spec['copy'][field])}/{cap} ok")
+    for locale, copy in table.items():
+        print(f"{locale:8} " + "  ".join(f"{k} {len(copy[k])}/{cap}" for k, cap in COPY_CAPS))
     for fname in (CARD_FILE, DETAILS_FILE):
         if not (art_dir / fname).exists():
             raise SystemExit(f"missing art: {art_dir / fname}")
     territories = ["<all ~175 from /v1/territories>"] if dry_run else all_territories()
     print(f"territories: {len(territories)}")
     payload = event_payload(spec, territories)
+    # Every locale gets its own localization and the same art: the art is textless, so one
+    # card and one details page serve all of them.
+    def body(locale: str, event_id: str) -> dict[str, Any]:
+        return localization_payload({**spec, "locale": locale, "copy": table[locale]}, event_id)
+
     if dry_run:
         print(json.dumps(payload, indent=2))
-        print(json.dumps(localization_payload(spec, "<event id>"), indent=2))
+        for locale in table:
+            print(json.dumps(body(locale, "<event id>"), indent=2, ensure_ascii=False))
+        print(f"art for each of {len(table)}: {CARD_FILE} + {DETAILS_FILE} from {art_dir}")
         print("dry run: nothing sent")
         return 0
     ev = call("POST", "/v1/appEvents", json=payload)
@@ -177,11 +201,12 @@ def create(spec_path: Path, art_dir: Path, dry_run: bool) -> int:
         bail("create appEvent", ev)
     event_id = ev["data"]["id"]
     print("event created:", event_id, ev["data"]["attributes"].get("eventState"))
-    loc = call("POST", "/v1/appEventLocalizations", json=localization_payload(spec, event_id))
-    if "_error" in loc:
-        bail("create localization", loc)
-    print("localization created:", loc["data"]["id"])
-    upload_screenshots(loc["data"]["id"], art_dir)
+    for locale in table:
+        loc = call("POST", "/v1/appEventLocalizations", json=body(locale, event_id))
+        if "_error" in loc:
+            bail(f"create localization {locale} (DRAFT {event_id} keeps the locales before it)", loc)
+        print(f"{locale}: localization created:", loc["data"]["id"])
+        upload_screenshots(loc["data"]["id"], art_dir)
     final = call("GET", f"/v1/appEvents/{event_id}")
     print("final eventState:", final["data"]["attributes"].get("eventState"))
     print("event id:", event_id, "— submit for review by hand in App Store Connect")

@@ -1,0 +1,58 @@
+{
+  "referenceName": "halloween-2026",
+  "badge": "SPECIAL_EVENT",
+  "purpose": "APPROPRIATE_FOR_ALL_USERS",
+  "priority": "NORMAL",
+  "purchaseRequirement": "NO_COST_ASSOCIATED",
+  "locale": "en-US",
+  "publishStart": "2026-10-17T09:00:00Z",
+  "eventStart": "2026-10-24T00:00:00Z",
+  "eventEnd": "2026-11-01T23:59:00Z",
+  "copy": {
+    "name": "Halloween in the Lair",
+    "shortDescription": "M1K3 dresses up. Pumpkin glow, villain grin.",
+    "longDescription": "From Oct 24 to Nov 1, the Phosphor Fox glows pumpkin orange and greets you in costume. A little wicked, all on-device."
+  },
+  "localizations": {
+    "en-US": {
+      "name": "Halloween in the Lair",
+      "shortDescription": "M1K3 dresses up. Pumpkin glow, villain grin.",
+      "longDescription": "From Oct 24 to Nov 1, the Phosphor Fox glows pumpkin orange and greets you in costume. A little wicked, all on-device."
+    },
+    "de-DE": {
+      "name": "Halloween im Versteck",
+      "shortDescription": "M1K3 verkleidet sich. Kürbisglut, Schurkengrinsen.",
+      "longDescription": "Vom 24.10. bis 1.11. glüht der Phosphorfuchs kürbisorange und begrüßt dich im Kostüm. Etwas fies, alles auf dem Gerät."
+    },
+    "es-ES": {
+      "name": "Halloween en la guarida",
+      "shortDescription": "M1K3 se disfraza. Brillo calabaza, risa villana.",
+      "longDescription": "Del 24 oct. al 1 nov., el zorro fosforescente brilla color calabaza y te recibe disfrazado. Todo en tu dispositivo."
+    },
+    "fr-FR": {
+      "name": "Halloween dans le repaire",
+      "shortDescription": "M1K3 se déguise. Lueur citrouille, air de méchant.",
+      "longDescription": "Du 24 oct. au 1er nov., le renard phosphorescent luit couleur citrouille et vous accueille déguisé. Tout sur l'appareil."
+    },
+    "ja": {
+      "name": "アジトのハロウィン",
+      "shortDescription": "M1K3が仮装。かぼちゃ色の光と、悪役の笑み。",
+      "longDescription": "10月24日〜11月1日、燐光のキツネがかぼちゃ色に光り、仮装姿であなたを出迎えます。ちょっぴり悪だくみ、すべて端末上で。"
+    },
+    "ko": {
+      "name": "아지트의 할로윈",
+      "shortDescription": "M1K3가 분장했어요. 호박빛 광채, 악당의 미소.",
+      "longDescription": "10월 24일부터 11월 1일까지, 인광 여우가 호박빛으로 빛나며 코스튬 차림으로 당신을 맞이합니다. 살짝 사악하게, 모두 기기 안에서."
+    },
+    "pt-BR": {
+      "name": "Halloween no covil",
+      "shortDescription": "M1K3 se fantasia. Luz de abóbora, riso de vilão.",
+      "longDescription": "De 24/10 a 1º/11, a raposa fosforescente brilha cor de abóbora e te recebe fantasiada. Tudo no aparelho, com malícia."
+    },
+    "zh-Hans": {
+      "name": "老巢里的万圣节",
+      "shortDescription": "M1K3 换上万圣节装扮。南瓜色光芒，反派式微笑。",
+      "longDescription": "10月24日至11月1日，磷光狐狸泛起南瓜橙光，换上戏服迎接你。一切都在设备上，坏得恰到好处。"
+    }
+  }
+}
