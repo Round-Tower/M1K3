@@ -24,6 +24,8 @@
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — cognitive-load cut (Kev's diff): the brain subtitle under the wordmark
 //  and the empty-state headline/tagline are gone; the chips carry the invitation. Dead brainSubtitle removed with it.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — in season (Halloween) one costume line under the wordmark
+//  (SeasonalGreetingLine); opt-out in Settings ▸ Face. Confidence 0.8 (verify-by-launch).
 //
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — M1K3_VOICE_AT_LAUNCH harness switch (enter voice mode when the brain is
@@ -80,6 +82,7 @@ struct ChatScreen: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage(AppCore.avatarBackdropKey) private var avatarBackdrop = true
     @AppStorage(CompanionDefaults.companionKey) private var companion = ""
+    @AppStorage(CompanionDefaults.seasonalLooksKey) private var seasonalLooks = true
     @State private var draft = ""
     @State private var starters: [String] = []
     @State private var showAttachmentImporter = false
@@ -291,6 +294,16 @@ struct ChatScreen: View {
                     .font(.pixel(28))
                     .kerning(2)
                     .foregroundStyle(.white)
+                // In season, M1K3 greets in costume (opt-out in Settings ▸ Face).
+                SeasonalGreetingLine(
+                    season: SeasonalLook.resolve(
+                        on: Date(), calendar: .current, enabled: seasonalLooks,
+                        override: SeasonalLook.Override(in: .standard)
+                    ),
+                    font: .callout
+                )
+                .colorScheme(.dark)
+                .padding(.horizontal, 24)
             }
             if core.brainLoad.isActive {
                 brainLoadRow

@@ -186,6 +186,8 @@ struct ContentView: View {
     /// first-session greeting to the quiet returning-user variant (a veteran's
     /// every new conversation must not replay "Nice to meet you").
     @AppStorage("greeting.firstTurnDone") private var greetingFirstTurnDone = false
+    /// Settings ▸ Companion ▸ Seasonal looks. The greeting dresses up in season unless opted out.
+    @AppStorage(CompanionDefaults.seasonalLooksKey) private var seasonalLooks = true
     /// Voice mode's toolbar button stays LABELED ("Voice mode", not icon-only)
     /// until the first entry — the headline feature must not hide behind an
     /// unlabeled wave glyph for someone who's never found it.
@@ -660,6 +662,10 @@ struct ContentView: View {
                     isIngesting: env.isIngesting,
                     lastIngestedTitle: env.lastIngestedTitle,
                     starters: starters,
+                    season: SeasonalLook.resolve(
+                        on: Date(), calendar: .current, enabled: seasonalLooks,
+                        override: SeasonalLook.Override(in: .standard)
+                    ),
                     onImport: { showImporter = true },
                     onSend: { text in Task { await env.send(text) } }
                 )
