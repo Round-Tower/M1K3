@@ -6,9 +6,11 @@
 
    The <html data-platform> that shows the button is set in each page's <head>.
 
-   Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.8. Prior: Unknown (new file). */
+   Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.8. Prior: Unknown (new file).
+   Review: Kev + claude-opus-5.5, 2026-10-11 — the shared link carries ct=send-to-mac, so App Store
+   Connect counts the installs this button starts. Confidence 0.85. */
 (function () {
-  var data = { title: 'M1K3 for Mac', url: 'https://apps.apple.com/app/id6780230835' };
+  var data = { title: 'M1K3 for Mac', url: 'https://apps.apple.com/app/id6780230835?pt=120784482&ct=send-to-mac&mt=12' };
   document.querySelectorAll('[data-send-to-mac]').forEach(function (btn) {
     var label = btn.textContent;
     btn.setAttribute('aria-live', 'polite');  // so "Link copied ✓" is announced, not just drawn

@@ -40,7 +40,7 @@ Key facts:
   access token from Settings (`m1k3 login`, then `m1k3 connect <client>`); a visiting agent can propose a todo
   but only the user accepts it. Connecting an agent: https://m1k3.app/agents
 - Install: the two-minute guide is https://m1k3.app/install (the Mac App
-  Store at https://apps.apple.com/app/id6780230835, Homebrew
+  Store at https://apps.apple.com/app/id6780230835?pt=120784482&ct=llms-txt&mt=12, Homebrew
   `brew trust round-tower/tap && brew install --cask round-tower/tap/m1k3`,
   the signed & notarized DMG at
   https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg, or

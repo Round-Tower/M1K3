@@ -22,7 +22,7 @@ STEP 1 — GET THE APP
   The command-line client then lives at
     /Applications/M1K3.app/Contents/Helpers/m1k3
   Mac App Store (a person's easiest route; it updates through the store):
-    https://apps.apple.com/app/id6780230835
+    https://apps.apple.com/app/id6780230835?pt=120784482&ct=install-txt&mt=12
   Note: the App Store copy of `m1k3` is sandboxed, so its `connect` prints
   the config instead of writing it. Prefer Homebrew or the DMG for agents.
   iPhone and iPad: the TestFlight beta —

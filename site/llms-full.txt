@@ -30,7 +30,7 @@ Mac App Store · the easy way
 
 Free, and it updates through the App Store. One honest note: the App Store copy of m1k3 is sandboxed, so its connect prints the config rather than writing it; Homebrew and the DMG write it for you.
 
-Get it on the Mac App Store (https://apps.apple.com/app/id6780230835) iPhone & iPad beta (TestFlight) (https://testflight.apple.com/join/Fxp2F5Je)
+Get it on the Mac App Store (https://apps.apple.com/app/id6780230835?pt=120784482&ct=site-install&mt=12) iPhone & iPad beta (TestFlight) (https://testflight.apple.com/join/Fxp2F5Je)
 
 Homebrew · agents' favourite
 
@@ -591,7 +591,7 @@ Eighteen, spanning knowledge, memory, intelligence, voice, and todos (the README
 
 ### How do I connect Claude Code to M1K3?
 
-Step 1 — install M1K3 and give it something to know. Get the app (Homebrew, the Mac App Store (https://apps.apple.com/app/id6780230835), the DMG (https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg), or source (https://github.com/Round-Tower/M1K3); requires macOS 26 on Apple Silicon), then drop documents, notes, or PDFs into it. M1K3 indexes them into its knowledge graph on-device.
+Step 1 — install M1K3 and give it something to know. Get the app (Homebrew, the Mac App Store (https://apps.apple.com/app/id6780230835?pt=120784482&ct=site-mcp-inline&mt=12), the DMG (https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg), or source (https://github.com/Round-Tower/M1K3); requires macOS 26 on Apple Silicon), then drop documents, notes, or PDFs into it. M1K3 indexes them into its knowledge graph on-device.
 
 Step 2 — switch the server on and connect. In M1K3, open Settings ▸ MCP Server, switch it on, and Copy the access token. Every request has to carry it; one without it gets a 401. Then, from Terminal:
 
@@ -813,7 +813,7 @@ What you get back: your data stays home by construction, everything works offlin
 
 ### How to try M1K3
 
-- Get it on the Mac App Store (https://apps.apple.com/app/id6780230835) — the easiest way in.
+- Get it on the Mac App Store (https://apps.apple.com/app/id6780230835?pt=120784482&ct=site-chatgpt-alt-list&mt=12) — the easiest way in.
 
 - Homebrew — two lines in Terminal, and the m1k3 command lands on your PATH.
 
@@ -5889,7 +5889,7 @@ STEP 1 — GET THE APP
   The command-line client then lives at
     /Applications/M1K3.app/Contents/Helpers/m1k3
   Mac App Store (a person's easiest route; it updates through the store):
-    https://apps.apple.com/app/id6780230835
+    https://apps.apple.com/app/id6780230835?pt=120784482&ct=install-txt&mt=12
   Note: the App Store copy of `m1k3` is sandboxed, so its `connect` prints
   the config instead of writing it. Prefer Homebrew or the DMG for agents.
   iPhone and iPad: the TestFlight beta —
