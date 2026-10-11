@@ -19,6 +19,9 @@
 //  layer. The SwiftUI carousel (M1K3App/WakeSetupCarousel.swift) only renders.
 //
 //  Signed: Kev + claude-fable-5, 2026-08-30, Confidence 0.9. Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the NO-WAIT deck (#540 defect 1): `brainAlreadyReady`
+//  makes completion user-driven (always `.invite`), so a re-run or a ready first run shows the deck
+//  instead of auto-advancing past it; the wait paths are byte-for-byte the old rule. Confidence 0.9.
 
 import Foundation
 
@@ -58,8 +61,17 @@ public struct WakeSetupFlow: Sendable, Equatable {
     /// exactly once, at completion.
     public private(set) var note = ""
 
-    public init(cards: [WakeSetupCard] = WakeSetupCard.allCases) {
+    /// True for the NO-WAIT deck (a re-run, or a first run whose brain is already
+    /// ready): there is nothing to wait for, so the do-nothing auto-advance would skip
+    /// the deck the instant it mounted. Completion is the user's tap, always.
+    public let userDrivenCompletion: Bool
+
+    /// `brainAlreadyReady: true` is the no-wait mode (#540 defect 1); the default is the
+    /// wait paths, whose rule is unchanged.
+    public init(cards: [WakeSetupCard] = WakeSetupCard.allCases, brainAlreadyReady: Bool = false) {
         self.cards = cards.isEmpty ? WakeSetupCard.allCases : cards
+        brainReady = brainAlreadyReady
+        userDrivenCompletion = brainAlreadyReady
     }
 
     public var current: WakeSetupCard {
@@ -115,6 +127,7 @@ public struct WakeSetupFlow: Sendable, Equatable {
     /// who engaged, and never delays one who didn't.
     public var completion: Completion {
         guard brainReady else { return .keepWaiting }
+        if userDrivenCompletion { return .invite }
         return hasEngaged ? .invite : .autoComplete
     }
 }
@@ -151,6 +164,12 @@ public enum WakeProgressCopy {
             "almost with you…",
         ]
         return lines[((tick % lines.count) + lines.count) % lines.count]
+    }
+
+    /// The deck's primary button when there is no wait: nothing is waking, so no
+    /// "I'm awake" payoff; the button just ends setup (skipping everything is the same tap).
+    public static func finishLine(isRerun: Bool) -> String {
+        isRerun ? "Done" : "Start chatting"
     }
 
     /// The payoff at 100%: a greeting, not a state change. Spoken and shown.

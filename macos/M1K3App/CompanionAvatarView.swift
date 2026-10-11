@@ -68,6 +68,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — seasonal looks: the phosphor treatment takes the resolved
 //  `SeasonalLook` (Halloween pumpkin/ember/violet); a live skin repaints when the season flips (`lastSeason`).
 //  Matters only under the Phosphor skin (the baked lattice stays neutral). Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — OnboardingTrace breadcrumbs around the creature load (start /
+//  ready, once per Re-run tap, silent otherwise) so the "re-run was slow" log shows what the backdrop costs.
+//  Confidence 0.85.
 
 // AppKit on macOS, UIKit on iOS/visionOS — the companion render path is now
 // cross-platform (shared into the M1K3iOSApp mobile shell). Only the emotion-fill
@@ -78,6 +81,7 @@
     import UIKit
 #endif
 import M1K3Avatar
+import M1K3LogCore
 import os
 import RealityKit
 import SwiftUI
@@ -453,6 +457,7 @@ struct CompanionAvatarView: View {
     /// selection changes.
     private func reload(to companion: CompanionSpec) async {
         guard let root = scene.root else { return }
+        OnboardingTrace.shared.markOnce("companion load start (\(companion.id))")
         scene.loadToken += 1
         let token = scene.loadToken
         loading?.wrappedValue = true
@@ -579,6 +584,7 @@ struct CompanionAvatarView: View {
         // otherwise the visionOS window-fit (which only runs inside `update`) waits
         // on the next unrelated `controller.state` change to frame correctly.
         loadTick &+= 1
+        OnboardingTrace.shared.markOnce("companion ready (\(companion.id))")
     }
 
     /// Harvest each bundled clip as an animation resource bound to the idle host's

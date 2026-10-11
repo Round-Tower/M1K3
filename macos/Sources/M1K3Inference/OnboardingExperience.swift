@@ -19,6 +19,8 @@
 //  change without a migration).
 //
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#544 pass 2) — `permissionRequiredKeys` doc matches `apply`.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — `current(in:)` / `currentLabel(for:)`: the re-run card's
+//  "Currently: Full / Private / Custom" line (#540 slice-1 carry-over). Confidence 0.85.
 //
 
 import Foundation
@@ -67,6 +69,24 @@ public enum OnboardingExperience: String, Sendable, CaseIterable {
         for entry in Self.fullExperienceDefaults {
             if on, Self.permissionRequiredKeys.contains(entry.key) { continue }
             defaults.set(on ? entry.value : false, forKey: entry.key)
+        }
+    }
+
+    /// Which door the store currently reads as: all seven keys on is Full, all seven off is
+    /// Private, anything else (a toggle flipped in Settings since) is nil, i.e. Custom.
+    public static func current(in defaults: UserDefaults) -> OnboardingExperience? {
+        let values = fullExperienceDefaults.map { defaults.bool(forKey: $0.key) }
+        if values.allSatisfy(\.self) { return .fullExperience }
+        if values.allSatisfy({ !$0 }) { return .privateByDefault }
+        return nil
+    }
+
+    /// The re-run card's "Currently: …" word for `current(in:)`.
+    public static func currentLabel(for experience: OnboardingExperience?) -> String {
+        switch experience {
+        case .fullExperience: "Full"
+        case .privateByDefault: "Private"
+        case nil: "Custom"
         }
     }
 }

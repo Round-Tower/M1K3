@@ -34,6 +34,8 @@
 //  `excludedKinds` too (the agent's copies leaked a caption as an observation); pinned by text scan.
 //  Review: Kev + claude-opus-5-5, 2026-10-10 — the Mac turns the router's three flags on by default
 //  (`whenUnset: true`): every tier, the group head and chains, on the 10-10 arm's evidence. iOS unchanged.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — `readAFMAvailability()`: the AFM availability probe off the main actor (the re-run sheet read it
+//  synchronously in onAppear). Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -52,7 +54,14 @@ extension AppEnvironment {
     /// Reused across sends so a turn doesn't allocate a fresh probe each time; the
     /// live `isAvailable` read (SystemLanguageModel.availability) stays per-call so a
     /// mid-session Apple-Intelligence change is honoured.
-    private static let afmAvailabilityProbe = AppleFoundationModelsProvider()
+    private nonisolated static let afmAvailabilityProbe = AppleFoundationModelsProvider()
+
+    /// The same live read OFF the main actor. `SystemLanguageModel.availability` is a system call
+    /// (an AFM daemon round-trip that can take seconds), so HelloView reads it from a detached
+    /// task after the first frame instead of in `onAppear` (the re-run sheet felt slow, 2026-10-11).
+    nonisolated static func readAFMAvailability() -> AFMAvailability {
+        afmAvailabilityProbe.availabilityState
+    }
 
     /// The same live read, callable from `init` (before `self` is whole) — the
     /// launch restore needs it to ease a persisted Mini onto the Mini this Mac

@@ -30,6 +30,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — `screengrab` category for the
 //  App Store plate harness (SubsystemGuard caught the bare literal in CI).
 //  Confidence now 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — `onboarding` category for the re-run sheet's
+//  breadcrumbs ("it was slow", TestFlight). Confidence 0.9.
 //
 
 import Foundation
@@ -158,6 +160,10 @@ public enum M1K3Log {
         /// The iOS/visionOS shell's core (`M1K3iOSApp/AppCore`): brain pick,
         /// restore, pairing adoption — state names and counts only.
         case iosCore = "ios-core"
+        /// First-run and re-run onboarding (`HelloView`): phase changes and the
+        /// re-run sheet's stopwatch (ms since the button tap). Phase names and
+        /// durations only — never the typed name or the profile note.
+        case onboarding
     }
 
     /// Build a `Logger` on the M1K3 subsystem for a catalogued category.

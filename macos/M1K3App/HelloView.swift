@@ -66,10 +66,25 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#544 pass 2) — the ceremony task is owned by the view and
 //  cancelled on disappear; Cancel and interactive dismiss are gated while settling; the direct keys are
 //  applied AFTER the ceremony, so a cancelled Full writes nothing.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — "Re-run onboarding… was slow, and I only saw the name page"
+//  (TestFlight): (1) the setup deck on EVERY path — a `.setup` phase mounts WakeSetupCarousel with the brain
+//  already ready (WakeSetupFlow(brainAlreadyReady:), completion is the tap) after a re-run or a first run on
+//  `.keepCurrent`/`.useMini`; the wait phases are unchanged. (2) the first frame is light: AFM availability
+//  reads off the main actor in a `.task` (doors wake when it lands), and the live backdrop mounts ~150 ms
+//  after the card paints and fades in; OnboardingTrace breadcrumbs (ms since the Re-run tap) record where the
+//  time goes. (3) the "Currently: Full / Private / Custom" line on a re-run (closes slice 1's Open).
+//  Confidence 0.75 — flow rule + classifier + clock are tested; the speed win is a hypothesis until the
+//  TestFlight log, and the sheet is verify-by-launch.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — a re-run's doors never wait on AFM (it
+//  never reads it) and a first run's wake after 3 s if the probe hangs; the door copy is a placeholder until
+//  AFM lands (no flip under the user); the already-loaded fallback edge shows the deck; the Mini-wait poll
+//  reads off the main actor too; the backdrop sleep honours cancellation. Known, accepted: a first-run user
+//  who quits mid-deck sees the hello again next launch (the gate flips on the deck's button). Confidence 0.75.
 
 import M1K3AgentTools
 import M1K3Avatar
 import M1K3Inference
+import M1K3LogCore
 import SwiftUI
 
 // MARK: - Onboarding experience choice
@@ -86,11 +101,22 @@ struct HelloView: View {
         case waitingForMini
         /// Lil fallback downloading (`modelLoad` is the active selection's truth).
         case downloading
+        /// The setup deck with NO wait: a re-run, or a first run whose brain is already
+        /// ready. The user taps through (or straight past) it; nothing auto-advances.
+        case setup
     }
 
     @State private var phase: Phase = .hello
     @State private var userName = ""
     @State private var afm: AFMAvailability = .available
+    /// False until the off-main AFM read lands: the doors wait for it (their copy and the
+    /// policy depend on it) rather than the first frame blocking on a daemon round-trip.
+    @State private var afmKnown = false
+    /// The live backdrop mounts AFTER the card is on screen (RealityView + USDZ load is the
+    /// heaviest thing on this sheet); the card paints first, the face fades in behind it.
+    @State private var backdropReady = false
+    /// "Full" / "Private" / "Custom": where the seven experience keys stand now (re-run only).
+    @State private var currentDoorLabel: String?
     /// The Full door's permission ceremony is running: doors and Cancel
     /// disabled, the sheet held. The task is owned here so a dismissal cancels
     /// it and nothing of the hello lands after the user walked away.
@@ -110,6 +136,7 @@ struct HelloView: View {
                 case .hello: helloCard
                 case .waitingForMini: waitingCard
                 case .downloading: downloadingCard
+                case .setup: setupCard
                 }
             }
             .padding(32)
@@ -126,25 +153,62 @@ struct HelloView: View {
             // He stays FORWARD during the waits now: the carousel's whole
             // metaphor is the face waking up as the bar fills (WakeAlertness),
             // so receding him would hide the show.
-            AvatarChatBackground(env: env, isTyping: false)
+            if backdropReady {
+                AvatarChatBackground(env: env, isTyping: false)
+                    .transition(.opacity)
+            }
         }
+        .animation(reduceMotion ? nil : .easeIn(duration: 0.5), value: backdropReady)
         .glassBackdrop()
         .onAppear {
-            afm = env.afmAvailability
+            OnboardingTrace.shared.markOnce("hello first onAppear")
             env.avatar.setEmotion(.happy)
-            if isRerun, userName.isEmpty {
-                userName = UserDefaults.standard.string(
-                    forKey: AppEnvironment.userDisplayNameKey
-                ) ?? ""
+            if isRerun {
+                currentDoorLabel = OnboardingExperience.currentLabel(
+                    for: OnboardingExperience.current(in: .standard)
+                )
+                if userName.isEmpty {
+                    userName = UserDefaults.standard.string(
+                        forKey: AppEnvironment.userDisplayNameKey
+                    ) ?? ""
+                }
             }
+        }
+        .task {
+            // After the first frame: the AFM probe is a daemon call (seconds on a bad day), so it
+            // reads OFF the main actor, and the doors wake when it lands.
+            afm = await Self.readAFM()
+            afmKnown = true
+            OnboardingTrace.shared.markOnce("hello afm read (\(String(describing: afm)))")
+        }
+        .task {
+            // A hung probe must not leave the first-run doors dead: after 3 s they wake on the
+            // optimistic default and a late read still corrects `afm`.
+            do { try await Task.sleep(for: .seconds(3)) } catch { return }
+            if !afmKnown {
+                afmKnown = true
+                OnboardingTrace.shared.markOnce("hello afm read timed out (3 s)")
+            }
+        }
+        .task {
+            // Let the card paint, then bring the face in behind it.
+            do { try await Task.sleep(for: .milliseconds(150)) } catch { return }
+            backdropReady = true
+            OnboardingTrace.shared.markOnce("hello backdrop mounted")
         }
         .onDisappear {
             env.avatar.resetToIdle()
             ceremony?.cancel()
+            OnboardingTrace.shared.mark("hello disappeared")
+            OnboardingTrace.shared.end()
         }
         .interactiveDismissDisabled(settling)
+        .onChange(of: phase) { _, new in
+            OnboardingTrace.shared.mark("phase -> \(String(describing: new))")
+        }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { afm = env.afmAvailability }
+            guard phase == .active else { return }
+            Task { afm = await Self.readAFM() }
         }
         .onChange(of: env.modelLoad) { _, state in
             guard case .ready = state, phase == .downloading else { return }
@@ -154,6 +218,11 @@ struct HelloView: View {
             wakeFlow.markBrainReady()
             if wakeFlow.completion == .autoComplete { onComplete() }
         }
+    }
+
+    /// The availability read, off the main actor (see `AppEnvironment.readAFMAvailability`).
+    private static func readAFM() async -> AFMAvailability {
+        await Task.detached(priority: .userInitiated) { AppEnvironment.readAFMAvailability() }.value
     }
 
     // MARK: - The one screen
@@ -204,6 +273,16 @@ struct HelloView: View {
             }
             .frame(maxWidth: 360)
             .padding(.top, 4)
+            // The door titles and captions depend on `afm`; until it lands they render as
+            // placeholders rather than painting one answer and flipping to another.
+            .redacted(reason: doorsWaitingOnAFM ? .placeholder : [])
+
+            if let currentDoorLabel {
+                Text("Currently: \(currentDoorLabel)")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel("Currently set to \(currentDoorLabel)")
+            }
 
             Text(disclosureCaption)
                 .font(.caption)
@@ -271,6 +350,23 @@ struct HelloView: View {
         }
     }
 
+    // MARK: - Setup (no wait: re-run, or a first run whose brain is ready)
+
+    private var setupCard: some View {
+        VStack(spacing: 16) {
+            Spacer(minLength: 20)
+            // The same deck as the waits, with the brain already ready: no bar, and
+            // completion is the tap on the primary button (or past it, skipping everything).
+            WakeSetupCarousel(
+                flow: $wakeFlow,
+                fraction: nil,
+                finishTitle: WakeProgressCopy.finishLine(isRerun: isRerun),
+                onComplete: onComplete
+            )
+            Spacer(minLength: 20)
+        }
+    }
+
     // MARK: - Waiting (AFM assets syncing)
 
     private var waitingCard: some View {
@@ -294,7 +390,7 @@ struct HelloView: View {
             // no-yank rule as the download path decides auto-advance vs invite.
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(2))
-                if case .available = env.afmAvailability {
+                if case .available = await Self.readAFM() {
                     env.selectBrain(.mini)
                     wakeFlow.markBrainReady()
                     if wakeFlow.completion == .autoComplete { onComplete() }
@@ -374,12 +470,17 @@ struct HelloView: View {
         if prominent {
             Button { sayHello(experience: experience) } label: { label }
                 .buttonStyle(.glassProminent)
-                .disabled(settling)
+                .disabled(settling || doorsWaitingOnAFM)
         } else {
             Button { sayHello(experience: experience) } label: { label }
                 .buttonStyle(.bordered)
-                .disabled(settling)
+                .disabled(settling || doorsWaitingOnAFM)
         }
+    }
+
+    /// First run only: the doors' copy and the brain policy read `afm`. A re-run doesn't.
+    private var doorsWaitingOnAFM: Bool {
+        !afmKnown && !isRerun
     }
 
     // MARK: - Actions
@@ -415,22 +516,29 @@ struct HelloView: View {
         env.saveFirstRunName(userName, rewriteProfile: isRerun)
         env.avatar.setEmotion(.excited)
         if isRerun {
-            onComplete()
+            showSetupDeck()
             return
         }
         switch FirstRunBrainPolicy.resolve(afm: afm, currentBrain: env.selectedBrain) {
         case let .keepCurrent(tier):
             env.selectBrain(tier)
-            onComplete()
+            showSetupDeck()
         case .useMini:
             env.selectBrain(.mini)
-            onComplete()
+            showSetupDeck()
         case .waitForMini:
             env.selectBrain(.mini)
             phase = .waitingForMini
         case let .downloadFallback(tier, _):
             startFallbackDownload(tier)
         }
+    }
+
+    /// The deck with no wait (#540 defect 1): the brain is ready, so the flow starts ready and
+    /// completion is the user's tap. Every path without a download or warm lands here.
+    private func showSetupDeck() {
+        wakeFlow = WakeSetupFlow(brainAlreadyReady: true)
+        phase = .setup
     }
 
     /// "630 MB" / "2.2 GB" from the tier's own figure — one source for every copy line.
@@ -444,8 +552,8 @@ struct HelloView: View {
         // selection now, so using modelLoad here is correct (unlike the
         // background upgrade, which must never touch it).
         if env.selectBrain(tier) {
-            // Already loaded (re-run edge) — no transition coming; finish now.
-            onComplete()
+            // Already loaded — no transition is coming, so this is a no-wait path: the deck.
+            showSetupDeck()
         }
     }
 
