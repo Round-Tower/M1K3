@@ -19,6 +19,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the polish pass (TestFlight 499): centring anchor, shared glass
 //  card with the progress footer kept outside it, pixel titles, glass buttons, earcon wiring order. Confidence 0.6
 //  (text tripwires; how it looks and sounds is verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (PR 2b) — the kit card: no ProgressView inside the glass, a fixed live-bar
+//  slot beneath it, one download verb, Done never waits. Confidence 0.6.
 //
 
 import Foundation
@@ -208,6 +210,58 @@ struct OnboardingDeckScanTests {
         #expect(engage.lowerBound < early.lowerBound, "Return on the last card no longer engages")
         #expect(hello.contains("chosenExperience = experience") && hello.contains("fullDoor: chosenExperience == .fullExperience"))
         #expect(hello.contains("minHeight: 700"))
+    }
+
+    // MARK: - The kit card (PR 2b: "My full kit")
+
+    @Test("the kit card holds no ProgressView inside the glass; its live bar is in a fixed slot below it")
+    func kitCardObeysTheGlassRule() throws {
+        let deck = try Self.code("M1K3App/WakeSetupCarousel.swift")
+        let card = Self.slice(deck, from: "private var kitCard", to: "private var kitLoadSlot")
+        #expect(!card.contains("ProgressView("), "a ticking bar is inside the glass card")
+        #expect(!card.contains(".glassEffect(") && !card.contains(".onboardingCard"))
+        // Rows are a fixed height, so a status change never resizes the glass.
+        #expect(card.contains(".frame(height: Self.kitRowHeight, alignment: .top)"))
+        let slot = Self.slice(deck, from: "private var kitLoadSlot", to: "private var voiceLoadSlot")
+        #expect(slot.contains("ProgressView(value: fraction)") && slot.contains(".frame(height: Self.kitSlotHeight)"))
+        // The slot sits after the glass card in the body, never inside it.
+        let body = Self.slice(deck, from: "var body: some View", to: "@ViewBuilder private var card")
+        let glassAt = try #require(body.range(of: ".onboardingCard(nearLiveProgress:"))
+        let slotAt = try #require(body.range(of: "kitLoadSlot"))
+        #expect(glassAt.lowerBound < slotAt.lowerBound, "the kit slot moved inside the glass")
+        // The row status is static copy from the pure kit, not a live view.
+        #expect(card.contains("OnboardingKit.statusLine(row.status)"))
+    }
+
+    @Test("Get my kit reuses env.startDownload (no second download path) and the deck's Done never waits on it")
+    func doneNeverWaitsOnTheKit() throws {
+        let deck = try Self.code("M1K3App/WakeSetupCarousel.swift")
+        let get = Self.slice(deck, from: "private func getKit", to: "private var kitLoadSlot")
+        #expect(get.contains("env.startDownload(kind)"))
+        #expect(!get.contains("await") && !get.contains("Task"), "the tap awaits a download")
+        #expect(get.contains("soundEffects.play(.selectionTick)"))
+        for path in ["switchEmbeddings", "enableWhisperKit", "prepareM1K3Voice", "BrainWeightsFetcher", "WhisperKit.download"] {
+            #expect(!deck.contains(path), "\(path): the deck grew its own download path")
+        }
+        let finish = Self.slice(deck, from: "private func finish(", to: "private func sayHi")
+        for forbidden in ["kit.", "downloadItems", "startDownload", "progress("] {
+            #expect(!finish.contains(forbidden), "finish() looks at the kit (\(forbidden))")
+        }
+        #expect(finish.contains("onComplete()"))
+        // The toggles tick like every other selection on the deck.
+        let card = Self.slice(deck, from: "private var kitCard", to: "private var kitLoadSlot")
+        #expect(card.contains("soundEffects.play(.selectionTick)"))
+        #expect(card.contains("kit.toggle(item.kind)"))
+    }
+
+    @Test("the wait decks have no kit card; the no-wait deck does")
+    func kitOnlyOnTheNoWaitDeck() throws {
+        let hello = try Self.code("M1K3App/HelloView.swift")
+        #expect(hello.contains("WakeSetupFlow(cards: WakeSetupCard.waitDeck)"))
+        #expect(hello.contains("WakeSetupFlow(brainAlreadyReady: true)"))
+        let deck = try Self.code("M1K3App/WakeSetupCarousel.swift")
+        #expect(deck.contains("if flow.cards.contains(.kit) { kitLoadSlot }"))
+        #expect(deck.contains("case .kit: kitCard"))
     }
 
     @Test("the Re-run button starts the onboarding stopwatch")

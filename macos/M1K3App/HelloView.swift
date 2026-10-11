@@ -87,6 +87,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold, round 2) — sheet minHeight 640 -> 700 (the voice
 //  card + nav + 96 pt footer), and `chosenExperience` (set in finishHello) gates the spoken sign-off to the Full door.
 //  Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (PR 2b) — the wait decks start from `WakeSetupCard.waitDeck` (no "My full kit"
+//  card beside a download or warm); the no-wait deck keeps `WakeSetupFlow(brainAlreadyReady: true)` and gains the kit. Confidence 0.8.
 
 import M1K3AgentTools
 import M1K3Avatar
@@ -132,7 +134,7 @@ struct HelloView: View {
     /// The wake-setup deck shown during both waits. Its completion rule (pure,
     /// pinned) owns the no-yank behaviour: an untouched deck auto-advances on
     /// ready exactly like the old spinner did; an engaged one waits for a tap.
-    @State private var wakeFlow = WakeSetupFlow()
+    @State private var wakeFlow = WakeSetupFlow(cards: WakeSetupCard.waitDeck)
     /// The door applied in THIS session (set in `finishHello`): only Full gets the spoken sign-off.
     @State private var chosenExperience: OnboardingExperience?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion

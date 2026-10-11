@@ -37,6 +37,11 @@
 //  download/warming footers are a fixed 96 pt (two-line caption); the card slot has a fixed minHeight (the
 //  chevrons stay put); finish() is double-tap armoured and speaks only on the Full door; sleeps honour
 //  cancellation; Return on the last card still engages. Confidence 0.7 (layout is verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (PR 2b) — the "My full kit" card closes the no-wait deck (Lil or Big, semantic
+//  memory with a brain, Sharper ears, M1K3 Voice; `OnboardingKit` is the pure selection). One tap starts each ticked item
+//  through `env.startDownload`; `finish` never waits on them. By the glass rule the rows carry STATIC status only and the
+//  live bar sits in `kitLoadSlot`, a fixed 34 pt slot under the glass; rows are a fixed 44 pt; the card slot grew to 310.
+//  Wait decks (`WakeSetupCard.waitDeck`) have no kit card. Confidence 0.65 (layout is verify-by-launch).
 
 import M1K3Avatar
 import M1K3Inference
@@ -65,6 +70,9 @@ struct WakeSetupCarousel: View {
     @State private var hasFinished = false
     @State private var hasCommittedNote = false
     @State private var invitePulse = false
+    /// The "My full kit" card's ticks and what the tap started. View state: the no-wait deck mounts the
+    /// carousel once, so nothing remounts it (the wait decks have no kit card).
+    @State private var kit = OnboardingKit()
     @AppStorage(ReadingMode.storageKey) private var readingMode: ReadingMode = .standard
     @AppStorage(AppEnvironment.voiceCompanionKey) private var voiceCompanion = CompanionDefaults.houseCompanion.id
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -102,6 +110,9 @@ struct WakeSetupCarousel: View {
             // Outside the glass, in a reserved slot: the live Kokoro bar (voice card, re-run or no-wait).
             voiceLoadSlot
 
+            // Outside the glass, in a fixed slot: the live bar for the kit the user asked for.
+            if flow.cards.contains(.kit) { kitLoadSlot }
+
             // The download / warming branches reserve a FIXED height (below), so a caption that
             // wraps on some tick can't reflow the centred stack and move the card mid-download.
             progressFooter
@@ -117,8 +128,9 @@ struct WakeSetupCarousel: View {
     }
 
     /// The tallest card (the voice card: title, two tier rows, sample button, status line) plus
-    /// slack for a wrapped tagline. Cards shorter than this top-align inside it.
-    private static let cardSlotHeight: CGFloat = 270
+    /// slack for a wrapped tagline. The kit card (title, four fixed-height rows, button, caption) sets the
+    /// height now. Cards shorter than this top-align inside it.
+    private static let cardSlotHeight: CGFloat = 310
     /// Two caption lines, the bar or spinner, and the mute button.
     private static let footerHeight: CGFloat = 96
 
@@ -130,6 +142,7 @@ struct WakeSetupCarousel: View {
         case .readingMode: readingModeCard
         case .voice: voiceCard
         case .face: faceCard
+        case .kit: kitCard
         }
     }
 
@@ -237,6 +250,156 @@ struct WakeSetupCarousel: View {
             .buttonStyle(.glass)
             cardCaption("I'm behind this card — that's the live preview.")
         }
+    }
+
+    // MARK: - The kit card ("My full kit")
+
+    /// Fixed row height: a status line replacing a purpose line, or a wrapped failure, never moves the glass.
+    private static let kitRowHeight: CGFloat = 44
+    /// The kit's live-bar slot under the glass: the bar, one caption line.
+    private static let kitSlotHeight: CGFloat = 34
+
+    private var kitCard: some View {
+        // Reading `downloadItems` re-evaluates this body on a download tick, which is fine; nothing in
+        // here ticks. The rows show STATIC status; the live bar is `kitLoadSlot`, outside the glass.
+        let items = env.downloadItems
+        let rows = kit.rows(items: items)
+        return VStack(spacing: 8) {
+            cardTitle("My full kit")
+            if kit.isChecking(items: items) {
+                kitNote("Looking at what's already on this Mac…")
+            } else if kit.hasNothingToOffer(items: items) {
+                kitNote("You already have everything I can fetch here. Nothing to download.")
+            } else {
+                VStack(spacing: 4) {
+                    ForEach(rows) { row in kitRow(row) }
+                }
+                kitAction(items: items)
+                cardCaption("One-time downloads. None of your data goes with them.")
+            }
+        }
+        .onAppear { env.refreshDownloads() }
+    }
+
+    private func kitNote(_ text: LocalizedStringKey) -> some View {
+        Text(text)
+            .font(.callout)
+            .foregroundStyle(.secondary)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity, minHeight: 120)
+    }
+
+    @ViewBuilder private func kitRow(_ row: OnboardingKit.Row) -> some View {
+        let item = row.item
+        let size = (item.sizeIsApproximate ? "~" : "") + item.bytes.formatted(.byteCount(style: .file))
+        if row.status == .offer {
+            Toggle(isOn: Binding(
+                get: { row.ticked },
+                set: { _ in
+                    env.soundEffects.play(.selectionTick)
+                    kit.toggle(item.kind)
+                    flow.engage()
+                }
+            )) {
+                kitRowLabel(name: item.name, size: size, detail: OnboardingKit.shortPurpose(item.kind))
+            }
+            .toggleStyle(.checkbox)
+            .frame(height: Self.kitRowHeight, alignment: .top)
+        } else {
+            HStack(alignment: .top, spacing: 8) {
+                Image(systemName: kitStatusSymbol(row.status))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(row.status == .ready ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
+                    .frame(width: 18)
+                kitRowLabel(name: item.name, size: size, detail: OnboardingKit.statusLine(row.status) ?? "")
+            }
+            .frame(height: Self.kitRowHeight, alignment: .top)
+            .accessibilityElement(children: .combine)
+        }
+    }
+
+    private func kitRowLabel(name: String, size: String, detail: String) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            HStack {
+                Text(name).font(.headline)
+                Spacer()
+                Text(size).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+            }
+            Text(detail)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private func kitStatusSymbol(_ status: OnboardingKit.Status) -> String {
+        switch status {
+        case .offer: "square"
+        case .downloading, .preparing: "arrow.down.circle"
+        case .ready: "checkmark.circle.fill"
+        case .failed: "exclamationmark.triangle"
+        }
+    }
+
+    /// The one primary tap, in a fixed 32 pt slot that holds either the button or its aftermath.
+    private func kitAction(items: [DownloadItem]) -> some View {
+        let list = kit.startList(items: items)
+        let progress = kit.progress(items: items)
+        return ZStack {
+            if progress.total > 0 {
+                Text(progress.isFinished ? "That's the kit. Finish whenever you like." : "Fetching in the background. Carry on, or finish.")
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+            } else {
+                let total = kit.totalBytes(items: items).formatted(.byteCount(style: .file))
+                let approx = kit.totalIsApproximate(items: items) ? "~" : ""
+                Button(list.isEmpty ? "Get my kit" : "Get my kit (\(approx)\(total))") { getKit(items: items) }
+                    .buttonStyle(.glass)
+                    .disabled(list.isEmpty)
+            }
+        }
+        .frame(height: 32)
+    }
+
+    /// Start every ticked item through the one download verb, then carry on: nothing here awaits a
+    /// download, and `finish` never looks at them.
+    private func getKit(items: [DownloadItem]) {
+        let list = kit.startList(items: items)
+        guard !list.isEmpty else { return }
+        flow.engage()
+        env.soundEffects.play(.selectionTick)
+        kit.markStarted(list)
+        for kind in list {
+            env.startDownload(kind)
+        }
+    }
+
+    /// The live kit bar, beneath the glass card in a fixed slot (always laid out, so it appearing moves
+    /// nothing). It shows while a started item is still arriving; a failed or finished kit stops it.
+    private var kitLoadSlot: some View {
+        let progress = kit.progress(items: env.downloadItems)
+        return ZStack {
+            if progress.total > 0, !progress.isFinished {
+                VStack(spacing: 4) {
+                    if let fraction = progress.fraction {
+                        ProgressView(value: fraction)
+                    } else {
+                        ProgressView()
+                    }
+                    Text("Fetching your kit · \(progress.ready) of \(progress.total) ready")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                .controlSize(.small)
+                .frame(maxWidth: 240)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Fetching your kit, \(progress.ready) of \(progress.total) ready")
+            }
+        }
+        .frame(height: Self.kitSlotHeight)
     }
 
     /// The live voice-load bar, beneath the glass card and always laid out (14 pt) so it appearing
