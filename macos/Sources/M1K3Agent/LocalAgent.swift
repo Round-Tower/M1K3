@@ -37,6 +37,7 @@
 //  with no unheld gaps (#498 review). Injectable for tests; the body moved to `runHeld` unchanged.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — comment only: the ReAct-floor image note said only Big
 //  sees; Lil (Qwen3.5-4B, #517) sees too and also resolves native. No logic changed.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — doc comment only: ModelEvalReport.strippingThink (retired) → ThinkStripper.strip. Confidence 0.9.
 
 import Foundation
 import M1K3Inference
@@ -61,7 +62,7 @@ public struct AgentResult: Sendable, Equatable {
     /// carry `<think>…</think>` when a remainder streamed live (the
     /// user-visible conclusion went through `onConclusionToken`). Display
     /// callers must split/strip reasoning themselves (`ReasoningSplit`,
-    /// `ModelEvalReport.strippingThink`); `AgentRAGResponder` already does.
+    /// `ThinkStripper.strip`); `AgentRAGResponder` already does.
     public let conclusion: String
     public let toolsUsed: [String]
     public let iterations: Int

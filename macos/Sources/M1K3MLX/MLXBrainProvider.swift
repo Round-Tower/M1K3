@@ -82,7 +82,7 @@
 //  its four extension files and the test file; `RuntimeOption.mlxGemma` → `.mlx`; the default diagnostics
 //  `name` "mlx-gemma" → "mlx-brain" (checked: no store, eval JSON or router reads it). Mechanical — no
 //  behaviour change; the header above was rewritten because it still described a Gemma-only provider.
-//  Left alone on purpose: `Gemma4TemplateFix` / `GemmaMTPSpike` / `GemmaVisionSpike` (really Gemma-specific),
+//  Left alone on purpose: `Gemma4TemplateFix` (really Gemma-specific; the MTP and vision spikes are retired),
 //  dated records under scratch/ and ADR 0001, and the fossil default configuration.
 //  Review: Kev + claude-opus-5-5, 2026-09-23, Confidence 0.85 — sampling rides a SamplingProfile
 //  (M1K3Inference): `house` = the old 1.1/64 loop guard + upstream defaults, still the default;
@@ -122,6 +122,7 @@
 //  ships (the id-keyed overloads had no production caller); the config read is a flatMap. 12B stays 1024.
 //  Review: Kev + claude-fable-5.1, 2026-10-11 — `effectiveThinking` (#555): the template switch and the synthetic
 //  opener read the turn's `InferenceIntent.thinking` over the construction flag.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — comment only: the retired MTP/vision spikes no longer named as live. Confidence 0.9.
 import Foundation
 import Hub
 import M1K3Inference
