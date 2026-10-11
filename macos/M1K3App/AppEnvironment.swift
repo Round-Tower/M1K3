@@ -105,6 +105,10 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — 1.1 Settings restructure: `weightImportState` left with the Import weights UI;
 //  the launch calls `retireAuditions()` (clear audition choices, delete the folder once) before the first brain is built.
 //  Confidence 0.7 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — Settings > Brains & downloads (#downloads-manager): `downloadsLedger`, `kokoro` now internal,
+//  switchEmbeddings feeds the ledger (progress + failure copy), WhisperKit's first download reports a real fraction,
+//  voice / WhisperKit / brain-load failures go through DownloadFailureCopy, and selectBrain cancels the manager's fetch
+//  of the same brain (single writer to the Hub folder). Confidence 0.7 (verify-by-launch).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — comment only: the thinking rain is unmounted; ambientNotes stays as the seam. Confidence 0.9.
 
 import AppKit
@@ -350,6 +354,9 @@ final class AppEnvironment {
     /// Why the last removal did not free the space, keyed to the folder it was
     /// about; shown in the row and dropped once that folder is no longer retired.
     var retiredWeightsFailure: RetiredWeightsFailure?
+    /// Settings > Brains & downloads' bookkeeping (in-flight brain fetches, failures, what is on
+    /// disk). A class of its own because an extension cannot hold stored properties.
+    let downloadsLedger = DownloadsLedger()
     /// The single MLX slot behind `RuntimeOption.mlx` in the façade; re-pointed
     /// at `currentMLXProvider` whenever the brain switches between Lil and Big, so
     /// the swap is seen without rebuilding the RAGResponder. Internal (not
@@ -407,7 +414,8 @@ final class AppEnvironment {
     /// Voice OUTPUT (TTS). The Built-in Apple voice is the swap-back target;
     /// Kokoro is the premium "M1K3 Voice" tier (downloads on first use).
     private let builtinSpeech: AVSpeechProvider
-    private let kokoro: KokoroSpeechProvider
+    /// Internal: Settings > Brains & downloads (+Downloads) asks it what is staged and removes it.
+    let kokoro: KokoroSpeechProvider
     /// "M1K3 Voice" model-load state — mirrors `whisperLoad`/`modelLoad`.
     private(set) var voiceLoad: ModelLoadState = .idle
     /// The chosen TTS tier; restored on launch, persisted on change.
@@ -1437,7 +1445,19 @@ final class AppEnvironment {
         // progress on a fresh fetch is a follow-up.)
         whisperLoad = .preparing
         do {
-            try await whisperKit.prepareModel { _ in }
+            // Real download progress (the provider fetches a missing model itself, scaled into
+            // 0.05 ... 0.9); past that it is the CoreML compile, which stays indeterminate.
+            try await whisperKit.prepareModel { [weak self] fraction in
+                Task { @MainActor in
+                    guard let self, self.isPreparingWhisper else { return }
+                    let finished = WhisperKitProvider.downloadFinishedProgress
+                    if fraction > 0.05, fraction < finished {
+                        self.whisperLoad = .progress((fraction - 0.05) / (finished - 0.05))
+                    } else if fraction >= finished, fraction < 1 {
+                        self.whisperLoad = .preparing
+                    }
+                }
+            }
             isPreparingWhisper = false
             whisperLoad = .ready
             // Remember the upgrade so the next launch auto-loads WhisperKit instead
@@ -1445,7 +1465,7 @@ final class AppEnvironment {
             UserDefaults.standard.set(true, forKey: Self.whisperEnabledKey)
         } catch {
             isPreparingWhisper = false
-            whisperLoad = .failed(message: error.localizedDescription)
+            whisperLoad = .failed(message: DownloadFailureCopy.message(for: error))
         }
     }
 
@@ -1513,6 +1533,8 @@ final class AppEnvironment {
         // background upgrade fetch FIRST (the partial snapshot survives and
         // resumes wherever it's next wanted). State recomputes below.
         cancelBrainUpgradeFetch()
+        // …and the downloads manager's own fetch of THIS brain (same folder, same rule).
+        cancelManagerBrainFetch(for: tier)
         selectedBrain = tier
         UserDefaults.standard.set(tier.rawValue, forKey: Self.selectedBrainKey)
         // Deliberately NOT writing hasChosenBrainKey here (removed 2026-07-03):
@@ -1620,7 +1642,7 @@ final class AppEnvironment {
                 // A 404/gated-repo/disk-full/checksum failure is non-transient, so
                 // Retry never fires onRetry — it lands here and only set UI state.
                 Self.brainLog.error("brain load failed [\(mlx.modelIdentifier, privacy: .public)]: \(error.localizedDescription, privacy: .public)")
-                modelLoad = .failed(message: error.localizedDescription)
+                modelLoad = .failed(message: DownloadFailureCopy.knownMessage(for: error) ?? error.localizedDescription)
             }
         }
     }
@@ -1711,12 +1733,21 @@ final class AppEnvironment {
         embeddingStatus = useMLX
             ? "Loading MLX embedder and rebuilding the index…"
             : "Rebuilding the index with the Hashing embedder…"
-        defer { isReindexing = false }
+        downloadsLedger.embedderSwitching = useMLX
+        downloadsLedger.embedderFraction = nil
+        downloadsLedger.failures[.semanticMemory] = nil
+        defer {
+            isReindexing = false
+            downloadsLedger.embedderSwitching = false
+            downloadsLedger.embedderFraction = nil
+            refreshDownloads()
+        }
 
         let newEmbedder: any EmbeddingService = useMLX
             ? MLXEmbeddingService(onLoadProgress: { fraction in
                 Task { @MainActor in
                     self.embeddingStatus = "Downloading embedder… \(Int((fraction * 100).rounded()))%"
+                    self.downloadsLedger.embedderFraction = fraction
                 }
             })
             : HashingEmbeddingService()
@@ -1740,6 +1771,7 @@ final class AppEnvironment {
             // are still in the stored space, and so are its bars.
             Self.embedLog.error("embedding switch failed, rolled back: \(error.localizedDescription, privacy: .public)")
             embeddingStatus = "Couldn’t switch embeddings: \(error.localizedDescription)"
+            if useMLX { downloadsLedger.failures[.semanticMemory] = DownloadFailureCopy.message(for: error) }
         }
         MLXMemoryBudget.reclaim(label: "switchEmbeddings")
         // The graph's vectors live in the same embedding space — swap them too
@@ -2868,7 +2900,7 @@ extension AppEnvironment {
                 // The façade never left Built-in — say so in the row, not just
                 // the banner (the iOS rule from #199's review).
                 selectedVoiceTier = .builtin
-                voiceLoad = .failed(message: error.localizedDescription)
+                voiceLoad = .failed(message: DownloadFailureCopy.message(for: error))
             }
         }
     }

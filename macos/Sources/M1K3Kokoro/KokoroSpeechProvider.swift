@@ -63,6 +63,9 @@
 //  8th gen (Apple GPU family 5) staged all 192 MB, then trapped in `warm()` — MLX kernels don't compile on
 //  that GPU. The shell now never offers M1K3 Voice there (MLXRuntimeSupport) and discards a stage left
 //  behind. Pinned by KokoroStageDiscardTests. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — Settings > Brains & downloads: `removeStagedModel()` (user-driven
+//  delete that also clears `_ready`, unlike `discardStagedModel()`), and the tamper
+//  error classifies as an integrity refusal for the friendly-copy mapper. Confidence 0.75 (verify-by-launch).
 //  Review: Kev + claude-opus-5-5, 2026-10-02 — forwards the renderer's playbackStallCount
 //  (SpeechProviderWithPlaybackHealth). Confidence now 0.85.
 
@@ -141,6 +144,17 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, SpeechPro
     /// A future "free up space" button must cancel the prepare task first.
     public func discardStagedModel() {
         guard !lock.withLock({ _ready }) else { return }
+        Self.discardStagedModel(at: modelDirectory)
+    }
+
+    /// Delete the staged weights on a user's say-so (Settings > Brains & downloads > Remove),
+    /// even though this session already loaded them. `discardStagedModel()` refuses when
+    /// `_ready`, because it exists for a device that can never run Kokoro; this is for a
+    /// voice the user is NOT using. The caller guarantees M1K3 Voice is not the active
+    /// speech provider and no `prepare` is in flight (the downloads manager cancels first).
+    /// Clearing `_ready` makes a later `prepare` fetch and verify afresh.
+    public func removeStagedModel() {
+        lock.withLock { _ready = false }
         Self.discardStagedModel(at: modelDirectory)
     }
 
@@ -444,10 +458,18 @@ struct KokoroDownloadHTTPError: LocalizedError {
 /// digest in `KokoroPinnedWeights` (#70) — thrown rather than silently
 /// retried, so a live compromise or a very unlucky corruption on the fresh
 /// download surfaces instead of spinning silently against the same source.
-struct KokoroWeightTamperError: LocalizedError {
+struct KokoroWeightTamperError: LocalizedError, DownloadFailureClassifying {
     let file: String
     var errorDescription: String? {
         "Kokoro's \(file) does not match the digest pinned for round-tower/Kokoro-82M-bf16 — refusing to use it"
+    }
+
+    /// Never transient (a retry would fetch the same bytes); the short sentence for a person.
+    var downloadFailureKind: DownloadFailureKind? {
+        .integrity(message: String(localized: """
+        I didn't use the voice files: they don't match what this version of M1K3 expects. \
+        Try the download again, and tell us if it keeps happening.
+        """))
     }
 }
 

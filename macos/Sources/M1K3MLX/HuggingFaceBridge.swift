@@ -24,6 +24,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85 — swift-transformers 1.3.4: both HubApis
 //  pass `cache: nil`, keeping ONE store (the snapshot layout `downloadBase/models/<id>` is unchanged
 //  from 1.1.9, so existing weights stay hits; 1.3's content-addressed HubCache would add a second copy).
+//  Review: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.85 — #557: `isFallbackWorthy` needed no edit;
+//  Hub's wrapped `downloadError` / `networkError(URLError)` now classify as offline (DownloadErrors.swift),
+//  which `RetryPolicy.isTransientNetworkError` — the first line of it — honours.
 //
 
 import Foundation

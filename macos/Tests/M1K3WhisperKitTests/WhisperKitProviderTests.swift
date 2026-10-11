@@ -48,6 +48,23 @@ struct WhisperKitProviderTests {
         #expect(provider.isModelDownloaded) // present → safe to auto-load, no re-download
     }
 
+    @Test("removeDownloadedModel deletes exactly one variant's folder and tolerates a missing one")
+    func removeDownloadedModelIsScoped() throws {
+        let base = FileManager.default.temporaryDirectory
+            .appendingPathComponent("m1k3-wk-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: base) }
+        for variant in ["base.en", "small.en"] {
+            let bundle = try #require(WhisperKitProvider.modelFolder(model: variant, downloadBase: base))
+                .appendingPathComponent("AudioEncoder.mlmodelc")
+            try FileManager.default.createDirectory(at: bundle, withIntermediateDirectories: true)
+        }
+        try WhisperKitProvider.removeDownloadedModel(model: "base.en", downloadBase: base)
+        #expect(!WhisperKitProvider.isModelDownloaded(model: "base.en", downloadBase: base))
+        #expect(WhisperKitProvider.isModelDownloaded(model: "small.en", downloadBase: base))
+        try WhisperKitProvider.removeDownloadedModel(model: "base.en", downloadBase: base) // already gone
+        try WhisperKitProvider.removeDownloadedModel(model: "base.en", downloadBase: nil)
+    }
+
     @Test("conforms to TranscriptionProvider and slots into a router")
     func conformsToSeam() {
         let provider: any TranscriptionProvider = WhisperKitProvider()

@@ -38,6 +38,9 @@
 //  ints replace the dismissal bool; the state machine is unchanged — the park
 //  decision arrives through its existing recompute input.
 
+//  Review: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.8 — `stageDirectedBrainFetch` also cancels the
+//  downloads manager's own fetch of the same brain (Settings > Brains & downloads), keeping one writer per folder.
+
 import AppKit
 import Foundation
 import M1K3Inference
@@ -109,6 +112,7 @@ extension AppEnvironment {
     /// already renders.
     func stageDirectedBrainFetch(_ tier: BrainTier) {
         cancelBrainUpgradeFetch() // one writer to the Hub cache; also clears a prior directed pick
+        cancelManagerBrainFetch(for: tier) // …and the downloads manager's fetch of the same brain
         directedBrainTarget = tier
         brainUpgrade = BrainUpgradePolicy.transition(brainUpgrade, on: .pickerFetchStarted)
         Self.upgradeLog.notice("directed picker fetch: \(tier.rawValue, privacy: .public) in background")

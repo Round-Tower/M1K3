@@ -12,6 +12,8 @@
 //  model download/load stays verify-by-launch in WhisperKitProvider.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-17, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — `approxBytes`, the sizeHint's figure as a number for
+//  Settings > Brains & downloads (pinned to the hint by a test). Confidence 0.85.
 
 import Foundation
 
@@ -43,6 +45,16 @@ public enum WhisperModelVariant: String, CaseIterable, Identifiable, Sendable {
         case .tiny: "~75 MB · fastest, least accurate"
         case .base: "~145 MB · balanced"
         case .small: "~480 MB · most accurate"
+        }
+    }
+
+    /// The same figure in bytes, for the downloads list. WhisperKit's repo is not pinned,
+    /// so this is an estimate, and the list says so.
+    public var approxBytes: Int64 {
+        switch self {
+        case .tiny: 75_000_000
+        case .base: 145_000_000
+        case .small: 480_000_000
         }
     }
 

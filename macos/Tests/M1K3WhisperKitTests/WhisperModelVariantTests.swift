@@ -61,6 +61,15 @@ struct WhisperModelVariantTests {
         #expect(WhisperModelVariant.allCases == [.tiny, .base, .small])
     }
 
+    @Test("approxBytes matches the MB figure in the picker's size hint (the downloads list quotes it)")
+    func approxBytesMatchesHint() {
+        for variant in WhisperModelVariant.allCases {
+            let hintMB = variant.sizeHint.split(separator: " ").first
+                .flatMap { Int($0.drop { $0 == "~" }) }
+            #expect(variant.approxBytes == Int64(hintMB ?? -1) * 1_000_000, "\(variant)")
+        }
+    }
+
     @Test("each tier has a non-empty label and size hint for the picker")
     func labels() {
         for variant in WhisperModelVariant.allCases {
