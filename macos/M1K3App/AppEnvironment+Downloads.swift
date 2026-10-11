@@ -27,6 +27,18 @@
 //  B4 complete-vs-partial scan; B5 transition-only refresh with a generation counter (AFM and the retired-folder walk off
 //  the hot path); B6 semantic-memory guards; N1 `scanned`; N2/N3 remove ordering; N5 a failed selected brain retries.
 //  Confidence 0.65 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (PR 2b) — `offersSemanticMemory(alongside:)` and
+//  `semanticMemorySizeLabel`: the one seam the picker and the upgrade card ask for "Also get semantic
+//  memory" (`SemanticMemoryOffer`). Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — O1 the semantic-memory QUEUE (`requestSemanticMemory`,
+//  `watchSemanticQueue`: the surfaces only request; the embedder starts when `SemanticMemoryQueue.shouldStartNow` says the
+//  brain, the chat, the re-index and the heat are all clear, retried on every observed transition); O2/O3 the offer gate;
+//  O4 the toggle's reserved slot + size fallback; K1 the voice refreshes on completion; K2 `DownloadStatusStore`, the
+//  tick-free statuses the glass-hosted kit card reads; K5 `startDownload` says whether it began. Confidence 0.7 (the
+//  retry loop and the ordering of two real downloads are verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (#570 bot fold) — `settleSemanticQueue`: a start or a drop now disarms the
+//  watch and cancels the heat nudge, so a retry after a drop is evaluated at once (both passes flagged the stuck
+//  `semanticWatchArmed`); the any-brain-fetch hold is documented as intended. Confidence 0.75.
 
 import Foundation
 import M1K3Inference
@@ -57,6 +69,52 @@ final class DownloadsLedger {
     /// Apple Intelligence state, read off the main actor (it is an AFM daemon round-trip).
     var afm: AFMAvailability = .available
     @ObservationIgnored var brainTasks: [DownloadKind: Task<Void, Never>] = [:]
+    /// A requested "Also get semantic memory" waiting for its turn (see `SemanticMemoryQueue`).
+    var pendingSemanticMemory: PendingSemanticMemory?
+    /// Bumped by the heat-retry timer so the queue's observation re-evaluates (heat is not observable).
+    var semanticQueueTick = 0
+    /// One live observation of the queue at a time.
+    @ObservationIgnored var semanticWatchArmed = false
+    @ObservationIgnored var semanticRetryTask: Task<Void, Never>?
+}
+
+/// A queued semantic-memory request: the brain it rides with, or nil when nothing in particular (Settings, the kit).
+struct PendingSemanticMemory: Equatable {
+    var brain: BrainTier?
+}
+
+/// The statuses of every download WITHOUT their fractions, for surfaces that must not repaint on a tick (the
+/// Liquid Glass kit card: a tick that re-evaluates or reflows glass is the #566 layout-crash class). It re-derives
+/// the catalogue under observation tracking but publishes only when the PHASE changes (`DownloadItem.phaseOnly`),
+/// so a reader of `items` is invalidated on transitions, never per progress tick. Live fractions are read only
+/// off the glass, from `AppEnvironment.downloadItems`.
+@MainActor @Observable
+final class DownloadStatusStore {
+    private(set) var items: [DownloadItem] = []
+    @ObservationIgnored private var source: (@MainActor () -> [DownloadItem])?
+    @ObservationIgnored private var generation = 0
+
+    /// Begin publishing (idempotent per call: a newer start supersedes an older loop).
+    func start(_ source: @escaping @MainActor () -> [DownloadItem]) {
+        generation += 1
+        self.source = source
+        track(generation)
+    }
+
+    func stop() {
+        generation += 1
+        source = nil
+    }
+
+    private func track(_ generation: Int) {
+        guard generation == self.generation, let source else { return }
+        let fresh = withObservationTracking {
+            source().map(\.phaseOnly)
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in self?.track(generation) }
+        }
+        if fresh != items { items = fresh }
+    }
 }
 
 extension AppEnvironment {
@@ -78,6 +136,20 @@ extension AppEnvironment {
             ),
             facts: Dictionary(uniqueKeysWithValues: DownloadKind.allCases.map { ($0, downloadFacts(for: $0)) })
         )
+    }
+
+    /// The statuses without their fractions (`DownloadStatusStore`): what a glass-hosted surface reads. Empty
+    /// until `beginObservingDownloadStatuses()` has run, which `OnboardingKit` reads as "still looking".
+    var downloadStatuses: [DownloadItem] {
+        downloadStatusStore.items
+    }
+
+    func beginObservingDownloadStatuses() {
+        downloadStatusStore.start { [weak self] in self?.downloadItems ?? [] }
+    }
+
+    func endObservingDownloadStatuses() {
+        downloadStatusStore.stop()
     }
 
     /// Everything that can make a brain "in use" (B2), read off live state into the pure policy.
@@ -132,6 +204,8 @@ extension AppEnvironment {
                 facts.load = .progress(downloading)
             } else {
                 facts.reindexing = isReindexing
+                // Queued behind a brain / a chat turn: it reads "Downloading" (at nothing yet), not "Download".
+                if !isReindexing, ledger.pendingSemanticMemory != nil { facts.load = .progress(0) }
             }
         case .sharperEars:
             facts.inUse = isWhisperKitActive || whisperLoad == .ready
@@ -152,6 +226,148 @@ extension AppEnvironment {
     private func voiceFailure(or fallback: ModelLoadState) -> ModelLoadState {
         if case .failed = voiceLoad { return voiceLoad }
         return fallback
+    }
+
+    // MARK: - The semantic-memory offer
+
+    /// What the offer's toggle does in the layout beside a download of `tier`: nothing, a reserved invisible
+    /// slot (before the first disk scan, so it popping in never shoves the button), or the toggle. The offer is
+    /// withheld while a re-index runs, the embedder is switching, or one is already queued (O3).
+    func semanticMemoryOfferSlot(alongside tier: BrainTier?) -> SemanticMemoryOffer.Slot {
+        let ledger = downloadsLedger
+        guard ledger.pendingSemanticMemory == nil, !isReindexing, !ledger.embedderSwitching else { return .none }
+        return SemanticMemoryOffer.slot(
+            brainTarget: tier, scanned: ledger.scanned, usingMLXEmbeddings: usingMLXEmbeddings,
+            installed: ledger.installed.contains(.semanticMemory)
+        )
+    }
+
+    /// Whether the toggle is on screen beside a download of `tier` (the shown half of the slot).
+    func offersSemanticMemory(alongside tier: BrainTier?) -> Bool {
+        semanticMemoryOfferSlot(alongside: tier) == .shown
+    }
+
+    /// The offer's size, from the same pinned manifest the Settings pane uses ("1.3 GB"); a rough figure, never zero.
+    /// Read off the manifest, not `downloadItems`: the toggle can sit inside glass, so it must not observe download ticks.
+    var semanticMemorySizeLabel: String {
+        let manifest = DownloadSizes.manifest(sharperEarsBytes: 0, voiceBytes: 0)
+        return SemanticMemoryOffer.sizeText(catalogueBytes: manifest.bytes[.semanticMemory] ?? 0)
+    }
+
+    // MARK: - The semantic-memory queue (O1)
+
+    /// Ask for semantic memory. It does not start here: it waits (pending) until the brain it rides with is
+    /// ready, no chat turn is running, no re-index is running and background work is allowed
+    /// (`SemanticMemoryQueue`), and `watchSemanticQueue` starts it on the transition that clears the last blocker.
+    /// One request per tap: a second one, or one during a re-index, is refused (`false`).
+    @discardableResult
+    func requestSemanticMemory(after brain: BrainTier? = nil) -> Bool {
+        let ledger = downloadsLedger
+        guard !usingMLXEmbeddings, SemanticMemoryQueue.canRequest(
+            pending: ledger.pendingSemanticMemory != nil, isReindexing: isReindexing,
+            embedderSwitching: ledger.embedderSwitching
+        ) else { return false }
+        ledger.failures[.semanticMemory] = nil
+        ledger.pendingSemanticMemory = PendingSemanticMemory(brain: brain)
+        if !ledger.scanned { refreshDownloads() } // "is the brain already here" needs the disk facts
+        // One hop later: the brain's own start (selectBrain, the fetch) runs right after this call on the
+        // same turn, and the queue must see it, not race it.
+        Task { @MainActor [weak self] in self?.watchSemanticQueue() }
+        return true
+    }
+
+    private enum SemanticQueueDecision {
+        case wait, start
+        case drop(String)
+    }
+
+    /// Everything the queue reads, gathered under observation tracking so each transition re-runs it.
+    private func semanticQueueDecision(for pending: PendingSemanticMemory) -> SemanticQueueDecision {
+        let ledger = downloadsLedger
+        _ = ledger.semanticQueueTick // the heat-retry nudge
+        var onDisk = true
+        var swapPending = false
+        var upgradeFetching = false
+        if case .fetching = brainUpgrade, pending.brain == nil || brainUpgradeTarget == pending.brain { upgradeFetching = true }
+        if let tier = pending.brain, let kind = DownloadKind.allCases.first(where: { $0.brainTier == tier }) {
+            onDisk = ledger.installed.contains(kind) || (selectedBrain == tier && modelLoad == .ready)
+            if case .staged = brainUpgrade, brainUpgradeTarget == tier { swapPending = true }
+            // The brain it rides with did not arrive: say so rather than wait forever.
+            if selectedBrain == tier, case .failed = modelLoad {
+                return .drop(String(localized: "Didn't start: \(tier.displayName) didn't load. Try again from Settings ▸ Brains & downloads."))
+            }
+            if case .failed(_, transient: false) = brainUpgrade, brainUpgradeTarget == tier {
+                return .drop(String(localized: "Didn't start: \(tier.displayName) didn't download. Try again from Settings ▸ Brains & downloads."))
+            }
+        } else if case .staged(consented: true) = brainUpgrade {
+            swapPending = true
+        }
+        // ANY brain fetch holds the queue, not only the target's: by design one big download at a
+        // time (a Big from Settings and the embedder would split the pipe), so a kit request with
+        // no brain of its own waits behind it too.
+        let conditions = SemanticMemoryQueue.Conditions(
+            brainOnDisk: onDisk, brainFetching: !ledger.brainFetch.isEmpty || upgradeFetching,
+            brainLoadInFlight: modelLoad.isActive, brainSwapPending: swapPending,
+            isResponding: chat.isResponding, isReindexing: isReindexing, embedderSwitching: ledger.embedderSwitching,
+            backgroundWorkAllowed: Self.backgroundWorkAllowed()
+        )
+        if !conditions.backgroundWorkAllowed { armSemanticHeatRetry() }
+        return SemanticMemoryQueue.shouldStartNow(pending: true, conditions) ? .start : .wait
+    }
+
+    /// Heat and Low Power Mode are not observable: while they block, nudge the queue every 30 s.
+    private func armSemanticHeatRetry() {
+        let ledger = downloadsLedger
+        guard ledger.semanticRetryTask == nil else { return }
+        ledger.semanticRetryTask = Task { [weak self] in
+            do { try await Task.sleep(for: .seconds(30)) } catch { return }
+            guard let self else { return }
+            downloadsLedger.semanticRetryTask = nil
+            downloadsLedger.semanticQueueTick += 1
+        }
+    }
+
+    /// The queue drained (started or dropped): clear the request, DISARM the watch and stop the heat
+    /// nudge. The tracking closure only re-arms on a change of what the decision reads, and a drop
+    /// changes none of it, so a stuck `semanticWatchArmed` would leave a retry unevaluated until some
+    /// unrelated transition (#570 review, both passes). The stale closure still fires harmlessly into
+    /// `watchSemanticQueue`'s `pending == nil` guard.
+    private func settleSemanticQueue() {
+        let ledger = downloadsLedger
+        ledger.pendingSemanticMemory = nil
+        ledger.semanticWatchArmed = false
+        ledger.semanticRetryTask?.cancel()
+        ledger.semanticRetryTask = nil
+    }
+
+    /// Observe the queue until it drains: re-decide on every change of anything it reads (the brain's load
+    /// settling, a turn ending, a re-index ending, a fetch ending, the disk scan landing).
+    func watchSemanticQueue() {
+        let ledger = downloadsLedger
+        guard let pending = ledger.pendingSemanticMemory, !ledger.semanticWatchArmed else { return }
+        ledger.semanticWatchArmed = true
+        let decision = withObservationTracking {
+            semanticQueueDecision(for: pending)
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.downloadsLedger.semanticWatchArmed = false
+                self?.watchSemanticQueue()
+            }
+        }
+        switch decision {
+        case .wait:
+            break
+        case let .drop(message):
+            settleSemanticQueue()
+            ledger.failures[.semanticMemory] = message
+        case .start:
+            settleSemanticQueue()
+            Self.downloadsLog.notice("semantic memory queue: starting")
+            Task { [weak self] in
+                await self?.switchEmbeddings(toMLX: true)
+                self?.refreshDownloads()
+            }
+        }
     }
 
     // MARK: - Disk facts
@@ -220,40 +436,39 @@ extension AppEnvironment {
 
     // MARK: - Verbs
 
-    func startDownload(_ kind: DownloadKind) {
+    /// Start one download. Returns whether it really began (or was queued): a silent guard (a Remove is
+    /// deleting it, a foreground load or the upgrade already owns the folder) answers `false`, so a caller that
+    /// pins a "Downloading…" row to the answer never pins one no bytes back.
+    @discardableResult
+    func startDownload(_ kind: DownloadKind) -> Bool {
         let ledger = downloadsLedger
-        guard !ledger.removing.contains(kind) else { return } // busy: a Remove is deleting it
+        guard !ledger.removing.contains(kind) else { return false } // busy: a Remove is deleting it
         ledger.failures[kind] = nil
         switch kind {
         case .lil, .big, .pocket:
             // The selected brain whose load failed: "Try again" reloads it (N5).
             if let tier = kind.brainTier, selectedBrain == tier, case .failed = modelLoad {
                 selectBrain(tier)
-                return
+                return true
             }
-            startBrainDownload(kind)
+            return startBrainDownload(kind)
         case .semanticMemory:
-            // This is a switch plus a re-index of the notes, not just a download (B6): say so
-            // rather than silently doing nothing.
+            // This is a switch plus a re-index of the notes, not just a download (B6): it queues behind the
+            // brain and any chat turn (O1) rather than starting at once, and says so if one is running (O3).
             if isReindexing {
                 ledger.failures[kind] = String(localized: "Already re-indexing your notes. Try again when it's done.")
-                return
+                return false
             }
-            if chat.isResponding {
-                ledger.failures[kind] = String(localized: "I'm answering right now. Try again when I'm done.")
-                return
-            }
-            Task { [weak self] in
-                await self?.switchEmbeddings(toMLX: true)
-                self?.refreshDownloads()
-            }
+            return requestSemanticMemory()
         case .sharperEars:
+            guard !whisperLoad.isActive else { return false }
             Task { [weak self] in
                 await self?.enableWhisperKit()
                 self?.refreshDownloads()
             }
+            return true
         case .voice:
-            prepareM1K3Voice()
+            return prepareM1K3Voice()
         }
     }
 
@@ -343,12 +558,12 @@ extension AppEnvironment {
 
     // MARK: - Brain fetches
 
-    private func startBrainDownload(_ kind: DownloadKind) {
+    private func startBrainDownload(_ kind: DownloadKind) -> Bool {
         guard let tier = kind.brainTier, let modelID = tier.mlxModelID,
-              downloadsLedger.brainTasks[kind] == nil else { return }
+              downloadsLedger.brainTasks[kind] == nil else { return false }
         // One writer per folder: a foreground load or the background upgrade owns this brain.
-        if selectedBrain == tier, modelLoad.isActive { return }
-        if case .fetching = brainUpgrade, brainUpgradeTarget == tier { return }
+        if selectedBrain == tier, modelLoad.isActive { return false }
+        if case .fetching = brainUpgrade, brainUpgradeTarget == tier { return false }
         let ledger = downloadsLedger
         ledger.brainFetch[kind] = 0
         let progress: @Sendable (Double) -> Void = { [weak self] fraction in
@@ -389,6 +604,7 @@ extension AppEnvironment {
             if failure == nil { recomputeBrainUpgradeState() }
             refreshDownloads()
         }
+        return true
     }
 
     private func cancelManagerBrainFetch(_ kind: DownloadKind) {

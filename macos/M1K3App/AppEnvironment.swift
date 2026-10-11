@@ -112,6 +112,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — N2 `whisperModelRemoved()`; P3 `selectBuiltinVoiceAndSettle()`;
 //  `selectBrain` refuses a tier a Remove is deleting (B3); stale WhisperKit-progress comment dropped. Confidence 0.7.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — comment only: the thinking rain is unmounted; ambientNotes stays as the seam. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — K1 `prepareM1K3Voice` refreshes the download facts when it
+//  ends (success, failure or cancel) and says whether it began; K2 `downloadStatusStore` (tick-free statuses for the glass kit
+//  card). Confidence 0.75.
 
 import AppKit
 import Foundation
@@ -359,6 +362,8 @@ final class AppEnvironment {
     /// Settings > Brains & downloads' bookkeeping (in-flight brain fetches, failures, what is on
     /// disk). A class of its own because an extension cannot hold stored properties.
     let downloadsLedger = DownloadsLedger()
+    /// The tick-free statuses a glass-hosted surface reads (`DownloadStatusStore`).
+    let downloadStatusStore = DownloadStatusStore()
     /// The single MLX slot behind `RuntimeOption.mlx` in the façade; re-pointed
     /// at `currentMLXProvider` whenever the brain switches between Lil and Big, so
     /// the swap is seen without rebuilding the RAGResponder. Internal (not
@@ -2873,8 +2878,10 @@ extension AppEnvironment {
     /// the speech façade to M1K3 Voice. Mirrors `enableWhisperKit`. Idempotent — one
     /// task at a time, and the provider returns instantly once the weights are on
     /// disk. The iOS shell's shape (`AppCore+VoiceOutput`), ported for #200.
-    func prepareM1K3Voice() {
-        guard voicePrepareTask == nil else { return }
+    /// Returns whether a download began (`false` when one is already running).
+    @discardableResult
+    func prepareM1K3Voice() -> Bool {
+        guard voicePrepareTask == nil else { return false }
         voicePrepareGeneration += 1
         let generation = voicePrepareGeneration
         voiceLoad = .progress(0)
@@ -2884,6 +2891,9 @@ extension AppEnvironment {
                 // Only clear our own handle — a cancel-then-repick may already
                 // hold a newer task here.
                 if voicePrepareGeneration == generation { voicePrepareTask = nil }
+                // Success or failure, re-read the disk: `DownloadState.resolve` reads the voice as absent until a
+                // scan says it is staged, and the kit bar spins forever without it (K1). A cancel refreshes too.
+                refreshDownloads()
             }
             do {
                 try await kokoro.prepare { fraction in
@@ -2914,6 +2924,7 @@ extension AppEnvironment {
                 voiceLoad = .failed(message: DownloadFailureCopy.message(for: error))
             }
         }
+        return true
     }
 
     /// Settings > Brains & downloads > Remove for M1K3 Voice: fall back to Built-in (which

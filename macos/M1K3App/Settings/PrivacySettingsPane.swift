@@ -3,7 +3,7 @@
 //  M1K3App
 //
 //  The "Privacy" Settings tab: the product's promise told in one place — web
-//  search (the one capability that sends anything off this Mac), Spotlight
+//  search (beside the model downloads, what sends anything off this Mac), Spotlight
 //  donation, context senses and scripts. (The MCP server and Brain at Home
 //  moved to their own panes in 1.1.) Split out of the old single-Form
 //  SettingsView (2026-07-13) — see SettingsView.swift for the shell.
@@ -49,6 +49,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — 1.1: the MCP server section (token row, connect snippets, copy helpers)
 //  moved to MCPServerSettingsPane.swift and Brain at Home to BrainAtHomeSettingsPane.swift, each its own
 //  Settings pane. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (PR 2b) — the Tools footer comes from `NetworkCrossings`: web search is no
+//  longer "the one capability that sends anything off this Mac" (the model downloads cross too). Confidence 0.85.
 
 import AppKit // NSApp — the age-range sheet's window
 #if canImport(DeclaredAgeRange)
@@ -56,6 +58,7 @@ import AppKit // NSApp — the age-range sheet's window
 #endif
 import M1K3AgentTools
 import M1K3Chat // PrivateCloudTurn + AgeBand/AgeAppropriateness/PersistedAgeBandProvider
+import M1K3Inference // NetworkCrossings
 import M1K3LanguageModel // PrivateCloudRung / ChatEgressConsent
 import SwiftUI
 
@@ -89,20 +92,12 @@ struct PrivacySettingsPane: View {
             } header: {
                 SettingsHeader("Tools", systemImage: "wrench.and.screwdriver")
             } footer: {
-                // The "one capability" sentence is true only while no Private
-                // Cloud Compute rung exists in this build (ADR 0006: the copy
-                // changes with the rung, never before it).
-                Text(privateCloudSetting == .hidden
-                    ? """
-                    The one capability that sends anything off this Mac — every search \
-                    and page read shows in the reply as it happens. Date, time, and \
-                    system tools stay local either way.
-                    """
-                    : """
-                    Every search and page read shows in the reply as it happens. Date, \
-                    time, and system tools stay local either way.
-                    """)
-                    .font(.callout).foregroundStyle(.secondary)
+                // From the one `NetworkCrossings` list: web search is no longer "the one capability" (the
+                // model downloads cross too), and the sentence changes with the rung (ADR 0006), never before.
+                Text(NetworkCrossings.webSearchFootnote(for: NetworkCrossings.Lane(
+                    privateCloudBackendPresent: privateCloudSetting != .hidden
+                )))
+                .font(.callout).foregroundStyle(.secondary)
             }
 
             privateCloudSection

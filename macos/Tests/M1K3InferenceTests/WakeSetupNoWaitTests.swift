@@ -8,6 +8,7 @@
 //  (WakeSetupTests) are untouched, and pinned again here beside the new rule.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.9. Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — K7: a bare WakeSetupFlow() is the four-card wait deck, no kit. Confidence 0.9.
 
 @testable import M1K3Inference
 import Testing
@@ -42,6 +43,19 @@ struct WakeSetupNoWaitTests {
         engaged.advance()
         engaged.markBrainReady()
         #expect(engaged.completion == .invite)
+    }
+
+    @Test("K7: a bare WakeSetupFlow() is the wait deck: four cards, no kit, and an untouched one still auto-advances")
+    func bareFlowIsTheWaitDeck() {
+        var flow = WakeSetupFlow()
+        #expect(flow.cards == WakeSetupCard.waitDeck)
+        #expect(flow.cards.count == 4)
+        #expect(!flow.cards.contains(.kit))
+        #expect(WakeSetupFlow(cards: []).cards == WakeSetupCard.waitDeck, "an empty deck falls back to the wait deck, not the kit")
+        flow.markBrainReady()
+        #expect(flow.completion == .autoComplete)
+        // The no-wait deck asks for the kit by name.
+        #expect(WakeSetupFlow(cards: WakeSetupCard.allCases, brainAlreadyReady: true).cards.last == .kit)
     }
 
     @Test("the explicit wait initialiser matches the default")

@@ -15,13 +15,20 @@
 	     folder (the hands' one-time grant; see AppEnvironment+Scripts). -->
 	<key>com.apple.security.files.user-selected.read-write</key>
 	<true/>
-	<!-- Outbound network — the ONLY reason the app reaches the internet: downloading
-	     on-device model weights (MLX brains + WhisperKit) from huggingface.co on
-	     first use. Without this the sandbox blocks DNS itself (NSURLError -1003,
-	     "hostname could not be found") and Lil/Big can't be fetched. Chat, RAG,
-	     documents, and calls stay fully on-device; nothing is uploaded. Matches the
-	     onboarding promise: "Downloads … only when you ask."
-	     Signed: Kev + claude-opus-4-8, 2026-06-08, Confidence 0.85, Prior: Unknown -->
+	<!-- Outbound network — why the app reaches the internet: (1) downloading on-device models,
+	     once each, when you ask: the brains (Lil, Big, and the small Mini on a Mac without Apple
+	     Intelligence), the semantic-memory embedder and WhisperKit's speech models from
+	     huggingface.co, and M1K3 Voice (Kokoro: its model from huggingface.co, its
+	     voices-v1.0.bin voice-styles file from a github.com release); (2) the web search and
+	     page-reading tools, on by default with one switch in Settings. Without this the sandbox
+	     blocks DNS itself (NSURLError -1003, "hostname could not be found") and none of it can
+	     be fetched. Chat, RAG, documents, and calls stay fully on-device; nothing is uploaded.
+	     The list lives in NetworkCrossings (M1K3Inference), which feeds the in-app copy.
+	     Signed: Kev + claude-opus-4-8, 2026-06-08, Confidence 0.85, Prior: Unknown
+	     Review: Kev + claude-opus-5.5, 2026-10-11 — comment only, no key touched: it said model
+	     weights from huggingface.co were the sole reason; downloads grew (embedder, WhisperKit,
+	     Kokoro incl. github.com, the pocket Mini) and the web tools were always a second reason.
+	     Confidence 0.85. -->
 	<key>com.apple.security.network.client</key>
 	<true/>
 	<!-- Inbound LISTENING for two servers, both default OFF in Settings:

@@ -23,6 +23,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — C3 anything on disk is
 //  removable and listed; B4 `.partial`; B3 `.removing`; N1 `.checking`; B6 `.reindexing`; N5 a failed
 //  load is never masked as "In use". Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — K2: `phaseOnly` on the state and the item, the tick-free
+//  view the glass-hosted kit card holds. Confidence 0.85.
 
 import Foundation
 
@@ -115,6 +117,14 @@ public enum DownloadState: Equatable, Sendable {
     /// Re-indexing the user's notes after Semantic memory switched on.
     case reindexing
 
+    /// The same phase without the tick: a `.downloading` fraction is dropped (an honest "downloading"),
+    /// every other case is unchanged. Equal phases compare equal, so a surface that must not repaint on
+    /// every tick (anything inside Liquid Glass) can hold these and be re-evaluated on transitions only.
+    public var phaseOnly: DownloadState {
+        if case .downloading = self { return .downloading(fraction: nil) }
+        return self
+    }
+
     /// A removal wins, then a re-index, then a load in flight over what is on disk; a failed
     /// load shows as failed even for the selected brain (it is not "In use" if it cannot
     /// load, N5); otherwise disk and use decide.
@@ -158,6 +168,14 @@ public struct DownloadItem: Identifiable, Equatable, Sendable {
 
     public var id: String {
         kind.id
+    }
+
+    /// This item with its state's fraction dropped (`DownloadState.phaseOnly`).
+    public var phaseOnly: DownloadItem {
+        DownloadItem(
+            kind: kind, name: name, purpose: purpose, bytes: bytes, sizeIsApproximate: sizeIsApproximate,
+            state: state.phaseOnly, actions: actions
+        )
     }
 }
 

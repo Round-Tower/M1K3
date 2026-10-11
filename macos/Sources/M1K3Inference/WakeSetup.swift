@@ -22,6 +22,10 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the NO-WAIT deck (#540 defect 1): `brainAlreadyReady`
 //  makes completion user-driven (always `.invite`), so a re-run or a ready first run shows the deck
 //  instead of auto-advancing past it; the wait paths are byte-for-byte the old rule. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the `.kit` card ("My full kit", PR 2b) closes the no-wait deck;
+//  `waitDeck` is the old four cards for the download/warm waits. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — K7: the default deck (and the empty-deck fallback) is
+//  `waitDeck`, not `allCases`; the no-wait deck passes its cards explicitly. Confidence 0.9.
 
 import Foundation
 
@@ -38,6 +42,14 @@ public enum WakeSetupCard: String, CaseIterable, Sendable, Identifiable {
     case voice
     /// The companion face picker — the live backdrop is the preview.
     case face
+    /// "My full kit": Lil (or Big), semantic memory, sharper ears and M1K3 Voice in one tap,
+    /// fetched in the background. Last, so Done is the next thing after it. See `OnboardingKit`.
+    case kit
+
+    /// The deck while a brain downloads or warms: no kit card. The wait already owns the
+    /// connection (and the glass-safe progress footer); a second fetch beside it would be a
+    /// bandwidth fight, and the kit is one tap away in Settings > Brains & downloads.
+    public static let waitDeck: [WakeSetupCard] = allCases.filter { $0 != .kit }
 
     public var id: String {
         rawValue
@@ -67,9 +79,11 @@ public struct WakeSetupFlow: Sendable, Equatable {
     public let userDrivenCompletion: Bool
 
     /// `brainAlreadyReady: true` is the no-wait mode (#540 defect 1); the default is the
-    /// wait paths, whose rule is unchanged.
-    public init(cards: [WakeSetupCard] = WakeSetupCard.allCases, brainAlreadyReady: Bool = false) {
-        self.cards = cards.isEmpty ? WakeSetupCard.allCases : cards
+    /// wait paths, whose rule is unchanged. The default DECK is the wait deck (no kit card): the
+    /// no-wait deck asks for `WakeSetupCard.allCases` by name, so a bare `WakeSetupFlow()` during a
+    /// wait can never carry a kit that fetches beside the wait's own download.
+    public init(cards: [WakeSetupCard] = WakeSetupCard.waitDeck, brainAlreadyReady: Bool = false) {
+        self.cards = cards.isEmpty ? WakeSetupCard.waitDeck : cards
         brainReady = brainAlreadyReady
         userDrivenCompletion = brainAlreadyReady
     }

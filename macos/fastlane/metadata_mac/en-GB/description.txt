@@ -1,17 +1,17 @@
-My friends call me Mike. I'm a local AI agent that runs on your Mac — no account, no telemetry. Your conversations, notes, and documents stay on the device by default. Two things can go out, each a switch in Settings: web search (on by default, so answers can be current) and the optional Private Cloud Compute brain, which you pick and consent to once.
+My friends call me Mike. I'm a local AI agent that runs on your Mac — no account, no telemetry. Your conversations, notes, and documents stay on the device by default. Beyond the models you ask me to download, two things can go out, each a switch in Settings: web search (on by default, so answers can be current) and the optional Private Cloud Compute brain, which you pick and consent to once.
 
 WHAT I DO
 • Chat with a capable on-device language model — fast on Apple Silicon.
 • Talk to me: on-device speech recognition and a natural neural voice (Kokoro TTS).
 • Bring your own knowledge: drop in notes and PDFs and I'll answer from them (on-device retrieval).
 • I remember what matters to you — a temporal knowledge graph you can see, search, and delete at any time.
-• Three brain tiers — Mini (instant, no download), Lil (4B), and Big (12B) — pick the one that fits your machine.
+• Three brain tiers — Mini (instant on Apple Intelligence Macs, a small download on others), Lil (4B), and Big (12B) — pick the one that fits your machine.
 • A friendly 3D companion and a pixel face, if you want them.
 • Brain at Home: pair your iPhone or iPad over LAN and use your Mac's big brain from the couch.
 
 PUNK BY DESIGN
 • Everything runs locally. Inference, search, and voice are all on-device.
-• I use the network for two things: downloading a brain when you ask, and web search — on by default so answers can be current, one switch in Settings to turn it off.
+• I use the network for two things: downloading models when you ask (brains, speech and voice), and web search — on by default so answers can be current, one switch in Settings to turn it off.
 • No analytics. No tracking. No data collection. You can verify it — the source code is published under a source-available licence.
 
 BUILT FOR YOUR MACHINE

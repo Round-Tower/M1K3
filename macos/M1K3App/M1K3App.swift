@@ -21,6 +21,7 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — SidebarCommands() (View > Show/Hide Sidebar, the system toggle's menu twin) and ReviewPanelCommands registered with the chat chrome 1.1 toolbar reorder. Confidence 0.75.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the Phosphor Fox (white lattice) is the house default via CompanionDefaults.registeredDefaults / houseCompanion (Kev, TestFlight 499). Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — one-time Mac skin preservation (`skinToPreserve`) just before register(defaults:). Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — launch kicks `refreshDownloads()` once after the environment is built, so the semantic-memory offer's first disk scan has usually landed before a picker or card renders (O4). Confidence 0.8.
 
 import AppKit
 import M1K3Avatar
@@ -334,6 +335,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 env.mainWindowOnScreen = mainWindowOnScreen // replay the pre-launch report
                 environment = env
                 AppEnvironment.registerShared(env)
+                // Read the disk facts once, off the main thread (refreshDownloads scans detached), so the
+                // semantic-memory offer's `scanned` is usually true before a picker or card renders (O4).
+                env.refreshDownloads()
                 let hud = NotchHUDController(env: env)
                 hud.start()
                 notchHUD = hud
