@@ -60,4 +60,17 @@ struct AvatarActivityStatusLabelTests {
         #expect(AvatarActivity.thinking.statusLabel(isRecording: false) == "Thinking…")
         #expect(AvatarActivity.speaking.statusLabel(isRecording: false) == "Speaking…")
     }
+
+    @Test("VoiceOver hears a turn start, the voice states and errors — never generating or idle")
+    func voiceOverAnnouncements() {
+        #expect(AvatarActivity.thinking.voiceOverAnnouncement(from: .idle) == "M1K3 — Thinking")
+        #expect(AvatarActivity.listening.voiceOverAnnouncement(from: .idle) == "M1K3 — Listening")
+        #expect(AvatarActivity.speaking.voiceOverAnnouncement(from: .generating) == "M1K3 — Speaking")
+        #expect(AvatarActivity.error.voiceOverAnnouncement(from: .thinking) == "M1K3 — Error")
+        // The chatty middle and the quiet end of every turn stay silent.
+        #expect(AvatarActivity.generating.voiceOverAnnouncement(from: .thinking) == nil)
+        #expect(AvatarActivity.idle.voiceOverAnnouncement(from: .generating) == nil)
+        // No change, no announcement.
+        #expect(AvatarActivity.thinking.voiceOverAnnouncement(from: .thinking) == nil)
+    }
 }

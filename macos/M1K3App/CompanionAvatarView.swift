@@ -239,8 +239,10 @@ struct CompanionAvatarView: View {
     /// textures. Applies on build and switches live when the picker changes.
     @AppStorage(CompanionDefaults.shadingStyleKey) private var shadingRaw = CompanionShadingStyle.off.rawValue
 
+    /// The style to paint: the user's pick, or the phosphor costume while a season is in
+    /// (`wearing`): the seasonal tint lives only in the phosphor shader.
     private var shadingStyle: CompanionShadingStyle {
-        CompanionShadingStyle(rawValue: shadingRaw) ?? .off
+        (CompanionShadingStyle(rawValue: shadingRaw) ?? .off).wearing(season)
     }
 
     /// Settings ▸ Companion ▸ Seasonal looks (opt-out, default on).
@@ -248,10 +250,7 @@ struct CompanionAvatarView: View {
 
     /// The look in force right now: the launch-argument override, the opt-out, then the date.
     private var season: SeasonalLook? {
-        SeasonalLook.resolve(
-            on: Date(), calendar: .current, enabled: seasonalLooks,
-            override: SeasonalLook.Override(in: .standard)
-        )
+        SeasonalLook.now(enabled: seasonalLooks)
     }
 
     /// Optional mirror of the mesh load for a host that wants a spinner (the

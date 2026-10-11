@@ -375,10 +375,14 @@ extension AppEnvironment {
             try await provider.generate(prompt: prompt)
         }
         // Never thinks (2026-10-11): outside a turn the thinking-on build thought to the 4,096
-        // cap and could store a "<think>…" note.
-        guard let generated = try? await InferenceIntent.withThinking(false, {
-            try await InferenceIntent.backgroundUtility(render)
-        }) else {
+        // cap and could store a "<think>…" note. Hoisted and @Sendable for the same reason as
+        // `render`: an inline closure here is MainActor-inferred and refused across the hop.
+        let quiet: @Sendable () async throws -> String = {
+            try await InferenceIntent.withThinking(false) {
+                try await InferenceIntent.backgroundUtility(render)
+            }
+        }
+        guard let generated = try? await quiet() else {
             Self.heartbeatLog.notice("render failed: generate error — digest ships")
             return .digest
         }

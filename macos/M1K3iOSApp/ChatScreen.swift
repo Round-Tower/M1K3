@@ -296,10 +296,7 @@ struct ChatScreen: View {
                     .foregroundStyle(.white)
                 // In season, M1K3 greets in costume (opt-out in Settings ▸ Face).
                 SeasonalGreetingLine(
-                    season: SeasonalLook.resolve(
-                        on: Date(), calendar: .current, enabled: seasonalLooks,
-                        override: SeasonalLook.Override(in: .standard)
-                    ),
+                    season: SeasonalLook.now(enabled: seasonalLooks),
                     font: .callout
                 )
                 .colorScheme(.dark)

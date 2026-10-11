@@ -457,6 +457,29 @@ struct AuditionStoreTests {
         #expect(FileManager.default.fileExists(atPath: store.root.path))
     }
 
+    @Test("prepare clears and decides synchronously but leaves the folder for the slow half")
+    func prepareLeavesTheDeleteForLater() throws {
+        let (store, temp) = try storeWithImport()
+        defer { try? FileManager.default.removeItem(at: temp) }
+        let defaults = try freshDefaults()
+        defaults.set("org/Repo", forKey: AuditionSelection.key(forTier: "lil"))
+
+        let (report, folder) = AuditionCleanup.prepare(store: store, defaults: defaults, arguments: [:])
+        // The choice is gone and the marker spent before any brain is built...
+        #expect(AuditionSelection.repoID(forTier: "lil", defaults: defaults) == nil)
+        #expect(defaults.bool(forKey: AuditionCleanup.markerKey))
+        #expect(!report.deletedFolder)
+        // ...but the multi-GB walk + delete is handed back, not done on the caller's thread.
+        #expect(folder == store.root)
+        #expect(FileManager.default.fileExists(atPath: store.root.path))
+
+        let removed = try AuditionCleanup.removeFolder(#require(folder))
+        #expect(removed.deletedFolder && removed.bytesFreed >= 1000 && removed.error == nil)
+        #expect(!FileManager.default.fileExists(atPath: store.root.path))
+        // Spent: a second launch hands back nothing.
+        #expect(AuditionCleanup.prepare(store: store, defaults: defaults, arguments: [:]).folder == nil)
+    }
+
     @Test("run with an audition launch argument keeps the folder and the marker")
     func runSkipsForLaunchArgument() throws {
         let (store, temp) = try storeWithImport()

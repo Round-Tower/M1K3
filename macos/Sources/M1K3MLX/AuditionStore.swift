@@ -390,25 +390,49 @@ public enum AuditionCleanup {
         arguments.keys.contains { $0.hasPrefix("audition.") }
     }
 
-    /// Run the migration. Never throws: a failed delete is reported and the marker is
-    /// spent anyway (a stuck folder must not retry a multi-GB walk every launch).
+    /// Run the whole migration in one call (`prepare`, then `removeFolder`). Never throws: a
+    /// failed delete is reported and the marker is spent anyway (a stuck folder must not retry
+    /// a multi-GB walk every launch).
     @discardableResult
     public static func run(
         store: AuditionStore?,
         defaults: UserDefaults = .standard,
         arguments: [String: Any] = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
     ) -> Report {
+        var (report, folder) = prepare(store: store, defaults: defaults, arguments: arguments)
+        guard let folder else { return report }
+        let removed = removeFolder(folder)
+        report.deletedFolder = removed.deletedFolder
+        report.bytesFreed = removed.bytesFreed
+        report.error = removed.error
+        return report
+    }
+
+    /// The fast, synchronous half — run it before the first brain is built: clears the
+    /// persisted choices, decides, spends the marker. Returns the folder still to remove
+    /// (nil when nothing is due), so the slow half can run off the main actor.
+    public static func prepare(
+        store: AuditionStore?,
+        defaults: UserDefaults = .standard,
+        arguments: [String: Any] = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
+    ) -> (report: Report, folder: URL?) {
         let plan = plan(markerSpent: defaults.bool(forKey: markerKey), hasLaunchArgument: hasLaunchArgument(arguments: arguments))
         var report = Report()
         if plan.clearChoices {
             report.clearedKeys = AuditionSelection.clearPersistedChoices(defaults: defaults)
         }
-        guard plan.deleteFolder else { return report }
+        guard plan.deleteFolder else { return (report, nil) }
         defaults.set(true, forKey: markerKey)
-        guard let store, FileManager.default.fileExists(atPath: store.root.path) else { return report }
-        let bytes = AuditionStore.directorySize(store.root)
+        guard let store, FileManager.default.fileExists(atPath: store.root.path) else { return (report, nil) }
+        return (report, store.root)
+    }
+
+    /// The slow half: a recursive size walk and a multi-GB delete. Safe on any thread.
+    public static func removeFolder(_ root: URL) -> Report {
+        var report = Report()
+        let bytes = AuditionStore.directorySize(root)
         do {
-            try FileManager.default.removeItem(at: store.root)
+            try FileManager.default.removeItem(at: root)
             report.deletedFolder = true
             report.bytesFreed = bytes
             auditionLog.notice("1.1 migration removed the auditions folder (\(bytes) bytes freed)")

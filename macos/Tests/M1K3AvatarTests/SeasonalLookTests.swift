@@ -47,6 +47,27 @@ struct SeasonalLookTests {
         #expect(SeasonalLook.active(on: instant, calendar: losAngeles) == .halloween)
     }
 
+    @Test("a non-Gregorian regional calendar still reads Oct 24 – Nov 1 on the Gregorian dates")
+    func nonGregorianCalendar() throws {
+        let utc = try calendar("UTC")
+        let halloween = try date(2026, 10, 31, 12, 0, in: utc)
+        let june = try date(2026, 6, 15, 12, 0, in: utc)
+        for identifier: Calendar.Identifier in [.islamicUmmAlQura, .hebrew, .persian, .chinese] {
+            var regional = Calendar(identifier: identifier)
+            regional.timeZone = utc.timeZone
+            #expect(SeasonalLook.active(on: halloween, calendar: regional) == .halloween, "\(identifier)")
+            #expect(SeasonalLook.active(on: june, calendar: regional) == nil, "\(identifier)")
+        }
+    }
+
+    @Test("in season every shading style wears the phosphor costume; out of season the choice stands")
+    func seasonWearsPhosphor() {
+        for style in CompanionShadingStyle.allCases {
+            #expect(style.wearing(.halloween) == .phosphor)
+            #expect(style.wearing(nil) == style)
+        }
+    }
+
     @Test("it applies in any year")
     func otherYears() throws {
         let utc = try calendar("UTC")

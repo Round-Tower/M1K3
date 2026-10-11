@@ -30,6 +30,10 @@
 //  makeMLXBrain and evalMLXBrain stay (evals and `-audition.*` use them). `retireAuditions` replaces
 //  dropAuditionThatNeverLoaded: clear choices every launch, delete the folder once (Kev's ruling).
 //  Confidence 0.7 (migration pure core is tested; the launch call is verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (review fold) — the folder delete leaves the main actor
+//  (`prepare` sync, `removeFolder` detached at utility): a 1.0 user with a few GB of auditions no
+//  longer launches 1.1 to a beach ball. The header's "the pane refuse" notes above are history:
+//  the pane is gone. Confidence 0.75.
 //
 
 import Foundation
@@ -77,13 +81,16 @@ extension AppEnvironment {
     /// so every persisted choice (and a never-finished load's marker) is dropped, and ONCE
     /// the imported weights folder is deleted. A `-audition.*` launch argument keeps the
     /// folder and the marker. See `AuditionCleanup`.
-    @discardableResult
-    nonisolated static func retireAuditions() -> AuditionCleanup.Report {
-        let report = AuditionCleanup.run(store: auditionStore)
+    /// The choices clear synchronously (the brain built next must not read one); the folder
+    /// delete — a multi-GB walk — runs detached at utility priority so launch never waits on it.
+    nonisolated static func retireAuditions() {
+        let (report, folder) = AuditionCleanup.prepare(store: auditionStore)
         if !report.clearedKeys.isEmpty {
             auditionLog.notice("1.1 migration cleared audition choices: \(report.clearedKeys.joined(separator: ","), privacy: .public)")
         }
-        return report
+        if let folder {
+            Task.detached(priority: .utility) { AuditionCleanup.removeFolder(folder) }
+        }
     }
 
     /// A normal quit, even mid-load, is not a crash: keep the audition for next launch.

@@ -15,6 +15,11 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.85 (pure date maths pinned by
 //  tests; the on-screen look is verify-by-launch). Prior: Unknown.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — review fold: month/day are read on the GREGORIAN
+//  calendar in the caller's zone (Calendar.current follows a Hebrew/Islamic/Persian/Chinese
+//  regional calendar, whose month 10 is another season); the launch override is read once
+//  (`launchOverride`, the avatar resolves ~30 Hz); `now(enabled:)` is the shells' one call, on
+//  `.autoupdatingCurrent` so a traveller's zone follows them. Confidence 0.9.
 //
 
 import Foundation
@@ -47,7 +52,10 @@ public enum SeasonalLook: String, Sendable {
 
     /// The look in season on `date` in `calendar`'s time zone, else nil.
     public static func active(on date: Date, calendar: Calendar) -> SeasonalLook? {
-        let parts = calendar.dateComponents([.month, .day], from: date)
+        // Halloween is a Gregorian date. Keep the caller's time zone, never its calendar system.
+        var gregorian = Calendar(identifier: .gregorian)
+        gregorian.timeZone = calendar.timeZone
+        let parts = gregorian.dateComponents([.month, .day], from: date)
         guard let month = parts.month, let day = parts.day else { return nil }
         switch (month, day) {
         case (10, 24...), (11, 1): return .halloween
@@ -64,11 +72,13 @@ public enum SeasonalLook: String, Sendable {
         }
     }
 
-    /// The look right now, reading the persisted opt-out (default on) and the argument override.
-    public static func current(
-        now: Date = Date(), calendar: Calendar = .current, defaults: UserDefaults = .standard
-    ) -> SeasonalLook? {
-        let enabled = defaults.object(forKey: CompanionDefaults.seasonalLooksKey) as? Bool ?? true
-        return resolve(on: now, calendar: calendar, enabled: enabled, override: Override(in: defaults))
+    /// The launch-argument override, read once: the argument domain is fixed at launch, and the
+    /// avatar resolves the season on every sync.
+    public static let launchOverride: Override? = Override(in: .standard)
+
+    /// The look to wear right now — the shells' one call. `enabled` is the Seasonal looks
+    /// opt-out the caller already observes (`@AppStorage(CompanionDefaults.seasonalLooksKey)`).
+    public static func now(enabled: Bool) -> SeasonalLook? {
+        resolve(on: Date(), calendar: .autoupdatingCurrent, enabled: enabled, override: launchOverride)
     }
 }

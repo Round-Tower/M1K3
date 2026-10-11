@@ -86,6 +86,9 @@
 //  puts the sidebar toggles at the window's edges (system toggle left, Review panel last on the right with a
 //  fixed spacer; ⌃⌘S / ⌥⌘R live in View-menu commands). Confidence 0.7 (verify by launch owed: overflow,
 //  system toggle after collapse, light + dark).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (review fold) — VoiceOver hears M1K3's state as announcements
+//  (the panel was its only readable avatar); the greeting's season is `SeasonalLook.now(enabled:)`.
+//  Confidence 0.75 (announcements by ear).
 
 import M1K3Avatar
 import M1K3Chat
@@ -619,6 +622,14 @@ struct ContentView: View {
         .onChange(of: env.reviewLedger.completedTurns) { _, _ in
             askForRatingIfEarned()
         }
+        // The retired panel was the only avatar VoiceOver could read; the backdrop stays
+        // decorative, so M1K3's state reaches VoiceOver as announcements (policy in
+        // AvatarActivity.voiceOverAnnouncement — quiet for generating and idle).
+        .onChange(of: env.avatar.state.activity) { previous, activity in
+            if let announcement = activity.voiceOverAnnouncement(from: previous) {
+                AccessibilityNotification.Announcement(announcement).post()
+            }
+        }
     }
 
     /// One flag for both consumers (card mount + banner suppression) so the
@@ -662,10 +673,7 @@ struct ContentView: View {
                     isIngesting: env.isIngesting,
                     lastIngestedTitle: env.lastIngestedTitle,
                     starters: starters,
-                    season: SeasonalLook.resolve(
-                        on: Date(), calendar: .current, enabled: seasonalLooks,
-                        override: SeasonalLook.Override(in: .standard)
-                    ),
+                    season: SeasonalLook.now(enabled: seasonalLooks),
                     onImport: { showImporter = true },
                     onSend: { text in Task { await env.send(text) } }
                 )
