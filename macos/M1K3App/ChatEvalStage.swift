@@ -76,6 +76,8 @@
 //  (terse / emoji / softcap) as the responder's style clause.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the live arm builds Lil the way the app does (thinking on);
 //  the bare arms scope `InferenceIntent.thinking` themselves (#555). `tier` now measures the shipped shape.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the grounded-Q arm (bare RAGResponder) scopes the arm's thinking flag
+//  too; unscoped it thought on 8/8 once the provider was built thinking-on (#555 after arm, 09:53).
 //
 
 import Foundation
@@ -710,7 +712,9 @@ enum ChatEvalStage {
                     fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
             case .groundedQ:
-                let observation = try await groundedObservation(fixture, provider: provider, start: start, clock: clock)
+                let observation = try await groundedObservation(
+                    fixture, provider: provider, thinking: thinking, start: start, clock: clock
+                )
                 return ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit)
             case .toolUse where routerArmRequested:
                 let observation = try await livePathObservation(
@@ -790,7 +794,7 @@ enum ChatEvalStage {
     /// RAGResponder (which retrieves, then strips hallucinated citations), and
     /// read the validated-citation count straight off the response.
     private static func groundedObservation(
-        _ fixture: ChatEvalFixture, provider: any InferenceProvider,
+        _ fixture: ChatEvalFixture, provider: any InferenceProvider, thinking: EvalThinkingPlan,
         start: ContinuousClock.Instant, clock: ContinuousClock
     ) async throws -> EvalObservation {
         // path: nil → GRDB in-memory DatabaseQueue, fresh per fixture. Intentional:
@@ -802,7 +806,11 @@ enum ChatEvalStage {
             _ = try await ingester.ingest(title: "Notes", text: doc)
         }
         let responder = RAGResponder(store: store, embedder: embedder, provider: provider)
-        let response = try await responder.answer(fixture.prompt)
+        // The bare RAGResponder has no per-turn policy: scope the arm's flag (the provider is
+        // built thinking-ON like the app's, so an unscoped call would think — #555 harness fold).
+        let response = try await InferenceIntent.withThinking(thinking.bareThinks) {
+            try await responder.answer(fixture.prompt)
+        }
         return EvalObservation(
             rawText: response.answer,
             validCitationCount: response.citations.count,
