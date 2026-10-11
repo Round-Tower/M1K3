@@ -51,6 +51,8 @@
 //  TODO: line). The composition is pinned in PulseTailTests. Flag off = the old path, line for line. Confidence 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-09-18 (4) — PR #382 second-pass fold: the tail's order is no longer re-derived here: this calls `PulseTail.lift`, handing it
 //  `TodoProposalLine.extract`. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the pulse generation runs `withThinking(false)` and the output passes
+//  `ReasoningSplit` before `FollowUpSplit` (a thinking-on build stored "<think>…"). Confidence 0.8.
 
 import AppKit
 import Foundation
@@ -372,7 +374,11 @@ extension AppEnvironment {
         let render: @Sendable () async throws -> String = {
             try await provider.generate(prompt: prompt)
         }
-        guard let raw = try? await InferenceIntent.backgroundUtility(render) else {
+        // Never thinks (2026-10-11): outside a turn the thinking-on build thought to the 4,096
+        // cap and could store a "<think>…" note.
+        guard let generated = try? await InferenceIntent.withThinking(false, {
+            try await InferenceIntent.backgroundUtility(render)
+        }) else {
             Self.heartbeatLog.notice("render failed: generate error — digest ships")
             return .digest
         }
@@ -384,6 +390,7 @@ extension AppEnvironment {
         // digit). The ORDER is load-bearing and was silently wrong once, so it lives
         // in tested code this calls (PulseTail), not in lines re-derived here. With
         // chips not asked for, that is the old TODO-only path, line for line.
+        let raw = ReasoningSplit.split(generated).answer
         let lifted = PulseTail.lift(
             FollowUpSplit.split(raw).answer.trimmingCharacters(in: .whitespacesAndNewlines),
             mayAuthorChips: mayAuthorChips, todo: TodoProposalLine.extract

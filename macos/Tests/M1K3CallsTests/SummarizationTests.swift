@@ -283,6 +283,20 @@ struct LongCallSummarizationTests {
         #expect(answers.allSatisfy { $0 == "true|true" })
     }
 
+    /// 2026-10-11: a thinking-on brain thought per chunk to the 4,096 cap, and a capped
+    /// think strips to empty — no deep summary. Utility generations never think.
+    @Test("every summary call runs with thinking explicitly off")
+    func neverThinks() async {
+        let seen = ScriptedInference { _ in "\(String(describing: InferenceIntent.thinking))" }
+        let long = transcript(lines: 2000)
+        _ = await InferenceIntent.withThinking(true) {
+            await SummarizationPipeline(quickProvider: seen, deepProvider: seen).summarize(transcript: long)
+        }
+        let answers = await seen.answers
+        #expect(answers.count > 3)
+        #expect(answers.allSatisfy { $0 == "Optional(false)" })
+    }
+
     @Test("a short call is one pass per tier, exactly as before")
     func shortCallUnchanged() async {
         let deep = ScriptedInference { _ in "Overview: fine" }
