@@ -14,6 +14,9 @@
 //  Prior: Unknown (sounds salvaged from the Python-era ./sounds/ library).
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the vocabulary grows to eleven and every earcon but the dial-up is
 //  SYNTHESISED (`EarconSynth`, `Source.synth`); the three salvaged WAVs retire. Confidence now 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — five onboarding earcons (doorPick, cardTurn, selectionTick,
+//  wakeChime, doneChord; Kev, TestFlight 499: "we need sound effects too"). Confidence 0.7 (recipes are
+//  first drafts for Kev's ear).
 //
 
 import Foundation
@@ -49,6 +52,18 @@ public enum SoundEffect: String, CaseIterable, Sendable {
     case stop
     /// The signature — M, 1, K, 3 as four notes. An asset for the brand, not a UI beat.
     case soundMark
+    /// A door was picked in the onboarding sheet — a soft latch click.
+    case doorPick
+    /// A setup card turned (chevron or Return) — a short whoosh-tick.
+    case cardTurn
+    /// A row picked in a setup card (reading mode, voice, face) — a tiny tick.
+    case selectionTick
+    /// M1K3 waking as the brain arrives — a short rising chime, played BEFORE the greeting
+    /// (earcons are muted while M1K3 speaks). The 1.1 s `soundMark` is the brand signature and
+    /// would hold the greeting back.
+    case wakeChime
+    /// The setup deck is done — a short major resolve, then M1K3's one-line voice.
+    case doneChord
     /// Sustained modem-handshake "connecting…" — looped while a model
     /// downloads/loads. Nostalgic dial-up; stops the moment the brain's ready.
     case dialup
@@ -65,7 +80,8 @@ public enum SoundEffect: String, CaseIterable, Sendable {
         switch self {
         case .dialup: .bundled("dialup")
         case .error, .save, .voiceEnter, .voiceExit, .listenStart, .endpointHeard, .thinkingTick,
-             .toolCall, .answerLanded, .stop, .soundMark: .synth
+             .toolCall, .answerLanded, .stop, .soundMark,
+             .doorPick, .cardTurn, .selectionTick, .wakeChime, .doneChord: .synth
         }
     }
 }

@@ -714,7 +714,9 @@ let package = Package(
         ),
         .testTarget(
             name: "M1K3AvatarTests",
-            dependencies: ["M1K3Avatar"],
+            // M1K3Inference is test-only here: the chord-gap test reads OnboardingVoiceLine.delayAfterChord
+            // against the rendered chord.
+            dependencies: ["M1K3Avatar", "M1K3Inference"],
             path: "Tests/M1K3AvatarTests"
         ),
         // M1K3 Voice — the premium neural TTS tier (Kokoro). Isolated like

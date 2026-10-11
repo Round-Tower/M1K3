@@ -18,6 +18,7 @@
 //
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — injects `photoMemory` (caption memory) into the root. TDD_SKIP:
 //  scene wiring.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the Phosphor Fox (white lattice) is the house default via CompanionDefaults.registeredDefaults / houseCompanion (Kev, TestFlight 499). Confidence 0.85.
 
 import M1K3Avatar
 import SwiftUI
@@ -30,14 +31,12 @@ struct M1K3iOSApp: App {
 
     init() {
         BundledFonts.register() // Silkscreen — the pixel wordmark face.
-        // The Phosphor Fox is the house default on every surface (the Mac registers
-        // Fox + phosphor skin; the phone ships the baked-lattice creature, so no
-        // shader is needed). Registered, not written: an explicit persisted choice
-        // (any face, including the pixel face's "") always wins, and if the assets
-        // were ever absent the resolver falls back to the pixel face, never blank.
-        UserDefaults.standard.register(defaults: [
-            CompanionDefaults.companionKey: CompanionSpec.phosphorFox.id,
-        ])
+        // The Phosphor Fox (white baked lattice, no shader) is the house default on
+        // every surface, Mac and phone alike. Registered, not written: an explicit
+        // persisted choice (any face, including the pixel face's "") always wins, and
+        // if the assets were ever absent the resolver falls back to the pixel face,
+        // never blank.
+        UserDefaults.standard.register(defaults: CompanionDefaults.registeredDefaults)
     }
 
     var body: some Scene {

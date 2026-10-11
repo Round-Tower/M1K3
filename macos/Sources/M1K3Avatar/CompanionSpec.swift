@@ -2,8 +2,9 @@
 //  CompanionSpec.swift
 //  M1K3Avatar
 //
-//  A 3D companion creature — the OPT-IN avatar skin for voice mode, sibling to
-//  the procedural pixel face (which stays M1K3's default brand face everywhere).
+//  A 3D companion creature — the avatar skin for voice mode (the Phosphor Fox is the
+//  house default, `CompanionDefaults.houseCompanion`), sibling to the procedural
+//  pixel face (the explicit "" pick and the fallback when assets are absent).
 //  Pure data: the creature's identity, its display scale, and which animation
 //  dialect its converted USDZ clips speak. No RealityKit here — playback lives in
 //  the app's CompanionAvatarView (verify-by-launch); this layer is `swift test`'d.
@@ -24,6 +25,10 @@
 //  onto Survey/Run (it ships only three clips). Part of the companion-choreography fix. Confidence now 0.75.
 //  Review: claude-fable-5.1, 2026-09-09 — the phosphorFox doc claimed `.off` reproduces the site; a capture
 //  showed a grey wireframe. Corrected: the lattice is baked, the glow is the shader. Confidence now 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the Phosphor Fox is the house default (Kev, TestFlight 499):
+//  it leads `all`, and the header/doc stop calling creatures opt-in. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — `named` calls the empty id "the explicit
+//  pixel-face pick", not "the default" (doc only). Confidence 0.9.
 
 /// The two animation vocabularies in M1K3's companion lineup. The Quaternius
 /// "Quirky Series" pack shares a rich clip set (Idle_A/Idle_B/Walk/Run/Jump/Fear/…);
@@ -181,9 +186,10 @@ public struct CompanionSpec: Equatable, Sendable, Identifiable {
     /// `macos/tools/companion-pipeline/build_phosphor_fox.py`.
     ///
     /// Ships as its OWN creature rather than a re-skin: the LATTICE is in the asset.
-    /// The glow is not — under `.off` it renders as a plain grey wireframe (captured
-    /// 2026-09-09 by the screengrab suite); `.phosphor` is what reproduces the site.
-    /// Same Khronos rig → same `.fox` dialect, same three clips.
+    /// The glow is not — under `.off` it renders as a white/grey wireframe lattice (the
+    /// look on every store plate, and the house default since 2026-10-11); `.phosphor`
+    /// adds the site's rim-glow on top. Same Khronos rig → same `.fox` dialect, same
+    /// three clips.
     public static let phosphorFox = CompanionSpec(
         id: "PhosphorFox",
         displayName: "Phosphor Fox",
@@ -191,10 +197,11 @@ public struct CompanionSpec: Equatable, Sendable, Identifiable {
         clips: ["Survey", "Walk", "Run"]
     )
 
-    public static let all: [CompanionSpec] = [.fox, .inkfish, .sparrow, .gecko, .colobus, .phosphorFox]
+    /// The house companion first, then the rest in the order they joined the cast.
+    public static let all: [CompanionSpec] = [.phosphorFox, .fox, .inkfish, .sparrow, .gecko, .colobus]
 
     /// Resolve a persisted picker id to a spec. The empty string (and any unknown
-    /// id) means "pixel face" — the default — and returns nil.
+    /// id) means "pixel face" — the explicit pixel-face pick — and returns nil.
     public static func named(_ id: String) -> CompanionSpec? {
         all.first { $0.id == id }
     }

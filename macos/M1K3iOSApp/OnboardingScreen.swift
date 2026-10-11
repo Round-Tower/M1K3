@@ -31,7 +31,7 @@ import SwiftUI
 
 struct OnboardingScreen: View {
     @Environment(AppCore.self) private var core
-    @AppStorage(CompanionDefaults.companionKey) private var companion = ""
+    @AppStorage(CompanionDefaults.companionKey) private var companion = CompanionDefaults.houseCompanion.id
     let onDone: () -> Void
 
     private enum Step: Equatable {

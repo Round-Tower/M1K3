@@ -28,11 +28,11 @@ import SwiftUI
 struct CompanionSettingsSection: View {
     let env: AppEnvironment
 
-    @AppStorage(AppEnvironment.voiceCompanionKey) private var voiceCompanion = ""
+    @AppStorage(AppEnvironment.voiceCompanionKey) private var voiceCompanion = CompanionDefaults.houseCompanion.id
     @AppStorage(AppEnvironment.avatarDisplayKey) private var avatarDisplayRaw = AvatarDisplay.defaultValue.rawValue
     @AppStorage(CompanionDefaults.seasonalLooksKey) private var seasonalLooks = true
     @AppStorage(AppEnvironment.companionShadingKey) private var companionShading =
-        CompanionShadingStyle.off.rawValue
+        CompanionDefaults.houseShading.rawValue
 
     /// One selectable face. The creature list self-extends: a new CompanionSpec
     /// with bundled assets appears here with no picker wiring (same isInstalled

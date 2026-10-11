@@ -80,6 +80,13 @@
 //  AFM lands (no flip under the user); the already-loaded fallback edge shows the deck; the Mini-wait poll
 //  reads off the main actor too; the backdrop sleep honours cancellation. Known, accepted: a first-run user
 //  who quits mid-deck sees the hello again next launch (the gate flips on the deck's button). Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the polish pass (TestFlight 499): every phase centres
+//  (`defaultScrollAnchor`, the dead spacers go), the hello card wears the shared Liquid Glass
+//  `onboardingCard()` instead of a material panel, and a door tap plays `doorPick` BEFORE the Full door's
+//  permission ceremony. Confidence 0.7 (look and sound are verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold, round 2) — sheet minHeight 640 -> 700 (the voice
+//  card + nav + 96 pt footer), and `chosenExperience` (set in finishHello) gates the spoken sign-off to the Full door.
+//  Confidence 0.7.
 
 import M1K3AgentTools
 import M1K3Avatar
@@ -126,6 +133,8 @@ struct HelloView: View {
     /// pinned) owns the no-yank behaviour: an untouched deck auto-advances on
     /// ready exactly like the old spinner did; an engaged one waits for a tap.
     @State private var wakeFlow = WakeSetupFlow()
+    /// The door applied in THIS session (set in `finishHello`): only Full gets the spoken sign-off.
+    @State private var chosenExperience: OnboardingExperience?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
 
@@ -146,7 +155,12 @@ struct HelloView: View {
                 value: phase
             )
         }
-        .frame(minWidth: 580, minHeight: 640)
+        // Content shorter than the window sits in the middle on every phase (hello, deck, waits);
+        // taller content (a big text size) still scrolls from the top.
+        .defaultScrollAnchor(.center, for: .alignment)
+        // 700: the voice card (the tallest) + title, nav, caption, voice slot and the 96 pt footer.
+        // Still inside a 13" MacBook Air's 1470x956 points (minus menu bar + title bar).
+        .frame(minWidth: 580, minHeight: 700)
         .background {
             // The live face is the room — same full-window reactive backdrop as
             // chat, mounted ONCE outside the phase switch (RealityView identity).
@@ -308,17 +322,10 @@ struct HelloView: View {
                 .foregroundStyle(.secondary)
             }
         }
-        // The words sit on a panel, the face stays the room: the full-window fox
+        // The words sit on a glass card, the face stays the room: the full-window fox
         // ran straight through the "Private" door and the disclosure line, which
         // read as noise in the onboarding plate (2026-09-23 readability pass).
-        .padding(.horizontal, 36)
-        .padding(.vertical, 30)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 26, style: .continuous)
-                .strokeBorder(.white.opacity(0.08))
-        }
-        .frame(maxWidth: 560)
+        .onboardingCard()
     }
 
     /// True when the tested policy would answer this tap with the Lil download
@@ -354,16 +361,16 @@ struct HelloView: View {
 
     private var setupCard: some View {
         VStack(spacing: 16) {
-            Spacer(minLength: 20)
             // The same deck as the waits, with the brain already ready: no bar, and
             // completion is the tap on the primary button (or past it, skipping everything).
             WakeSetupCarousel(
                 flow: $wakeFlow,
                 fraction: nil,
                 finishTitle: WakeProgressCopy.finishLine(isRerun: isRerun),
+                isRerun: isRerun,
+                fullDoor: chosenExperience == .fullExperience,
                 onComplete: onComplete
             )
-            Spacer(minLength: 20)
         }
     }
 
@@ -371,7 +378,6 @@ struct HelloView: View {
 
     private var waitingCard: some View {
         VStack(spacing: 16) {
-            Spacer(minLength: 20)
             // Same carousel, indeterminate progress source (O6): the AFM warm
             // is usually short, but it's the same dead wait without this.
             WakeSetupCarousel(flow: $wakeFlow, fraction: nil, onComplete: onComplete)
@@ -383,7 +389,6 @@ struct HelloView: View {
             .buttonStyle(.plain)
             .font(.caption)
             .foregroundStyle(.secondary)
-            Spacer(minLength: 20)
         }
         .task {
             // Re-poll while visible; the moment AFM turns available the same
@@ -404,7 +409,6 @@ struct HelloView: View {
 
     private var downloadingCard: some View {
         VStack(spacing: 20) {
-            Spacer(minLength: 20)
             switch env.modelLoad {
             case .downloading, .idle, .preparing, .ready:
                 // The wait IS the setup time (O1): cards up front, the honest
@@ -438,7 +442,6 @@ struct HelloView: View {
                     }
                 }
             }
-            Spacer(minLength: 20)
         }
     }
 
@@ -487,6 +490,9 @@ struct HelloView: View {
 
     private func sayHello(experience: OnboardingExperience = .fullExperience) {
         guard !settling else { return }
+        // At the tap, before the Full door's permission ceremony: the click lands with the
+        // finger, not after the system sheets.
+        env.soundEffects.play(.doorPick)
         guard experience == .fullExperience else {
             finishHello(experience: experience)
             return
@@ -509,6 +515,7 @@ struct HelloView: View {
         // Direct keys after the ceremony, so a cancelled Full never half-applies
         // (Full's apply skips the three senses the ceremony just stored).
         experience.apply(to: .standard)
+        chosenExperience = experience
         // Name first, brain second — the gate key flips in onComplete, and the
         // profile write must land before any window swap. On a re-run, rewrite
         // the profile's "Name:" line (not just seed it) so the system prompt

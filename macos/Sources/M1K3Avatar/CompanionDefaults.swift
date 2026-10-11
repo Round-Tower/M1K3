@@ -13,12 +13,35 @@
 //  values preserved verbatim from AppEnvironment+VoiceMode so no migration).
 //  Prior: AppEnvironment+VoiceMode (Kev + claude-opus-4-8 lineage).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — adds `seasonalLooksKey` (the opt-out). Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — adds `houseCompanion` / `houseShading` / `registeredDefaults`:
+//  the Phosphor Fox in its white lattice is the default on Mac and iOS (Kev, TestFlight 499), one source
+//  for both entry points and every @AppStorage fallback. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — `skinToPreserve` / `skinPreservedKey`: the
+//  Mac used to register skin "phosphor", so a user who picked a face but never touched Skin saw the glow;
+//  under the `.off` house default they'd silently lose it. One-time, Mac-only. Confidence 0.8.
 //
 
 public enum CompanionDefaults {
-    /// Persisted avatar choice. Empty string (default) = the pixel face; otherwise
-    /// a `CompanionSpec` id (e.g. "Fox") or the constellation sentinel below.
+    /// Persisted avatar choice. Empty string = the pixel face (an explicit pick);
+    /// otherwise a `CompanionSpec` id (e.g. "Colobus") or the constellation
+    /// sentinel below. A never-touched install resolves to `houseCompanion`
+    /// through `registeredDefaults`.
     public static let companionKey = "voiceMode.companion"
+
+    /// The house look (Kev, TestFlight 499, 2026-10-11): the Phosphor Fox in its
+    /// white baked lattice, as on every store plate.
+    public static let houseCompanion = CompanionSpec.phosphorFox
+
+    /// The house shading: `.off` keeps the baked white lattice untouched.
+    public static let houseShading = CompanionShadingStyle.off
+
+    /// What both composition roots hand to `UserDefaults.register(defaults:)`.
+    /// Registered, never written: an explicit persisted choice (any face, any
+    /// skin, the pixel face's "") always wins; only never-touched keys resolve here.
+    public static let registeredDefaults: [String: String] = [
+        companionKey: houseCompanion.id,
+        shadingStyleKey: houseShading.rawValue,
+    ]
 
     /// Sentinel `companionKey` value selecting the live 3D memory constellation
     /// (procedural, not a USDZ creature). Distinct from "" (pixel face) and any
@@ -27,8 +50,24 @@ public enum CompanionDefaults {
     public static let constellationID = "memory-constellation"
 
     /// Shading style for 3D creature companions — a `CompanionShadingStyle`
-    /// rawValue (off / phosphor / cel). Default off (the baked textures).
+    /// rawValue (off / phosphor / cel). House default `.off` (the baked textures).
     public static let shadingStyleKey = "companion.shadingStyle"
+
+    /// Marker: the one-time 1.1 skin preservation has run (Mac only).
+    public static let skinPreservedKey = "companion.skinPreserved1_1"
+
+    /// The Mac registered skin "phosphor" before 1.1, so a user who picked a face but never
+    /// touched Skin was SEEING the glow. Under the `.off` house default they would silently lose
+    /// it. Returns the skin to persist ("phosphor") only when a face is persisted, no skin is, and
+    /// the one-time marker is unspent; the caller sets the marker either way, so a brand-new 1.1
+    /// user who picks a face later is untouched. `persisted` is the PERSISTENT domain, never
+    /// registered defaults (which would make every key look set).
+    public static func skinToPreserve(persisted: [String: Any]?, markerSpent: Bool) -> String? {
+        guard !markerSpent, let persisted,
+              persisted[companionKey] != nil, persisted[shadingStyleKey] == nil
+        else { return nil }
+        return CompanionShadingStyle.phosphor.rawValue
+    }
 
     /// Opt-out for seasonal looks (Halloween first). Bool, default true.
     public static let seasonalLooksKey = "avatar.seasonalLooks"

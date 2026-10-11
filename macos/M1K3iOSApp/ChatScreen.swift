@@ -83,7 +83,7 @@ struct ChatScreen: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage(AppCore.avatarBackdropKey) private var avatarBackdrop = true
-    @AppStorage(CompanionDefaults.companionKey) private var companion = ""
+    @AppStorage(CompanionDefaults.companionKey) private var companion = CompanionDefaults.houseCompanion.id
     @AppStorage(CompanionDefaults.seasonalLooksKey) private var seasonalLooks = true
     @State private var draft = ""
     @State private var starters: [String] = []

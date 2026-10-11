@@ -5,6 +5,7 @@
 
 import Foundation
 @testable import M1K3Avatar
+import M1K3Inference
 import Testing
 
 struct EarconSynthTests {
@@ -49,6 +50,31 @@ struct EarconSynthTests {
         #expect(EarconSynth.render(.voiceEnter) == EarconSynth.render(.voiceEnter))
     }
 
+    private static let onboardingEffects: [SoundEffect] = [.doorPick, .cardTurn, .selectionTick, .wakeChime, .doneChord]
+
+    @Test("the onboarding earcons render, are deterministic, short and all different")
+    func onboardingEarcons() throws {
+        var renders: [[Float]] = []
+        for effect in Self.onboardingEffects {
+            let first = try #require(EarconSynth.render(effect), "\(effect) has no recipe")
+            #expect(first == EarconSynth.render(effect), "\(effect) is not deterministic")
+            #expect(Double(first.count) / EarconSynth.sampleRate <= 1.0, "\(effect) outstays its welcome")
+            renders.append(first)
+        }
+        #expect(Set(renders).count == renders.count)
+    }
+
+    @Test("the per-step ticks are quicker than the arrival sounds")
+    func ticksAreQuick() throws {
+        func seconds(_ effect: SoundEffect) throws -> Double {
+            try Double(#require(EarconSynth.render(effect)).count) / EarconSynth.sampleRate
+        }
+        for tick in [SoundEffect.doorPick, .cardTurn, .selectionTick] {
+            #expect(try seconds(tick) <= 0.4, "\(tick) is not a tick")
+        }
+        #expect(try seconds(.selectionTick) < seconds(.doneChord))
+    }
+
     @Test("the bundled dial-up has no recipe")
     func dialupNotSynthesised() {
         #expect(EarconSynth.render(.dialup) == nil)
@@ -75,5 +101,34 @@ struct EarconSynthTests {
             let tail = samples.suffix(64)
             #expect((tail.map(abs).max() ?? 1) < 0.02, "\(effect) ends hot")
         }
+    }
+
+    @Test("the done chord has rung out before the voice line starts, and the pause stays short")
+    func voiceWaitsForTheChord() throws {
+        let samples = try #require(EarconSynth.render(.doneChord))
+        let lastAudible = try #require(samples.lastIndex { abs($0) > 0.005 })
+        let ringsOutAt = Double(lastAudible) / EarconSynth.sampleRate
+        let c = OnboardingVoiceLine.delayAfterChord.components
+        let delay = Double(c.seconds) + Double(c.attoseconds) / 1e18
+        #expect(delay >= ringsOutAt, "the voice starts over the chord's tail (\(ringsOutAt) s)")
+        #expect(delay < 1.0)
+    }
+
+    @Test("the onboarding noise layers are audible after bit-crushing, not sparse crackle")
+    func noiseLayersContribute() throws {
+        for effect in [SoundEffect.doorPick, .cardTurn] {
+            let recipe = try #require(EarconSynth.recipe(for: effect))
+            let bare = EarconSynth.Recipe(voices: recipe.voices.filter { $0.wave != .noise }, length: recipe.length)
+            #expect(bare.voices.count < recipe.voices.count, "\(effect) lost its noise voice")
+            let full = EarconSynth.render(recipe)
+            let without = EarconSynth.render(bare)
+            let diff = zip(full, without).map { $0 - $1 }
+            let rms = (diff.map { $0 * $0 }.reduce(0, +) / Float(diff.count)).squareRoot()
+            #expect(rms > 0.002, "\(effect) noise contributes \(rms) RMS")
+        }
+        // The breath is a breath: well past the old gain-0.04 / 4-bit crackle.
+        let turn = try #require(EarconSynth.recipe(for: .cardTurn))
+        let noise = try #require(turn.voices.first { $0.wave == .noise })
+        #expect(noise.gain >= 0.08 && (noise.crushBits ?? 16) >= 6)
     }
 }

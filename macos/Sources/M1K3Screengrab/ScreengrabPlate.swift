@@ -23,6 +23,7 @@
 //  `M1K3_SCREENGRAB_BRAIN` (default `lil`), so an iPad-simulator run fronts on `mini` (no MLX there).
 //  Proven: 12/12 plates on the iPad Pro 13" simulator, the real iPad set on the 1.0.0 listing. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — -chat.avatarDisplay background on every recipe, so plates stop showing the owner's stored choice (UserDefaults is not rerouted). Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the Phosphor Fox (white lattice) is the house default via CompanionDefaults.registeredDefaults / houseCompanion (Kev, TestFlight 499). Confidence 0.85.
 //
 
 import Foundation
@@ -46,8 +47,8 @@ public enum ScreengrabPlate: String, CaseIterable, Sendable {
     case constellation
 
     /// The face every non-tile plate wears, so chat/voice/memories match each
-    /// other across a run. The Phosphor Fox is the house default on iOS and a
-    /// registered choice on the Mac.
+    /// other across a run. The Phosphor Fox (white lattice) is the house default
+    /// on both platforms (`CompanionDefaults.houseCompanion`).
     public static let houseFace = "PhosphorFox"
 
     /// The vendored creature a companion tile shows; nil for every other plate.

@@ -77,6 +77,7 @@
 //  stop button": smoked glass (translucent fill + sheen + rim), because backdrop blurs can't sample through
 //  the RealityView and drew a box on bright desktops; the band fades in 12 pt; a hover-only stop button calls
 //  `stopSpeaking()`. Confidence 0.75 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the Phosphor Fox (white lattice) is the house default via CompanionDefaults.registeredDefaults / houseCompanion (Kev, TestFlight 499). Confidence 0.85.
 
 import M1K3Avatar
 import M1K3Voice
@@ -91,7 +92,7 @@ private struct MarqueeKey: Hashable {
 struct NotchHUDContentView: View {
     let env: AppEnvironment
     let geometry: NotchHUDGeometry
-    @AppStorage(AppEnvironment.voiceCompanionKey) private var companion = ""
+    @AppStorage(AppEnvironment.voiceCompanionKey) private var companion = CompanionDefaults.houseCompanion.id
     /// Ordered-out HUD → no creature at all (the fallback path below bypasses
     /// AvatarSurface's own gate, so it is gated here).
     @Environment(\.windowVisible) private var windowVisible
@@ -327,7 +328,7 @@ struct NotchHUDContentView: View {
     }
 
     private var houseFallbackCompanion: CompanionSpec {
-        CompanionAssets.isInstalled(.phosphorFox) ? .phosphorFox : .fox
+        CompanionAssets.isInstalled(CompanionDefaults.houseCompanion) ? CompanionDefaults.houseCompanion : .fox
     }
 }
 

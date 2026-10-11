@@ -50,7 +50,7 @@ import SwiftUI
 struct VoiceScreen: View {
     @Environment(AppCore.self) private var core
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @AppStorage(CompanionDefaults.companionKey) private var companion = ""
+    @AppStorage(CompanionDefaults.companionKey) private var companion = CompanionDefaults.houseCompanion.id
     /// Low Power Mode, observed: a toggle mid-session triggers no render on its
     /// own, so a render-time read would miss it until something else moved.
     @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled

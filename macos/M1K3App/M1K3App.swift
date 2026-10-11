@@ -19,6 +19,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — injects `photoMemory` (caption memory) into the main window.
 //  TDD_SKIP: scene wiring.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — SidebarCommands() (View > Show/Hide Sidebar, the system toggle's menu twin) and ReviewPanelCommands registered with the chat chrome 1.1 toolbar reorder. Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the Phosphor Fox (white lattice) is the house default via CompanionDefaults.registeredDefaults / houseCompanion (Kev, TestFlight 499). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — one-time Mac skin preservation (`skinToPreserve`) just before register(defaults:). Confidence 0.8.
 
 import AppKit
 import M1K3Avatar
@@ -261,16 +263,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         // Before any MLX use: the quit-during-generation guard (MLXExitGuard
         // header has the crash story). Normal errors stay fail-loud.
         MLXExitGuard.install()
-        // The phosphor Fox is the house default (Kev, 2026-08-06: "pretty
-        // awesome — default standard"). Registered defaults, not writes: an
-        // explicit persisted choice (any face, any skin — including pixel
-        // face's "") always wins; only the never-touched majority resolve
-        // here. If Fox's assets are ever absent the resolver's unknown-id
+        // The Phosphor Fox in its white lattice is the house default (Kev, TestFlight
+        // 499, 2026-10-11; before that the Fox + phosphor skin, 2026-08-06). Registered
+        // defaults, not writes: an explicit persisted choice (any face, any skin —
+        // including pixel face's "") always wins; only the never-touched majority
+        // resolve here. If the assets are ever absent the resolver's unknown-id
         // fallback still lands on the pixel face — never a blank surface.
-        UserDefaults.standard.register(defaults: [
-            CompanionDefaults.companionKey: "Fox",
-            CompanionDefaults.shadingStyleKey: CompanionShadingStyle.phosphor.rawValue,
-        ])
+        // One-time, BEFORE registering: the Mac used to register skin "phosphor", so a user who
+        // picked a face but never touched Skin had the glow. Read the persistent domain only.
+        let defaults = UserDefaults.standard
+        let persisted = defaults.persistentDomain(forName: Bundle.main.bundleIdentifier ?? "app.m1k3")
+        if let skin = CompanionDefaults.skinToPreserve(
+            persisted: persisted, markerSpent: defaults.bool(forKey: CompanionDefaults.skinPreservedKey)
+        ) {
+            defaults.set(skin, forKey: CompanionDefaults.shadingStyleKey)
+        }
+        defaults.set(true, forKey: CompanionDefaults.skinPreservedKey)
+        UserDefaults.standard.register(defaults: CompanionDefaults.registeredDefaults)
         let menuBarOnly = UserDefaults.standard.bool(forKey: StartupPreferences.menuBarOnlyKey)
         if StartupVisibility(menuBarOnly: menuBarOnly).hidesDockIcon {
             NSApp.setActivationPolicy(.accessory)

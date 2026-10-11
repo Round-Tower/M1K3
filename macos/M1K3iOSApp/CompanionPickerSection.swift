@@ -38,10 +38,10 @@ import SwiftUI
 
 struct CompanionPickerSection: View {
     @Environment(AppCore.self) private var core
-    @AppStorage(CompanionDefaults.companionKey) private var companion = ""
+    @AppStorage(CompanionDefaults.companionKey) private var companion = CompanionDefaults.houseCompanion.id
     @AppStorage(CompanionDefaults.seasonalLooksKey) private var seasonalLooks = true
     @AppStorage(CompanionDefaults.shadingStyleKey) private var shadingRaw =
-        CompanionShadingStyle.off.rawValue
+        CompanionDefaults.houseShading.rawValue
 
     /// One selectable face.
     private struct FaceChoice: Identifiable {

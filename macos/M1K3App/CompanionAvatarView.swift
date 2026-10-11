@@ -71,6 +71,7 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — OnboardingTrace breadcrumbs around the creature load (start /
 //  ready, once per Re-run tap, silent otherwise) so the "re-run was slow" log shows what the backdrop costs.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-11 — the Phosphor Fox (white lattice) is the house default via CompanionDefaults.registeredDefaults / houseCompanion (Kev, TestFlight 499). Confidence 0.85.
 
 // AppKit on macOS, UIKit on iOS/visionOS — the companion render path is now
 // cross-platform (shared into the M1K3iOSApp mobile shell). Only the emotion-fill
@@ -197,8 +198,9 @@ final class CompanionScene {
 /// and crossfades clips as the AvatarController's state changes — driven by the same
 /// AvatarState the pixel face reads, through ClipMapper instead of FaceExpression.
 ///
-/// The pixel face stays M1K3's default brand face (chat, onboarding, the app icon);
-/// this is the wink the curious user opts into.
+/// The Phosphor Fox (white lattice) is the house default creature on every surface
+/// (`CompanionDefaults.houseCompanion`); the pixel face is the explicit "" pick, the
+/// brand mark and the fallback when a creature's assets are absent.
 ///
 /// VERIFY-BY-LAUNCH: RealityKit load/animation/lighting is eyeballed at ⌘R; the
 /// state→clip maths is unit-tested in M1K3Avatar (ClipMapper / CompanionSpec).
@@ -241,7 +243,7 @@ struct CompanionAvatarView: View {
 
     /// Opt-in shading style (phosphor glow / cel toon) over the companion's baked
     /// textures. Applies on build and switches live when the picker changes.
-    @AppStorage(CompanionDefaults.shadingStyleKey) private var shadingRaw = CompanionShadingStyle.off.rawValue
+    @AppStorage(CompanionDefaults.shadingStyleKey) private var shadingRaw = CompanionDefaults.houseShading.rawValue
 
     /// The style to paint: the user's pick, or the phosphor costume while a season is in
     /// (`wearing`): the seasonal tint lives only in the phosphor shader.
