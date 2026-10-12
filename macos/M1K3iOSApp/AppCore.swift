@@ -68,9 +68,13 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `photoMemory` (caption memory) + the delete-cascade wiring.
 //  Compile-checked; verify-by-launch owed.
 //  Review: Kev + claude-opus-4-6, 2026-10-12 — PCC as a brain tier on iOS: `privateCloudBackend` (static,
-//  live or echo in DEBUG), `privateCloudStatus`, `privateCloudEnabled()` (absent = ON), `privateCloudState`,
+//  live or echo in DEBUG), `privateCloudStatus`, `privateCloudState`,
 //  `refreshPrivateCloudStatus()`, `privateCloudSendAllowed()`, `sendPrivateCloud(_:includeConversation:)`.
 //  EgressFacts carries `privateCloudOffered`. Confidence 0.75 (compile-verified; verify-by-launch owed).
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — Bug fixes: removed dead `privateCloudEnabledKey` /
+//  `privateCloudEnabled()` (the Settings toggle now writes `ChatEgressConsent.defaultsKey`, matching
+//  the Mac's PrivacySettingsPane); `privateCloudSendAllowed()` no longer double-gates (the rung
+//  already reads `chatEgressAllowed`). Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -232,12 +236,6 @@ final class AppCore {
 
     var privateCloudStatus: PrivateCloudStatus?
 
-    nonisolated static func privateCloudEnabled() -> Bool {
-        let defaults = UserDefaults.standard
-        return defaults.object(forKey: privateCloudEnabledKey) == nil
-            || defaults.bool(forKey: privateCloudEnabledKey)
-    }
-
     func privateCloudState(consent: Bool?) -> PrivateCloudState {
         PrivateCloudState(
             backendPresent: Self.privateCloudBackend != nil,
@@ -260,7 +258,6 @@ final class AppCore {
     func privateCloudSendAllowed() -> Bool {
         guard isReady else { return false }
         guard Self.privateCloudBackend != nil else { return false }
-        guard Self.privateCloudEnabled() else { return false }
         let gate = privateCloudState(consent: privateCloudConsentPersisted)
         guard PrivateCloudRung.escalation(armed: true, gate) == .privateCloud else { return false }
         return true
@@ -309,7 +306,6 @@ final class AppCore {
     /// deliberately NOT shared spelling with the Mac (it has no Home tier).
     nonisolated static let homeBrainActiveKey = "brainLink.homeActive"
     nonisolated static let webSearchEnabledKey = "webSearchEnabled"
-    nonisolated static let privateCloudEnabledKey = "privateCloudEnabled"
     /// Shared spelling with the Mac (AppEnvironment.selectedVoiceTierKey).
     nonisolated static let selectedVoiceTierKey = "selectedVoiceTier"
     /// The full-bleed reactive avatar behind chat — default ON; the Settings

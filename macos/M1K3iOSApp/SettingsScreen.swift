@@ -44,6 +44,9 @@
 //  who shared no longer reads "No age range declared". Confidence 0.9 (copy pinned in M1K3Chat).
 //  Review: Kev + claude-opus-4-6, 2026-10-12 — PCC toggle in Grounding section (`PrivateCloudRung.setting()`
 //  gates visibility); footer explains both web search and PCC when offered. Confidence 0.8.
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — Bug fix: PCC toggle now binds to
+//  `ChatEgressConsent.defaultsKey` (matching the Mac's PrivacySettingsPane), not the dead
+//  `privateCloudEnabledKey` that the rung never read. Confidence 0.9.
 
 #if canImport(DeclaredAgeRange)
     @preconcurrency import DeclaredAgeRange
@@ -58,7 +61,6 @@ import SwiftUI
 struct SettingsScreen: View {
     @Environment(AppCore.self) private var core
     @AppStorage(AppCore.webSearchEnabledKey) private var webSearchEnabled = true
-    @AppStorage(AppCore.privateCloudEnabledKey) private var privateCloudEnabled = true
     @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
     @AppStorage(PersistedAgeBandProvider.defaultsKey) private var ageBandRaw: String?
     /// Why the last "Set up" came back without an answer — shown under the button.
@@ -163,7 +165,7 @@ struct SettingsScreen: View {
             Section {
                 Toggle("Web search in chat", isOn: $webSearchEnabled)
                 if privateCloudSetting != .hidden {
-                    Toggle("Private Cloud Compute", isOn: $privateCloudEnabled)
+                    Toggle("Private Cloud Compute", isOn: $privateCloudConsent)
                 }
             } header: {
                 Text("Grounding")

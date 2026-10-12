@@ -22,6 +22,9 @@
 //  the framework has no public docs beyond WWDC26 sessions 298/299).
 //  Prior: Unknown (new file).
 //  Review: Kev + claude-opus-4-6, 2026-10-12 — lint: long lines in heuristicEvaluator broken up.
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — evaluators collapsed to one ClosureEvaluator that
+//  looks up the fixture by prompt: if the framework runs all evaluators against all samples, the
+//  per-fixture approach cross-fired. Confidence 0.7 (the framework's dispatch is undocumented).
 //
 
 #if compiler(>=6.4)
@@ -149,12 +152,17 @@
         }
 
         var evaluators: [any EvaluatorProtocol<ModelSample<String>, String>] {
-            let fixtures = ChatEvalFixtures.fixtures(for: .openChat)
-            return zip(dataset, fixtures).map { sample, fixture in
+            let fixtureMap = Dictionary(
+                uniqueKeysWithValues: ChatEvalFixtures.fixtures(for: .openChat).map { ($0.prompt, $0) }
+            )
+            return [
                 ClosureEvaluator { sample, response in
-                    AppleEvalBridge.heuristicEvaluator(fixture: fixture)(sample, response)
-                }
-            }
+                    guard let fixture = fixtureMap[sample.input.prompt] else {
+                        return [.failing(rationale: "No fixture for prompt")]
+                    }
+                    return AppleEvalBridge.heuristicEvaluator(fixture: fixture)(sample, response)
+                },
+            ]
         }
     }
 

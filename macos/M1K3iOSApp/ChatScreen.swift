@@ -64,6 +64,12 @@
 //  sheet, `privateCloudControl`, `sendToPrivateCloud` helper, arming action in send(), PCC status task. The sheet
 //  content extracted to `privateCloudConsentView` (the body's modifier chain hit the type-checker's limit).
 //  Confidence 0.75 (compile-verified; verify-by-launch owed).
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — Three PCC fixes: (1) arming init reads
+//  `selectedDefaultsKey` not the dead `privateCloudEnabledKey`; (2) `send()` defers draft clearing
+//  until after PCC routing — `.askConsent` returns early so cancel/swipe-dismiss keeps the text;
+//  consent `onSend` clears it; (3) arming persistence: `.onAppear` + `.onChange` handlers mirror
+//  the Mac's `PersistingCloudPicker` (persist isOn/consent, reconcile on control changes).
+//  Confidence 0.8.
 
 import M1K3Avatar
 import M1K3Chat
@@ -98,7 +104,7 @@ struct ChatScreen: View {
     @State private var attachmentError: String?
     @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
     @State private var privateCloudArming = PrivateCloudArming(
-        isOn: AppCore.privateCloudEnabled(),
+        isOn: UserDefaults.standard.bool(forKey: PrivateCloudArming.selectedDefaultsKey),
         consent: UserDefaults.standard.object(forKey: PrivateCloudArming.consentDefaultsKey) as? Bool
     )
     @State private var privateCloudPending: PendingPrivateCloudSend?
@@ -247,6 +253,26 @@ struct ChatScreen: View {
             .sheet(item: $privateCloudPending) { pending in
                 privateCloudConsentView(pending)
             }
+            .onAppear {
+                privateCloudArming.controlChanged(privateCloudControl)
+                if !privateCloudArming.isOn {
+                    UserDefaults.standard.removeObject(forKey: PrivateCloudArming.consentDefaultsKey)
+                }
+            }
+            .onChange(of: privateCloudControl) { _, newValue in
+                privateCloudArming.controlChanged(newValue)
+            }
+            .onChange(of: privateCloudArming.isOn) { _, on in
+                UserDefaults.standard.set(on, forKey: PrivateCloudArming.selectedDefaultsKey)
+                if !on { UserDefaults.standard.removeObject(forKey: PrivateCloudArming.consentDefaultsKey) }
+            }
+            .onChange(of: privateCloudArming.consent) { _, consent in
+                if let consent {
+                    UserDefaults.standard.set(consent, forKey: PrivateCloudArming.consentDefaultsKey)
+                } else {
+                    UserDefaults.standard.removeObject(forKey: PrivateCloudArming.consentDefaultsKey)
+                }
+            }
             .task { await core.refreshPrivateCloudStatus() }
     }
 
@@ -255,6 +281,7 @@ struct ChatScreen: View {
             consent: pending.consent,
             onSend: { includeConversation in
                 privateCloudPending = nil
+                clearDraft()
                 privateCloudArming.consented(
                     includeConversation: includeConversation, seen: pending.onDeviceShown
                 )
@@ -623,32 +650,37 @@ struct ChatScreen: View {
 
     private func send() {
         guard canSend else { return }
+        let hasAttachments = !pendingAttachments.isEmpty
+        let onDevice = ChatSession.onDeviceMessageIDs(core.chat.messages)
+        let action: PrivateCloudArming.Action = core.voiceLoop != nil ? .local : privateCloudArming.action(
+            control: privateCloudControl, hasAttachments: hasAttachments, onDeviceMessages: onDevice
+        )
         var text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         if !pendingFiles.isEmpty {
             let fileContext = pendingFiles.map(\.contextBlock).joined(separator: "\n\n")
             text = text.isEmpty ? fileContext : fileContext + "\n\n" + text
         }
-        let images = pendingAttachments
-        draft = ""
-        pendingAttachments = []
-        pendingFiles = []
-        inputFocused = false
-
-        let hasAttachments = !images.isEmpty
-        let onDevice = ChatSession.onDeviceMessageIDs(core.chat.messages)
-        let action: PrivateCloudArming.Action = core.voiceLoop != nil ? .local : privateCloudArming.action(
-            control: privateCloudControl, hasAttachments: hasAttachments, onDeviceMessages: onDevice
-        )
         switch action {
         case .askConsent:
             privateCloudPending = PendingPrivateCloudSend(
                 consent: core.chat.privateCloudConsent(for: text), onDeviceShown: onDevice
             )
+            return
         case let .sendDirect(includeConversation):
+            clearDraft()
             sendToPrivateCloud(core.chat.privateCloudConsent(for: text), includeConversation: includeConversation)
         case .local:
+            let images = pendingAttachments
+            clearDraft()
             Task { await core.send(text, images: images) }
         }
+    }
+
+    private func clearDraft() {
+        draft = ""
+        pendingAttachments = []
+        pendingFiles = []
+        inputFocused = false
     }
 
     private var attachmentErrorMessage: Text {
