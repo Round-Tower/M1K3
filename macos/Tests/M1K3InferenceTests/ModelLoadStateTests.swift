@@ -154,7 +154,7 @@ struct IOSBrainDownloadRowScanTests {
     @Test("the screen stays on while a brain downloads, from the root (Settings pushed over chat keeps it)")
     func keepAwake() throws {
         let root = try Self.code("M1K3iOSApp/RootView.swift")
-        #expect(root.contains(".onChange(of: core.isDownloadingBrain, initial: true)"))
+        #expect(root.contains(".onChange(of: core.isDownloadingBrain && !core.brainDownloadContinues, initial: true)"))
         #expect(root.contains("UIApplication.shared.isIdleTimerDisabled = downloading"))
         let core = try Self.code("M1K3iOSApp/AppCore.swift")
         #expect(core.contains("brainStall.observe(fraction, at: Date())"))

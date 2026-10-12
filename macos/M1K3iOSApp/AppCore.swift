@@ -76,6 +76,11 @@
 //  typed answer lands with `.answerLanded`, a failure with `.error`. Confidence 0.7 (the sound is verify-on-device).
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — a launch breadcrumb: `background resources: gpu=` (the iPhone 17 Pro says
 //  false, so background Lil turns are off the table on iPhone today). Confidence 0.95.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — Live Activities slice 1 (Kev: Apple's progress UI): a brain download is
+//  its own step, to disk via BrainWeightsFetcher and carried by iOS when the person leaves (ContinuedDownloadTask);
+//  the weights load only in the foreground (MLX traps on background Metal), so one finished in the background loads
+//  on return. A cancel from the system UI is a .failed "Download stopped", never retried by a foreground bounce.
+//  Confidence 0.6 (the background run is verify-on-device).
 
 import AVFoundation
 #if os(iOS)
@@ -204,6 +209,9 @@ final class AppCore {
     private(set) var brainLoad: ModelLoadState = .idle
     /// Moves only when the download's fraction does, so the chat row can say a transfer has stalled.
     private(set) var brainStall = DownloadStallWatch()
+    /// iOS is carrying the brain download (a continued-processing task): the person may leave the app, the screen may
+    /// sleep, and the system shows the progress.
+    private(set) var brainDownloadContinues = false
     /// Bytes still coming for the chosen brain (not the load after them): the root keeps the screen on meanwhile.
     var isDownloadingBrain: Bool {
         brainLoad.fraction.map { $0 < 1 } ?? false
@@ -725,6 +733,22 @@ final class AppCore {
                 mlx = MLXBrainProvider(modelID: modelID, maxTokens: Self.generationCap(for: selectedBrain))
             }
             do {
+                // The bytes first, to disk only (no Metal), carried by iOS if the person leaves the app (a continued-
+                // processing task). MLX may load only in the foreground, so the download and the load are two steps.
+                if !LocalModelInventory().isInstalled(modelID: modelID) {
+                    try await downloadWeights(modelID: modelID, tier: selectedBrain, generation: generation)
+                    guard generation == warmGeneration else {
+                        if mlx !== currentMLX { mlx.releaseMemory() }
+                        return
+                    }
+                    guard ContinuedDownload.loadsNow(appIsActive: Self.appIsActive) else {
+                        // Finished in the background: warmForForeground re-warms an idle brain from disk on return.
+                        if mlx !== currentMLX { mlx.releaseMemory() }
+                        brainLoad = .idle
+                        Self.log.notice("brain warm: \(tierName, privacy: .public) downloaded in the background; loads on return")
+                        return
+                    }
+                }
                 try await mlx.prepare { fraction in
                     Task { @MainActor [weak self] in
                         guard let self, generation == warmGeneration else { return }
@@ -747,10 +771,54 @@ final class AppCore {
             } catch {
                 if mlx !== currentMLX { mlx.releaseMemory() }
                 guard generation == warmGeneration else { return }
+                if Task.isCancelled || error is CancellationError {
+                    // Stopped (the person cancelled it from the system's progress UI). A .failed brain is not retried
+                    // by a foreground bounce; picking it again starts the download over.
+                    brainLoad = .failed(message: "Download stopped. Pick \(tierName) again in Settings to start it over.")
+                    Self.log.notice("brain warm: \(tierName, privacy: .public) download stopped")
+                    return
+                }
                 brainLoad = .failed(message: error.localizedDescription)
                 Self.log.error("brain warm failed: \(error.localizedDescription, privacy: .public)")
             }
         }
+    }
+
+    /// A brain's weights to disk (no Metal), carried by iOS if the person leaves the app: the system shows the
+    /// progress and keeps the transfer alive (`ContinuedDownloadTask`). Elsewhere, and when iOS declines, an ordinary
+    /// foreground download.
+    private func downloadWeights(modelID: String, tier: BrainTier, generation: Int) async throws {
+        #if os(iOS)
+            let continued = ContinuedDownloadTask.begin(ContinuedDownload(tier: tier)) { [weak self] in
+                self?.warmTask?.cancel()
+            }
+            brainDownloadContinues = continued != nil
+            defer { brainDownloadContinues = false }
+        #endif
+        do {
+            try await BrainWeightsFetcher().fetch(modelID: modelID) { fraction in
+                Task { @MainActor [weak self] in
+                    guard let self, generation == warmGeneration else { return }
+                    brainLoad = .progress(fraction)
+                    brainStall.observe(fraction, at: Date())
+                    #if os(iOS)
+                        continued?.report(fraction)
+                    #endif
+                }
+            }
+            #if os(iOS)
+                continued?.finish(success: true)
+            #endif
+        } catch {
+            #if os(iOS)
+                continued?.finish(success: false)
+            #endif
+            throw error
+        }
+    }
+
+    private static var appIsActive: Bool {
+        UIApplication.shared.applicationState == .active
     }
 
     /// Measure Mini's fixed instructions using the platform tokenizer. This is

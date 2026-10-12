@@ -11,6 +11,8 @@
 # surface now, not at ship.
 #
 # Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
+# Review: Kev + claude-opus-5.5, 2026-10-12 — M1K3iOS permits app.m1k3.download.* (BGTaskSchedulerPermittedIdentifiers): a brain
+# download iOS carries when the person leaves the app (BGContinuedProcessingTask). iOS target only. Confidence 0.8.
 # Review: Kev + claude-fable-5.1, 2026-09-07 — M1K3ScreengrabUITests / M1K3iOSScreengrabUITests (bundle.ui-testing) + the
 # test plans that switch XCTest's automatic screen capture OFF; both shells link M1K3Screengrab.
 # Review: Kev + claude-opus-5, 2026-09-11 — the `m1k3` command-line client: a `tool` target embedded into the app at
@@ -499,6 +501,11 @@ targets:
         NSSpeechRecognitionUsageDescription: "M1K3 transcribes your speech on-device so you can talk to it. Nothing is sent to Apple or any server."
         NSCameraUsageDescription: "M1K3 uses the camera only to scan the pairing code your Mac shows for Brain at Home. No photos or video are captured or stored."
         NSLocalNetworkUsageDescription: "Brain at Home connects to your own Mac over your Wi-Fi so this device can use its bigger brain. That connection stays on your own network, encrypted."
+        # A brain download carried by iOS when the person leaves the app (BGContinuedProcessingTask, iOS 26):
+        # requests use app.m1k3.download.<tier> under this wildcard (ContinuedDownload). iOS only: visionOS has
+        # no continued-processing tasks.
+        BGTaskSchedulerPermittedIdentifiers:
+          - "app.m1k3.download.*"
 
   # visionOS sibling — same shell, same portable graph, rendered spatially as a
   # window. The Kokoro visionOS gap (no xrOS ONNX slice) is RESOLVED as of

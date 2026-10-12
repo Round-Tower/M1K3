@@ -18,6 +18,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — TestFlight 505, "Lil Waking seems to hang at 0%": the screen stays on while a
 //  brain downloads. The Hub downloads in a foreground session, so an auto-lock suspends it and the retry restarts the file
 //  from zero. From the root, so pushing Settings over the chat doesn't drop it. Confidence 0.75 (verify on the phone).
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — not while iOS carries the download (a continued-processing task): then the
+//  screen may sleep and the system shows the progress. Confidence 0.75.
 //
 
 import M1K3Screengrab
@@ -51,8 +53,9 @@ struct RootView: View {
             }
         }
         #if os(iOS)
-        // An auto-lock suspends the Hub's foreground download, and the retry restarts the file from zero.
-        .onChange(of: core.isDownloadingBrain, initial: true) { _, downloading in
+        // An auto-lock suspends a foreground download (the retry restarts the file from zero). When iOS carries it
+        // (a continued-processing task) the screen may sleep: the system keeps it going and shows the progress.
+        .onChange(of: core.isDownloadingBrain && !core.brainDownloadContinues, initial: true) { _, downloading in
             UIApplication.shared.isIdleTimerDisabled = downloading
         }
         #endif

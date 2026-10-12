@@ -63,6 +63,7 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — TestFlight 505, "Lil Waking seems to hang at 0%": the load row read
 //  "Waking… Int(f*100)%" through the whole download (a started download under 1% read 0%). It reads the shared
 //  `statusLine` (Downloading N% / <1%, then Waking), says to keep M1K3 open, and names a stall. Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — while iOS carries the download, the line says the person can leave.
 
 import M1K3Avatar
 import M1K3Chat
@@ -369,6 +370,8 @@ struct ChatScreen: View {
                     TimelineView(.periodic(from: .now, by: 5)) { context in
                         Text(core.brainStall.isStalled(at: context.date)
                             ? "Still downloading. Keep M1K3 open and on Wi-Fi."
+                            : core.brainDownloadContinues
+                            ? "\(name) keeps downloading if you leave M1K3."
                             : "Keep M1K3 open while \(name) downloads.")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
