@@ -4,7 +4,7 @@ NO ACCOUNT REQUIRED — just launch and use it.
 
 FIRST LAUNCH:
   Mac: on most Macs, uses Apple Intelligence (instant, no download).
-  iPhone/iPad: downloads a local AI model (~3 GB on 8 GB devices). After setup, fully offline.
+  iPhone/iPad: the same. Apple Intelligence where available (instant, no download); Lil (~3 GB, 8 GB devices) downloads only when chosen, on first use. After that, fully offline.
   Without Apple Intelligence on any platform, downloads a local model (~630 MB–3 GB).
   Lil (the downloaded 4B brain) accepts image attachments: the paperclip in chat takes a photo or screenshot, read on-device.
 
@@ -27,7 +27,7 @@ MICROPHONE: on-device speech-to-text. Never transmitted.
 FILES: user-selected notes/PDFs only. Processed locally.
 
 HOW TO TEST:
-  1. Finish onboarding + model download
+  1. Finish onboarding (no download with Apple Intelligence)
   2. Chat, then voice mode
   3. Drag in a note/PDF and ask about it
   4. Memories > "forget" an item
