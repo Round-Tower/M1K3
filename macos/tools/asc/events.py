@@ -1,3 +1,8 @@
+#!/usr/bin/env -S uv run --script --managed-python
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["pyjwt[crypto]", "requests"]
+# ///
 """App Store in-app events for the app.m1k3 record — create a DRAFT, list, inspect.
 
 In-app events show on iPhone and iPad only (Apple's own nomination form says
@@ -52,6 +57,9 @@ Review: Kev + claude-opus-5.5, 2026-10-11 — review fold: a failure after the e
   localization's screenshots back). `localization_table` no longer needs `copy`
   when the table holds the primary. Confidence 0.75 — the loop and resume are pinned
   against a recorded fake; the live resume is still verify-by-run.
+Review: Kev + claude-opus-5.5, 2026-10-12 — a PEP 723 header + exec bit, like submit.py: `./events.py`
+  was "permission denied" and `uv run events.py` died on `import requests` the morning Halloween
+  went in. Confidence 0.95.
 """
 from __future__ import annotations
 

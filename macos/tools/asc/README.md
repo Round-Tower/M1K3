@@ -9,7 +9,7 @@ Auth: `asc.py` signs an ES256 JWT from `~/.appstoreconnect/private_keys/asc_api_
 (the fastlane JSON the Fastfile reads), or from `ASC_KEY_ID` +
 `ASC_KEY_ISSUER_ID` with `AuthKey_<id>.p8` beside it. Needs `PyJWT` and
 `requests` at run time; pytest needs neither. The release scripts (`submit.py`,
-`precheck.py`, `builds.py`) carry a PEP 723 header, so `./submit.py status`
+`precheck.py`, `builds.py`, `events.py`) carry a PEP 723 header, so `./submit.py status`
 runs through `uv` with its own deps. No `--with` incantation, no Intel-Python trap.
 
 ## Release runbook (Mac + iOS on one build)
