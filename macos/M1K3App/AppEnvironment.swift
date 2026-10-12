@@ -115,6 +115,7 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — K1 `prepareM1K3Voice` refreshes the download facts when it
 //  ends (success, failure or cancel) and says whether it began; K2 `downloadStatusStore` (tick-free statuses for the glass kit
 //  card). Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — `voiceFirstListenPending` (voice mode's chime stands in for the first tick).
 
 import AppKit
 import Foundation
@@ -464,6 +465,9 @@ final class AppEnvironment {
     /// preference; the Settings toggle updates `isEnabled` live. Not observed —
     /// nothing in the UI reacts to the player object (lazy needs a stored prop,
     /// which @Observable's rewrite would otherwise forbid).
+    /// Set when voice mode opens on its chime: the first listen then skips its tick (VoiceModeEarcons).
+    @ObservationIgnored var voiceFirstListenPending = false
+
     @ObservationIgnored private(set) lazy var soundEffects: SoundEffectPlayer = .bundled(
         isEnabled: Self.soundEffectsEnabledDefault,
         volume: 0.3, // gentle — earcons are seasoning, not the meal (0.6 → 0.4 → 0.3: Kev, 2026-09-09, "tiny bit too loud")

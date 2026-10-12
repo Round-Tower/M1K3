@@ -81,6 +81,9 @@
 //  the weights load only in the foreground (MLX traps on background Metal), so one finished in the background loads
 //  on return. A cancel from the system UI is a .failed "Download stopped", never retried by a foreground bounce.
 //  Confidence 0.6 (the background run is verify-on-device).
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — chat auto-speak (AppCore+AutoSpeak; Kev: "voice on with Kokoro"): a session
+//  begins before each send, Stop also stops the voice (`isSpeakingAnswer` keeps Stop showing while it talks), and an
+//  earcon never flips the session mid-answer. Voice mode's first listen defers to its chime. Confidence 0.65.
 
 import AVFoundation
 #if os(iOS)
@@ -209,6 +212,12 @@ final class AppCore {
     private(set) var brainLoad: ModelLoadState = .idle
     /// Moves only when the download's fraction does, so the chat row can say a transfer has stalled.
     private(set) var brainStall = DownloadStallWatch()
+    /// The chat auto-speak session (AppCore+AutoSpeak); nil when idle.
+    @ObservationIgnored var autoSpeakTask: Task<Void, Never>?
+    /// An answer is being read aloud: the Send button shows Stop until it's done.
+    var isSpeakingAnswer = false
+    /// Set when voice mode opens on its chime: the first listen then skips its tick (VoiceModeEarcons).
+    @ObservationIgnored var voiceFirstListenPending = false
     /// iOS is carrying the brain download (a continued-processing task): the person may leave the app, the screen may
     /// sleep, and the system shows the progress.
     private(set) var brainDownloadContinues = false
@@ -300,7 +309,7 @@ final class AppCore {
     /// switch (the default solo-ambient would stop their music for a click). Voice mode keeps its own echo-cancelled
     /// session. Only a change is an IPC, so a repeat costs a property read.
     private func prepareEarconSession() {
-        guard voiceLoop == nil else { return }
+        guard voiceLoop == nil, autoSpeakTask == nil else { return }
         let session = AVAudioSession.sharedInstance()
         guard session.category != .ambient else { return }
         try? session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
@@ -929,6 +938,9 @@ final class AppCore {
     /// The Send button's Stop face: cut the streaming answer short. `send`
     /// returns normally afterwards and settles the avatar itself.
     func stopResponding() {
+        // Also the voice: an auto-spoken answer keeps talking after the text is done.
+        cancelAutoSpeak()
+        Task { await stopSpeakingAnswer() }
         guard chat.isResponding else { return }
         chat.stopResponding()
     }
@@ -936,6 +948,7 @@ final class AppCore {
     func send(_ text: String, images: [ImageAttachment] = []) async {
         guard isReady else { return }
         avatar.setActivity(.thinking)
+        beginAutoSpeakSession() // before the send: it pins this turn's answer (AppCore+AutoSpeak)
         await chat.send(text, images: images)
         // After a stop with nothing streamed, `messages.last` is the user's own
         // question (the assistant bubble is removed) — only an assistant row

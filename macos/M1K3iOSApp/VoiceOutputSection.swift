@@ -19,6 +19,7 @@
 //  A12-family GPU says why (a newer chip) instead of blaming the Simulator; ~192 MB in the header. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — a "Sound effects" toggle (the Mac's key) for the iPhone's new earcons;
 //  it reaches the live player at once. Verify-on-device.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — "Speak answers" (chat auto-speak, the Mac's key): off stops the voice at once.
 //
 
 import M1K3Inference
@@ -29,6 +30,8 @@ struct VoiceOutputSection: View {
     @Environment(AppCore.self) private var core
     /// Earcons (the Mac's key): on unless turned off; the player reads it live.
     @AppStorage(AppCore.soundEffectsEnabledKey) private var soundEffectsEnabled = true
+    /// Chat auto-speak (the Mac's key): answers read aloud as they stream, in the voice above.
+    @AppStorage(VoiceModeDefaults.autoSpeakKey) private var autoSpeak = false
 
     private var tiers: [VoiceTier] {
         AppCore.neuralVoiceAvailable ? VoiceTier.allCases : [.builtin]
@@ -69,6 +72,12 @@ struct VoiceOutputSection: View {
             Button("Hear a sample") {
                 Task { await core.speakSample() }
             }
+            Toggle("Speak answers", isOn: $autoSpeak)
+                .onChange(of: autoSpeak) { _, on in
+                    guard !on else { return }
+                    core.cancelAutoSpeak()
+                    Task { await core.stopSpeakingAnswer() }
+                }
             Toggle("Sound effects", isOn: $soundEffectsEnabled)
                 .onChange(of: soundEffectsEnabled) { _, enabled in core.soundEffects.isEnabled = enabled }
         } header: {

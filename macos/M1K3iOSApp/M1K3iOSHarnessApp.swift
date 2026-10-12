@@ -19,6 +19,7 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — injects `photoMemory` (caption memory) into the root. TDD_SKIP:
 //  scene wiring.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the Phosphor Fox (white lattice) is the house default via CompanionDefaults.registeredDefaults / houseCompanion (Kev, TestFlight 499). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — a true background ends a chat auto-speak session (no background audio mode).
 
 import M1K3Avatar
 import SwiftUI
@@ -63,6 +64,7 @@ struct M1K3iOSApp: App {
                     // and audio session are torn down by the OS) — leave cleanly
                     // BEFORE shedding the brain, so the loop never sees a dead mic.
                     core?.exitVoiceMode()
+                    core?.cancelAutoSpeak() // no background audio: a half-read answer just stops
                     core?.releaseForBackground()
                 case .active: core?.warmForForeground()
                 default: break

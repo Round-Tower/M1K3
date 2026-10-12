@@ -9,6 +9,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-12, Confidence 0.6 (text tripwires; the sound is verify-on-device).
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — voice mode's start is the onboarding chime now (VoiceModeEarcons), and the
+//  earcon session guard also waits out an auto-spoken answer. Confidence 0.6.
 //
 
 import Foundation
@@ -37,7 +39,7 @@ struct IOSEarconWiringScanTests {
         #expect(core.contains("volume: 0.3"))
         #expect(core.contains("beforePlay: { [weak self] in self?.prepareEarconSession() }"))
         // Ambient mixes with the user's music and honours the silent switch; voice mode keeps its own session.
-        #expect(core.contains("guard voiceLoop == nil else { return }"))
+        #expect(core.contains("guard voiceLoop == nil, autoSpeakTask == nil else { return }"))
         #expect(core.contains("setCategory(.ambient, mode: .default, options: [.mixWithOthers])"))
     }
 
@@ -47,9 +49,11 @@ struct IOSEarconWiringScanTests {
         let send = core.components(separatedBy: "func send(_ text: String").dropFirst().first ?? ""
         #expect(send.contains("soundEffects.play(.error)") && send.contains("soundEffects.play(.answerLanded)"))
         let voice = try Self.code("M1K3iOSApp/AppCore+Voice.swift")
-        for effect in [".voiceEnter", ".voiceExit", ".listenStart", ".endpointHeard"] {
+        // Voice mode opens on the onboarding's chime (VoiceModeEarcons, pinned in VoiceModeEarconsTests).
+        for effect in ["VoiceModeEarcons.enter", ".voiceExit", ".endpointHeard"] {
             #expect(voice.contains("soundEffects.play(\(effect))"), "voice mode lost \(effect)")
         }
+        #expect(voice.contains("VoiceModeEarcons.listenStart(isFirstListen:"))
         let onboarding = try Self.code("M1K3iOSApp/OnboardingScreen.swift")
         #expect(onboarding.contains("core.soundEffects.play(.selectionTick)"))
         #expect(onboarding.contains("core.soundEffects.play(.doneChord)"))

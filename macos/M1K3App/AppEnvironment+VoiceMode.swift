@@ -42,6 +42,8 @@
 //  at end of turn, after the sentences were spoken). Confidence 0.85; verify-by-launch owed for the
 //  refusal's timing against the on-screen swap.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the Phosphor Fox (white lattice) is the house default via CompanionDefaults.registeredDefaults / houseCompanion (Kev, TestFlight 499). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — voice mode opens on the onboarding's wake chime (VoiceModeEarcons; Kev, on the
+//  iPhone: "use our new onboarding sound"); its first listen skips the tick. Same on both shells. Verify-by-ear.
 
 import AppKit
 import AVFoundation
@@ -290,7 +292,9 @@ extension AppEnvironment {
         Task { await stopSpeaking() }
         UserDefaults.standard.set(true, forKey: Self.hasEnteredVoiceModeKey)
         UserDefaults.standard.set(true, forKey: Self.voiceModeActiveKey)
-        soundEffects.play(.voiceEnter) // M1K3 materialising
+        // The onboarding's wake chime opens voice mode, and stands in for the first listen's tick (Kev, 2026-10-12).
+        soundEffects.play(VoiceModeEarcons.enter)
+        voiceFirstListenPending = true
         // Conversational endpointing lives in EndpointCadence now — ONE preset,
         // shared with the iOS shell, which used to carry its own drifted copy of
         // these numbers from the same complaint. The endpointer also learns Kev's
@@ -411,7 +415,11 @@ extension AppEnvironment {
                 // blocked means the user hit notDetermined→deny mid-gesture or
                 // revoked mid-session. Voice mode can't work at all then — exit
                 // it and raise the recovery banner instead of looping silently.
-                soundEffects.play(.listenStart) // the mic is open — an eyebrow going up
+                let firstListen = voiceFirstListenPending
+                voiceFirstListenPending = false
+                if let tick = VoiceModeEarcons.listenStart(isFirstListen: firstListen) {
+                    soundEffects.play(tick) // the mic is open — an eyebrow going up
+                }
                 return AsyncStream { continuation in
                     let forwarder = Task {
                         var sawSegments = false
