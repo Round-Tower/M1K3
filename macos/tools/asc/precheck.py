@@ -33,6 +33,8 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from collections.abc import Callable
+from functools import partial
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -127,12 +129,21 @@ def check_localization(platform: str, attrs: dict[str, Any], needs_whats_new: bo
     if not (attrs.get("description") or "").strip():
         out.append(("FAIL", f"{locale}: empty description"))
     if needs_whats_new:
-        whats_new = (attrs.get("whatsNew") or "").strip()
-        if not whats_new:
+        whats_new = attrs.get("whatsNew") or ""
+        if not whats_new.strip():
             out.append(("FAIL", f"{locale}: empty What's New (required after a platform's first version)"))
-        elif len(whats_new) > WHATS_NEW_CAP:
+        elif len(whats_new) > WHATS_NEW_CAP:  # raw: a false FAIL at the cap is cheap, a false PASS goes PARTIAL
             out.append(("FAIL", f"{locale}: What's New {len(whats_new)}/{WHATS_NEW_CAP}"))
     return out
+
+
+def whats_new_rule(count: Callable[[], int]) -> tuple[bool, tuple[str, str] | None]:
+    """Whether the platform needs What's New (it has shipped a version before), and a NOTE row
+    when the count can't be read — an unreadable count leaves What's New unchecked, never crashes."""
+    try:
+        return count() > 1, None
+    except RuntimeError as exc:
+        return False, ("NOTE", f"version count unreadable ({exc}); What's New unchecked")
 
 
 def render(platform: str, rows: list[tuple[str, str]]) -> str:
@@ -192,7 +203,9 @@ def run(platforms: tuple[str, ...]) -> int:
         rows.append(check_review_notes(review_notes.review_detail(version["id"])))
         if state not in SUBMITTABLE_STATES:
             rows.append(("NOTE", f"state {state}: fields are locked until the version is editable again"))
-        needs_whats_new = version_count(platform) > 1
+        needs_whats_new, note = whats_new_rule(partial(version_count, platform))
+        if note:
+            rows.append(note)
         for loc in paginate(f"/v1/appStoreVersions/{version['id']}/appStoreVersionLocalizations?limit=50"):
             rows += check_localization(platform, loc["attributes"], needs_whats_new=needs_whats_new)
             if loc["attributes"]["locale"] == "en-US":
