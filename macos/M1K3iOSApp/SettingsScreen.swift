@@ -49,12 +49,15 @@
 import M1K3BrainLink
 import M1K3Chat
 import M1K3Inference
+import M1K3LanguageModel
 import M1K3Screengrab
 import SwiftUI
 
 struct SettingsScreen: View {
     @Environment(AppCore.self) private var core
     @AppStorage(AppCore.webSearchEnabledKey) private var webSearchEnabled = true
+    @AppStorage(AppCore.privateCloudEnabledKey) private var privateCloudEnabled = true
+    @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
     @AppStorage(PersistedAgeBandProvider.defaultsKey) private var ageBandRaw: String?
     /// Why the last "Set up" came back without an answer — shown under the button.
     @State private var ageRangeFailure: AgeRangeRequestFailure?
@@ -157,14 +160,23 @@ struct SettingsScreen: View {
 
             Section {
                 Toggle("Web search in chat", isOn: $webSearchEnabled)
+                if privateCloudSetting != .hidden {
+                    Toggle("Private Cloud Compute", isOn: $privateCloudEnabled)
+                }
             } header: {
                 Text("Grounding")
             } footer: {
-                // "Your conversation", not "the only thing that reaches the internet":
-                // brain and M1K3 Voice downloads reach the internet too; Brain at Home
-                // (above) sends prompts to your own Mac. Review catches, 2026-09-03/05.
-                Text("The only thing that sends your conversation to the internet. "
-                    + "Every search shows in the reply as it happens.")
+                if privateCloudSetting != .hidden {
+                    Text("Web search sends your query to DuckDuckGo. Private Cloud Compute "
+                        + "sends your message to Apple — processed on secure hardware that "
+                        + "Apple itself cannot read.")
+                } else {
+                    // "Your conversation", not "the only thing that reaches the internet":
+                    // brain and M1K3 Voice downloads reach the internet too; Brain at Home
+                    // (above) sends prompts to your own Mac. Review catches, 2026-09-03/05.
+                    Text("The only thing that sends your conversation to the internet. "
+                        + "Every search shows in the reply as it happens.")
+                }
             }
             .id(Self.groundingID)
 
@@ -330,6 +342,10 @@ struct SettingsScreen: View {
                 ? "Turn on Apple Intelligence in Settings, or \(alternative)."
                 : "This device can't run Apple Intelligence — \(alternative)."
         }
+    }
+
+    private var privateCloudSetting: PrivateCloudRung.Setting {
+        PrivateCloudRung.setting(core.privateCloudState(consent: privateCloudConsent))
     }
 
     private var appVersion: String {

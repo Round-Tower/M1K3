@@ -22,6 +22,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#486) — `EgressFacts.searchProvider` is the one
 //  name for the web search backend; the clause reads it, and EgressDisclosureTests pins it equal
 //  to `WebSearchTool.providerName` (this module cannot link the tools). Confidence 0.85.
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — `privateCloudDefault`: iPhone's always-on PCC says
+//  "your messages go to" instead of the Mac's "if you pick". Confidence 0.8.
 //
 
 import Foundation
@@ -35,17 +37,25 @@ public struct EgressFacts: Sendable, Equatable {
     /// The web tools are in the palette: the Settings switch AND the age band
     /// (`webToolsAllowed`) — a child's session withholds them whatever the switch says.
     public var webSearch: Bool
-    /// Private Cloud Compute is a brain the user can pick (Mac only). Deliberately not
-    /// "picked": a PCC turn never reaches this responder (`PrivateCloudTurn`), so the
-    /// clause is only ever read on a turn that stayed local — review fold, #482.
+    /// Private Cloud Compute is a brain the user can pick (Mac) or the default send
+    /// path (iPhone). Deliberately not "picked": a PCC turn never reaches this
+    /// responder (`PrivateCloudTurn`), so the clause is only ever read on a turn
+    /// that stayed local — review fold, #482.
     public var privateCloudOffered: Bool
+    /// PCC is the default send path (iPhone's always-on model). The clause says
+    /// "messages go to" instead of "if you pick" — Kev, 2026-10-12.
+    public var privateCloudDefault: Bool
     /// The phone's Home brain: the user's own Mac answers, over their Wi‑Fi, and the
     /// phone's prompt — its retrieved memories and documents too — goes there.
     public var brainIsHome: Bool
 
-    public init(webSearch: Bool, privateCloudOffered: Bool = false, brainIsHome: Bool = false) {
+    public init(
+        webSearch: Bool, privateCloudOffered: Bool = false,
+        privateCloudDefault: Bool = false, brainIsHome: Bool = false
+    ) {
         self.webSearch = webSearch
         self.privateCloudOffered = privateCloudOffered
+        self.privateCloudDefault = privateCloudDefault
         self.brainIsHome = brainIsHome
     }
 }
@@ -62,7 +72,9 @@ public enum EgressDisclosure {
                 + "from our chat, and Wikipedia lookups and pages I read are fetched."
                 : "Web search is off."
         )
-        if facts.privateCloudOffered {
+        if facts.privateCloudDefault {
+            answer.append("Your messages go to Apple's Private Cloud Compute — processed securely, then deleted.")
+        } else if facts.privateCloudOffered {
             answer.append("If you pick Private Cloud Compute as my brain, what you send goes to Apple's Private Cloud Compute.")
         }
         answer.append(

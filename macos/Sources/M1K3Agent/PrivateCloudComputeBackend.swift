@@ -31,6 +31,9 @@
 //  unentitled, per ADR 0006's own context section). Prior: Unknown
 //  Review: Kev + claude-opus-4-6, 2026-09-16 — M1K3_FM27 env-var gate removed;
 //  now #if canImport(FoundationModels). Confidence now 0.85.
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — live() now returns a backend on iOS/visionOS 27+.
+//  No SecTask on iOS: the runtime availability check gates PCC (unavailable without the portal
+//  capability). Confidence 0.8 (verify-by-archive + live PCC on the phone).
 //
 
 import Foundation
@@ -162,6 +165,9 @@ public enum PrivateCloudBackends {
             #if os(macOS)
                 guard #available(macOS 27.0, *) else { return nil }
                 guard processHasEntitlement() else { return nil }
+                return PrivateCloudComputeBackend()
+            #elseif os(iOS) || os(visionOS)
+                guard #available(iOS 27.0, visionOS 27.0, *) else { return nil }
                 return PrivateCloudComputeBackend()
             #else
                 return nil

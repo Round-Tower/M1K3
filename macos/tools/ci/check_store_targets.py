@@ -250,6 +250,24 @@ def lane_gaps(name: str, entitlements: dict) -> list[str]:
     ]
 
 
+# PCC must be in both store lanes (MAS + iOS). The Developer ID lane can't carry it
+# (PROFILE_ONLY_ENTITLEMENTS above), but the store lanes need it for always-on PCC on
+# iPhone and the brain-picker escalation on Mac.
+STORE_LANE_PCC_ENTITLEMENTS = (
+    "M1K3App/M1K3-MAS.entitlements",
+    "M1K3iOSApp/M1K3iOS.entitlements",
+)
+PCC_KEY = "com.apple.developer.private-cloud-compute"
+
+
+def store_lane_pcc_gaps(name: str, entitlements: dict) -> list[str]:
+    if name not in (os.path.basename(p) for p in STORE_LANE_PCC_ENTITLEMENTS):
+        return []
+    if entitlements.get(PCC_KEY) is True:
+        return []
+    return [f"{name} is missing {PCC_KEY} — PCC is always-on on iPhone and offered on Mac"]
+
+
 def main(argv: list[str]) -> int:
     try:
         import yaml  # type: ignore
@@ -268,7 +286,9 @@ def main(argv: list[str]) -> int:
     problems += developer_id_keychain_gaps(developer_id)
     for lane in LANE_ENTITLEMENTS:
         with open(os.path.join(macos, lane), "rb") as f:
-            problems += lane_gaps(os.path.basename(lane), plistlib.load(f))
+            ents = plistlib.load(f)
+            problems += lane_gaps(os.path.basename(lane), ents)
+            problems += store_lane_pcc_gaps(os.path.basename(lane), ents)
     names = sorted(store_targets(project))
     if not problems:
         print(f"✓ {len(names)} store targets ({', '.join(names)}) all upload into {EXPECTED_BUNDLE_ID!r} "

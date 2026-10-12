@@ -8,10 +8,17 @@
   the document picker, networking has no entitlement (local-network + Bonjour are
   Info.plist usage keys), and the mic/calendar/location are usage strings + TCC.
 
-  The one entry is Increased Memory Limit. iOS jetsams a foreground app at a
-  FRACTION of physical RAM; the mobile MLX ceiling (MLXMemoryBudget, 4 GB) only
-  engages MLX back-pressure before the kernel's limit if that limit sits above it.
-  Entitlement-only — no developer-portal capability, automatic signing carries it.
+  The entries: Increased Memory Limit (iOS jetsams a foreground app at a
+  FRACTION of physical RAM; the mobile MLX ceiling only engages back-pressure
+  before the kernel's limit if that limit sits above it), Declared Age Range
+  (Content Controls' "Set up"), and Private Cloud Compute (PCC, the same
+  entitlement the Mac App Store lane carries — Apple's server model).
+
+  The PCC entitlement is an App ID capability: the profile must carry it too.
+  Kev enables it in the Apple Developer portal (Identifiers ▸ app.m1k3 ▸
+  Additional Capabilities ▸ Private Cloud Compute ▸ tick ▸ Save), then Xcode's
+  automatic signing picks it up on the next archive. Without the portal
+  capability the entitlement is harmless (PrivateCloudBackends.live() returns nil).
 
   Signed: Kev + claude-fable-5.1, 2026-09-02, Confidence 0.8 (the entitlement is
   Apple's documented lever for exactly this; the 4 GB ceiling vs the real per-device
@@ -22,11 +29,18 @@
   Mac's tap did nothing in build 375). An App ID capability, so the profile carries
   it. check_store_targets.py pins it. Confidence 0.8 (the Xcode Cloud profile picking
   the capability up is verify-by-archive).
+  Review: Kev + claude-opus-4-6, 2026-10-12 — Private Cloud Compute entitlement added:
+  PrivateCloudComputeLanguageModel is in the iOS 27 SDK. The backend code
+  (PrivateCloudComputeBackend) is @available(iOS 27, *); the shell wires it the same way
+  the Mac does (PrivateCloudBackends.live()). Portal capability is Kev's to enable.
+  Confidence 0.75 (verify-by-archive + live PCC generation on the phone).
 -->
 <dict>
 	<key>com.apple.developer.kernel.increased-memory-limit</key>
 	<true/>
 	<key>com.apple.developer.declared-age-range</key>
+	<true/>
+	<key>com.apple.developer.private-cloud-compute</key>
 	<true/>
 </dict>
 </plist>
