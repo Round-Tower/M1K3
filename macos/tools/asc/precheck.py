@@ -23,6 +23,9 @@ Signed: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.8 (the evaluators are
   read on the 1.0.0 records — see README).
 Review: Kev + claude-fable-5.1, 2026-09-16, Confidence 0.85 — `check_review_notes`: the App Review
 notes must name both inbound listeners (the network.server rejection); shares review_notes.problems().
+Review: Kev + claude-opus-5.5, 2026-10-12, Confidence 0.85 — What's New: Mac 1.1.0 read PASS with
+it empty in all ten locales, which Apple refuses at send (a `submit --platform ALL` would go PARTIAL).
+Required once a platform has more than one version, the rule fastlane's deliver skips it by; cap 4000.
 Format: MurphySig v0.4 (https://murphysig.dev/spec). Prior: none (new file).
 """
 from __future__ import annotations
@@ -33,9 +36,9 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from asc import APP_ID, PLATFORMS, call, paginate  # noqa: E402
 import review_notes
-from keywords import field_report  # noqa: E402
+from asc import APP_ID, PLATFORMS, call, paginate
+from keywords import field_report
 
 # What a complete set looks like per platform — one display type each is the
 # minimum the store shows; Apple scales the rest.
@@ -46,6 +49,7 @@ REQUIRED_DISPLAY_TYPES = {
 }
 SUBMITTABLE_STATES = ("PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED", "METADATA_REJECTED")
 PROMO_CAP = 170
+WHATS_NEW_CAP = 4000
 
 
 # --------------------------------------------------------------------------- #
@@ -109,7 +113,8 @@ def check_prices(resp: dict[str, Any]) -> tuple[str, str]:
     return "PASS", f"price schedule: {len(resp.get('data', []))} manual price(s)"
 
 
-def check_localization(platform: str, attrs: dict[str, Any]) -> list[tuple[str, str]]:
+def check_localization(platform: str, attrs: dict[str, Any], needs_whats_new: bool = False) -> list[tuple[str, str]]:
+    """`needs_whats_new`: the platform has shipped a version before, so Apple requires What's New."""
     locale = attrs["locale"]
     out = []
     for line in field_report(platform, locale, "keywords", attrs.get("keywords"), 100):
@@ -121,6 +126,12 @@ def check_localization(platform: str, attrs: dict[str, Any]) -> list[tuple[str, 
         out.append(("FAIL", f"{locale}: no support URL"))
     if not (attrs.get("description") or "").strip():
         out.append(("FAIL", f"{locale}: empty description"))
+    if needs_whats_new:
+        whats_new = (attrs.get("whatsNew") or "").strip()
+        if not whats_new:
+            out.append(("FAIL", f"{locale}: empty What's New (required after a platform's first version)"))
+        elif len(whats_new) > WHATS_NEW_CAP:
+            out.append(("FAIL", f"{locale}: What's New {len(whats_new)}/{WHATS_NEW_CAP}"))
     return out
 
 
@@ -144,6 +155,11 @@ def latest_version(platform: str) -> dict[str, Any] | None:
     build_id = (version.get("relationships", {}).get("build", {}).get("data") or {}).get("id")
     version["_build"] = next((i for i in resp.get("included", []) if i["id"] == build_id), None) if build_id else None
     return version
+
+
+def version_count(platform: str) -> int:
+    """How many versions `platform` has ever had; 1 means this is its first (no What's New)."""
+    return sum(1 for _ in paginate(f"/v1/apps/{APP_ID}/appStoreVersions?filter[platform]={platform}&limit=50"))
 
 
 def screenshot_sets(localization_id: str) -> list[dict[str, Any]]:
@@ -176,8 +192,9 @@ def run(platforms: tuple[str, ...]) -> int:
         rows.append(check_review_notes(review_notes.review_detail(version["id"])))
         if state not in SUBMITTABLE_STATES:
             rows.append(("NOTE", f"state {state}: fields are locked until the version is editable again"))
+        needs_whats_new = version_count(platform) > 1
         for loc in paginate(f"/v1/appStoreVersions/{version['id']}/appStoreVersionLocalizations?limit=50"):
-            rows += check_localization(platform, loc["attributes"])
+            rows += check_localization(platform, loc["attributes"], needs_whats_new=needs_whats_new)
             if loc["attributes"]["locale"] == "en-US":
                 rows += check_screenshots(platform, screenshot_sets(loc["id"]))
         print(render(platform, rows))
