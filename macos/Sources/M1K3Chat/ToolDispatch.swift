@@ -30,6 +30,9 @@
 //  "who won … this year" to lookup_fact 3/3. Confidence 0.85 (pinned; the chain cells re-run to confirm).
 //  Review: Kev + claude-opus-5-5, 2026-10-10 — #542 round 2: "yet" leaves the cues ("strong yet light"); the
 //  chained-query limit is documented and pinned. Confidence 0.8.
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — pickerInstructions: meta/self-referential questions ("what can
+//  you do", "who are you", greetings, "help") now explicitly route to none. On iPhone AFM picked web_search for
+//  "what can you do?" and returned gov.ie transport advice. Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -80,7 +83,8 @@ public enum ToolDispatch {
     search or lookup, the query to use (for fetch_page, the URL). Pick none when the message \
     can be answered from general knowledge, reasoning, writing, maths, code, or conversation. \
     Well-known, stable facts (capital cities, famous authors, basic science, history) need no \
-    tool: pick none. Writing or explaining code is none.
+    tool: pick none. Writing or explaining code is none. Questions about you, your abilities \
+    or this conversation (greetings, "what can you do", "who are you", "help") are none.
     """
 
     static let menuLines: [String: String] = [

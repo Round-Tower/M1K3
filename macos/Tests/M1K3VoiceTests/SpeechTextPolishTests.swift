@@ -257,4 +257,26 @@ extension SpeechTextPolishTests {
         let text = "Two sources: the river and the well. I'll follow up: tomorrow."
         #expect(SpeechTextPolish.polish(text) == text)
     }
+
+    @Test("a singular trailing Source block is stripped too")
+    func singularSourceBlockStripped() {
+        let text = "You can walk or cycle.\n\nSource:\n- https://gov.ie/transport"
+        #expect(SpeechTextPolish.polish(text) == "You can walk or cycle.")
+    }
+
+    @Test("a parenthetical source attribution is stripped from speech")
+    func inlineSourceParenStripped() {
+        let text = "You can walk or cycle (Source: gov.ie)."
+        #expect(SpeechTextPolish.polish(text) == "You can walk or cycle.")
+        let via = "Rain expected (Via: met.ie/today)."
+        #expect(SpeechTextPolish.polish(via) == "Rain expected.")
+        let from = "Population is 5 million (From: cso.ie)."
+        #expect(SpeechTextPolish.polish(from) == "Population is 5 million.")
+    }
+
+    @Test("prose parens without a source keyword survive")
+    func nonSourceParensSurvive() {
+        let text = "Cork (an open source project) is written in Swift."
+        #expect(SpeechTextPolish.polish(text) == text)
+    }
 }

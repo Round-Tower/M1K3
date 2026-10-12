@@ -43,6 +43,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-24 — the name's spoken form now comes from
 //  `SpokenName.everyday`, beside the introduction's spelled form, so the two can't
 //  drift. No behaviour change. Confidence now 0.9.
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — singular "Source:" trailing block (was only
+//  "Sources:"); inline parenthetical source attributions "(Source: gov.ie)" stripped from speech.
+//  AFM on iPhone was speaking full URLs from web search results. Confidence 0.9.
 //
 
 import Foundation
@@ -264,14 +267,26 @@ public enum SpeechTextPolish {
         text.replacing(/(?:^|\n+)Web sources:\n(?:•[^\n]*\n?)*$/, with: "")
     }
 
-    /// A model-written "Sources:" tail — a label on its own line followed by
-    /// bullet / dash / bracket lines, or inline citation tokens — is chip UI,
-    /// not speech (narration read one verbatim, 2026-09-12). Anchored to the
-    /// end; "Two sources: the river…" mid-prose survives (line start + colon
-    /// + only list/citation lines to the end).
+    /// A model-written "Sources:" or "Source:" tail — a label on its own line
+    /// followed by bullet / dash / bracket lines, or inline citation tokens —
+    /// is chip UI, not speech (narration read one verbatim, 2026-09-12).
+    /// Anchored to the end; "Two sources: the river…" mid-prose survives
+    /// (line start + colon + only list/citation lines to the end).
     private static func stripSourcesBlock(_ text: String) -> String {
+        var result = text.replacing(
+            /(?i)(?:^|\n+)[ \t]*Sources?:[ \t]*(?:\[[^\n]*)?\n?(?:[ \t]*[•\-*\[\d][^\n]*\n?)*$/,
+            with: ""
+        )
+        result = stripInlineSourceParens(result)
+        return result
+    }
+
+    /// Parenthetical source attributions: "(Source: gov.ie)" or
+    /// "(via gov.ie)" read as noise in speech. Only when keyed by Source/Via/From
+    /// inside parens, so "(an open source project)" survives.
+    private static func stripInlineSourceParens(_ text: String) -> String {
         text.replacing(
-            /(?i)(?:^|\n+)[ \t]*Sources:[ \t]*(?:\[[^\n]*)?\n?(?:[ \t]*[•\-*\[\d][^\n]*\n?)*$/,
+            /\s*\((?:Source|Via|From):?\s+[^)]+\)/.ignoresCase(),
             with: ""
         )
     }
