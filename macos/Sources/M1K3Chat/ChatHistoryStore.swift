@@ -18,6 +18,9 @@
 //  + write run on the DB's writer queue, off the MainActor; a protocol default
 //  hops the sync `save` off-caller for the non-GRDB conformers. `save` and
 //  `saveAsync` share one private `upsert` body so their SQL can't drift.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — `list()` reads titles through `TitleSanitizer.listed`: a pre-fix
+//  "<think>Thinking Process" title lists as untitled (and is retitled at the next exchange); no row is rewritten,
+//  so there is no migration. Confidence 0.9.
 //
 
 import Foundation
@@ -162,7 +165,8 @@ public final class GRDBChatHistoryStore: ChatHistoryPersisting, @unchecked Senda
                 guard let id = UUID(uuidString: row["id"]) else { return nil }
                 return ConversationSummary(
                     id: id,
-                    title: row["title"],
+                    // A title leaked from reasoning before the 2026-10-11 fix lists as untitled (TitleSanitizer.listed).
+                    title: TitleSanitizer.listed(row["title"]),
                     createdAt: Date(timeIntervalSince1970: row["created_at"]),
                     updatedAt: Date(timeIntervalSince1970: row["updated_at"])
                 )
