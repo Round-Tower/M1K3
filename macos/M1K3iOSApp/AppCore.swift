@@ -74,8 +74,13 @@
 //  player with the Mac's key and volume; outside voice mode each one plays under an AMBIENT session (mixes with the
 //  user's music, honours the silent switch), where the default solo-ambient would stop their music for a click; a
 //  typed answer lands with `.answerLanded`, a failure with `.error`. Confidence 0.7 (the sound is verify-on-device).
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — a launch breadcrumb: `background resources: gpu=` (the iPhone 17 Pro says
+//  false, so background Lil turns are off the table on iPhone today). Confidence 0.95.
 
 import AVFoundation
+#if os(iOS)
+    import BackgroundTasks
+#endif
 import Foundation
 import M1K3Agent
 import M1K3AgentTools
@@ -357,6 +362,13 @@ final class AppCore {
     }
 
     init() throws {
+        #if os(iOS)
+            // Whether a continued-processing task may use the GPU on THIS device (the Live Activities plan: background
+            // Lil needs it, and forum reports say iPhones answer no). A breadcrumb, read once per launch.
+            Self.log.notice(
+                "background resources: gpu=\(BGTaskScheduler.supportedResources.contains(.gpu), privacy: .public)"
+            )
+        #endif
         // Voice output starts on Built-in; M1K3 Voice is restored below only
         // when it was chosen AND is already on disk. Constructing the Kokoro
         // provider touches no MLX (safe on the Simulator) — prepare() does.
