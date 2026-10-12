@@ -60,10 +60,15 @@
 //  keeps this view mounted beneath it, so two RealityViews ran); VoiceScreen's full-bleed hero is the one.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (CI fold) — the costume line renders inline from
 //  `SeasonalLook.greeting(for:)` (the shared SeasonalGreeting.swift is gone). Confidence 0.85.
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — PCC consent wiring: `privateCloudArming` state, `privateCloudPending`
+//  sheet, `privateCloudControl`, `sendToPrivateCloud` helper, arming action in send(), PCC status task. The sheet
+//  content extracted to `privateCloudConsentView` (the body's modifier chain hit the type-checker's limit).
+//  Confidence 0.75 (compile-verified; verify-by-launch owed).
 
 import M1K3Avatar
 import M1K3Chat
 import M1K3Inference
+import M1K3LanguageModel
 import M1K3Screengrab
 import StoreKit
 import SwiftUI
@@ -91,6 +96,12 @@ struct ChatScreen: View {
     @State private var pendingAttachments: [ImageAttachment] = []
     @State private var pendingFiles: [FileAttachment] = []
     @State private var attachmentError: String?
+    @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
+    @State private var privateCloudArming = PrivateCloudArming(
+        isOn: AppCore.privateCloudEnabled(),
+        consent: UserDefaults.standard.object(forKey: PrivateCloudArming.consentDefaultsKey) as? Bool
+    )
+    @State private var privateCloudPending: PendingPrivateCloudSend?
     @FocusState private var inputFocused: Bool
 
     private var chatting: Bool {
@@ -190,9 +201,8 @@ struct ChatScreen: View {
             ) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text(attachmentError ?? "")
+                attachmentErrorMessage
             }
-            // One picker for images and files; AttachmentRouting sorts them.
             .fileImporter(
                 isPresented: $showAttachmentImporter,
                 allowedContentTypes: AttachmentRouting.contentTypes(
@@ -210,17 +220,9 @@ struct ChatScreen: View {
                     pendingAttachments = []
                 }
             }
-            // Harness switch for device field tests driven from the Mac: a launch
-            // environment of M1K3_VOICE_AT_LAUNCH=1 enters voice mode as soon as
-            // the brain is ready — devicectl can pass an environment, but it
-            // cannot tap. The Mac's SelfTest env keys are the precedent. Inert
-            // for every ordinary launch.
-            // Blank canvas (first appearance and every New chat) → new chips.
             .task(id: chatting) {
                 if !chatting { reshuffleStarters() }
             }
-            // Every completed turn re-asks the ledger; it answers yes once per
-            // version, and only once the app has lived here a few days.
             .onChange(of: core.reviewLedger.completedTurns) { _, _ in
                 askForRatingIfEarned()
             }
@@ -230,7 +232,6 @@ struct ChatScreen: View {
                     voiceLaunched = true
                     core.enterVoiceMode()
                 } else if ScreengrabHarness.current.isActive {
-                    // The App Store screengrab suite's per-plate beat (AppCore+Screengrab).
                     voiceLaunched = true
                     core.performScreengrabBeat()
                     screengrabPath = ScreengrabHarness.current.phoneRoute
@@ -243,6 +244,27 @@ struct ChatScreen: View {
                 case .memories: MemoriesScreen()
                 }
             }
+            .sheet(item: $privateCloudPending) { pending in
+                privateCloudConsentView(pending)
+            }
+            .task { await core.refreshPrivateCloudStatus() }
+    }
+
+    private func privateCloudConsentView(_ pending: PendingPrivateCloudSend) -> some View {
+        PrivateCloudConsentSheet(
+            consent: pending.consent,
+            onSend: { includeConversation in
+                privateCloudPending = nil
+                privateCloudArming.consented(
+                    includeConversation: includeConversation, seen: pending.onDeviceShown
+                )
+                sendToPrivateCloud(pending.consent, includeConversation: includeConversation)
+            },
+            onCancel: {
+                privateCloudPending = nil
+                privateCloudArming.declined()
+            }
+        )
     }
 
     /// See the `.task(id: brainReady)` above — read once per process.
@@ -611,7 +633,34 @@ struct ChatScreen: View {
         pendingAttachments = []
         pendingFiles = []
         inputFocused = false
-        Task { await core.send(text, images: images) }
+
+        let hasAttachments = !images.isEmpty
+        let onDevice = ChatSession.onDeviceMessageIDs(core.chat.messages)
+        let action: PrivateCloudArming.Action = core.voiceLoop != nil ? .local : privateCloudArming.action(
+            control: privateCloudControl, hasAttachments: hasAttachments, onDeviceMessages: onDevice
+        )
+        switch action {
+        case .askConsent:
+            privateCloudPending = PendingPrivateCloudSend(
+                consent: core.chat.privateCloudConsent(for: text), onDeviceShown: onDevice
+            )
+        case let .sendDirect(includeConversation):
+            sendToPrivateCloud(core.chat.privateCloudConsent(for: text), includeConversation: includeConversation)
+        case .local:
+            Task { await core.send(text, images: images) }
+        }
+    }
+
+    private var attachmentErrorMessage: Text {
+        Text(attachmentError ?? "")
+    }
+
+    private var privateCloudControl: PrivateCloudRung.Control {
+        PrivateCloudRung.control(core.privateCloudState(consent: privateCloudConsent))
+    }
+
+    private func sendToPrivateCloud(_ consent: PrivateCloudTurn.Consent, includeConversation: Bool) {
+        Task { await core.sendPrivateCloud(consent, includeConversation: includeConversation) }
     }
 
     // MARK: - Attachments

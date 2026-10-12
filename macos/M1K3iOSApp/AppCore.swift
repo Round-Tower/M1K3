@@ -64,9 +64,13 @@
 //  (AppleFoundationModelsProvider.recordDeviceContextWindow), whatever brain is selected.
 //  Review: Kev + claude-opus-5-5, 2026-10-04 — egressClauseProvider (#482): web search + the Home brain
 //  (a live `homeBrainLive` mirror of `homeBrainActive` — the persisted flag missed a phone with no local
-//  brain). No PCC on iOS. Confidence 0.8.
+//  brain). Confidence 0.8.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `photoMemory` (caption memory) + the delete-cascade wiring.
 //  Compile-checked; verify-by-launch owed.
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — PCC as a brain tier on iOS: `privateCloudBackend` (static,
+//  live or echo in DEBUG), `privateCloudStatus`, `privateCloudEnabled()` (absent = ON), `privateCloudState`,
+//  `refreshPrivateCloudStatus()`, `privateCloudSendAllowed()`, `sendPrivateCloud(_:includeConversation:)`.
+//  EgressFacts carries `privateCloudOffered`. Confidence 0.75 (compile-verified; verify-by-launch owed).
 
 import Foundation
 import M1K3Agent
@@ -78,6 +82,7 @@ import M1K3Inference
 import M1K3Knowledge
 import M1K3KnowledgeTools
 import M1K3Kokoro
+import M1K3LanguageModel
 import M1K3LogCore
 import M1K3Memory
 import M1K3MemoryChatBridge
@@ -214,6 +219,67 @@ final class AppCore {
     /// `homeBrainActive`, readable off the main actor (the egress clause, per turn).
     nonisolated static let homeBrainLive = Mutex(false)
 
+    // MARK: - Private Cloud Compute (always-on by default on iPhone)
+
+    nonisolated static let privateCloudBackend: (any PrivateCloudAnswering)? = {
+        if let live = PrivateCloudBackends.live() { return live }
+        #if DEBUG
+            return PrivateCloudEchoBackend.fromEnvironment(ProcessInfo.processInfo.environment)
+        #else
+            return nil
+        #endif
+    }()
+
+    var privateCloudStatus: PrivateCloudStatus?
+
+    nonisolated static func privateCloudEnabled() -> Bool {
+        let defaults = UserDefaults.standard
+        return defaults.object(forKey: privateCloudEnabledKey) == nil
+            || defaults.bool(forKey: privateCloudEnabledKey)
+    }
+
+    func privateCloudState(consent: Bool?) -> PrivateCloudState {
+        PrivateCloudState(
+            backendPresent: Self.privateCloudBackend != nil,
+            available: privateCloudStatus?.available ?? true,
+            consent: consent,
+            managedOff: UserDefaults.standard.bool(forKey: PrivateCloudRung.managedOffDefaultsKey),
+            quota: privateCloudStatus?.quota ?? .unknown
+        )
+    }
+
+    var privateCloudConsentPersisted: Bool? {
+        ChatEgressConsent.persisted(in: .standard)
+    }
+
+    func refreshPrivateCloudStatus() async {
+        guard let backend = Self.privateCloudBackend else { return }
+        privateCloudStatus = await backend.status()
+    }
+
+    func privateCloudSendAllowed() -> Bool {
+        guard isReady else { return false }
+        guard Self.privateCloudBackend != nil else { return false }
+        guard Self.privateCloudEnabled() else { return false }
+        let gate = privateCloudState(consent: privateCloudConsentPersisted)
+        guard PrivateCloudRung.escalation(armed: true, gate) == .privateCloud else { return false }
+        return true
+    }
+
+    @discardableResult
+    func sendPrivateCloud(_ consent: PrivateCloudTurn.Consent, includeConversation: Bool) async -> Bool {
+        guard privateCloudSendAllowed(), let backend = Self.privateCloudBackend else { return false }
+        let gate = privateCloudState(consent: privateCloudConsentPersisted)
+        avatar.setActivity(.thinking)
+        await chat.sendPrivateCloud(
+            consent, includeConversation: includeConversation, backend: backend,
+            gate: gate, localBrainName: selectedBrain.displayName
+        )
+        if case .speaking = avatar.state.activity {} else { avatar.resetToIdle() }
+        await refreshPrivateCloudStatus()
+        return true
+    }
+
     /// The Settings web toggle — absent means allowed (the shipped default). One reader for
     /// the palette and the egress clause, so the two can't disagree (#485 review).
     nonisolated static func webSearchAllowed() -> Bool {
@@ -243,6 +309,7 @@ final class AppCore {
     /// deliberately NOT shared spelling with the Mac (it has no Home tier).
     nonisolated static let homeBrainActiveKey = "brainLink.homeActive"
     nonisolated static let webSearchEnabledKey = "webSearchEnabled"
+    nonisolated static let privateCloudEnabledKey = "privateCloudEnabled"
     /// Shared spelling with the Mac (AppEnvironment.selectedVoiceTierKey).
     nonisolated static let selectedVoiceTierKey = "selectedVoiceTier"
     /// The full-bleed reactive avatar behind chat — default ON; the Settings
@@ -977,10 +1044,12 @@ final class AppCore {
                     spoken: defaults.bool(forKey: VoiceModeDefaults.activeKey)
                 )
             },
-            // What can leave this device this turn (#482): web search, and the Home brain
-            // (the paired Mac answers over Wi‑Fi). No Private Cloud Compute on iOS.
             egressClauseProvider: {
-                let facts = EgressFacts(webSearch: Self.webSearchAllowed(), brainIsHome: Self.homeBrainLive.withLock { $0 })
+                let facts = EgressFacts(
+                    webSearch: Self.webSearchAllowed(),
+                    privateCloudOffered: Self.privateCloudBackend != nil,
+                    brainIsHome: Self.homeBrainLive.withLock { $0 }
+                )
                 return EgressDisclosure.clause(facts, device: HostPlatform.thisDevice)
             },
             // The Mac's tool router, mirrored (flagged; Mini only unless `toolRouterAllTiers`).
