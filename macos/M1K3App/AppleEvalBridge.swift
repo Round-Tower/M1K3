@@ -11,11 +11,9 @@
 //  in platform SDK targets, not SPM packages. The pure fixture definitions and
 //  heuristic scorer remain in M1K3Eval (package, unit-tested off-device).
 //
-//  Usage (SelfTest, headless):
-//
-//      M1K3_SELFTEST=1 M1K3_SELFTEST_APPLE_EVAL=1 \
-//      M1K3_SELFTEST_APPLE_EVAL_KINDS=open-chat,security \
-//      M1K3.app/Contents/MacOS/M1K3
+//  Scaffold: the types compile and the fixture bridge is tested by shape, but
+//  nothing wires `OpenChatEvaluation` into SelfTest yet. The wire (a SelfTest
+//  hook behind `M1K3_SELFTEST_APPLE_EVAL`) is owed — tracked as a follow-up.
 //
 //  Signed: Kev + claude-opus-4-6, 2026-10-12, Confidence 0.65 (compile-verified
 //  against the Evaluations.framework swiftinterface; runtime is verify-owed —
@@ -152,9 +150,8 @@
         }
 
         var evaluators: [any EvaluatorProtocol<ModelSample<String>, String>] {
-            let fixtureMap = Dictionary(
-                uniqueKeysWithValues: ChatEvalFixtures.fixtures(for: .openChat).map { ($0.prompt, $0) }
-            )
+            let fixtures = ChatEvalFixtures.fixtures(for: .openChat)
+            let fixtureMap = Dictionary(fixtures.map { ($0.prompt, $0) }, uniquingKeysWith: { first, _ in first })
             return [
                 ClosureEvaluator { sample, response in
                     guard let fixture = fixtureMap[sample.input.prompt] else {

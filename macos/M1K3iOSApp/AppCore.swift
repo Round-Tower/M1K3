@@ -68,7 +68,7 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `photoMemory` (caption memory) + the delete-cascade wiring.
 //  Compile-checked; verify-by-launch owed.
 //  Review: Kev + claude-opus-4-6, 2026-10-12 — PCC as a brain tier on iOS: `privateCloudBackend` (static,
-//  live or echo in DEBUG), `privateCloudStatus`, `privateCloudState`,
+//  live or echo in DEBUG), `privateCloudStatus`, `privateCloudEnabled()` (absent = ON), `privateCloudState`,
 //  `refreshPrivateCloudStatus()`, `privateCloudSendAllowed()`, `sendPrivateCloud(_:includeConversation:)`.
 //  EgressFacts carries `privateCloudOffered`. Confidence 0.75 (compile-verified; verify-by-launch owed).
 //  Review: Kev + claude-opus-4-6, 2026-10-12 — Bug fixes: removed dead `privateCloudEnabledKey` /

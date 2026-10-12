@@ -167,6 +167,13 @@ public enum PrivateCloudBackends {
                 return PrivateCloudComputeBackend()
             #elseif os(iOS) || os(visionOS)
                 guard #available(iOS 27.0, visionOS 27.0, *) else { return nil }
+                // No processHasEntitlement() on iOS: the provisioning profile
+                // enforces the entitlement at install time (App ID capability).
+                // A missing capability fails the Xcode Cloud archive, not the
+                // runtime. If the entitlement is somehow absent at runtime,
+                // `model.availability` reads `.unavailable` and the rung hides
+                // PCC — check_store_targets.py pins the entitlement on the
+                // store lanes so the gate never opens silently.
                 return PrivateCloudComputeBackend()
             #else
                 return nil

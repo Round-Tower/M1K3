@@ -235,6 +235,14 @@ def developer_id_keychain_gaps(developer_id_entitlements: dict) -> list[str]:
 # 375 shipped Content Controls with no declared-age-range entitlement, so the Mac's "Set up"
 # never showed a sheet. The Developer ID lane joined on 2026-10-09, once its profile could grant it.
 REQUIRED_ENTITLEMENTS = ("com.apple.developer.declared-age-range",)
+# Entitlements the store lanes (MAS + iOS) must carry but the Developer ID lane must not
+# (PROFILE_ONLY_ENTITLEMENTS already forbids it there). PCC is the gate: PrivateCloudRung
+# reads backendPresent from the backend constructor, which succeeds only with the entitlement.
+STORE_REQUIRED_ENTITLEMENTS = ("com.apple.developer.private-cloud-compute",)
+STORE_LANE_ENTITLEMENTS = (
+    "M1K3App/M1K3-MAS.entitlements",
+    "M1K3iOSApp/M1K3iOS.entitlements",
+)
 LANE_ENTITLEMENTS = (
     "M1K3App/M1K3-MAS.entitlements",
     "M1K3iOSApp/M1K3iOS.entitlements",
@@ -246,6 +254,14 @@ def lane_gaps(name: str, entitlements: dict) -> list[str]:
     return [
         f"{name} is missing {key} — the feature it gates does nothing without it"
         for key in REQUIRED_ENTITLEMENTS
+        if entitlements.get(key) is not True
+    ]
+
+
+def store_lane_gaps(name: str, entitlements: dict) -> list[str]:
+    return [
+        f"{name} is missing {key} — the store lane needs it for the feature to work"
+        for key in STORE_REQUIRED_ENTITLEMENTS
         if entitlements.get(key) is not True
     ]
 
@@ -268,7 +284,10 @@ def main(argv: list[str]) -> int:
     problems += developer_id_keychain_gaps(developer_id)
     for lane in LANE_ENTITLEMENTS:
         with open(os.path.join(macos, lane), "rb") as f:
-            problems += lane_gaps(os.path.basename(lane), plistlib.load(f))
+            ents = plistlib.load(f)
+        problems += lane_gaps(os.path.basename(lane), ents)
+        if lane in STORE_LANE_ENTITLEMENTS:
+            problems += store_lane_gaps(os.path.basename(lane), ents)
     names = sorted(store_targets(project))
     if not problems:
         print(f"✓ {len(names)} store targets ({', '.join(names)}) all upload into {EXPECTED_BUNDLE_ID!r} "

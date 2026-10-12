@@ -23,8 +23,9 @@
   it. check_store_targets.py pins it. Confidence 0.8 (the Xcode Cloud profile picking
   the capability up is verify-by-archive).
   Review: Kev + claude-opus-4-6, 2026-10-12 — PCC entitlement added
-  (com.apple.developer.private-cloud-compute). check_store_targets.py already expects it.
-  Confidence 0.85.
+  (com.apple.developer.private-cloud-compute). check_store_targets.py now pins it on
+  store lanes (STORE_REQUIRED_ENTITLEMENTS). The iOS App ID capability is verify-owed
+  (profile must carry it or Xcode Cloud archive fails). Confidence 0.8.
 -->
 <dict>
 	<key>com.apple.developer.kernel.increased-memory-limit</key>
