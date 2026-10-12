@@ -68,7 +68,7 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `photoMemory` (caption memory) + the delete-cascade wiring.
 //  Compile-checked; verify-by-launch owed.
 //  Review: Kev + claude-opus-4-6, 2026-10-12 — PCC as a brain tier on iOS: `privateCloudBackend` (static,
-//  live or echo in DEBUG), `privateCloudStatus`, `privateCloudEnabled()` (absent = ON), `privateCloudState`,
+//  live or echo in DEBUG), `privateCloudStatus`, `privateCloudState`,
 //  `refreshPrivateCloudStatus()`, `privateCloudSendAllowed()`, `sendPrivateCloud(_:includeConversation:)`.
 //  EgressFacts carries `privateCloudOffered`. Confidence 0.75 (compile-verified; verify-by-launch owed).
 //  Review: Kev + claude-opus-4-6, 2026-10-12 — Bug fixes: removed dead `privateCloudEnabledKey` /
@@ -223,7 +223,7 @@ final class AppCore {
     /// `homeBrainActive`, readable off the main actor (the egress clause, per turn).
     nonisolated static let homeBrainLive = Mutex(false)
 
-    // MARK: - Private Cloud Compute (always-on by default on iPhone)
+    // MARK: - Private Cloud Compute (opt-in via Settings toggle)
 
     nonisolated static let privateCloudBackend: (any PrivateCloudAnswering)? = {
         if let live = PrivateCloudBackends.live() { return live }

@@ -652,6 +652,7 @@ struct ChatScreen: View {
         guard canSend else { return }
         let hasAttachments = !pendingAttachments.isEmpty
         let onDevice = ChatSession.onDeviceMessageIDs(core.chat.messages)
+        // Voice mode answers on-device (ADR 0010); typed sends in voice never go to PCC.
         let action: PrivateCloudArming.Action = core.voiceLoop != nil ? .local : privateCloudArming.action(
             control: privateCloudControl, hasAttachments: hasAttachments, onDeviceMessages: onDevice
         )
