@@ -24,6 +24,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-04 — the local-brain line says "Private by design", not "Everything runs
 //  on your device" (Kev retired the absolute: web search is on by default). The Home branch is unchanged. Confidence 0.9.
 //
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — earcons (Kev's iPhone list): a selection tick on each brain and face pick,
+//  the done chord on "Say hello". Ambient session, so they honour the silent switch. Verify-on-device.
 
 import M1K3Avatar
 import M1K3Inference
@@ -158,6 +160,7 @@ struct OnboardingScreen: View {
 
     private func brainCard(_ tier: BrainTier) -> some View {
         Button {
+            core.soundEffects.play(.selectionTick)
             core.selectBrain(tier)
             step = .face
         } label: {
@@ -174,6 +177,7 @@ struct OnboardingScreen: View {
 
     private var homeCard: some View {
         Button {
+            core.soundEffects.play(.selectionTick)
             if core.homeBrain != nil {
                 core.selectHomeBrain()
                 step = .face
@@ -252,6 +256,7 @@ struct OnboardingScreen: View {
                 ForEach(faces) { face in
                     let selected = companion == face.id
                     Button {
+                        core.soundEffects.play(.selectionTick)
                         companion = face.id
                         core.avatar.setEmotion(.excited)
                     } label: {
@@ -273,6 +278,7 @@ struct OnboardingScreen: View {
                 }
             }
             Button {
+                core.soundEffects.play(.doneChord)
                 onDone()
             } label: {
                 Text("Say hello")

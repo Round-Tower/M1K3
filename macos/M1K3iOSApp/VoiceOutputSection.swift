@@ -17,6 +17,8 @@
 //  Prior: none (new file, patterned on SettingsScreen's Brain section).
 //  Review: Kev + claude-opus-5-5, 2026-09-25 — the unavailable note comes from MLXRuntimeSupport.voiceNote, so an
 //  A12-family GPU says why (a newer chip) instead of blaming the Simulator; ~192 MB in the header. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — a "Sound effects" toggle (the Mac's key) for the iPhone's new earcons;
+//  it reaches the live player at once. Verify-on-device.
 //
 
 import M1K3Inference
@@ -25,6 +27,8 @@ import SwiftUI
 
 struct VoiceOutputSection: View {
     @Environment(AppCore.self) private var core
+    /// Earcons (the Mac's key): on unless turned off; the player reads it live.
+    @AppStorage(AppCore.soundEffectsEnabledKey) private var soundEffectsEnabled = true
 
     private var tiers: [VoiceTier] {
         AppCore.neuralVoiceAvailable ? VoiceTier.allCases : [.builtin]
@@ -65,6 +69,8 @@ struct VoiceOutputSection: View {
             Button("Hear a sample") {
                 Task { await core.speakSample() }
             }
+            Toggle("Sound effects", isOn: $soundEffectsEnabled)
+                .onChange(of: soundEffectsEnabled) { _, enabled in core.soundEffects.isEnabled = enabled }
         } header: {
             Text("Voice")
         } footer: {

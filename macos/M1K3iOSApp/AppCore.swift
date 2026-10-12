@@ -70,7 +70,12 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — TestFlight 505, "Lil Waking seems to hang at 0%": `brainStall` (a
 //  DownloadStallWatch fed by the warm's progress, reset per warm) lets the chat row name a stalled download, and
 //  `isDownloadingBrain` drives the root's keep-awake. Confidence 0.75 (verify on the phone).
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — earcons on the iPhone (Kev's list: "Sound effects & earcons"): the shared
+//  player with the Mac's key and volume; outside voice mode each one plays under an AMBIENT session (mixes with the
+//  user's music, honours the silent switch), where the default solo-ambient would stop their music for a click; a
+//  typed answer lands with `.answerLanded`, a failure with `.error`. Confidence 0.7 (the sound is verify-on-device).
 
+import AVFoundation
 import Foundation
 import M1K3Agent
 import M1K3AgentTools
@@ -199,6 +204,19 @@ final class AppCore {
         brainLoad.fraction.map { $0 < 1 } ?? false
     }
 
+    /// UI earcons: the Mac's catalogue and synth recipes (M1K3Avatar), its Settings key and its volume, muted while
+    /// M1K3 speaks. Lazy so `isSpeaking` can read the avatar; not observed (nothing in the UI reacts to the player).
+    @ObservationIgnored private(set) lazy var soundEffects: SoundEffectPlayer = .bundled(
+        isEnabled: Self.soundEffectsEnabledDefault,
+        volume: 0.3,
+        isSpeaking: { [weak self] in
+            guard let self else { return false }
+            if case .speaking = avatar.state.activity { return true }
+            return false
+        },
+        beforePlay: { [weak self] in self?.prepareEarconSession() }
+    )
+
     private(set) var indexedItemCount = 0
     private(set) var lastIngestStatus: String?
     /// A transient note about the brain choice (e.g. "Lil runs on a real device"
@@ -258,6 +276,23 @@ final class AppCore {
     /// The full-bleed reactive avatar behind chat — default ON; the Settings
     /// toggle is the opt-out (the Mac's avatarDisplay panel/background choice,
     /// collapsed to a switch). Reduce Transparency also disables it, unstored.
+    /// The Mac's key (`AppEnvironment.soundEffectsEnabledKey`): earcons on unless the user turned them off.
+    nonisolated static let soundEffectsEnabledKey = "soundEffects.enabled"
+    nonisolated static var soundEffectsEnabledDefault: Bool {
+        UserDefaults.standard.object(forKey: soundEffectsEnabledKey) == nil
+            || UserDefaults.standard.bool(forKey: soundEffectsEnabledKey)
+    }
+
+    /// Before an earcon: outside voice mode, an AMBIENT session, which mixes with the user's music and honours the silent
+    /// switch (the default solo-ambient would stop their music for a click). Voice mode keeps its own echo-cancelled
+    /// session. Only a change is an IPC, so a repeat costs a property read.
+    private func prepareEarconSession() {
+        guard voiceLoop == nil else { return }
+        let session = AVAudioSession.sharedInstance()
+        guard session.category != .ambient else { return }
+        try? session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+    }
+
     nonisolated static let avatarBackdropKey = "avatarBackdrop"
     /// Memory auto-capture toggle — default ON (matches the Mac). Off = M1K3
     /// never distils durable facts from your chat.
@@ -828,9 +863,12 @@ final class AppCore {
         let answer = chat.messages.last.flatMap { $0.role == .assistant ? $0 : nil }
         if case .failed? = answer?.status {
             avatar.setActivity(.error)
+            soundEffects.play(.error)
         } else {
             avatar.setEmotion(.happy)
             avatar.resetToIdle()
+            // The answer is home; a stopped one earns no landing chime (the Mac's rule).
+            if let answer, answer.interrupted != true { soundEffects.play(.answerLanded) }
             // A real, unstopped answer counts toward the rating ask;
             // ChatScreen consumes it when it's earned.
             if let answer, ReviewPromptPolicy.isWin(answerFailed: false, interrupted: answer.interrupted == true) {

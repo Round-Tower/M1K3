@@ -19,6 +19,9 @@
 //  Timer semantics test-pinned; the fade itself is verify-by-ear.
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the pool builds `.synth` sources from `EarconSynth.wavData` via
 //  `AVAudioPlayer(data:)`; bundled ones load as before. Confidence now 0.8 (pool is verify-at-⌘R by contract).
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — `bundled(beforePlay:)`, a hook ahead of each one-shot: the iPhone
+//  picks its audio session there (ambient outside voice mode, so a tick never stops the user's music). Defaults to
+//  nothing, so the Mac is unchanged. Confidence 0.85.
 //
 
 import AVFoundation
@@ -117,16 +120,18 @@ public extension SoundEffectPlayer {
     /// Production player: preloads the bundled WAVs into a pool of prepared
     /// AVAudioPlayers and plays via CoreAudio. Independent of the voice
     /// AVAudioEngine — the system mixer composes them.
+    /// `beforePlay` runs ahead of each one-shot that passes the gate (the iPhone sets its audio session there).
     static func bundled(
         isEnabled: Bool,
         volume: Float = 0.6,
-        isSpeaking: @escaping @MainActor () -> Bool
+        isSpeaking: @escaping @MainActor () -> Bool,
+        beforePlay: @escaping @MainActor () -> Void = {}
     ) -> SoundEffectPlayer {
         let pool = AVAudioEarconPool(volume: volume)
         return SoundEffectPlayer(
             isEnabled: isEnabled,
             isSpeaking: isSpeaking,
-            sink: { effect in pool.play(effect) },
+            sink: { effect in beforePlay(); pool.play(effect) },
             loopSink: { effect, start in pool.loop(effect, start: start) }
         )
     }

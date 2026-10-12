@@ -58,6 +58,8 @@
 //  still the Apple one, so this is parity with the Mac shell, byte-identical in behaviour today.
 //  Confidence 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-09-15 (2) — both voice turn shapes feed the rating ledger — a voice-only phone user could never earn the ask before.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — earcons on the iPhone (Kev's list): voiceEnter / voiceExit at the mode's
+//  edges, listenStart when the mic opens, endpointHeard when a question is taken, the Mac's cues. Verify-on-device.
 
 import AVFoundation
 import Foundation
@@ -128,6 +130,7 @@ extension AppCore {
         )
         voiceLoop = controller
         voicePauseNote = nil
+        soundEffects.play(.voiceEnter) // M1K3 materialising (the Mac's cue)
         installAudioSessionObservers()
         // The mic engine needs the record-capable session first; activate it off
         // the main actor and only then arm the loop. A leave in between wins.
@@ -144,6 +147,7 @@ extension AppCore {
     /// cancelled — its answer still lands in the chat transcript, unspoken.
     func exitVoiceMode() {
         guard let controller = voiceLoop else { return }
+        soundEffects.play(.voiceExit) // dematerialising: the enter sweep, mirrored
         controller.exit()
         voiceLoop = nil
         voicePauseNote = nil
@@ -220,6 +224,7 @@ extension AppCore {
                 // segment boundary, not the end of the listen (FinalityPolicy).
                 let upstream = try transcriber.startListening(finality: .keepsListening)
                 avatar.setActivity(.listening)
+                soundEffects.play(.listenStart) // the mic is open
                 // Forward the segments, and when a listen ends without a word
                 // ask the transcriber whether that was silence or a failure.
                 // Report BEFORE finishing so the loop cancels the pending listen
@@ -251,6 +256,7 @@ extension AppCore {
                     return .failure(VoiceTurnFailure(message: "M1K3 is shutting down."))
                 }
                 avatar.setActivity(.thinking)
+                soundEffects.play(.endpointHeard) // got it: one soft tick down
                 await chat.send(question)
                 guard let last = chat.messages.last, last.role == .assistant else {
                     return .failure(VoiceTurnFailure(message: "No answer arrived."))
@@ -300,6 +306,7 @@ extension AppCore {
                     return .failure(VoiceTurnFailure(message: "M1K3 is shutting down."))
                 }
                 avatar.setActivity(.thinking)
+                soundEffects.play(.endpointHeard) // got it: one soft tick down
                 // The fold-forward guard (only prefix-extending updates — a
                 // FOLLOWUPS/polish shrink must never re-speak the answer).
                 var folder = StreamedAnswerFolder(stopMatcher: { FollowUpSplit.trailerStart(in: $0) })
