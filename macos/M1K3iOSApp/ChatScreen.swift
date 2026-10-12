@@ -60,6 +60,9 @@
 //  keeps this view mounted beneath it, so two RealityViews ran); VoiceScreen's full-bleed hero is the one.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (CI fold) — the costume line renders inline from
 //  `SeasonalLook.greeting(for:)` (the shared SeasonalGreeting.swift is gone). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — TestFlight 505, "Lil Waking seems to hang at 0%": the load row read
+//  "Waking… Int(f*100)%" through the whole download (a started download under 1% read 0%). It reads the shared
+//  `statusLine` (Downloading N% / <1%, then Waking), says to keep M1K3 open, and names a stall. Confidence 0.75.
 
 import M1K3Avatar
 import M1K3Chat
@@ -349,18 +352,32 @@ struct ChatScreen: View {
         }
     }
 
+    /// "Downloading Lil… 3%" while the bytes come ("<1%" once they start, never a frozen "0%"), "Waking Lil…" for the
+    /// load after them. While downloading, a line under the bar says to keep M1K3 open, and names a stall (TestFlight
+    /// 505: "Lil Waking seems to hang at 0%"). The screen stays on meanwhile (RootView).
     private var brainLoadRow: some View {
-        Group {
-            if let fraction = core.brainLoad.fraction {
-                ProgressView(value: fraction) {
-                    Text("Waking \(core.selectedBrain.displayName)… \(Int(fraction * 100))%")
-                        .font(.caption2)
+        let name = core.selectedBrain.displayName
+        return Group {
+            if let fraction = core.brainLoad.fraction, fraction < 1 {
+                VStack(spacing: 4) {
+                    ProgressView(value: fraction) {
+                        Text(core.brainLoad.statusLine(modelName: name))
+                            .font(.caption2)
+                    }
+                    .frame(maxWidth: 240)
+                    // A clock for the stall check only; the bar moves on its own.
+                    TimelineView(.periodic(from: .now, by: 5)) { context in
+                        Text(core.brainStall.isStalled(at: context.date)
+                            ? "Still downloading. Keep M1K3 open and on Wi-Fi."
+                            : "Keep M1K3 open while \(name) downloads.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                .frame(maxWidth: 240)
             } else {
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.small)
-                    Text("Waking \(core.selectedBrain.displayName)…").font(.caption2)
+                    Text(core.brainLoad.statusLine(modelName: name)).font(.caption2)
                 }
             }
         }

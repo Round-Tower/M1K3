@@ -67,6 +67,9 @@
 //  brain). No PCC on iOS. Confidence 0.8.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `photoMemory` (caption memory) + the delete-cascade wiring.
 //  Compile-checked; verify-by-launch owed.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — TestFlight 505, "Lil Waking seems to hang at 0%": `brainStall` (a
+//  DownloadStallWatch fed by the warm's progress, reset per warm) lets the chat row name a stalled download, and
+//  `isDownloadingBrain` drives the root's keep-awake. Confidence 0.75 (verify on the phone).
 
 import Foundation
 import M1K3Agent
@@ -189,6 +192,13 @@ final class AppCore {
     private(set) var selectedBrain: BrainTier
     /// Warm-up state for the MLX brain (Lil). Stays `.idle` for Mini (AFM).
     private(set) var brainLoad: ModelLoadState = .idle
+    /// Moves only when the download's fraction does, so the chat row can say a transfer has stalled.
+    private(set) var brainStall = DownloadStallWatch()
+    /// Bytes still coming for the chosen brain (not the load after them): the root keeps the screen on meanwhile.
+    var isDownloadingBrain: Bool {
+        brainLoad.fraction.map { $0 < 1 } ?? false
+    }
+
     private(set) var indexedItemCount = 0
     private(set) var lastIngestStatus: String?
     /// A transient note about the brain choice (e.g. "Lil runs on a real device"
@@ -656,6 +666,7 @@ final class AppCore {
         warmTask = Task { [weak self] in
             guard let self, generation == warmGeneration else { return }
             brainLoad = .preparing
+            brainStall.reset()
             // Reuse the provider already built for this exact model (cold launch made
             // one as the slot's initial backend); only build fresh on a model change,
             // releasing the outgoing weights first — never leak two Metal instances.
@@ -671,6 +682,7 @@ final class AppCore {
                     Task { @MainActor [weak self] in
                         guard let self, generation == warmGeneration else { return }
                         brainLoad = .progress(fraction)
+                        brainStall.observe(fraction, at: Date())
                     }
                 }
                 guard generation == warmGeneration else {

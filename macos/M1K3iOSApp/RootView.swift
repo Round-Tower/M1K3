@@ -15,6 +15,9 @@
 //  NavigationStack{ChatScreen}; navigation moved into toolbars.
 //  Review: Kev + claude-opus-5-5, 2026-10-03 — the stack owns a typed path so the screengrab harness can push
 //  a plate's screen (`ScreengrabHarness.phoneRoute`); every ordinary link is still view-destination. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — TestFlight 505, "Lil Waking seems to hang at 0%": the screen stays on while a
+//  brain downloads. The Hub downloads in a foreground session, so an auto-lock suspends it and the retry restarts the file
+//  from zero. From the root, so pushing Settings over the chat doesn't drop it. Confidence 0.75 (verify on the phone).
 //
 
 import M1K3Screengrab
@@ -31,19 +34,27 @@ struct RootView: View {
     }
 
     var body: some View {
-        if onboarded {
-            NavigationStack(path: $screengrabPath) { ChatScreen(screengrabPath: $screengrabPath) }
-                .preferredColorScheme(.dark)
-        } else {
-            OnboardingScreen {
-                // Sole writer of the first-run gate: selectBrain can no-op
-                // early-return (picking Mini at idle) before it could persist this,
-                // so onboarding must record its own completion or it repeats every
-                // launch (startOnboarded reads hasChosenBrain at init).
-                UserDefaults.standard.set(true, forKey: AppCore.hasChosenBrainKey)
-                withAnimation { onboarded = true }
+        Group {
+            if onboarded {
+                NavigationStack(path: $screengrabPath) { ChatScreen(screengrabPath: $screengrabPath) }
+                    .preferredColorScheme(.dark)
+            } else {
+                OnboardingScreen {
+                    // Sole writer of the first-run gate: selectBrain can no-op
+                    // early-return (picking Mini at idle) before it could persist this,
+                    // so onboarding must record its own completion or it repeats every
+                    // launch (startOnboarded reads hasChosenBrain at init).
+                    UserDefaults.standard.set(true, forKey: AppCore.hasChosenBrainKey)
+                    withAnimation { onboarded = true }
+                }
+                .transition(.opacity)
             }
-            .transition(.opacity)
         }
+        #if os(iOS)
+        // An auto-lock suspends the Hub's foreground download, and the retry restarts the file from zero.
+        .onChange(of: core.isDownloadingBrain, initial: true) { _, downloading in
+            UIApplication.shared.isIdleTimerDisabled = downloading
+        }
+        #endif
     }
 }

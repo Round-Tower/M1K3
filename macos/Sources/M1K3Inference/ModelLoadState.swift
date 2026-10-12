@@ -14,6 +14,11 @@
 //  Foundation Models) don't need it.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — TestFlight 505, iPhone: "Lil Waking seems to hang at 0%, with a small amount
+//  of progress in the bar." A started download under half a percent read "0%" (rounded) beside a visible sliver; it now
+//  reads "<1%". `statusLine` says Downloading while bytes come and Waking once they're in (the load has no number), and
+//  `DownloadStallWatch` tells a slow transfer from a dead one (the foreground Hub session dies when the phone locks, and
+//  an interrupted file restarts from zero). Confidence 0.85.
 
 import Foundation
 
@@ -58,7 +63,7 @@ public enum ModelLoadState: Sendable, Equatable {
         case .idle:
             return ""
         case let .downloading(fraction):
-            return "Downloading \(modelName)… \(percent(fraction))%"
+            return "Downloading \(modelName)… \(percent(fraction))"
         case .preparing:
             return "Preparing \(modelName)…"
         case .ready:
@@ -74,13 +79,58 @@ public enum ModelLoadState: Sendable, Equatable {
     /// number). Keeps the toolbar quiet instead of jamming in "Downloading X… N%".
     public var compactLabel: String {
         switch self {
-        case let .downloading(fraction): "\(percent(fraction))%"
+        case let .downloading(fraction): percent(fraction)
         case .idle, .preparing, .ready, .failed: ""
         }
     }
 
-    private func percent(_ fraction: Double) -> Int {
-        Int((fraction * 100).rounded())
+    /// The one-line status for a progress row (the iPhone chat): "Downloading X… N%" while the bytes come, "Waking X…"
+    /// once they are all in or while it loads from disk (no honest number), empty otherwise.
+    public func statusLine(modelName: String) -> String {
+        switch self {
+        case let .downloading(fraction) where fraction < 1:
+            "Downloading \(modelName)… \(percent(fraction))"
+        case .downloading, .preparing:
+            "Waking \(modelName)…"
+        case .idle, .ready, .failed:
+            ""
+        }
+    }
+
+    /// Rounded to a whole percent, except that a STARTED download under half a percent reads "<1%": rounding it to
+    /// "0%" beside a visible sliver of bar read as a hang (TestFlight 505). Exactly 0 is an honest "0%".
+    private func percent(_ fraction: Double) -> String {
+        let whole = Int((fraction * 100).rounded())
+        return whole == 0 && fraction > 0 ? "<1%" : "\(whole)%"
+    }
+}
+
+/// Tells a slow download from a dead one. The Hub bridge repeats its last fraction as a heartbeat, so only a CHANGED
+/// value resets the clock (a drop counts: an interrupted file restarts from zero and is moving again);
+/// `isStalled` is true once nothing has moved for `threshold` while bytes are still owed.
+public struct DownloadStallWatch: Sendable, Equatable {
+    /// Long enough that a slow link's pauses don't cry wolf, short enough that a dead transfer is named.
+    public static let threshold: TimeInterval = 20
+
+    private var lastFraction: Double?
+    private var lastAdvance: Date?
+
+    public init() {}
+
+    /// Record a progress report at `now`.
+    public mutating func observe(_ fraction: Double, at now: Date) {
+        guard fraction != lastFraction else { return }
+        lastFraction = fraction
+        lastAdvance = now
+    }
+
+    public func isStalled(at now: Date) -> Bool {
+        guard let lastFraction, let lastAdvance, lastFraction < 1 else { return false }
+        return now.timeIntervalSince(lastAdvance) >= Self.threshold
+    }
+
+    public mutating func reset() {
+        self = DownloadStallWatch()
     }
 }
 
