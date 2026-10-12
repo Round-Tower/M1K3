@@ -1,0 +1,17 @@
+NOVEDADES DE LA 1.1
+
+• Una bienvenida nueva. La configuración es una breve baraja de tarjetas sobre cristal, con títulos de píxeles, unos sonidos pequeños y unas palabras mías al terminar. La última tarjeta, My full kit, te trae a Lil, la memoria semántica, oídos más afinados y mi voz con un solo toque mientras sigues a lo tuyo. Vuelve a abrirla cuando quieras desde Settings > General.
+• Brains & downloads. Una página de Ajustes enumera todo lo que puedo descargar, con su tamaño, el progreso en vivo, "Cancel" y "Resume", y "Remove" para devolverte el espacio. Una descarga que agota el tiempo ahora se reintenta sola.
+• Lil ve. Lil ahora es Qwen3.5 (4B) y lee imágenes: adjunta una foto, una captura o una pizarra y pregúntame por ella. Se descarga una vez más (unos 3 GB); quita el Lil anterior en Settings > Brains & downloads. El ajuste "Reasoning" vuelve a funcionar con Lil.
+• La memoria semántica viaja con Lil. Elígela junto con Lil y cambio tu búsqueda a ella en cuanto Lil esté listo.
+• Recordar esta foto. Bajo cualquier imagen que envíes, un toque guarda en mi memoria un pie de foto privado, para que puedas preguntarme por ella más tarde. Nunca sale de tu Mac, los agentes conectados por MCP no pueden leerlo, y al borrar el chat lo olvido.
+• Conoce al Phosphor Fox, el nuevo compañero predeterminado: una red blanca. Si ya elegiste uno, sigue siendo tuyo.
+• Unos Ajustes más ordenados. MCP Server y Brain at Home tienen sus propias páginas. Las audiciones de modelos y la importación de pesos desaparecen: si importaste pesos de audición, se borran una vez para devolverte el espacio.
+• Tu compañero, detrás del chat. El avatar ahora está en el fondo de la ventana, o lo apagas, sin panel lateral. La lluvia de pensamiento se va por ahora. VoiceOver avisa cuando empiezo a pensar, escuchar o hablar.
+• Halloween en la guarida. Del 24 de octubre al 1 de noviembre me disfrazo. Apágalo en Settings > M1K3 > Companion > Seasonal looks.
+• Big, más rápido. Big (Gemma 4) ya no pierde aproximadamente un segundo por paso releyendo su propio prompt.
+• Herramientas más rápidas en todos los cerebros, una corrección para una llamada a herramienta que Lil a veces escribía con una etiqueta de más, y una llamada a herramienta rechazada ahora le explica el motivo al cerebro para que pueda intentarlo de nuevo. Los títulos de los chats ya no muestran mi pensamiento.
+• Se acabaron los bloqueos cuando la pantalla se duerme. Una llamada que no se pudo leer ya no oculta el resto de tu lista de llamadas.
+• Si antes activaste los embeddings semánticos de MLX, reconstruyo tu índice de búsqueda una vez, la próxima vez que tu Mac esté inactivo y fresco.
+
+Todo lo demás se ejecuta en tu Mac. Sin cuenta, sin telemetría. La red se usa para descargar modelos, la búsqueda web y la nube privada opcional. Settings > Brains & downloads nombra cada descarga; la búsqueda web y la nube privada son interruptores en Settings > Privacy.

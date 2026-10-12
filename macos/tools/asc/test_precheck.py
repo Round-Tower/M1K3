@@ -48,3 +48,31 @@ def test_precheck_review_notes_row_splits_never_set_from_read_failed() -> None:
     assert precheck.check_review_notes({"_error": 401}) == ("NOTE", "review notes read failed: 401")
     assert precheck.check_review_notes({"_error": "transport"}) == ("NOTE", "review notes read failed: transport")
     assert precheck.check_review_notes({"data": {"attributes": {"notes": ""}}}) == ("FAIL", "notes are empty")
+
+
+def test_check_localization_requires_whats_new_after_the_first_version() -> None:
+    # 2026-10-12: Mac 1.1.0 read PASS with What's New empty in all ten locales; Apple refuses that at send.
+    ok = {"locale": "de-DE", "keywords": "assistant", "promotionalText": "p",
+          "supportUrl": "https://m1k3.app/support", "description": "d"}
+    assert precheck.check_localization("MAC_OS", {**ok, "whatsNew": " "}, needs_whats_new=True) == [
+        ("FAIL", "de-DE: empty What's New (required after a platform's first version)")]
+    assert precheck.check_localization("MAC_OS", {**ok, "whatsNew": "w" * 4001}, needs_whats_new=True) == [
+        ("FAIL", "de-DE: What's New 4001/4000")]
+    assert precheck.check_localization("MAC_OS", {**ok, "whatsNew": "NEW IN 1.1"}, needs_whats_new=True) == []
+    # The cap reads the raw text: exactly 4000 passes, 4000 plus a trailing newline does not.
+    assert precheck.check_localization("MAC_OS", {**ok, "whatsNew": "w" * 4000}, needs_whats_new=True) == []
+    assert precheck.check_localization("MAC_OS", {**ok, "whatsNew": "w" * 4000 + "\n"}, needs_whats_new=True) == [
+        ("FAIL", "de-DE: What's New 4001/4000")]
+    # A platform's first version has no What's New field to fill (fastlane skips it too).
+    assert precheck.check_localization("IOS", ok, needs_whats_new=False) == []
+
+
+def test_whats_new_rule_reads_a_failed_count_as_a_note() -> None:
+    assert precheck.whats_new_rule(lambda: 2) == (True, None)
+    assert precheck.whats_new_rule(lambda: 1) == (False, None)
+
+    def boom() -> int:
+        raise RuntimeError("GET /v1/apps/x/appStoreVersions: 503")
+
+    assert precheck.whats_new_rule(boom) == (
+        False, ("NOTE", "version count unreadable (GET /v1/apps/x/appStoreVersions: 503); What's New unchecked"))

@@ -9,7 +9,7 @@ Auth: `asc.py` signs an ES256 JWT from `~/.appstoreconnect/private_keys/asc_api_
 (the fastlane JSON the Fastfile reads), or from `ASC_KEY_ID` +
 `ASC_KEY_ISSUER_ID` with `AuthKey_<id>.p8` beside it. Needs `PyJWT` and
 `requests` at run time; pytest needs neither. The release scripts (`submit.py`,
-`precheck.py`, `builds.py`) carry a PEP 723 header, so `./submit.py status`
+`precheck.py`, `builds.py`, `events.py`) carry a PEP 723 header, so `./submit.py status`
 runs through `uv` with its own deps. No `--with` incantation, no Intel-Python trap.
 
 ## Release runbook (Mac + iOS on one build)
@@ -23,6 +23,8 @@ Verify before you cancel: once a submission is cancelled, its place in the queue
 ./submit.py cancel --platform ALL --confirm --wait    # only if a submission is live
 ./submit.py attach --platform ALL --build N --confirm
 ./precheck.py --platform MAC_OS; ./precheck.py --platform IOS
+# an in-app event riding the release: ./events.py create --spec … --art-dir …, then App Store Connect ▸
+# In-App Events ▸ the event ▸ Add for Review (a draft iOS submission); submit adds the version and sends both
 ./submit.py submit --platform ALL --confirm           # refuses an unstamped build (exit 5) unless --why
 ```
 
