@@ -46,6 +46,10 @@
 //  `env.downloadStatuses` (phase only) and the live bars are their own views (`KitLoadSlot`, `VoiceLoadSlot`) outside it; K3 un-started
 //  offers vanish after the tap; K4 in-flight rows read-only + a Settings pointer, "Nothing to download" only when true; K5 rows pinned
 //  only if `startDownload` began; K6 the voice bar hides while the kit drives the voice. Confidence 0.65 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — TestFlight 505 ("onboarding is kinda awesome"; the face was hard to see): on
+//  the face card the deck card fades back but keeps its place (nothing jumps) and `faceStrip`, a compact glass strip with the
+//  picker, Say hi, the shared `chevron(forward:)` and dots, takes the top, so the creature has the middle. Card-turn
+//  animation only: a fade and a render scale, never a tick. Confidence 0.6 (the look is verify-by-launch).
 
 import M1K3Avatar
 import M1K3Inference
@@ -86,30 +90,43 @@ struct WakeSetupCarousel: View {
             // Title, card, arrows and caption share ONE glass surface. The progress footer is
             // deliberately outside it: a ticking view inside glass, or a tick that moves or resizes
             // it, is the known NSGenericException layout crash (ContentView's Mini banner).
-            VStack(spacing: 18) {
-                Text(flow.userDrivenCompletion ? "Set up the room" : "While I wake — set up the room")
-                    .font(.pixel(28))
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityAddTraits(.isHeader)
+            ZStack(alignment: .top) {
+                VStack(spacing: 18) {
+                    Text(flow.userDrivenCompletion ? "Set up the room" : "While I wake — set up the room")
+                        .font(.pixel(28))
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
 
-                card
-                    // A fixed slot sized for the tallest card (the voice card), top-aligned: the
-                    // centred stack never re-centres on a card turn, so the chevrons stay put.
-                    .frame(maxWidth: 460, minHeight: Self.cardSlotHeight, alignment: .top)
-                    .animation(
-                        reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85),
-                        value: flow.index
-                    )
+                    card
+                        // A fixed slot sized for the tallest card (the voice card), top-aligned: the
+                        // centred stack never re-centres on a card turn, so the chevrons stay put.
+                        .frame(maxWidth: 460, minHeight: Self.cardSlotHeight, alignment: .top)
+                        .animation(
+                            reduceMotion ? nil : .spring(response: 0.35, dampingFraction: 0.85),
+                            value: flow.index
+                        )
 
-                navigation
+                    navigation
 
-                Text("All of this lives in Settings too — skip anything.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    Text("All of this lives in Settings too — skip anything.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                // Glass, except beside a live download bar (see OnboardingGlass).
+                .onboardingCard(nearLiveProgress: fraction != nil)
+                // The face card: the creature behind the deck IS the preview, so the card steps aside. It keeps its
+                // place (the stack never re-centres, so Done and the arrows never jump), fades back, and the compact
+                // strip takes the top. Kev, TestFlight 505: "hard to see it… reveal the avatar in full glory".
+                .opacity(revealsFace ? 0 : 1)
+                .scaleEffect(revealsFace ? 0.97 : 1, anchor: .top)
+                .disabled(revealsFace)
+                .accessibilityHidden(revealsFace)
+
+                if revealsFace { faceStrip.transition(faceStripTransition) }
             }
-            // Glass, except beside a live download bar (see OnboardingGlass).
-            .onboardingCard(nearLiveProgress: fraction != nil)
+            // A card turn, never a tick: the one geometry change here is a render transform and a fade.
+            .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.86), value: revealsFace)
 
             // Outside the glass, in a reserved slot: the live Kokoro bar (voice card, re-run or no-wait). Their own
             // views, so a download tick invalidates the bar and not this body (nor the glass in it). Hidden while the
@@ -142,6 +159,15 @@ struct WakeSetupCarousel: View {
     /// Two caption lines, the bar or spinner, and the mute button.
     private static let footerHeight: CGFloat = 96
 
+    /// On the face card the deck card hides and `faceStrip` shows: the creature is the preview.
+    private var revealsFace: Bool {
+        flow.current == .face
+    }
+
+    private var faceStripTransition: AnyTransition {
+        reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.94, anchor: .top))
+    }
+
     // MARK: - Cards
 
     @ViewBuilder private var card: some View {
@@ -149,7 +175,8 @@ struct WakeSetupCarousel: View {
         case .aboutYou: aboutYouCard
         case .readingMode: readingModeCard
         case .voice: voiceCard
-        case .face: faceCard
+        // The face controls live in `faceStrip`, so nothing sits in front of the creature.
+        case .face: Color.clear
         case .kit: kitCard
         }
     }
@@ -233,30 +260,43 @@ struct WakeSetupCarousel: View {
         }
     }
 
+    /// The face card, compact, at the top of the sheet: the middle belongs to the creature. The deck's own surface
+    /// (material beside a live bar, like the card), with the deck's arrows and dots so the turn works the same.
+    private var faceStrip: some View {
+        faceCard
+            .onboardingCard(nearLiveProgress: fraction != nil, compact: true)
+    }
+
     private var faceCard: some View {
         VStack(spacing: 12) {
             cardTitle("Pick my face")
-            // Same roster rule as CompanionSettings: pixel face + constellation +
-            // whichever creatures ship installed. The backdrop IS the live preview.
-            Picker("Face", selection: $voiceCompanion) {
-                Text("Pixel face").tag("")
-                Text("Constellation").tag(AppEnvironment.voiceCompanionConstellation)
-                ForEach(CompanionSpec.all.filter(CompanionAssets.isInstalled), id: \.id) { spec in
-                    Text(spec.displayName).tag(spec.id)
+            GlassEffectContainer(spacing: 12) {
+                HStack(spacing: 12) {
+                    chevron(forward: false)
+                    // Same roster rule as CompanionSettings: pixel face + constellation +
+                    // whichever creatures ship installed. The backdrop IS the live preview.
+                    Picker("Face", selection: $voiceCompanion) {
+                        Text("Pixel face").tag("")
+                        Text("Constellation").tag(AppEnvironment.voiceCompanionConstellation)
+                        ForEach(CompanionSpec.all.filter(CompanionAssets.isInstalled), id: \.id) { spec in
+                            Text(spec.displayName).tag(spec.id)
+                        }
+                    }
+                    .labelsHidden()
+                    .frame(maxWidth: 220)
+                    .onChange(of: voiceCompanion) { _, _ in
+                        env.soundEffects.play(.selectionTick)
+                        flow.engage()
+                    }
+                    Button("Say hi") {
+                        flow.engage()
+                        sayHi()
+                    }
+                    .buttonStyle(.glass)
+                    chevron(forward: true)
                 }
             }
-            .labelsHidden()
-            .frame(maxWidth: 260)
-            .onChange(of: voiceCompanion) { _, _ in
-                env.soundEffects.play(.selectionTick)
-                flow.engage()
-            }
-            Button("Say hi") {
-                flow.engage()
-                sayHi()
-            }
-            .buttonStyle(.glass)
-            cardCaption("I'm behind this card — that's the live preview.")
+            cardDots
         }
     }
 
@@ -402,38 +442,36 @@ struct WakeSetupCarousel: View {
     private var navigation: some View {
         GlassEffectContainer(spacing: 16) {
             HStack(spacing: 16) {
-                Button {
-                    turn(forward: false)
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .imageScale(.large).fontWeight(.semibold)
-                        .frame(width: 24, height: 24)
-                }
-                .buttonStyle(.glass).buttonBorderShape(.circle).controlSize(.large)
-                .disabled(!flow.canGoBack)
-                .accessibilityLabel("Previous card")
-
-                HStack(spacing: 6) {
-                    ForEach(Array(flow.cards.enumerated()), id: \.offset) { position, _ in
-                        Circle()
-                            .fill(position == flow.index ? AnyShapeStyle(.tint) : AnyShapeStyle(.quaternary))
-                            .frame(width: 6, height: 6)
-                    }
-                }
-                .accessibilityLabel("Card \(flow.index + 1) of \(flow.cards.count)")
-
-                Button {
-                    turn(forward: true)
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .imageScale(.large).fontWeight(.semibold)
-                        .frame(width: 24, height: 24)
-                }
-                .buttonStyle(.glass).buttonBorderShape(.circle).controlSize(.large)
-                .disabled(!flow.canAdvance)
-                .accessibilityLabel("Next card")
+                chevron(forward: false)
+                cardDots
+                chevron(forward: true)
             }
         }
+    }
+
+    /// One round glass arrow: the deck's navigation and the face strip share it.
+    private func chevron(forward: Bool) -> some View {
+        Button {
+            turn(forward: forward)
+        } label: {
+            Image(systemName: forward ? "chevron.right" : "chevron.left")
+                .imageScale(.large).fontWeight(.semibold)
+                .frame(width: 24, height: 24)
+        }
+        .buttonStyle(.glass).buttonBorderShape(.circle).controlSize(.large)
+        .disabled(forward ? !flow.canAdvance : !flow.canGoBack)
+        .accessibilityLabel(forward ? "Next card" : "Previous card")
+    }
+
+    private var cardDots: some View {
+        HStack(spacing: 6) {
+            ForEach(Array(flow.cards.enumerated()), id: \.offset) { position, _ in
+                Circle()
+                    .fill(position == flow.index ? AnyShapeStyle(.tint) : AnyShapeStyle(.quaternary))
+                    .frame(width: 6, height: 6)
+            }
+        }
+        .accessibilityLabel("Card \(flow.index + 1) of \(flow.cards.count)")
     }
 
     /// One card turn, with its whoosh-tick — only when the deck actually moves, so a Return on the

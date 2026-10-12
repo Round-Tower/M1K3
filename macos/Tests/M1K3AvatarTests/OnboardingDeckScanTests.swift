@@ -23,6 +23,9 @@
 //  live-bar slot beneath it, one download verb, Done never waits; the semantic-memory offer's wiring. Confidence 0.6.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — K2 the glass-hosted kit card reads statuses only (no fraction, no
 //  `downloadItems`), K1 the transition hooks, K6 the voice bar yields, O1 the queue replaces the direct start. Confidence 0.6.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — TestFlight 505 ("onboarding is kinda awesome", two notes): the face card reveals
+//  the creature (a compact glass strip up top; the full card held in place but hidden, so nothing jumps) and the brain
+//  picker's cards are width-capped. Confidence 0.6 (text tripwires; the look is verify-by-launch).
 //
 
 import Foundation
@@ -176,8 +179,11 @@ struct OnboardingDeckScanTests {
         let deck = try Self.code("M1K3App/WakeSetupCarousel.swift")
         let nav = Self.slice(deck, from: "private var navigation", to: "@ViewBuilder private var progressFooter")
         #expect(nav.contains("GlassEffectContainer(spacing: 16)"))
-        #expect(nav.components(separatedBy: ".buttonBorderShape(.circle)").count - 1 == 2)
-        #expect(nav.components(separatedBy: ".controlSize(.large)").count - 1 == 2)
+        // One round glass chevron, used both ways (the deck and the face strip share it).
+        #expect(nav.contains("chevron(forward: false)") && nav.contains("chevron(forward: true)"))
+        let chevron = Self.slice(deck, from: "private func chevron(forward: Bool)", to: "private var cardDots")
+        #expect(chevron.contains(".buttonBorderShape(.circle)") && chevron.contains(".controlSize(.large)"))
+        #expect(chevron.contains(".buttonStyle(.glass)"))
         let footer = Self.slice(deck, from: "@ViewBuilder private var progressFooter", to: "private func nudgeAlertness")
         let buttons = Self.slice(footer, from: "case .invite where", to: "case .autoComplete")
         #expect(!buttons.contains(".frame(maxWidth: .infinity)"), "the Done label is full-width again")
@@ -355,5 +361,33 @@ struct OnboardingDeckScanTests {
     func rerunButtonStartsTrace() throws {
         let code = try Self.code("M1K3App/Settings/GeneralSettingsPane.swift")
         #expect(code.contains("OnboardingTrace.shared.begin()"))
+    }
+
+    @Test("TestFlight 505: the face card reveals the creature; a compact strip up top, the deck card held but hidden")
+    func faceCardRevealsTheCreature() throws {
+        let deck = try Self.code("M1K3App/WakeSetupCarousel.swift")
+        let body = Self.slice(deck, from: "var body: some View", to: "@ViewBuilder private var card")
+        // The full card keeps its place (Done and the arrows never jump) but steps aside on the face card.
+        #expect(body.contains(".opacity(revealsFace ? 0 : 1)"))
+        #expect(body.contains(".disabled(revealsFace)"))
+        #expect(body.contains("if revealsFace { faceStrip"))
+        // No face controls left behind the creature in the full card.
+        let cards = Self.slice(deck, from: "@ViewBuilder private var card", to: "private var aboutYouCard")
+        #expect(cards.contains("case .face: Color.clear"))
+        #expect(!deck.contains("I'm behind this card"))
+        // The strip is the deck's own surface, compact, material beside a live bar like the card, and nothing ticks in it.
+        let strip = Self.slice(deck, from: "private var faceStrip", to: "private static let kitRowHeight")
+        #expect(strip.contains(".onboardingCard(nearLiveProgress: fraction != nil, compact: true)"))
+        #expect(strip.contains("chevron(forward: false)") && strip.contains("chevron(forward: true)"))
+        #expect(!strip.contains("ProgressView") && !strip.contains("fraction:"))
+        let glass = try Self.code("M1K3App/OnboardingGlass.swift")
+        #expect(glass.contains("compact: Bool"))
+    }
+
+    @Test("TestFlight 505: the brain picker's cards are width-capped, not window-wide")
+    func brainPickerIsWidthCapped() throws {
+        let picker = try Self.code("M1K3App/BrainPickerView.swift")
+        #expect(picker.contains("brainPicker.frame(maxWidth: Self.pickerWidth)"))
+        #expect(picker.contains("static let pickerWidth: CGFloat = 520"))
     }
 }

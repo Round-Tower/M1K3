@@ -44,6 +44,8 @@
 //  Confidence 0.75.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — O1 the tap QUEUES semantic memory (`requestSemanticMemory(after:)`)
 //  behind the brain; O2/O4 the toggle's reserved slot and "Starts after X is ready". Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — TestFlight 505: "the list grows right to the edge of the screen". The picker
+//  column is capped at `pickerWidth` (520, the onboarding card's content width) and centred. Confidence 0.85.
 
 import M1K3Avatar
 import M1K3Inference
@@ -62,6 +64,9 @@ struct BrainPickerView: View {
     /// "Also get semantic memory", pre-ticked while it is offered (Kev, 2026-10-11).
     @State private var alsoSemanticMemory = SemanticMemoryOffer.preTicked
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// The cards' column: the onboarding card's content width, never the window's (a wide window stretched every card).
+    private static let pickerWidth: CGFloat = 520
 
     /// Computed, not stored: the badge must land on pocket when Apple
     /// Intelligence is blocked (PR #234 review 1).
@@ -85,7 +90,7 @@ struct BrainPickerView: View {
                     subtitle: isWakingBrain ? "Configuring M1K3's mainframe" : "Pick a brain"
                 )
 
-                if isWakingBrain { brainAwakening } else { brainPicker }
+                if isWakingBrain { brainAwakening } else { brainPicker.frame(maxWidth: Self.pickerWidth) }
                 Spacer()
             }
             .padding(32)
