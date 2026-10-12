@@ -23,6 +23,8 @@
 //  listed" — pocket is a local brain too. Confidence now 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-10-04 — the local-brain line says "Private by design", not "Everything runs
 //  on your device" (Kev retired the absolute: web search is on by default). The Home branch is unchanged. Confidence 0.9.
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — removed the "Recommended" capsule badge from `cardBody()` and both
+//  call sites. The tier's policy role stays in MobileBrainMenu. Confidence 0.9.
 //
 
 import M1K3Avatar
@@ -164,7 +166,6 @@ struct OnboardingScreen: View {
             cardBody(
                 glyph: tier.glyph,
                 title: tier.displayName,
-                recommended: menu.recommended == .tier(tier),
                 detail: tier.detail,
                 footnote: tier.approxDownloadMB.map { "~\($0) MB download on first use" } ?? "No download — instant"
             )
@@ -184,7 +185,6 @@ struct OnboardingScreen: View {
             cardBody(
                 glyph: "house.fill",
                 title: "Home",
-                recommended: menu.recommended == .brainAtHome,
                 detail: core.homeBrain.map { "\($0.name)’s brain, over your Wi‑Fi." }
                     ?? "Your Mac’s brain, over your own Wi‑Fi. Scan a code to pair.",
                 footnote: core.homeBrain == nil ? "Needs M1K3 on your Mac" : "Paired"
@@ -194,7 +194,7 @@ struct OnboardingScreen: View {
     }
 
     private func cardBody(
-        glyph: String, title: String, recommended: Bool, detail: String, footnote: String
+        glyph: String, title: String, detail: String, footnote: String
     ) -> some View {
         HStack(spacing: 14) {
             Image(systemName: glyph)
@@ -202,16 +202,7 @@ struct OnboardingScreen: View {
                 .foregroundStyle(.tint)
                 .frame(width: 44)
             VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(title).font(.headline).foregroundStyle(.white)
-                    if recommended {
-                        Text("Recommended")
-                            .font(.caption2.weight(.semibold))
-                            .padding(.horizontal, 7).padding(.vertical, 2)
-                            .background(.tint, in: .capsule)
-                            .foregroundStyle(.white)
-                    }
-                }
+                Text(title).font(.headline).foregroundStyle(.white)
                 Text(detail)
                     .font(.caption)
                     .foregroundStyle(.secondary)

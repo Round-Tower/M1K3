@@ -233,6 +233,24 @@ def test_the_developer_id_lane_must_carry_declared_age_range_too():
     assert len(missing) == 1 and "declared-age-range" in missing[0]
 
 
+def test_store_lane_without_pcc_is_flagged():
+    missing = m.store_lane_gaps("M1K3iOS.entitlements", {"com.apple.developer.declared-age-range": True})
+    assert len(missing) == 1
+    assert "private-cloud-compute" in missing[0]
+
+
+def test_store_lane_with_pcc_passes():
+    ents = {
+        "com.apple.developer.declared-age-range": True,
+        "com.apple.developer.private-cloud-compute": True,
+    }
+    assert m.store_lane_gaps("M1K3iOS.entitlements", ents) == []
+
+
+def test_developer_id_lane_is_not_a_store_lane():
+    assert "M1K3App/M1K3.entitlements" not in m.STORE_LANE_ENTITLEMENTS
+
+
 def test_archs_arm64_passes():
     project = _project(
         {"M1K3": _app("macOS", "app.m1k3", "a.plist", sources=[{"path": "M1K3App"}])},

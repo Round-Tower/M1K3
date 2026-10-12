@@ -12,6 +12,8 @@
 //  Review: Kev + claude-fable-5, 2026-07-02, Confidence 0.9 — extracted the 4×
 //  duplicated selection radio into SelectionRadio with a symbol-replace
 //  transition; card titles moved to the shared Font.pixelTitle.
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — removed the "Recommended" badge: `isRecommended` property,
+//  `recommendedBadge` view, and the HStack wrapping the title. The tier's policy role stays. Confidence 0.9.
 
 import M1K3Inference
 import SwiftUI
@@ -39,7 +41,6 @@ struct SelectionRadio: View {
 struct BrainCard: View {
     let tier: BrainTier
     let isSelected: Bool
-    let isRecommended: Bool
     /// True when this Mac is below the tier's memory floor — the card shows
     /// but can't be chosen (honest about why, no silent hiding).
     var isLocked = false
@@ -59,11 +60,8 @@ struct BrainCard: View {
                     .accessibilityHidden(true)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
-                        Text(tier.displayName).font(.pixelTitle)
-                        if isRecommended { recommendedBadge }
-                    }
-                    .padding(.bottom, 2)
+                    Text(tier.displayName).font(.pixelTitle)
+                        .padding(.bottom, 2)
                     Text(tier.tagline)
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.tint)
@@ -93,14 +91,6 @@ struct BrainCard: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(tier.displayName), \(tier.tagline). \(sizeLabel)")
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
-    }
-
-    private var recommendedBadge: some View {
-        Text("Recommended")
-            .font(.caption2.weight(.semibold))
-            .padding(.horizontal, 8)
-            .padding(.vertical, 2)
-            .glassEffect(.regular.tint(.accentColor.opacity(0.3)), in: .capsule)
     }
 
     private var sizeLabel: String {

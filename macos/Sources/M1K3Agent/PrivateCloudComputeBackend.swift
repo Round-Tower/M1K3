@@ -31,6 +31,8 @@
 //  unentitled, per ADR 0006's own context section). Prior: Unknown
 //  Review: Kev + claude-opus-4-6, 2026-09-16 — M1K3_FM27 env-var gate removed;
 //  now #if canImport(FoundationModels). Confidence now 0.85.
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — `live()` returns a backend on iOS/visionOS (no
+//  `processHasEntitlement()` — the system enforces it). Confidence 0.8.
 //
 
 import Foundation
@@ -162,6 +164,16 @@ public enum PrivateCloudBackends {
             #if os(macOS)
                 guard #available(macOS 27.0, *) else { return nil }
                 guard processHasEntitlement() else { return nil }
+                return PrivateCloudComputeBackend()
+            #elseif os(iOS) || os(visionOS)
+                guard #available(iOS 27.0, visionOS 27.0, *) else { return nil }
+                // No processHasEntitlement() on iOS: the provisioning profile
+                // enforces the entitlement at install time (App ID capability).
+                // A missing capability fails the Xcode Cloud archive, not the
+                // runtime. If the entitlement is somehow absent at runtime,
+                // `model.availability` reads `.unavailable` and the rung hides
+                // PCC — check_store_targets.py pins the entitlement on the
+                // store lanes so the gate never opens silently.
                 return PrivateCloudComputeBackend()
             #else
                 return nil
