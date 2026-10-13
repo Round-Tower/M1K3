@@ -19,10 +19,11 @@ and never covered the Swift Mac MVP — the active surface. It was removed.
 
 ## Landing tooling
 
-`macos/tools/ci/pr_watch.py <PR>` watches a PR by HEAD SHA: required CI jobs
-green (on a PR the App-shell and mobile xcodebuild jobs run only when their
-paths change — a skipped job reads green; every push to master/develop builds all three)
-and enough review passes that name that head, inferred from the diff: 2 for a
+`macos/tools/ci/pr_watch.py <PR>` watches a PR by HEAD SHA: every check master's
+ruleset requires green, read live (ci.yml's six jobs, TruffleHog, CodeQL; #558). On a PR
+the App-shell and mobile xcodebuild jobs run only when their paths change, and a skipped
+job reads green; every push to master/develop builds all three. The watch also needs
+enough review passes that name that head, inferred from the diff: 2 for a
 risk surface (`RISK_SURFACE_PATTERNS`, plus GRDB migrations read off the tree
 and patch), else 1. `--passes N` overrides; going below the inference needs
 `--why`. A docs-only head gets no auto pass, so one pass there means a summon. `land.sh <PR> [--passes N]`
@@ -39,5 +40,7 @@ branch. Rules are tests in `test_pr_watch.py`.
 - **`attic.yml` left with the attic** (2026-08-13): the archived Python surface
   and its curated smoke subset + Bandit gate were cleared from the working
   tree. Git history before `7545b4a4` keeps the whole thing, workflow included.
-- **Dropped CodeQL** (needed repo "Code Security" enabled + noisy here) and
-  **npm-audit** (no real Node app — the stub `package.json` left with the attic).
+- **Dropped the CodeQL workflow** (needed repo "Code Security" enabled + noisy here) and
+  **npm-audit** (no real Node app — the stub `package.json` left with the attic). CodeQL
+  came back as GitHub's default code-scanning setup, with no workflow file here, and is a
+  required check on master's ruleset; the landing gate reads it off the head (#558).

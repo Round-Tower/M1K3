@@ -3,7 +3,22 @@
 Each fixture is a shape the claude-review bots have actually posted on this
 repo (read off PR #293, 2026-09-12) or a CI job list read off the Actions API.
 """
+
 import pr_watch as m
+import pytest
+
+# The real gh readers, kept before the autouse stub below replaces them.
+_REAL_RULESET_REQUIRED = m.ruleset_required
+_REAL_HEAD_CHECKS = m.head_check_conclusions
+
+
+@pytest.fixture(autouse=True)
+def _no_live_ruleset(monkeypatch):
+    """main() reads the base branch's ruleset and the head's check runs through gh.
+    No test reaches the network: the stub ruleset is ci.yml's six jobs, so nothing
+    is read off the head unless a test says so."""
+    monkeypatch.setattr(m, "ruleset_required", lambda repo, pr: m.ALWAYS_REQUIRED)
+    monkeypatch.setattr(m, "head_check_conclusions", lambda repo, head: {})
 
 
 def bot(body, created="2026-09-12T08:00:00Z", updated=None):
@@ -13,8 +28,10 @@ def bot(body, created="2026-09-12T08:00:00Z", updated=None):
     return c
 
 
+# A package-only head: ci.yml skips the mobile job on a PR whose diff misses its
+# paths, and a skipped job reads green.
 GREEN_JOBS = {"Detect compilable changes": "success", "Swift · Mac MVP (swift test)": "success",
-              "Swift · App shell (xcodebuild)": "success",
+              "Swift · App shell (xcodebuild)": "success", "Swift · iOS + visionOS shells (xcodebuild)": "skipped",
               "Project guards (test scheme · store targets)": "success", "Docs match the code (module map)": "success"}
 # Kev's PR, from a branch of this repo: the only origin that lands hands-off.
 OURS = {"author": "kpmmmurphy", "head_repo": "Round-Tower/M1K3", "base_repo": "Round-Tower/M1K3"}
@@ -185,7 +202,7 @@ def test_an_unnamed_summon_shaped_auto_comment_is_one_pass_not_two():
     auto = bot("**Claude finished @kev's task in 20s** ---\n### Review of #457\n\nfine", created="2026-09-30T11:55:00Z")
     jobs = {"Detect compilable changes": "success", "Swift · Mac MVP (swift test)": "success",
             "Project guards (test scheme · store targets)": "success", "Docs match the code (module map)": "success"}
-    v = m.verdict(head, ["macos/tools/ci/pr_watch.py"], jobs, [auto], auto_ok=True, passes_needed=2,
+    v = m.verdict(head, jobs, [auto], auto_ok=True, passes_needed=2,
                   auto_comment=auto, head_seen_at=seen)
     assert v.passes == 1
 
@@ -245,12 +262,13 @@ def test_an_auto_review_that_names_the_head_counts_once_not_twice():
     # head `x`" — summon-shaped and naming the head. One review, one pass.
     head = "cd1aa308" + "0" * 32
     review = bot("**Claude finished @kev's task in 1m 47s** ---\n### Reviewed head `cd1aa308` (both commits)\n- [x] a", created="2026-09-24T18:54:10Z")
-    jobs = {m.JOB_SWIFT_TEST: "success", m.JOB_APP: "success", m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
-    v = m.verdict(head, ["macos/Sources/A.swift"], jobs, [review], auto_ok=True, passes_needed=2, auto_comment=review)
+    jobs = {m.JOB_SWIFT_TEST: "success", m.JOB_APP: "success", m.JOB_MOBILE: "skipped",
+            m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
+    v = m.verdict(head, jobs, [review], auto_ok=True, passes_needed=2, auto_comment=review)
     assert v.passes == 1 and not v.ready
     # An auto comment that names no head still adds its one pass.
     plain = bot("## Review: perf pass\nFocused…", created="2026-09-24T18:54:10Z")
-    v = m.verdict(head, ["macos/Sources/A.swift"], jobs, [plain], auto_ok=True, passes_needed=2, auto_comment=plain)
+    v = m.verdict(head, jobs, [plain], auto_ok=True, passes_needed=2, auto_comment=plain)
     assert v.passes == 1
 
 
@@ -289,8 +307,9 @@ def test_a_concurrent_summon_in_the_window_does_not_eat_the_auto_runs_gh_pr_comm
     summon["body"] += f"\n\nVERDICT: APPROVE @ {head}"
     review = bot(f"## Review: CI tooling pass\nFocused on pr_watch.py…\n\nVERDICT: APPROVE @ {head}", created="2026-09-24T21:09:55Z")
     assert m.auto_pass_comment(head, runs, [summon, review]) is review
-    jobs = {m.JOB_SWIFT_TEST: "skipped", m.JOB_APP: "skipped", m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
-    v = m.verdict(head, ["macos/tools/ci/pr_watch.py"], jobs, [summon, review], auto_ok=True, passes_needed=2, auto_comment=review,
+    jobs = {m.JOB_SWIFT_TEST: "skipped", m.JOB_APP: "skipped", m.JOB_MOBILE: "skipped",
+            m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
+    v = m.verdict(head, jobs, [summon, review], auto_ok=True, passes_needed=2, auto_comment=review,
                   **OURS)
     assert v.passes == 2 and v.ready
 
@@ -317,47 +336,98 @@ def test_a_review_citing_another_runs_url_in_prose_is_still_this_runs_comment():
 
 # --- which CI jobs gate the merge ------------------------------------------
 
-def test_package_only_change_does_not_wait_for_the_mobile_job():
-    req = m.required_jobs(["macos/Sources/M1K3Voice/ObservedSignal.swift", "macos/Tests/M1K3VoiceTests/X.swift"])
-    assert m.JOB_SWIFT_TEST in req and m.JOB_APP in req and m.JOB_GUARDS in req and m.JOB_DOCS in req
-    assert m.JOB_MOBILE not in req
+# #558: master's ruleset requires eight checks: ci.yml's six (the iOS + visionOS
+# shells among them), TruffleHog and CodeQL. GitHub refuses a merge (405) while
+# any of them runs, so the gate waits on the same set, read live.
+RULES = [  # GET repos/Round-Tower/M1K3/rules/branches/master, 2026-10-13, trimmed
+    {"type": "deletion", "ruleset_id": 7},
+    {"type": "required_status_checks", "ruleset_id": 7,
+     "parameters": {"strict_required_status_checks_policy": False,
+                    "required_status_checks": [{"context": "Detect compilable changes"},
+                                               {"context": "Swift · iOS + visionOS shells (xcodebuild)"},
+                                               {"context": "Secrets · TruffleHog"},
+                                               {"context": "CodeQL", "integration_id": 57789}]}},
+    {"type": "pull_request", "ruleset_id": 7, "parameters": {}},
+]
 
 
-def test_mobile_shell_change_makes_the_mobile_job_required():
-    for path in ("macos/M1K3iOSApp/ChatScreen.swift", "macos/M1K3visionOS/Info.generated.plist", "macos/project.yml", "macos/Package.swift", "macos/Package.resolved",
-                 "macos/M1K3App/AvatarView.swift", "macos/M1K3App/Phosphor.metal", "macos/M1K3App/Resources/Fonts/Silkscreen-Bold.ttf",
-                 "macos/M1K3.icon/icon.json"):
-        assert m.JOB_MOBILE in m.required_jobs([path]), path
+def test_the_mobile_job_is_always_required_and_a_skipped_one_reads_green():
+    # The ruleset requires it whatever the diff. ci.yml skips it on a PR that
+    # misses the mobile paths, and skipped reads green, so a package-only head
+    # still never waits for the mobile build.
+    assert m.JOB_MOBILE in m.required_jobs()
+    assert m.ci_verdict(m.required_jobs(), {**GREEN_JOBS, m.JOB_MOBILE: "skipped"}).state == "green"
+    running = m.ci_verdict(m.required_jobs(), {**GREEN_JOBS, m.JOB_MOBILE: None})
+    assert running.state == "pending" and m.JOB_MOBILE in running.detail
 
 
-def test_mac_only_shell_files_and_test_targets_leave_the_mobile_job_advisory():
-    # SelfTest.swift is Mac-shell only; UITests/ are test targets no CI job compiles.
-    for path in ("macos/M1K3App/SelfTest.swift", "macos/M1K3App/Info.generated.plist", "macos/UITests/ScreengrabiOS/A.swift"):
-        assert m.JOB_MOBILE not in m.required_jobs([path]), path
+def test_553s_shape_waits_for_the_running_mobile_job():
+    # #553: a Mac-shell file outside the old prefix list started the mobile job;
+    # the gate read READY and GitHub refused with 405 "is in progress".
+    jobs = {**GREEN_JOBS, m.JOB_MOBILE: None}
+    v = m.verdict(V_HEAD, jobs, [_summon(V_APPROVE)], auto_ok=False,
+                  passes_needed=1, **OURS)
+    assert not v.ready and v.ci.state == "pending"
 
 
-def test_mobile_prefixes_cover_every_mac_shell_file_the_mobile_targets_compile():
-    # project.yml is the source of truth: every `path: M1K3App/<file>` entry is a
-    # Mac-shell file some mobile target compiles (the Mac target takes the whole
-    # directory as `path: M1K3App`). A new shared file must land here too, or a
-    # break in it would read as advisory.
-    import pathlib
-    import re
-    spec = (pathlib.Path(__file__).resolve().parents[2] / "project.yml").read_text()
-    shared = sorted(set(re.findall(r"^\s*-\s*path:\s*(M1K3App/\S+)", spec, re.MULTILINE)))
-    assert shared, "expected shared M1K3App/ files in project.yml"
-    for rel in shared:
-        assert m.JOB_MOBILE in m.required_jobs([f"macos/{rel}"]), f"macos/{rel} is compiled by a mobile target but not in MOBILE_PATH_PREFIXES"
+def test_required_contexts_reads_every_status_check_rule():
+    assert m.required_contexts(RULES) == {"Detect compilable changes", "Swift · iOS + visionOS shells (xcodebuild)",
+                                          "Secrets · TruffleHog", "CodeQL"}
+    # two rulesets on one branch both count; a rule without parameters adds nothing
+    extra = [{"type": "required_status_checks", "parameters": {"required_status_checks": [{"context": "Other"}]}},
+             {"type": "required_status_checks"}]
+    assert "Other" in m.required_contexts(RULES + extra)
+    assert m.required_contexts([]) == frozenset()
 
 
-def test_ci_workflow_change_requires_everything():
-    assert m.JOB_MOBILE in m.required_jobs([".github/workflows/ci.yml"])
+def test_ruleset_checks_join_the_required_set():
+    req = m.required_jobs(m.required_contexts(RULES))
+    assert {"Secrets · TruffleHog", "CodeQL", m.JOB_SWIFT_TEST, m.JOB_MOBILE} <= req
+
+
+def test_a_running_ruleset_check_outside_ci_yml_holds_the_gate():
+    # ci.yml's jobs alone read green here; GitHub would still refuse while TruffleHog runs.
+    ruleset = m.required_contexts(RULES)
+    jobs = {**GREEN_JOBS, "Secrets · TruffleHog": None, "CodeQL": "success"}
+    v = m.ci_verdict(m.required_jobs(ruleset), jobs)
+    assert v.state == "pending" and "Secrets · TruffleHog" in v.detail
+    jobs["Secrets · TruffleHog"] = "failure"
+    assert m.ci_verdict(m.required_jobs(ruleset), jobs).state == "red"
+
+
+def test_the_newest_check_run_per_name_wins():
+    runs = [{"id": 11, "name": "CodeQL", "conclusion": "failure"},
+            {"id": 13, "name": "CodeQL", "conclusion": "success"},  # a re-run supersedes
+            {"id": 12, "name": "Secrets · TruffleHog", "conclusion": None},  # still running
+            {"id": 14, "conclusion": "success"}]  # nameless: ignored
+    assert m.newest_check_conclusions(runs) == {"CodeQL": "success", "Secrets · TruffleHog": None}
+
+
+def test_a_ci_yml_job_its_newest_run_has_not_registered_reads_pending_not_stale():
+    # Pre-push review of #558's fix: a reopened PR re-runs ci.yml on the same head,
+    # whose check runs still carry the older run's results. Only ci.yml's newest run
+    # speaks for its own jobs, so an unregistered one waits.
+    jobs = {k: v for k, v in GREEN_JOBS.items() if k != m.JOB_SWIFT_TEST}
+    ruleset = m.ALWAYS_REQUIRED | {"CodeQL"}
+    merged = m.merge_ruleset_checks(jobs, {m.JOB_SWIFT_TEST: "cancelled", "CodeQL": "success"}, ruleset)
+    assert m.JOB_SWIFT_TEST not in merged and merged["CodeQL"] == "success"
+    assert m.ci_verdict(m.required_jobs(ruleset), merged).state == "pending"
+
+
+def test_head_checks_fill_only_required_names_ci_yml_did_not_report():
+    # ci.yml's newest run stays the source for its own jobs, and a check nobody
+    # requires (the review job, Slack) never enters the verdict.
+    jobs = {m.JOB_SWIFT_TEST: "success"}
+    head = {m.JOB_SWIFT_TEST: "failure", "CodeQL": "success", "Claude Code Review": "failure"}
+    assert m.merge_ruleset_checks(jobs, head, frozenset({m.JOB_SWIFT_TEST, "CodeQL"})) == {
+        m.JOB_SWIFT_TEST: "success", "CodeQL": "success"}
 
 
 def test_a_skipped_app_shell_job_reads_green_on_a_package_only_head():
     # ci.yml path-gates the App-shell job on PRs (2026-09-24); the watch must
     # not hold a package-only PR hostage to a job that never ran.
-    jobs = {m.JOB_GATE: "success", m.JOB_SWIFT_TEST: "success", m.JOB_APP: "skipped", m.JOB_GUARDS: "success", m.JOB_DOCS: "success"}
+    jobs = {m.JOB_GATE: "success", m.JOB_SWIFT_TEST: "success", m.JOB_APP: "skipped", m.JOB_MOBILE: "skipped",
+            m.JOB_GUARDS: "success", m.JOB_DOCS: "success"}
     assert m.ci_verdict(m.ALWAYS_REQUIRED, jobs).state == "green"
 
 
@@ -377,9 +447,9 @@ def test_ci_verdict_is_red_on_any_required_failure_and_names_it():
 
 def test_advisory_failure_is_reported_but_does_not_block():
     req = {m.JOB_SWIFT_TEST}
-    v = m.ci_verdict(req, {m.JOB_SWIFT_TEST: "success", m.JOB_MOBILE: "failure"})
+    v = m.ci_verdict(req, {m.JOB_SWIFT_TEST: "success", "Notify Slack": "failure"})
     assert v.state == "green"
-    assert m.JOB_MOBILE in v.advisory
+    assert "Notify Slack" in v.advisory
 
 
 # --- the landing verdict ---------------------------------------------------
@@ -389,18 +459,20 @@ def test_ready_needs_green_required_ci_and_enough_passes_on_this_head():
     comments = [bot("**Claude finished @kev's task in 2m** ---\n### Final pass — review of head `08eb0c00`\n- [x] a\n\n"
                     f"VERDICT: APPROVE @ {head}", created="2026-09-12T08:00:00Z")]
     auto = bot(f"## Review: auto pass\nFine.\n\nVERDICT: APPROVE @ {head}", created="2026-09-12T08:05:00Z")
-    jobs = {m.JOB_SWIFT_TEST: "success", m.JOB_APP: "success", m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
-    v = m.verdict(head, ["macos/Sources/A.swift"], jobs, comments + [auto], auto_ok=True, passes_needed=2, auto_comment=auto,
+    jobs = {m.JOB_SWIFT_TEST: "success", m.JOB_APP: "success", m.JOB_MOBILE: "skipped",
+            m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
+    v = m.verdict(head, jobs, comments + [auto], auto_ok=True, passes_needed=2, auto_comment=auto,
                   **OURS)
     assert v.ready and v.passes == 2
-    v = m.verdict(head, ["macos/Sources/A.swift"], jobs, comments, auto_ok=False, passes_needed=2)
+    v = m.verdict(head, jobs, comments, auto_ok=False, passes_needed=2)
     assert not v.ready and v.passes == 1 and "1/2" in v.summary
 
 
 def test_trivial_head_needs_no_passes():
     head = "aaaaaaaa" + "0" * 32
-    jobs = {m.JOB_SWIFT_TEST: "success", m.JOB_APP: "success", m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
-    assert m.verdict(head, ["macos/Sources/A.swift"], jobs, [], auto_ok=False, passes_needed=0, **OURS).ready
+    jobs = {m.JOB_SWIFT_TEST: "success", m.JOB_APP: "success", m.JOB_MOBILE: "skipped",
+            m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
+    assert m.verdict(head, jobs, [], auto_ok=False, passes_needed=0, **OURS).ready
 
 
 def test_one_pass_is_the_default_and_two_is_the_risk_surface_opt_in():
@@ -556,7 +628,7 @@ def test_red_ci_is_never_ready_however_many_passes():
     head = "bbbbbbbb" + "0" * 32
     comments = [bot("**Claude finished @kev's task** ---\n### Final pass — review of head `bbbbbbbb`\n- [x] a")] * 3
     jobs = {m.JOB_SWIFT_TEST: "failure", m.JOB_APP: "success", m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
-    v = m.verdict(head, ["macos/Sources/A.swift"], jobs, comments, auto_ok=True, passes_needed=2)
+    v = m.verdict(head, jobs, comments, auto_ok=True, passes_needed=2)
     assert not v.ready and v.ci.state == "red"
 
 
@@ -577,8 +649,8 @@ def _summon(verdict_line, created="2026-10-10T10:00:00Z", updated=None, title="#
     return bot(body + "\n · branch `fix/x`", created=created, updated=updated)
 
 
-def _gate(comments, passes_needed=1, auto_comment=None, files=("macos/Sources/A.swift",), head=V_HEAD, origin=None):
-    return m.verdict(head, list(files), GREEN_JOBS, comments, auto_ok=auto_comment is not None,
+def _gate(comments, passes_needed=1, auto_comment=None, head=V_HEAD, origin=None):
+    return m.verdict(head, GREEN_JOBS, comments, auto_ok=auto_comment is not None,
                      passes_needed=passes_needed, auto_comment=auto_comment, **(origin or OURS))
 
 
@@ -727,15 +799,14 @@ def test_every_owed_pass_must_approve_whichever_finished_last():
     # other would land or not by which run finished first.
     auto_cr = bot("## Review\nBLOCKING: the gate fails open.\n\nVERDICT: CHANGES_REQUESTED @ c0ffee12", created="2026-10-10T10:03:00Z")
     summon_ok = _summon(V_APPROVE, created="2026-10-10T10:00:05Z", updated="2026-10-10T10:04:00Z")
-    risky = ("macos/tools/ci/pr_watch.py",)
-    v = _gate([summon_ok, auto_cr], passes_needed=2, auto_comment=auto_cr, files=risky)
+    v = _gate([summon_ok, auto_cr], passes_needed=2, auto_comment=auto_cr)
     assert v.passes == 2 and not v.ready
     assert "verdict: CHANGES_REQUESTED on c0ffee12" in v.reasons
     auto_ok = bot(f"## Review\nFine.\n\n{V_APPROVE}", created="2026-10-10T10:03:00Z")
-    assert _gate([summon_ok, auto_ok], passes_needed=2, auto_comment=auto_ok, files=risky).ready
+    assert _gate([summon_ok, auto_ok], passes_needed=2, auto_comment=auto_ok).ready
     # the mirror: the blocker finishes last
     summon_cr = _summon("VERDICT: CHANGES_REQUESTED @ c0ffee12", created="2026-10-10T10:00:05Z", updated="2026-10-10T10:04:00Z")
-    assert not _gate([summon_cr, auto_ok], passes_needed=2, auto_comment=auto_ok, files=risky).ready
+    assert not _gate([summon_cr, auto_ok], passes_needed=2, auto_comment=auto_ok).ready
 
 
 def test_a_concurrent_blocker_stands_when_one_pass_is_owed_too():
@@ -799,7 +870,7 @@ def test_a_trivial_head_needs_no_verdict_until_a_pass_on_it_says_otherwise():
 
 def test_an_auto_pass_whose_comment_is_unknown_cannot_approve():
     # the two-argument auto_ok form: a green run with no comment in hand reads no verdict
-    v = m.verdict(V_HEAD, ["macos/Sources/A.swift"], GREEN_JOBS, [], auto_ok=True, passes_needed=1)
+    v = m.verdict(V_HEAD, GREEN_JOBS, [], auto_ok=True, passes_needed=1)
     assert v.passes == 1 and not v.ready
     assert "verdict: missing on c0ffee12" in v.reasons
 
@@ -876,7 +947,7 @@ def test_an_unknown_origin_fails_closed():
     # a deleted fork has no head repository; a caller that passes nothing gets nothing
     assert not _gate([_summon(APPROVED)], origin={**OURS, "head_repo": None}).ready
     assert not _gate([_summon(APPROVED)], origin={**OURS, "author": None}).ready
-    v = m.verdict(V_HEAD, ["macos/Sources/A.swift"], GREEN_JOBS, [_summon(APPROVED)], auto_ok=False, passes_needed=1)
+    v = m.verdict(V_HEAD, GREEN_JOBS, [_summon(APPROVED)], auto_ok=False, passes_needed=1)
     assert not v.ready and "author: unknown" in v.reasons and "head repo: unknown" in v.reasons
 
 
@@ -916,3 +987,128 @@ def test_main_will_not_land_a_fork_even_with_green_ci_and_an_approving_pass(monk
     assert "fork: head is outside-dev/M1K3" in capsys.readouterr().out
     monkeypatch.setattr(m, "snapshot", lambda repo, pr: snap("kpmmmurphy", "Round-Tower/M1K3"))
     assert m.main(["9", "--once", "--repo", "Round-Tower/M1K3"]) == 0
+
+
+# --- the ruleset and the head's check runs, wired (#558) ---------------------
+
+def _snap_ours(jobs=None):
+    return ("OPEN", V_HEAD, ["macos/Sources/A/B.swift"], dict(jobs or GREEN_JOBS), [_summon(APPROVED)], None, 0, None,
+            {}, "kpmmmurphy", "Round-Tower/M1K3")
+
+
+def test_main_waits_on_a_ruleset_check_until_it_is_green(monkeypatch, capsys):
+    monkeypatch.setattr(m, "migration_files", lambda: {"macos/Sources/X/XStore.swift"})
+    monkeypatch.setattr(m, "snapshot", lambda repo, pr: _snap_ours())
+    monkeypatch.setattr(m, "ruleset_required", lambda repo, pr: m.ALWAYS_REQUIRED | {"Secrets · TruffleHog"})
+    monkeypatch.setattr(m, "head_check_conclusions", lambda repo, head: {"Secrets · TruffleHog": None})
+    assert m.main(["9", "--once", "--repo", "Round-Tower/M1K3"]) == 2
+    assert "Secrets · TruffleHog" in capsys.readouterr().out
+    monkeypatch.setattr(m, "head_check_conclusions", lambda repo, head: {"Secrets · TruffleHog": "success"})
+    assert m.main(["9", "--once", "--repo", "Round-Tower/M1K3"]) == 0
+
+
+def test_main_retries_an_unreadable_ruleset_then_reads_it_once(monkeypatch, capsys):
+    # Three polls: the first read fails, the second reads, the third reads nothing.
+    answers = iter([None, m.ALWAYS_REQUIRED])  # a third read would raise StopIteration
+    reads = []
+
+    def read(repo, pr):
+        reads.append(pr)
+        return next(answers)
+
+    pending = {**GREEN_JOBS, m.JOB_SWIFT_TEST: None}
+    polls = iter([_snap_ours(pending), _snap_ours(pending), _snap_ours()])
+    monkeypatch.setattr(m, "migration_files", lambda: {"macos/Sources/X/XStore.swift"})
+    monkeypatch.setattr(m, "snapshot", lambda repo, pr: next(polls))
+    monkeypatch.setattr(m, "ruleset_required", read)
+    monkeypatch.setattr(m.time, "sleep", lambda seconds: None)
+    assert m.main(["9", "--repo", "Round-Tower/M1K3", "--interval", "1"]) == 0
+    assert reads == [9, 9]
+    assert capsys.readouterr().out.count("could not read the base branch's ruleset") == 1
+
+
+def test_a_garbled_gh_body_is_a_gh_failure_not_ci_red(monkeypatch, capsys):
+    def garbled(repo, pr):
+        raise m.json.JSONDecodeError("Expecting value", "<html>", 0)
+
+    monkeypatch.setattr(m, "migration_files", lambda: {"macos/Sources/X/XStore.swift"})
+    monkeypatch.setattr(m, "snapshot", garbled)
+    assert m.main(["9", "--once", "--repo", "Round-Tower/M1K3"]) == 4
+    assert "gh failed" in capsys.readouterr().out
+
+
+def test_the_ruleset_note_names_what_drifted():
+    assert m.ruleset_note(m.ALWAYS_REQUIRED | {"CodeQL"}) is None
+    assert "could not read" in m.ruleset_note(None)
+    assert "requires no checks" in m.ruleset_note(frozenset())
+    assert m.JOB_MOBILE in m.ruleset_note(m.ALWAYS_REQUIRED - {m.JOB_MOBILE})
+
+
+def test_an_unreadable_ruleset_gates_on_ci_yml_and_says_so(monkeypatch, capsys):
+    # GitHub still enforces the ruleset at merge (405, nothing merged), so the
+    # watch falls back to ci.yml's jobs rather than refusing to watch at all.
+    monkeypatch.setattr(m, "migration_files", lambda: {"macos/Sources/X/XStore.swift"})
+    monkeypatch.setattr(m, "snapshot", lambda repo, pr: _snap_ours())
+    monkeypatch.setattr(m, "ruleset_required", lambda repo, pr: None)
+    assert m.main(["9", "--once", "--repo", "Round-Tower/M1K3"]) == 0
+    assert "ruleset" in capsys.readouterr().out
+
+
+def test_a_gh_failure_reading_the_head_checks_is_a_gh_failure(monkeypatch, capsys):
+    def boom(repo, head):
+        raise m.subprocess.CalledProcessError(1, ["gh"], stderr="HTTP 502")
+
+    monkeypatch.setattr(m, "migration_files", lambda: {"macos/Sources/X/XStore.swift"})
+    monkeypatch.setattr(m, "snapshot", lambda repo, pr: _snap_ours())
+    monkeypatch.setattr(m, "ruleset_required", lambda repo, pr: m.ALWAYS_REQUIRED | {"CodeQL"})
+    monkeypatch.setattr(m, "head_check_conclusions", boom)
+    assert m.main(["9", "--once", "--repo", "Round-Tower/M1K3"]) == 4  # never "CI red"
+
+
+def test_ruleset_required_reads_the_base_branchs_rules(monkeypatch):
+    asked = []
+
+    def fake_gh_json(*args):
+        asked.append(args)
+        if args[:2] == ("pr", "view"):
+            return {"baseRefName": "release/1.1"}
+        return [RULES]  # --paginate --slurp: one page
+
+    monkeypatch.setattr(m, "_gh_json", fake_gh_json)
+    assert _REAL_RULESET_REQUIRED("Round-Tower/M1K3", 9) == m.required_contexts(RULES)
+    rules_call = next(a for a in asked if a[-1] == "repos/Round-Tower/M1K3/rules/branches/release%2F1.1")
+    assert "--paginate" in rules_call and "--slurp" in rules_call
+
+
+def test_an_unexpected_rules_shape_is_unreadable_not_an_empty_ruleset(monkeypatch):
+    # Without --slurp the API's single page is a flat list of rules; read as pages,
+    # every rule would drop and the gate would quietly lose TruffleHog and CodeQL.
+    def flat(*args):
+        return {"baseRefName": "master"} if args[:2] == ("pr", "view") else RULES
+
+    monkeypatch.setattr(m, "_gh_json", flat)
+    assert _REAL_RULESET_REQUIRED("o/r", 9) is None
+
+
+def test_ruleset_required_is_none_when_gh_fails(monkeypatch):
+    def boom(*args):
+        raise m.subprocess.CalledProcessError(1, ["gh"], stderr="HTTP 403")
+
+    monkeypatch.setattr(m, "_gh_json", boom)
+    assert _REAL_RULESET_REQUIRED("o/r", 9) is None
+
+
+def test_head_check_conclusions_reads_every_page(monkeypatch):
+    def fake_gh_json(*args):
+        assert args[-1] == f"repos/o/r/commits/{V_HEAD}/check-runs?per_page=100"
+        return [{"total_count": 2, "check_runs": [{"id": 1, "name": "CodeQL", "conclusion": "success"}]},
+                {"total_count": 2, "check_runs": [{"id": 2, "name": "Secrets · TruffleHog", "conclusion": None}]}]
+
+    monkeypatch.setattr(m, "_gh_json", fake_gh_json)
+    assert _REAL_HEAD_CHECKS("o/r", V_HEAD) == {"CodeQL": "success", "Secrets · TruffleHog": None}
+
+
+def test_a_neutral_required_check_reads_green_as_github_reads_it():
+    # A required check passes on success, skipped or neutral (GitHub's rule). Code
+    # scanning can conclude neutral, and the gate must not wait on it forever.
+    assert m.ci_verdict(frozenset({"CodeQL"}), {"CodeQL": "neutral"}).state == "green"
