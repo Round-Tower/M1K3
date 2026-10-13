@@ -313,8 +313,9 @@
     border-top: 1px solid var(--line);
     padding: 36px 40px; display: flex; justify-content: space-between; align-items: center;
     font-family: var(--mono); font-size: 11px; color: var(--ink-faint); letter-spacing: 0.1em;
-    max-width: 1200px; margin: 0 auto;
+    max-width: 1200px; margin: 0 auto; gap: 18px; flex-wrap: wrap;
   }
+  footer .guides { flex-basis: 100%; order: -1; }
   footer a { color: var(--ink-dim); text-decoration: none; }
   footer a:hover { color: var(--ink-bright); }
   /* privacy-respecting share: native Web Share API, copy-link fallback. No third parties. */
@@ -661,6 +662,7 @@ the action list?<br />
 <footer>
   <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE LTD</a> · MADE IN IRELAND · FOX: <a href="https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox" rel="license">PIXELMANNEN / TOMKRANIS, CC-BY 4.0</a> · CREATURES: <a href="https://quaternius.com" rel="license">QUATERNIUS, CC0</a></span>
   <span><a href="/agents">FOR AGENTS</a> · <a href="/teams">FOR TEAMS</a> · <a href="/vr">VR</a> · <button class="share-link" id="shareBtn" type="button" aria-label="Share M1K3">SHARE ↗</button> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
+  <span class="guides">GUIDES: <a href="/local-llm-mac-guide">LOCAL LLMS ON A MAC</a> · <a href="/vs-ollama">M1K3 VS OLLAMA</a> · <a href="/private-chatgpt-alternative-mac">PRIVATE CHATGPT ALTERNATIVE</a> · <a href="/mcp-knowledge-server">A LOCAL MEMORY FOR CLAUDE</a> · <a href="/golden-gate-on-device-ai">ON-DEVICE AI IN MACOS 27</a></span>
 </footer>
 
 <!-- ================= SCRIPTS ================= -->
@@ -1118,6 +1120,8 @@ tick();
      and repo say (ProductivityApplication; no softwareVersion to drift; the repo LICENSE; downloadUrl the clean
      store URL; publisher Round Tower, legalName Round Tower Software Ltd; operatingSystem "macOS 26 or later",
      with softwareRequirements). dateModified bumped to 2026-10-13 for it. #572: the five guides are linked from
-     the page (the MCP card and a line under the FAQ, styled like the answers). Confidence 0.85. -->
+     the page (the MCP card and a line under the FAQ, styled like the answers). Confidence 0.85.
+     Review: Kev + claude-opus-5-5, 2026-10-13 — #572: the footer carries a GUIDES row linking all five guides
+     (each guide marks itself aria-current); guides also gain a BreadcrumbList. Confidence 0.9. -->
 </body>
 </html>
