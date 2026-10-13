@@ -138,7 +138,9 @@ jobs:
         # --xunit-output keeps per-test wall times on every run (issue #296: the
         # parallel suite stalls the runner and short watchdogs fire; the stall is
         # visible as a block of trivial tests all reporting the same N s).
-        run: swift test --parallel --xunit-output test-results/xunit.xml
+        # --disable-xctest: the suite is all Swift Testing, so the XCTest pass found
+        # nothing and only cost its launch. xunit.xml still carries every test.
+        run: swift test --parallel --disable-xctest --xunit-output test-results/xunit.xml
 
       - name: Upload test timings
         if: always()
@@ -427,3 +429,6 @@ jobs:
 # mobile job (target: under 20 min, from 23–34).
 # Review: Kev + claude-opus-5-5, 2026-10-13 — the guards job fails on the old company name
 # (check_company_name.py, #574). Confidence 0.9.
+# Review: Kev + claude-opus-5-5, 2026-10-13 — swift test skips the empty XCTest pass (--disable-xctest;
+# no test imports XCTest). Measured locally: a filtered run 7.4 → 4.0 s, the full run 24 → 20 s.
+# Confidence 0.85.

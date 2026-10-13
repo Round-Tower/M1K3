@@ -15,8 +15,8 @@ the doc-drift CI job pins it to `Package.swift`), `ROADMAP.md` (what's next, kep
 ## Build & test
 
 ```bash
-swift test --parallel                        # what CI runs; swift-testing, not XCTest
-swift test --filter BrainCatalogueTests      # one suite ("Suite/test" for one test)
+swift test --parallel --disable-xctest       # what CI runs; all Swift Testing, so skip the empty XCTest pass
+tools/dev/tdd.sh M1K3VoiceTests [VoiceMood]  # inner loop: builds ONE test target, runs only its tests
 swift build -c release --product M1K3MCP     # the stdio MCP server binary
 xcodegen generate                            # project.yml is the source of truth; M1K3.xcodeproj is a gitignored artifact
 xcodebuild -scheme M1K3 -destination 'platform=macOS' -skipPackagePluginValidation build | xcbeautify
@@ -117,3 +117,6 @@ named is gone with WhisperKit 1.x. -->
 tag pair; the kernelTag re-index and the voice-check obligations named. -->
 <!-- Review: Kev + claude-opus-5-5, 2026-10-13, Confidence 0.85 — the Landing bullet: master's ruleset
 requires eight checks now, and the gate reads them live (#558); "no required status checks" was stale. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-10-13, Confidence 0.8 — Build & test: `--disable-xctest` (no test
+imports XCTest) and tools/dev/tdd.sh, the one-target inner loop; `swift test --filter` rebuilt every
+dependent test bundle and ran an empty XCTest pass. -->
