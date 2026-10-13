@@ -10,6 +10,8 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-13, Confidence 0.85 (pure; the scan is a
 //  string pin, cheap and blunt). Prior: Unknown (new file).
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — the onboarding brain step arms it too (Kev: "the
+//  on boarding Pick a brain screen also needs it"). Confidence 0.85.
 //
 
 import Foundation
@@ -72,6 +74,10 @@ struct PrivateCloudPhonePickTests {
         #expect(try source("M1K3App/ContentView.swift").contains("privateCloudArming.select(true)"))
         let settings = try source("M1K3iOSApp/SettingsScreen.swift")
         #expect(settings.contains("pickPrivateCloud(true)"), "the iOS brain list arms PCC")
+        #expect(
+            try source("M1K3iOSApp/OnboardingScreen.swift").contains("pickPrivateCloud(true)"),
+            "the iOS onboarding brain step offers PCC"
+        )
         #expect(!settings.contains("Toggle(\"Private Cloud Compute\""), "one control on the phone, not a switch too")
         #expect(try source("M1K3iOSApp/AppCore.swift").contains("privateCloudArming.select(on)"))
     }
