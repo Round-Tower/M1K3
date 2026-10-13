@@ -138,11 +138,11 @@ jobs:
         # --xunit-output keeps per-test wall times on every run (issue #296: the
         # parallel suite stalls the runner and short watchdogs fire; the stall is
         # visible as a block of trivial tests all reporting the same N s).
-        # --disable-xctest: the suite is all Swift Testing, so the XCTest pass found
-        # nothing and only cost its launch. xunit.xml still carries every test, and
-        # tools/ci/test_package_tests_are_swift_testing.py fails if a package test
-        # ever imports XCTest (it would otherwise be skipped here silently).
-        run: swift test --parallel --disable-xctest --xunit-output test-results/xunit.xml
+        # Not --disable-xctest here: on this runner's Xcode 26 toolchain,
+        # `--parallel --disable-xctest` builds and then exits 1 with no tests run
+        # (#596's first two runs, 2026-10-13). Locally (Swift 6.4) the flag works,
+        # and tdd.sh and the local full run use it.
+        run: swift test --parallel --xunit-output test-results/xunit.xml
 
       - name: Upload test timings
         if: always()
@@ -434,9 +434,9 @@ jobs:
 # mobile job (target: under 20 min, from 23–34).
 # Review: Kev + claude-opus-5-5, 2026-10-13 — the guards job fails on the old company name
 # (check_company_name.py, #574). Confidence 0.9.
-# Review: Kev + claude-opus-5-5, 2026-10-13 — swift test skips the empty XCTest pass (--disable-xctest;
-# no test imports XCTest). Measured locally: a filtered run 7.4 → 4.0 s, the full run 24 → 20 s.
-# Confidence 0.85.
+# Review: Kev + claude-opus-5-5, 2026-10-13 — swift test stays plain `--parallel`: --disable-xctest made
+# the runner's Xcode 26 swift test exit 1 after the build with no tests run (#596). The flag stays local.
+# Confidence 0.9.
 # Review: Kev + claude-opus-5-5, 2026-10-13 — project.yml turns compilation caching on for Debug;
 # the three xcodebuild jobs pass COMPILATION_CACHE_ENABLE_CACHING=NO, since a fresh runner's empty
 # cache only adds the first-build overhead (+8% measured). Persisting the cache here is a separate

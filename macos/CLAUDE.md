@@ -15,7 +15,8 @@ the doc-drift CI job pins it to `Package.swift`), `ROADMAP.md` (what's next, kep
 ## Build & test
 
 ```bash
-swift test --parallel --disable-xctest       # what CI runs; all Swift Testing, so skip the empty XCTest pass
+swift test --parallel --disable-xctest       # the local full run: all Swift Testing, so skip the empty XCTest pass
+                                             # (CI keeps plain --parallel: Xcode 26's swift test exits 1 with the flag)
 tools/dev/tdd.sh M1K3VoiceTests [VoiceMood]  # inner loop: builds ONE test target, runs only its tests
 swift build -c release --product M1K3MCP     # the stdio MCP server binary
 xcodegen generate                            # project.yml is the source of truth; M1K3.xcodeproj is a gitignored artifact

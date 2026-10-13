@@ -1,6 +1,6 @@
-"""CI runs `swift test --disable-xctest` (#596) because the package's tests are
-all Swift Testing. A package test that imported XCTest would then never run and
-nothing would say so, so this fails first. (UITests/ are Xcode-project targets,
+"""tools/dev/tdd.sh and the local full run use `swift test --disable-xctest` (#596)
+because the package's tests are all Swift Testing. A package test that imported
+XCTest would never run there and nothing would say so, so this fails first. (UITests/ are Xcode-project targets,
 outside the package, and run through their own test plans.)
 
 Signed: Kev + claude-opus-5-5, 2026-10-13, Confidence 0.9. Prior: none (new file).
@@ -20,7 +20,7 @@ def importers(root: pathlib.Path) -> list[str]:
 def test_no_package_test_imports_xctest():
     assert any(TESTS.rglob("*.swift")), f"no Swift tests under {TESTS}"
     found = importers(TESTS)
-    assert not found, f"CI runs swift test --disable-xctest, so these would never run: {found}"
+    assert not found, f"the local runs use --disable-xctest, so these would never run there: {found}"
 
 
 def test_the_scan_catches_an_xctest_import(tmp_path):
