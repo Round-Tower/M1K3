@@ -19,18 +19,33 @@
 //  the turn. iOS had no tool trace at all. Confidence 0.85.
 //
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — "Remember this photo" under a sent image (RememberPhotoButton).
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — the Mac's answer row comes to the phone (Kev rates answers on
+//  iOS to evaluate chat): speak, copy, share, thumbs up, and thumbs down with an optional note committed on
+//  Done (MessageView's semantics). Ratings go to the shared ChatSession store. Confidence 0.8 (verify-by-launch;
+//  the wiring is pinned by PhoneAnswerActionsTests).
 //  TDD_SKIP: view body.
 
 import M1K3Chat
 import M1K3Knowledge
 import SwiftUI
+import UIKit
 
 struct MessageBubble: View {
     let message: ChatMessage
     /// Chat backdrop active — M1K3's flat turns get a soft scrim so they read
     /// over the moving avatar (the Mac's LegibilityScrim treatment).
     var scrimmed = false
+    /// This answer's rating, if any (the shared ChatSession's map).
+    var verdict: FeedbackVerdict?
+    /// The saved thumbs-down note, prefilled when the field reopens.
+    var existingComment: String?
+    var onFeedback: (FeedbackVerdict, String?) -> Void = { _, _ in }
+    var onSpeak: (String) -> Void = { _ in }
     var onSendFollowUp: (String) -> Void = { _ in }
+
+    @State private var didCopy = false
+    @State private var showComment = false
+    @State private var commentDraft = ""
 
     var body: some View {
         switch message.role {
@@ -84,13 +99,7 @@ struct MessageBubble: View {
                         .foregroundStyle(.red)
                 }
                 if case .complete = message.status, !message.text.isEmpty {
-                    ShareLink(item: message.text + ShareSignature.answerSuffix) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.caption)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-                    .accessibilityLabel("Share this answer")
+                    answerActions
                 }
                 if !message.sources.isEmpty {
                     sourcesRow(message.sources)
@@ -99,6 +108,89 @@ struct MessageBubble: View {
                 followUpChips
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// The Mac's row under a finished answer (MessageView): speak, copy, share, then
+    /// a thumbs-up in one tap and a thumbs-down that opens an optional note and
+    /// commits with it on Done. A tap on thumbs-down alone never clobbers a saved note.
+    private var answerActions: some View {
+        HStack(spacing: 14) {
+            Button { onSpeak(message.text) } label: { actionIcon("speaker.wave.2") }
+                .accessibilityLabel("Speak this answer")
+            Button { copyAnswer() } label: { actionIcon(didCopy ? "checkmark" : "doc.on.doc") }
+                .accessibilityLabel(didCopy ? "Copied" : "Copy this answer")
+            ShareLink(item: message.text + ShareSignature.answerSuffix) { actionIcon("square.and.arrow.up") }
+                .accessibilityLabel("Share this answer")
+            Divider().frame(height: 16).opacity(0.4)
+            Button { onFeedback(.good, nil) } label: {
+                actionIcon(verdict == .good ? "hand.thumbsup.fill" : "hand.thumbsup")
+                    .foregroundStyle(verdict == .good ? AnyShapeStyle(.green) : AnyShapeStyle(.secondary))
+            }
+            .accessibilityLabel("Good answer")
+            .accessibilityAddTraits(verdict == .good ? .isSelected : [])
+            Button {
+                commentDraft = existingComment ?? ""
+                showComment = true
+            } label: {
+                actionIcon(verdict == .bad ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                    .foregroundStyle(verdict == .bad ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
+            }
+            .accessibilityLabel("Needs work")
+            .accessibilityHint("Opens a note on what was off")
+            .accessibilityAddTraits(verdict == .bad ? .isSelected : [])
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .sensoryFeedback(.selection, trigger: verdict)
+        .sheet(isPresented: $showComment) { feedbackNoteSheet }
+    }
+
+    /// One row icon with a finger-sized hit area; the glyph stays caption-small.
+    private func actionIcon(_ symbol: String) -> some View {
+        Image(systemName: symbol)
+            .font(.footnote)
+            .contentTransition(.symbolEffect(.replace))
+            .frame(minWidth: 32, minHeight: 32)
+            .contentShape(Rectangle())
+    }
+
+    /// The thumbs-down note: optional, but a quick "why" is what makes a bad answer
+    /// fixable ("should have searched the web"). Done commits the verdict with it.
+    private var feedbackNoteSheet: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Note (optional)", text: $commentDraft, axis: .vertical)
+                        .lineLimit(2 ... 6)
+                } footer: {
+                    Text("A quick note, like \"should have searched the web\", so this can be fixed later.")
+                }
+            }
+            .navigationTitle("What was off?")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { showComment = false }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        onFeedback(.bad, commentDraft)
+                        showComment = false
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    /// Copies the answer's markdown source, as the Mac does, with a brief tick.
+    private func copyAnswer() {
+        UIPasteboard.general.string = message.text
+        didCopy = true
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1.5))
+            didCopy = false
         }
     }
 

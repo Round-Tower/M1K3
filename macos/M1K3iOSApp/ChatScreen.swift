@@ -80,6 +80,9 @@
 //  in voice mode (the chip claimed PCC for a send that stayed local); a send the gate refuses goes LOCAL
 //  before the draft is cleared (`privateCloudSendAllowed` is synchronous), like every other send PCC can't
 //  honour — no draft juggling. Decline runs through `core.pickPrivateCloud(false)`. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — answers carry the Mac's row (MessageBubble): `rate(_:_:_:)` records into
+//  the shared ChatSession store with the selected brain, and a first like counts toward the rating ask as on the
+//  Mac; the speaker button reads aloud via `core.readAloud`. Confidence 0.8 (verify-by-launch).
 
 import M1K3Avatar
 import M1K3Chat
@@ -288,6 +291,20 @@ struct ChatScreen: View {
     /// See the `.task(id: brainReady)` above — read once per process.
     private static let voiceAtLaunch = ProcessInfo.processInfo.environment["M1K3_VOICE_AT_LAUNCH"] == "1"
 
+    /// A rating from an answer's row (MessageBubble): into the shared store the Mac
+    /// uses, and, on the transition INTO liked, toward the rating ask (the Mac's rule:
+    /// a re-tapped thumb is one opinion, not two).
+    private func rate(_ message: ChatMessage, _ verdict: FeedbackVerdict, _ comment: String?) {
+        let wasLiked = core.chat.feedbackVerdicts[message.id] == .good
+        core.chat.recordFeedback(
+            messageID: message.id, verdict: verdict, comment: comment, brain: core.selectedBrain.displayName
+        )
+        if verdict == .good, !wasLiked {
+            core.reviewLedger.recordDelight()
+            askForRatingIfEarned()
+        }
+    }
+
     /// The rating ask, consumed HERE and nowhere else — this is the screen
     /// that can show the sheet. A short beat after the answer lands so the
     /// dialog never arrives on the last token.
@@ -417,6 +434,10 @@ struct ChatScreen: View {
                         MessageBubble(
                             message: message,
                             scrimmed: backdropActive,
+                            verdict: core.chat.feedbackVerdicts[message.id],
+                            existingComment: core.chat.feedbackComments[message.id],
+                            onFeedback: { verdict, comment in rate(message, verdict, comment) },
+                            onSpeak: { core.readAloud($0) },
                             onSendFollowUp: { question in
                                 // Same gate the starter chips use (brainReady) — chips
                                 // carry their own prompt, so no draft dependency; chips

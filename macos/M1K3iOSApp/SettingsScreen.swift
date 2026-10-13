@@ -51,6 +51,8 @@
 //  Private Cloud Compute is a row in Brain, after Home. Picking it is the yes and the pick
 //  (`core.pickPrivateCloud`); a phone brain or Home takes both back. The Grounding footer quotes
 //  `PrivateCloudTurn.appleGuarantee` instead of our own claim. Confidence 0.8 (verify-by-device).
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — the "Answer ratings" section (AnswerRatingsSection.swift):
+//  the rated count and an Export ratings (JSONL) share, for evaluating chat off the phone. Confidence 0.8.
 
 #if canImport(DeclaredAgeRange)
     @preconcurrency import DeclaredAgeRange
@@ -205,6 +207,8 @@ struct SettingsScreen: View {
             } footer: {
                 Text(readingMode.detail)
             }
+
+            AnswerRatingsSection()
 
             Section {
                 LabeledContent("Version", value: appVersion)
