@@ -47,6 +47,10 @@
 //  Review: Kev + claude-opus-4-6, 2026-10-12 — Bug fix: PCC toggle now binds to
 //  `ChatEgressConsent.defaultsKey` (matching the Mac's PrivacySettingsPane), not the dead
 //  `privateCloudEnabledKey` that the rung never read. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — one control (Kev): the Grounding toggle is gone and
+//  Private Cloud Compute is a row in Brain, after Home. Picking it is the yes and the pick
+//  (`core.pickPrivateCloud`); a phone brain or Home takes both back. The Grounding footer quotes
+//  `PrivateCloudTurn.appleGuarantee` instead of our own claim. Confidence 0.8 (verify-by-device).
 
 #if canImport(DeclaredAgeRange)
     @preconcurrency import DeclaredAgeRange
@@ -61,7 +65,6 @@ import SwiftUI
 struct SettingsScreen: View {
     @Environment(AppCore.self) private var core
     @AppStorage(AppCore.webSearchEnabledKey) private var webSearchEnabled = true
-    @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
     @AppStorage(PersistedAgeBandProvider.defaultsKey) private var ageBandRaw: String?
     /// Why the last "Set up" came back without an answer — shown under the button.
     @State private var ageRangeFailure: AgeRangeRequestFailure?
@@ -115,6 +118,7 @@ struct SettingsScreen: View {
             Section("Brain") {
                 ForEach(brains) { tier in
                     Button {
+                        core.pickPrivateCloud(false)
                         core.selectBrain(tier)
                     } label: {
                         HStack(spacing: 12) {
@@ -130,7 +134,7 @@ struct SettingsScreen: View {
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            if core.selectedBrain == tier, !core.homeBrainActive {
+                            if core.selectedBrain == tier, !core.homeBrainActive, !core.privateCloudArming.isOn {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(.tint)
                             }
@@ -142,6 +146,9 @@ struct SettingsScreen: View {
                     homeBrainRow(brain)
                 } else {
                     pairRow
+                }
+                if privateCloudRow != .hidden {
+                    privateCloudBrainRow
                 }
                 if let note = menu.note {
                     Text(note).font(.caption).foregroundStyle(.secondary)
@@ -164,16 +171,12 @@ struct SettingsScreen: View {
 
             Section {
                 Toggle("Web search in chat", isOn: $webSearchEnabled)
-                if privateCloudSetting != .hidden {
-                    Toggle("Private Cloud Compute", isOn: $privateCloudConsent)
-                }
             } header: {
                 Text("Grounding")
             } footer: {
-                if privateCloudSetting != .hidden {
-                    Text("Web search sends your query to DuckDuckGo. Private Cloud Compute "
-                        + "sends your message to Apple — processed on secure hardware that "
-                        + "Apple itself cannot read.")
+                if privateCloudRow != .hidden {
+                    Text("Web search sends your query to DuckDuckGo. Private Cloud Compute, under Brain, "
+                        + "sends your messages to Apple. " + PrivateCloudTurn.appleGuarantee)
                 } else {
                     Text("The only thing that sends your conversation to the internet. "
                         + "Every search shows in the reply as it happens.")
@@ -284,6 +287,7 @@ struct SettingsScreen: View {
     /// The Home tier row: the paired Mac's brain, selectable like a tier.
     private func homeBrainRow(_ brain: PairedBrain) -> some View {
         Button {
+            core.pickPrivateCloud(false)
             core.selectHomeBrain()
         } label: {
             HStack(spacing: 12) {
@@ -298,7 +302,7 @@ struct SettingsScreen: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                if core.homeBrainActive {
+                if core.homeBrainActive, !core.privateCloudArming.isOn {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.tint)
                 }
@@ -345,8 +349,37 @@ struct SettingsScreen: View {
         }
     }
 
-    private var privateCloudSetting: PrivateCloudRung.Setting {
-        PrivateCloudRung.setting(core.privateCloudState(consent: privateCloudConsent))
+    /// The phone's one PCC control: present wherever the rung can exist, whatever was stored.
+    private var privateCloudRow: PrivateCloudRung.Control {
+        PrivateCloudRung.pickerControl(core.privateCloudState(consent: nil))
+    }
+
+    /// Private Cloud Compute as a brain: the same row shape as Home, disabled (and
+    /// saying why) while PCC is out or its limit is spent.
+    private var privateCloudBrainRow: some View {
+        Button {
+            core.pickPrivateCloud(true)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: PrivateCloudLabel.symbolName)
+                    .font(.title3)
+                    .foregroundStyle(.tint)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(PrivateCloudRung.menuTitle(privateCloudRow)).foregroundStyle(.primary)
+                    Text("Answers on Apple's servers — asks before your first message goes")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if core.privateCloudArming.isOn {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.tint)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(privateCloudRow != .ready)
     }
 
     private var appVersion: String {

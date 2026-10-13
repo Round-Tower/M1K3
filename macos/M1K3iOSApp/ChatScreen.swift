@@ -70,6 +70,9 @@
 //  consent `onSend` clears it; (3) arming persistence: `.onAppear` + `.onChange` handlers mirror
 //  the Mac's `PersistingCloudPicker` (persist isOn/consent, reconcile on control changes).
 //  Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — the pick lives on `core.privateCloudArming` (AppCore
+//  persists it) so Settings' brain list can arm it; nothing on iOS ever did, so the sheet never
+//  opened. A cloud chip over the input bar says when the next message goes to PCC. Confidence 0.8.
 
 import M1K3Avatar
 import M1K3Chat
@@ -103,10 +106,6 @@ struct ChatScreen: View {
     @State private var pendingFiles: [FileAttachment] = []
     @State private var attachmentError: String?
     @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
-    @State private var privateCloudArming = PrivateCloudArming(
-        isOn: UserDefaults.standard.bool(forKey: PrivateCloudArming.selectedDefaultsKey),
-        consent: UserDefaults.standard.object(forKey: PrivateCloudArming.consentDefaultsKey) as? Bool
-    )
     @State private var privateCloudPending: PendingPrivateCloudSend?
     @FocusState private var inputFocused: Bool
 
@@ -253,25 +252,9 @@ struct ChatScreen: View {
             .sheet(item: $privateCloudPending) { pending in
                 privateCloudConsentView(pending)
             }
-            .onAppear {
-                privateCloudArming.controlChanged(privateCloudControl)
-                if !privateCloudArming.isOn {
-                    UserDefaults.standard.removeObject(forKey: PrivateCloudArming.consentDefaultsKey)
-                }
-            }
+            .onAppear { core.privateCloudArming.controlChanged(privateCloudControl) }
             .onChange(of: privateCloudControl) { _, newValue in
-                privateCloudArming.controlChanged(newValue)
-            }
-            .onChange(of: privateCloudArming.isOn) { _, on in
-                UserDefaults.standard.set(on, forKey: PrivateCloudArming.selectedDefaultsKey)
-                if !on { UserDefaults.standard.removeObject(forKey: PrivateCloudArming.consentDefaultsKey) }
-            }
-            .onChange(of: privateCloudArming.consent) { _, consent in
-                if let consent {
-                    UserDefaults.standard.set(consent, forKey: PrivateCloudArming.consentDefaultsKey)
-                } else {
-                    UserDefaults.standard.removeObject(forKey: PrivateCloudArming.consentDefaultsKey)
-                }
+                core.privateCloudArming.controlChanged(newValue)
             }
             .task { await core.refreshPrivateCloudStatus() }
     }
@@ -282,14 +265,14 @@ struct ChatScreen: View {
             onSend: { includeConversation in
                 privateCloudPending = nil
                 clearDraft()
-                privateCloudArming.consented(
+                core.privateCloudArming.consented(
                     includeConversation: includeConversation, seen: pending.onDeviceShown
                 )
                 sendToPrivateCloud(pending.consent, includeConversation: includeConversation)
             },
             onCancel: {
                 privateCloudPending = nil
-                privateCloudArming.declined()
+                core.privateCloudArming.declined()
             }
         )
     }
@@ -527,6 +510,15 @@ struct ChatScreen: View {
 
     private var inputBar: some View {
         VStack(spacing: 0) {
+            if privateCloudServesNextSend {
+                Label(PrivateCloudLabel.text, systemImage: "cloud.fill")
+                    .font(.caption)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .padding(.bottom, 6)
+                    .accessibilityLabel("Your next message goes to Apple's Private Cloud Compute")
+            }
             if !pendingAttachments.isEmpty {
                 pendingImagesStrip
             }
@@ -653,7 +645,7 @@ struct ChatScreen: View {
         let hasAttachments = !pendingAttachments.isEmpty
         let onDevice = ChatSession.onDeviceMessageIDs(core.chat.messages)
         // Voice mode answers on-device (ADR 0010); typed sends in voice never go to PCC.
-        let action: PrivateCloudArming.Action = core.voiceLoop != nil ? .local : privateCloudArming.action(
+        let action: PrivateCloudArming.Action = core.voiceLoop != nil ? .local : core.privateCloudArming.action(
             control: privateCloudControl, hasAttachments: hasAttachments, onDeviceMessages: onDevice
         )
         var text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -690,6 +682,13 @@ struct ChatScreen: View {
 
     private var privateCloudControl: PrivateCloudRung.Control {
         PrivateCloudRung.control(core.privateCloudState(consent: privateCloudConsent))
+    }
+
+    /// Only when the next typed send really leaves: not with an image staged or PCC out.
+    private var privateCloudServesNextSend: Bool {
+        core.privateCloudArming.servesNextSend(
+            control: privateCloudControl, hasAttachments: !pendingAttachments.isEmpty
+        )
     }
 
     private func sendToPrivateCloud(_ consent: PrivateCloudTurn.Consent, includeConversation: Bool) {

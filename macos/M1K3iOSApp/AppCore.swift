@@ -75,6 +75,10 @@
 //  `privateCloudEnabled()` (the Settings toggle now writes `ChatEgressConsent.defaultsKey`, matching
 //  the Mac's PrivacySettingsPane); `privateCloudSendAllowed()` no longer double-gates (the rung
 //  already reads `chatEgressAllowed`). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — the PCC pick moved here from ChatScreen's view state
+//  (`privateCloudArming`, persisted on every change), so Settings' brain list can pick it and Chat
+//  routes on it. `pickPrivateCloud(_:)` is the phone's one control: the yes and the pick together.
+//  #585 shipped the sheet with nothing that armed it. Confidence 0.8 (verify-by-device owed).
 
 import Foundation
 import M1K3Agent
@@ -223,7 +227,32 @@ final class AppCore {
     /// `homeBrainActive`, readable off the main actor (the egress clause, per turn).
     nonisolated static let homeBrainLive = Mutex(false)
 
-    // MARK: - Private Cloud Compute (opt-in via Settings toggle)
+    // MARK: - Private Cloud Compute (the brain list's row)
+
+    /// The PCC pick and the sheet's answer (ADR 0010). One owner, so Settings' brain
+    /// list picks it and Chat routes on it; persisted on every change.
+    var privateCloudArming = PrivateCloudArming(
+        isOn: UserDefaults.standard.bool(forKey: PrivateCloudArming.selectedDefaultsKey),
+        consent: UserDefaults.standard.object(forKey: PrivateCloudArming.consentDefaultsKey) as? Bool
+    ) {
+        didSet {
+            let defaults = UserDefaults.standard
+            defaults.set(privateCloudArming.isOn, forKey: PrivateCloudArming.selectedDefaultsKey)
+            if let consent = privateCloudArming.consent {
+                defaults.set(consent, forKey: PrivateCloudArming.consentDefaultsKey)
+            } else {
+                defaults.removeObject(forKey: PrivateCloudArming.consentDefaultsKey)
+            }
+        }
+    }
+
+    /// The phone's one control: the brain list's row is the chat-egress yes AND the pick,
+    /// and choosing any other brain takes both back. The sheet still asks before the
+    /// first message leaves.
+    func pickPrivateCloud(_ on: Bool) {
+        UserDefaults.standard.set(on, forKey: ChatEgressConsent.defaultsKey)
+        privateCloudArming.select(on)
+    }
 
     nonisolated static let privateCloudBackend: (any PrivateCloudAnswering)? = {
         if let live = PrivateCloudBackends.live() { return live }
