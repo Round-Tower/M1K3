@@ -23,9 +23,13 @@
 //  Review: Kev + claude-opus-4-6, 2026-10-12 — evaluators collapsed to one ClosureEvaluator that
 //  looks up the fixture by prompt: if the framework runs all evaluators against all samples, the
 //  per-fixture approach cross-fired. Confidence 0.7 (the framework's dispatch is undocumented).
+//  Review: Kev + claude-fable-5.1, 2026-10-13 — gated on `canImport(Evaluations)`, not the compiler
+//  version: the nightly DMG runner and Xcode Cloud's macOS archive have a 6.4 compiler whose SDK
+//  has no Evaluations module, so #585's merge failed both ("unable to resolve module dependency:
+//  'Evaluations'"). PR CI never compiled the file (older Xcode), so it passed. Confidence 0.9.
 //
 
-#if compiler(>=6.4)
+#if canImport(Evaluations)
     import Evaluations
     import Foundation
     import FoundationModels

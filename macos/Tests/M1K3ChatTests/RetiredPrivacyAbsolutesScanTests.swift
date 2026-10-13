@@ -13,6 +13,8 @@
 //  Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 (a line heuristic: a
 //  phrase split across two source lines slips past; the four phrases are the ones App
 //  Review and the PR #527 review named, not every possible absolute). Prior: none.
+//  Review: Kev + claude-fable-5.1, 2026-10-13 — `AppleEvalBridgeGateTests` rides here (same
+//  file-walk root): an optional Apple module is gated on its import, not a compiler version.
 //
 
 import Foundation
@@ -141,5 +143,21 @@ struct RetiredPrivacyAbsolutesScanTests {
         for hit in try Self.hits(in: Self.shippedFiles()) {
             Issue.record("retired privacy absolute: \(hit)")
         }
+    }
+}
+
+/// 2026-10-13: `AppleEvalBridge.swift` was gated on `compiler(>=6.4)`, and the release
+/// runners (nightly DMG, Xcode Cloud's macOS archive) have that compiler with an SDK that
+/// has no Evaluations module — #585's merge failed both lanes while PR CI, on an older
+/// Xcode, never compiled the file. An optional Apple module is gated on its import.
+struct AppleEvalBridgeGateTests {
+    @Test("the Evaluations bridge compiles only where the module exists")
+    func gatedOnCanImport() throws {
+        let source = try String(
+            contentsOf: RetiredPrivacyAbsolutesScanTests.macosRoot.appendingPathComponent("M1K3App/AppleEvalBridge.swift"),
+            encoding: .utf8
+        )
+        #expect(source.contains("#if canImport(Evaluations)"))
+        #expect(!source.contains("#if compiler(>=6.4)"))
     }
 }
