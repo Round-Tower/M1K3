@@ -108,6 +108,11 @@ Anything a cold session needs on turn one belongs below, not there.
   `macos/tools/asc/creative.py upload|place` (dry-run until `--confirm`, Kev's
   via `!`). A placement needs an editable version, CPP or PPO; never cancel a
   review to place art.
+- **Optional Apple modules are gated on `#if canImport(X)`, never `#if compiler(>=N)`** (#586):
+  PR CI's Xcode is older than the release runners' (nightly DMG, Xcode Cloud), so a compiler
+  gate passes CI and breaks master. `Evaluations.framework` is a test-bundle framework the app
+  target can never import. After a merge that adds an Apple framework, read the release-lane
+  check-runs on the merge commit, not just PR CI.
 - Never pre-seed the model cache with `hf download` (cache poison).
 - In-app A/B overrides go as argv (`M1K3 -prefillStepSize 512`): on macOS 27
   `defaults write app.m1k3` never reaches the sandboxed app. `log` is a zsh
