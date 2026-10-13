@@ -64,16 +64,24 @@ struct PhoneAnswerActionsTests {
         for symbol in ["speaker.wave.2", "doc.on.doc", "square.and.arrow.up", "hand.thumbsup", "hand.thumbsdown"] {
             #expect(bubble.contains(symbol), "MessageBubble is missing \(symbol)")
         }
-        #expect(bubble.contains("UIPasteboard.general.string = message.text"), "copy puts the answer's source on the pasteboard")
+        #expect(
+            bubble.contains("UIPasteboard.general.string = message.text"),
+            "copy puts the answer's source on the pasteboard"
+        )
         #expect(bubble.contains("onFeedback(.bad, commentDraft)"), "thumbs-down commits with its note, on Done")
 
         let screen = try Self.source("M1K3iOSApp/ChatScreen.swift")
         #expect(screen.contains("core.chat.recordFeedback("), "ratings go to the shared store")
-        #expect(screen.contains("core.reviewLedger.recordDelight()"), "a liked answer counts toward the rating ask, as on the Mac")
+        #expect(
+            screen.contains("core.reviewLedger.recordDelight()"),
+            "a liked answer counts toward the rating ask, as on the Mac"
+        )
         #expect(screen.contains("core.readAloud("), "the speaker button reads the answer aloud")
 
         let settings = try Self.source("M1K3iOSApp/SettingsScreen.swift")
-        #expect(settings.contains("answerRatingsJSONL()"), "Settings exports the ratings")
+        #expect(settings.contains("AnswerRatingsSection()"), "Settings shows the ratings section")
+        let section = try Self.source("M1K3iOSApp/AnswerRatingsSection.swift")
+        #expect(section.contains("answerRatingsJSONL()"), "the section exports the ratings")
     }
 
     private static func source(_ relative: String) throws -> String {
