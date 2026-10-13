@@ -330,6 +330,11 @@ jobs:
       - name: Store copy fits Apple's limits in every locale
         working-directory: macos
         run: python3 tools/ci/check_store_metadata.py
+      # #574: the registered name is Round Tower Software Ltd. Apple's certificate names and
+      # dated provenance keep the old one; everything a reader sees does not.
+      - name: The company name is Round Tower Software Ltd
+        working-directory: macos
+        run: python3 tools/ci/check_company_name.py
       # The guards' pure helpers have unit tests (test_check_*.py) that nothing
       # ran until 2026-09-02 — a helper regression would have passed CI while the
       # guard quietly stopped guarding. Run them.
@@ -420,3 +425,5 @@ jobs:
 # to 26 on 2026-10-19 (#582): four of them are required checks. Confidence 0.85:
 # both are standard build settings; the saving is verify-by-run on this PR's own
 # mobile job (target: under 20 min, from 23–34).
+# Review: Kev + claude-opus-5-5, 2026-10-13 — the guards job fails on the old company name
+# (check_company_name.py, #574). Confidence 0.9.

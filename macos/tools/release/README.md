@@ -20,7 +20,9 @@ macos/tools/release/release-macos.sh --skip-notarize   # local test build (no Ga
 
 Output: `/tmp/m1k3-release/M1K3-<version>.dmg` (drag-to-Applications layout).
 Signing identity: **Developer ID Application: Round Tower Software Studios Ltd
-(76DJH43A4P)** — already installed.
+(76DJH43A4P)** — already installed. The certificate carries the Apple account's legal
+entity, which keeps the old "Studios" name until the apps move to the new Round Tower
+Software Ltd account (#574); everywhere else the name is Round Tower Software Ltd.
 
 ### Homebrew cask (after the first hosted DMG)
 A cask formula points at the hosted `.dmg` URL + its sha256. Add once m1k3.app

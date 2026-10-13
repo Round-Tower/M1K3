@@ -324,7 +324,9 @@ targets:
         # input): a sandboxed script phase can do neither. Only these two app
         # shells carry a script phase, so the blast radius is just them.
         ENABLE_USER_SCRIPT_SANDBOXING: NO
-        INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Round Tower Software Studios Ltd"
+        # Review: Kev + claude-opus-5-5, 2026-10-13 — the copyright names Round Tower Software Ltd, the
+        # registered name (#574). Confidence 0.95.
+        INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Round Tower Software Ltd"
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
         # DEFAULT to the App-Store-SAFE entitlements (no audioanalyticsd
         # mach-lookup exception, which ITMS-90285 rejects). The privileged direct-

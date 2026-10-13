@@ -82,7 +82,7 @@ def notice_text(repo: str, revision: str) -> str:
         f"MODIFICATION NOTICE (Apache-2.0 section 4(b)):\n"
         f"These weights are a 4-bit quantised, MLX-converted derivative of the\n"
         f"original model — the weight files were quantised and re-sharded for MLX.\n"
-        f"Redistributed here by Round Tower Software Studios Ltd as a byte-for-byte\n"
+        f"Redistributed here by Round Tower Software Ltd as a byte-for-byte\n"
         f"copy of the commit above, so that M1K3 has a second source for the exact\n"
         f"revision it pins. Round Tower is not affiliated with or endorsed by the\n"
         f"original model's authors.\n\n"
