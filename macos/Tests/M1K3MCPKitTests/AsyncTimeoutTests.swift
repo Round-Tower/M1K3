@@ -52,6 +52,14 @@ struct AsyncTimeoutTests {
                 return "done"
             }
         }
+        // The loser's cancel handler runs when that task is scheduled: on a starved CI runner
+        // the 0.1 s deadline can fire before the operation even starts, so the handler lands
+        // just AFTER the throw (#598's run: a 23 s stall). Wait for it; 30 s separates the
+        // two outcomes (tools/ci/check_wall_clock_bounds.py's floor).
+        let deadline = ContinuousClock.now.advanced(by: .seconds(30))
+        while !cancelled.withLock({ $0 }), ContinuousClock.now < deadline {
+            try? await Task.sleep(for: .milliseconds(20))
+        }
         #expect(cancelled.withLock { $0 } == true)
     }
 
