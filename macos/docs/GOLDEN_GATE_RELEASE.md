@@ -107,7 +107,7 @@ candidate; four things are new.
 **The bump.** One commit, `chore(release): v1.1.0`, moves `MARKETING_VERSION`
 to 1.1.0 in `project.yml` (both Apple targets read it), `versionName` /
 `versionCode` (10100) / `packageVersion` in `app/composeApp/build.gradle.kts`,
-the site's `softwareVersion`, and the What's New in `fastlane/metadata_mac` and
+and the What's New in `fastlane/metadata_mac` and
 `metadata_ios` (`tools/ci/check_store_metadata.py` must pass). It lands only
 after 1.0.0 clears review: a bump while 1.0.0 is `IN_REVIEW` would need a new
 version record and lose the queue spot. `CURRENT_PROJECT_VERSION` stays; Xcode
@@ -151,4 +151,6 @@ correct as of #503.
      2026-10-05 cancel). Prior: Unknown (§1–§5 unsigned before this).
      Review: Kev + claude-opus-5.5, 2026-10-11 — the bump is done (1.0.0 live; #561 bumped, #524 the
      notes), the ASC version string must be renamed "1.1" → "1.1.0", iOS waits on its own 1.0.0 review,
-     and a fourth new step: the one-time audition folder delete is verified on build N. Confidence 0.85. -->
+     and a fourth new step: the one-time audition folder delete is verified on build N. Confidence 0.85.
+     Review: Kev + claude-opus-5-5, 2026-10-13 — the bump no longer touches the site: its JSON-LD carries no
+     softwareVersion (#573; test_jsonld.py refuses one). Confidence 0.9. -->
