@@ -21,6 +21,10 @@
 //  Signed: Kev + claude-opus-4-8, 2026-08-20, Confidence 0.8 (the pure core is
 //  TDD'd; the .saver render + install are verify-by-launch in System Settings —
 //  a screensaver can't be driven headlessly). Prior: the M mark (PR #142).
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — #578: each display seeds its own rain once the window knows its
+//  screen; the face drifts slowly (ScreensaverDrift); the saver stops animating on macOS's
+//  com.apple.screensaver.willstop, the Sonoma-era workaround for a host that keeps a dismissed saver running.
+//  Confidence 0.75 (the pure parts are pinned; the host behaviour is verify-by-launch).
 //
 
 import AppKit
@@ -29,6 +33,9 @@ import ScreenSaver
 
 public final class M1K3ScreenSaverView: ScreenSaverView {
     private var field: RainField
+    private let density: Double
+    /// The host's will-stop broadcast (see `init`); removed in `deinit`.
+    private nonisolated(unsafe) var willStopObserver: NSObjectProtocol?
     /// Live presence — v1 leaves it resting; the follow-up probe updates it.
     private var presence: PresenceSnapshot = .resting
     private var phase: Double = 0
@@ -42,10 +49,24 @@ public final class M1K3ScreenSaverView: ScreenSaverView {
     override public init?(frame: NSRect, isPreview: Bool) {
         // Fewer lanes in the tiny System-Settings preview so it doesn't look dense.
         let columns = isPreview ? 18 : 48
-        field = RainField(columns: columns, density: isPreview ? 1.0 : 1.3, seed: 0x4D31_4B33)
+        density = isPreview ? 1.0 : 1.3
+        field = RainField(columns: columns, density: density, seed: 0x4D31_4B33)
         super.init(frame: frame, isPreview: isPreview)
         animationTimeInterval = 1.0 / 30.0
         wantsLayer = true
+        // Since Sonoma the legacyScreenSaver host often keeps a dismissed saver animating, and
+        // instances pile up (#578). macOS broadcasts this just before the saver stops.
+        willStopObserver = DistributedNotificationCenter.default().addObserver(
+            forName: Notification.Name("com.apple.screensaver.willstop"), object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.stopAnimation() }
+        }
+    }
+
+    deinit {
+        if let willStopObserver {
+            DistributedNotificationCenter.default().removeObserver(willStopObserver)
+        }
     }
 
     @available(*, unavailable)
@@ -54,6 +75,15 @@ public final class M1K3ScreenSaverView: ScreenSaverView {
     }
 
     // MARK: - Animation
+
+    override public func startAnimation() {
+        super.startAnimation()
+        // Each display its own rain (#578): the window knows its screen now, not at init.
+        let key = NSDeviceDescriptionKey("NSScreenNumber")
+        if let display = (window?.screen?.deviceDescription[key] as? NSNumber)?.uint32Value {
+            field = RainField(columns: field.columns, density: density, seed: RainField.seed(forDisplay: display))
+        }
+    }
 
     override public func animateOneFrame() {
         super.animateOneFrame()
@@ -100,8 +130,11 @@ public final class M1K3ScreenSaverView: ScreenSaverView {
             * CGFloat(PixelFace.rows) / CGFloat(PixelFace.cols))
         let cell = faceH / CGFloat(PixelFace.rows)
         let faceW = cell * CGFloat(PixelFace.cols)
-        let ox = bounds.midX - faceW / 2
-        let oy = bounds.midY - faceH / 2 + bounds.height * 0.10 // above centre
+        // A slow wander inside a small box (#578): kinder to the panel than a fixed face.
+        let drift = ScreensaverDrift.offset(at: phase)
+        let side = min(bounds.width, bounds.height)
+        let ox = bounds.midX - faceW / 2 + CGFloat(drift.dx) * side
+        let oy = bounds.midY - faceH / 2 + bounds.height * 0.10 + CGFloat(drift.dy) * side // above centre
         let block = cell * 0.72
         let breath = 0.9 + 0.1 * (0.5 + 0.5 * sin(phase * 0.9))
 
