@@ -56,6 +56,26 @@
   ]
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "M1K3",
+      "item": "https://m1k3.app/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "What Golden Gate ships for on-device AI",
+      "item": "https://m1k3.app/golden-gate-on-device-ai"
+    }
+  ]
+}
+</script>
 <link rel="preload" href="fonts/vt323-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
 <link rel="stylesheet" href="fonts.css" />
 <link rel="stylesheet" href="geo.css" />
@@ -181,6 +201,7 @@
 <footer>
   <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE LTD</a> · MADE IN IRELAND</span>
   <span><a href="/teams">FOR TEAMS</a> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
+  <span class="guides">GUIDES: <a href="/local-llm-mac-guide">LOCAL LLMS ON A MAC</a> · <a href="/vs-ollama">M1K3 VS OLLAMA</a> · <a href="/private-chatgpt-alternative-mac">PRIVATE CHATGPT ALTERNATIVE</a> · <a href="/mcp-knowledge-server">A LOCAL MEMORY FOR CLAUDE</a> · <a href="/golden-gate-on-device-ai" aria-current="page">ON-DEVICE AI IN MACOS 27</a></span>
 </footer>
 
 <!-- Signed: Kev + claude-opus-4-6, 2026-09-12, Confidence 0.9.
@@ -197,6 +218,8 @@
      (Round Tower's provider token) and its own ct, so App Store Connect counts which door converts and the
      page still tracks nobody. JSON-LD keeps the canonical URL. Confidence 0.85.
      Review: Kev + claude-opus-5-5, 2026-10-13 — the footer's copyright line names Round Tower Software Ltd,
-     the registered name (#574; Kev, 2026-10-11). Confidence 0.95. -->
+     the registered name (#574; Kev, 2026-10-11). Confidence 0.95.
+     Review: Kev + claude-opus-5-5, 2026-10-13 — #572: the footer carries a GUIDES row linking all five guides
+     (each guide marks itself aria-current); guides also gain a BreadcrumbList. Confidence 0.9. -->
 </body>
 </html>

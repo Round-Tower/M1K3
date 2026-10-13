@@ -73,3 +73,31 @@ def test_the_homepage_links_every_guide():
     for slug in GUIDES:
         assert (SITE / f"{slug}.html").is_file(), slug
         assert f'href="/{slug}"' in page, f"the homepage does not link /{slug}"
+
+
+def test_each_guide_has_a_breadcrumb_trail_home_to_itself():
+    # #572: a crawler places each guide under the homepage, not floating in the sitemap.
+    for slug in GUIDES:
+        page = SITE / f"{slug}.html"
+        crumbs = next((b for b in blocks(page) if b.get("@type") == "BreadcrumbList"), None)
+        assert crumbs is not None, f"{slug} has no BreadcrumbList"
+        items = crumbs["itemListElement"]
+        assert [i["position"] for i in items] == [1, 2], slug
+        assert items[0]["item"] == "https://m1k3.app/"
+        canonical = re.search(r'<link rel="canonical" href="([^"]*)"', page.read_text(encoding="utf-8")).group(1)
+        assert items[1]["item"] == canonical, slug
+
+
+def test_every_footer_links_every_guide():
+    # #572: each guide links the others, and every page carries the list.
+    pages = [p for p in sorted(SITE.glob("*.html")) if "<footer>" in p.read_text(encoding="utf-8")]
+    assert len(pages) >= 10, "the footer scan stopped finding pages"
+    for page in pages:
+        footer = re.search(r"<footer>.*?</footer>", page.read_text(encoding="utf-8"), re.DOTALL).group(0)
+        for slug in GUIDES:
+            assert f'href="/{slug}"' in footer, f"{page.name}'s footer does not link /{slug}"
+
+
+def test_every_page_names_its_canonical_url():
+    for page in sorted(SITE.glob("*.html")):
+        assert '<link rel="canonical" href="https://m1k3.app/' in page.read_text(encoding="utf-8"), page.name
