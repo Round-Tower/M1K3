@@ -19,7 +19,7 @@ permissions:
 jobs:
   secrets:
     name: Secrets · TruffleHog
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # not -latest: that label becomes Ubuntu 26 on 2026-10-19 (#582); move deliberately
     steps:
       - name: Checkout
         uses: actions/checkout@v5

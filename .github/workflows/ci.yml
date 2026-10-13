@@ -40,7 +40,7 @@ jobs:
   # pr_watch reads a skipped job as green.
   changes:
     name: Detect compilable changes
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # not -latest: that label becomes Ubuntu 26 on 2026-10-19 (#582); move deliberately
     outputs:
       swift: ${{ steps.filter.outputs.swift }}
       shell: ${{ steps.filter.outputs.shell }}
@@ -233,6 +233,10 @@ jobs:
     # job, two steps: the checkout/xcodegen/SPM-resolve cost is paid once and
     # the visionOS build reuses the shared clone cache. The macos-26 runner
     # image ships the visionOS SDK + simulators (verified 2026-07-08).
+    # ARCHS=arm64: a generic Simulator destination builds EVERY simulator arch,
+    # and the x86_64 slice, which nothing ships, doubled both builds (master
+    # 2026-10-13: iOS 693 s + visionOS 1347 s, both slices). Devices are arm64
+    # (Xcode Cloud archives those) and the runner itself is Apple silicon.
     runs-on: macos-26
     timeout-minutes: 60
     steps:
@@ -268,6 +272,7 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -clonedSourcePackagesDirPath .spm-cache \
             -skipPackagePluginValidation \
+            ARCHS=arm64 \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             build | xcbeautify
 
@@ -280,6 +285,7 @@ jobs:
             -destination 'generic/platform=visionOS Simulator' \
             -clonedSourcePackagesDirPath .spm-cache \
             -skipPackagePluginValidation \
+            ARCHS=arm64 \
             CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" \
             build | xcbeautify
 
@@ -289,7 +295,7 @@ jobs:
     # targets). Guard against a `.testTarget` added to Package.swift but not the
     # scheme — which would silently never run. Pure-Python, no build, seconds.
     name: Project guards (test scheme · store targets)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # not -latest: that label becomes Ubuntu 26 on 2026-10-19 (#582); move deliberately
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -344,7 +350,7 @@ jobs:
     # rows). Born from four modules going undocumented — the first thing a
     # contributor reads must not lie. Pure-Python, no build, seconds.
     name: Docs match the code (module map)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # not -latest: that label becomes Ubuntu 26 on 2026-10-19 (#582); move deliberately
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -365,7 +371,7 @@ jobs:
     # build would otherwise read as green.
     needs:
       [changes, swift-mac, app-build, mobile-build, scheme-drift, doc-drift]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # not -latest: that label becomes Ubuntu 26 on 2026-10-19 (#582); move deliberately
     if: always()
     env:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
@@ -407,3 +413,10 @@ jobs:
 # now. The cost is a shell break landing on master first — caught on the push
 # run, Xcode Cloud and the nightly. Confidence now 0.8: the `if` shape and the
 # skipped-reads-green path are verify-by-run on this PR's own checks.
+# Review: Kev + claude-opus-5-5, 2026-10-13 — the mobile job builds arm64 only
+# (ARCHS=arm64): the generic Simulator destinations compiled an x86_64 slice next
+# to arm64, and on master that was 34 min for both platforms (iOS 693 s +
+# visionOS 1347 s). The Linux jobs pin ubuntu-24.04 ahead of ubuntu-latest moving
+# to 26 on 2026-10-19 (#582): four of them are required checks. Confidence 0.85:
+# both are standard build settings; the saving is verify-by-run on this PR's own
+# mobile job (target: under 20 min, from 23–34).
