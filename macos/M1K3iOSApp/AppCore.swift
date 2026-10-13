@@ -87,6 +87,10 @@
 //  `pickPrivateCloud(false)` (security-auditor: "Keep it on this iPhone" left `chatEgressAllowed` true).
 //  `refreshPrivateCloudStatus` reconciles the pick with the control, so an org switch flipped while the
 //  chat screen is unmounted still ends it. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-13 — Built-in speaks in the best installed system voice (#584):
+//  `BestSystemVoice.pick` once at launch onto `builtinSpeech.defaultVoiceIdentifier`; nil leaves the
+//  system default. Logged (.notice, the identifier only) so a device read says which voice won.
+//  Confidence 0.8 (which voices a phone lists is verify-by-device).
 
 import Foundation
 import M1K3Agent
@@ -425,6 +429,17 @@ final class AppCore {
         // provider touches no MLX (safe on the Simulator) — prepare() does.
         speech = SwappableSpeechProvider(builtinSpeech)
         kokoro = KokoroSpeechProvider()
+        // Built-in is the best installed voice for this locale, never the compact
+        // default when a better one exists (#584). nil = leave the system default.
+        // Off the main actor: the voice catalogue read is a launch-path cost, and
+        // the providers' setters are lock-guarded; a line spoken before it lands
+        // (well under onboarding's first words) uses the default.
+        Task.detached(priority: .userInitiated) { [builtinSpeech] in
+            let builtinVoice = BestSystemVoice.pick(voices: SystemVoices.installed(), locale: .current)
+            builtinSpeech.defaultVoiceIdentifier = builtinVoice
+            Logger(subsystem: "app.m1k3", category: "voice")
+                .notice("built-in voice: \(builtinVoice ?? "system default", privacy: .public)")
+        }
 
         // Same launch hygiene the Mac shell does, through the same shared call
         // (issue #85 makes a mid-conversation kill a real scenario here).
