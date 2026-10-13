@@ -42,6 +42,9 @@
 //  at end of turn, after the sentences were spoken). Confidence 0.85; verify-by-launch owed for the
 //  refusal's timing against the on-screen swap.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the Phosphor Fox (white lattice) is the house default via CompanionDefaults.registeredDefaults / houseCompanion (Kev, TestFlight 499). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — `speak(_:narrator:mood:)`: the speak tool's emotion reaches the voice
+//  as a VoiceMood (pace + pitch) on the utterance, not only the face (#576 §1). Neutral, the default, is today's
+//  utterance. Confidence 0.8 (pinned by VoiceMoodTests; the sound is verify-by-launch).
 
 import AppKit
 import AVFoundation
@@ -201,15 +204,16 @@ extension AppEnvironment {
     /// Text is sanitized for speech (URLs → hosts, citation tokens and the
     /// Web-sources block dropped) BEFORE the providers see it, so every
     /// downstream word timeline is built against the same string the karaoke
-    /// view displays.
-    func speak(_ text: String, narrator: Narrator = .m1k3) async {
+    /// view displays. `mood` (the speak tool's emotion) shades the pace and, on
+    /// Apple voices, the pitch; the default, neutral, is the plain utterance.
+    func speak(_ text: String, narrator: Narrator = .m1k3, mood: VoiceMood = .neutral) async {
         let polished = SpeechTextPolish.polish(text)
         // A message that is ONLY a sources block polishes to empty; never hand
         // providers "" — the voice loop waits on a speechDidEnd that would
         // not arrive.
         let spoken = polished.isEmpty ? text : polished
         speechHighlight.beginUtterance(text: spoken, narrator: narrator)
-        await speech.speak(spoken)
+        await speech.speak(SpeechUtterance(text: spoken, mood: mood))
     }
 
     func stopSpeaking() async {

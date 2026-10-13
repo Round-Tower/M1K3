@@ -22,6 +22,9 @@
 //  the audio plays fine (the logged 2026-08-10 symptom). Also corrected the
 //  stale "serial server" rationale — the server interleaves requests; the
 //  client's own timeout is the real reason wait defaults false. TDD'd.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — the speak tool's text says the emotion now sets the voice's
+//  pace (and pitch where the voice allows) as well as the face (#576 §1; the app maps it to a VoiceMood).
+//  Wording only. Confidence 0.9.
 //
 
 import Foundation
@@ -165,7 +168,8 @@ private func speakDefinition(
         tool: Tool(
             name: "speak",
             description: "Speak text aloud through M1K3's voice (and animate the avatar). Optional "
-                + "emotion: happy, sad, angry, surprised, love, thinking, excited, sleepy, neutral. "
+                + "emotion, which sets the face and the voice's pace (and pitch where the voice "
+                + "allows): happy, sad, angry, surprised, love, thinking, excited, sleepy, neutral. "
                 + "Pass wait:true to return once playback finishes, or after ~25s with a "
                 + "still-speaking note for a long read (poll get_status); default returns as "
                 + "speech starts. If another visitor is already speaking, this call queues behind "
@@ -175,7 +179,7 @@ private func speakDefinition(
                 "type": "object",
                 "properties": [
                     "text": ["type": "string", "description": "what to say"],
-                    "emotion": ["type": "string", "description": "avatar emotion while speaking (optional)"],
+                    "emotion": ["type": "string", "description": "face and voice mood while speaking (optional)"],
                     "wait": [
                         "type": "boolean",
                         "description": "return after playback completes, bounded at ~25s (default false)",

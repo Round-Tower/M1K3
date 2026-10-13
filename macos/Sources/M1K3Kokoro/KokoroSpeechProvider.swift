@@ -70,6 +70,10 @@
 //  error classifies as an integrity refusal for the friendly-copy mapper. Confidence 0.75 (verify-by-launch).
 //  Review: Kev + claude-opus-5-5, 2026-10-02 — forwards the renderer's playbackStallCount
 //  (SpeechProviderWithPlaybackHealth). Confidence now 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — #576 §1: synthesis runs at the utterance's speed
+//  (`speedMultiplier`, a VoiceMood's pace), clamped by `kokoroSpeed` to 0.8...1.25. Kokoro has no
+//  pitch control, so a mood's pitch reaches Apple voices only. Confidence 0.8 (the clamp is pinned;
+//  how a paced line sounds is verify-by-launch).
 
 import Foundation
 import M1K3Inference
@@ -239,6 +243,14 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, SpeechPro
 
     // MARK: - Synthesis
 
+    /// The speed Kokoro synthesizes at for a speed multiplier (1 = its own pace).
+    /// Clamped to 0.8...1.25: the duration predictor slurs past that, and the
+    /// fastest AVSpeech rate (a multiplier of 2) would garble it.
+    public static func kokoroSpeed(_ multiplier: Float) -> Float {
+        guard multiplier.isFinite else { return 1 }
+        return min(max(multiplier, 0.8), 1.25)
+    }
+
     /// Neural path: text → sentence chunks → G2P → MLX (config.json +
     /// model.safetensors) → mono PCM @ 24 kHz streamed to the renderer
     /// chunk-by-chunk, each with its word
@@ -249,7 +261,9 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, SpeechPro
     /// failure ends the utterance with what was already scheduled instead of
     /// re-speaking it all in the fallback voice.
     private func synthesize(_ utterance: SpeechUtterance) async {
-        let chunks = synthesizer.synthesizeStream(text: utterance.text)
+        let chunks = synthesizer.synthesizeStream(
+            text: utterance.text, speed: Self.kokoroSpeed(utterance.speedMultiplier)
+        )
         let timed = AsyncThrowingStream<TimedPCMChunk, Error> { continuation in
             let task = Task {
                 do {
