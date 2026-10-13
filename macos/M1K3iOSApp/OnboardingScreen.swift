@@ -182,12 +182,13 @@ struct OnboardingScreen: View {
             cardBody(
                 glyph: "cloud.fill",
                 title: PrivateCloudRung.menuTitle(privateCloudCard),
-                detail: "Answers on Apple's servers. Asks before your first message leaves this iPhone.",
+                detail: "Answers on Apple's servers. Asks before your first message leaves this device.",
                 footnote: "No download — needs the internet"
             )
         }
         .buttonStyle(.plain)
         .disabled(privateCloudCard != .ready)
+        .accessibilityElement(children: .combine)
     }
 
     private func brainCard(_ tier: BrainTier) -> some View {

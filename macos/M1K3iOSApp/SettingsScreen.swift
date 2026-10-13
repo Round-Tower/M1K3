@@ -380,6 +380,8 @@ struct SettingsScreen: View {
         }
         .buttonStyle(.plain)
         .disabled(privateCloudRow != .ready)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(core.privateCloudArming.isOn ? .isSelected : [])
     }
 
     private var appVersion: String {

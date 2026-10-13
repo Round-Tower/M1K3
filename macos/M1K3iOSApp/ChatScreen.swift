@@ -73,6 +73,13 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-13 — the pick lives on `core.privateCloudArming` (AppCore
 //  persists it) so Settings' brain list can arm it; nothing on iOS ever did, so the sheet never
 //  opened. A cloud chip over the input bar says when the next message goes to PCC. Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-13 — #585 follow-ups: the send button no longer waits for the
+//  local brain when the send goes to PCC (`PrivateCloudRung.sendReady`), and a send the core refuses
+//  (`sendPrivateCloud` false) puts the draft back instead of dropping it. Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-13 (pre-push review fold) — `privateCloudServesNextSend` is false
+//  in voice mode (the chip claimed PCC for a send that stayed local); a send the gate refuses goes LOCAL
+//  before the draft is cleared (`privateCloudSendAllowed` is synchronous), like every other send PCC can't
+//  honour — no draft juggling. Decline runs through `core.pickPrivateCloud(false)`. Confidence 0.85.
 
 import M1K3Avatar
 import M1K3Chat
@@ -264,15 +271,16 @@ struct ChatScreen: View {
             consent: pending.consent,
             onSend: { includeConversation in
                 privateCloudPending = nil
-                clearDraft()
                 core.privateCloudArming.consented(
                     includeConversation: includeConversation, seen: pending.onDeviceShown
                 )
+                guard core.privateCloudSendAllowed() else { send(); return }
+                clearDraft()
                 sendToPrivateCloud(pending.consent, includeConversation: includeConversation)
             },
             onCancel: {
                 privateCloudPending = nil
-                core.privateCloudArming.declined()
+                core.pickPrivateCloud(false)
             }
         )
     }
@@ -629,7 +637,8 @@ struct ChatScreen: View {
     }
 
     private var canSend: Bool {
-        brainReady
+        !core.chat.isResponding
+            && PrivateCloudRung.sendReady(localBrainReady: core.isReady, servesPrivateCloud: privateCloudServesNextSend)
             && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
@@ -659,10 +668,12 @@ struct ChatScreen: View {
                 consent: core.chat.privateCloudConsent(for: text), onDeviceShown: onDevice
             )
             return
-        case let .sendDirect(includeConversation):
+        case let .sendDirect(includeConversation) where core.privateCloudSendAllowed():
             clearDraft()
             sendToPrivateCloud(core.chat.privateCloudConsent(for: text), includeConversation: includeConversation)
-        case .local:
+        case .sendDirect, .local:
+            // A send PCC can't honour right now stays on this device, like an
+            // attachment or an outage — never dropped.
             let images = pendingAttachments
             clearDraft()
             Task { await core.send(text, images: images) }
@@ -686,7 +697,7 @@ struct ChatScreen: View {
 
     /// Only when the next typed send really leaves: not with an image staged or PCC out.
     private var privateCloudServesNextSend: Bool {
-        core.privateCloudArming.servesNextSend(
+        core.voiceLoop == nil && core.privateCloudArming.servesNextSend(
             control: privateCloudControl, hasAttachments: !pendingAttachments.isEmpty
         )
     }

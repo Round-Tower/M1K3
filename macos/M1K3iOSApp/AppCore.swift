@@ -79,6 +79,14 @@
 //  (`privateCloudArming`, persisted on every change), so Settings' brain list can pick it and Chat
 //  routes on it. `pickPrivateCloud(_:)` is the phone's one control: the yes and the pick together.
 //  #585 shipped the sheet with nothing that armed it. Confidence 0.8 (verify-by-device owed).
+//  Review: Kev + claude-fable-5.1, 2026-10-13 — `privateCloudSendAllowed` no longer requires `isReady`: PCC
+//  needs no brain on this device, and the guard kept sends disabled while Lil warmed. A PCC failure's
+//  local fallback still needs the local brain and says so through the rung's notice. Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-13 (pre-push review fold) — the egress key MIRRORS the pick: every
+//  turn-off (decline, Home or a phone brain, the rung vanishing) clears the stored yes, not only
+//  `pickPrivateCloud(false)` (security-auditor: "Keep it on this iPhone" left `chatEgressAllowed` true).
+//  `refreshPrivateCloudStatus` reconciles the pick with the control, so an org switch flipped while the
+//  chat screen is unmounted still ends it. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -238,6 +246,8 @@ final class AppCore {
         didSet {
             let defaults = UserDefaults.standard
             defaults.set(privateCloudArming.isOn, forKey: PrivateCloudArming.selectedDefaultsKey)
+            // One control: the chat-egress yes lives and dies with the pick.
+            defaults.set(privateCloudArming.isOn, forKey: ChatEgressConsent.defaultsKey)
             if let consent = privateCloudArming.consent {
                 defaults.set(consent, forKey: PrivateCloudArming.consentDefaultsKey)
             } else {
@@ -250,8 +260,14 @@ final class AppCore {
     /// and choosing any other brain takes both back. The sheet still asks before the
     /// first message leaves.
     func pickPrivateCloud(_ on: Bool) {
-        UserDefaults.standard.set(on, forKey: ChatEgressConsent.defaultsKey)
         privateCloudArming.select(on)
+    }
+
+    /// The rung's own say: a backend or policy that no longer allows PCC ends the pick.
+    func reconcilePrivateCloudPick() {
+        privateCloudArming.controlChanged(
+            PrivateCloudRung.control(privateCloudState(consent: privateCloudConsentPersisted))
+        )
     }
 
     nonisolated static let privateCloudBackend: (any PrivateCloudAnswering)? = {
@@ -280,12 +296,12 @@ final class AppCore {
     }
 
     func refreshPrivateCloudStatus() async {
-        guard let backend = Self.privateCloudBackend else { return }
+        guard let backend = Self.privateCloudBackend else { reconcilePrivateCloudPick(); return }
         privateCloudStatus = await backend.status()
+        reconcilePrivateCloudPick()
     }
 
     func privateCloudSendAllowed() -> Bool {
-        guard isReady else { return false }
         guard Self.privateCloudBackend != nil else { return false }
         let gate = privateCloudState(consent: privateCloudConsentPersisted)
         guard PrivateCloudRung.escalation(armed: true, gate) == .privateCloud else { return false }

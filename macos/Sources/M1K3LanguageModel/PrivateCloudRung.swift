@@ -40,6 +40,9 @@
 //  "build the one-control version"): on iOS the brain list's row is both the yes and the pick,
 //  so it reads PCC's state as if allowed. #585 shipped the iOS sheet with nothing that armed it.
 //  Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-13 — `sendReady`: a send that goes to PCC doesn't wait for the
+//  local brain (#585 follow-up: the phone's send button stayed disabled while Lil warmed, PCC picked).
+//  Confidence 0.9.
 //
 
 import Foundation
@@ -121,6 +124,12 @@ public enum PrivateCloudRung {
             backendPresent: state.backendPresent, available: state.available, consent: true,
             managedOff: state.managedOff, quota: state.quota
         ))
+    }
+
+    /// Whether the send control is live: the local brain must be ready unless the
+    /// send leaves for PCC, which needs no brain on this device.
+    public static func sendReady(localBrainReady: Bool, servesPrivateCloud: Bool) -> Bool {
+        localBrainReady || servesPrivateCloud
     }
 
     /// Whether an armed send goes to the consent sheet: only while the control is

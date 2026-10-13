@@ -64,6 +64,13 @@ struct PrivateCloudPhonePickTests {
         #expect(arming.action(control: control, hasAttachments: false, onDeviceMessages: []) == .askConsent)
     }
 
+    @Test("a PCC send doesn't wait for the local brain; a local send does")
+    func sendReadyFollowsTheRoute() {
+        #expect(PrivateCloudRung.sendReady(localBrainReady: false, servesPrivateCloud: true))
+        #expect(PrivateCloudRung.sendReady(localBrainReady: true, servesPrivateCloud: false))
+        #expect(!PrivateCloudRung.sendReady(localBrainReady: false, servesPrivateCloud: false))
+    }
+
     @Test("every shell with a PCC consent sheet has a row that arms it")
     func everyShellCanArm() throws {
         let macos = URL(fileURLWithPath: #filePath)
@@ -80,5 +87,6 @@ struct PrivateCloudPhonePickTests {
         )
         #expect(!settings.contains("Toggle(\"Private Cloud Compute\""), "one control on the phone, not a switch too")
         #expect(try source("M1K3iOSApp/AppCore.swift").contains("privateCloudArming.select(on)"))
+        #expect(try source("M1K3iOSApp/ChatScreen.swift").contains("PrivateCloudRung.sendReady("), "the phone's send gate")
     }
 }
