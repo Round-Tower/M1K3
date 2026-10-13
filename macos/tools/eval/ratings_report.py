@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read the answer ratings you exported from the phone (or the Mac) and say what they show.
+"""Read the answer ratings you exported from the phone and say what they show.
 
     tools/eval/ratings_report.py                         # the newest export in ~/Downloads
     tools/eval/ratings_report.py ratings.jsonl           # or a file you name
@@ -21,12 +21,16 @@ the noted misses into eval fixture drafts.
 
 Signed: Kev + claude-opus-5-5, 2026-10-13, Confidence 0.85 (pure helpers pinned in
 test_ratings_report.py; parsing reuses feedback_to_fixtures). Prior: none (new file).
+Review: Kev + claude-opus-5-5, 2026-10-13 (#597 follow-up) — the fixtures hint quotes its path (AirDrop's
+"name 2.jsonl"), and questions, notes and names are markdown-escaped. Confidence 0.9.
 """
 
 from __future__ import annotations
 
 import argparse
 import pathlib
+import re
+import shlex
 import sys
 from collections import Counter
 from dataclasses import dataclass
@@ -69,6 +73,16 @@ def bad_without_tools(rows: list[f2f.FeedbackRow]) -> list[f2f.FeedbackRow]:
     return sorted(misses, key=lambda r: r.rated_at, reverse=True)
 
 
+def _md(text: str) -> str:
+    """Escape a question, note or name so markdown shows it as written: no surprise bold,
+    list, link or swallowed <tag>, and no `|` breaking a table cell."""
+    text = text.replace("\\", "\\\\")
+    for ch in "*_`[]|":
+        text = text.replace(ch, "\\" + ch)
+    text = text.replace("<", "&lt;").replace(">", "&gt;")
+    return re.sub(r"^(\s*)([-+#]|\d+\.)", r"\1\\\2", text)
+
+
 def _clip(text: str, limit: int = 140) -> str:
     flat = " ".join(text.split())
     return flat if len(flat) <= limit else flat[: limit - 1] + "…"
@@ -90,11 +104,11 @@ def render(rows: list[f2f.FeedbackRow], source: str) -> str:
         "| Brain | Rated | Good | Bad | Bad rate |",
         "|---|---|---|---|---|",
     ]
-    out += [f"| {b} | {n} | {g} | {x} | {round(100 * x / n)}% |" for b, n, g, x in by_brain(rows)]
+    out += [f"| {_md(b)} | {n} | {g} | {x} | {round(100 * x / n)}% |" for b, n, g, x in by_brain(rows)]
 
     silent = bad_without_tools(rows)
     out += ["", f"## Bad answers where no tool fired ({len(silent)})", ""]
-    out += [f"- **{_clip(r.question, 90)}** ({r.brain}){': ' + _clip(r.comment) if r.comment else ''}"
+    out += [f"- **{_md(_clip(r.question, 90))}** ({_md(r.brain)}){': ' + _md(_clip(r.comment)) if r.comment else ''}"
             for r in silent] or ["None."]
 
     noted = sorted((r for r in rows if r.verdict == "bad" and r.comment), key=lambda r: r.rated_at, reverse=True)
@@ -102,12 +116,14 @@ def render(rows: list[f2f.FeedbackRow], source: str) -> str:
     out += ["", f"## Notes on bad answers ({len(noted)})", ""]
     for r in noted:
         tools = ", ".join(r.tools_used) or "no tools"
-        out.append(f"- **{_clip(r.question, 90)}**  \n  {_clip(r.comment or '')}  \n  _{r.brain} · {tools} · {r.rated_at}_")
+        meta = _md(f"{r.brain} · {tools} · {r.rated_at}")
+        out.append(f"- **{_md(_clip(r.question, 90))}**  \n  {_md(_clip(r.comment or ''))}  \n  _{meta}_")
     if not noted:
         out.append("None.")
     if unnoted:
         out += ["", f"{unnoted} bad answer{'s' if unnoted != 1 else ''} without a note. A note is what makes a miss fixable."]
-    out += ["", f"Next: `tools/eval/feedback_to_fixtures.py --jsonl {source}` drafts eval fixtures from the noted misses.", ""]
+    out += ["", f"Next: `tools/eval/feedback_to_fixtures.py --jsonl {shlex.quote(source)}` drafts eval fixtures "
+            "from the noted misses.", ""]
     return "\n".join(out)
 
 

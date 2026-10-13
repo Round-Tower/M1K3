@@ -23,6 +23,8 @@
 //  iOS to evaluate chat): speak, copy, share, thumbs up, and thumbs down with an optional note committed on
 //  Done (MessageView's semantics). Ratings go to the shared ChatSession store. Confidence 0.8 (verify-by-launch;
 //  the wiring is pinned by PhoneAnswerActionsTests).
+//  Review: Kev + claude-opus-5-5, 2026-10-13 (#597 follow-up) — 44 pt hit targets, the note field takes focus, and
+//  a typed note can't be swiped away. Confidence 0.85.
 //  TDD_SKIP: view body.
 
 import M1K3Chat
@@ -46,6 +48,7 @@ struct MessageBubble: View {
     @State private var didCopy = false
     @State private var showComment = false
     @State private var commentDraft = ""
+    @FocusState private var noteFocused: Bool
 
     var body: some View {
         switch message.role {
@@ -115,7 +118,7 @@ struct MessageBubble: View {
     /// a thumbs-up in one tap and a thumbs-down that opens an optional note and
     /// commits with it on Done. A tap on thumbs-down alone never clobbers a saved note.
     private var answerActions: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 6) {
             Button { onSpeak(message.text) } label: { actionIcon("speaker.wave.2") }
                 .accessibilityLabel("Speak this answer")
             Button { copyAnswer() } label: { actionIcon(didCopy ? "checkmark" : "doc.on.doc") }
@@ -146,12 +149,12 @@ struct MessageBubble: View {
         .sheet(isPresented: $showComment) { feedbackNoteSheet }
     }
 
-    /// One row icon with a finger-sized hit area; the glyph stays caption-small.
+    /// One row icon with a 44 pt hit area (the HIG minimum); the glyph stays small.
     private func actionIcon(_ symbol: String) -> some View {
         Image(systemName: symbol)
             .font(.footnote)
             .contentTransition(.symbolEffect(.replace))
-            .frame(minWidth: 32, minHeight: 32)
+            .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
     }
 
@@ -163,6 +166,7 @@ struct MessageBubble: View {
                 Section {
                     TextField("Note (optional)", text: $commentDraft, axis: .vertical)
                         .lineLimit(2 ... 6)
+                        .focused($noteFocused)
                 } footer: {
                     Text("A quick note, like \"should have searched the web\", so this can be fixed later.")
                 }
@@ -182,6 +186,9 @@ struct MessageBubble: View {
             }
         }
         .presentationDetents([.medium])
+        // A typed note is never lost to a stray swipe: Cancel or Done, on purpose.
+        .interactiveDismissDisabled(commentDraft != (existingComment ?? ""))
+        .onAppear { noteFocused = true }
     }
 
     /// Copies the answer's markdown source, as the Mac does, with a brief tick.

@@ -67,3 +67,27 @@ def test_newest_export_in_a_folder(tmp_path):
     os.utime(other, (9_999, 9_999))  # newest file, but not an export
     assert rr.newest_export(tmp_path) == new
     assert rr.newest_export(tmp_path / "missing") is None
+
+
+def test_the_fixtures_hint_survives_a_path_with_spaces():
+    # AirDrop names a repeat "m1k3-answer-ratings 2.jsonl": the hint must paste as one argument.
+    report = rr.render(rr.f2f.rows_from_jsonl(EXPORT), source="/Users/k/Downloads/m1k3-answer-ratings 2.jsonl")
+    assert "--jsonl '/Users/k/Downloads/m1k3-answer-ratings 2.jsonl'" in report
+
+
+def test_a_unicode_line_separator_inside_an_answer_does_not_split_its_row():
+    # Apple's JSONSerialization writes U+2028/U+2029/U+0085 raw; str.splitlines() broke a row on them.
+    ls, ps, nel = chr(0x2028), chr(0x2029), chr(0x85)
+    raw = json.dumps({"message_id": "m", "verdict": "bad", "question": f"Wrapped{ps}question{nel}here",
+                      "comment": f"odd{ls}text", "tools_used": []}, ensure_ascii=False)
+    assert ls in raw  # a raw separator, as the phone writes it
+    rows = rr.f2f.rows_from_jsonl(raw + "\n" + _line("good"))
+    assert len(rows) == 2 and rows[0].comment == f"odd{ls}text"
+
+
+def test_markdown_in_questions_and_notes_is_escaped():
+    line = _line("bad", brain="Lil|Pro", comment="- not a list <think>", question="what does **kwargs do?")
+    report = rr.render(rr.f2f.rows_from_jsonl(line), source="x.jsonl")
+    assert "what does \\*\\*kwargs do?" in report
+    assert "\\- not a list &lt;think&gt;" in report
+    assert "| Lil\\|Pro |" in report

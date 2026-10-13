@@ -297,7 +297,7 @@ struct ChatScreen: View {
     private func rate(_ message: ChatMessage, _ verdict: FeedbackVerdict, _ comment: String?) {
         let wasLiked = core.chat.feedbackVerdicts[message.id] == .good
         core.chat.recordFeedback(
-            messageID: message.id, verdict: verdict, comment: comment, brain: core.selectedBrain.displayName
+            messageID: message.id, verdict: verdict, comment: comment, brain: core.answeringBrainName
         )
         if verdict == .good, !wasLiked {
             core.reviewLedger.recordDelight()

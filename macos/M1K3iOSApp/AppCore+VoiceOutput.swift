@@ -28,6 +28,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-13 — `readAloud(_:)`: an answer's speaker button (MessageBubble), polished
 //  for speech like the Mac's speak path, in the same playback session as the sample; refused while a voice
 //  conversation holds the audio. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5-5, 2026-10-13 (#597 follow-up) — readAloud is a toggle (a tap while speaking stops),
+//  refuses while an answer streams, and re-checks voice mode after the session hop. Confidence 0.8.
 //
 
 import AVFoundation
@@ -114,14 +116,22 @@ extension AppCore {
     }
 
     /// Read one answer aloud: the speaker button on M1K3's turns (MessageBubble).
-    /// Polished for speech (links to hosts, citation tokens dropped) as the Mac does;
-    /// a no-op while a voice conversation holds the audio session.
+    /// A tap while anything is being read stops it (a toggle, so Built-in's queue
+    /// never reads an answer twice). Polished for speech as the Mac does. Silent
+    /// while an answer streams or a voice conversation holds the audio session,
+    /// checked again after the session hop. The session is released when speech
+    /// ends (AppCore+Voice), so ducked music comes back.
     func readAloud(_ text: String) {
-        guard !isVoiceModeActive else { return }
+        guard !isVoiceModeActive, !chat.isResponding else { return }
         let polished = SpeechTextPolish.polish(text)
         let spoken = polished.isEmpty ? text : polished
         Task {
+            if await speech.isSpeaking() {
+                await speech.stop()
+                return
+            }
             await Self.activateSampleAudioSession()
+            guard !isVoiceModeActive, !chat.isResponding else { return }
             await speech.speak(spoken)
         }
     }

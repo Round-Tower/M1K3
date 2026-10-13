@@ -18,6 +18,8 @@
 //  + write run on the DB's writer queue, off the MainActor; a protocol default
 //  hops the sync `save` off-caller for the non-GRDB conformers. `save` and
 //  `saveAsync` share one private `upsert` body so their SQL can't drift.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — `deleteAllFeedback()`: the user's Clear ratings now that the phone
+//  shows them (no default, like recordFeedback). Confidence 0.9 (PhoneAnswerActionsTests).
 //
 
 import Foundation
@@ -83,6 +85,9 @@ public protocol ChatHistoryPersisting: Sendable {
     func feedbackComments(conversationID: UUID) throws -> [UUID: String]
     /// Every feedback row, newest first — the export/inspection read.
     func allFeedback() throws -> [AnswerFeedback]
+    /// Delete every feedback row: the user's Clear ratings (iOS Settings). NO default, for the
+    /// recordFeedback reason: a silent no-op conformer would claim a delete it never did.
+    func deleteAllFeedback() throws
 }
 
 public extension ChatHistoryPersisting {
@@ -321,6 +326,10 @@ public final class GRDBChatHistoryStore: ChatHistoryPersisting, @unchecked Senda
             }
             return result
         }
+    }
+
+    public func deleteAllFeedback() throws {
+        try dbQueue.write { db in try db.execute(sql: "DELETE FROM message_feedback") }
     }
 
     public func allFeedback() throws -> [AnswerFeedback] {

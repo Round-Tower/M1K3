@@ -70,8 +70,8 @@
 //  raw route does not, and is now named as the remaining exposure. No logic changed.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `onAttachmentsDiscarded`: the conversation-delete cascade hook for
 //  caption memory (Photo knowledge items key on the attachment filename).
-//  Review: Kev + claude-opus-5-5, 2026-10-13 — `answerRatingsJSONL()` / `ratedAnswerCount()`: every rated
-//  answer in the store as eval-fixture JSONL, for the phone's Settings export (Kev is rating answers on
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — `loadAnswerRatings()` (one read off the main actor: count + eval-
+//  fixture JSONL) and `clearAnswerRatings()`, for the phone's Settings export and Clear (Kev is rating answers on
 //  iOS). Read from the store, so it spans every conversation. Confidence 0.9 (PhoneAnswerActionsTests).
 
 import Foundation
@@ -1008,18 +1008,23 @@ public final class ChatSession {
         Task.detached(priority: .utility) { try? history?.recordFeedback(record) }
     }
 
-    /// Every rated answer in the store as JSONL (AnswerFeedbackExport's eval-fixture
-    /// shape): the phone's Settings export (Kev, 2026-10-13). Read from the store,
-    /// not this conversation's map, so it spans every conversation. Empty when
-    /// nothing is rated or there is no store. A user-initiated read of a small table.
-    public func answerRatingsJSONL() -> String {
-        guard let rows = try? history?.allFeedback(), !rows.isEmpty else { return "" }
-        return AnswerFeedbackExport.jsonl(rows) { $0.formatted(.iso8601) }
+    /// Every rated answer in the store: the phone's Settings export (Kev, 2026-10-13).
+    /// One read, off the main actor (the table holds every question and answer), giving
+    /// the count and the JSONL in AnswerFeedbackExport's eval-fixture shape. Read from
+    /// the store, not this conversation's map, so it spans every conversation.
+    public func loadAnswerRatings() async -> AnswerRatings {
+        let history = history
+        let rows = await Task.detached(priority: .userInitiated) { (try? history?.allFeedback()) ?? [] }.value
+        guard !rows.isEmpty else { return AnswerRatings(count: 0, jsonl: "") }
+        return AnswerRatings(count: rows.count, jsonl: AnswerFeedbackExport.jsonl(rows) { $0.formatted(.iso8601) })
     }
 
-    /// How many answers carry a rating, across every conversation.
-    public func ratedAnswerCount() -> Int {
-        (try? history?.allFeedback().count) ?? 0
+    /// Delete every rating (the user's Clear ratings) and empty the thumbs on screen.
+    public func clearAnswerRatings() async {
+        let history = history
+        _ = await Task.detached(priority: .userInitiated) { try? history?.deleteAllFeedback() }.value
+        feedbackVerdicts = [:]
+        feedbackComments = [:]
     }
 
     /// Fire-and-forget auto-titling after a successful exchange of an untitled
@@ -1188,5 +1193,17 @@ public final class ChatSession {
     public func stripArtifactTagsFromLastMessage() {
         guard let index = messages.lastIndex(where: { $0.role == .assistant }) else { return }
         messages[index].text = ChatArtifactDisplay.stripArtifactTags(messages[index].text)
+    }
+}
+
+/// The ratings export as Settings shows it: how many answers carry a thumb, and the
+/// JSONL the share sheet sends.
+public struct AnswerRatings: Sendable, Equatable {
+    public let count: Int
+    public let jsonl: String
+
+    public init(count: Int, jsonl: String) {
+        self.count = count
+        self.jsonl = jsonl
     }
 }
