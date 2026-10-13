@@ -51,16 +51,21 @@
 //  Private Cloud Compute is a row in Brain, after Home. Picking it is the yes and the pick
 //  (`core.pickPrivateCloud`); a phone brain or Home takes both back. The Grounding footer quotes
 //  `PrivateCloudTurn.appleGuarantee` instead of our own claim. Confidence 0.8 (verify-by-device).
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — "Answer ratings": how many answers carry a thumbs, and an
+//  Export ratings (JSONL) share for evaluating chat off the phone (ChatSession.answerRatingsJSONL). Read once
+//  when Settings opens. Confidence 0.8 (verify-by-launch).
 
 #if canImport(DeclaredAgeRange)
     @preconcurrency import DeclaredAgeRange
 #endif
+import CoreTransferable
 import M1K3BrainLink
 import M1K3Chat
 import M1K3Inference
 import M1K3LanguageModel
 import M1K3Screengrab
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct SettingsScreen: View {
     @Environment(AppCore.self) private var core
@@ -70,6 +75,10 @@ struct SettingsScreen: View {
     @State private var ageRangeFailure: AgeRangeRequestFailure?
     @AppStorage(ReadingMode.storageKey) private var readingModeRaw = ReadingMode.standard.rawValue
     @AppStorage(AppCore.avatarBackdropKey) private var avatarBackdrop = true
+    /// Answer ratings, read once when Settings opens (the bubble's thumbs live in
+    /// the shared ChatSession store; Settings can't change them meanwhile).
+    @State private var ratedAnswers = 0
+    @State private var ratingsJSONL = ""
 
     /// What THIS device may list — Mini only where Apple Intelligence runs, Lil only
     /// above its memory floor, Brain at Home always (MobileBrainMenu).
@@ -204,6 +213,26 @@ struct SettingsScreen: View {
                 Text("Reading")
             } footer: {
                 Text(readingMode.detail)
+            }
+
+            Section {
+                LabeledContent("Rated answers", value: "\(ratedAnswers)")
+                ShareLink(
+                    item: AnswerRatingsFile(jsonl: ratingsJSONL),
+                    preview: SharePreview("M1K3 answer ratings")
+                ) {
+                    Label("Export ratings (JSONL)", systemImage: "square.and.arrow.up")
+                }
+                .disabled(ratedAnswers == 0)
+            } header: {
+                Text("Answer ratings")
+            } footer: {
+                Text("Your thumbs up and down on M1K3's answers, with any notes. They stay on this device "
+                    + "until you export them, to see what worked and what didn't.")
+            }
+            .task {
+                ratedAnswers = core.chat.ratedAnswerCount()
+                ratingsJSONL = core.chat.answerRatingsJSONL()
             }
 
             Section {
@@ -403,3 +432,16 @@ struct SettingsScreen: View {
         }
     }
 #endif
+
+/// The ratings export as a file the share sheet can save or AirDrop: JSONL, one
+/// rated answer per line (AnswerFeedbackExport's eval-fixture shape).
+private struct AnswerRatingsFile: Transferable {
+    let jsonl: String
+
+    static var transferRepresentation: some TransferRepresentation {
+        DataRepresentation(exportedContentType: UTType(filenameExtension: "jsonl") ?? .plainText) { file in
+            Data(file.jsonl.utf8)
+        }
+        .suggestedFileName("m1k3-answer-ratings.jsonl")
+    }
+}

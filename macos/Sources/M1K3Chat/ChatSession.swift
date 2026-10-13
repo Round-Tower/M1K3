@@ -70,6 +70,9 @@
 //  raw route does not, and is now named as the remaining exposure. No logic changed.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `onAttachmentsDiscarded`: the conversation-delete cascade hook for
 //  caption memory (Photo knowledge items key on the attachment filename).
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — `answerRatingsJSONL()` / `ratedAnswerCount()`: every rated
+//  answer in the store as eval-fixture JSONL, for the phone's Settings export (Kev is rating answers on
+//  iOS). Read from the store, so it spans every conversation. Confidence 0.9 (PhoneAnswerActionsTests).
 
 import Foundation
 import M1K3Inference
@@ -1003,6 +1006,20 @@ public final class ChatSession {
         // DB write (the saveAsync precedent).
         let history = history
         Task.detached(priority: .utility) { try? history?.recordFeedback(record) }
+    }
+
+    /// Every rated answer in the store as JSONL (AnswerFeedbackExport's eval-fixture
+    /// shape): the phone's Settings export (Kev, 2026-10-13). Read from the store,
+    /// not this conversation's map, so it spans every conversation. Empty when
+    /// nothing is rated or there is no store. A user-initiated read of a small table.
+    public func answerRatingsJSONL() -> String {
+        guard let rows = try? history?.allFeedback(), !rows.isEmpty else { return "" }
+        return AnswerFeedbackExport.jsonl(rows) { $0.formatted(.iso8601) }
+    }
+
+    /// How many answers carry a rating, across every conversation.
+    public func ratedAnswerCount() -> Int {
+        (try? history?.allFeedback().count) ?? 0
     }
 
     /// Fire-and-forget auto-titling after a successful exchange of an untitled

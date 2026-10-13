@@ -25,6 +25,9 @@
 //  explicit Built-in pick clears a stale failure banner.
 //  Review: Kev + claude-opus-5-5, 2026-09-25 — doc only: neuralVoiceAvailable (= mlxAvailable) now also refuses an
 //  A12-family GPU (warming Kokoro traps there); ~192 MB. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — `readAloud(_:)`: an answer's speaker button (MessageBubble), polished
+//  for speech like the Mac's speak path, in the same playback session as the sample; refused while a voice
+//  conversation holds the audio. Confidence 0.8 (verify-by-launch).
 //
 
 import AVFoundation
@@ -107,6 +110,19 @@ extension AppCore {
                 selectedVoiceTier = .builtin
                 voiceLoad = .failed(message: error.localizedDescription)
             }
+        }
+    }
+
+    /// Read one answer aloud: the speaker button on M1K3's turns (MessageBubble).
+    /// Polished for speech (links to hosts, citation tokens dropped) as the Mac does;
+    /// a no-op while a voice conversation holds the audio session.
+    func readAloud(_ text: String) {
+        guard !isVoiceModeActive else { return }
+        let polished = SpeechTextPolish.polish(text)
+        let spoken = polished.isEmpty ? text : polished
+        Task {
+            await Self.activateSampleAudioSession()
+            await speech.speak(spoken)
         }
     }
 

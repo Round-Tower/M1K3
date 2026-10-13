@@ -91,6 +91,8 @@
 //  `BestSystemVoice.pick` once at launch onto `builtinSpeech.defaultVoiceIdentifier`; nil leaves the
 //  system default. Logged (.notice, the identifier only) so a device read says which voice won.
 //  Confidence 0.8 (which voices a phone lists is verify-by-device).
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — doc only: the reviewLedger note now counts the bubble's thumbs-up
+//  (the phone has one since this date). Confidence 0.9.
 
 import Foundation
 import M1K3Agent
@@ -141,9 +143,9 @@ final class AppCore {
     )
     /// The pixel-cube companion, shared verbatim with the Mac app (AvatarView).
     let avatar = AvatarController()
-    /// The App Store rating ledger (ReviewPromptPolicy's facts). The phone has
-    /// no thumbs-up, so completed turns carry the signal here; ChatScreen
-    /// alone consumes a due prompt. Silent under the screengrab harness.
+    /// The App Store rating ledger (ReviewPromptPolicy's facts). Completed turns
+    /// and, since 2026-10-13, a liked answer (the bubble's thumbs-up) carry the
+    /// signal; ChatScreen alone consumes a due prompt. Silent under the screengrab harness.
     let reviewLedger = ReviewPromptLedger(
         storage: UserDefaults.standard,
         version: ReviewPromptLedger.marketingVersion(),
