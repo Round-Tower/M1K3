@@ -36,6 +36,13 @@
 //  (`menuTitle`), and the pick holds until a local brain is chosen, so `controlHelp`
 //  says so. `brainPickerHelp` (PR #462 review) lifts the picker's tooltip out of the view,
 //  and names voice mode as on-device. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — `pickerControl`, the phone's one control (Kev:
+//  "build the one-control version"): on iOS the brain list's row is both the yes and the pick,
+//  so it reads PCC's state as if allowed. #585 shipped the iOS sheet with nothing that armed it.
+//  Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-13 — `sendReady`: a send that goes to PCC doesn't wait for the
+//  local brain (#585 follow-up: the phone's send button stayed disabled while Lil warmed, PCC picked).
+//  Confidence 0.9.
 //
 
 import Foundation
@@ -107,6 +114,22 @@ public enum PrivateCloudRung {
             return .exhausted(resetsAt: resetsAt)
         }
         return .ready
+    }
+
+    /// The phone's brain-list row, which is both the switch and the pick: picking it
+    /// writes the yes, so the stored answer doesn't gate it. Hidden only where the
+    /// rung can't exist (no backend, org policy).
+    public static func pickerControl(_ state: PrivateCloudState) -> Control {
+        control(PrivateCloudState(
+            backendPresent: state.backendPresent, available: state.available, consent: true,
+            managedOff: state.managedOff, quota: state.quota
+        ))
+    }
+
+    /// Whether the send control is live: the local brain must be ready unless the
+    /// send leaves for PCC, which needs no brain on this device.
+    public static func sendReady(localBrainReady: Bool, servesPrivateCloud: Bool) -> Bool {
+        localBrainReady || servesPrivateCloud
     }
 
     /// Whether an armed send goes to the consent sheet: only while the control is

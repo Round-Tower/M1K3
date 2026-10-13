@@ -75,6 +75,18 @@
 //  `privateCloudEnabled()` (the Settings toggle now writes `ChatEgressConsent.defaultsKey`, matching
 //  the Mac's PrivacySettingsPane); `privateCloudSendAllowed()` no longer double-gates (the rung
 //  already reads `chatEgressAllowed`). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — the PCC pick moved here from ChatScreen's view state
+//  (`privateCloudArming`, persisted on every change), so Settings' brain list can pick it and Chat
+//  routes on it. `pickPrivateCloud(_:)` is the phone's one control: the yes and the pick together.
+//  #585 shipped the sheet with nothing that armed it. Confidence 0.8 (verify-by-device owed).
+//  Review: Kev + claude-fable-5.1, 2026-10-13 — `privateCloudSendAllowed` no longer requires `isReady`: PCC
+//  needs no brain on this device, and the guard kept sends disabled while Lil warmed. A PCC failure's
+//  local fallback still needs the local brain and says so through the rung's notice. Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-13 (pre-push review fold) — the egress key MIRRORS the pick: every
+//  turn-off (decline, Home or a phone brain, the rung vanishing) clears the stored yes, not only
+//  `pickPrivateCloud(false)` (security-auditor: "Keep it on this iPhone" left `chatEgressAllowed` true).
+//  `refreshPrivateCloudStatus` reconciles the pick with the control, so an org switch flipped while the
+//  chat screen is unmounted still ends it. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -223,7 +235,40 @@ final class AppCore {
     /// `homeBrainActive`, readable off the main actor (the egress clause, per turn).
     nonisolated static let homeBrainLive = Mutex(false)
 
-    // MARK: - Private Cloud Compute (opt-in via Settings toggle)
+    // MARK: - Private Cloud Compute (the brain list's row)
+
+    /// The PCC pick and the sheet's answer (ADR 0010). One owner, so Settings' brain
+    /// list picks it and Chat routes on it; persisted on every change.
+    var privateCloudArming = PrivateCloudArming(
+        isOn: UserDefaults.standard.bool(forKey: PrivateCloudArming.selectedDefaultsKey),
+        consent: UserDefaults.standard.object(forKey: PrivateCloudArming.consentDefaultsKey) as? Bool
+    ) {
+        didSet {
+            let defaults = UserDefaults.standard
+            defaults.set(privateCloudArming.isOn, forKey: PrivateCloudArming.selectedDefaultsKey)
+            // One control: the chat-egress yes lives and dies with the pick.
+            defaults.set(privateCloudArming.isOn, forKey: ChatEgressConsent.defaultsKey)
+            if let consent = privateCloudArming.consent {
+                defaults.set(consent, forKey: PrivateCloudArming.consentDefaultsKey)
+            } else {
+                defaults.removeObject(forKey: PrivateCloudArming.consentDefaultsKey)
+            }
+        }
+    }
+
+    /// The phone's one control: the brain list's row is the chat-egress yes AND the pick,
+    /// and choosing any other brain takes both back. The sheet still asks before the
+    /// first message leaves.
+    func pickPrivateCloud(_ on: Bool) {
+        privateCloudArming.select(on)
+    }
+
+    /// The rung's own say: a backend or policy that no longer allows PCC ends the pick.
+    func reconcilePrivateCloudPick() {
+        privateCloudArming.controlChanged(
+            PrivateCloudRung.control(privateCloudState(consent: privateCloudConsentPersisted))
+        )
+    }
 
     nonisolated static let privateCloudBackend: (any PrivateCloudAnswering)? = {
         if let live = PrivateCloudBackends.live() { return live }
@@ -251,12 +296,12 @@ final class AppCore {
     }
 
     func refreshPrivateCloudStatus() async {
-        guard let backend = Self.privateCloudBackend else { return }
+        guard let backend = Self.privateCloudBackend else { reconcilePrivateCloudPick(); return }
         privateCloudStatus = await backend.status()
+        reconcilePrivateCloudPick()
     }
 
     func privateCloudSendAllowed() -> Bool {
-        guard isReady else { return false }
         guard Self.privateCloudBackend != nil else { return false }
         let gate = privateCloudState(consent: privateCloudConsentPersisted)
         guard PrivateCloudRung.escalation(armed: true, gate) == .privateCloud else { return false }
