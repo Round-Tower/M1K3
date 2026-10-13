@@ -27,6 +27,15 @@ imported** — read its last block when a task continues prior work, not before.
 Anything a cold session needs on turn one belongs below, not there.
 
 ## Standing carry-forwards
+- **Act fast with the house tooling (Kev, 2026-10-13, measured).** Inner loop: `macos/tools/dev/tdd.sh
+  <TestTarget> [name]` builds one test bundle and runs only its tests (about 13 s; `swift test --filter`
+  takes about 20 s). Run the full `swift test --parallel --disable-xctest` once before a push, never
+  between edits; the suite is all Swift Testing. Debug `xcodebuild` shares Xcode's compilation cache
+  (a fresh worktree builds in 112 s, 171 s without it), so never wipe DerivedData or the cache to
+  "fix" a build without evidence. Land with `land.sh`. Run independent reviews, builds and CI watches
+  in parallel (background tasks plus Monitor), not one after another.
+- **No brain auditions for now (Kev, 2026-10-13):** make the current brains better; don't scout new
+  models.
 - **Landing a PR:** `macos/tools/ci/land.sh <PR> [--passes N]` gates on
   `pr_watch.py` (required CI green on the head sha, review passes read against
   that head, each owed pass ending `VERDICT: APPROVE @ <full 40-char head sha>`;
@@ -237,4 +246,7 @@ Review: Kev + claude-opus-5.5, 2026-10-11 — #559 review fold: the router fact 
 just the ADR; the measured figure points at its eval file; the #558 bullet says when to delete it.
 Review: Kev + claude-opus-5-5, 2026-10-13 — the #558 bullet retires with its fix: the gate now waits on
 every check master's ruleset requires, read live. Confidence 0.85.
+Review: Kev + claude-opus-5-5, 2026-10-13 — two standing facts on top of the carry-forwards: act fast
+with the measured house tooling (tdd.sh, --disable-xctest, the Debug compilation cache, land.sh,
+parallel watches), and no brain auditions for now. Confidence 0.85.
 -->

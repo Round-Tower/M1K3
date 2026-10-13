@@ -33,7 +33,8 @@ Build-from-source instructions for the Mac app live in
 
 1. Contributions are by invitation (see *Licensing* below) — ask first, then
    fork, branch, and make the change with tests.
-2. Run the fast loop locally: `cd macos && swift test --parallel`. If you
+2. Run the fast loop locally: `cd macos && tools/dev/tdd.sh <TestTarget>` while you
+   work, then `swift test --parallel --disable-xctest` before you push. If you
    touched the Claude Code mod under `.claude/skills/m1k3/`, also run
    `claude plugin validate .claude/skills/m1k3 && claude plugin test
    .claude/skills/m1k3` (CI does not run these yet).
