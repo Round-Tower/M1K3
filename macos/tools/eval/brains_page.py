@@ -54,6 +54,8 @@ Mini records crashed the page; ChatEvalDocument always encodes the field).
 Review: Kev + claude-opus-5.5, 2026-10-11 — the head carries Safari's App Store banner
 (apple-itunes-app) like every other page; test_native_download.py pins it here so a
 regenerate keeps it. Confidence 0.9.
+Review: Kev + claude-opus-5-5, 2026-10-13 — the footer's copyright line names Round Tower Software
+Ltd, the registered name (#574). Confidence 0.95.
 """
 
 from __future__ import annotations
@@ -898,7 +900,7 @@ def render_html(doc: dict) -> str:
 </main>
 
 <footer>
-  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE STUDIOS LTD</a> · MADE IN IRELAND</span>
+  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE LTD</a> · MADE IN IRELAND</span>
   <span><a href="/teams">FOR TEAMS</a> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
 </footer>
 

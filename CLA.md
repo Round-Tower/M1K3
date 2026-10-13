@@ -16,7 +16,7 @@ attachment — anything meant to become part of M1K3) you agree that:
    licence.
 
 2. **Inbound grant: Apache License 2.0.** You license the contribution to
-   Round Tower Software Studios Ltd and to every recipient of M1K3 under the
+   Round Tower Software Ltd and to every recipient of M1K3 under the
    [Apache License, Version 2.0](https://www.apache.org/licenses/LICENSE-2.0),
    including its patent grant. This is a permissive inbound licence: it lets
    us ship your work as part of M1K3 under the FSL now, under Apache-2.0 when
@@ -49,3 +49,6 @@ Unknown — new file.)*
 *Review: Kev + claude-opus-5-5, 2026-10-02 — the inbound grant now runs to
 Round Tower Software Studios Ltd (was "Kevin Murphy / Round Tower"): Kev's call
 that the company holds the licence. Terms unchanged. Confidence 0.8.*
+*Review: Kev + claude-opus-5-5, 2026-10-13 — #574: the operative text names Round Tower
+Software Ltd, the registered name (Kev, 2026-10-11). The dated reviews above keep the old name
+as history. Confidence 0.9.*
