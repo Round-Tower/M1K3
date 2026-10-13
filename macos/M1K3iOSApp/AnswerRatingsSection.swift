@@ -9,6 +9,9 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-13, Confidence 0.8 (verify-by-launch;
 //  the export itself is pinned in PhoneAnswerActionsTests). Prior: none (new file).
+//  Review: Kev + claude-opus-5-5, 2026-10-13 (#597 follow-up) — one read off the main actor
+//  (`loadAnswerRatings`), Clear ratings behind a confirmation, and a footer that says the file
+//  holds each question and answer, not only the thumbs. Confidence 0.85.
 //  TDD_SKIP: view body.
 //
 
@@ -19,29 +22,40 @@ import UniformTypeIdentifiers
 
 struct AnswerRatingsSection: View {
     @Environment(AppCore.self) private var core
-    @State private var ratedAnswers = 0
-    @State private var ratingsJSONL = ""
+    @State private var ratings = AnswerRatings(count: 0, jsonl: "")
+    @State private var confirmClear = false
 
     var body: some View {
         Section {
-            LabeledContent("Rated answers", value: "\(ratedAnswers)")
+            LabeledContent("Rated answers", value: "\(ratings.count)")
             ShareLink(
-                item: AnswerRatingsFile(jsonl: ratingsJSONL),
+                item: AnswerRatingsFile(jsonl: ratings.jsonl),
                 preview: SharePreview("M1K3 answer ratings")
             ) {
                 Label("Export ratings (JSONL)", systemImage: "square.and.arrow.up")
             }
-            .disabled(ratedAnswers == 0)
+            .disabled(ratings.count == 0)
+            Button("Clear ratings", role: .destructive) { confirmClear = true }
+                .disabled(ratings.count == 0)
+                .confirmationDialog(
+                    "Delete all \(ratings.count) ratings?", isPresented: $confirmClear, titleVisibility: .visible
+                ) {
+                    Button("Delete ratings", role: .destructive) {
+                        Task {
+                            await core.chat.clearAnswerRatings()
+                            ratings = await core.chat.loadAnswerRatings()
+                        }
+                    }
+                } message: {
+                    Text("Every thumb and note goes. Your conversations stay.")
+                }
         } header: {
             Text("Answer ratings")
         } footer: {
-            Text("Your thumbs up and down on M1K3's answers, with any notes. They stay on this device "
-                + "until you export them, to see what worked and what didn't.")
+            Text("Your thumbs up and down, with any notes, and the question and answer each one rates. "
+                + "They stay on this device unless you export them.")
         }
-        .task {
-            ratedAnswers = core.chat.ratedAnswerCount()
-            ratingsJSONL = core.chat.answerRatingsJSONL()
-        }
+        .task { ratings = await core.chat.loadAnswerRatings() }
     }
 }
 

@@ -97,6 +97,8 @@ private final class WatermarkHistoryStore: ChatHistoryPersisting, @unchecked Sen
         []
     }
 
+    func deleteAllFeedback() throws {}
+
     func setDistilledWatermark(id: UUID, count: Int) throws {
         lock.lock()
         defer { lock.unlock() }

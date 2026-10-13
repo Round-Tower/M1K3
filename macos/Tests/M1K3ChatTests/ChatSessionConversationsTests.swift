@@ -121,6 +121,11 @@ private final class InMemoryHistoryStore: ChatHistoryPersisting, @unchecked Send
             .reduce(into: [:]) { if let c = $1.comment { $0[$1.messageID] = c } }
     }
 
+    func deleteAllFeedback() throws {
+        lock.lock(); defer { lock.unlock() }
+        feedbackRows.removeAll()
+    }
+
     func allFeedback() throws -> [AnswerFeedback] {
         lock.lock(); defer { lock.unlock() }
         return feedbackRows.values.sorted { $0.createdAt > $1.createdAt }

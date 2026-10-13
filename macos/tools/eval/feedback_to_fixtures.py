@@ -19,6 +19,10 @@ open_link, comment: "we didn't pick it up") became `tool-read-site`.
 
 Signed: Kev + claude-fable-5.1, 2026-09-04, Confidence 0.85 (pure helpers
 tested; the SQLite read mirrors AnswerFeedbackExport's columns). Prior: Unknown
+
+Review: Kev + claude-opus-5-5, 2026-10-13 — rows_from_jsonl splits on "\n" only: a raw U+2028 in an
+answer (Apple doesn't escape it) cut a row in half and json.loads killed the whole read. Pinned in
+test_ratings_report.py. Confidence 0.9.
 """
 
 from __future__ import annotations
@@ -103,7 +107,9 @@ def render(rows: list[FeedbackRow]) -> str:
 
 def rows_from_jsonl(text: str) -> list[FeedbackRow]:
     rows = []
-    for line in text.splitlines():
+    # split("\n"), not splitlines(): Apple's JSONSerialization writes U+2028/U+2029/U+0085
+    # raw inside strings, and splitlines() would cut a row in half on them.
+    for line in text.split("\n"):
         if not line.strip():
             continue
         o = json.loads(line)

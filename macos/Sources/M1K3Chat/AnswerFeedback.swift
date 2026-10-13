@@ -19,6 +19,9 @@
 //  Signed: Kev + claude-fable-5, 2026-08-19, Confidence 0.9 (pure types +
 //  export TDD'd; the store/UI wiring is verify-by-launch). Prior:
 //  docs/CONVERSATION_RATING_DESIGN.md (conversation-level concept).
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — the contract gains two user actions on the phone (Settings ▸ Answer
+//  ratings): the rows leave the device ONLY when the user shares the JSONL export, and Clear ratings deletes them
+//  all. Still local, never synced, never over MCP. Confidence 0.9.
 //
 
 import Foundation

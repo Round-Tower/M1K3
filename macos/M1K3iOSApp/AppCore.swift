@@ -93,6 +93,9 @@
 //  Confidence 0.8 (which voices a phone lists is verify-by-device).
 //  Review: Kev + claude-opus-5-5, 2026-10-13 — doc only: the reviewLedger note now counts the bubble's thumbs-up
 //  (the phone has one since this date). Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 (#597 follow-up) — `chat.residentBrainName` stamps each answer with
+//  `answeringBrainName` ("Brain at Home" when Home fronts), as the Mac does: ratings named the brain selected at
+//  tap time, so Home answers read as Lil/Mini and a later switch re-labelled earlier answers. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -230,6 +233,12 @@ final class AppCore {
     /// The paired Mac, if any. Metadata only — the PSK lives in the Keychain
     /// (PairedBrainStore's split, mirroring the Mac side).
     private(set) var homeBrain: PairedBrain?
+    /// Who answers a local send right now: the paired Mac when Home fronts, else the
+    /// phone's selected brain. The label an answer (and so its rating) carries.
+    var answeringBrainName: String {
+        homeBrainActive ? "Brain at Home" : selectedBrain.displayName
+    }
+
     /// True while the inference slot points at the paired Mac's brain. The
     /// local `selectedBrain` is kept untouched as the tier to return to.
     private(set) var homeBrainActive = false {
@@ -560,6 +569,10 @@ final class AppCore {
         // Caption memory: a deleted chat forgets its Photo memories.
         photoMemory.onChange = { [weak self] in self?.refreshCounts() }
         chat.onAttachmentsDiscarded = { [weak self] in self?.photoMemory.forget($0) }
+        // Stamp each answer with the brain that rendered it, read at finalization (the Mac's
+        // AppEnvironment rule), so a rating made later still names who answered. PCC answers
+        // stamp themselves in ChatSession.
+        chat.residentBrainName = { [weak self] in self?.answeringBrainName }
 
         refreshCounts()
         // Brain at Home: restore a paired Mac, and re-point the slot at it if
