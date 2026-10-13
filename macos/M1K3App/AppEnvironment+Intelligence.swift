@@ -43,6 +43,8 @@
 //  `mcpResponder` (withholds Photo captions, caption memory); `.local` (the App Intent) is unchanged.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — `surface` has no default (fail-closed:
 //  a new caller must say who is asking); AskSurfaceCallSiteTests scans every call site.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — `intelligenceSpeak` and a visitor's queued line pass the emotion
+//  to the voice too (a VoiceMood, #576 §1); the face still follows it as before. Confidence 0.85.
 
 import Foundation
 import M1K3Avatar // AvatarEmotion
@@ -237,12 +239,13 @@ extension AppEnvironment {
             if let emotion {
                 avatar.setEmotion(AvatarEmotion.from(emotion))
             }
+            let mood = VoiceMood(emotion)
             if wait {
                 let stallsBefore = speech.playbackStallCount
-                await speak(text, narrator: narrator)
+                await speak(text, narrator: narrator, mood: mood)
                 try throwIfSpeechStalled(since: stallsBefore)
             } else {
-                Task { @MainActor in await self.speak(text, narrator: narrator) }
+                Task { @MainActor in await self.speak(text, narrator: narrator, mood: mood) }
             }
             return
         }
@@ -288,7 +291,7 @@ extension AppEnvironment {
         if let emotion = request.emotion {
             avatar.setEmotion(AvatarEmotion.from(emotion))
         }
-        await speak(request.text, narrator: request.narrator)
+        await speak(request.text, narrator: request.narrator, mood: VoiceMood(request.emotion))
     }
 
     // MARK: - Remember
