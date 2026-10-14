@@ -1,9 +1,10 @@
-# GitHub Sponsors: the Round-Tower profile (paste-ready)
+# GitHub Sponsors: the Round-Tower profile
 
 `.github/FUNDING.yml` and the "SPONSOR ♥" link in every m1k3.app footer point at
-`github.com/sponsors/Round-Tower`. The org has no Sponsors listing yet (GitHub API, 2026-10-14:
-`hasSponsorsListing: false`), so that URL redirects to the org page. This file holds what goes
-into the listing. The account steps (bank, tax, approval) are Kev's.
+`github.com/sponsors/Round-Tower`. **It is live: approved 2026-10-14.** Below is exactly what's
+published: the short bio, the introduction, featured work (M1K3, murphysig, puca), five tiers
+and the goal, all read back through the GitHub API the same day. Change the listing here first,
+then on GitHub, so the two stay the same. The account steps (bank, tax) are Kev's.
 
 The copy keeps the house rules:
 
@@ -17,7 +18,7 @@ The copy keeps the house rules:
 - **Organisations:** those that want M1K3 on their own hardware license M1K3 for Teams.
   Sponsorship is support, not a licence.
 
-## Kev's setup on github.com, in this order
+## Kev's setup on github.com (done 2026-10-14; kept for a future org)
 
 1. Turn on two-factor authentication on the account that owns Round-Tower. GitHub requires it.
 2. **Sign up.** Go to github.com/sponsors → **Get sponsored** → **Join the waitlist** next to
@@ -78,8 +79,9 @@ Running M1K3 for a team on your own hardware? That's [M1K3 for Teams](https://m1
 
 ## Tiers
 
-The prices are Kev's call, and they're final once published. Turn custom amounts on, with a
-minimum of US$1.
+Published 2026-10-14 (Kev: "go with those"). A tier's price is final once published: to change
+one, retire it and publish a new one. GitHub has no tier-name field, so each description opens
+with the name in bold. Custom amounts are on at GitHub's defaults (no recommended amount set).
 
 | Kind | Name | Price | Description |
 |---|---|---|---|
@@ -95,7 +97,7 @@ Use this welcome message on every tier:
 Thank you. You're keeping a local AI free for everyone. — Kev and M1K3
 ```
 
-For the goal, set 25 monthly sponsors, with this description:
+The goal is 25 monthly sponsors, with this description:
 
 ```text
 Twenty-five monthly sponsors keep M1K3's brains getting better every month, free for everyone.
@@ -113,4 +115,8 @@ Context: written when Kev asked to set up the Sponsors page that FUNDING.yml and
 Open:
   - The tier prices, The Lair's README line, the welcome message's signature and the goal are proposals for Kev.
   - If The Lair keeps its perk, M1K3's README owes a sponsors line.
+Review: Kev + claude-opus-5-5, 2026-10-14 — the listing is live and matches this file: the profile, featured
+  work, all five tiers with the welcome message, and the goal, published from the dashboard and read back via
+  the GraphQL API. Kev took the proposals as written, which retires the first Open. Still open: the first
+  sponsor on The Lair owes M1K3's README a sponsors line. Confidence 0.9
 -->
