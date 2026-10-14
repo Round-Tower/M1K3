@@ -235,3 +235,28 @@ def test_a_canceling_draft_is_no_conflict() -> None:
     # alone, it is adopted, so the plan says wait
     lone = [_sub("event-draft", None, "CANCELING")]
     assert submit.submission_for(lone, "IOS", _items({"event-draft": [_event_item()]}))["id"] == "event-draft"
+
+
+def test_only_a_refused_include_falls_back(monkeypatch, capsys) -> None:
+    # A transient failure must not silently drop appEvent and hide the event draft (review on #609).
+    calls = []
+
+    def failing(error):
+        def paginate(path):
+            calls.append(path)
+            if "appEvent" in path:
+                raise RuntimeError(f"GET {path} -> {error}")
+            return iter([_item("ver-1")])
+        return paginate
+
+    monkeypatch.setattr(submit, "paginate", failing("400: {\"errors\":[{\"detail\":\"'appEvent' is not a valid include\"}]}"))
+    assert submit.items_of("s") == [_item("ver-1")]
+    assert "appEvent check skipped" in capsys.readouterr().out
+    for transient in ("503: upstream", "429: slow down", "transport: timed out", "401: expired token"):
+        monkeypatch.setattr(submit, "paginate", failing(transient))
+        try:
+            submit.items_of("s")
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError(f"{transient} must not fall back")

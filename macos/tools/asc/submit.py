@@ -269,8 +269,19 @@ def items_of(submission_id: str) -> list[dict[str, Any]]:
     base = f"/v1/reviewSubmissions/{submission_id}/items?limit=50&include="
     try:
         return list(paginate(base + "appStoreVersion,appEvent"))
-    except RuntimeError:  # appEvent as an include is unproven here (#605): never let it break the Mac path
+    except RuntimeError as error:
+        # appEvent as an include is unproven here (#605). Only ASC refusing THAT falls back, and
+        # loudly: a transient failure falling back would hide the event's draft (review on #609).
+        if not include_refused(str(error)):
+            raise
+        print(f"   {submission_id[:8]}: ASC refused include=appEvent; appEvent check skipped "
+              "(an event's draft will not be adopted: check status in App Store Connect)")
         return list(paginate(base + "appStoreVersion"))
+
+
+def include_refused(message: str) -> bool:
+    """A 400 that names the include: ASC rejecting the parameter, not a transient failure."""
+    return "-> 400" in message and ("include" in message or "appEvent" in message)
 
 
 def run_status(platforms: tuple[str, ...]) -> int:

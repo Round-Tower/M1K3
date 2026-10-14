@@ -9,7 +9,7 @@
 //  chat; only a foreign scheme is refused (nil) so the shell can ignore it.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-14, Confidence 0.85 (pure + tested;
-//  the onOpenURL wiring is verify-by-launch). Prior: none (new file).
+//  the onOpenURL wiring is verify-by-launch). Prior: Unknown.
 
 import Foundation
 
