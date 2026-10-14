@@ -13,7 +13,8 @@
 //  Signed: Kev + claude-fable-5, 2026-07-19, Confidence 0.85 (TDD'd against a
 //  temp directory: copy, independence-from-original, extension, distinctness,
 //  missing-source throw). Prior: Unknown
-//  Review: Kev + claude-opus-5-5, 2026-10-14 — store(data:fileExtension:) for the iOS PhotosPicker (#604). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-14 — store(data:fileExtension:) for the iOS
+//  PhotosPicker (#604). Confidence 0.85.
 //
 
 import Foundation

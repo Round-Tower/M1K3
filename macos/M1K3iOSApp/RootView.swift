@@ -15,7 +15,8 @@
 //  NavigationStack{ChatScreen}; navigation moved into toolbars.
 //  Review: Kev + claude-opus-5-5, 2026-10-03 — the stack owns a typed path so the screengrab harness can push
 //  a plate's screen (`ScreengrabHarness.phoneRoute`); every ordinary link is still view-destination. Confidence 0.85.
-//  Review: Kev + claude-opus-5-5, 2026-10-14 — onOpenURL: an `m1k3://` link (Halloween's event, #603) pops to the chat root. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5-5, 2026-10-14 — onOpenURL: an `m1k3://` link (Halloween's event, #603)
+//  pops to the chat root. Confidence 0.8 (verify-by-launch).
 //
 
 import M1K3Inference

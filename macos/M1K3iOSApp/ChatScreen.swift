@@ -26,8 +26,9 @@
 //  and the empty-state headline/tagline are gone; the chips carry the invitation. Dead brainSubtitle removed with it.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — in season (Halloween) one costume line under the wordmark
 //  (SeasonalLook.greeting); opt-out in Settings ▸ Face. Confidence 0.8 (verify-by-launch).
-//  Review: Kev + claude-opus-5-5, 2026-10-14 — PhotosPicker beside the Files paperclip (#604): same AttachmentStore path,
-//  gated on supportsImageInput. Confidence 0.8 (compile-verified; picking from a real library is verify-by-launch).
+//  Review: Kev + claude-opus-5-5, 2026-10-14 — PhotosPicker beside the Files paperclip (#604): same
+//  AttachmentStore path, gated on supportsImageInput. Confidence 0.8 (compile-verified; picking from
+//  a real library is verify-by-launch).
 //
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — M1K3_VOICE_AT_LAUNCH harness switch (enter voice mode when the brain is
