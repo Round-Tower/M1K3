@@ -11,7 +11,7 @@ before this event publishes (17 Oct). Read the store lookup
 (`itunes.apple.com/lookup?id=6780230835`) before submitting the event: an event card
 for content users can't see breaks the one promise it makes.
 
-## Copy (`event.json`; en-US below, the other seven locales in its `localizations` table, all within the caps by test)
+## Copy (`event.json`; en-US below, the other nine locales in its `localizations` table, all within the caps by test)
 
 | Field | Cap | Text |
 |---|---|---|
@@ -31,7 +31,12 @@ haven't had a native read.
   calendar season). Apple may judge a cosmetic look thin. If review pushes back, the
   honest answer is the look, the greeting and the dates, not a bigger claim.
 - **Purpose `APPROPRIATE_FOR_ALL_USERS`.** It's a look for everyone, new or not.
-- **Priority NORMAL**, no purchase, all territories, no deep link (the app has no URL scheme).
+- **Priority NORMAL**, no purchase, all territories.
+- **Deep link `m1k3://event/halloween`.** App Store Connect won't add an event for review without
+  one, and Apple's help page takes a custom URL. The iOS target registers `m1k3` from build 521
+  (`project.yml`, pinned by `tools/ci/check_store_targets.py`). There's no handler yet: the link
+  opens M1K3, and the event (the costume and its greeting) is the chat screen. en-GB reuses the
+  en-US copy with day-first dates; es-MX reuses es-ES, since "de oct." breaks the 120 cap.
 - **Dates (UTC):** publish 17 Oct 09:00 (7 days ahead; the cap is 14), run 24 Oct 10:00 →
   1 Nov 11:00 (8 days 1 h; the cap is 31).
 
@@ -112,7 +117,18 @@ name, badge and description laid over them.
 python3 tools/asc/events.py create --spec fastlane/events/halloween/event.json \
     --art-dir ../marketing/events/halloween --dry-run    # payloads only, no key needed
 python3 tools/asc/events.py create --spec fastlane/events/halloween/event.json \
-    --art-dir ../marketing/events/halloween              # the DRAFT, 8 locales, art on each
+    --art-dir ../marketing/events/halloween              # the DRAFT, 10 locales, art on each
+```
+
+The live DRAFT is 6822718507: created 2026-10-14 with eight locales and no deep link. Bring it
+up to the spec in this order. `create --event` adds en-GB and es-MX with their video; `update`
+then sets the deep link and rewrites every locale's copy. Run the other way round, `update`
+would create the two locales with no media and `create --event` would skip them.
+
+```
+python3 tools/asc/events.py create --event 6822718507 --spec fastlane/events/halloween/event.json \
+    --art-dir ../marketing/events/halloween
+python3 tools/asc/events.py update --event 6822718507 --spec fastlane/events/halloween/event.json
 ```
 
 `create` makes the DRAFT, one localization per locale (en-US first), and uploads the same
@@ -121,7 +137,13 @@ error ends with the line that resumes it (`create … --event <id>`). That run c
 the locales the event lacks. It skips the ones it has without checking their art, so look
 at those in App Store Connect. A plain re-run would make a second event.
 
-Then in App Store Connect, preview the media under the overlays, then Submit for review. Events have their own review queue and lock while
+Before review, paste `m1k3://event/halloween` into Notes on an iPhone running a build with the
+scheme and tap it: Apple's own test, and M1K3 should open. iOS has no approved version yet, so
+the event rides the first iOS version's submission (Apple: "include the In-App Event in the
+same submission as your first iOS app version"): Add for Review in App Store Connect, then
+`tools/asc/submit.py submit --platform ALL --confirm` sends it with the version.
+
+Preview the media under the overlays in App Store Connect first. Events have their own review queue and lock while
 in review. Submit early: publishing starts 17 Oct, and the start date can't have passed
 when Apple approves it.
 
@@ -144,4 +166,9 @@ Review: Kev + claude-opus-5-5, 2026-10-14 — the media is video now (Kev: "we n
   with matching stills; events.py uploads video when it's there and checks it with ffprobe first. Still open:
   the SPECIAL_EVENT bar, a native read of the copy, and ASC's event preview of the video under the overlays.
   Confidence 0.75
+Review: Kev + claude-opus-5-5, 2026-10-14 — the live create worked (8 locales, 16 clips COMPLETE) but App
+  Store Connect wouldn't add the event for review without a deep link. The spec gains m1k3://event/halloween
+  (the iOS target registers the scheme from build 521) plus en-GB and es-MX, the store's other two locales;
+  the live DRAFT's two-step catch-up is above. Kev's preview retires the overlay open ("the event looks
+  amazing"). Still open: the SPECIAL_EVENT bar and a native read of the copy. Confidence 0.8
 -->
