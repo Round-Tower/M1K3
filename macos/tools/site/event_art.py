@@ -7,9 +7,10 @@ a Game of Life field, textless.
     python3 tools/site/event_art.py --palette halloween --guides        # + proofs with the safe area drawn
     python3 tools/site/event_art.py --palette halloween --check         # spec-check what's in --out
 
-Writes `event-card-1920x1080.jpg` and `event-details-1080x1920.jpg`, the names
-tools/asc/events.py uploads, into marketing/events/<palette>/ (gitignored: binaries stay
-out of the tree). JPEG at quality 90, sRGB-tagged, exact pixel sizes.
+Writes `event-card-1920x1080.jpg` and `event-details-1080x1920.jpg`, the stills
+tools/asc/events.py uploads when a slot has no video, into marketing/events/<palette>/
+(gitignored: binaries stay out of the tree; `--out` elsewhere to keep the stills already
+there). JPEG at quality 90, sRGB-tagged, exact pixel sizes.
 
 Palettes: `phosphor` is the default and is the store creative's own (white phosphor on
 the hero's black), so a future event starts from the brand; `halloween` is the app's
@@ -32,6 +33,10 @@ Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.7. Prior: store_creative
 the rasterizer are imported from them, not copied; the palettes, the event canvases, the
 moon and the bats are new. The safe area is a third party's measurement, not Apple's:
 UNVERIFIED until ASC's event preview shows the card and the details page.
+Review: Kev + claude-opus-5-5, 2026-10-14 — docstring only: Halloween's slots are video now
+(a 3D render from the private motion project), so these stills are the fallback events.py
+uploads when a slot has no video, and the default --out would overwrite the stills that sit
+beside the videos. Confidence unchanged (0.7).
 """
 from __future__ import annotations
 
