@@ -33,10 +33,11 @@ haven't had a native read.
 - **Purpose `APPROPRIATE_FOR_ALL_USERS`.** It's a look for everyone, new or not.
 - **Priority NORMAL**, no purchase, all territories.
 - **Deep link `m1k3://event/halloween`.** App Store Connect won't add an event for review without
-  one, and Apple's help page takes a custom URL. The iOS target registers `m1k3` from build 521
-  (`project.yml`, pinned by `tools/ci/check_store_targets.py`). There's no handler yet: the link
-  opens M1K3, and the event (the costume and its greeting) is the chat screen. en-GB reuses the
-  en-US copy with day-first dates; es-MX reuses es-ES, since "de oct." breaks the 120 cap.
+  one, and Apple's help page takes a custom URL. The iOS target registers `m1k3` from the first
+  build that carries this change (`project.yml`, pinned by `tools/ci/check_store_targets.py`).
+  There's no handler yet: the link opens M1K3, and the event (the costume and its greeting) is
+  the chat screen. en-GB reuses the en-US copy with day-first dates; es-MX reuses es-ES, since
+  "de oct." breaks the 120 cap.
 - **Dates (UTC):** publish 17 Oct 09:00 (7 days ahead; the cap is 14), run 24 Oct 10:00 →
   1 Nov 11:00 (8 days 1 h; the cap is 31).
 
@@ -108,8 +109,9 @@ Sources, read 2026-10-11:
 - https://developer.apple.com/help/app-store-connect/reference/in-app-event-badges (badge definitions)
 - https://www.yellowhead.com/blog/in-app-events-promotional-content-safe-zone-guidelines/ (the safe-zone figures; not Apple's)
 
-**UNVERIFIED** until ASC's event preview shows the card and the details page with the
-name, badge and description laid over them.
+The eight locales the first `create` made were previewed in App Store Connect on 2026-10-14
+(Kev: "the event looks amazing"). en-GB and es-MX get their video in the catch-up below and
+want the same look once their clips finish processing.
 
 ## Ship it (ASC writes are Kev's, via `!`)
 
@@ -127,9 +129,15 @@ would create the two locales with no media and `create --event` would skip them.
 
 ```
 python3 tools/asc/events.py create --event 6822718507 --spec fastlane/events/halloween/event.json \
-    --art-dir ../marketing/events/halloween
-python3 tools/asc/events.py update --event 6822718507 --spec fastlane/events/halloween/event.json
+    --art-dir ../marketing/events/halloween --dry-run    # then again without --dry-run
+python3 tools/asc/events.py update --event 6822718507 --spec fastlane/events/halloween/event.json \
+    --dry-run                                            # then again without --dry-run
 ```
+
+If `update`'s event PATCH is refused, nothing has changed yet (it is the first write): set the
+deep link by hand on the event page in App Store Connect. The review notes
+(`fastlane/review_notes.txt`, pushed with `tools/asc/review_notes.py set`) tell App Review where
+the event is and how to see it before 24 Oct.
 
 `create` makes the DRAFT, one localization per locale (en-US first), and uploads the same
 textless card and details page to each. If it fails part-way, the DRAFT stays and the
@@ -168,7 +176,11 @@ Review: Kev + claude-opus-5-5, 2026-10-14 — the media is video now (Kev: "we n
   Confidence 0.75
 Review: Kev + claude-opus-5-5, 2026-10-14 — the live create worked (8 locales, 16 clips COMPLETE) but App
   Store Connect wouldn't add the event for review without a deep link. The spec gains m1k3://event/halloween
-  (the iOS target registers the scheme from build 521) plus en-GB and es-MX, the store's other two locales;
+  (the iOS target registers the scheme from the first build that carries it) plus en-GB and es-MX, the store's two
+  other locales;
   the live DRAFT's two-step catch-up is above. Kev's preview retires the overlay open ("the event looks
   amazing"). Still open: the SPECIAL_EVENT bar and a native read of the copy. Confidence 0.8
+Review: Kev + claude-opus-5-5, 2026-10-14 — review fold: dry runs before both catch-up commands, the hand
+  fallback if `update`'s PATCH is refused, the review notes' event paragraph, and the preview note made
+  true (eight locales seen; en-GB and es-MX still to look at). Confidence 0.8
 -->

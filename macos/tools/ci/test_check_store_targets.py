@@ -327,8 +327,9 @@ def test_only_the_ios_target_needs_the_scheme():
 
 
 def test_every_event_deep_link_opens_the_shipping_ios_target():
-    """The real project.yml and the real event specs: each spec's deep link is a URL whose
-    scheme the iOS target registers (or a universal link), so Open on the card opens M1K3."""
+    """The real project.yml and the real event specs: every spec has a deep link, and its
+    scheme is one the iOS target registers, so Open on the card opens M1K3. (No universal link
+    passes: the app has no applinks entitlement.)"""
     import json
     from pathlib import Path
 
@@ -340,8 +341,7 @@ def test_every_event_deep_link_opens_the_shipping_ios_target():
     assert m.EVENT_DEEP_LINK_SCHEME in schemes
     specs = sorted((macos / "fastlane/events").glob("*/event.json"))
     linked = {p.parent.name: json.loads(p.read_text()).get("deepLink") for p in specs}
-    assert linked["halloween"] == "m1k3://event/halloween"
+    assert "halloween" in linked
     for name, link in linked.items():
-        if link:
-            scheme = link.split("://", 1)[0]
-            assert scheme == "https" or scheme in schemes, f"{name}: {link}"
+        assert link, f"{name}: no deepLink"
+        assert link.split("://", 1)[0] in schemes, f"{name}: {link}"

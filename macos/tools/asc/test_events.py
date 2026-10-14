@@ -53,6 +53,7 @@ def test_attributes_patch_and_localization_patch_shapes() -> None:
     patch = events.attributes_patch(_spec(), "E1", ["USA"])
     assert patch["data"]["id"] == "E1" and "relationships" not in patch["data"]
     assert patch["data"]["attributes"]["badge"] == "PREMIERE"
+    assert patch["data"]["attributes"]["deepLink"] == "m1k3://event/waking-up"   # how `update` sets a live draft's link
     lp = events.localization_patch("L1", {"name": "n", "shortDescription": "s", "longDescription": "l", "x": 1})
     assert lp["data"]["id"] == "L1" and set(lp["data"]["attributes"]) == {"name", "shortDescription", "longDescription"}
 
@@ -63,7 +64,8 @@ def test_localization_problems_prefixes_the_locale() -> None:
 
 
 EVENT_SPECS = sorted((Path(__file__).resolve().parents[2] / "fastlane/events").glob("*/event.json"))
-LOCALES = {"en-US", "en-GB", "de-DE", "es-ES", "es-MX", "fr-FR", "ja", "ko", "pt-BR", "zh-Hans"}
+# Every store locale: an event covers each one the iPhone listing has.
+LOCALES = {p.name for p in (Path(__file__).resolve().parents[2] / "fastlane/metadata_ios").iterdir() if p.is_dir()}
 
 
 def _when(stamp: str) -> datetime:
@@ -82,8 +84,8 @@ def test_every_event_spec_is_within_apples_rules(path: Path) -> None:
     spec = json.loads(path.read_text())
     assert events.copy_problems(spec["copy"]) == []
     assert events.localization_problems(spec) == []
-    # Waking Up never shipped (its draft ended 16 Oct unsubmitted) and predates the store's
-    # en-GB and es-MX; an event that ships covers every store locale.
+    # Waking Up never shipped (its draft, never submitted, runs out on 16 Oct) and predates the
+    # store's en-GB and es-MX; an event that ships covers every store locale.
     expected = LOCALES - {"en-GB", "es-MX"} if path.parent.name == "waking-up" else LOCALES
     assert set(spec["localizations"]) == expected
     assert spec["localizations"][spec.get("locale", "en-US")] == spec["copy"]   # one primary copy, not two
@@ -159,6 +161,7 @@ def test_create_dry_run_builds_every_localization_and_sends_nothing(event_id, tm
     ("halloween", False),
     ("m1k3://", False),
     ("://event", False),
+    (42, False),
 ])
 def test_deep_link_problems_wants_a_url(link, ok) -> None:
     spec = {**_spec(), "deepLink": link} if link is not None else {k: v for k, v in _spec().items() if k != "deepLink"}
@@ -232,6 +235,10 @@ class FakeASC:
             return {"data": {"id": "L-" + locale}}
         if method == "GET":
             return {"data": {"attributes": {"eventState": "DRAFT"}}}
+        if method == "PATCH" and path.startswith("/v1/appEvents/"):
+            return {"data": {"attributes": body["data"]["attributes"]}}
+        if method == "PATCH" and path.startswith("/v1/appEventLocalizations/"):
+            return {"data": {"attributes": body["data"]["attributes"]}}
         raise AssertionError(f"unexpected {method} {path}")
 
     def paginate(self, path: str):
@@ -551,3 +558,19 @@ def test_create_says_clips_process_after_upload(tmp_path, live, capsys, monkeypa
     monkeypatch.setattr(events, "probe", lambda _p: _probe())
     assert events.create(spec_path, tmp_path, dry_run=False) == 0
     assert "video clips process after upload" in capsys.readouterr().out
+
+
+def test_update_sets_the_deep_link_and_creates_a_missing_locale_without_media(live, capsys) -> None:
+    """The live draft's catch-up order rests on this: `update` PATCHes the event (deep link and
+    all) and every existing locale, but a locale it lacks is POSTed with NO media, so the
+    README runs `create --event` (missing locales, video and all) first."""
+    fake, spec_path = live(existing=("en-US", "de-DE"))
+    assert events.update("EV7", spec_path, dry_run=False) == 0
+    event_patches = [b for m, path, b in fake.sent if (m, path) == ("PATCH", "/v1/appEvents/EV7")]
+    assert len(event_patches) == 1
+    assert event_patches[0]["data"]["attributes"]["deepLink"] == "m1k3://event/waking-up"
+    patched = {path for m, path, _ in fake.sent if m == "PATCH" and "/appEventLocalizations/" in path}
+    assert patched == {"/v1/appEventLocalizations/L-en-US", "/v1/appEventLocalizations/L-de-DE"}
+    assert fake.localization_posts() == [("fr-FR", "EV7")]
+    assert fake.uploads == []
+    assert "fr-FR: created (no art yet" in capsys.readouterr().out

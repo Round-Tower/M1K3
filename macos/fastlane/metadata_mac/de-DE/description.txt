@@ -6,7 +6,7 @@ WAS ICH KANN
 • Bring dein eigenes Wissen mit: Lade Notizen und PDFs und ich beantworte Fragen daraus (On-Device-Retrieval).
 • Ich merke mir, was dir wichtig ist — ein temporaler Wissensgraph, den du jederzeit durchsuchen und löschen kannst.
 • Drei Hirnstufen — Mini (sofort auf Macs mit Apple Intelligence, sonst ein kleiner Download), Lil (4B) und Big (12B) — wähle die passende für deinen Mac.
-• Zeig mir Dinge: Lil und Big lesen Bilder. Häng ein Foto, einen Screenshot oder ein Whiteboard an und frag danach. Ein Tipp hält eine private Bildunterschrift in meinem Gedächtnis fest, damit du später danach fragen kannst.
+• Zeig mir Dinge: Lil und Big lesen Bilder. Häng ein Foto, einen Screenshot oder ein Whiteboard an und frag mich dazu. Mit einem Klick halte ich eine private Bildunterschrift in meinem Gedächtnis fest, damit du später danach fragen kannst.
 • Ein freundlicher 3D-Begleiter und ein Pixel-Gesicht, wenn du magst.
 • Brain at Home: Koppele dein iPhone oder iPad über LAN und nutze das große Hirn deines Macs vom Sofa aus.
 

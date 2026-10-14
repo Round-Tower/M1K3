@@ -2,7 +2,7 @@ Mes amis m’appellent Mike. Je suis un agent IA local qui vit sur ton iPhone et
 
 CE QUE JE FAIS
 • Discute avec un cerveau sur l’appareil — Mini démarre instantanément sur les appareils compatibles Apple Intelligence (ailleurs, un petit téléchargement), et Lil (4B) tourne entièrement hors ligne sur les iPhone et iPad dotés de 8 Go de mémoire.
-• Montre-moi des choses : Lil lit aussi les images. Joins une photo ou une capture d’écran et pose-moi des questions dessus. Un geste garde dans ma mémoire une légende privée, pour que tu puisses m’en reparler plus tard.
+• Montre-moi des choses : Lil lit aussi les images. Joins une image depuis Fichiers et pose-moi des questions dessus. Un geste garde dans ma mémoire une légende privée, pour que tu puisses m’en reparler plus tard.
 • Parle-moi : reconnaissance vocale sur l’appareil et une voix neuronale naturelle.
 • Apporte tes connaissances : ajoute des PDF et des fichiers texte, et je réponds à partir d’eux, sur l’appareil.
 • Je retiens ce qui compte pour toi, et tu peux voir et rechercher tout ce que j’ai gardé.

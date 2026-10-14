@@ -2,7 +2,7 @@ My friends call me Mike. I'm a local AI agent that lives on your iPhone and iPad
 
 WHAT I DO
 • Chat with an on-device brain — Mini starts instantly on Apple Intelligence devices (a small download everywhere else), and Lil (4B) runs fully offline on iPhones and iPads with 8 GB of memory.
-• Show me things: Lil reads images too. Attach a photo or a screenshot and ask about it, and one tap keeps a private caption in my memory for later.
+• Show me things: Lil reads images too. Attach an image from Files and ask about it, and one tap keeps a private caption in my memory for later.
 • Talk to me: on-device speech recognition and a natural neural voice.
 • Bring your own knowledge: add PDFs and text files and I'll answer from them, on device.
 • I remember what matters to you, and you can see and search everything I've kept.

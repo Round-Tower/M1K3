@@ -2,7 +2,7 @@ Meine Freunde nennen mich Mike. Ich bin ein lokaler KI-Agent, der auf deinem iPh
 
 WAS ICH KANN
 • Chatte mit einem Gehirn auf dem Gerät — Mini startet sofort auf Geräten mit Apple Intelligence (sonst mit einem kleinen Download), und Lil (4B) läuft komplett offline auf iPhones und iPads mit 8 GB Arbeitsspeicher.
-• Zeig mir Dinge: Lil liest auch Bilder. Häng ein Foto oder einen Screenshot an und frag danach. Ein Tipp hält eine private Bildunterschrift in meinem Gedächtnis fest, damit du später danach fragen kannst.
+• Zeig mir Dinge: Lil liest auch Bilder. Häng ein Bild aus der Dateien-App an und frag mich dazu. Mit einem Fingertipp halte ich eine private Bildunterschrift in meinem Gedächtnis fest, damit du später danach fragen kannst.
 • Sprich mit mir: Spracherkennung auf dem Gerät und eine natürliche neuronale Stimme.
 • Bring dein eigenes Wissen mit: Füge PDFs und Textdateien hinzu, und ich antworte auf ihrer Grundlage — auf dem Gerät.
 • Ich merke mir, was dir wichtig ist, und du kannst alles sehen und durchsuchen, was ich behalten habe.

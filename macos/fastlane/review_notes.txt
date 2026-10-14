@@ -6,7 +6,9 @@ FIRST LAUNCH:
   Mac: on most Macs, uses Apple Intelligence (instant, no download).
   iPhone/iPad: downloads a local AI model (~3 GB on 8 GB devices). After setup, fully offline.
   Without Apple Intelligence on any platform, downloads a local model (~630 MB–3 GB).
-  Lil (the downloaded 4B brain) accepts image attachments: the paperclip in chat takes a photo or screenshot, read on-device.
+  Lil (the downloaded 4B brain) accepts image attachments: the paperclip in chat takes an image file (on iPhone/iPad, from the Files app), read on-device.
+
+IN-APP EVENT "Halloween in the Lair" (iPhone/iPad, in this submission): from Oct 24 to Nov 1 on the device's calendar, the companion glows pumpkin orange and the empty chat greets you in costume. The event's deep link, m1k3://event/halloween, opens M1K3 on the chat, where the look is. To see it now: set the device date to 25 Oct 2026 (iPhone: Settings > General > Date & Time, turn off Set Automatically; Mac: System Settings > General > Date & Time), then relaunch M1K3. Opt-out: Settings > Face > Seasonal looks (Mac: Settings > M1K3 > Companion > Seasonal looks).
 
 OUTBOUND (network.client): model download + web search (ON by default so answers can be current; one switch turns it off: Settings > Privacy > Web search (DuckDuckGo)). No analytics, tracking, or telemetry.
 
