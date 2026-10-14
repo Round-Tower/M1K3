@@ -33,6 +33,9 @@
 # Review: Kev + claude-fable-5.1, 2026-10-09 — RememberPhotoButton.swift joins the MobileShell template (caption memory).
 # Review: Kev + claude-fable-5.1, 2026-10-09 — MARKETING_VERSION 1.0.0 → 1.1.0 (chore(release): v1.1.0, held until 1.0.0
 # clears review). CURRENT_PROJECT_VERSION stays "1": Xcode Cloud numbers the store builds (VERSIONING.md). Confidence 0.9.
+# Review: Kev + claude-opus-5-5, 2026-10-14 — M1K3iOS registers the `m1k3` URL scheme: App Store Connect won't add an
+# in-app event for review without a deep link, and Halloween's (m1k3://event/halloween) opens the app through it
+# (check_store_targets.py pins it). Confidence 0.85; the open is verify-by-launch on a device.
 
 name: M1K3
 
@@ -511,6 +514,14 @@ targets:
         NSSpeechRecognitionUsageDescription: "M1K3 transcribes your speech on-device so you can talk to it. Nothing is sent to Apple or any server."
         NSCameraUsageDescription: "M1K3 uses the camera only to scan the pairing code your Mac shows for Brain at Home. No photos or video are captured or stored."
         NSLocalNetworkUsageDescription: "Brain at Home connects to your own Mac over your Wi-Fi so this device can use its bigger brain. That connection stays on your own network, encrypted."
+        # In-app events deep-link here: Open on the Halloween card is m1k3://event/halloween
+        # (fastlane/events/*/event.json). App Store Connect won't add an event for review
+        # without a deep link. No handler yet: the link opens M1K3, and the event (the
+        # costume and its greeting) is the chat screen. check_store_targets.py pins this.
+        CFBundleURLTypes:
+          - CFBundleURLName: app.m1k3
+            CFBundleURLSchemes:
+              - m1k3
 
   # visionOS sibling — same shell, same portable graph, rendered spatially as a
   # window. The Kokoro visionOS gap (no xrOS ONNX slice) is RESOLVED as of

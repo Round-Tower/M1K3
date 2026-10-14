@@ -28,6 +28,10 @@ its Developer ID profile grants (its macOS 27 keychain identity). Confidence 0.8
 launch: profile embedded, no -34018, MCP listening on 4242).
 Review: Kev + claude-opus-5-5, 2026-10-09 — Declared Age Range is required on every lane, the
 Developer ID one included (its profile grants it); PCC alone stays forbidden there.
+Review: Kev + claude-opus-5-5, 2026-10-14 — the iOS target must register the `m1k3` URL scheme:
+App Store Connect won't add an in-app event for review without a deep link, and Halloween's
+(m1k3://event/halloween) opens the app only through it. Confidence 0.85 (Apple's help page takes
+a custom URL; the open itself is verify-by-launch on a device).
 """
 from __future__ import annotations
 
@@ -47,6 +51,10 @@ ALL_ORIENTATIONS = {
     "UIInterfaceOrientationLandscapeLeft",
     "UIInterfaceOrientationLandscapeRight",
 }
+# In-app events (iPhone and iPad only) deep-link into the app through this scheme. App Store
+# Connect won't add an event for review without a deep link (2026-10-14), and a custom-scheme
+# link opens nothing unless the iOS target registers the scheme. fastlane/events/*/event.json.
+EVENT_DEEP_LINK_SCHEME = "m1k3"
 
 # --------------------------------------------------------------------------- #
 # Pure helpers (unit-tested)
@@ -96,6 +104,15 @@ def _setting(target: dict, key: str):
 
 def _info_prop(target: dict, key: str):
     return ((target.get("info") or {}).get("properties") or {}).get(key)
+
+
+def url_schemes(target: dict) -> set[str]:
+    """Every scheme the target's Info.plist registers under CFBundleURLTypes."""
+    return {
+        str(scheme)
+        for url_type in _info_prop(target, "CFBundleURLTypes") or []
+        for scheme in (url_type or {}).get("CFBundleURLSchemes") or []
+    }
 
 
 def _as_set(value) -> set[str] | None:
@@ -168,6 +185,11 @@ def audit(project: dict) -> list[str]:
             problems.append(
                 f"{name}: no {MANIFEST} in its sources (template or own) — Apple rejects "
                 f"iOS/visionOS submissions without a privacy manifest at the bundle root"
+            )
+        if t.get("platform") == "iOS" and EVENT_DEEP_LINK_SCHEME not in url_schemes(t):
+            problems.append(
+                f"{name}: no {EVENT_DEEP_LINK_SCHEME!r} URL scheme in CFBundleURLTypes — the in-app events' "
+                f"deep link (Open on the event card) can't open the app without it"
             )
         if t.get("platform") == "iOS" and not requires_full_screen(t):
             got = ipad_orientations(t) or set()
@@ -291,7 +313,8 @@ def main(argv: list[str]) -> int:
     names = sorted(store_targets(project))
     if not problems:
         print(f"✓ {len(names)} store targets ({', '.join(names)}) all upload into {EXPECTED_BUNDLE_ID!r} "
-              f"with a privacy manifest and their own Info.plist; the iOS target declares its iPad orientations.")
+              f"with a privacy manifest and their own Info.plist; the iOS target declares its iPad orientations "
+              f"and registers the {EVENT_DEEP_LINK_SCHEME!r} event deep-link scheme.")
         return 0
     print("❌ project.yml store-target drift:")
     for p in problems:

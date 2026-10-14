@@ -18,7 +18,7 @@ def _spec() -> dict:
     return {
         "referenceName": "waking-up-2026-09", "badge": "PREMIERE", "purpose": "ATTRACT_NEW_USERS",
         "publishStart": "2026-09-17T09:00:00Z", "eventStart": "2026-09-18T09:00:00Z",
-        "eventEnd": "2026-10-16T21:00:00Z",
+        "eventEnd": "2026-10-16T21:00:00Z", "deepLink": "m1k3://event/waking-up",
         "copy": {"name": "Waking Up", "shortDescription": "short", "longDescription": "long"},
     }
 
@@ -29,13 +29,15 @@ def test_copy_problems_reports_each_cap_and_empties() -> None:
     assert events.copy_problems({"name": "Waking Up", "shortDescription": "s", "longDescription": "l"}) == []
 
 
-def test_event_payload_shape_and_optional_deep_link() -> None:
+def test_event_payload_shape_and_deep_link() -> None:
     p = events.event_payload(_spec(), ["USA", "IRL"])
     a = p["data"]["attributes"]
     assert p["data"]["relationships"]["app"]["data"]["id"] == asc.APP_ID
     assert a["territorySchedules"][0]["territories"] == ["USA", "IRL"]
     assert a["purchaseRequirement"] == "NO_COST_ASSOCIATED" and a["priority"] == "HIGH"
-    assert "deepLink" not in a  # the app has no URL scheme; the field is optional
+    assert a["deepLink"] == "m1k3://event/waking-up"
+    bare = {k: v for k, v in _spec().items() if k != "deepLink"}
+    assert "deepLink" not in events.event_payload(bare, ["USA"])["data"]["attributes"]  # the builder stays literal
     with pytest.raises(ValueError):
         events.event_payload({**_spec(), "badge": "PARTY"}, ["USA"])
 
@@ -51,6 +53,7 @@ def test_attributes_patch_and_localization_patch_shapes() -> None:
     patch = events.attributes_patch(_spec(), "E1", ["USA"])
     assert patch["data"]["id"] == "E1" and "relationships" not in patch["data"]
     assert patch["data"]["attributes"]["badge"] == "PREMIERE"
+    assert patch["data"]["attributes"]["deepLink"] == "m1k3://event/waking-up"   # how `update` sets a live draft's link
     lp = events.localization_patch("L1", {"name": "n", "shortDescription": "s", "longDescription": "l", "x": 1})
     assert lp["data"]["id"] == "L1" and set(lp["data"]["attributes"]) == {"name", "shortDescription", "longDescription"}
 
@@ -61,7 +64,8 @@ def test_localization_problems_prefixes_the_locale() -> None:
 
 
 EVENT_SPECS = sorted((Path(__file__).resolve().parents[2] / "fastlane/events").glob("*/event.json"))
-LOCALES = {"en-US", "de-DE", "es-ES", "fr-FR", "ja", "ko", "pt-BR", "zh-Hans"}
+# Every store locale: an event covers each one the iPhone listing has.
+LOCALES = {p.name for p in (Path(__file__).resolve().parents[2] / "fastlane/metadata_ios").iterdir() if p.is_dir()}
 
 
 def _when(stamp: str) -> datetime:
@@ -74,13 +78,16 @@ def test_both_shipped_specs_are_found() -> None:
 
 @pytest.mark.parametrize("path", EVENT_SPECS, ids=lambda p: p.parent.name)
 def test_every_event_spec_is_within_apples_rules(path: Path) -> None:
-    """Caps, the eight store locales, Apple's enums, and the schedule limits from
+    """Caps, every store locale, Apple's enums, and the schedule limits from
     developer.apple.com/help/app-store-connect/offer-in-app-events/offer-in-app-events:
     publish at most 14 days before the start; an event runs 15 minutes to 31 days."""
     spec = json.loads(path.read_text())
     assert events.copy_problems(spec["copy"]) == []
     assert events.localization_problems(spec) == []
-    assert set(spec["localizations"]) == LOCALES
+    # Waking Up never shipped (its draft, never submitted, runs out on 16 Oct) and predates the
+    # store's en-GB and es-MX; an event that ships covers every store locale.
+    expected = LOCALES - {"en-GB", "es-MX"} if path.parent.name == "waking-up" else LOCALES
+    assert set(spec["localizations"]) == expected
     assert spec["localizations"][spec.get("locale", "en-US")] == spec["copy"]   # one primary copy, not two
     events.event_payload(spec, ["USA"])                                            # badge + purpose in the enums
     assert spec.get("priority", "HIGH") in ("HIGH", "NORMAL")
@@ -102,6 +109,10 @@ def test_the_halloween_event_runs_the_apps_window() -> None:
     assert _when(spec["eventEnd"]) == datetime(2026, 11, 2, tzinfo=new_zealand)
     assert _when(spec["publishStart"]) == datetime(2026, 10, 17, 9, tzinfo=timezone.utc)
     assert spec["copy"]["name"] == "Halloween in the Lair"
+    # Open on the card lands in the app through the scheme the iOS target registers
+    # (tools/ci/check_store_targets.py pins the registration).
+    assert spec["deepLink"] == "m1k3://event/halloween"
+    assert set(spec["localizations"]) == LOCALES
 
 
 def test_localization_table_puts_the_primary_first_and_falls_back_to_copy() -> None:
@@ -139,6 +150,51 @@ def test_create_dry_run_builds_every_localization_and_sends_nothing(event_id, tm
         assert f"would GET /v1/appEvents/{event_id}/localizations" in out
         assert '"referenceName"' not in out
         assert out.count(f'"id": "{event_id}"') == len(LOCALES)
+
+
+@pytest.mark.parametrize("link,ok", [
+    ("m1k3://event/halloween", True),
+    ("https://m1k3.app/halloween", True),
+    (None, False),
+    ("", False),
+    ("   ", False),
+    ("halloween", False),
+    ("m1k3://", False),
+    ("://event", False),
+    (42, False),
+])
+def test_deep_link_problems_wants_a_url(link, ok) -> None:
+    spec = {**_spec(), "deepLink": link} if link is not None else {k: v for k, v in _spec().items() if k != "deepLink"}
+    problems = events.deep_link_problems(spec)
+    assert (problems == []) is ok, problems
+    if not ok:
+        assert "deepLink" in problems[0]
+
+
+def test_create_refuses_a_spec_without_a_deep_link_before_sending(tmp_path, monkeypatch) -> None:
+    # App Store Connect won't add an event for review without one (2026-10-14): the
+    # Halloween draft had to be patched after the fact. Refuse before any request.
+    def no_network(*_a, **_k):
+        raise AssertionError("a refused spec must not reach App Store Connect")
+    for name in ("call", "paginate", "upload_media", "probe"):
+        monkeypatch.setattr(events, name, no_network)
+    path = tmp_path / "event.json"
+    path.write_text(json.dumps({k: v for k, v in _spec().items() if k != "deepLink"}))
+    for dry_run in (True, False):
+        with pytest.raises(SystemExit, match="no deepLink"):
+            events.create(path, tmp_path, dry_run=dry_run)
+
+
+def test_update_refuses_a_spec_without_a_deep_link_before_sending(tmp_path, monkeypatch) -> None:
+    def no_network(*_a, **_k):
+        raise AssertionError("a refused spec must not reach App Store Connect")
+    for name in ("call", "paginate"):
+        monkeypatch.setattr(events, name, no_network)
+    path = tmp_path / "event.json"
+    path.write_text(json.dumps({**_spec(), "deepLink": "halloween"}))
+    for dry_run in (True, False):
+        with pytest.raises(SystemExit, match="deepLink 'halloween' is not a URL"):
+            events.update("EV1", path, dry_run=dry_run)
 
 
 def test_create_refuses_a_spec_whose_locale_breaks_a_cap(tmp_path) -> None:
@@ -179,6 +235,10 @@ class FakeASC:
             return {"data": {"id": "L-" + locale}}
         if method == "GET":
             return {"data": {"attributes": {"eventState": "DRAFT"}}}
+        if method == "PATCH" and path.startswith("/v1/appEvents/"):
+            return {"data": {"attributes": body["data"]["attributes"]}}
+        if method == "PATCH" and path.startswith("/v1/appEventLocalizations/"):
+            return {"data": {"attributes": body["data"]["attributes"]}}
         raise AssertionError(f"unexpected {method} {path}")
 
     def paginate(self, path: str):
@@ -498,3 +558,19 @@ def test_create_says_clips_process_after_upload(tmp_path, live, capsys, monkeypa
     monkeypatch.setattr(events, "probe", lambda _p: _probe())
     assert events.create(spec_path, tmp_path, dry_run=False) == 0
     assert "video clips process after upload" in capsys.readouterr().out
+
+
+def test_update_sets_the_deep_link_and_creates_a_missing_locale_without_media(live, capsys) -> None:
+    """The live draft's catch-up order rests on this: `update` PATCHes the event (deep link and
+    all) and every existing locale, but a locale it lacks is POSTed with NO media, so the
+    README runs `create --event` (missing locales, video and all) first."""
+    fake, spec_path = live(existing=("en-US", "de-DE"))
+    assert events.update("EV7", spec_path, dry_run=False) == 0
+    event_patches = [b for m, path, b in fake.sent if (m, path) == ("PATCH", "/v1/appEvents/EV7")]
+    assert len(event_patches) == 1
+    assert event_patches[0]["data"]["attributes"]["deepLink"] == "m1k3://event/waking-up"
+    patched = {path for m, path, _ in fake.sent if m == "PATCH" and "/appEventLocalizations/" in path}
+    assert patched == {"/v1/appEventLocalizations/L-en-US", "/v1/appEventLocalizations/L-de-DE"}
+    assert fake.localization_posts() == [("fr-FR", "EV7")]
+    assert fake.uploads == []
+    assert "fr-FR: created (no art yet" in capsys.readouterr().out

@@ -16,10 +16,11 @@ ALL_FOUR = (
 )
 
 
-def _app(platform, bundle_id, info_path, templates=None, sources=None, type_="application", ipad_orientations=ALL_FOUR):
-    # iOS fixtures declare the full iPad orientation set by default so that each
-    # test sees only the finding it is about; pass ipad_orientations=None for a
-    # bare target (the orientation tests build their own).
+def _app(platform, bundle_id, info_path, templates=None, sources=None, type_="application", ipad_orientations=ALL_FOUR,
+         url_schemes=("m1k3",)):
+    # iOS fixtures declare the full iPad orientation set and the event deep-link scheme by
+    # default so that each test sees only the finding it is about; pass ipad_orientations=None
+    # or url_schemes=() for a bare target (the orientation and scheme tests build their own).
     settings = {"PRODUCT_BUNDLE_IDENTIFIER": bundle_id}
     if platform == "iOS" and ipad_orientations:
         settings["INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad"] = ipad_orientations
@@ -29,6 +30,8 @@ def _app(platform, bundle_id, info_path, templates=None, sources=None, type_="ap
         "settings": {"base": settings},
         "info": {"path": info_path},
     }
+    if platform == "iOS" and url_schemes:
+        t["info"]["properties"] = {"CFBundleURLTypes": [{"CFBundleURLSchemes": list(url_schemes)}]}
     if templates:
         t["templates"] = templates
     if sources:
@@ -135,7 +138,7 @@ def _ios(settings=None, info_props=None):
     t = _app("iOS", "app.m1k3", "a.plist", templates=["MobileShell"], ipad_orientations=None)
     t["settings"]["base"].update(settings or {})
     if info_props:
-        t["info"]["properties"] = info_props
+        t["info"].setdefault("properties", {}).update(info_props)
     return _project({"M1K3iOS": t}, templates={"MobileShell": TEMPLATE_WITH_MANIFEST})
 
 
@@ -275,3 +278,70 @@ def test_archs_universal_is_flagged():
     )
     problems = m.audit(project)
     assert any("#340" in p for p in problems)
+
+
+# In-app events deep-link into the iOS app. App Store Connect won't add an event for
+# review without a deep link (2026-10-14), and a custom-scheme link only opens the app
+# if the iOS target registers that scheme.
+
+
+def test_url_schemes_reads_every_url_type():
+    t = _app("iOS", "app.m1k3", "a.plist", url_schemes=())
+    assert m.url_schemes(t) == set()
+    t["info"]["properties"] = {"CFBundleURLTypes": [
+        {"CFBundleURLName": "app.m1k3", "CFBundleURLSchemes": ["m1k3"]},
+        {"CFBundleURLSchemes": ["other", "third"]},
+        {"CFBundleURLName": "no schemes"},
+    ]}
+    assert m.url_schemes(t) == {"m1k3", "other", "third"}
+
+
+def test_ios_target_without_the_event_deep_link_scheme_is_flagged():
+    project = _project(
+        {"M1K3iOS": _app("iOS", "app.m1k3", "a.plist", templates=["MobileShell"], url_schemes=())},
+        templates={"MobileShell": TEMPLATE_WITH_MANIFEST},
+    )
+    problems = m.audit(project)
+    assert len(problems) == 1
+    assert "M1K3iOS" in problems[0] and "'m1k3'" in problems[0] and "deep link" in problems[0]
+
+
+def test_ios_target_registering_the_scheme_among_others_passes():
+    project = _project(
+        {"M1K3iOS": _app("iOS", "app.m1k3", "a.plist", templates=["MobileShell"], url_schemes=("other", "m1k3"))},
+        templates={"MobileShell": TEMPLATE_WITH_MANIFEST},
+    )
+    assert m.audit(project) == []
+
+
+def test_only_the_ios_target_needs_the_scheme():
+    # Events show on iPhone and iPad only: the Mac and visionOS targets register nothing.
+    project = _project(
+        {
+            "M1K3": _app("macOS", "app.m1k3", "M1K3App/Info.generated.plist", sources=[{"path": "M1K3App"}]),
+            "M1K3visionOS": _app("visionOS", "app.m1k3", "v.plist", templates=["MobileShell"]),
+        },
+        templates={"MobileShell": TEMPLATE_WITH_MANIFEST},
+    )
+    assert m.audit(project) == []
+
+
+def test_every_event_deep_link_opens_the_shipping_ios_target():
+    """The real project.yml and the real event specs: every spec has a deep link, and its
+    scheme is one the iOS target registers, so Open on the card opens M1K3. (No universal link
+    passes: the app has no applinks entitlement.)"""
+    import json
+    from pathlib import Path
+
+    import yaml
+
+    macos = Path(__file__).resolve().parents[2]
+    project = yaml.safe_load((macos / "project.yml").read_text())
+    schemes = m.url_schemes(m.store_targets(project)["M1K3iOS"])
+    assert m.EVENT_DEEP_LINK_SCHEME in schemes
+    specs = sorted((macos / "fastlane/events").glob("*/event.json"))
+    linked = {p.parent.name: json.loads(p.read_text()).get("deepLink") for p in specs}
+    assert "halloween" in linked
+    for name, link in linked.items():
+        assert link, f"{name}: no deepLink"
+        assert link.split("://", 1)[0] in schemes, f"{name}: {link}"

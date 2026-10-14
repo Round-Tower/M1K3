@@ -26,10 +26,12 @@ the event exists names the DRAFT and the `--event` line that resumes it (a
 plain re-run would POST a second event). `create --event <id>` lists the
 event's localizations and creates only the missing locales, art and all; a
 locale that already exists is skipped and its art is NOT checked.
-`update` rewrites a DRAFT's attributes (badge, dates, purpose) and every
-localization's copy from the spec's `localizations` table, keeping the art
-already uploaded — for the draft that was created with over-cap copy and a
-past start date. Neither command submits — submission stays a human click in App Store Connect
+`update` rewrites a DRAFT's attributes (badge, dates, purpose, deep link) and
+every existing localization's copy from the spec's `localizations` table, keeping
+the art already uploaded — for the draft that was created with over-cap copy and
+a past start date. A locale the draft lacks is created WITHOUT art, so add missing
+locales with `create --event` first. Both commands refuse a spec without a
+`deepLink` URL: App Store Connect won't add an event for review without one. Neither command submits — submission stays a human click in App Store Connect
 (events review in their own queue and LOCK while in review). `--dry-run`
 prints every payload and touches nothing.
 
@@ -80,6 +82,14 @@ Review: Kev + claude-opus-5-5, 2026-10-14 — event video: each slot uploads its
   by the average; a clip whose commit says FAILED bails, and create says clips process after upload.
   Confidence 0.7: the pure half and the upload steps are pinned against fakes; Apple's acceptance
   of the video POST is unrun until Kev's first `create`.
+Review: Kev + claude-opus-5-5, 2026-10-14 — the first live `create` worked (eight locales, 16
+  clips, all COMPLETE), but App Store Connect wouldn't add the event for review: no deep link.
+  `create` and `update` now refuse a spec without a `deepLink` URL before any request; the
+  Halloween spec carries m1k3://event/halloween, the scheme the iOS target registers
+  (tools/ci/check_store_targets.py pins it). Confidence 0.85.
+Review: Kev + claude-opus-5-5, 2026-10-14 — review fold: a non-string deepLink is refused, not an
+  AttributeError, and the payload sends the stripped link; `update`'s PATCH carrying the link, and
+  its creating a missing locale with no media, are pinned against the fake. Confidence 0.85.
 """
 from __future__ import annotations
 
@@ -120,6 +130,20 @@ PURPOSES = ("APPROPRIATE_FOR_ALL_USERS", "ATTRACT_NEW_USERS", "KEEP_ACTIVE_USERS
 # --------------------------------------------------------------------------- #
 
 
+def deep_link_problems(spec: dict[str, Any]) -> list[str]:
+    """App Store Connect won't add an event for review without a deep link (2026-10-14): where
+    Open on the card lands. Any `scheme://…` URL passes here; check_store_targets.py pins the
+    custom scheme to the one the iOS target registers."""
+    link = spec.get("deepLink")
+    if not isinstance(link, str) or not link.strip():
+        return ["no deepLink: App Store Connect won't add an event for review without one"]
+    link = link.strip()
+    scheme, sep, rest = link.partition("://")
+    if not (scheme and sep and rest):
+        return [f"deepLink {link!r} is not a URL (scheme://…)"]
+    return []
+
+
 def copy_problems(copy: dict[str, str]) -> list[str]:
     """Every cap the copy breaks, as 'field: n/cap' lines; empty when clean."""
     out = []
@@ -153,7 +177,7 @@ def event_payload(spec: dict[str, Any], territories: list[str]) -> dict[str, Any
         }],
     }
     if spec.get("deepLink"):
-        attrs["deepLink"] = spec["deepLink"]
+        attrs["deepLink"] = spec["deepLink"].strip()
     return {"data": {"type": "appEvents", "attributes": attrs,
                      "relationships": {"app": {"data": {"type": "apps", "id": APP_ID}}}}}
 
@@ -419,6 +443,8 @@ def print_dry_run(spec: dict[str, Any], table: dict[str, dict[str, str]], art_di
 def create(spec_path: Path, art_dir: Path, dry_run: bool, event_id: str | None = None) -> int:
     """The DRAFT and every locale, or with `event_id` the locales an earlier run left out."""
     spec = json.loads(spec_path.read_text())
+    if problems := deep_link_problems(spec):
+        raise SystemExit("; ".join(problems))
     table = localization_table(spec)
     if problems := localization_problems({"localizations": table}):
         raise SystemExit("copy breaks caps: " + "; ".join(problems))
@@ -444,6 +470,8 @@ def create(spec_path: Path, art_dir: Path, dry_run: bool, event_id: str | None =
 
 def update(event_id: str, spec_path: Path, dry_run: bool) -> int:
     spec = json.loads(spec_path.read_text())
+    if problems := deep_link_problems(spec):
+        raise SystemExit("; ".join(problems))
     table = spec.get("localizations") or {spec.get("locale", "en-US"): spec["copy"]}
     spec["localizations"] = table
     if problems := localization_problems(spec):

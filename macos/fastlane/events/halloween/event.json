@@ -8,6 +8,7 @@
   "publishStart": "2026-10-17T09:00:00Z",
   "eventStart": "2026-10-24T10:00:00Z",
   "eventEnd": "2026-11-01T11:00:00Z",
+  "deepLink": "m1k3://event/halloween",
   "copy": {
     "name": "Halloween in the Lair",
     "shortDescription": "M1K3 dresses up. Pumpkin glow, villain grin.",
@@ -19,12 +20,22 @@
       "shortDescription": "M1K3 dresses up. Pumpkin glow, villain grin.",
       "longDescription": "From Oct 24 to Nov 1, the Phosphor Fox glows pumpkin orange and greets you in costume. A little wicked, all on-device."
     },
+    "en-GB": {
+      "name": "Halloween in the Lair",
+      "shortDescription": "M1K3 dresses up. Pumpkin glow, villain grin.",
+      "longDescription": "From 24 Oct to 1 Nov, the Phosphor Fox glows pumpkin orange and greets you in costume. A little wicked, all on-device."
+    },
     "de-DE": {
       "name": "Halloween im Versteck",
       "shortDescription": "M1K3 verkleidet sich. Kürbisglut, Schurkengrinsen.",
       "longDescription": "Vom 24.10. bis 1.11. glüht der Phosphorfuchs kürbisorange und begrüßt dich im Kostüm. Etwas fies, alles auf dem Gerät."
     },
     "es-ES": {
+      "name": "Halloween en la guarida",
+      "shortDescription": "M1K3 se disfraza. Brillo calabaza, risa villana.",
+      "longDescription": "Del 24 oct. al 1 nov., el zorro fosforescente brilla color calabaza y te recibe disfrazado. Todo en tu dispositivo."
+    },
+    "es-MX": {
       "name": "Halloween en la guarida",
       "shortDescription": "M1K3 se disfraza. Brillo calabaza, risa villana.",
       "longDescription": "Del 24 oct. al 1 nov., el zorro fosforescente brilla color calabaza y te recibe disfrazado. Todo en tu dispositivo."
