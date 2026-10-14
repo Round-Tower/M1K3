@@ -106,6 +106,10 @@ Anything a cold session needs on turn one belongs below, not there.
   cancel loses the queue spot (2026-10-05: both were cancelled before the build was checked).
   `submit` refuses an unstamped build unless `--why`. Relaunching matters until #491, because the
   stale-process check reads the binary's mtime, which installers preserve. ASC writes are Kev's, via `!`.
+  An in-app event joins the iOS submission (Apple's rule for a first iOS version). ASC won't Add it
+  for Review without a deep link (`m1k3://event/<name>`, the scheme M1K3iOS registers), and its UI
+  draft submission has no platform, which `submit --platform ALL` can't see (#605): until #605, run
+  `submit --platform MAC_OS`, then add the iOS version to the event's draft in the ASC UI.
 - Store copy: name/subtitle are record-wide, so edit `macos/fastlane/metadata_mac`
   AND `metadata_ios` together (`macos/tools/ci/check_store_metadata.py` fails on
   drift). Review notes live only in `macos/fastlane/review_notes.txt`. Run
@@ -249,4 +253,7 @@ every check master's ruleset requires, read live. Confidence 0.85.
 Review: Kev + claude-opus-5-5, 2026-10-13 — two standing facts on top of the carry-forwards: act fast
 with the measured house tooling (tdd.sh, --disable-xctest, the Debug compilation cache, land.sh,
 parallel watches), and no brain auditions for now. Confidence 0.85.
+Review: Kev + claude-opus-5-5, 2026-10-14 (/debrief) — the release carry-forward gains the in-app event
+path: a deep link is required, and the event's UI draft submission (platform null) is invisible to
+`submit --platform ALL` until #605. Both hit live on the 1.1 release. Confidence 0.85.
 -->
