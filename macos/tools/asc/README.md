@@ -24,7 +24,8 @@ Verify before you cancel: once a submission is cancelled, its place in the queue
 ./submit.py attach --platform ALL --build N --confirm
 ./precheck.py --platform MAC_OS; ./precheck.py --platform IOS
 # an in-app event riding the release: ./events.py create --spec … --art-dir …, then App Store Connect ▸
-# In-App Events ▸ the event ▸ Add for Review (a draft iOS submission); submit adds the version and sends both
+# In-App Events ▸ the event ▸ Add for Review (a draft with NO platform); `status` lists it under IOS and
+# submit adopts it, adds the version and sends both (#605; the API path is unproven: dry-run first)
 ./submit.py submit --platform ALL --confirm           # refuses an unstamped build (exit 5) unless --why
 ```
 

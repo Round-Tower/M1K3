@@ -26,6 +26,11 @@
 //  and the empty-state headline/tagline are gone; the chips carry the invitation. Dead brainSubtitle removed with it.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — in season (Halloween) one costume line under the wordmark
 //  (SeasonalLook.greeting); opt-out in Settings ▸ Face. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5-5, 2026-10-14 — PhotosPicker beside the Files paperclip (#604): same
+//  AttachmentStore path, gated on supportsImageInput. Confidence 0.8 (compile-verified; picking from
+//  a real library is verify-by-launch).
+//  Review: same day (2), #609 review — the picks land only if the brain still takes images after they load
+//  (a brain switch mid-load discarded the pending set), and the picker caps pending images at 4.
 //
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — M1K3_VOICE_AT_LAUNCH harness switch (enter voice mode when the brain is
@@ -89,6 +94,7 @@ import M1K3Chat
 import M1K3Inference
 import M1K3LanguageModel
 import M1K3Screengrab
+import PhotosUI
 import StoreKit
 import SwiftUI
 import UniformTypeIdentifiers
@@ -112,6 +118,7 @@ struct ChatScreen: View {
     @State private var draft = ""
     @State private var starters: [String] = []
     @State private var showAttachmentImporter = false
+    @State private var pickedPhotos: [PhotosPickerItem] = []
     @State private var pendingAttachments: [ImageAttachment] = []
     @State private var pendingFiles: [FileAttachment] = []
     @State private var attachmentError: String?
@@ -228,6 +235,11 @@ struct ChatScreen: View {
                 if case let .success(urls) = result {
                     attach(urls)
                 }
+            }
+            .onChange(of: pickedPhotos) { _, items in
+                guard !items.isEmpty else { return }
+                pickedPhotos = []
+                Task { await attachPhotos(items) }
             }
             .onChange(of: core.selectedBrain) {
                 if !core.selectedBrain.supportsImageInput {
@@ -564,6 +576,22 @@ struct ChatScreen: View {
                     .disabled(core.chat.isResponding || !core.isReady)
                     .accessibilityLabel("Attach")
 
+                    if core.selectedBrain.supportsImageInput {
+                        // Out of process: no photo-library prompt, no usage string.
+                        PhotosPicker(
+                            selection: $pickedPhotos,
+                            maxSelectionCount: max(1, Self.photoLimit - pendingAttachments.count),
+                            matching: .images
+                        ) {
+                            Image(systemName: "photo.on.rectangle")
+                                .font(.system(size: 20))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(core.chat.isResponding || !core.isReady
+                            || pendingAttachments.count >= Self.photoLimit)
+                        .accessibilityLabel("Attach from Photos")
+                    }
+
                     TextField("Ask M1K3…", text: $draft, axis: .vertical)
                         .lineLimit(1 ... 4)
                         .focused($inputFocused)
@@ -755,6 +783,39 @@ struct ChatScreen: View {
         }
         return failures
     }
+
+    /// The Photos picker's landing: bytes in, a stored copy out, the same
+    /// `ImageAttachment` the Files importer yields. Every failure is named.
+    private func attachPhotos(_ items: [PhotosPickerItem]) async {
+        guard core.selectedBrain.supportsImageInput else { return }
+        var failures: [String] = []
+        var stored: [ImageAttachment] = []
+        for item in items {
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self) else {
+                    failures.append(String(localized: "A photo couldn't be read."))
+                    continue
+                }
+                let ext = item.supportedContentTypes.first?.preferredFilenameExtension
+                try stored.append(Self.attachmentStore.store(data: data, fileExtension: ext))
+            } catch {
+                failures.append(error.localizedDescription)
+            }
+        }
+        // The brain can change while the picks load: a brain without image input
+        // discards the pending set, so these must not land after it did.
+        guard core.selectedBrain.supportsImageInput else {
+            AttachmentStore.discard(stored)
+            return
+        }
+        pendingAttachments.append(contentsOf: stored)
+        if !failures.isEmpty {
+            attachmentError = failures.joined(separator: "\n")
+        }
+    }
+
+    /// The Photos picker's ceiling on images pending in one message.
+    private static let photoLimit = 4
 
     private func attachFiles(at urls: [URL]) -> [String] {
         var failures: [String] = []

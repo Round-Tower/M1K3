@@ -176,3 +176,87 @@ def test_a_stamp_must_name_its_build(tmp_path):
     assert submit.gate_problems("453", stamp_dir=tmp_path)
     (tmp_path / "verified-453.json").write_text('{"build": "453"}')
     assert submit.gate_problems("453", stamp_dir=tmp_path) == []
+
+
+# The 1.1 release (2026-10-14, #605): Add for Review on an in-app event made a live submission
+# with platform null whose one item was the appEvent. `submit --platform IOS` must adopt it
+# (Apple: the event rides the first iOS version's submission), not create a second.
+def _event_item(event_id="ev-1"):
+    return {"id": "i-" + event_id, "relationships": {"appEvent": {"data": {"type": "appEvents", "id": event_id}}}}
+
+
+def _items(by_id):
+    return lambda sub_id: by_id.get(sub_id, [])
+
+
+def test_ios_adopts_the_platform_less_event_draft() -> None:
+    draft = _sub("5da2339d", None, "READY_FOR_REVIEW")
+    subs = [draft, _sub("mac-open", "MAC_OS", "UNRESOLVED_ISSUES")]
+    items = _items({"5da2339d": [_event_item()]})
+    assert submit.submission_for(subs, "IOS", items)["id"] == "5da2339d"
+    # the Mac never adopts it: events are iPhone and iPad only
+    assert submit.submission_for(subs, "MAC_OS", items)["id"] == "mac-open"
+    # and the plan is: add the version to that draft, then send it
+    assert submit.next_steps(draft, "IOS", "ver-1", [_event_item()]) == ["add version ver-1", "submit"]
+
+
+def test_a_platform_less_draft_without_an_event_is_not_adopted() -> None:
+    draft = _sub("x", None, "READY_FOR_REVIEW")
+    assert submit.submission_for([draft], "IOS", _items({"x": [_item("ver-0")]})) is None
+    # without an item reader (status, cancel on the Mac) nothing platform-less is read
+    assert submit.submission_for([draft], "IOS") is None
+
+
+def test_an_event_draft_beside_an_ios_draft_refuses_naming_both() -> None:
+    subs = [_sub("event-draft", None, "READY_FOR_REVIEW"), _sub("ios-open", "IOS", "UNRESOLVED_ISSUES")]
+    try:
+        submit.submission_for(subs, "IOS", _items({"event-draft": [_event_item()]}))
+    except submit.DraftConflict as conflict:
+        assert "event-dr" in str(conflict) and "ios-open" in str(conflict)
+    else:
+        raise AssertionError("two iOS drafts must refuse")
+
+
+def test_has_event_survives_a_null_relationship() -> None:
+    assert submit.has_event([_event_item()])
+    assert not submit.has_event([{"id": "i", "relationships": {"appEvent": {"data": None}}}])
+    assert not submit.has_event([_item("ver-1")])
+
+
+def test_status_lists_platform_less_drafts() -> None:
+    subs = [_sub("d", None, "READY_FOR_REVIEW"), _sub("old", None, "COMPLETE"), _sub("m", "MAC_OS", "COMPLETE")]
+    assert [s["id"] for s in submit.platformless(subs)] == ["d"]
+
+
+def test_a_canceling_draft_is_no_conflict() -> None:
+    # A CANCELING event draft is going away: the live IOS one serves, no refusal (review on #605).
+    subs = [_sub("event-draft", None, "CANCELING"), _sub("ios-open", "IOS", "UNRESOLVED_ISSUES")]
+    assert submit.submission_for(subs, "IOS", _items({"event-draft": [_event_item()]}))["id"] == "ios-open"
+    # alone, it is adopted, so the plan says wait
+    lone = [_sub("event-draft", None, "CANCELING")]
+    assert submit.submission_for(lone, "IOS", _items({"event-draft": [_event_item()]}))["id"] == "event-draft"
+
+
+def test_only_a_refused_include_falls_back(monkeypatch, capsys) -> None:
+    # A transient failure must not silently drop appEvent and hide the event draft (review on #609).
+    calls = []
+
+    def failing(error):
+        def paginate(path):
+            calls.append(path)
+            if "appEvent" in path:
+                raise RuntimeError(f"GET {path} -> {error}")
+            return iter([_item("ver-1")])
+        return paginate
+
+    monkeypatch.setattr(submit, "paginate", failing("400: {\"errors\":[{\"detail\":\"'appEvent' is not a valid include\"}]}"))
+    assert submit.items_of("s") == [_item("ver-1")]
+    assert "appEvent check skipped" in capsys.readouterr().out
+    for transient in ("503: upstream", "429: slow down", "transport: timed out", "401: expired token"):
+        monkeypatch.setattr(submit, "paginate", failing(transient))
+        try:
+            submit.items_of("s")
+        except RuntimeError:
+            pass
+        else:
+            raise AssertionError(f"{transient} must not fall back")
