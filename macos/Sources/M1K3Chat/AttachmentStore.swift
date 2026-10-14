@@ -13,6 +13,7 @@
 //  Signed: Kev + claude-fable-5, 2026-07-19, Confidence 0.85 (TDD'd against a
 //  temp directory: copy, independence-from-original, extension, distinctness,
 //  missing-source throw). Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-10-14 — store(data:fileExtension:) for the iOS PhotosPicker (#604). Confidence 0.85.
 //
 
 import Foundation
@@ -37,6 +38,21 @@ public struct AttachmentStore: Sendable {
         let name = ext.isEmpty ? UUID().uuidString : "\(UUID().uuidString).\(ext)"
         let destination = directory.appendingPathComponent(name)
         try FileManager.default.copyItem(at: originalURL, to: destination)
+        return ImageAttachment(url: destination)
+    }
+
+    /// Write picked bytes (the Photos picker hands data, not a URL) into the
+    /// attachments directory and return the attachment. The extension is
+    /// reduced to alphanumerics so a hostile or odd value can't leave the
+    /// directory; none means no extension. Empty data throws: a zero-byte
+    /// image is never an attachment.
+    public func store(data: Data, fileExtension: String?) throws -> ImageAttachment {
+        guard !data.isEmpty else { throw CocoaError(.fileReadCorruptFile) }
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let ext = String((fileExtension ?? "").filter { $0.isASCII && ($0.isLetter || $0.isNumber) })
+        let name = ext.isEmpty ? UUID().uuidString : "\(UUID().uuidString).\(ext)"
+        let destination = directory.appendingPathComponent(name)
+        try data.write(to: destination, options: .atomic)
         return ImageAttachment(url: destination)
     }
 

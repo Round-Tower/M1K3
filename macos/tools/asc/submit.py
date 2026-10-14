@@ -34,6 +34,11 @@ a refusal never half-sends a release (review on #490 found the first cut could).
 2026-10-05 release, where both cancels and the submit ran before the build was checked. PEP 723
 header so `./submit.py` brings its own deps. Confidence 0.85 (pure half pinned; attach and
 cancel were driven live on 2026-10-05 through the scratchpad versions of this code).
+Review: Kev + claude-opus-5-5, 2026-10-14 — #605: for IOS, a live platform-less draft holding an
+appEvent (what Add for Review on an in-app event makes) is the iOS submission; beside an IOS draft
+it refuses naming both; `status` lists it under IOS; items are read with their appEvent. Confidence
+0.7 (pinned on the live 1.1 shape; UNVERIFIED that ASC takes the version item into that draft over
+the API, or whether it first wants `platform: IOS` set — the UI did it on 2026-10-14).
 """
 
 from __future__ import annotations
@@ -42,6 +47,7 @@ import argparse
 import json
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -72,14 +78,48 @@ MIN_WHY = 10  # a reason, not a token
 # --------------------------------------------------------------------------- #
 
 
-def submission_for(subs: list[dict[str, Any]], platform: str) -> dict[str, Any] | None:
+class DraftConflict(Exception):
+    """Two live iOS submissions: an event's platform-less draft and an IOS one."""
+
+
+def _live(s: dict[str, Any]) -> bool:
+    return s["attributes"].get("state") in LIVE_STATES + WAITING_STATES
+
+
+def _live_now(s: dict[str, Any]) -> bool:
+    return s["attributes"].get("state") in LIVE_STATES
+
+
+def platformless(subs: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Live submissions with no platform: what Add for Review on an in-app event makes."""
+    return [s for s in subs if s["attributes"].get("platform") is None and _live(s)]
+
+
+def draft_label(items: list[dict[str, Any]]) -> str:
+    return "no platform: an event's draft" if has_event(items) else "no platform"
+
+
+def has_event(items: list[dict[str, Any]]) -> bool:
+    return any((((i.get("relationships") or {}).get("appEvent") or {}).get("data") or {}).get("id") for i in items)
+
+
+def submission_for(
+    subs: list[dict[str, Any]], platform: str, items_of: Callable[[str], list[dict[str, Any]]] | None = None
+) -> dict[str, Any] | None:
     """The one live submission for `platform` (ASC allows one at a time); terminal
-    states (COMPLETE, CANCELING, …) never count, however new."""
-    live = [
-        s for s in subs
-        if s["attributes"].get("platform") == platform
-        and s["attributes"].get("state") in LIVE_STATES + WAITING_STATES
-    ]
+    states (COMPLETE, CANCELING, …) never count, however new.
+
+    For IOS, given `items_of`, a platform-less live draft holding an appEvent is the iOS
+    draft too (#605): Add for Review on an event makes one, and the first iOS version must
+    ride it. Beside an IOS draft it raises DraftConflict naming both."""
+    live = [s for s in subs if s["attributes"].get("platform") == platform and _live(s)]
+    if platform == "IOS" and items_of is not None:
+        drafts = [s for s in platformless(subs) if has_event(items_of(s["id"]))]
+        # A CANCELING one is going away: two LIVE ones are the conflict.
+        if any(_live_now(s) for s in drafts) and any(_live_now(s) for s in live):
+            names = ", ".join(f"{s['id'][:8]} ({s['attributes'].get('platform') or 'no platform'})" for s in drafts + live)
+            raise DraftConflict(f"two live iOS submissions: {names}; resolve one in App Store Connect")
+        live += drafts
     live.sort(key=lambda s: s["attributes"].get("submittedDate") or "", reverse=True)
     return live[0] if live else None
 
@@ -225,14 +265,20 @@ def submissions() -> list[dict[str, Any]]:
 def items_of(submission_id: str) -> list[dict[str, Any]]:
     """`include=appStoreVersion` is what makes the item carry its version relationship —
     the bare list returns items with no relationships at all (probed 2026-09-16), and
-    `has_item` would read every version as missing."""
-    return list(paginate(f"/v1/reviewSubmissions/{submission_id}/items?include=appStoreVersion&limit=50"))
+    `has_item` would read every version as missing. `appEvent` likewise for `has_event`."""
+    base = f"/v1/reviewSubmissions/{submission_id}/items?limit=50&include="
+    try:
+        return list(paginate(base + "appStoreVersion,appEvent"))
+    except RuntimeError:  # appEvent as an include is unproven here (#605): never let it break the Mac path
+        return list(paginate(base + "appStoreVersion"))
 
 
 def run_status(platforms: tuple[str, ...]) -> int:
     subs = submissions()
     for platform in platforms:
         rows = [s for s in subs if s["attributes"].get("platform") == platform]
+        if platform == "IOS":  # an event's draft has no platform until the version joins it (#605)
+            rows += platformless(subs)
         rows.sort(key=lambda s: s["attributes"].get("submittedDate") or "", reverse=True)
         print(f"== {platform}: {len(rows)} submission(s)")
         for s in rows[:6]:
@@ -241,7 +287,8 @@ def run_status(platforms: tuple[str, ...]) -> int:
                 (i.get("relationships", {}).get("appStoreVersion", {}).get("data") or {}).get("id", "?")[:8]
                 for i in items_of(s["id"])
             ) if a.get("state") in LIVE_STATES else "…"
-            print(f"   {s['id'][:8]} {a.get('state'):<20} {a.get('submittedDate') or '-':<26} items: {versions}")
+            tag = "" if a.get("platform") else f"  ({draft_label(items_of(s['id']))})"
+            print(f"   {s['id'][:8]} {a.get('state'):<20} {a.get('submittedDate') or '-':<26} items: {versions}{tag}")
     return 0
 
 
@@ -255,9 +302,15 @@ def prepare(platform: str, why: str | None) -> dict[str, Any]:
     if version is None:
         print(f"{platform}: no version to submit")
         return {"platform": platform, "problems": ["no version to submit"], "steps": ["already"]}
-    sub = submission_for(submissions(), platform)
+    try:
+        sub = submission_for(submissions(), platform, items_of)
+    except DraftConflict as conflict:
+        print(f"{platform}: {conflict}")
+        return {"platform": platform, "problems": [str(conflict)], "steps": ["refused"]}
     items = items_of(sub["id"]) if sub else []
     steps = next_steps(sub, platform, version["id"], items)
+    if sub is not None and sub["attributes"].get("platform") is None:
+        print(f"   {platform}: adopting the event's platform-less draft {sub['id'][:8]} (#605)")
     a = version["attributes"]
     print(f"{platform} {a['versionString']} ({a.get('appVersionState') or a.get('appStoreState')}) · "
           f"submission {sub['id'][:8] + ' ' + sub['attributes']['state'] if sub else 'none'}")
@@ -331,11 +384,16 @@ def run_submit_all(platforms: tuple[str, ...], confirm: bool, why: str | None) -
 
 
 def run_cancel(platform: str, confirm: bool) -> int:
-    sub = submission_for(submissions(), platform)
+    try:
+        sub = submission_for(submissions(), platform, items_of)
+    except DraftConflict as conflict:
+        print(f"{platform}: {conflict}")
+        return 1
     if not cancel_allowed(sub):
         print(f"{platform}: no live submission to cancel")
         return 1
-    print(f"{platform}: submission {sub['id'][:8]} {sub['attributes']['state']} → canceled")
+    tag = "" if sub["attributes"].get("platform") else f" ({draft_label(items_of(sub['id']))}: the event leaves review too)"
+    print(f"{platform}: submission {sub['id'][:8]} {sub['attributes']['state']}{tag} → canceled")
     if not confirm:
         print("dry-run — add --confirm to execute (the queue position is the price)")
         return 0
@@ -385,7 +443,10 @@ def run_attach(platform: str, number: str, confirm: bool) -> int:
 
 
 def canceling(platform: str) -> bool:
-    sub = submission_for(submissions(), platform)
+    try:
+        sub = submission_for(submissions(), platform, items_of)
+    except DraftConflict:
+        return False
     return sub is not None and sub["attributes"].get("state") in WAITING_STATES
 
 

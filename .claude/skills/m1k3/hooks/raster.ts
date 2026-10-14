@@ -5,6 +5,8 @@
 //
 // Signed: Kev + Claude, 2026-10-05, Confidence 0.8 (the packing is pinned by
 // tests/face.test.ts; how a terminal paints it is verify-by-launch). Prior: Unknown
+// Review: Kev + claude-opus-5-5, 2026-10-14 — faceSvg: 1-px LED gutter (was 2) and a 6% unlit
+// floor (was 8%); Kev saw an empty box in the desktop Code tab. Confidence 0.6 (desktop paint unseen).
 
 import { ACCENT, COLS, ROWS, frame, shade, type AvatarState } from './face-math'
 
@@ -70,7 +72,11 @@ export function brailleCells(rows: readonly string[], colour: number): string {
   return packCells(cells)
 }
 
-/** The face as SVG markup for the desktop and editor surfaces, which have no `Raster`. */
+/**
+ * The face as SVG markup for the desktop and editor surfaces, which have no `Raster`.
+ * Each LED fills its pitch but a 1-px gutter, and an unlit one sits at 6%, so the
+ * lit features read at band size (a 2-px inset at an 8-px pitch read as an empty box).
+ */
 export function faceSvg(state: AvatarState, time: number, size = 12): string {
   const grid = frame(state, time)
   const accent = ACCENT[state.emotion]
@@ -81,8 +87,8 @@ export function faceSvg(state: AvatarState, time: number, size = 12): string {
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const level = grid[r]?.[c] ?? 0
-      const x = pad + c * size + 2, y = pad + r * size + 2
-      rects += `<rect x="${x}" y="${y}" width="${size - 4}" height="${size - 4}" rx="1.5" fill="${hex}" fill-opacity="${(0.08 + 0.92 * level).toFixed(3)}"/>`
+      const x = pad + c * size + 1, y = pad + r * size + 1
+      rects += `<rect x="${x}" y="${y}" width="${size - 2}" height="${size - 2}" rx="${(size / 5).toFixed(1)}" fill="${hex}" fill-opacity="${(0.06 + 0.94 * level).toFixed(3)}"/>`
     }
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}"><rect width="${w}" height="${h}" fill="#0e1013" rx="6"/>${rects}</svg>`

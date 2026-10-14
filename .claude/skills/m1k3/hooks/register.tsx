@@ -17,6 +17,8 @@
 // before the gap, so two lines at once still speak one. Pinned by "without an allow rule for speak…" (mutation-checked). The band
 // drawing and the fox are now seen live in Ghostty. Confidence 0.8 (speech with
 // the rule in place still owes Kev's ear).
+// Review: Kev + claude-opus-5-5, 2026-10-14 — the desktop face draws at a 10-px pitch (was 8):
+// Kev saw an empty box above the prompt in the Code tab. Confidence 0.6 (verify-by-launch owed).
 
 import { atom, read, update } from 'claude-code'
 import type { Register } from 'claude-code'
@@ -343,7 +345,7 @@ export const register: Register = (on, options) => {
     if (which === 'face') {
       return (
         <Box flexDirection="row" alignItems="center">
-          <Svg source={faceSvg(current, time, 8)} alt={`M1K3 ${label}`} width={13 * 8 + 12} height={11 * 8 + 12} />
+          <Svg source={faceSvg(current, time, 10)} alt={`M1K3 ${label}`} width={13 * 10 + 12} height={11 * 10 + 12} />
           {caption}
         </Box>
       )
