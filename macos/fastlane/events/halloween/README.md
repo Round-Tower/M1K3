@@ -45,23 +45,50 @@ from UTC−10 to UTC+13 the card is never live where the look isn't. The price i
 up to 23 hours shorter than the look at each end, starting late in the east and ending
 early in the west.
 
-## Art: rendered from code, textless
+## Art: the Phosphor Fox in costume, as video
+
+Both slots are **video**, which Apple recommends ("consider using video"). Event video autoplays and repeats.
+
+| File | Slot | Format |
+|---|---|---|
+| `event-card-1920x1080.mp4` | Event card, 16:9 | H.264, 30 fps, 20.5 s, no audio, about 25 MB |
+| `event-details-1080x1920.mp4` | Details page, 9:16 | the same |
+
+Each video loops seamlessly. The fox's Survey clip plays exactly six times in 615 frames, and every other
+motion completes whole cycles in the same span. Measured, the last frame steps into the first like any
+other frame.
+
+The scene uses the site hero's own `Fox.glb`, in the app's Halloween phosphor:
+
+- **The fox:** a PUMPKIN lattice drawn as thick lines over a dark body, with a VIOLET rim. Its EMBER eyes
+  ride the head bone.
+- **The setting:** the violet CRT floor, under a harvest moon made of the Life field's cells.
+- **The bats:** real Life gliders crossing the moon, cut out of its lattice. The renderer refuses to load
+  unless four B3/S23 steps move a glider one cell.
+- **The embers:** they rise off the floor and cool from ember through pumpkin to violet, like the app's Life cells.
+
+Matching stills sit beside the videos for the nomination and social posts: `event-card-1920x1080.jpg` and
+`event-details-1080x1920.jpg` are frame 412, saved as sRGB JPEG at quality 90. The `*-guides.png` proofs
+mark the safe area.
+
+The videos are rendered in the private motion project (Remotion, under `marketing/motion`), which isn't in
+this repo:
 
 ```
-python3 tools/site/event_art.py --palette halloween --guides    # from macos/
+npx remotion render src/halloween/index.ts HalloweenCard ../events/halloween/event-card-1920x1080.mp4 \
+    --codec=h264 --muted --color-space=bt709 --crf=16
+npx remotion render src/halloween/index.ts HalloweenDetails ../events/halloween/event-details-1080x1920.mp4 \
+    --codec=h264 --muted --color-space=bt709 --crf=16
 ```
 
-This writes `event-card-1920x1080.jpg` (16:9) and `event-details-1080x1920.jpg` (9:16) to
-`marketing/events/halloween/` (gitignored, so binaries stay out of the tree), plus
-`*-guides.png` proofs. Each proof marks the safe area in green, the overlay bands in red,
-and the top of the bottom third with a dashed line. JPEGs are quality 90 and sRGB-tagged,
-and the script spec-checks them before it exits. The scene is the store creative's own: the Phosphor Fox from
-`site/vendor/Fox.glb` in PUMPKIN strokes (its far flank VIOLET) with an EMBER halo,
-standing on a Life field whose cells cool from ember through pumpkin to violet ash. Behind
-it is a harvest moon made of the field's own cells. Three Life gliders cross the moon as
-bats; they're real gliders (a test steps them through B3/S23), cut out of the moon's lattice.
-The palette is the app's, colour for colour: PUMPKIN `#FF8A1F`, EMBER `#FFB347`,
-VIOLET `#9B5CFF`, NIGHT `#0A0610`.
+`events.py create` uploads each slot's video when one is present, and otherwise its still. Before it sends
+anything, a dry run included, it checks every video against Apple's media table with `ffprobe`. The first
+pass's 2D stills still render as the fallback, but `event_art.py` writes into the art dir by default and
+would overwrite the frame-412 stills, so render it elsewhere:
+`python3 tools/site/event_art.py --palette halloween --out <scratch dir>` (from `macos/`). The old 2D pair
+is kept in the art dir's `previous-2d/`. `event_art.py --check` spec-checks whichever stills are in the art
+dir. The palette is the
+app's, colour for colour: PUMPKIN `#FF8A1F`, EMBER `#FFB347`, VIOLET `#9B5CFF`, NIGHT `#0A0610`.
 
 **Safe area.** Apple publishes the sizes but no safe area for event media. It says to
 keep text and logos out of the art, not to add borders or gradients (it applies its own),
@@ -112,4 +139,9 @@ Review: Kev + claude-opus-5.5, 2026-10-11 — review fold: Kev's call on the UTC
   UTC+13, pinned by test), retiring that open; the 1 Nov Open is retired too, since
   SeasonalLook.active matches (10, 24...) and (11, 1). Documented the `--event` resume.
   Still open: the SPECIAL_EVENT bar and a native read of the copy. Confidence 0.8
+Review: Kev + claude-opus-5-5, 2026-10-14 — the media is video now (Kev: "we need better assets & videos"):
+  a 20.5 s seamless loop per slot of the 3D Phosphor Fox in costume, rendered in the private motion project,
+  with matching stills; events.py uploads video when it's there and checks it with ffprobe first. Still open:
+  the SPECIAL_EVENT bar, a native read of the copy, and ASC's event preview of the video under the overlays.
+  Confidence 0.75
 -->
