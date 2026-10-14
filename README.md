@@ -2,7 +2,7 @@
   <img src="assets/brand/readme-hero.svg" alt="M1K3 — local, offline AI. Punk intelligence. No data centers required. The Phosphor Fox, a wireframe fox, surveys a field of Conway's Game of Life." width="100%">
 </p>
 
-<h1 align="center">M1K3 — Own your AI</h1>
+<h1 align="center">M1K3 — but my friends call me Mike.</h1>
 
 <p align="center">
 Local AI that runs <strong>entirely on your Apple-Silicon Mac</strong> —
