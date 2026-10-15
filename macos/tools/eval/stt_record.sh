@@ -12,6 +12,9 @@
 # verify-by-run: the mic grant goes to the terminal app on the first take). Prior: Unknown.
 # Review: claude-opus-5-5, 2026-10-15: Kev's first run printed nothing; the device listing's
 # exit 251 tripped err_return. list_devices swallows it.
+# Review: claude-opus-5-5, 2026-10-15: the first take then quit at "Enter to stop": ffmpeg's
+# exit 255 on SIGINT tripped err_return (and it held the terminal; now -nostdin). Two takes
+# and a quit driven through a pty. Confidence 0.8.
 
 emulate -L zsh
 setopt err_return pipe_fail
@@ -48,10 +51,13 @@ print "Recording ${#prompts} prompts into $out (mic: $device). q quits, s skips,
 
 take() {  # $1 = clip path stem; records until Enter
   local stem=$1
-  ffmpeg -hide_banner -loglevel error -y -f avfoundation -i ":$device" -ac 1 -ar 16000 "$stem.wav" &
+  # -nostdin and </dev/null: ffmpeg otherwise takes the terminal for its own q key and the
+  # read below fails, which err_return turned into a silent quit after the first take.
+  ffmpeg -nostdin -hide_banner -loglevel error -y -f avfoundation -i ":$device" -ac 1 -ar 16000 "$stem.wav" </dev/null &
   local pid=$!
-  read -s "?  ● recording… Enter to stop"
-  kill -INT $pid 2>/dev/null; wait $pid 2>/dev/null
+  read -s "?  ● recording… Enter to stop" || true
+  # ffmpeg exits 255 on SIGINT, a clean stop: under err_return a bare wait quit the script.
+  kill -INT $pid 2>/dev/null; wait $pid 2>/dev/null || true
   print "\r  ✓ saved $(basename $stem).wav                "
 }
 
