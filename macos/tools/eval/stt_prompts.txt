@@ -1,0 +1,48 @@
+# stt_prompts.txt — the lines read aloud for the speech-to-text eval (tools/eval/stt_record.sh).
+# One prompt per line; blank lines and # comments are skipped. The reference transcript is the line
+# as written. Kev's private additions (names from memory) go in ~/.cache/m1k3-stt-corpus/extra.txt.
+#
+# Signed: Kev + claude-opus-5-5, 2026-10-15, Confidence 0.7 (a first mix: dictation, Irish places,
+# M1K3's own vocabulary, restarts, numbers; reweigh after the first run). Prior: Unknown.
+
+# Everyday dictation
+Remind me to call the dentist tomorrow morning before ten.
+Can you summarise the last three notes I made about the launch?
+What's on my calendar for Friday afternoon?
+Add milk, eggs and a sourdough loaf to the shopping list.
+I think the second draft reads better, but the ending still drags.
+Send a quick message to say I'm running about fifteen minutes late.
+How long would it take to walk from the station to the harbour?
+Read me back what I said about the budget yesterday.
+
+# Irish places and names
+We climbed Carrauntoohil on the first dry Saturday in May.
+The ferry from Dún Laoghaire leaves at half past eight.
+My cousin Siobhán lives just outside Clonakilty.
+Is the road to Gougane Barra open after the storm?
+Aoife and Oisín are coming down from Letterkenny for the weekend.
+We stopped for chips in Ballybunion on the way home.
+
+# M1K3's own vocabulary
+Switch the brain to Lil and turn thinking off for this chat.
+Is the MLX model still loading, or did the download stall?
+Open the MCP settings and copy the access token for Claude.
+Kokoro sounds warmer than the built-in voice on the iPhone.
+Remember that the PhosphorFox is the companion I like best.
+Run the SwiftUI preview and check the Liquid Glass toolbar.
+
+# Restarts and thinking aloud
+Set a timer for, no wait, make it twenty minutes.
+The meeting is on Tuesday, sorry, I mean Wednesday, at three.
+Can you, um, find the article about offline maps I saved last week?
+I want to, actually, never mind, just read me the weather.
+
+# Numbers and dates
+My flight is EI 712 on the twenty-third of November.
+The invoice came to four hundred and sixty-two euro fifty.
+Call me back on zero eight seven, five five five, one two three four.
+
+# Longer stretches
+When I get home this evening I'd like a short summary of everything I asked you today, with the things I still need to do at the top.
+The trouble with the old version was that it listened to the music in the room and wrote down the lyrics instead of what I said.
+If the weather holds, we'll head west on Saturday, stay two nights near Dingle, and come back through Killarney on Monday.
