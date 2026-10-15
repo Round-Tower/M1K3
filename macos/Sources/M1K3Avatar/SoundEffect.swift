@@ -14,6 +14,9 @@
 //  Prior: Unknown (sounds salvaged from the Python-era ./sounds/ library).
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — the vocabulary grows to eleven and every earcon but the dial-up is
 //  SYNTHESISED (`EarconSynth`, `Source.synth`); the three salvaged WAVs retire. Confidence now 0.8.
+//  Review: claude-opus-5-5, 2026-10-15 — the dial-up ships as lossless ALAC (dialup.caf, 919 KB)
+//  instead of PCM WAV (2.8 MB, ~9% of the app): identical samples, so the loop is unchanged.
+//  Found by the bundle-size pass (Kev's OpenBundle roadmap item). Confidence 0.9.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — five onboarding earcons (doorPick, cardTurn, selectionTick,
 //  wakeChime, doneChord; Kev, TestFlight 499: "we need sound effects too"). Confidence 0.7 (recipes are
 //  first drafts for Kev's ear).
@@ -69,7 +72,7 @@ public enum SoundEffect: String, CaseIterable, Sendable {
     case dialup
 
     /// Where the sound comes from: synthesised by `EarconSynth` at init, or a
-    /// bundled WAV under `SoundEffects/` (only the dial-up — real modem texture
+    /// bundled CAF under `SoundEffects/` (only the dial-up — real modem texture
     /// no short recipe replaces).
     public enum Source: Equatable, Sendable {
         case synth
@@ -86,12 +89,14 @@ public enum SoundEffect: String, CaseIterable, Sendable {
     }
 }
 
-/// Locates the bundled WAVs. Mirrors `CompanionAssets` — resources are copied
+/// Locates the bundled sounds. Mirrors `CompanionAssets` — resources are copied
 /// verbatim into `Bundle.module` under `SoundEffects/`.
 public enum SoundEffectAssets {
     public static func url(for effect: SoundEffect) -> URL? {
         guard case let .bundled(name) = effect.source else { return nil }
-        return Bundle.module.url(forResource: name, withExtension: "wav", subdirectory: "SoundEffects")
+        // ALAC in CAF: lossless, so the loop seam is the WAV's, at a third of the size (AAC's
+        // encoder priming would put a gap in a loop).
+        return Bundle.module.url(forResource: name, withExtension: "caf", subdirectory: "SoundEffects")
     }
 
     /// True when every catalogue entry is playable: a bundled entry has its

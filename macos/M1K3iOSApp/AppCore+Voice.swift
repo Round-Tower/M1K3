@@ -63,6 +63,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — voice mode opens on the onboarding's wake chime (VoiceModeEarcons; Kev: "use our
 //  new onboarding sound"), its first listen skips the tick; entering stops an auto-spoken answer. `speakAndWait` is internal
 //  now (chat auto-speak shares it).
+//  Review: Kev + claude-opus-5-5, 2026-10-13 (#597 follow-up) — speech that ends outside voice mode releases the
+//  audio session (.notifyOthersOnDeactivation), so music a readout ducked comes back; entering voice mode stops a
+//  readout before the mic opens. Confidence 0.8 (verify-by-launch, with music playing).
 
 import AVFoundation
 import Foundation
@@ -106,6 +109,9 @@ extension AppCore {
                     voiceLoop.speechDidEnd()
                 } else {
                     avatar.resetToIdle()
+                    // A readout or a sample ended outside voice mode: give the audio back so
+                    // music ducked by the playback session returns (#597 follow-up).
+                    Task { await Self.deactivateVoiceAudioSession() }
                 }
             }
         }
@@ -123,6 +129,8 @@ extension AppCore {
     /// the loop parks idle rather than looping silently.
     func enterVoiceMode() {
         guard voiceLoop == nil, !chat.isResponding, isReady else { return }
+        // A readout must not keep talking into the mic that is about to open.
+        Task { await speech.stop() }
         // The responder's @Sendable budget closure cannot see `voiceLoop`, so
         // the mode announces itself through the shared defaults slot — the same
         // one the Mac shell has written since voice-first shipped.

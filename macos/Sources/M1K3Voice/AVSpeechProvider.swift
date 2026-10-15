@@ -16,6 +16,9 @@
 //  Review: Kev + claude-fable-5, 2026-06-11 — adopted SpeechProviderWithWordTiming:
 //  willSpeakRangeOfSpeechString → onWordSpoken (exact live word ranges).
 //  Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-13 — `defaultVoiceIdentifier` (#584): the voice an utterance
+//  that names none speaks in. The shells set it once at launch from `BestSystemVoice.pick`, so Built-in
+//  is the best installed voice, never the compact default when a better one exists. Confidence 0.85.
 
 import AVFoundation
 import Foundation
@@ -30,6 +33,15 @@ public final class AVSpeechProvider: NSObject, SpeechProviderWithWordTiming, @un
     private var _onSpeakingEnded: (@Sendable () -> Void)?
     private var _onTimelineReady: (@Sendable (SpokenWordTimeline) -> Void)?
     private var _onWordSpoken: (@Sendable (Range<Int>) -> Void)?
+    private var _defaultVoiceIdentifier: String?
+
+    /// The voice for utterances that name none; nil keeps the system default.
+    /// Resolved once at launch by the shells (`BestSystemVoice`). Lock-guarded
+    /// like the callbacks: written on the main actor, read in `speak`.
+    public var defaultVoiceIdentifier: String? {
+        get { callbackLock.withLock { _defaultVoiceIdentifier } }
+        set { callbackLock.withLock { _defaultVoiceIdentifier = newValue } }
+    }
 
     /// Called on the main thread when synthesis starts. Set by AppEnvironment to
     /// drive the avatar into the .speaking activity state. Lock-guarded: read from
@@ -75,7 +87,7 @@ public final class AVSpeechProvider: NSObject, SpeechProviderWithWordTiming, @un
             let spoken = AVSpeechUtterance(string: utterance.text)
             spoken.rate = utterance.rate
             spoken.pitchMultiplier = utterance.pitch
-            if let id = utterance.voiceIdentifier,
+            if let id = utterance.voiceIdentifier ?? defaultVoiceIdentifier,
                let voice = AVSpeechSynthesisVoice(identifier: id)
             {
                 spoken.voice = voice

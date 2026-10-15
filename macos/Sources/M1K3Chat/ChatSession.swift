@@ -70,6 +70,9 @@
 //  raw route does not, and is now named as the remaining exposure. No logic changed.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `onAttachmentsDiscarded`: the conversation-delete cascade hook for
 //  caption memory (Photo knowledge items key on the attachment filename).
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — `loadAnswerRatings()` (one read off the main actor: count + eval-
+//  fixture JSONL) and `clearAnswerRatings()`, for the phone's Settings export and Clear (Kev is rating answers on
+//  iOS). Read from the store, so it spans every conversation. Confidence 0.9 (PhoneAnswerActionsTests).
 
 import Foundation
 import M1K3Inference
@@ -1005,6 +1008,25 @@ public final class ChatSession {
         Task.detached(priority: .utility) { try? history?.recordFeedback(record) }
     }
 
+    /// Every rated answer in the store: the phone's Settings export (Kev, 2026-10-13).
+    /// One read, off the main actor (the table holds every question and answer), giving
+    /// the count and the JSONL in AnswerFeedbackExport's eval-fixture shape. Read from
+    /// the store, not this conversation's map, so it spans every conversation.
+    public func loadAnswerRatings() async -> AnswerRatings {
+        let history = history
+        let rows = await Task.detached(priority: .userInitiated) { (try? history?.allFeedback()) ?? [] }.value
+        guard !rows.isEmpty else { return AnswerRatings(count: 0, jsonl: "") }
+        return AnswerRatings(count: rows.count, jsonl: AnswerFeedbackExport.jsonl(rows) { $0.formatted(.iso8601) })
+    }
+
+    /// Delete every rating (the user's Clear ratings) and empty the thumbs on screen.
+    public func clearAnswerRatings() async {
+        let history = history
+        _ = await Task.detached(priority: .userInitiated) { try? history?.deleteAllFeedback() }.value
+        feedbackVerdicts = [:]
+        feedbackComments = [:]
+    }
+
     /// Fire-and-forget auto-titling after a successful exchange of an untitled
     /// conversation. Never blocks send; failure or garbage output just means
     /// "retry after the next exchange". The conversation id is captured at
@@ -1171,5 +1193,17 @@ public final class ChatSession {
     public func stripArtifactTagsFromLastMessage() {
         guard let index = messages.lastIndex(where: { $0.role == .assistant }) else { return }
         messages[index].text = ChatArtifactDisplay.stripArtifactTags(messages[index].text)
+    }
+}
+
+/// The ratings export as Settings shows it: how many answers carry a thumb, and the
+/// JSONL the share sheet sends.
+public struct AnswerRatings: Sendable, Equatable {
+    public let count: Int
+    public let jsonl: String
+
+    public init(count: Int, jsonl: String) {
+        self.count = count
+        self.jsonl = jsonl
     }
 }

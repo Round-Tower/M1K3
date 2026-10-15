@@ -46,6 +46,8 @@
 //  behind the brain; O2/O4 the toggle's reserved slot and "Starts after X is ready". Confidence 0.7.
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — TestFlight 505: "the list grows right to the edge of the screen". The picker
 //  column is capped at `pickerWidth` (520, the onboarding card's content width) and centred. Confidence 0.85.
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — removed `isRecommended:` from BrainCard init (the badge is gone;
+//  the tier's policy role stays in MobileBrainMenu.recommended). Confidence 0.9.
 
 import M1K3Avatar
 import M1K3Inference
@@ -150,7 +152,6 @@ struct BrainPickerView: View {
                 BrainCard(
                     tier: tier,
                     isSelected: !autoSelected && selectedBrain == tier,
-                    isRecommended: tier == recommended,
                     isLocked: !tier.isSelectableOnThisMac,
                     isDownloaded: env.isBrainDownloaded(tier)
                 ) {

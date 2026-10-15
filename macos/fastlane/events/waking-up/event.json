@@ -8,6 +8,7 @@
   "publishStart": "2026-09-17T09:00:00Z",
   "eventStart": "2026-09-18T09:00:00Z",
   "eventEnd": "2026-10-16T21:00:00Z",
+  "deepLink": "m1k3://event/waking-up",
   "copy": {
     "name": "Waking Up",
     "shortDescription": "A private AI companion, awake on your iPhone.",

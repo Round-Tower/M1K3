@@ -5,6 +5,8 @@ name: Security
 # (no real Node app — root had only a stub package.json). What's left is the
 # cheap, genuinely-useful stuff for a privacy-focused local-AI project:
 #   • secrets detection (verified only — no noise)
+# CodeQL now runs as GitHub's default code-scanning setup (not from this file)
+# and is a required check on master's ruleset, beside TruffleHog below.
 # The Python SAST (Bandit) left with the archived Python surface (attic/,
 # cleared from the tree 2026-08-13 — history before 7545b4a4 keeps it).
 
@@ -19,7 +21,7 @@ permissions:
 jobs:
   secrets:
     name: Secrets · TruffleHog
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # not -latest: that label becomes Ubuntu 26 on 2026-10-19 (#582); move deliberately
     steps:
       - name: Checkout
         uses: actions/checkout@v5

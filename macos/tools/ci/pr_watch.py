@@ -24,14 +24,15 @@ in project memory. Now they are code, tested in test_pr_watch.py:
   ("Claude finished … Reviewed head `x`", #404); it is counted once.
 * Placeholders ("**Claude working…**", an unchecked `- [ ]` checklist, the
   older "I'll analyze this and get back to you") never count.
-* The mobile job (iOS + visionOS shells, ~19 min) is ADVISORY unless the diff
-  touches the mobile shell, a Mac-shell file the MobileShell compiles, the
-  project spec, the package manifest, or ci.yml.
-  Package-only changes do not wait for it; a break there is fixed forward, with
-  Xcode Cloud as the backstop. Master has no required status checks (checked
-  2026-09-12) — every gate is ours. Since 2026-09-24 ci.yml itself skips the
-  App-shell and mobile xcodebuild jobs on a PR whose diff misses their paths
-  (pushes to master/develop build everything); a skipped job reads green here.
+* Required CI is what the base branch's ruleset requires, read live once per
+  watch: ci.yml's six jobs (the iOS + visionOS shells among them, whatever the
+  diff, #558), TruffleHog and CodeQL. ci.yml skips the App-shell and mobile
+  xcodebuild jobs on a PR whose diff misses their paths (pushes to
+  master/develop build everything), and a skipped job reads green here, so a
+  package-only PR never waits for them. ci.yml's jobs are read off its newest
+  run on the head, the ruleset's other checks off the head commit's check runs,
+  newest per name. An unreadable ruleset falls back to ci.yml's jobs with a
+  note; GitHub's merge call still enforces it (405, nothing merged).
 * Passes are inferred from the diff unless `--passes N` says otherwise: 2 when
   any changed file is a risk surface (RISK_SURFACE_PATTERNS, read off the
   2026-10-04 audit of #287–#480), else 1. An explicit N always wins. The rule
@@ -172,6 +173,22 @@ review_gate.py. The sha must be 40 chars as well as equal, so a head read short 
 cannot turn a prefix into "the full sha" (the pre-push code-quality pass). Confidence now 0.85,
 pinned in test_pr_watch.py. Whether the bots write the full sha unprompted is unmeasured; the summon
 prompt now asks for it.
+Review: Kev + claude-opus-5-5, 2026-10-13 — #558: master's ruleset requires eight checks, and the
+gate read only ci.yml's newest run, with the mobile job advisory unless the diff hit a prefix list.
+#553 read READY while that job ran (ci.yml's `mobile` filter takes all of M1K3App/, the list took a
+dozen files) and GitHub refused with 405. TruffleHog and CodeQL had the same hole. The mobile job is
+now always required (a path-skipped one reads green, so package-only PRs still never wait), the
+ruleset is read live once per watch (`ruleset_required`), and its checks outside ci.yml come off the
+head's check runs, newest per name. MOBILE_PATH_PREFIXES and its project.yml pin are gone: nothing
+reads them. A neutral conclusion reads green, as GitHub reads a required check: code scanning can
+conclude neutral, and the gate would have waited on it forever. The pre-push code-quality pass
+folded in: the head's check runs fill only checks ci.yml does not run (a reopened PR's head carries
+an older run's `cancelled`, and an unregistered ci.yml job must read pending); an unreadable ruleset
+is retried each poll (noted once) and a response of the wrong shape is unreadable, never "no
+checks"; `ruleset_note` names drift from ALWAYS_REQUIRED; a garbled gh body exits 4 like any gh
+failure; and `verdict` lost its dead `changed_files`. Verified live: all eight contexts read off
+the ruleset; TruffleHog and CodeQL found on #590's code head and on #589's docs-only head.
+Confidence 0.85.
 """
 from __future__ import annotations
 
@@ -181,6 +198,7 @@ import re
 import subprocess
 import sys
 import time
+import urllib.parse
 from dataclasses import dataclass, field
 from enum import Enum
 
@@ -191,39 +209,11 @@ JOB_MOBILE = "Swift · iOS + visionOS shells (xcodebuild)"
 JOB_GUARDS = "Project guards (test scheme · store targets)"
 JOB_DOCS = "Docs match the code (module map)"
 
-ALWAYS_REQUIRED = frozenset({JOB_GATE, JOB_SWIFT_TEST, JOB_APP, JOB_GUARDS, JOB_DOCS})
-# Paths the mobile job compiles that the always-required App-shell job does not
-# vouch for. project.yml defines every target; the package manifest moves the
-# dependencies the shell links; ci.yml changes the jobs themselves — each makes
-# the full matrix required. The M1K3App/ entries are the files the MobileShell
-# template pulls out of the Mac shell (project.yml `MobileShell.sources` and the
-# M1K3iOS target) — test_pr_watch pins this list against project.yml. M1K3.icon
-# is here because the iOS target compiles the same document with its own idiom
-# set, so App-shell green does not vouch for it. Not here: UITests/ (test
-# targets; no CI job compiles them).
-MOBILE_PATH_PREFIXES = (
-    "macos/M1K3iOSApp/",
-    "macos/M1K3visionOS/",
-    "macos/M1K3.icon/",
-    "macos/M1K3App/AvatarView.swift",
-    "macos/M1K3App/AvatarEmotion+SwiftUI.swift",
-    "macos/M1K3App/PixelFont.swift",
-    "macos/M1K3App/ReadingMode.swift",
-    "macos/M1K3App/ReadingText.swift",
-    "macos/M1K3App/SpeechHighlight.swift",
-    "macos/M1K3App/KaraokeReadingText.swift",
-    "macos/M1K3App/CompanionAvatarView.swift",
-    "macos/M1K3App/CodeBlockView.swift",
-    "macos/M1K3App/RememberPhotoButton.swift",
-    "macos/M1K3App/PhosphorMaterial.swift",
-    "macos/M1K3App/Phosphor.metal",
-    "macos/M1K3App/PrivacyInfo.xcprivacy",
-    "macos/M1K3App/Resources/Fonts/",
-    "macos/project.yml",
-    "macos/Package.swift",
-    "macos/Package.resolved",
-    ".github/workflows/ci.yml",
-)
+# ci.yml's jobs, every one required by master's ruleset. The mobile job is
+# required whatever the diff (#558): a running one makes GitHub refuse the merge
+# (405), and ci.yml skips it on a PR that misses its paths, which reads green.
+# The ruleset's other checks (TruffleHog, CodeQL) join at watch time.
+ALWAYS_REQUIRED = frozenset({JOB_GATE, JOB_SWIFT_TEST, JOB_APP, JOB_MOBILE, JOB_GUARDS, JOB_DOCS})
 
 
 # Where a second pass earns its keep. The 2026-10-04 audit of #287–#480 found
@@ -346,7 +336,9 @@ BOT_LOGIN = "claude[bot]"
 # either. A constant, not an env var: widening it is a reviewed change, not a flag
 # an agent can set to unblock itself. Lowercase — logins compare without case.
 AUTO_LAND_AUTHORS = frozenset({"kpmmmurphy"})
-GREEN = {"success", "skipped"}
+# GitHub passes a required check on success, skipped or neutral. Actions jobs never
+# conclude neutral; code scanning (CodeQL, which the gate reads since #558) can.
+GREEN = {"success", "skipped", "neutral"}
 RED = {"failure", "cancelled", "timed_out", "action_required", "startup_failure"}
 
 
@@ -677,10 +669,64 @@ def auto_pass_ok(head: str, review_runs: list[dict], comments: list[dict] | None
     return auto_pass_comment(head, review_runs, comments) is not None
 
 
-def required_jobs(changed_files: list[str]) -> frozenset[str]:
-    if any(p.startswith(MOBILE_PATH_PREFIXES) for p in changed_files):
-        return ALWAYS_REQUIRED | {JOB_MOBILE}
-    return ALWAYS_REQUIRED
+def required_jobs(ruleset: frozenset[str] = frozenset()) -> frozenset[str]:
+    """ci.yml's jobs plus every check the base branch's rulesets require. The
+    diff no longer matters: GitHub enforces the ruleset whatever it touches."""
+    return ALWAYS_REQUIRED | ruleset
+
+
+def ruleset_note(ruleset: frozenset[str] | None) -> str | None:
+    """What the watch should say about the ruleset it read, if anything: unread
+    (it gates on ci.yml's jobs alone; GitHub still enforces the ruleset), empty,
+    or no longer requiring a job the gate still waits on (ALWAYS_REQUIRED drifted)."""
+    if ruleset is None:
+        return ("could not read the base branch's ruleset — gating on ci.yml's jobs alone "
+                "until it reads; GitHub still enforces it at merge")
+    if not ruleset:
+        return "the base branch's ruleset requires no checks — gating on ci.yml's jobs alone"
+    drifted = sorted(ALWAYS_REQUIRED - ruleset)
+    if drifted:
+        return ("the ruleset no longer requires " + ", ".join(drifted)
+                + " — the gate still waits on it; update ALWAYS_REQUIRED")
+    return None
+
+
+def required_contexts(rules: list[dict]) -> frozenset[str]:
+    """The status-check contexts in GET repos/{repo}/rules/branches/{branch}:
+    every `required_status_checks` rule, from every ruleset on the branch."""
+    contexts: set[str] = set()
+    for rule in rules or []:
+        if rule.get("type") != "required_status_checks":
+            continue
+        for check in (rule.get("parameters") or {}).get("required_status_checks") or []:
+            if check.get("context"):
+                contexts.add(check["context"])
+    return frozenset(contexts)
+
+
+def newest_check_conclusions(check_runs: list[dict]) -> dict[str, str | None]:
+    """name → conclusion of the newest check run per name (a re-run supersedes
+    the attempt before it); None while it runs."""
+    newest: dict[str, dict] = {}
+    for run in check_runs:
+        name = run.get("name")
+        if name and (name not in newest or run.get("id", 0) > newest[name].get("id", 0)):
+            newest[name] = run
+    return {name: run.get("conclusion") for name, run in newest.items()}
+
+
+def merge_ruleset_checks(jobs: dict[str, str | None], head_checks: dict[str, str | None],
+                         ruleset: frozenset[str]) -> dict[str, str | None]:
+    """ci.yml's jobs, plus the head's check runs for the required checks ci.yml
+    does not run (TruffleHog, CodeQL). ci.yml's newest run is the only source for
+    its own jobs: on a reopened PR the head carries an older run's check runs, and
+    a job the new run has not registered yet must read pending, not that run's
+    stale `cancelled` or green. A check nothing requires never enters the verdict."""
+    merged = dict(jobs)
+    for name in ruleset - ALWAYS_REQUIRED:
+        if name not in merged and name in head_checks:
+            merged[name] = head_checks[name]
+    return merged
 
 
 @dataclass
@@ -714,7 +760,6 @@ class Verdict:
 
 def verdict(
     head: str,
-    changed_files: list[str],
     jobs: dict[str, str | None],
     comments: list[dict],
     auto_ok: bool,
@@ -724,8 +769,9 @@ def verdict(
     author: str | None = None,
     head_repo: str | None = None,
     base_repo: str | None = None,
+    ruleset: frozenset[str] = frozenset(),
 ) -> Verdict:
-    ci = ci_verdict(required_jobs(changed_files), jobs)
+    ci = ci_verdict(required_jobs(ruleset), jobs)
     # The auto pass's own comment can be summon-shaped ("Claude finished …", #404)
     # and so already counted as a summon — by name, or (#457) by time. One
     # review is one pass.
@@ -764,6 +810,33 @@ def _gh_json(*args: str):
     return json.loads(_gh(*args))
 
 
+def ruleset_required(repo: str, pr: int) -> frozenset[str] | None:
+    """The checks the PR's base branch requires, read live from its rulesets.
+    None when gh cannot read them: the watch then gates on ci.yml's jobs alone,
+    and GitHub's merge call still enforces the ruleset (405, nothing merged)."""
+    try:
+        base = _gh_json("pr", "view", str(pr), "--repo", repo, "--json", "baseRefName")["baseRefName"]
+        pages = _gh_json("api", "--paginate", "--slurp",
+                         f"repos/{repo}/rules/branches/{urllib.parse.quote(base, safe='')}")
+    except (subprocess.CalledProcessError, json.JSONDecodeError, KeyError, TypeError):
+        return None
+    # --slurp wraps each page in an outer list. Any other shape is unreadable, not
+    # "no required checks": an empty set would quietly drop TruffleHog and CodeQL.
+    if not isinstance(pages, list) or not all(isinstance(page, list) for page in pages):
+        return None
+    return required_contexts([rule for page in pages for rule in page if isinstance(rule, dict)])
+
+
+def head_check_conclusions(repo: str, head: str) -> dict[str, str | None]:
+    """Every check run on the head commit, newest per name: the source for the
+    required checks ci.yml does not run (TruffleHog's workflow, code scanning).
+    A context reported through the commit-status API is not a check run, so it
+    would read pending: fails safe, and none is required today."""
+    pages = _gh_json("api", "--paginate", "--slurp", f"repos/{repo}/commits/{head}/check-runs?per_page=100")
+    runs = [run for page in pages if isinstance(page, dict) for run in page.get("check_runs") or []]
+    return newest_check_conclusions(runs)
+
+
 def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | None], list[dict], dict | None, int,
                                           str | None, dict[str, str], str | None, str | None]:
     view = _gh_json("pr", "view", str(pr), "--repo", repo, "--json", "state,headRefOid,author,headRepository")
@@ -772,7 +845,7 @@ def snapshot(repo: str, pr: int) -> tuple[str, str, list[str], dict[str, str | N
     author = (view.get("author") or {}).get("login")
     head_repo = (view.get("headRepository") or {}).get("nameWithOwner")
     # REST + --paginate: `gh pr view --json files` caps at 100 files, and a
-    # dropped mobile-shell path would silently demote the mobile job to advisory.
+    # dropped risk-surface path would silently lower the passes the diff owes.
     raw = [f for page in _gh_json("api", "--paginate", "--slurp", f"repos/{repo}/pulls/{pr}/files") for f in page]
     files = changed_paths(raw)
     patches = {f["filename"]: f.get("patch") for f in raw}  # None = GitHub omitted it
@@ -822,14 +895,28 @@ def main(argv: list[str] | None = None) -> int:
     if not migrations:
         print("warning: found no GRDB migrations in this checkout (git grep failed?) — "
               "migration edits will only be caught by the patch", flush=True)
+    # Read once it is readable: a ruleset changes by hand, a head every push. Until
+    # then the watch gates on ci.yml's jobs alone and tries again each poll.
+    ruleset: frozenset[str] | None = None
+    ruleset_noted = False
     while True:
+        if ruleset is None:
+            ruleset = ruleset_required(repo, args.pr)
+            note = ruleset_note(ruleset)
+            if note and (ruleset is not None or not ruleset_noted):
+                print(f"note: {note}", flush=True)
+            ruleset_noted = True
+        required_ruleset = ruleset or frozenset()
         try:
             (state, head, files, jobs, comments, auto_comment, inline, head_seen_at, patches,
              author, head_repo) = snapshot(repo, args.pr)
-        except subprocess.CalledProcessError as err:
-            # A gh blip (rate limit, 5xx) must not read as "CI red": exit 4 once,
-            # or wait out the interval and look again while polling.
-            print(f"gh failed: {err.stderr.strip()[:200]}", flush=True)
+            if state == "OPEN" and (required_ruleset - ALWAYS_REQUIRED) - jobs.keys():
+                jobs = merge_ruleset_checks(jobs, head_check_conclusions(repo, head), required_ruleset)
+        except (subprocess.CalledProcessError, json.JSONDecodeError) as err:
+            # A gh blip (rate limit, 5xx, a garbled body) must not read as "CI red":
+            # exit 4 once, or wait out the interval and look again while polling.
+            detail = (err.stderr or "") if isinstance(err, subprocess.CalledProcessError) else str(err)
+            print(f"gh failed: {detail.strip()[:200]}", flush=True)
             if args.once or time.monotonic() >= deadline:
                 return 4
             time.sleep(args.interval)
@@ -852,9 +939,9 @@ def main(argv: list[str] | None = None) -> int:
         if needed < inferred and not warned:
             print(f"note: {owed_by} needs {inferred}; landing on --passes {needed}: {args.why}", flush=True)
             warned = True
-        v = verdict(head, files, jobs, comments, auto_comment is not None, needed,
+        v = verdict(head, jobs, comments, auto_comment is not None, needed,
                     auto_comment=auto_comment, head_seen_at=head_seen_at,
-                    author=author, head_repo=head_repo, base_repo=repo)
+                    author=author, head_repo=head_repo, base_repo=repo, ruleset=required_ruleset)
         stamp = time.strftime("%H:%M:%S")
         print(f"{stamp} #{args.pr} {v.summary} · inline comments {inline}", flush=True)
         if v.ready:

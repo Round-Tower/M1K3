@@ -58,8 +58,8 @@ ask.
 The business logic lives in SwiftPM packages and tests without Xcode:
 
 ```bash
-swift test --parallel                 # the full fast suite (what CI runs)
-swift test --filter M1K3KnowledgeTests
+swift test --parallel --disable-xctest   # the full fast suite (CI runs it without the flag)
+tools/dev/tdd.sh M1K3KnowledgeTests     # one test target, rebuilt and run alone
 ```
 
 Tests use **swift-testing** (`import Testing`, `@Test`), not XCTest.

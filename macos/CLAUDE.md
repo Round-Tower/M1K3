@@ -15,8 +15,9 @@ the doc-drift CI job pins it to `Package.swift`), `ROADMAP.md` (what's next, kep
 ## Build & test
 
 ```bash
-swift test --parallel                        # what CI runs; swift-testing, not XCTest
-swift test --filter BrainCatalogueTests      # one suite ("Suite/test" for one test)
+swift test --parallel --disable-xctest       # the local full run: all Swift Testing, so skip the empty XCTest pass
+                                             # (CI keeps plain --parallel: Xcode 26's swift test exits 1 with the flag)
+tools/dev/tdd.sh M1K3VoiceTests [VoiceMood]  # inner loop: builds ONE test target, runs only its tests
 swift build -c release --product M1K3MCP     # the stdio MCP server binary
 xcodegen generate                            # project.yml is the source of truth; M1K3.xcodeproj is a gitignored artifact
 xcodebuild -scheme M1K3 -destination 'platform=macOS' -skipPackagePluginValidation build | xcbeautify
@@ -34,8 +35,8 @@ xcodebuild -scheme M1K3 -destination 'platform=macOS' -skipPackagePluginValidati
   3-core runner wall time is mostly pool wait. Separate the two outcomes by ≥ 30 s or
   assert which side acted (`tools/ci/check_wall_clock_bounds.py` enforces it).
 - **Landing:** `tools/ci/land.sh <PR> [--passes N]` gates on `tools/ci/pr_watch.py`, whose
-  rules are pinned in `test_pr_watch.py`; the pass rules (one by default) are in `../CLAUDE.md`. Master
-  has no required status checks — that rule is the gate. Verify a merge by `state` +
+  rules are pinned in `test_pr_watch.py`; the pass rules (one by default) are in `../CLAUDE.md`. The
+  gate waits on every check master's ruleset requires, read live (#558). Verify a merge by `state` +
   `mergedAt`, never by an exit code.
 
 ## The metallib wall
@@ -115,3 +116,8 @@ named is gone with WhisperKit 1.x. -->
 <!-- Review: Kev + claude-opus-5-5, 2026-10-08, Confidence 0.85 — Lil is Qwen3.5-4B (VLM) again. -->
 <!-- Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.8 — the MLX pin bullet: back on the 3.32.x / 0.32.x
 tag pair; the kernelTag re-index and the voice-check obligations named. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-10-13, Confidence 0.85 — the Landing bullet: master's ruleset
+requires eight checks now, and the gate reads them live (#558); "no required status checks" was stale. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-10-13, Confidence 0.8 — Build & test: `--disable-xctest` (no test
+imports XCTest) and tools/dev/tdd.sh, the one-target inner loop; `swift test --filter` rebuilt every
+dependent test bundle and ran an empty XCTest pass. -->

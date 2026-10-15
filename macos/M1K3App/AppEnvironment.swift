@@ -116,6 +116,9 @@
 //  ends (success, failure or cancel) and says whether it began; K2 `downloadStatusStore` (tick-free statuses for the glass kit
 //  card). Confidence 0.75.
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — `voiceFirstListenPending` (voice mode's chime stands in for the first tick).
+//  Review: Kev + claude-fable-5.1, 2026-10-13 — Built-in speaks in the best installed system voice (#584):
+//  `BestSystemVoice.pick` once at launch onto both Built-in paths (`builtinSpeech`, the Effectful renderer);
+//  nil leaves the system default. Logged (.notice, identifier only). Confidence 0.8.
 
 import AppKit
 import Foundation
@@ -1059,6 +1062,18 @@ final class AppEnvironment {
         voiceRenderer = renderer
         kokoro = KokoroSpeechProvider(renderer: renderer)
         speech = SwappableSpeechProvider(builtinSpeech)
+        // Built-in is the best installed voice for this locale, never the compact
+        // default when a better one exists (#584). nil = leave the system default.
+        // Off the main actor: the voice catalogue read is a launch-path cost, and
+        // the providers' setters are lock-guarded; a line spoken before it lands
+        // (well under onboarding's first words) uses the default.
+        Task.detached(priority: .userInitiated) { [builtinSpeech = self.builtinSpeech] in
+            let builtinVoice = BestSystemVoice.pick(voices: SystemVoices.installed(), locale: .current)
+            builtinSpeech.defaultVoiceIdentifier = builtinVoice
+            renderer.defaultVoiceIdentifier = builtinVoice
+            Logger(subsystem: "app.m1k3", category: "voice")
+                .notice("built-in voice: \(builtinVoice ?? "system default", privacy: .public)")
+        }
         selectedVoiceTier = VoiceTierRestore.restoredTier(
             persisted: UserDefaults.standard.string(forKey: Self.selectedVoiceTierKey)
         )

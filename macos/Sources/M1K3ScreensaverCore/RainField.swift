@@ -14,6 +14,8 @@
 //  Signed: Kev + claude-opus-4-8, 2026-08-20, Confidence 0.85 (pure sim,
 //  TDD'd; the felt density/speed is a verify-by-eye taste call on the surface).
 //  Prior: InferencePhosphor's rising-glyph model (2026-08-19).
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — `seed(forDisplay:)`: each display seeds its own rain (#578).
+//  Confidence 0.9 (ScreensaverMotionTests).
 //
 
 /// One falling/rising block in the rain. `column` indexes the grid; `y` is the
@@ -42,6 +44,17 @@ public struct RainField: Sendable {
     ///   - columns: number of vertical lanes across the width.
     ///   - density: drops per column on average (0…several).
     ///   - seed: SplitMix64 seed — same seed ⇒ same rain (deterministic tests).
+    /// A seed of this display's own (#578: every monitor showed the same rain): the
+    /// house seed mixed with the display's ID through one SplitMix64 step, so it is
+    /// stable for a display across runs and never zero.
+    public static func seed(forDisplay displayID: UInt32) -> UInt64 {
+        var z = 0x4D31_4B33 ^ (UInt64(displayID) &* 0x9E37_79B9_7F4A_7C15)
+        z = (z ^ (z >> 30)) &* 0xBF58_476D_1CE4_E5B9
+        z = (z ^ (z >> 27)) &* 0x94D0_49BB_1331_11EB
+        z ^= z >> 31
+        return z == 0 ? 0x9E37_79B9_7F4A_7C15 : z
+    }
+
     public init(columns: Int = 40, density: Double = 1.4, seed: UInt64 = 0x4D31_4B33) {
         self.columns = max(1, columns)
         state = seed == 0 ? 0x9E37_79B9_7F4A_7C15 : seed

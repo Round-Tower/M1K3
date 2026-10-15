@@ -64,9 +64,38 @@
 //  (AppleFoundationModelsProvider.recordDeviceContextWindow), whatever brain is selected.
 //  Review: Kev + claude-opus-5-5, 2026-10-04 — egressClauseProvider (#482): web search + the Home brain
 //  (a live `homeBrainLive` mirror of `homeBrainActive` — the persisted flag missed a phone with no local
-//  brain). No PCC on iOS. Confidence 0.8.
+//  brain). Confidence 0.8.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `photoMemory` (caption memory) + the delete-cascade wiring.
 //  Compile-checked; verify-by-launch owed.
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — PCC as a brain tier on iOS: `privateCloudBackend` (static,
+//  live or echo in DEBUG), `privateCloudStatus`, `privateCloudState`,
+//  `refreshPrivateCloudStatus()`, `privateCloudSendAllowed()`, `sendPrivateCloud(_:includeConversation:)`.
+//  EgressFacts carries `privateCloudOffered`. Confidence 0.75 (compile-verified; verify-by-launch owed).
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — Bug fixes: removed dead `privateCloudEnabledKey` /
+//  `privateCloudEnabled()` (the Settings toggle now writes `ChatEgressConsent.defaultsKey`, matching
+//  the Mac's PrivacySettingsPane); `privateCloudSendAllowed()` no longer double-gates (the rung
+//  already reads `chatEgressAllowed`). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — the PCC pick moved here from ChatScreen's view state
+//  (`privateCloudArming`, persisted on every change), so Settings' brain list can pick it and Chat
+//  routes on it. `pickPrivateCloud(_:)` is the phone's one control: the yes and the pick together.
+//  #585 shipped the sheet with nothing that armed it. Confidence 0.8 (verify-by-device owed).
+//  Review: Kev + claude-fable-5.1, 2026-10-13 — `privateCloudSendAllowed` no longer requires `isReady`: PCC
+//  needs no brain on this device, and the guard kept sends disabled while Lil warmed. A PCC failure's
+//  local fallback still needs the local brain and says so through the rung's notice. Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-13 (pre-push review fold) — the egress key MIRRORS the pick: every
+//  turn-off (decline, Home or a phone brain, the rung vanishing) clears the stored yes, not only
+//  `pickPrivateCloud(false)` (security-auditor: "Keep it on this iPhone" left `chatEgressAllowed` true).
+//  `refreshPrivateCloudStatus` reconciles the pick with the control, so an org switch flipped while the
+//  chat screen is unmounted still ends it. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-13 — Built-in speaks in the best installed system voice (#584):
+//  `BestSystemVoice.pick` once at launch onto `builtinSpeech.defaultVoiceIdentifier`; nil leaves the
+//  system default. Logged (.notice, the identifier only) so a device read says which voice won.
+//  Confidence 0.8 (which voices a phone lists is verify-by-device).
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — doc only: the reviewLedger note now counts the bubble's thumbs-up
+//  (the phone has one since this date). Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 (#597 follow-up) — `chat.residentBrainName` stamps each answer with
+//  `answeringBrainName` ("Brain at Home" when Home fronts), as the Mac does: ratings named the brain selected at
+//  tap time, so Home answers read as Lil/Mini and a later switch re-labelled earlier answers. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — TestFlight 505, "Lil Waking seems to hang at 0%": `brainStall` (a
 //  DownloadStallWatch fed by the warm's progress, reset per warm) lets the chat row name a stalled download, and
 //  `isDownloadingBrain` drives the root's keep-awake. Confidence 0.75 (verify on the phone).
@@ -99,6 +128,7 @@ import M1K3Inference
 import M1K3Knowledge
 import M1K3KnowledgeTools
 import M1K3Kokoro
+import M1K3LanguageModel
 import M1K3LogCore
 import M1K3Memory
 import M1K3MemoryChatBridge
@@ -137,9 +167,9 @@ final class AppCore {
     )
     /// The pixel-cube companion, shared verbatim with the Mac app (AvatarView).
     let avatar = AvatarController()
-    /// The App Store rating ledger (ReviewPromptPolicy's facts). The phone has
-    /// no thumbs-up, so completed turns carry the signal here; ChatScreen
-    /// alone consumes a due prompt. Silent under the screengrab harness.
+    /// The App Store rating ledger (ReviewPromptPolicy's facts). Completed turns
+    /// and, since 2026-10-13, a liked answer (the bubble's thumbs-up) carry the
+    /// signal; ChatScreen alone consumes a due prompt. Silent under the screengrab harness.
     let reviewLedger = ReviewPromptLedger(
         storage: UserDefaults.standard,
         version: ReviewPromptLedger.marketingVersion(),
@@ -253,6 +283,12 @@ final class AppCore {
     /// The paired Mac, if any. Metadata only — the PSK lives in the Keychain
     /// (PairedBrainStore's split, mirroring the Mac side).
     private(set) var homeBrain: PairedBrain?
+    /// Who answers a local send right now: the paired Mac when Home fronts, else the
+    /// phone's selected brain. The label an answer (and so its rating) carries.
+    var answeringBrainName: String {
+        homeBrainActive ? "Brain at Home" : selectedBrain.displayName
+    }
+
     /// True while the inference slot points at the paired Mac's brain. The
     /// local `selectedBrain` is kept untouched as the tier to return to.
     private(set) var homeBrainActive = false {
@@ -263,6 +299,93 @@ final class AppCore {
 
     /// `homeBrainActive`, readable off the main actor (the egress clause, per turn).
     nonisolated static let homeBrainLive = Mutex(false)
+
+    // MARK: - Private Cloud Compute (the brain list's row)
+
+    /// The PCC pick and the sheet's answer (ADR 0010). One owner, so Settings' brain
+    /// list picks it and Chat routes on it; persisted on every change.
+    var privateCloudArming = PrivateCloudArming(
+        isOn: UserDefaults.standard.bool(forKey: PrivateCloudArming.selectedDefaultsKey),
+        consent: UserDefaults.standard.object(forKey: PrivateCloudArming.consentDefaultsKey) as? Bool
+    ) {
+        didSet {
+            let defaults = UserDefaults.standard
+            defaults.set(privateCloudArming.isOn, forKey: PrivateCloudArming.selectedDefaultsKey)
+            // One control: the chat-egress yes lives and dies with the pick.
+            defaults.set(privateCloudArming.isOn, forKey: ChatEgressConsent.defaultsKey)
+            if let consent = privateCloudArming.consent {
+                defaults.set(consent, forKey: PrivateCloudArming.consentDefaultsKey)
+            } else {
+                defaults.removeObject(forKey: PrivateCloudArming.consentDefaultsKey)
+            }
+        }
+    }
+
+    /// The phone's one control: the brain list's row is the chat-egress yes AND the pick,
+    /// and choosing any other brain takes both back. The sheet still asks before the
+    /// first message leaves.
+    func pickPrivateCloud(_ on: Bool) {
+        privateCloudArming.select(on)
+    }
+
+    /// The rung's own say: a backend or policy that no longer allows PCC ends the pick.
+    func reconcilePrivateCloudPick() {
+        privateCloudArming.controlChanged(
+            PrivateCloudRung.control(privateCloudState(consent: privateCloudConsentPersisted))
+        )
+    }
+
+    nonisolated static let privateCloudBackend: (any PrivateCloudAnswering)? = {
+        if let live = PrivateCloudBackends.live() { return live }
+        #if DEBUG
+            return PrivateCloudEchoBackend.fromEnvironment(ProcessInfo.processInfo.environment)
+        #else
+            return nil
+        #endif
+    }()
+
+    var privateCloudStatus: PrivateCloudStatus?
+
+    func privateCloudState(consent: Bool?) -> PrivateCloudState {
+        PrivateCloudState(
+            backendPresent: Self.privateCloudBackend != nil,
+            available: privateCloudStatus?.available ?? true,
+            consent: consent,
+            managedOff: UserDefaults.standard.bool(forKey: PrivateCloudRung.managedOffDefaultsKey),
+            quota: privateCloudStatus?.quota ?? .unknown
+        )
+    }
+
+    var privateCloudConsentPersisted: Bool? {
+        ChatEgressConsent.persisted(in: .standard)
+    }
+
+    func refreshPrivateCloudStatus() async {
+        guard let backend = Self.privateCloudBackend else { reconcilePrivateCloudPick(); return }
+        privateCloudStatus = await backend.status()
+        reconcilePrivateCloudPick()
+    }
+
+    func privateCloudSendAllowed() -> Bool {
+        guard Self.privateCloudBackend != nil else { return false }
+        let gate = privateCloudState(consent: privateCloudConsentPersisted)
+        guard PrivateCloudRung.escalation(armed: true, gate) == .privateCloud else { return false }
+        return true
+    }
+
+    @discardableResult
+    func sendPrivateCloud(_ consent: PrivateCloudTurn.Consent, includeConversation: Bool) async -> Bool {
+        guard privateCloudSendAllowed(), let backend = Self.privateCloudBackend else { return false }
+        let gate = privateCloudState(consent: privateCloudConsentPersisted)
+        avatar.setActivity(.thinking)
+        await chat.sendPrivateCloud(
+            consent, includeConversation: includeConversation, backend: backend,
+            gate: gate, localBrainName: selectedBrain.displayName
+        )
+        if case .speaking = avatar.state.activity {} else { avatar.resetToIdle() }
+        await refreshPrivateCloudStatus()
+        return true
+    }
 
     /// The Settings web toggle — absent means allowed (the shipped default). One reader for
     /// the palette and the egress clause, so the two can't disagree (#485 review).
@@ -391,6 +514,17 @@ final class AppCore {
         // provider touches no MLX (safe on the Simulator) — prepare() does.
         speech = SwappableSpeechProvider(builtinSpeech)
         kokoro = KokoroSpeechProvider()
+        // Built-in is the best installed voice for this locale, never the compact
+        // default when a better one exists (#584). nil = leave the system default.
+        // Off the main actor: the voice catalogue read is a launch-path cost, and
+        // the providers' setters are lock-guarded; a line spoken before it lands
+        // (well under onboarding's first words) uses the default.
+        Task.detached(priority: .userInitiated) { [builtinSpeech] in
+            let builtinVoice = BestSystemVoice.pick(voices: SystemVoices.installed(), locale: .current)
+            builtinSpeech.defaultVoiceIdentifier = builtinVoice
+            Logger(subsystem: "app.m1k3", category: "voice")
+                .notice("built-in voice: \(builtinVoice ?? "system default", privacy: .public)")
+        }
 
         // Same launch hygiene the Mac shell does, through the same shared call
         // (issue #85 makes a mid-conversation kill a real scenario here).
@@ -509,6 +643,10 @@ final class AppCore {
         // Caption memory: a deleted chat forgets its Photo memories.
         photoMemory.onChange = { [weak self] in self?.refreshCounts() }
         chat.onAttachmentsDiscarded = { [weak self] in self?.photoMemory.forget($0) }
+        // Stamp each answer with the brain that rendered it, read at finalization (the Mac's
+        // AppEnvironment rule), so a rating made later still names who answered. PCC answers
+        // stamp themselves in ChatSession.
+        chat.residentBrainName = { [weak self] in self?.answeringBrainName }
 
         refreshCounts()
         // Brain at Home: restore a paired Mac, and re-point the slot at it if
@@ -1120,10 +1258,12 @@ final class AppCore {
                     spoken: defaults.bool(forKey: VoiceModeDefaults.activeKey)
                 )
             },
-            // What can leave this device this turn (#482): web search, and the Home brain
-            // (the paired Mac answers over Wi‑Fi). No Private Cloud Compute on iOS.
             egressClauseProvider: {
-                let facts = EgressFacts(webSearch: Self.webSearchAllowed(), brainIsHome: Self.homeBrainLive.withLock { $0 })
+                let facts = EgressFacts(
+                    webSearch: Self.webSearchAllowed(),
+                    privateCloudOffered: Self.privateCloudBackend != nil,
+                    brainIsHome: Self.homeBrainLive.withLock { $0 }
+                )
                 return EgressDisclosure.clause(facts, device: HostPlatform.thisDevice)
             },
             // The Mac's tool router, mirrored (flagged; Mini only unless `toolRouterAllTiers`).

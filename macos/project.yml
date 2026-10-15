@@ -35,6 +35,9 @@
 # Review: Kev + claude-fable-5.1, 2026-10-09 — RememberPhotoButton.swift joins the MobileShell template (caption memory).
 # Review: Kev + claude-fable-5.1, 2026-10-09 — MARKETING_VERSION 1.0.0 → 1.1.0 (chore(release): v1.1.0, held until 1.0.0
 # clears review). CURRENT_PROJECT_VERSION stays "1": Xcode Cloud numbers the store builds (VERSIONING.md). Confidence 0.9.
+# Review: Kev + claude-opus-5-5, 2026-10-14 — M1K3iOS registers the `m1k3` URL scheme: App Store Connect won't add an
+# in-app event for review without a deep link, and Halloween's (m1k3://event/halloween) opens the app through it
+# (check_store_targets.py pins it). Confidence 0.85; the open is verify-by-launch on a device.
 
 name: M1K3
 
@@ -74,6 +77,16 @@ settings:
     # Signed: Kev + claude-opus-4-8, 2026-06-12, Confidence 0.9, Prior: Unknown
     DEVELOPMENT_TEAM: "76DJH43A4P"
     CODE_SIGN_STYLE: Automatic
+  configs:
+    Debug:
+      # Compilation caching (Kev, 2026-10-13): every Debug build shares one content-addressed
+      # cache, Xcode's COMPILATION_CACHE_CAS_PATH under DerivedData, so a fresh worktree or a
+      # branch switch replays what any build already compiled. Measured on the Mac app, each
+      # build into a new folder: off 171 s; on and empty 184 s; on and warm 112 s. The cache
+      # was 2.1 GB. Debug only: an archive builds from nothing. CI passes NO, since its
+      # runners start empty.
+      # Review: Kev + claude-opus-5-5, 2026-10-13 — enabled for Debug. Confidence 0.85.
+      COMPILATION_CACHE_ENABLE_CACHING: YES
 
 packages:
   M1K3:
@@ -326,7 +339,9 @@ targets:
         # input): a sandboxed script phase can do neither. Only these two app
         # shells carry a script phase, so the blast radius is just them.
         ENABLE_USER_SCRIPT_SANDBOXING: NO
-        INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Round Tower Software Studios Ltd"
+        # Review: Kev + claude-opus-5-5, 2026-10-13 — the copyright names Round Tower Software Ltd, the
+        # registered name (#574). Confidence 0.95.
+        INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Round Tower Software Ltd"
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
         # DEFAULT to the App-Store-SAFE entitlements (no audioanalyticsd
         # mach-lookup exception, which ITMS-90285 rejects). The privileged direct-
@@ -506,6 +521,14 @@ targets:
         # no continued-processing tasks.
         BGTaskSchedulerPermittedIdentifiers:
           - "app.m1k3.download.*"
+        # In-app events deep-link here: Open on the Halloween card is m1k3://event/halloween
+        # (fastlane/events/*/event.json). App Store Connect won't add an event for review
+        # without a deep link. No handler yet: the link opens M1K3, and the event (the
+        # costume and its greeting) is the chat screen. check_store_targets.py pins this.
+        CFBundleURLTypes:
+          - CFBundleURLName: app.m1k3
+            CFBundleURLSchemes:
+              - m1k3
 
   # visionOS sibling — same shell, same portable graph, rendered spatially as a
   # window. The Kokoro visionOS gap (no xrOS ONNX slice) is RESOLVED as of

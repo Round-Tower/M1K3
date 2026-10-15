@@ -16,8 +16,9 @@ which Apple asks for "as early as possible".
 | longDescription | 120 | M1K3 is out. Three on-device brains, a neural voice, your notes as memory. No account, no cloud. Private by design. |
 
 Badge **PREMIERE** ("content available for the first time" — a 1.0 is one),
-purpose **ATTRACT_NEW_USERS**, priority HIGH, all territories, no deep link
-(the app has no URL scheme). Dates: publish 17 Sep, run 18 Sep → 16 Oct
+purpose **ATTRACT_NEW_USERS**, priority HIGH, all territories, deep link
+`m1k3://event/waking-up` (events.py refuses a spec without one since 2026-10-14;
+the iOS target registers `m1k3`). Dates: publish 17 Sep, run 18 Sep → 16 Oct
 (a 28-day window inside the 31-day cap, promoted from 14 days out). Move
 them in `event.json` if approval lands later — Apple rejects an event whose
 start has passed.
@@ -65,4 +66,7 @@ Format: MurphySig v0.4 (https://murphysig.dev/spec)
 Prior: none (new). Copy is within every cap by test; "Private by design" is
   the 1.0 posture (no cloud path ships — ADR 0006's rung is 1.2). The
   iPhone-only surface is Apple's statement, not an inference.
+Review: Kev + claude-opus-5-5, 2026-10-14 — the spec gains a deep link: App Store Connect won't
+  add an event for review without one, and events.py now refuses a spec that lacks it. The
+  draft itself (6811192045) was never submitted and runs out on 16 Oct. Confidence 0.9
 -->

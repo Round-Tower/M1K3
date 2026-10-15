@@ -9,6 +9,7 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-07-19, Confidence 0.85 (red-first;
 //  pure FileManager logic under a temp directory). Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-10-14 — store(data:) cases for the PhotosPicker (#604). Confidence 0.85.
 //
 
 import Foundation
@@ -92,5 +93,45 @@ struct AttachmentStoreTests {
         #expect(throws: (any Error).self) {
             _ = try store.store(originalURL: temp.appendingPathComponent("nope.png"))
         }
+    }
+
+    // MARK: - store(data:fileExtension:) — the Photos picker hands bytes, not a URL
+
+    @Test("stores picked bytes as a file in the attachments directory, keeping the extension")
+    func storesData() throws {
+        let temp = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: temp) }
+        let store = AttachmentStore(directory: temp.appendingPathComponent("attachments"))
+        let bytes = Data([0x89, 0x50, 0x4E, 0x47, 0x01])
+
+        let attachment = try store.store(data: bytes, fileExtension: "png")
+
+        #expect(attachment.url.path.contains("attachments"))
+        #expect(attachment.url.pathExtension == "png")
+        #expect(try Data(contentsOf: attachment.url) == bytes)
+    }
+
+    @Test("a missing or odd extension never escapes the directory or yields a dotted name")
+    func dataExtensionIsSanitised() throws {
+        let temp = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: temp) }
+        let directory = temp.appendingPathComponent("attachments")
+        let store = AttachmentStore(directory: directory)
+
+        let bare = try store.store(data: Data([1]), fileExtension: nil)
+        #expect(bare.url.pathExtension.isEmpty)
+        #expect(!bare.url.lastPathComponent.hasSuffix("."))
+
+        let hostile = try store.store(data: Data([1]), fileExtension: "../../evil")
+        #expect(hostile.url.deletingLastPathComponent().standardizedFileURL
+            == directory.standardizedFileURL)
+    }
+
+    @Test("empty picked data throws rather than storing a zero-byte image")
+    func emptyDataThrows() throws {
+        let temp = try makeTempDirectory()
+        defer { try? FileManager.default.removeItem(at: temp) }
+        let store = AttachmentStore(directory: temp.appendingPathComponent("attachments"))
+        #expect(throws: (any Error).self) { try store.store(data: Data(), fileExtension: "png") }
     }
 }

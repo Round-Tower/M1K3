@@ -698,7 +698,8 @@ let package = Package(
         ),
         .testTarget(
             name: "M1K3WhisperKitTests",
-            dependencies: ["M1K3WhisperKit", "M1K3Voice", "M1K3Calls"],
+            // M1K3Eval: the speech-to-text eval's scorer (SpeechToTextEvalTests, gated M1K3_STT_EVAL=1).
+            dependencies: ["M1K3WhisperKit", "M1K3Voice", "M1K3Calls", "M1K3Eval"],
             path: "Tests/M1K3WhisperKitTests"
         ),
         // Avatar companion: pure types (emotion, activity, state, tool→emotion

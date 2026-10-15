@@ -10,7 +10,7 @@ the Apache License said the same for the earlier revisions.
 
 ## What is protected
 
-The following are trademarks and brand assets of Round Tower Software Studios Ltd
+The following are trademarks and brand assets of Round Tower Software Ltd
 ("Round Tower"), whether or not registered ("the M1K3 marks"):
 
 - The names **M1K3**, **M1K3 Voice**, **Lil M1K3**, and **Brain at Home**.
@@ -120,3 +120,6 @@ licence and the marks. The rights holder is Round Tower Software Studios Ltd
 (was "Kevin Murphy / Round Tower"), the endorsement line names Round Tower only,
 and the public contact is hello@round-tower.ie. Marks list and policy unchanged.
 Confidence 0.85.*
+*Review: Kev + claude-opus-5-5, 2026-10-13 — #574: the operative text names Round Tower
+Software Ltd, the registered name (Kev, 2026-10-11). The dated reviews above keep the old name
+as history. Confidence 0.9.*

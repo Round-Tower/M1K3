@@ -19,7 +19,7 @@
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>NSHumanReadableCopyright</key>
-	<string>M1K3 — your machine, keeping watch.</string>
+	<string>© 2026 Round Tower Software Ltd</string>
 	<key>NSPrincipalClass</key>
 	<string>M1K3Screensaver.M1K3ScreenSaverView</string>
 </dict>

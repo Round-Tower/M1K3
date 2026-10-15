@@ -27,6 +27,15 @@ imported** — read its last block when a task continues prior work, not before.
 Anything a cold session needs on turn one belongs below, not there.
 
 ## Standing carry-forwards
+- **Act fast with the house tooling (Kev, 2026-10-13, measured).** Inner loop: `macos/tools/dev/tdd.sh
+  <TestTarget> [name]` builds one test bundle and runs only its tests (about 13 s; `swift test --filter`
+  takes about 20 s). Run the full `swift test --parallel --disable-xctest` once before a push, never
+  between edits; the suite is all Swift Testing. Debug `xcodebuild` shares Xcode's compilation cache
+  (a fresh worktree builds in 112 s, 171 s without it), so never wipe DerivedData or the cache to
+  "fix" a build without evidence. Land with `land.sh`. Run independent reviews, builds and CI watches
+  in parallel (background tasks plus Monitor), not one after another.
+- **No brain auditions for now (Kev, 2026-10-13):** make the current brains better; don't scout new
+  models.
 - **Landing a PR:** `macos/tools/ci/land.sh <PR> [--passes N]` gates on
   `pr_watch.py` (required CI green on the head sha, review passes read against
   that head, each owed pass ending `VERDICT: APPROVE @ <full 40-char head sha>`;
@@ -97,6 +106,10 @@ Anything a cold session needs on turn one belongs below, not there.
   cancel loses the queue spot (2026-10-05: both were cancelled before the build was checked).
   `submit` refuses an unstamped build unless `--why`. Relaunching matters until #491, because the
   stale-process check reads the binary's mtime, which installers preserve. ASC writes are Kev's, via `!`.
+  An in-app event joins the iOS submission (Apple's rule for a first iOS version). ASC won't Add it
+  for Review without a deep link (`m1k3://event/<name>`, the scheme M1K3iOS registers), and its UI
+  draft submission has no platform; since #605 `submit` adopts it as the iOS submission, but the API
+  path is unproven: dry-run first, and if it balks, add the iOS version to the draft in the ASC UI.
 - Store copy: name/subtitle are record-wide, so edit `macos/fastlane/metadata_mac`
   AND `metadata_ios` together (`macos/tools/ci/check_store_metadata.py` fails on
   drift). Review notes live only in `macos/fastlane/review_notes.txt`. Run
@@ -108,6 +121,11 @@ Anything a cold session needs on turn one belongs below, not there.
   `macos/tools/asc/creative.py upload|place` (dry-run until `--confirm`, Kev's
   via `!`). A placement needs an editable version, CPP or PPO; never cancel a
   review to place art.
+- **Optional Apple modules are gated on `#if canImport(X)`, never `#if compiler(>=N)`** (#586):
+  PR CI's Xcode is older than the release runners' (nightly DMG, Xcode Cloud), so a compiler
+  gate passes CI and breaks master. `Evaluations.framework` is a test-bundle framework the app
+  target can never import. After a merge that adds an Apple framework, read the release-lane
+  check-runs on the merge commit, not just PR CI.
 - Never pre-seed the model cache with `hf download` (cache poison).
 - In-app A/B overrides go as argv (`M1K3 -prefillStepSize 512`): on macOS 27
   `defaults write app.m1k3` never reaches the sandboxed app. `log` is a zsh
@@ -146,9 +164,6 @@ Anything a cold session needs on turn one belongs below, not there.
   every tier (`ToolRouterWiring.allTiersEnabled(whenUnset: true)`, ADR 0009's `toolRouterAllTiers`), and the
   default live arm has no router, so it never takes the plain route. When an eval disagrees
   with a live report, diff the eval's flags, router and responder against the app's composition first.
-- Until #558 (delete this bullet when it merges): the landing gate treats the iOS + visionOS job as advisory, but master's ruleset requires
-  it. `land.sh` can read READY and GitHub then refuses (405, nothing merged): on a Swift diff, wait for
-  `gh pr checks <PR>` to show that job passed.
 - Entitlements by lane: Declared Age Range in all three (`M1K3-MAS`, `M1K3iOS`
   and the Developer ID `M1K3.entitlements`; `check_store_targets.py` requires
   it), PCC in `M1K3-MAS.entitlements` only (the check forbids it in the
@@ -233,4 +248,14 @@ path run the app's router; the gate-vs-ruleset trap until #558. Confidence 0.85 
 the #558 line retires with its fix).
 Review: Kev + claude-opus-5.5, 2026-10-11 — #559 review fold: the router fact cites the code switch, not
 just the ADR; the measured figure points at its eval file; the #558 bullet says when to delete it.
+Review: Kev + claude-opus-5-5, 2026-10-13 — the #558 bullet retires with its fix: the gate now waits on
+every check master's ruleset requires, read live. Confidence 0.85.
+Review: Kev + claude-opus-5-5, 2026-10-13 — two standing facts on top of the carry-forwards: act fast
+with the measured house tooling (tdd.sh, --disable-xctest, the Debug compilation cache, land.sh,
+parallel watches), and no brain auditions for now. Confidence 0.85.
+Review: Kev + claude-opus-5-5, 2026-10-14 (/debrief) — the release carry-forward gains the in-app event
+path: a deep link is required, and the event's UI draft submission (platform null) is invisible to
+`submit --platform ALL` until #605. Both hit live on the 1.1 release. Confidence 0.85.
+Review: Kev + claude-opus-5-5, 2026-10-14 — #605 lands: `submit` adopts the event's platform-less draft;
+the carry-forward keeps the UI fallback until an API run proves it. Confidence 0.7.
 -->

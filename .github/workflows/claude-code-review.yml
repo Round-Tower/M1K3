@@ -19,7 +19,9 @@ on:
 
 jobs:
   claude-review:
-    runs-on: ubuntu-latest
+    # Review: Kev + claude-opus-5-5, 2026-10-13 — pinned to ubuntu-24.04: ubuntu-latest becomes
+    # Ubuntu 26 on 2026-10-19 (#582), and these runs carry the landing gate's review verdicts.
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
       pull-requests: write # Required to post PR comments

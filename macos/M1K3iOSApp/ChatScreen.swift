@@ -26,6 +26,11 @@
 //  and the empty-state headline/tagline are gone; the chips carry the invitation. Dead brainSubtitle removed with it.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — in season (Halloween) one costume line under the wordmark
 //  (SeasonalLook.greeting); opt-out in Settings ▸ Face. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5-5, 2026-10-14 — PhotosPicker beside the Files paperclip (#604): same
+//  AttachmentStore path, gated on supportsImageInput. Confidence 0.8 (compile-verified; picking from
+//  a real library is verify-by-launch).
+//  Review: same day (2), #609 review — the picks land only if the brain still takes images after they load
+//  (a brain switch mid-load discarded the pending set), and the picker caps pending images at 4.
 //
 //
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — M1K3_VOICE_AT_LAUNCH harness switch (enter voice mode when the brain is
@@ -60,6 +65,29 @@
 //  keeps this view mounted beneath it, so two RealityViews ran); VoiceScreen's full-bleed hero is the one.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (CI fold) — the costume line renders inline from
 //  `SeasonalLook.greeting(for:)` (the shared SeasonalGreeting.swift is gone). Confidence 0.85.
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — PCC consent wiring: `privateCloudArming` state, `privateCloudPending`
+//  sheet, `privateCloudControl`, `sendToPrivateCloud` helper, arming action in send(), PCC status task. The sheet
+//  content extracted to `privateCloudConsentView` (the body's modifier chain hit the type-checker's limit).
+//  Confidence 0.75 (compile-verified; verify-by-launch owed).
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — Three PCC fixes: (1) arming init reads
+//  `selectedDefaultsKey` not the dead `privateCloudEnabledKey`; (2) `send()` defers draft clearing
+//  until after PCC routing — `.askConsent` returns early so cancel/swipe-dismiss keeps the text;
+//  consent `onSend` clears it; (3) arming persistence: `.onAppear` + `.onChange` handlers mirror
+//  the Mac's `PersistingCloudPicker` (persist isOn/consent, reconcile on control changes).
+//  Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — the pick lives on `core.privateCloudArming` (AppCore
+//  persists it) so Settings' brain list can arm it; nothing on iOS ever did, so the sheet never
+//  opened. A cloud chip over the input bar says when the next message goes to PCC. Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-13 — #585 follow-ups: the send button no longer waits for the
+//  local brain when the send goes to PCC (`PrivateCloudRung.sendReady`), and a send the core refuses
+//  (`sendPrivateCloud` false) puts the draft back instead of dropping it. Confidence 0.8.
+//  Review: Kev + claude-fable-5.1, 2026-10-13 (pre-push review fold) — `privateCloudServesNextSend` is false
+//  in voice mode (the chip claimed PCC for a send that stayed local); a send the gate refuses goes LOCAL
+//  before the draft is cleared (`privateCloudSendAllowed` is synchronous), like every other send PCC can't
+//  honour — no draft juggling. Decline runs through `core.pickPrivateCloud(false)`. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — answers carry the Mac's row (MessageBubble): `rate(_:_:_:)` records into
+//  the shared ChatSession store with the selected brain, and a first like counts toward the rating ask as on the
+//  Mac; the speaker button reads aloud via `core.readAloud`. Confidence 0.8 (verify-by-launch).
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — TestFlight 505, "Lil Waking seems to hang at 0%": the load row read
 //  "Waking… Int(f*100)%" through the whole download (a started download under 1% read 0%). It reads the shared
 //  `statusLine` (Downloading N% / <1%, then Waking), says to keep M1K3 open, and names a stall. Confidence 0.75.
@@ -69,7 +97,9 @@
 import M1K3Avatar
 import M1K3Chat
 import M1K3Inference
+import M1K3LanguageModel
 import M1K3Screengrab
+import PhotosUI
 import StoreKit
 import SwiftUI
 import UniformTypeIdentifiers
@@ -93,9 +123,12 @@ struct ChatScreen: View {
     @State private var draft = ""
     @State private var starters: [String] = []
     @State private var showAttachmentImporter = false
+    @State private var pickedPhotos: [PhotosPickerItem] = []
     @State private var pendingAttachments: [ImageAttachment] = []
     @State private var pendingFiles: [FileAttachment] = []
     @State private var attachmentError: String?
+    @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
+    @State private var privateCloudPending: PendingPrivateCloudSend?
     @FocusState private var inputFocused: Bool
 
     private var chatting: Bool {
@@ -195,9 +228,8 @@ struct ChatScreen: View {
             ) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text(attachmentError ?? "")
+                attachmentErrorMessage
             }
-            // One picker for images and files; AttachmentRouting sorts them.
             .fileImporter(
                 isPresented: $showAttachmentImporter,
                 allowedContentTypes: AttachmentRouting.contentTypes(
@@ -209,23 +241,20 @@ struct ChatScreen: View {
                     attach(urls)
                 }
             }
+            .onChange(of: pickedPhotos) { _, items in
+                guard !items.isEmpty else { return }
+                pickedPhotos = []
+                Task { await attachPhotos(items) }
+            }
             .onChange(of: core.selectedBrain) {
                 if !core.selectedBrain.supportsImageInput {
                     AttachmentStore.discard(pendingAttachments)
                     pendingAttachments = []
                 }
             }
-            // Harness switch for device field tests driven from the Mac: a launch
-            // environment of M1K3_VOICE_AT_LAUNCH=1 enters voice mode as soon as
-            // the brain is ready — devicectl can pass an environment, but it
-            // cannot tap. The Mac's SelfTest env keys are the precedent. Inert
-            // for every ordinary launch.
-            // Blank canvas (first appearance and every New chat) → new chips.
             .task(id: chatting) {
                 if !chatting { reshuffleStarters() }
             }
-            // Every completed turn re-asks the ledger; it answers yes once per
-            // version, and only once the app has lived here a few days.
             .onChange(of: core.reviewLedger.completedTurns) { _, _ in
                 askForRatingIfEarned()
             }
@@ -235,7 +264,6 @@ struct ChatScreen: View {
                     voiceLaunched = true
                     core.enterVoiceMode()
                 } else if ScreengrabHarness.current.isActive {
-                    // The App Store screengrab suite's per-plate beat (AppCore+Screengrab).
                     voiceLaunched = true
                     core.performScreengrabBeat()
                     screengrabPath = ScreengrabHarness.current.phoneRoute
@@ -248,10 +276,51 @@ struct ChatScreen: View {
                 case .memories: MemoriesScreen()
                 }
             }
+            .sheet(item: $privateCloudPending) { pending in
+                privateCloudConsentView(pending)
+            }
+            .onAppear { core.privateCloudArming.controlChanged(privateCloudControl) }
+            .onChange(of: privateCloudControl) { _, newValue in
+                core.privateCloudArming.controlChanged(newValue)
+            }
+            .task { await core.refreshPrivateCloudStatus() }
+    }
+
+    private func privateCloudConsentView(_ pending: PendingPrivateCloudSend) -> some View {
+        PrivateCloudConsentSheet(
+            consent: pending.consent,
+            onSend: { includeConversation in
+                privateCloudPending = nil
+                core.privateCloudArming.consented(
+                    includeConversation: includeConversation, seen: pending.onDeviceShown
+                )
+                guard core.privateCloudSendAllowed() else { send(); return }
+                clearDraft()
+                sendToPrivateCloud(pending.consent, includeConversation: includeConversation)
+            },
+            onCancel: {
+                privateCloudPending = nil
+                core.pickPrivateCloud(false)
+            }
+        )
     }
 
     /// See the `.task(id: brainReady)` above — read once per process.
     private static let voiceAtLaunch = ProcessInfo.processInfo.environment["M1K3_VOICE_AT_LAUNCH"] == "1"
+
+    /// A rating from an answer's row (MessageBubble): into the shared store the Mac
+    /// uses, and, on the transition INTO liked, toward the rating ask (the Mac's rule:
+    /// a re-tapped thumb is one opinion, not two).
+    private func rate(_ message: ChatMessage, _ verdict: FeedbackVerdict, _ comment: String?) {
+        let wasLiked = core.chat.feedbackVerdicts[message.id] == .good
+        core.chat.recordFeedback(
+            messageID: message.id, verdict: verdict, comment: comment, brain: core.answeringBrainName
+        )
+        if verdict == .good, !wasLiked {
+            core.reviewLedger.recordDelight()
+            askForRatingIfEarned()
+        }
+    }
 
     /// The rating ask, consumed HERE and nowhere else — this is the screen
     /// that can show the sheet. A short beat after the answer lands so the
@@ -403,6 +472,10 @@ struct ChatScreen: View {
                         MessageBubble(
                             message: message,
                             scrimmed: backdropActive,
+                            verdict: core.chat.feedbackVerdicts[message.id],
+                            existingComment: core.chat.feedbackComments[message.id],
+                            onFeedback: { verdict, comment in rate(message, verdict, comment) },
+                            onSpeak: { core.readAloud($0) },
                             onSendFollowUp: { question in
                                 // Same gate the starter chips use (brainReady) — chips
                                 // carry their own prompt, so no draft dependency; chips
@@ -504,6 +577,15 @@ struct ChatScreen: View {
 
     private var inputBar: some View {
         VStack(spacing: 0) {
+            if privateCloudServesNextSend {
+                Label(PrivateCloudLabel.text, systemImage: "cloud.fill")
+                    .font(.caption)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(.ultraThinMaterial, in: Capsule())
+                    .padding(.bottom, 6)
+                    .accessibilityLabel("Your next message goes to Apple's Private Cloud Compute")
+            }
             if !pendingAttachments.isEmpty {
                 pendingImagesStrip
             }
@@ -519,6 +601,22 @@ struct ChatScreen: View {
                     .buttonStyle(.plain)
                     .disabled(core.chat.isResponding || !core.isReady)
                     .accessibilityLabel("Attach")
+
+                    if core.selectedBrain.supportsImageInput {
+                        // Out of process: no photo-library prompt, no usage string.
+                        PhotosPicker(
+                            selection: $pickedPhotos,
+                            maxSelectionCount: max(1, Self.photoLimit - pendingAttachments.count),
+                            matching: .images
+                        ) {
+                            Image(systemName: "photo.on.rectangle")
+                                .font(.system(size: 20))
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(core.chat.isResponding || !core.isReady
+                            || pendingAttachments.count >= Self.photoLimit)
+                        .accessibilityLabel("Attach from Photos")
+                    }
 
                     TextField("Ask M1K3…", text: $draft, axis: .vertical)
                         .lineLimit(1 ... 4)
@@ -614,7 +712,8 @@ struct ChatScreen: View {
     }
 
     private var canSend: Bool {
-        brainReady
+        !core.chat.isResponding
+            && PrivateCloudRung.sendReady(localBrainReady: core.isReady, servesPrivateCloud: privateCloudServesNextSend)
             && !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
@@ -627,17 +726,59 @@ struct ChatScreen: View {
 
     private func send() {
         guard canSend else { return }
+        let hasAttachments = !pendingAttachments.isEmpty
+        let onDevice = ChatSession.onDeviceMessageIDs(core.chat.messages)
+        // Voice mode answers on-device (ADR 0010); typed sends in voice never go to PCC.
+        let action: PrivateCloudArming.Action = core.voiceLoop != nil ? .local : core.privateCloudArming.action(
+            control: privateCloudControl, hasAttachments: hasAttachments, onDeviceMessages: onDevice
+        )
         var text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         if !pendingFiles.isEmpty {
             let fileContext = pendingFiles.map(\.contextBlock).joined(separator: "\n\n")
             text = text.isEmpty ? fileContext : fileContext + "\n\n" + text
         }
-        let images = pendingAttachments
+        switch action {
+        case .askConsent:
+            privateCloudPending = PendingPrivateCloudSend(
+                consent: core.chat.privateCloudConsent(for: text), onDeviceShown: onDevice
+            )
+            return
+        case let .sendDirect(includeConversation) where core.privateCloudSendAllowed():
+            clearDraft()
+            sendToPrivateCloud(core.chat.privateCloudConsent(for: text), includeConversation: includeConversation)
+        case .sendDirect, .local:
+            // A send PCC can't honour right now stays on this device, like an
+            // attachment or an outage — never dropped.
+            let images = pendingAttachments
+            clearDraft()
+            Task { await core.send(text, images: images) }
+        }
+    }
+
+    private func clearDraft() {
         draft = ""
         pendingAttachments = []
         pendingFiles = []
         inputFocused = false
-        Task { await core.send(text, images: images) }
+    }
+
+    private var attachmentErrorMessage: Text {
+        Text(attachmentError ?? "")
+    }
+
+    private var privateCloudControl: PrivateCloudRung.Control {
+        PrivateCloudRung.control(core.privateCloudState(consent: privateCloudConsent))
+    }
+
+    /// Only when the next typed send really leaves: not with an image staged or PCC out.
+    private var privateCloudServesNextSend: Bool {
+        core.voiceLoop == nil && core.privateCloudArming.servesNextSend(
+            control: privateCloudControl, hasAttachments: !pendingAttachments.isEmpty
+        )
+    }
+
+    private func sendToPrivateCloud(_ consent: PrivateCloudTurn.Consent, includeConversation: Bool) {
+        Task { await core.sendPrivateCloud(consent, includeConversation: includeConversation) }
     }
 
     // MARK: - Attachments
@@ -668,6 +809,39 @@ struct ChatScreen: View {
         }
         return failures
     }
+
+    /// The Photos picker's landing: bytes in, a stored copy out, the same
+    /// `ImageAttachment` the Files importer yields. Every failure is named.
+    private func attachPhotos(_ items: [PhotosPickerItem]) async {
+        guard core.selectedBrain.supportsImageInput else { return }
+        var failures: [String] = []
+        var stored: [ImageAttachment] = []
+        for item in items {
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self) else {
+                    failures.append(String(localized: "A photo couldn't be read."))
+                    continue
+                }
+                let ext = item.supportedContentTypes.first?.preferredFilenameExtension
+                try stored.append(Self.attachmentStore.store(data: data, fileExtension: ext))
+            } catch {
+                failures.append(error.localizedDescription)
+            }
+        }
+        // The brain can change while the picks load: a brain without image input
+        // discards the pending set, so these must not land after it did.
+        guard core.selectedBrain.supportsImageInput else {
+            AttachmentStore.discard(stored)
+            return
+        }
+        pendingAttachments.append(contentsOf: stored)
+        if !failures.isEmpty {
+            attachmentError = failures.joined(separator: "\n")
+        }
+    }
+
+    /// The Photos picker's ceiling on images pending in one message.
+    private static let photoLimit = 4
 
     private func attachFiles(at urls: [URL]) -> [String] {
         var failures: [String] = []

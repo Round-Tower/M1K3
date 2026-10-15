@@ -42,6 +42,17 @@
 //  listing's claims), not "Everything runs on your device." Confidence 0.9.
 //  Review: Kev + claude-opus-5-5, 2026-10-09 — Content Controls reads AgeBand.contentControlsStatus: an adult
 //  who shared no longer reads "No age range declared". Confidence 0.9 (copy pinned in M1K3Chat).
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — PCC toggle in Grounding section (`PrivateCloudRung.setting()`
+//  gates visibility); footer explains both web search and PCC when offered. Confidence 0.8.
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — Bug fix: PCC toggle now binds to
+//  `ChatEgressConsent.defaultsKey` (matching the Mac's PrivacySettingsPane), not the dead
+//  `privateCloudEnabledKey` that the rung never read. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — one control (Kev): the Grounding toggle is gone and
+//  Private Cloud Compute is a row in Brain, after Home. Picking it is the yes and the pick
+//  (`core.pickPrivateCloud`); a phone brain or Home takes both back. The Grounding footer quotes
+//  `PrivateCloudTurn.appleGuarantee` instead of our own claim. Confidence 0.8 (verify-by-device).
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — the "Answer ratings" section (AnswerRatingsSection.swift):
+//  the rated count and an Export ratings (JSONL) share, for evaluating chat off the phone. Confidence 0.8.
 
 #if canImport(DeclaredAgeRange)
     @preconcurrency import DeclaredAgeRange
@@ -49,6 +60,7 @@
 import M1K3BrainLink
 import M1K3Chat
 import M1K3Inference
+import M1K3LanguageModel
 import M1K3Screengrab
 import SwiftUI
 
@@ -108,6 +120,7 @@ struct SettingsScreen: View {
             Section("Brain") {
                 ForEach(brains) { tier in
                     Button {
+                        core.pickPrivateCloud(false)
                         core.selectBrain(tier)
                     } label: {
                         HStack(spacing: 12) {
@@ -123,7 +136,7 @@ struct SettingsScreen: View {
                                     .foregroundStyle(.secondary)
                             }
                             Spacer()
-                            if core.selectedBrain == tier, !core.homeBrainActive {
+                            if core.selectedBrain == tier, !core.homeBrainActive, !core.privateCloudArming.isOn {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(.tint)
                             }
@@ -135,6 +148,9 @@ struct SettingsScreen: View {
                     homeBrainRow(brain)
                 } else {
                     pairRow
+                }
+                if privateCloudRow != .hidden {
+                    privateCloudBrainRow
                 }
                 if let note = menu.note {
                     Text(note).font(.caption).foregroundStyle(.secondary)
@@ -160,11 +176,13 @@ struct SettingsScreen: View {
             } header: {
                 Text("Grounding")
             } footer: {
-                // "Your conversation", not "the only thing that reaches the internet":
-                // brain and M1K3 Voice downloads reach the internet too; Brain at Home
-                // (above) sends prompts to your own Mac. Review catches, 2026-09-03/05.
-                Text("The only thing that sends your conversation to the internet. "
-                    + "Every search shows in the reply as it happens.")
+                if privateCloudRow != .hidden {
+                    Text("Web search sends your query to DuckDuckGo. Private Cloud Compute, under Brain, "
+                        + "sends your messages to Apple. " + PrivateCloudTurn.appleGuarantee)
+                } else {
+                    Text("The only thing that sends your conversation to the internet. "
+                        + "Every search shows in the reply as it happens.")
+                }
             }
             .id(Self.groundingID)
 
@@ -189,6 +207,8 @@ struct SettingsScreen: View {
             } footer: {
                 Text(readingMode.detail)
             }
+
+            AnswerRatingsSection()
 
             Section {
                 LabeledContent("Version", value: appVersion)
@@ -271,6 +291,7 @@ struct SettingsScreen: View {
     /// The Home tier row: the paired Mac's brain, selectable like a tier.
     private func homeBrainRow(_ brain: PairedBrain) -> some View {
         Button {
+            core.pickPrivateCloud(false)
             core.selectHomeBrain()
         } label: {
             HStack(spacing: 12) {
@@ -285,7 +306,7 @@ struct SettingsScreen: View {
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                if core.homeBrainActive {
+                if core.homeBrainActive, !core.privateCloudArming.isOn {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.tint)
                 }
@@ -330,6 +351,41 @@ struct SettingsScreen: View {
                 ? "Turn on Apple Intelligence in Settings, or \(alternative)."
                 : "This device can't run Apple Intelligence — \(alternative)."
         }
+    }
+
+    /// The phone's one PCC control: present wherever the rung can exist, whatever was stored.
+    private var privateCloudRow: PrivateCloudRung.Control {
+        PrivateCloudRung.pickerControl(core.privateCloudState(consent: nil))
+    }
+
+    /// Private Cloud Compute as a brain: the same row shape as Home, disabled (and
+    /// saying why) while PCC is out or its limit is spent.
+    private var privateCloudBrainRow: some View {
+        Button {
+            core.pickPrivateCloud(true)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: PrivateCloudLabel.symbolName)
+                    .font(.title3)
+                    .foregroundStyle(.tint)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(PrivateCloudRung.menuTitle(privateCloudRow)).foregroundStyle(.primary)
+                    Text("Answers on Apple's servers — asks before your first message goes")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                if core.privateCloudArming.isOn {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.tint)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(privateCloudRow != .ready)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(core.privateCloudArming.isOn ? .isSelected : [])
     }
 
     private var appVersion: String {

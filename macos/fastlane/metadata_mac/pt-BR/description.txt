@@ -5,7 +5,8 @@ O QUE EU FAÇO
 • Fale comigo: reconhecimento de voz no dispositivo e uma voz neural natural (Kokoro TTS).
 • Traga seu conhecimento: adicione notas e PDFs e eu respondo a partir deles (busca no dispositivo).
 • Lembro do que importa para você — um grafo de conhecimento temporal que você pode ver, buscar e apagar a qualquer momento.
-• Três níveis de cérebro — Mini (instantâneo, sem download), Lil (4B) e Big (12B) — escolha o que se encaixa na sua máquina.
+• Três níveis de cérebro — Mini (instantâneo em Macs com Apple Intelligence, um download pequeno nos outros), Lil (4B) e Big (12B) — escolha o que se encaixa na sua máquina.
+• Me mostre coisas: Lil e Big leem imagens. Anexe uma foto, uma captura de tela ou um quadro branco e pergunte sobre isso. Um toque guarda na minha memória uma legenda privada, para você perguntar depois.
 • Um simpático companheiro 3D e um rosto pixel, se quiser.
 • Brain at Home: conecte seu iPhone ou iPad via LAN e use o grande cérebro do seu Mac do sofá.
 

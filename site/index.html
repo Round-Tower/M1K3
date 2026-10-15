@@ -47,11 +47,11 @@
   "@type": "SoftwareApplication",
   "name": "M1K3 for Mac",
   "alternateName": ["M1K3", "Mike", "Local Offline AI Agent – M1K3", "M1K3 — Local AI Agent"],
-  "operatingSystem": "macOS 26 (Tahoe) or later",
+  "operatingSystem": "macOS 26 or later",
+  "softwareRequirements": "macOS 26 (Tahoe) or later",
   "processorRequirements": "Apple Silicon (arm64 only)",
-  "applicationCategory": "UtilitiesApplication",
+  "applicationCategory": "ProductivityApplication",
   "applicationSubCategory": "Local AI assistant",
-  "softwareVersion": "1.1.0",
   "isAccessibleForFree": true,
   "description": "Privacy-first AI that runs entirely on-device on Apple Silicon Macs: local LLM inference (MLX, Gemma 4, Qwen 3, Apple Foundation Models), live voice with on-device neural TTS, a personal knowledge graph with RAG, a self-repairing temporal memory graph, encrypted call transcription, a local agent, an ambient Heartbeat (off by default), a LAN Brain-at-Home service (off by default), a native screensaver, and an MCP server with 18 tools.",
   "featureList": [
@@ -69,14 +69,15 @@
   "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR", "availability": "https://schema.org/InStock", "url": "https://apps.apple.com/app/id6780230835" },
   "url": "https://m1k3.app/",
   "installUrl": "https://m1k3.app/install",
-  "downloadUrl": "https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg",
+  "downloadUrl": "https://apps.apple.com/app/id6780230835",
   "releaseNotes": "https://github.com/Round-Tower/M1K3/releases",
   "softwareHelp": { "@type": "CreativeWork", "name": "Install M1K3", "url": "https://m1k3.app/install" },
-  "license": "https://fsl.software/",
+  "license": "https://github.com/Round-Tower/M1K3/blob/master/LICENSE",
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie", "sameAs": ["https://github.com/Round-Tower"] },
+  "publisher": { "@type": "Organization", "name": "Round Tower", "legalName": "Round Tower Software Ltd", "url": "https://round-tower.ie" },
   "sameAs": ["https://github.com/Round-Tower/M1K3", "https://apps.apple.com/app/id6780230835"],
   "datePublished": "2026-07-02",
-  "dateModified": "2026-10-02"
+  "dateModified": "2026-10-13"
 }
 </script>
 <script type="application/ld+json">
@@ -312,8 +313,9 @@
     border-top: 1px solid var(--line);
     padding: 36px 40px; display: flex; justify-content: space-between; align-items: center;
     font-family: var(--mono); font-size: 11px; color: var(--ink-faint); letter-spacing: 0.1em;
-    max-width: 1200px; margin: 0 auto;
+    max-width: 1200px; margin: 0 auto; gap: 18px; flex-wrap: wrap;
   }
+  footer .guides { flex-basis: 100%; order: -1; }
   footer a { color: var(--ink-dim); text-decoration: none; }
   footer a:hover { color: var(--ink-bright); }
   /* privacy-respecting share: native Web Share API, copy-link fallback. No third parties. */
@@ -529,7 +531,7 @@
     <div class="cell reveal">
       <div class="cell-icon">&lt;/&gt;</div>
       <h3>MCP server</h3>
-      <p>M1K3 exposes your knowledge, memory, and voice to Claude and other agents over the Model Context Protocol — with an async job API for the slow, deep asks. Your second brain, available to your other AIs — locally.</p>
+      <p>M1K3 exposes your knowledge, memory, and voice to Claude and other agents over the Model Context Protocol — with an async job API for the slow, deep asks. Your second brain, available to your other AIs — locally. <a href="/mcp-knowledge-server">How it works</a>.</p>
       <span class="tag">mcp · 18 tools · 127.0.0.1:4242</span>
     </div>
     <div class="cell reveal">
@@ -632,6 +634,7 @@ the action list?<br />
       <p><strong>Organisations:</strong> <a href="/teams">M1K3 for Teams</a> puts the same brains, an institutional memory, and a persona tuned to your people on your own Apple Silicon hardware, under your own domain. An administrator can lock the Private Cloud Compute switch off fleet-wide, so no conversation goes to anyone's cloud. Licensed separately; write to <a href="mailto:hello@round-tower.ie">hello@round-tower.ie</a>.</p>
     </details>
   </div>
+  <p class="reveal" style="margin-top:28px; color:var(--ink-dim); font-size:15px; max-width:720px;">Longer answers: <a href="/local-llm-mac-guide">running a local LLM on a Mac</a> · <a href="/vs-ollama">M1K3 vs Ollama</a> · <a href="/private-chatgpt-alternative-mac">a private ChatGPT alternative</a> · <a href="/mcp-knowledge-server">a local memory for Claude</a> · <a href="/golden-gate-on-device-ai">on-device AI in macOS 27</a>.</p>
 </section>
 
 <hr class="rule" />
@@ -657,8 +660,9 @@ the action list?<br />
 </section>
 
 <footer>
-  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE STUDIOS LTD</a> · MADE IN IRELAND · FOX: <a href="https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox" rel="license">PIXELMANNEN / TOMKRANIS, CC-BY 4.0</a> · CREATURES: <a href="https://quaternius.com" rel="license">QUATERNIUS, CC0</a></span>
+  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE LTD</a> · MADE IN IRELAND · FOX: <a href="https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox" rel="license">PIXELMANNEN / TOMKRANIS, CC-BY 4.0</a> · CREATURES: <a href="https://quaternius.com" rel="license">QUATERNIUS, CC0</a></span>
   <span><a href="/agents">FOR AGENTS</a> · <a href="/teams">FOR TEAMS</a> · <a href="/vr">VR</a> · <button class="share-link" id="shareBtn" type="button" aria-label="Share M1K3">SHARE ↗</button> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
+  <span class="guides">GUIDES: <a href="/local-llm-mac-guide">LOCAL LLMS ON A MAC</a> · <a href="/vs-ollama">M1K3 VS OLLAMA</a> · <a href="/private-chatgpt-alternative-mac">PRIVATE CHATGPT ALTERNATIVE</a> · <a href="/mcp-knowledge-server">A LOCAL MEMORY FOR CLAUDE</a> · <a href="/golden-gate-on-device-ai">ON-DEVICE AI IN MACOS 27</a></span>
 </footer>
 
 <!-- ================= SCRIPTS ================= -->
@@ -1109,6 +1113,15 @@ tick();
      Confidence 0.8 (the UA read is the usual iPadOS-as-Mac trick; checked in emulation, not on a phone).
      Review: Kev + claude-opus-5.5, 2026-10-11 — App Store campaign links: each store link carries pt=120784482
      (Round Tower's provider token) and its own ct, so App Store Connect counts which door converts and the
-     page still tracks nobody. JSON-LD keeps the canonical URL. Confidence 0.85. -->
+     page still tracks nobody. JSON-LD keeps the canonical URL. Confidence 0.85.
+     Review: Kev + claude-opus-5-5, 2026-10-13 — the footer's copyright line names Round Tower Software Ltd,
+     the registered name (#574; Kev, 2026-10-11). Confidence 0.95.
+     Review: Kev + claude-opus-5-5, 2026-10-13 — #573: the SoftwareApplication JSON-LD says what the store
+     and repo say (ProductivityApplication; no softwareVersion to drift; the repo LICENSE; downloadUrl the clean
+     store URL; publisher Round Tower, legalName Round Tower Software Ltd; operatingSystem "macOS 26 or later",
+     with softwareRequirements). dateModified bumped to 2026-10-13 for it. #572: the five guides are linked from
+     the page (the MCP card and a line under the FAQ, styled like the answers). Confidence 0.85.
+     Review: Kev + claude-opus-5-5, 2026-10-13 — #572: the footer carries a GUIDES row linking all five guides
+     (each guide marks itself aria-current); guides also gain a BreadcrumbList. Confidence 0.9. -->
 </body>
 </html>

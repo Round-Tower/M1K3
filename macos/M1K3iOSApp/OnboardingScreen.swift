@@ -23,12 +23,19 @@
 //  listed" — pocket is a local brain too. Confidence now 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-10-04 — the local-brain line says "Private by design", not "Everything runs
 //  on your device" (Kev retired the absolute: web search is on by default). The Home branch is unchanged. Confidence 0.9.
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — removed the "Recommended" capsule badge from `cardBody()` and both
+//  call sites. The tier's policy role stays in MobileBrainMenu. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — a Private Cloud Compute card after the menu's options (Kev:
+//  "the on boarding Pick a brain screen also needs it"): the same one control as Settings ▸ Brain
+//  (`core.pickPrivateCloud`), shown wherever the rung can exist, disabled with the reason while PCC is out.
+//  Picking a phone brain or Home un-picks it. Confidence 0.8 (verify-by-device).
 //
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — earcons (Kev's iPhone list): a selection tick on each brain and face pick,
 //  the done chord on "Say hello". Ambient session, so they honour the silent switch. Verify-on-device.
 
 import M1K3Avatar
 import M1K3Inference
+import M1K3LanguageModel
 import SwiftUI
 
 struct OnboardingScreen: View {
@@ -100,6 +107,7 @@ struct OnboardingScreen: View {
         // approval lands late, the pairing still counts as the pick (review catch).
         .onChange(of: core.homeBrain?.identity) { _, identity in
             guard identity != nil, step == .brain, !pairing else { return }
+            core.pickPrivateCloud(false)
             core.selectHomeBrain()
             step = .face
         }
@@ -154,20 +162,47 @@ struct OnboardingScreen: View {
                 case .brainAtHome: homeCard
                 }
             }
+            if privateCloudCard != .hidden {
+                privateCloudBrainCard
+            }
         }
         .padding(.horizontal, 20)
+        .task { await core.refreshPrivateCloudStatus() }
+    }
+
+    private var privateCloudCard: PrivateCloudRung.Control {
+        PrivateCloudRung.pickerControl(core.privateCloudState(consent: nil))
+    }
+
+    /// PCC as a brain you pick, like Settings ▸ Brain. Answers come from Apple's
+    /// servers; the sheet still asks before the first message leaves.
+    private var privateCloudBrainCard: some View {
+        Button {
+            core.pickPrivateCloud(true)
+            step = .face
+        } label: {
+            cardBody(
+                glyph: "cloud.fill",
+                title: PrivateCloudRung.menuTitle(privateCloudCard),
+                detail: "Answers on Apple's servers. Asks before your first message leaves this device.",
+                footnote: "No download — needs the internet"
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(privateCloudCard != .ready)
+        .accessibilityElement(children: .combine)
     }
 
     private func brainCard(_ tier: BrainTier) -> some View {
         Button {
             core.soundEffects.play(.selectionTick)
+            core.pickPrivateCloud(false)
             core.selectBrain(tier)
             step = .face
         } label: {
             cardBody(
                 glyph: tier.glyph,
                 title: tier.displayName,
-                recommended: menu.recommended == .tier(tier),
                 detail: tier.detail,
                 footnote: tier.approxDownloadMB.map { "~\($0) MB download on first use" } ?? "No download — instant"
             )
@@ -179,6 +214,7 @@ struct OnboardingScreen: View {
         Button {
             core.soundEffects.play(.selectionTick)
             if core.homeBrain != nil {
+                core.pickPrivateCloud(false)
                 core.selectHomeBrain()
                 step = .face
             } else {
@@ -188,7 +224,6 @@ struct OnboardingScreen: View {
             cardBody(
                 glyph: "house.fill",
                 title: "Home",
-                recommended: menu.recommended == .brainAtHome,
                 detail: core.homeBrain.map { "\($0.name)’s brain, over your Wi‑Fi." }
                     ?? "Your Mac’s brain, over your own Wi‑Fi. Scan a code to pair.",
                 footnote: core.homeBrain == nil ? "Needs M1K3 on your Mac" : "Paired"
@@ -198,7 +233,7 @@ struct OnboardingScreen: View {
     }
 
     private func cardBody(
-        glyph: String, title: String, recommended: Bool, detail: String, footnote: String
+        glyph: String, title: String, detail: String, footnote: String
     ) -> some View {
         HStack(spacing: 14) {
             Image(systemName: glyph)
@@ -206,16 +241,7 @@ struct OnboardingScreen: View {
                 .foregroundStyle(.tint)
                 .frame(width: 44)
             VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text(title).font(.headline).foregroundStyle(.white)
-                    if recommended {
-                        Text("Recommended")
-                            .font(.caption2.weight(.semibold))
-                            .padding(.horizontal, 7).padding(.vertical, 2)
-                            .background(.tint, in: .capsule)
-                            .foregroundStyle(.white)
-                    }
-                }
+                Text(title).font(.headline).foregroundStyle(.white)
                 Text(detail)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -234,6 +260,7 @@ struct OnboardingScreen: View {
     /// The pairing sheet closed: a paired Mac means Home was the pick.
     private func pairingDismissed() {
         guard core.homeBrain != nil else { return }
+        core.pickPrivateCloud(false)
         core.selectHomeBrain()
         step = .face
     }

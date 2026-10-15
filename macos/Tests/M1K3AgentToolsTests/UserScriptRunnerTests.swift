@@ -11,6 +11,8 @@
 //  Review: Kev + claude-opus-5, 2026-09-12 — the abandon test's elapsed bound 10 s → 30 s: it
 //  measured 8.8 s of pool backlog on CI (#296); 30 s still sits under the test's 1-minute
 //  .timeLimit, so a regression fails on the bound itself. Confidence now 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-13 — the three success-path runs get a 60 s timeout (was 10): a 23 s
+//  CI pool stall timed out a trivial echo script on #598's run. The timeout tests keep their 1 s. Confidence 0.9.
 
 import CryptoKit
 import Foundation
@@ -56,7 +58,7 @@ struct UserScriptRunnerTests {
         defer { try? FileManager.default.removeItem(at: dir) }
         try write("hello.sh", "#!/bin/sh\necho out-line\necho err-line 1>&2\n", in: dir)
         let runner = UserScriptRunner(directory: { dir })
-        let outcome = try await runner.run(named: "hello.sh", arguments: [], timeout: 10, expectedSHA256: sha("#!/bin/sh\necho out-line\necho err-line 1>&2\n"))
+        let outcome = try await runner.run(named: "hello.sh", arguments: [], timeout: 60, expectedSHA256: sha("#!/bin/sh\necho out-line\necho err-line 1>&2\n"))
         #expect(outcome.succeeded)
         #expect(outcome.timedOut == false)
         #expect(outcome.output.contains("out-line"))
@@ -69,7 +71,7 @@ struct UserScriptRunnerTests {
         defer { try? FileManager.default.removeItem(at: dir) }
         try write("args.sh", "#!/bin/sh\necho \"got:$1:$2\"\n", in: dir)
         let runner = UserScriptRunner(directory: { dir })
-        let outcome = try await runner.run(named: "args.sh", arguments: ["alpha", "beta"], timeout: 10, expectedSHA256: sha("#!/bin/sh\necho \"got:$1:$2\"\n"))
+        let outcome = try await runner.run(named: "args.sh", arguments: ["alpha", "beta"], timeout: 60, expectedSHA256: sha("#!/bin/sh\necho \"got:$1:$2\"\n"))
         #expect(outcome.output.contains("got:alpha:beta"))
     }
 
@@ -79,7 +81,7 @@ struct UserScriptRunnerTests {
         defer { try? FileManager.default.removeItem(at: dir) }
         try write("fail.sh", "#!/bin/sh\necho before-death\nexit 3\n", in: dir)
         let runner = UserScriptRunner(directory: { dir })
-        let outcome = try await runner.run(named: "fail.sh", arguments: [], timeout: 10, expectedSHA256: sha("#!/bin/sh\necho before-death\nexit 3\n"))
+        let outcome = try await runner.run(named: "fail.sh", arguments: [], timeout: 60, expectedSHA256: sha("#!/bin/sh\necho before-death\nexit 3\n"))
         #expect(outcome.succeeded == false)
         #expect(outcome.failureReason?.isEmpty == false)
         #expect(outcome.output.contains("before-death"))

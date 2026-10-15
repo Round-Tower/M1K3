@@ -92,6 +92,9 @@
 //  plain. Every ending now goes through PlaybackWait: a clean .dataPlayedBack for the CURRENT wait records
 //  the success; a late callback from a stopped or timed-out line is ignored (it could also resolve the next
 //  utterance's wait). Confidence 0.75; the "completed playback clears it" claim above now holds for text too.
+//  Review: Kev + claude-fable-5.1, 2026-10-13 — `defaultVoiceIdentifier` (#584), the same seam as
+//  AVSpeechProvider's: the render path speaks utterances that name no voice in the best installed one.
+//  Confidence 0.8.
 
 import AVFoundation
 import Foundation
@@ -122,6 +125,19 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
     /// behaviour: audio already handed to the player has been heard.
     private let chainLock = NSLock()
     private var _chain: VoiceEffectChain
+    private var _defaultVoiceIdentifier: String?
+
+    /// The voice for utterances that name none; nil keeps the system default
+    /// (`BestSystemVoice`, set once at launch). Shares the chain's lock. The
+    /// plain fallback inherits it, so a failed render still speaks in it.
+    public var defaultVoiceIdentifier: String? {
+        get { chainLock.withLock { _defaultVoiceIdentifier } }
+        set {
+            chainLock.withLock { _defaultVoiceIdentifier = newValue }
+            plainFallback.defaultVoiceIdentifier = newValue
+        }
+    }
+
     var chain: VoiceEffectChain {
         chainLock.withLock { _chain }
     }
@@ -538,7 +554,7 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
         let spoken = AVSpeechUtterance(string: utterance.text)
         spoken.rate = utterance.rate
         spoken.pitchMultiplier = utterance.pitch
-        if let id = utterance.voiceIdentifier,
+        if let id = utterance.voiceIdentifier ?? defaultVoiceIdentifier,
            let voice = AVSpeechSynthesisVoice(identifier: id)
         {
             spoken.voice = voice

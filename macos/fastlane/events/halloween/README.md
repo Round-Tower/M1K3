@@ -11,7 +11,7 @@ before this event publishes (17 Oct). Read the store lookup
 (`itunes.apple.com/lookup?id=6780230835`) before submitting the event: an event card
 for content users can't see breaks the one promise it makes.
 
-## Copy (`event.json`; en-US below, the other seven locales in its `localizations` table, all within the caps by test)
+## Copy (`event.json`; en-US below, the other nine locales in its `localizations` table, all within the caps by test)
 
 | Field | Cap | Text |
 |---|---|---|
@@ -31,7 +31,13 @@ haven't had a native read.
   calendar season). Apple may judge a cosmetic look thin. If review pushes back, the
   honest answer is the look, the greeting and the dates, not a bigger claim.
 - **Purpose `APPROPRIATE_FOR_ALL_USERS`.** It's a look for everyone, new or not.
-- **Priority NORMAL**, no purchase, all territories, no deep link (the app has no URL scheme).
+- **Priority NORMAL**, no purchase, all territories.
+- **Deep link `m1k3://event/halloween`.** App Store Connect won't add an event for review without
+  one, and Apple's help page takes a custom URL. The iOS target registers `m1k3` from the first
+  build that carries this change (`project.yml`, pinned by `tools/ci/check_store_targets.py`).
+  There's no handler yet: the link opens M1K3, and the event (the costume and its greeting) is
+  the chat screen. en-GB reuses the en-US copy with day-first dates; es-MX reuses es-ES, since
+  "de oct." breaks the 120 cap.
 - **Dates (UTC):** publish 17 Oct 09:00 (7 days ahead; the cap is 14), run 24 Oct 10:00 →
   1 Nov 11:00 (8 days 1 h; the cap is 31).
 
@@ -45,23 +51,50 @@ from UTC−10 to UTC+13 the card is never live where the look isn't. The price i
 up to 23 hours shorter than the look at each end, starting late in the east and ending
 early in the west.
 
-## Art: rendered from code, textless
+## Art: the Phosphor Fox in costume, as video
+
+Both slots are **video**, which Apple recommends ("consider using video"). Event video autoplays and repeats.
+
+| File | Slot | Format |
+|---|---|---|
+| `event-card-1920x1080.mp4` | Event card, 16:9 | H.264, 30 fps, 20.5 s, no audio, about 25 MB |
+| `event-details-1080x1920.mp4` | Details page, 9:16 | the same |
+
+Each video loops seamlessly. The fox's Survey clip plays exactly six times in 615 frames, and every other
+motion completes whole cycles in the same span. Measured, the last frame steps into the first like any
+other frame.
+
+The scene uses the site hero's own `Fox.glb`, in the app's Halloween phosphor:
+
+- **The fox:** a PUMPKIN lattice drawn as thick lines over a dark body, with a VIOLET rim. Its EMBER eyes
+  ride the head bone.
+- **The setting:** the violet CRT floor, under a harvest moon made of the Life field's cells.
+- **The bats:** real Life gliders crossing the moon, cut out of its lattice. The renderer refuses to load
+  unless four B3/S23 steps move a glider one cell.
+- **The embers:** they rise off the floor and cool from ember through pumpkin to violet, like the app's Life cells.
+
+Matching stills sit beside the videos for the nomination and social posts: `event-card-1920x1080.jpg` and
+`event-details-1080x1920.jpg` are frame 412, saved as sRGB JPEG at quality 90. The `*-guides.png` proofs
+mark the safe area.
+
+The videos are rendered in the private motion project (Remotion, under `marketing/motion`), which isn't in
+this repo:
 
 ```
-python3 tools/site/event_art.py --palette halloween --guides    # from macos/
+npx remotion render src/halloween/index.ts HalloweenCard ../events/halloween/event-card-1920x1080.mp4 \
+    --codec=h264 --muted --color-space=bt709 --crf=16
+npx remotion render src/halloween/index.ts HalloweenDetails ../events/halloween/event-details-1080x1920.mp4 \
+    --codec=h264 --muted --color-space=bt709 --crf=16
 ```
 
-This writes `event-card-1920x1080.jpg` (16:9) and `event-details-1080x1920.jpg` (9:16) to
-`marketing/events/halloween/` (gitignored, so binaries stay out of the tree), plus
-`*-guides.png` proofs. Each proof marks the safe area in green, the overlay bands in red,
-and the top of the bottom third with a dashed line. JPEGs are quality 90 and sRGB-tagged,
-and the script spec-checks them before it exits. The scene is the store creative's own: the Phosphor Fox from
-`site/vendor/Fox.glb` in PUMPKIN strokes (its far flank VIOLET) with an EMBER halo,
-standing on a Life field whose cells cool from ember through pumpkin to violet ash. Behind
-it is a harvest moon made of the field's own cells. Three Life gliders cross the moon as
-bats; they're real gliders (a test steps them through B3/S23), cut out of the moon's lattice.
-The palette is the app's, colour for colour: PUMPKIN `#FF8A1F`, EMBER `#FFB347`,
-VIOLET `#9B5CFF`, NIGHT `#0A0610`.
+`events.py create` uploads each slot's video when one is present, and otherwise its still. Before it sends
+anything, a dry run included, it checks every video against Apple's media table with `ffprobe`. The first
+pass's 2D stills still render as the fallback, but `event_art.py` writes into the art dir by default and
+would overwrite the frame-412 stills, so render it elsewhere:
+`python3 tools/site/event_art.py --palette halloween --out <scratch dir>` (from `macos/`). The old 2D pair
+is kept in the art dir's `previous-2d/`. `event_art.py --check` spec-checks whichever stills are in the art
+dir. The palette is the
+app's, colour for colour: PUMPKIN `#FF8A1F`, EMBER `#FFB347`, VIOLET `#9B5CFF`, NIGHT `#0A0610`.
 
 **Safe area.** Apple publishes the sizes but no safe area for event media. It says to
 keep text and logos out of the art, not to add borders or gradients (it applies its own),
@@ -76,8 +109,9 @@ Sources, read 2026-10-11:
 - https://developer.apple.com/help/app-store-connect/reference/in-app-event-badges (badge definitions)
 - https://www.yellowhead.com/blog/in-app-events-promotional-content-safe-zone-guidelines/ (the safe-zone figures; not Apple's)
 
-**UNVERIFIED** until ASC's event preview shows the card and the details page with the
-name, badge and description laid over them.
+The eight locales the first `create` made were previewed in App Store Connect on 2026-10-14
+(Kev: "the event looks amazing"). en-GB and es-MX get their video in the catch-up below and
+want the same look once their clips finish processing.
 
 ## Ship it (ASC writes are Kev's, via `!`)
 
@@ -85,8 +119,25 @@ name, badge and description laid over them.
 python3 tools/asc/events.py create --spec fastlane/events/halloween/event.json \
     --art-dir ../marketing/events/halloween --dry-run    # payloads only, no key needed
 python3 tools/asc/events.py create --spec fastlane/events/halloween/event.json \
-    --art-dir ../marketing/events/halloween              # the DRAFT, 8 locales, art on each
+    --art-dir ../marketing/events/halloween              # the DRAFT, 10 locales, art on each
 ```
+
+The live DRAFT is 6822718507: created 2026-10-14 with eight locales and no deep link. Bring it
+up to the spec in this order. `create --event` adds en-GB and es-MX with their video; `update`
+then sets the deep link and rewrites every locale's copy. Run the other way round, `update`
+would create the two locales with no media and `create --event` would skip them.
+
+```
+python3 tools/asc/events.py create --event 6822718507 --spec fastlane/events/halloween/event.json \
+    --art-dir ../marketing/events/halloween --dry-run    # then again without --dry-run
+python3 tools/asc/events.py update --event 6822718507 --spec fastlane/events/halloween/event.json \
+    --dry-run                                            # then again without --dry-run
+```
+
+If `update`'s event PATCH is refused, nothing has changed yet (it is the first write): set the
+deep link by hand on the event page in App Store Connect. The review notes
+(`fastlane/review_notes.txt`, pushed with `tools/asc/review_notes.py set`) tell App Review where
+the event is and how to see it before 24 Oct.
 
 `create` makes the DRAFT, one localization per locale (en-US first), and uploads the same
 textless card and details page to each. If it fails part-way, the DRAFT stays and the
@@ -94,7 +145,13 @@ error ends with the line that resumes it (`create … --event <id>`). That run c
 the locales the event lacks. It skips the ones it has without checking their art, so look
 at those in App Store Connect. A plain re-run would make a second event.
 
-Then in App Store Connect, preview the media under the overlays, then Submit for review. Events have their own review queue and lock while
+Before review, paste `m1k3://event/halloween` into Notes on an iPhone running a build with the
+scheme and tap it: Apple's own test, and M1K3 should open. iOS has no approved version yet, so
+the event rides the first iOS version's submission (Apple: "include the In-App Event in the
+same submission as your first iOS app version"): Add for Review in App Store Connect, then
+`tools/asc/submit.py submit --platform ALL --confirm` sends it with the version.
+
+Preview the media under the overlays in App Store Connect first. Events have their own review queue and lock while
 in review. Submit early: publishing starts 17 Oct, and the start date can't have passed
 when Apple approves it.
 
@@ -112,4 +169,18 @@ Review: Kev + claude-opus-5.5, 2026-10-11 — review fold: Kev's call on the UTC
   UTC+13, pinned by test), retiring that open; the 1 Nov Open is retired too, since
   SeasonalLook.active matches (10, 24...) and (11, 1). Documented the `--event` resume.
   Still open: the SPECIAL_EVENT bar and a native read of the copy. Confidence 0.8
+Review: Kev + claude-opus-5-5, 2026-10-14 — the media is video now (Kev: "we need better assets & videos"):
+  a 20.5 s seamless loop per slot of the 3D Phosphor Fox in costume, rendered in the private motion project,
+  with matching stills; events.py uploads video when it's there and checks it with ffprobe first. Still open:
+  the SPECIAL_EVENT bar, a native read of the copy, and ASC's event preview of the video under the overlays.
+  Confidence 0.75
+Review: Kev + claude-opus-5-5, 2026-10-14 — the live create worked (8 locales, 16 clips COMPLETE) but App
+  Store Connect wouldn't add the event for review without a deep link. The spec gains m1k3://event/halloween
+  (the iOS target registers the scheme from the first build that carries it) plus en-GB and es-MX, the store's two
+  other locales;
+  the live DRAFT's two-step catch-up is above. Kev's preview retires the overlay open ("the event looks
+  amazing"). Still open: the SPECIAL_EVENT bar and a native read of the copy. Confidence 0.8
+Review: Kev + claude-opus-5-5, 2026-10-14 — review fold: dry runs before both catch-up commands, the hand
+  fallback if `update`'s PATCH is refused, the review notes' event paragraph, and the preview note made
+  true (eight locales seen; en-GB and es-MX still to look at). Confidence 0.8
 -->
