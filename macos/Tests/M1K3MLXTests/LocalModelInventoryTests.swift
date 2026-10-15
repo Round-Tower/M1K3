@@ -122,4 +122,27 @@ struct LocalModelInventoryTests {
         try seedSized("g/h", files: ["config.json": 5], under: base)
         #expect(inventory.installState(modelID: "g/h", pin: nil) == .partial)
     }
+
+    // Review: Kev + claude-opus-5.5, 2026-10-15 — the iPhone's continued download trusted the fetcher's return.
+
+    @Test("after a fetch returns, believe the disk: short of complete reads as no connection, never as done")
+    func requireCompleteBelievesTheDisk() throws {
+        let base = try makeBase()
+        let inventory = LocalModelInventory(downloadBase: base)
+        // Offline: the downloader returned without fetching anything.
+        #expect(throws: URLError.self) { try inventory.requireComplete(modelID: "a/b", pin: Self.pin) }
+        // One shard of two: the old any-safetensors check would have called this installed.
+        try seedSized("a/b", files: ["config.json": 10, "model-00001-of-00002.safetensors": 100], under: base)
+        do {
+            try inventory.requireComplete(modelID: "a/b", pin: Self.pin)
+            Issue.record("a partial download passed")
+        } catch let error as URLError {
+            #expect(error.code == .notConnectedToInternet)
+        }
+        try seedSized("a/b", files: ["model-00002-of-00002.safetensors": 200], under: base)
+        try inventory.requireComplete(modelID: "a/b", pin: Self.pin)
+        // Unpinned: any weights are complete, as installState says.
+        try seedSized("e/f", files: ["model.safetensors": 5], under: base)
+        try inventory.requireComplete(modelID: "e/f", pin: nil)
+    }
 }

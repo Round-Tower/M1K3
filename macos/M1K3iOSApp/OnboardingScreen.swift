@@ -30,6 +30,8 @@
 //  (`core.pickPrivateCloud`), shown wherever the rung can exist, disabled with the reason while PCC is out.
 //  Picking a phone brain or Home un-picks it. Confidence 0.8 (verify-by-device).
 //
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — earcons (Kev's iPhone list): a selection tick on each brain and face pick,
+//  the done chord on "Say hello". Ambient session, so they honour the silent switch. Verify-on-device.
 
 import M1K3Avatar
 import M1K3Inference
@@ -193,6 +195,7 @@ struct OnboardingScreen: View {
 
     private func brainCard(_ tier: BrainTier) -> some View {
         Button {
+            core.soundEffects.play(.selectionTick)
             core.pickPrivateCloud(false)
             core.selectBrain(tier)
             step = .face
@@ -209,6 +212,7 @@ struct OnboardingScreen: View {
 
     private var homeCard: some View {
         Button {
+            core.soundEffects.play(.selectionTick)
             if core.homeBrain != nil {
                 core.pickPrivateCloud(false)
                 core.selectHomeBrain()
@@ -279,6 +283,7 @@ struct OnboardingScreen: View {
                 ForEach(faces) { face in
                     let selected = companion == face.id
                     Button {
+                        core.soundEffects.play(.selectionTick)
                         companion = face.id
                         core.avatar.setEmotion(.excited)
                     } label: {
@@ -300,6 +305,7 @@ struct OnboardingScreen: View {
                 }
             }
             Button {
+                core.soundEffects.play(.doneChord)
                 onDone()
             } label: {
                 Text("Say hello")

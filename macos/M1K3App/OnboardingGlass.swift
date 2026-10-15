@@ -20,6 +20,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold, round 2) — comment corrected: the rule is "no
 //  ticking view inside glass, tick-stable geometry", not "glass never shares a layout pass with ticks".
 //  Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — `compact`: tighter padding for the deck's face strip (TestFlight 505,
+//  the creature needs the middle of the sheet). Same width, radius, tint and material rule. Confidence 0.8.
 //
 
 import SwiftUI
@@ -29,14 +31,16 @@ extension View {
     /// is true while a download bar ticks beside the card (the first-run download wait): then the
     /// surface is `.regularMaterial`, the resolution the ContentView banner crash settled on.
     /// The rule: no ticking view inside glass, and no tick may move or resize a glass surface
-    /// (body re-evaluation alone is fine). Every other phase is Liquid Glass.
-    func onboardingCard(nearLiveProgress: Bool = false) -> some View {
-        modifier(OnboardingCardStyle(nearLiveProgress: nearLiveProgress))
+    /// (body re-evaluation alone is fine). Every other phase is Liquid Glass. `compact` is the
+    /// deck's face strip: tighter padding, so the creature behind it keeps the middle.
+    func onboardingCard(nearLiveProgress: Bool = false, compact: Bool = false) -> some View {
+        modifier(OnboardingCardStyle(nearLiveProgress: nearLiveProgress, compact: compact))
     }
 }
 
 private struct OnboardingCardStyle: ViewModifier {
     let nearLiveProgress: Bool
+    let compact: Bool
 
     /// A light dark wash so body text holds up over the fox's moving lattice; clear glass alone
     /// let the wireframe run through the copy (the 2026-09-23 readability note).
@@ -45,8 +49,8 @@ private struct OnboardingCardStyle: ViewModifier {
 
     func body(content: Content) -> some View {
         let padded = content
-            .padding(.horizontal, 36)
-            .padding(.vertical, 30)
+            .padding(.horizontal, compact ? 24 : 36)
+            .padding(.vertical, compact ? 16 : 30)
             .frame(maxWidth: 560)
         if nearLiveProgress {
             padded.background(.regularMaterial, in: Self.shape)

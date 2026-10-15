@@ -257,4 +257,84 @@ extension SpeechTextPolishTests {
         let text = "Two sources: the river and the well. I'll follow up: tomorrow."
         #expect(SpeechTextPolish.polish(text) == text)
     }
+
+    @Test("a singular trailing Source block is stripped too")
+    func singularSourceBlockStripped() {
+        let text = "You can walk or cycle.\n\nSource:\n- https://gov.ie/transport"
+        #expect(SpeechTextPolish.polish(text) == "You can walk or cycle.")
+    }
+
+    @Test("a parenthetical source attribution is stripped from speech")
+    func inlineSourceParenStripped() {
+        let text = "You can walk or cycle (Source: gov.ie)."
+        #expect(SpeechTextPolish.polish(text) == "You can walk or cycle.")
+        let via = "Rain expected (Via: met.ie/today)."
+        #expect(SpeechTextPolish.polish(via) == "Rain expected.")
+        let from = "Population is 5 million (From: cso.ie)."
+        #expect(SpeechTextPolish.polish(from) == "Population is 5 million.")
+    }
+
+    @Test("prose parens without a source keyword survive")
+    func nonSourceParensSurvive() {
+        let text = "Cork (an open source project) is written in Swift."
+        #expect(SpeechTextPolish.polish(text) == text)
+    }
+}
+
+// Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — the inline attribution strip made its colon
+// optional, so ordinary asides that open with "from", "via" or "source" went missing from every spoken answer
+// (Mac and phone share this polish) while the screen still showed them.
+extension SpeechTextPolishTests {
+    @Test("an aside that opens with from / via / source is prose, not an attribution, and is spoken")
+    func keywordAsidesSurvive() {
+        for text in [
+            "The word salary (from the Latin salarium) means salt money.",
+            "The festival runs (from 3 to 5 pm) daily.",
+            "Take the N40 (via Douglas) to town.",
+            "The library (source code is on GitHub) is small.",
+        ] {
+            #expect(SpeechTextPolish.polish(text) == text, Comment(rawValue: text))
+        }
+    }
+
+    @Test("without a colon, an attribution goes only when all it names is a site")
+    func colonlessSiteAttributionStripped() {
+        #expect(SpeechTextPolish.polish("Rain expected (via met.ie).") == "Rain expected.")
+        #expect(SpeechTextPolish.polish("Population is 5 million (from cso.ie).") == "Population is 5 million.")
+        #expect(SpeechTextPolish.polish("Fares rise in May (source https://nta.ie/fares).") == "Fares rise in May.")
+    }
+
+    /// The trailing-block scan used to let every bullet or digit character open a new loop iteration, so a long
+    /// run that turned out not to be the answer's tail backtracked exponentially: measured by the review at 0.5 s
+    /// for 14 characters and 3.5 s for 16, about 2.5x per character, on the main actor, for every streamed
+    /// sentence. A run of 400 would never finish.
+    @Test("a long digit or bullet run that is not the answer's tail scans in linear time, and is spoken")
+    func sourcesScanIsLinear() {
+        let digits = "Call us.\nSources:\n\(String(repeating: "1", count: 400))\nThat's the number."
+        #expect(SpeechTextPolish.polish(digits) == digits)
+        let bullets = "Odd list.\nSource:\n\(String(repeating: "-x", count: 200))\nThe end."
+        #expect(SpeechTextPolish.polish(bullets) == bullets)
+        // The linear form still strips what it stripped before.
+        #expect(SpeechTextPolish.polish("Answer.\nSources:\n- a\n- b\n") == "Answer.")
+        #expect(SpeechTextPolish.polish("Answer.\nSources:\n[1] x\n2. y") == "Answer.")
+    }
+
+    /// Auto-speak polishes one streamed sentence at a time, and a model-written trailer arrives as a sentence of its
+    /// own. Whole-answer speech falls back to the raw text when polish leaves nothing (an empty utterance would strand
+    /// the voice loop's wait); one sentence of a longer answer has nothing waiting on it, so it is simply not spoken.
+    @Test("auto-speak's sentence lane: a Source trailer streamed as its own sentence says nothing, never its URL")
+    func trailerSentenceIsSilent() {
+        var folder = StreamedAnswerFolder()
+        for answer in [
+            "You can walk or cycle.\n\nSource:\n- https://gov.ie/transport",
+            "You can walk or cycle.\n\nSources:\n- https://gov.ie/transport\n- https://nta.ie",
+        ] {
+            folder = StreamedAnswerFolder()
+            var sentences = folder.ingest(answer)
+            if let tail = folder.flush() { sentences.append(tail) }
+            #expect(sentences.compactMap(SpeechTextPolish.spokenSentence) == ["You can walk or cycle."])
+        }
+        #expect(SpeechTextPolish.spokenSentence("It's 15 degrees (Source: met.ie).") == "It's 15 degrees.")
+        #expect(SpeechTextPolish.spokenSentence("  \n ") == nil)
+    }
 }

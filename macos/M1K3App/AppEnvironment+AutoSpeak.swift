@@ -28,6 +28,9 @@
 //  every answer delight or grate — is Kev's ⌘R to settle). Prior: Unknown.
 //  Review: Kev + claude-fable-5.1, 2026-09-30 — the folder carries `spokenLeakGuard` (see
 //  AppEnvironment+VoiceMode): a leaked prompt is refused live, not after it was spoken. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (iPhone auto-speak review fold) — each streamed sentence goes through
+//  `SpeechTextPolish.spokenSentence`: a Sources trailer arrives as its own sentence, polishes to nothing, and
+//  `speak(_:)`'s whole-answer fallback then read its raw URLs aloud. Now it is skipped. Confidence 0.85.
 
 import Foundation
 import M1K3Chat
@@ -95,7 +98,10 @@ extension AppEnvironment {
                     // cumulative ingest picks up everything streamed meanwhile.
                     for sentence in folder.ingest(message.text) {
                         guard !Task.isCancelled else { return }
-                        await self.speak(sentence)
+                        // A Sources trailer streams in as a sentence of its own and polishes to
+                        // nothing; `speak(_:)` would fall back to its raw URLs.
+                        guard let spoken = SpeechTextPolish.spokenSentence(sentence) else { continue }
+                        await self.speak(spoken)
                     }
                     switch message.status {
                     case .failed:
@@ -110,8 +116,8 @@ extension AppEnvironment {
                             if !Task.isCancelled { await self.speak(PersonaLeakGuard.refusal) }
                             return
                         }
-                        if !Task.isCancelled, let tail = folder.flush() {
-                            await self.speak(tail)
+                        if !Task.isCancelled, let spoken = folder.flush().flatMap(SpeechTextPolish.spokenSentence) {
+                            await self.speak(spoken)
                         }
                         return
                     default:

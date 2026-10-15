@@ -273,3 +273,16 @@ struct TitleSanitizerReasoningTests {
         #expect(TitleSanitizer.sanitize("<|channel>thought x<channel|>Cork weather") == "Cork weather")
     }
 }
+
+struct ListedTitleTests {
+    /// TestFlight 505 (2026-10-12): chats titled before #561 still read "<think>Thinking Process" in the sidebar.
+    @Test("a stored title carrying a think tag lists as untitled, so the titler names it again")
+    func reasoningLeakListsUntitled() {
+        #expect(TitleSanitizer.listed("<think>Thinking Process") == nil)
+        #expect(TitleSanitizer.listed("  <think>\nThe user wants") == nil)
+        #expect(TitleSanitizer.listed("<|channel>thought") == nil)
+        #expect(TitleSanitizer.listed("Conveyor seal failure") == "Conveyor seal failure")
+        #expect(TitleSanitizer.listed("Thinking about Cork") == "Thinking about Cork")
+        #expect(TitleSanitizer.listed(nil) == nil)
+    }
+}

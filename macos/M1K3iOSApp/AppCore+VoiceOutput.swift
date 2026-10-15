@@ -30,6 +30,12 @@
 //  conversation holds the audio. Confidence 0.8 (verify-by-launch).
 //  Review: Kev + claude-opus-5-5, 2026-10-13 (#597 follow-up) — readAloud is a toggle (a tap while speaking stops),
 //  refuses while an answer streams, and re-checks voice mode after the session hop. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — `activateSampleAudioSession` is internal: chat
+//  auto-speak plays under the same session instead of keeping its own copy (which swallowed errors unlogged).
+//  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — readAloud knows about chat auto-speak (master's
+//  button and the branch's auto-speak met in the merge): a tap while an answer is being auto-spoken stops the whole
+//  answer, where it used to skip one sentence or queue a second reading over it. Confidence 0.8 (verify on the phone).
 //
 
 import AVFoundation
@@ -123,6 +129,13 @@ extension AppCore {
     /// ends (AppCore+Voice), so ducked music comes back.
     func readAloud(_ text: String) {
         guard !isVoiceModeActive, !chat.isResponding else { return }
+        // While an answer is being auto-spoken, the button is its Stop: `speech.stop()` alone would skip only the
+        // current sentence (the loop speaks the next), and between sentences a tap would queue a second reading.
+        if autoSpeakTask != nil {
+            cancelAutoSpeak()
+            Task { await stopSpeakingAnswer() }
+            return
+        }
         let polished = SpeechTextPolish.polish(text)
         let spoken = polished.isEmpty ? text : polished
         Task {
@@ -147,8 +160,9 @@ extension AppCore {
     /// `.playAndRecord`; a plain `.playback` session here plays the sample
     /// through the speaker and past the ring/silent switch (under the default
     /// `.soloAmbient` a muted phone would "hear" nothing and read as broken).
-    /// Entering voice mode re-activates its own category afterwards.
-    private nonisolated static func activateSampleAudioSession() async {
+    /// Entering voice mode re-activates its own category afterwards. Also the
+    /// session a readout and an auto-spoken answer play under (one copy).
+    nonisolated static func activateSampleAudioSession() async {
         await Task.detached(priority: .userInitiated) {
             let session = AVAudioSession.sharedInstance()
             do {

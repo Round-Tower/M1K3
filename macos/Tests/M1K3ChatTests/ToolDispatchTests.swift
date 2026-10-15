@@ -172,6 +172,13 @@ struct ToolPickerChoicesTests {
     func alsoChoicesMatch() {
         #expect(Set(AFMToolPicker.alsoChoices) == ToolDispatch.dispatchable.union([ToolPick.noTool]))
     }
+
+    @Test("the picker instructions tell the model that meta and self-referential questions need no tool")
+    func metaQuestionsInInstructions() {
+        let text = ToolDispatch.pickerInstructions
+        #expect(text.contains("what can you do"))
+        #expect(text.contains("who are you"))
+    }
 }
 
 /// 2026-10-10: with chains on, Apple's pick sent "Who won the All-Ireland hurling final this year?" to

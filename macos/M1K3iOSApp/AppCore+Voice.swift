@@ -58,9 +58,22 @@
 //  still the Apple one, so this is parity with the Mac shell, byte-identical in behaviour today.
 //  Confidence 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-09-15 (2) — both voice turn shapes feed the rating ledger — a voice-only phone user could never earn the ask before.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — earcons on the iPhone (Kev's list): voiceEnter / voiceExit at the mode's
+//  edges, listenStart when the mic opens, endpointHeard when a question is taken, the Mac's cues. Verify-on-device.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — voice mode opens on the onboarding's wake chime (VoiceModeEarcons; Kev: "use our
+//  new onboarding sound"), its first listen skips the tick; entering stops an auto-spoken answer. `speakAndWait` is internal
+//  now (chat auto-speak shares it).
 //  Review: Kev + claude-opus-5-5, 2026-10-13 (#597 follow-up) — speech that ends outside voice mode releases the
 //  audio session (.notifyOthersOnDeactivation), so music a readout ducked comes back; entering voice mode stops a
 //  readout before the mic opens. Confidence 0.8 (verify-by-launch, with music playing).
+//  Review: Kev + claude-opus-5.5, 2026-10-15 — merging the branch's chat auto-speak with that release: an auto-spoken
+//  answer is one utterance per sentence, so the release waits while `autoSpeakTask` holds the session (it releases its
+//  own when the answer ends). Read from the code, not heard: without it ducked music would come back up between
+//  sentences. Confidence 0.75 (verify-by-ear on the phone, music playing, Speak answers on).
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — that release asks
+//  `AnswerAudioSessionPolicy.releaseWhenUtteranceEnds` (pure, truth-tabled) with `answerAudioHeld`, which an answer
+//  sets at its first sentence: a sample played during a generation now releases its own duck.
+//  `deactivateVoiceAudioSession` is internal so the answer's release reuses it. Confidence 0.75.
 
 import AVFoundation
 import Foundation
@@ -105,8 +118,13 @@ extension AppCore {
                 } else {
                     avatar.resetToIdle()
                     // A readout or a sample ended outside voice mode: give the audio back so
-                    // music ducked by the playback session returns (#597 follow-up).
-                    Task { await Self.deactivateVoiceAudioSession() }
+                    // music ducked by the playback session returns (#597 follow-up). Not between
+                    // the sentences of an auto-spoken answer: that session releases itself at the end.
+                    if AnswerAudioSessionPolicy.releaseWhenUtteranceEnds(
+                        voiceModeActive: voiceLoop != nil, answerHoldsSession: answerAudioHeld
+                    ) {
+                        Task { await Self.deactivateVoiceAudioSession() }
+                    }
                 }
             }
         }
@@ -136,6 +154,12 @@ extension AppCore {
         )
         voiceLoop = controller
         voicePauseNote = nil
+        // Voice mode owns speech: an auto-spoken answer stops here (the Mac's order).
+        cancelAutoSpeak()
+        Task { await stopSpeakingAnswer() }
+        // The onboarding's wake chime opens voice mode, and stands in for the first listen's tick (Kev, 2026-10-12).
+        soundEffects.play(VoiceModeEarcons.enter)
+        voiceFirstListenPending = true
         installAudioSessionObservers()
         // The mic engine needs the record-capable session first; activate it off
         // the main actor and only then arm the loop. A leave in between wins.
@@ -152,6 +176,7 @@ extension AppCore {
     /// cancelled — its answer still lands in the chat transcript, unspoken.
     func exitVoiceMode() {
         guard let controller = voiceLoop else { return }
+        soundEffects.play(.voiceExit) // dematerialising: the enter sweep, mirrored
         controller.exit()
         voiceLoop = nil
         voicePauseNote = nil
@@ -228,6 +253,11 @@ extension AppCore {
                 // segment boundary, not the end of the listen (FinalityPolicy).
                 let upstream = try transcriber.startListening(finality: .keepsListening)
                 avatar.setActivity(.listening)
+                let firstListen = voiceFirstListenPending
+                voiceFirstListenPending = false
+                if let tick = VoiceModeEarcons.listenStart(isFirstListen: firstListen) {
+                    soundEffects.play(tick) // the mic is open
+                }
                 // Forward the segments, and when a listen ends without a word
                 // ask the transcriber whether that was silence or a failure.
                 // Report BEFORE finishing so the loop cancels the pending listen
@@ -259,6 +289,7 @@ extension AppCore {
                     return .failure(VoiceTurnFailure(message: "M1K3 is shutting down."))
                 }
                 avatar.setActivity(.thinking)
+                soundEffects.play(.endpointHeard) // got it: one soft tick down
                 await chat.send(question)
                 guard let last = chat.messages.last, last.role == .assistant else {
                     return .failure(VoiceTurnFailure(message: "No answer arrived."))
@@ -308,6 +339,7 @@ extension AppCore {
                     return .failure(VoiceTurnFailure(message: "M1K3 is shutting down."))
                 }
                 avatar.setActivity(.thinking)
+                soundEffects.play(.endpointHeard) // got it: one soft tick down
                 // The fold-forward guard (only prefix-extending updates — a
                 // FOLLOWUPS/polish shrink must never re-speak the answer).
                 var folder = StreamedAnswerFolder(stopMatcher: { FollowUpSplit.trailerStart(in: $0) })
@@ -382,7 +414,9 @@ extension AppCore {
     /// Queue ONE utterance and return when it ends. The provider fires
     /// onSpeakingEnded once per utterance (finish or cancel), which resumes
     /// this; exit/stop paths resume it explicitly as a belt.
-    private func speakAndWait(_ text: String) async {
+    /// Speak and wait for the end (the callbacks are wired once at launch, so it works outside voice mode too:
+    /// chat auto-speak uses it).
+    func speakAndWait(_ text: String) async {
         await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
             resumePendingSpeech() // never strand an earlier waiter
             pendingSpeechEnd = continuation
@@ -429,7 +463,9 @@ extension AppCore {
         }.value
     }
 
-    private nonisolated static func deactivateVoiceAudioSession() async {
+    /// Every release of the speech session goes through here (voice mode's exit, a readout's end, an auto-spoken
+    /// answer's end), so ducked music comes back up.
+    nonisolated static func deactivateVoiceAudioSession() async {
         await Task.detached(priority: .utility) {
             do {
                 try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)

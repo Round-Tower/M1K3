@@ -32,6 +32,10 @@
 //  Process…": titling runs outside the turn's `withThinking` scope, so the thinking-on build
 //  thought. The adapter now scopes `withThinking(false)`, and `sanitize` runs `ReasoningSplit`
 //  first (an unclosed think is nil, the chat stays untitled). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — TestFlight 505: chats titled before that fix still listed
+//  "<think>Thinking Process". `listed(_:)` checks a stored title for the splitter's own tags: one carrying any
+//  lists as untitled, so the sidebar falls back and the titler names it at the next exchange. Read-side
+//  only: no stored row is rewritten. Confidence 0.85.
 //
 
 import Foundation
@@ -105,6 +109,16 @@ public enum TitleSanitizer {
     static func isRefusal(_ line: String) -> Bool {
         let straight = line.replacingOccurrences(of: "’", with: "'")
         return refusalOpenings.contains { straight.hasPrefix($0) }
+    }
+
+    /// A STORED title as the history lists it: nil when it carries a reasoning tag (any think or channel open or
+    /// close, `ReasoningSplit`'s own list), which only titles written before the 2026-10-11 fix can. The tags, not the
+    /// split: a bare "<|channel>thought" has empty reasoning. nil lists as untitled, and an untitled chat is titled
+    /// again after its next exchange (`scheduleTitlingIfNeeded`).
+    public static func listed(_ stored: String?) -> String? {
+        guard let stored else { return nil }
+        let tags = ReasoningSplit.openTags + ReasoningSplit.closeTags
+        return tags.contains { stored.contains($0) } ? nil : stored
     }
 
     public static func sanitize(_ raw: String) -> String? {

@@ -88,6 +88,13 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-13 — answers carry the Mac's row (MessageBubble): `rate(_:_:_:)` records into
 //  the shared ChatSession store with the selected brain, and a first like counts toward the rating ask as on the
 //  Mac; the speaker button reads aloud via `core.readAloud`. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — TestFlight 505, "Lil Waking seems to hang at 0%": the load row read
+//  "Waking… Int(f*100)%" through the whole download (a started download under 1% read 0%). It reads the shared
+//  `statusLine` (Downloading N% / <1%, then Waking), says to keep M1K3 open, and names a stall. Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — while iOS carries the download, the line says the person can leave.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — the Send button stops an auto-spoken answer too (`stoppable`).
+//  Review: Kev + claude-opus-5.5, 2026-10-15 — doc only: `brainLoadRow`'s comment sits on it again (`stoppable` had
+//  landed between them). Confidence 0.95.
 
 import M1K3Avatar
 import M1K3Chat
@@ -418,18 +425,39 @@ struct ChatScreen: View {
         }
     }
 
+    /// The Send button's Stop face: while an answer generates, and while one is read aloud (chat auto-speak).
+    private var stoppable: Bool {
+        core.chat.isResponding || core.isSpeakingAnswer
+    }
+
+    /// "Downloading Lil… 3%" while the bytes come ("<1%" once they start, never a frozen "0%"), "Waking Lil…" for the
+    /// load after them. While downloading, a line under the bar says to keep M1K3 open, and names a stall (TestFlight
+    /// 505: "Lil Waking seems to hang at 0%"). The screen stays on meanwhile (RootView).
     private var brainLoadRow: some View {
-        Group {
-            if let fraction = core.brainLoad.fraction {
-                ProgressView(value: fraction) {
-                    Text("Waking \(core.selectedBrain.displayName)… \(Int(fraction * 100))%")
-                        .font(.caption2)
+        let name = core.selectedBrain.displayName
+        return Group {
+            if let fraction = core.brainLoad.fraction, fraction < 1 {
+                VStack(spacing: 4) {
+                    ProgressView(value: fraction) {
+                        Text(core.brainLoad.statusLine(modelName: name))
+                            .font(.caption2)
+                    }
+                    .frame(maxWidth: 240)
+                    // A clock for the stall check only; the bar moves on its own.
+                    TimelineView(.periodic(from: .now, by: 5)) { context in
+                        Text(core.brainStall.isStalled(at: context.date)
+                            ? "Still downloading. Keep M1K3 open and on Wi-Fi."
+                            : core.brainDownloadContinues
+                            ? "\(name) keeps downloading if you leave M1K3."
+                            : "Keep M1K3 open while \(name) downloads.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
                 }
-                .frame(maxWidth: 240)
             } else {
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.small)
-                    Text("Waking \(core.selectedBrain.displayName)…").font(.caption2)
+                    Text(core.brainLoad.statusLine(modelName: name)).font(.caption2)
                 }
             }
         }
@@ -601,18 +629,18 @@ struct ChatScreen: View {
                         .onSubmit(send)
 
                     Button {
-                        if core.chat.isResponding { core.stopResponding() } else { send() }
+                        if stoppable { core.stopResponding() } else { send() }
                     } label: {
-                        Image(systemName: core.chat.isResponding ? "stop.circle.fill" : "arrow.up.circle.fill")
+                        Image(systemName: stoppable ? "stop.circle.fill" : "arrow.up.circle.fill")
                             .font(.system(size: 30))
                             .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(core.chat.isResponding ? .red : .accentColor)
+                            .foregroundStyle(stoppable ? .red : .accentColor)
                             .contentTransition(.symbolEffect(.replace))
-                            .animation(.default, value: core.chat.isResponding)
+                            .animation(.default, value: stoppable)
                     }
                     .buttonStyle(.plain)
-                    .disabled(!canSend && !core.chat.isResponding)
-                    .accessibilityLabel(core.chat.isResponding ? "Stop generating" : "Send")
+                    .disabled(!canSend && !stoppable)
+                    .accessibilityLabel(core.chat.isResponding ? "Stop generating" : core.isSpeakingAnswer ? "Stop speaking" : "Send")
                 }
             }
         }

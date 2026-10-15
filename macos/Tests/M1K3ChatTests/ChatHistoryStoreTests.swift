@@ -137,6 +137,22 @@ struct ChatHistoryStoreTests {
         #expect(try store.loadMessages(id: UUID()) == nil)
     }
 
+    @Test("a title leaked from reasoning before #561 lists as untitled; the stored row is left alone")
+    func reasoningLeakTitleListsUntitled() throws {
+        let store = try GRDBChatHistoryStore()
+        let leaked = UUID(), clean = UUID()
+        try store.save(id: leaked, messages: sampleMessages(), updatedAt: Date())
+        try store.save(id: clean, messages: sampleMessages(), updatedAt: Date(timeIntervalSince1970: 1))
+        try store.setTitle(id: leaked, title: "<think>Thinking Process")
+        try store.setTitle(id: clean, title: "Conveyor seal failure")
+        let titles = try Dictionary(uniqueKeysWithValues: store.list().map { ($0.id, $0.title) })
+        #expect(titles[leaked] == .some(nil))
+        #expect(titles[clean] == "Conveyor seal failure")
+        // The titler's next pass overwrites it like any untitled chat.
+        try store.setTitle(id: leaked, title: "Weather in Cork")
+        #expect(try store.list().first { $0.id == leaked }?.title == "Weather in Cork")
+    }
+
     @Test("a file-backed store persists across instances")
     func filePersistence() throws {
         let dir = FileManager.default.temporaryDirectory

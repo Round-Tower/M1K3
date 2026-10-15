@@ -96,7 +96,44 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-13 (#597 follow-up) — `chat.residentBrainName` stamps each answer with
 //  `answeringBrainName` ("Brain at Home" when Home fronts), as the Mac does: ratings named the brain selected at
 //  tap time, so Home answers read as Lil/Mini and a later switch re-labelled earlier answers. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — TestFlight 505, "Lil Waking seems to hang at 0%": `brainStall` (a
+//  DownloadStallWatch fed by the warm's progress, reset per warm) lets the chat row name a stalled download, and
+//  `isDownloadingBrain` drives the root's keep-awake. Confidence 0.75 (verify on the phone).
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — earcons on the iPhone (Kev's list: "Sound effects & earcons"): the shared
+//  player with the Mac's key and volume; outside voice mode each one plays under an AMBIENT session (mixes with the
+//  user's music, honours the silent switch), where the default solo-ambient would stop their music for a click; a
+//  typed answer lands with `.answerLanded`, a failure with `.error`. Confidence 0.7 (the sound is verify-on-device).
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — a launch breadcrumb: `background resources: gpu=` (the iPhone 17 Pro says
+//  false, so background Lil turns are off the table on iPhone today). Confidence 0.95.
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — Live Activities slice 1 (Kev: Apple's progress UI): a brain download is
+//  its own step, to disk via BrainWeightsFetcher and carried by iOS when the person leaves (ContinuedDownloadTask);
+//  the weights load only in the foreground (MLX traps on background Metal), so one finished in the background loads
+//  on return. A cancel from the system UI is a .failed "Download stopped", never retried by a foreground bounce.
+//  Confidence 0.6 (the background run is verify-on-device).
+//  Review: Kev + claude-opus-5.5, 2026-10-12 — chat auto-speak (AppCore+AutoSpeak; Kev: "voice on with Kokoro"): a session
+//  begins before each send, Stop also stops the voice (`isSpeakingAnswer` keeps Stop showing while it talks), and an
+//  earcon never flips the session mid-answer. Voice mode's first listen defers to its chime. Confidence 0.65.
+//  Review: Kev + claude-opus-5.5, 2026-10-15 — `downloadWeights`' progress closure captures `self` weakly itself, the
+//  house pattern (AppEnvironment+Downloads): the inner `[weak self]` alone left the outer closure holding it strongly,
+//  and the compiler warned. Same behaviour. Confidence 0.9 (the iOS build's warning is gone).
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — `autoSpeakGeneration` and `answerAudioHeld`: an
+//  auto-speak session's end touches only what it still owns, and the answer's duck is held from its first sentence
+//  (AppCore+AutoSpeak). Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — a Private Cloud turn gets the local send's
+//  on-device hooks: an auto-speak session (after the gate, before the send) and the turn earcon (`playTurnEarcon`,
+//  shared with `send`). Speak answers was silent on PCC, and a half-read answer talked over it. Nothing new leaves:
+//  the consent gate and the request are untouched. Confidence 0.75 (verify on an iOS 27 phone with PCC).
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — `downloadWeights` checks the disk
+//  (`LocalModelInventory.requireComplete`) before telling iOS the continued download succeeded: offline, the fetcher
+//  returns instead of throwing, and the Lock Screen said done with no weights. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — `brainDownloadContinues` follows the task
+//  (ContinuedDownloadTask's `onCarry`), not the submission: after a foreground expiry the screen stays awake again and
+//  the row stops promising the download survives leaving. Confidence 0.7 (verify on the phone).
 
+import AVFoundation
+#if os(iOS)
+    import BackgroundTasks
+#endif
 import Foundation
 import M1K3Agent
 import M1K3AgentTools
@@ -219,6 +256,39 @@ final class AppCore {
     private(set) var selectedBrain: BrainTier
     /// Warm-up state for the MLX brain (Lil). Stays `.idle` for Mini (AFM).
     private(set) var brainLoad: ModelLoadState = .idle
+    /// Moves only when the download's fraction does, so the chat row can say a transfer has stalled.
+    private(set) var brainStall = DownloadStallWatch()
+    /// The chat auto-speak session (AppCore+AutoSpeak); nil when idle.
+    @ObservationIgnored var autoSpeakTask: Task<Void, Never>?
+    /// Bumped per auto-speak session: a session's end touches only state it still owns.
+    @ObservationIgnored var autoSpeakGeneration = 0
+    /// An auto-spoken answer holds the ducking speech session (taken at its first sentence, released at its end).
+    @ObservationIgnored var answerAudioHeld = false
+    /// An answer is being read aloud: the Send button shows Stop until it's done.
+    var isSpeakingAnswer = false
+    /// Set when voice mode opens on its chime: the first listen then skips its tick (VoiceModeEarcons).
+    @ObservationIgnored var voiceFirstListenPending = false
+    /// iOS is carrying the brain download (a continued-processing task): the person may leave the app, the screen may
+    /// sleep, and the system shows the progress.
+    private(set) var brainDownloadContinues = false
+    /// Bytes still coming for the chosen brain (not the load after them): the root keeps the screen on meanwhile.
+    var isDownloadingBrain: Bool {
+        brainLoad.fraction.map { $0 < 1 } ?? false
+    }
+
+    /// UI earcons: the Mac's catalogue and synth recipes (M1K3Avatar), its Settings key and its volume, muted while
+    /// M1K3 speaks. Lazy so `isSpeaking` can read the avatar; not observed (nothing in the UI reacts to the player).
+    @ObservationIgnored private(set) lazy var soundEffects: SoundEffectPlayer = .bundled(
+        isEnabled: Self.soundEffectsEnabledDefault,
+        volume: 0.3,
+        isSpeaking: { [weak self] in
+            guard let self else { return false }
+            if case .speaking = avatar.state.activity { return true }
+            return false
+        },
+        beforePlay: { [weak self] in self?.prepareEarconSession() }
+    )
+
     private(set) var indexedItemCount = 0
     private(set) var lastIngestStatus: String?
     /// A transient note about the brain choice (e.g. "Lil runs on a real device"
@@ -328,10 +398,14 @@ final class AppCore {
         guard privateCloudSendAllowed(), let backend = Self.privateCloudBackend else { return false }
         let gate = privateCloudState(consent: privateCloudConsentPersisted)
         avatar.setActivity(.thinking)
+        // The local send's hooks, which are all on-device (speech, highlight, earcon): Speak answers reads this
+        // answer too, and the session supersedes a half-read earlier one. Before the send: it pins this turn.
+        beginAutoSpeakSession()
         await chat.sendPrivateCloud(
             consent, includeConversation: includeConversation, backend: backend,
             gate: gate, localBrainName: selectedBrain.displayName
         )
+        playTurnEarcon(chat.messages.last.flatMap { $0.role == .assistant ? $0 : nil })
         if case .speaking = avatar.state.activity {} else { avatar.resetToIdle() }
         await refreshPrivateCloudStatus()
         return true
@@ -371,6 +445,23 @@ final class AppCore {
     /// The full-bleed reactive avatar behind chat — default ON; the Settings
     /// toggle is the opt-out (the Mac's avatarDisplay panel/background choice,
     /// collapsed to a switch). Reduce Transparency also disables it, unstored.
+    /// The Mac's key (`AppEnvironment.soundEffectsEnabledKey`): earcons on unless the user turned them off.
+    nonisolated static let soundEffectsEnabledKey = "soundEffects.enabled"
+    nonisolated static var soundEffectsEnabledDefault: Bool {
+        UserDefaults.standard.object(forKey: soundEffectsEnabledKey) == nil
+            || UserDefaults.standard.bool(forKey: soundEffectsEnabledKey)
+    }
+
+    /// Before an earcon: outside voice mode, an AMBIENT session, which mixes with the user's music and honours the silent
+    /// switch (the default solo-ambient would stop their music for a click). Voice mode keeps its own echo-cancelled
+    /// session. Only a change is an IPC, so a repeat costs a property read.
+    private func prepareEarconSession() {
+        guard voiceLoop == nil, autoSpeakTask == nil else { return }
+        let session = AVAudioSession.sharedInstance()
+        guard session.category != .ambient else { return }
+        try? session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+    }
+
     nonisolated static let avatarBackdropKey = "avatarBackdrop"
     /// Memory auto-capture toggle — default ON (matches the Mac). Off = M1K3
     /// never distils durable facts from your chat.
@@ -435,6 +526,13 @@ final class AppCore {
     }
 
     init() throws {
+        #if os(iOS)
+            // Whether a continued-processing task may use the GPU on THIS device (the Live Activities plan: background
+            // Lil needs it, and forum reports say iPhones answer no). A breadcrumb, read once per launch.
+            Self.log.notice(
+                "background resources: gpu=\(BGTaskScheduler.supportedResources.contains(.gpu), privacy: .public)"
+            )
+        #endif
         // Voice output starts on Built-in; M1K3 Voice is restored below only
         // when it was chosen AND is already on disk. Constructing the Kokoro
         // provider touches no MLX (safe on the Simulator) — prepare() does.
@@ -794,6 +892,7 @@ final class AppCore {
         warmTask = Task { [weak self] in
             guard let self, generation == warmGeneration else { return }
             brainLoad = .preparing
+            brainStall.reset()
             // Reuse the provider already built for this exact model (cold launch made
             // one as the slot's initial backend); only build fresh on a model change,
             // releasing the outgoing weights first — never leak two Metal instances.
@@ -805,10 +904,27 @@ final class AppCore {
                 mlx = MLXBrainProvider(modelID: modelID, maxTokens: Self.generationCap(for: selectedBrain))
             }
             do {
+                // The bytes first, to disk only (no Metal), carried by iOS if the person leaves the app (a continued-
+                // processing task). MLX may load only in the foreground, so the download and the load are two steps.
+                if !LocalModelInventory().isInstalled(modelID: modelID) {
+                    try await downloadWeights(modelID: modelID, tier: selectedBrain, generation: generation)
+                    guard generation == warmGeneration else {
+                        if mlx !== currentMLX { mlx.releaseMemory() }
+                        return
+                    }
+                    guard ContinuedDownload.loadsNow(appIsActive: Self.appIsActive) else {
+                        // Finished in the background: warmForForeground re-warms an idle brain from disk on return.
+                        if mlx !== currentMLX { mlx.releaseMemory() }
+                        brainLoad = .idle
+                        Self.log.notice("brain warm: \(tierName, privacy: .public) downloaded in the background; loads on return")
+                        return
+                    }
+                }
                 try await mlx.prepare { fraction in
                     Task { @MainActor [weak self] in
                         guard let self, generation == warmGeneration else { return }
                         brainLoad = .progress(fraction)
+                        brainStall.observe(fraction, at: Date())
                     }
                 }
                 guard generation == warmGeneration else {
@@ -826,10 +942,60 @@ final class AppCore {
             } catch {
                 if mlx !== currentMLX { mlx.releaseMemory() }
                 guard generation == warmGeneration else { return }
+                if Task.isCancelled || error is CancellationError {
+                    // Stopped (the person cancelled it from the system's progress UI). A .failed brain is not retried
+                    // by a foreground bounce; picking it again starts the download over.
+                    brainLoad = .failed(message: "Download stopped. Pick \(tierName) again in Settings to start it over.")
+                    Self.log.notice("brain warm: \(tierName, privacy: .public) download stopped")
+                    return
+                }
                 brainLoad = .failed(message: error.localizedDescription)
                 Self.log.error("brain warm failed: \(error.localizedDescription, privacy: .public)")
             }
         }
+    }
+
+    /// A brain's weights to disk (no Metal), carried by iOS if the person leaves the app: the system shows the
+    /// progress and keeps the transfer alive (`ContinuedDownloadTask`). Elsewhere, and when iOS declines, an ordinary
+    /// foreground download.
+    private func downloadWeights(modelID: String, tier: BrainTier, generation: Int) async throws {
+        #if os(iOS)
+            // "iOS carries it" follows the task, not the submission: true once the system starts it, false again
+            // if an expiry in the foreground lets it go (the download then carries on as an ordinary one).
+            let continued = ContinuedDownloadTask.begin(
+                ContinuedDownload(tier: tier),
+                onCarry: { [weak self] carried in self?.brainDownloadContinues = carried },
+                onStop: { [weak self] in self?.warmTask?.cancel() }
+            )
+            defer { brainDownloadContinues = false }
+        #endif
+        do {
+            try await BrainWeightsFetcher().fetch(modelID: modelID) { [weak self] fraction in
+                Task { @MainActor in
+                    guard let self, generation == self.warmGeneration else { return }
+                    self.brainLoad = .progress(fraction)
+                    self.brainStall.observe(fraction, at: Date())
+                    #if os(iOS)
+                        continued?.report(fraction)
+                    #endif
+                }
+            }
+            // Believe the disk, not the return: offline, the downloader returns instead of throwing. A short
+            // download throws here, so iOS hears it failed and the row says why.
+            try LocalModelInventory().requireComplete(modelID: modelID)
+            #if os(iOS)
+                continued?.finish(success: true)
+            #endif
+        } catch {
+            #if os(iOS)
+                continued?.finish(success: false)
+            #endif
+            throw error
+        }
+    }
+
+    private static var appIsActive: Bool {
+        UIApplication.shared.applicationState == .active
     }
 
     /// Measure Mini's fixed instructions using the platform tokenizer. This is
@@ -940,6 +1106,9 @@ final class AppCore {
     /// The Send button's Stop face: cut the streaming answer short. `send`
     /// returns normally afterwards and settles the avatar itself.
     func stopResponding() {
+        // Also the voice: an auto-spoken answer keeps talking after the text is done.
+        cancelAutoSpeak()
+        Task { await stopSpeakingAnswer() }
         guard chat.isResponding else { return }
         chat.stopResponding()
     }
@@ -947,11 +1116,13 @@ final class AppCore {
     func send(_ text: String, images: [ImageAttachment] = []) async {
         guard isReady else { return }
         avatar.setActivity(.thinking)
+        beginAutoSpeakSession() // before the send: it pins this turn's answer (AppCore+AutoSpeak)
         await chat.send(text, images: images)
         // After a stop with nothing streamed, `messages.last` is the user's own
         // question (the assistant bubble is removed) — only an assistant row
         // is an answer.
         let answer = chat.messages.last.flatMap { $0.role == .assistant ? $0 : nil }
+        playTurnEarcon(answer)
         if case .failed? = answer?.status {
             avatar.setActivity(.error)
         } else {
@@ -962,6 +1133,16 @@ final class AppCore {
             if let answer, ReviewPromptPolicy.isWin(answerFailed: false, interrupted: answer.interrupted == true) {
                 reviewLedger.recordCompletedTurn()
             }
+        }
+    }
+
+    /// How a typed turn ended (local or Private Cloud), as an earcon: the error tone for a failure, the landing
+    /// chime for an answer that's home. A stopped answer earns no chime (the Mac's rule), and nothing landed, none.
+    private func playTurnEarcon(_ answer: ChatMessage?) {
+        if case .failed? = answer?.status {
+            soundEffects.play(.error)
+        } else if let answer, answer.interrupted != true {
+            soundEffects.play(.answerLanded)
         }
     }
 

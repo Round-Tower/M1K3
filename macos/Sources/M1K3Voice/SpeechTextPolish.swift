@@ -43,6 +43,18 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-24 — the name's spoken form now comes from
 //  `SpokenName.everyday`, beside the introduction's spelled form, so the two can't
 //  drift. No behaviour change. Confidence now 0.9.
+//  Review: Kev + claude-opus-4-6, 2026-10-12 — singular "Source:" trailing block (was only
+//  "Sources:"); inline parenthetical source attributions "(Source: gov.ie)" stripped from speech.
+//  AFM on iPhone was speaking full URLs from web search results. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — the inline strip needs a colon after its key,
+//  or nothing but a site: with the colon optional, "(from the Latin salarium)" and "(via Douglas)" went silent on
+//  both platforms while the screen kept them. Confidence 0.9 (negative cases pinned).
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — the Sources-block scan is linear: each list line
+//  must run to its own end, so a long bullet or digit run that isn't the tail no longer backtracks exponentially.
+//  Confidence 0.9 (a 400-character run pinned; the old form never finished it).
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — `spokenSentence`: auto-speak's per-sentence
+//  lane skips a sentence that polishes to nothing instead of reading it raw (a streamed Source trailer's URLs).
+//  Confidence 0.9.
 //
 
 import Foundation
@@ -63,6 +75,15 @@ public enum SpeechTextPolish {
         result = normalizeCurlyPunctuation(result)
         result = tidyWhitespace(result)
         return result
+    }
+
+    /// One streamed sentence of a longer answer (chat auto-speak), polished, or nil when nothing speakable is left:
+    /// a Sources trailer streams in as a sentence of its own and polishes to "". Whole-answer speech keeps its raw
+    /// fallback, because an empty utterance strands the voice loop's wait for the end; a skipped sentence strands
+    /// nothing, and the raw fallback would read the trailer's URLs aloud.
+    public static func spokenSentence(_ text: String) -> String? {
+        let polished = polish(text)
+        return polished.isEmpty ? nil : polished
     }
 
     // MARK: - The name
@@ -264,14 +285,33 @@ public enum SpeechTextPolish {
         text.replacing(/(?:^|\n+)Web sources:\n(?:•[^\n]*\n?)*$/, with: "")
     }
 
-    /// A model-written "Sources:" tail — a label on its own line followed by
-    /// bullet / dash / bracket lines, or inline citation tokens — is chip UI,
-    /// not speech (narration read one verbatim, 2026-09-12). Anchored to the
-    /// end; "Two sources: the river…" mid-prose survives (line start + colon
-    /// + only list/citation lines to the end).
+    /// A model-written "Sources:" or "Source:" tail — a label on its own line
+    /// followed by bullet / dash / bracket lines, or inline citation tokens —
+    /// is chip UI, not speech (narration read one verbatim, 2026-09-12).
+    /// Anchored to the end; "Two sources: the river…" mid-prose survives
+    /// (line start + colon + only list/citation lines to the end).
+    ///
+    /// Each list line runs to its own end (`\n` or the end of the text): with
+    /// an optional `\n`, every bullet or digit could open a new iteration, and
+    /// a long run that wasn't the tail backtracked exponentially (the 2026-10-15
+    /// review measured 3.5 s at 16 characters, on the main actor).
     private static func stripSourcesBlock(_ text: String) -> String {
+        var result = text.replacing(
+            /(?i)(?:^|\n+)[ \t]*Sources?:[ \t]*(?:\[[^\n]*)?\n?(?:[ \t]*[•\-*\[\d][^\n]*(?:\n|$))*$/,
+            with: ""
+        )
+        result = stripInlineSourceParens(result)
+        return result
+    }
+
+    /// Parenthetical source attributions: "(Source: gov.ie)" or
+    /// "(via gov.ie)" read as noise in speech. Keyed by Source/Via/From inside
+    /// parens AND either a colon after the key or nothing but a site after it:
+    /// "(from the Latin salarium)", "(via Douglas)" and "(source code is on
+    /// GitHub)" are prose and still speak, as does "(an open source project)".
+    private static func stripInlineSourceParens(_ text: String) -> String {
         text.replacing(
-            /(?i)(?:^|\n+)[ \t]*Sources:[ \t]*(?:\[[^\n]*)?\n?(?:[ \t]*[•\-*\[\d][^\n]*\n?)*$/,
+            /(?i)\s*\((?:Source|Via|From)(?::\s*[^)]+|\s+(?:https?:\/\/)?[\w-]+(?:\.[\w-]+)+(?:\/[^\s)]*)?)\)/,
             with: ""
         )
     }
