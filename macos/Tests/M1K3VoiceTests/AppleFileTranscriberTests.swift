@@ -38,4 +38,16 @@ struct AppleFileTranscriberTests {
         #expect(samples[8000] == 0)
         #expect(samples[23999] == 0)
     }
+
+    @Test("an empty clip is all silence, and no copy is left behind on any path")
+    func emptyClipIsSilence() throws {
+        let format = try #require(AVAudioFormat(standardFormatWithSampleRate: 16000, channels: 1))
+        let clip = FileManager.default.temporaryDirectory.appendingPathComponent("empty-\(UUID().uuidString).caf")
+        defer { try? FileManager.default.removeItem(at: clip) }
+        _ = try AVAudioFile(forWriting: clip, settings: format.settings)
+
+        let padded = try AppleFileTranscriber.withTrailingSilence(clip, seconds: 1)
+        defer { try? FileManager.default.removeItem(at: padded) }
+        #expect(try AVAudioFile(forReading: padded).length == 16000)
+    }
 }

@@ -7,8 +7,8 @@
 //  what an "error" is, so it is pinned (WordErrorRateTests): formatting never
 //  counts (case, punctuation, a fada, an apostrophe, "fifteen" vs "15",
 //  "twenty-third" vs "23rd", fillers like "um"), mishearing always does. Digits
-//  read one by one ("zero eight seven") become a digit string, grouped by the
-//  pauses (commas) between them; a clock time reads the same spoken or as
+//  read one by one ("zero eight seven") become a digit string, and adjacent digit
+//  strings join however they were grouped; a clock time reads the same spoken or as
 //  digits ("half past eight" = "8:30"). A corpus rate weights by words, not clips.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-15, Confidence 0.8 (pinned; the number
@@ -18,6 +18,9 @@
 //  errors (Apple's 0875551234 vs a grouped reading, "€462.50", Whisper's US "summarize" and
 //  "harbor"): adjacent digit words now join, euro is dropped, -ize/-or fold to -ise/-our.
 //  Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-10-15: an ordinal no longer joins a digit word ("one
+//  second" had folded to 3rd; code-quality-reviewer). Still scored as errors: "eight
+//  thirty" vs "8:30", "a hundred", "three point five", "per cent". Confidence 0.8.
 
 import Foundation
 
@@ -85,6 +88,8 @@ public enum WordErrorRate {
 
     /// Adjacent digit words are one number however they were grouped: "087 555 1234",
     /// "0875551234" and "zero eight seven, five five five, ..." all read "0875551234".
+    /// The cost: a misheard grouping ("23" for "2, 3") is free, and a wrong digit inside a
+    /// long run is one error, so number-heavy lines score a little kind.
     private static func joinDigitRuns(_ words: [String]) -> [String] {
         var out: [String] = []
         for word in words {
@@ -100,12 +105,10 @@ public enum WordErrorRate {
     /// One spelling per word: American "-ize" and "-or" read as the Irish "-ise" and "-our".
     private static func irishSpelling(_ word: String) -> String {
         if let irish = ourWords[word] { return irish }
-        for (american, irish) in [("ize", "ise"), ("izes", "ises"), ("ized", "ised"), ("izing", "ising")]
-            where word.count > american.count + 2 && word.hasSuffix(american)
-        {
-            return String(word.dropLast(american.count)) + irish
-        }
-        return word
+        let suffixes = [("ize", "ise"), ("izes", "ises"), ("ized", "ised"), ("izing", "ising")]
+        guard let (american, irish) = suffixes.first(where: { word.count > $0.0.count + 2 && word.hasSuffix($0.0) })
+        else { return word }
+        return String(word.dropLast(american.count)) + irish
     }
 
     /// A currency is formatting: "€20" and "twenty euro" both read "20" (the symbol is punctuation).
@@ -208,12 +211,12 @@ public enum WordErrorRate {
                 current = max(current, 1) * 100; onlyDigits = false; runLength += 1
             } else if let scale = scales[token], inRun {
                 total += max(current, 1) * scale; current = 0; onlyDigits = false; runLength += 1
-            } else if token == "and", inRun, current % 100 == 0, current + total > 0,
-                      isNumberWord(at: index + 1, in: tokens)
-            {
+            } else if token == "and", inRun, continuesAfterAnd(current, total, next: index + 1, in: tokens) {
                 // "four hundred AND sixty-two": part of the number.
             } else if let value = ordinals[token] {
-                if !joins(value) { emit() }
+                // An ordinal ends a tens word or a hundred ("twenty-third"), never a digit
+                // word: "one second" is 1 and 2nd, not 3rd.
+                if !joins(value) || (inRun && onlyDigits) { emit() }
                 current += value; inRun = true; onlyDigits = false; runLength += 1
                 emit(suffix: true)
             } else {
@@ -224,6 +227,11 @@ public enum WordErrorRate {
         }
         emit()
         return out
+    }
+
+    /// "and" belongs to a number after a round hundred or scale with a number word next.
+    private static func continuesAfterAnd(_ current: Int, _ total: Int, next: Int, in tokens: [String]) -> Bool {
+        current % 100 == 0 && current + total > 0 && isNumberWord(at: next, in: tokens)
     }
 
     private static func isNumberWord(at index: Int, in tokens: [String]) -> Bool {

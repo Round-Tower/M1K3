@@ -15,6 +15,8 @@
 # Review: claude-opus-5-5, 2026-10-15: the first take then quit at "Enter to stop": ffmpeg's
 # exit 255 on SIGINT tripped err_return (and it held the terminal; now -nostdin). Two takes
 # and a quit driven through a pty. Confidence 0.8.
+# Review: claude-opus-5-5, 2026-10-15: the no-microphone message and empty prompt files no
+# longer trip err_return (grep's exit 1, head's SIGPIPE on grep); code-quality-reviewer.
 
 emulate -L zsh
 setopt err_return pipe_fail
@@ -31,7 +33,7 @@ while (( $# )); do
     --out) out=$2; shift 2 ;;
     --device) device=$2; shift 2 ;;
     --from) from=$2; shift 2 ;;
-    --list-devices) list_devices | grep -A20 'audio devices'; return 0 ;;
+    --list-devices) list_devices | grep -A20 'audio devices' || true; return 0 ;;
     *) print -u2 "unknown flag $1"; return 2 ;;
   esac
 done
@@ -39,13 +41,13 @@ command -v ffmpeg >/dev/null || { print -u2 "needs ffmpeg (brew install ffmpeg)"
 if [[ $device == default ]]; then
   # The first device named a microphone: index 0 is often a virtual device (Zoom's records silence).
   device=$(list_devices \
-    | sed -n '/audio devices/,$p' | grep -i 'microphone' | head -1 | sed -E 's/.*\[([0-9]+)\].*/\1/')
+    | sed -n '/audio devices/,$p' | { grep -i 'microphone' || true } | sed -n '1s/.*\[\([0-9]*\)\].*/\1/p')
   [[ -n $device ]] || { print -u2 "no microphone found: pick one with --list-devices, then --device N"; return 2 }
 fi
 
-prompts=( ${(f)"$(grep -v '^#' $here/stt_prompts.txt | grep -v '^[[:space:]]*$')"} )
+prompts=( ${(f)"$(grep -v -e '^#' -e '^[[:space:]]*$' $here/stt_prompts.txt || true)"} )
 extra=~/.cache/m1k3-stt-corpus/extra.txt
-[[ -f $extra ]] && prompts+=( ${(f)"$(grep -v '^#' $extra | grep -v '^[[:space:]]*$')"} )
+[[ -f $extra ]] && prompts+=( ${(f)"$(grep -v -e '^#' -e '^[[:space:]]*$' $extra || true)"} )
 mkdir -p $out
 print "Recording ${#prompts} prompts into $out (mic: $device). q quits, s skips, r redoes the last."
 

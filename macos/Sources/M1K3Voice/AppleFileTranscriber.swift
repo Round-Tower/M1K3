@@ -14,6 +14,8 @@
 //  Review: claude-opus-5-5, 2026-10-15: every clip now ends on 1 s of silence
 //  (withTrailingSilence): on Kev's corpus DictationTranscriber dropped the last words of 8/30
 //  clips without it. Confidence 0.75.
+//  Review: claude-opus-5-5, 2026-10-15: the copy goes in chunks, zeroes its silence
+//  explicitly, takes an empty clip, and is deleted on any failure (code-quality-reviewer).
 
 import AVFoundation
 import Foundation
@@ -104,18 +106,32 @@ public enum AppleFileTranscriber {
         let format = source.processingFormat
         let out = FileManager.default.temporaryDirectory
             .appendingPathComponent("m1k3-stt-\(UUID().uuidString).caf")
-        let sink = try AVAudioFile(forWriting: out, settings: format.settings)
-        let capacity = AVAudioFrameCount(max(source.length, 1))
-        guard let audio = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: capacity),
-              let silence = AVAudioPCMBuffer(
-                  pcmFormat: format, frameCapacity: AVAudioFrameCount(seconds * format.sampleRate)
-              )
-        else { throw Failure.unreadableAudio(url.lastPathComponent) }
-        try source.read(into: audio)
-        silence.frameLength = silence.frameCapacity // a fresh buffer is zeroed: silence
-        try sink.write(from: audio)
-        try sink.write(from: silence)
-        return out
+        do {
+            // The copy is a voice: it never outlives a failure.
+            let sink = try AVAudioFile(forWriting: out, settings: format.settings)
+            let chunk: AVAudioFrameCount = 16384
+            guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: chunk) else {
+                throw Failure.unreadableAudio(url.lastPathComponent)
+            }
+            while source.framePosition < source.length {
+                try source.read(into: buffer, frameCount: chunk)
+                if buffer.frameLength == 0 { break }
+                try sink.write(from: buffer)
+            }
+            var silent = AVAudioFrameCount(seconds * format.sampleRate)
+            while silent > 0 {
+                buffer.frameLength = min(chunk, silent)
+                for channel in 0 ..< Int(format.channelCount) {
+                    buffer.floatChannelData.map { memset($0[channel], 0, Int(buffer.frameLength) * 4) }
+                }
+                try sink.write(from: buffer)
+                silent -= buffer.frameLength
+            }
+            return out
+        } catch {
+            try? FileManager.default.removeItem(at: out)
+            throw error
+        }
     }
 
     private static func join(_ segments: [String]) -> String {

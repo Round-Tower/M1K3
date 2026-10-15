@@ -7,8 +7,8 @@
 
       ],
       "name" : "analyzer (shipped, fast)",
-      "processingSeconds" : 6.0445673740000005,
-      "realTimeFactor" : 0.048612679198697946,
+      "processingSeconds" : 6.180995668,
+      "realTimeFactor" : 0.049709886737218406,
       "wordErrorRate" : 0.10662824207492795,
       "words" : 347
     },
@@ -19,8 +19,8 @@
 
       ],
       "name" : "analyzer (accurate)",
-      "processingSeconds" : 5.412180001,
-      "realTimeFactor" : 0.04352678262565458,
+      "processingSeconds" : 5.540615374999999,
+      "realTimeFactor" : 0.04455970810198937,
       "wordErrorRate" : 0.0893371757925072,
       "words" : 347
     },
@@ -31,8 +31,8 @@
 
       ],
       "name" : "analyzer+vocab (oracle names)",
-      "processingSeconds" : 5.765733377,
-      "realTimeFactor" : 0.046370191555304904,
+      "processingSeconds" : 6.011156249,
+      "realTimeFactor" : 0.048343974393077124,
       "wordErrorRate" : 0.10662824207492795,
       "words" : 347
     },
@@ -43,21 +43,21 @@
 
       ],
       "name" : "dictation",
-      "processingSeconds" : 7.829502335000001,
-      "realTimeFactor" : 0.06296779599710878,
+      "processingSeconds" : 8.302172620999999,
+      "realTimeFactor" : 0.06676918781861628,
       "wordErrorRate" : 0.11239193083573487,
       "words" : 347
     },
     {
       "audioSeconds" : 124.341375,
-      "errors" : 36,
+      "errors" : 38,
       "failures" : [
 
       ],
       "name" : "dictation+vocab",
-      "processingSeconds" : 10.484990795000002,
-      "realTimeFactor" : 0.08432423073172547,
-      "wordErrorRate" : 0.1037463976945245,
+      "processingSeconds" : 10.236712625,
+      "realTimeFactor" : 0.08232748451591435,
+      "wordErrorRate" : 0.10951008645533142,
       "words" : 347
     },
     {
@@ -67,8 +67,8 @@
 
       ],
       "name" : "whisper small.en",
-      "processingSeconds" : 12.033839334999998,
-      "realTimeFactor" : 0.09678065193504574,
+      "processingSeconds" : 11.941471328999999,
+      "realTimeFactor" : 0.09603779376736021,
       "wordErrorRate" : 0.08357348703170028,
       "words" : 347
     }

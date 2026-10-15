@@ -19,7 +19,8 @@
 //  Signed: Kev + claude-opus-5-5, 2026-10-15, Confidence 0.65 (engine glue; the scoring
 //  and pairing it relies on are pinned in M1K3EvalTests). Prior: Unknown.
 //  Review: claude-opus-5-5, 2026-10-15: the arms moved into engines(...) (lint: body length);
-//  the summary pads names itself, since %-34@ doesn't pad an NSString.
+//  the summary pads names itself, since %-34@ doesn't pad an NSString. A failure reason
+//  is the error's case or type, never its description (a path can carry a username).
 
 import AVFoundation
 import Foundation
@@ -61,7 +62,10 @@ struct SpeechToTextEvalTests {
                         "[\(name)] \(clip.id) \(score.errors)/\(score.words)\n  ref: \(clip.reference)\n  hyp: \(heard)"
                     )
                 } catch {
-                    arm.fail(clip: clip.id, reason: String(describing: error))
+                    // The report is committed: a reason names the failure, never a path.
+                    let reason = (error as? AppleFileTranscriber.Failure).map { String(describing: $0) }
+                        ?? String(describing: type(of: error))
+                    arm.fail(clip: clip.id, reason: reason)
                 }
             }
             results.append(arm)

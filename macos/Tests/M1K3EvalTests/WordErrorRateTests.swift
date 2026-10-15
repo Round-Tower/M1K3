@@ -8,6 +8,7 @@
 //  Signed: Kev + claude-opus-5-5, 2026-10-15, Confidence 0.85. Prior: Unknown.
 //  Review: claude-opus-5-5, 2026-10-15: Kev's first real corpus showed three formatting
 //  gaps scored as errors: a digit run grouped differently, a currency, US spelling. Pinned.
+//  Review: claude-opus-5-5, 2026-10-15: "one second" folded to 3rd (review catch). Pinned.
 
 @testable import M1K3Eval
 import Testing
@@ -57,6 +58,9 @@ struct WordErrorRateTests {
         // However the digits are grouped: Apple writes a phone number as one run (Kev's corpus).
         #expect(errors("zero eight seven, five five five, one two three four", "0875551234") == 0)
         #expect(errors("flight EI 712", "flight EI seven twelve") == 0)
+        // An ordinal word after a digit word is its own number: "one second" is not "3rd".
+        #expect(errors("give me one second", "give me 1 second") == 0)
+        #expect(errors("one third of it", "1 third of it") == 0)
         // A wrong number is a wrong word.
         #expect(errors("fifteen minutes", "50 minutes") == 1)
     }
