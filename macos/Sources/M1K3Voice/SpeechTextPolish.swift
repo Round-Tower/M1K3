@@ -49,6 +49,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — the inline strip needs a colon after its key,
 //  or nothing but a site: with the colon optional, "(from the Latin salarium)" and "(via Douglas)" went silent on
 //  both platforms while the screen kept them. Confidence 0.9 (negative cases pinned).
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — the Sources-block scan is linear: each list line
+//  must run to its own end, so a long bullet or digit run that isn't the tail no longer backtracks exponentially.
+//  Confidence 0.9 (a 400-character run pinned; the old form never finished it).
 //
 
 import Foundation
@@ -275,9 +278,14 @@ public enum SpeechTextPolish {
     /// is chip UI, not speech (narration read one verbatim, 2026-09-12).
     /// Anchored to the end; "Two sources: the river…" mid-prose survives
     /// (line start + colon + only list/citation lines to the end).
+    ///
+    /// Each list line runs to its own end (`\n` or the end of the text): with
+    /// an optional `\n`, every bullet or digit could open a new iteration, and
+    /// a long run that wasn't the tail backtracked exponentially (the 2026-10-15
+    /// review measured 3.5 s at 16 characters, on the main actor).
     private static func stripSourcesBlock(_ text: String) -> String {
         var result = text.replacing(
-            /(?i)(?:^|\n+)[ \t]*Sources?:[ \t]*(?:\[[^\n]*)?\n?(?:[ \t]*[•\-*\[\d][^\n]*\n?)*$/,
+            /(?i)(?:^|\n+)[ \t]*Sources?:[ \t]*(?:\[[^\n]*)?\n?(?:[ \t]*[•\-*\[\d][^\n]*(?:\n|$))*$/,
             with: ""
         )
         result = stripInlineSourceParens(result)
@@ -291,7 +299,7 @@ public enum SpeechTextPolish {
     /// GitHub)" are prose and still speak, as does "(an open source project)".
     private static func stripInlineSourceParens(_ text: String) -> String {
         text.replacing(
-            /\s*\((?:Source|Via|From)(?::\s*[^)]+|\s+(?:https?:\/\/)?[\w-]+(?:\.[\w-]+)+(?:\/[^\s)]*)?)\)/.ignoresCase(),
+            /(?i)\s*\((?:Source|Via|From)(?::\s*[^)]+|\s+(?:https?:\/\/)?[\w-]+(?:\.[\w-]+)+(?:\/[^\s)]*)?)\)/,
             with: ""
         )
     }

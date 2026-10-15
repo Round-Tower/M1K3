@@ -303,4 +303,19 @@ extension SpeechTextPolishTests {
         #expect(SpeechTextPolish.polish("Population is 5 million (from cso.ie).") == "Population is 5 million.")
         #expect(SpeechTextPolish.polish("Fares rise in May (source https://nta.ie/fares).") == "Fares rise in May.")
     }
+
+    /// The trailing-block scan used to let every bullet or digit character open a new loop iteration, so a long
+    /// run that turned out not to be the answer's tail backtracked exponentially: measured by the review at 0.5 s
+    /// for 14 characters and 3.5 s for 16, about 2.5x per character, on the main actor, for every streamed
+    /// sentence. A run of 400 would never finish.
+    @Test("a long digit or bullet run that is not the answer's tail scans in linear time, and is spoken")
+    func sourcesScanIsLinear() {
+        let digits = "Call us.\nSources:\n\(String(repeating: "1", count: 400))\nThat's the number."
+        #expect(SpeechTextPolish.polish(digits) == digits)
+        let bullets = "Odd list.\nSource:\n\(String(repeating: "-x", count: 200))\nThe end."
+        #expect(SpeechTextPolish.polish(bullets) == bullets)
+        // The linear form still strips what it stripped before.
+        #expect(SpeechTextPolish.polish("Answer.\nSources:\n- a\n- b\n") == "Answer.")
+        #expect(SpeechTextPolish.polish("Answer.\nSources:\n[1] x\n2. y") == "Answer.")
+    }
 }
