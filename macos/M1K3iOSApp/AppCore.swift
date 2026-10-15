@@ -113,6 +113,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — chat auto-speak (AppCore+AutoSpeak; Kev: "voice on with Kokoro"): a session
 //  begins before each send, Stop also stops the voice (`isSpeakingAnswer` keeps Stop showing while it talks), and an
 //  earcon never flips the session mid-answer. Voice mode's first listen defers to its chime. Confidence 0.65.
+//  Review: Kev + claude-opus-5.5, 2026-10-15 — `downloadWeights`' progress closure captures `self` weakly itself, the
+//  house pattern (AppEnvironment+Downloads): the inner `[weak self]` alone left the outer closure holding it strongly,
+//  and the compiler warned. Same behaviour. Confidence 0.9 (the iOS build's warning is gone).
 
 import AVFoundation
 #if os(iOS)
@@ -943,11 +946,11 @@ final class AppCore {
             defer { brainDownloadContinues = false }
         #endif
         do {
-            try await BrainWeightsFetcher().fetch(modelID: modelID) { fraction in
-                Task { @MainActor [weak self] in
-                    guard let self, generation == warmGeneration else { return }
-                    brainLoad = .progress(fraction)
-                    brainStall.observe(fraction, at: Date())
+            try await BrainWeightsFetcher().fetch(modelID: modelID) { [weak self] fraction in
+                Task { @MainActor in
+                    guard let self, generation == self.warmGeneration else { return }
+                    self.brainLoad = .progress(fraction)
+                    self.brainStall.observe(fraction, at: Date())
                     #if os(iOS)
                         continued?.report(fraction)
                     #endif
