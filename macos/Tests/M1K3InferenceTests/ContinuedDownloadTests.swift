@@ -7,6 +7,8 @@
 //  The task itself, the system's Live Activity and the background run are verify-on-device.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-12, Confidence 0.85. Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — pins: the disk is checked before iOS hears the
+//  download succeeded. Confidence 0.85.
 //
 
 import Foundation
@@ -99,6 +101,19 @@ struct ContinuedDownloadWiringScanTests {
         #expect(core.contains("ContinuedDownloadTask.begin("))
         // A stopped download is not retried by a foreground bounce (warmForForeground only re-warms .idle).
         #expect(warm.contains("Task.isCancelled || error is CancellationError"))
+    }
+
+    @Test("a fetch that returns is checked against the disk before iOS hears it succeeded")
+    func verifiedBeforeSuccess() throws {
+        // The downloader returns instead of throwing when offline; the rule is LocalModelInventoryTests'
+        // requireCompleteBelievesTheDisk. Without this the Lock Screen said done and the warm logged "downloaded in
+        // the background" with no weights on disk.
+        let core = try Self.code("M1K3iOSApp/AppCore.swift")
+        let download = try #require(core.components(separatedBy: "private func downloadWeights(").dropFirst().first)
+        let fetchAt = try #require(download.range(of: "BrainWeightsFetcher().fetch(modelID:"))
+        let checkAt = try #require(download.range(of: "try LocalModelInventory().requireComplete(modelID: modelID)"))
+        let successAt = try #require(download.range(of: "continued?.finish(success: true)"))
+        #expect(fetchAt.lowerBound < checkAt.lowerBound && checkAt.lowerBound < successAt.lowerBound)
     }
 
     @Test("while iOS carries the download the screen may sleep, and the row says the person can leave")

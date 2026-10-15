@@ -24,6 +24,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-07 — `cache: nil`, matching the downloader (one store).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — B4: `installState` tells a complete
 //  pinned download from a partial one by file sizes (no hashing). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-15 — `requireComplete`: the after-a-fetch check the Mac does inline
+//  (AppEnvironment+Downloads), as one seam, for the iPhone's continued download, which trusted the fetcher's return.
+//  Confidence 0.85.
 
 import Foundation
 import Hub
@@ -64,6 +67,17 @@ public struct LocalModelInventory: Sendable {
     /// exist. Anything else with bytes in the folder is `.partial`. Stat calls only, no hashing.
     public func installState(modelID: String) -> InstallState {
         installState(modelID: modelID, pin: PinnedWeights.pin(for: modelID))
+    }
+
+    /// After a fetch returns, believe the disk, not the return: the downloader falls back to a local partial when
+    /// offline or auth-blocked instead of throwing (BrainWeightsFetcher's header). Anything short of `.complete`
+    /// throws `URLError(.notConnectedToInternet)`, which `DownloadFailureCopy` reads as "check your connection".
+    public func requireComplete(modelID: String) throws {
+        try requireComplete(modelID: modelID, pin: PinnedWeights.pin(for: modelID))
+    }
+
+    func requireComplete(modelID: String, pin: WeightIntegrity.Pin?) throws {
+        guard installState(modelID: modelID, pin: pin) == .complete else { throw URLError(.notConnectedToInternet) }
     }
 
     func installState(modelID: String, pin: WeightIntegrity.Pin?) -> InstallState {

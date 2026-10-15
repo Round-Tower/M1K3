@@ -123,6 +123,9 @@
 //  on-device hooks: an auto-speak session (after the gate, before the send) and the turn earcon (`playTurnEarcon`,
 //  shared with `send`). Speak answers was silent on PCC, and a half-read answer talked over it. Nothing new leaves:
 //  the consent gate and the request are untouched. Confidence 0.75 (verify on an iOS 27 phone with PCC).
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — `downloadWeights` checks the disk
+//  (`LocalModelInventory.requireComplete`) before telling iOS the continued download succeeded: offline, the fetcher
+//  returns instead of throwing, and the Lock Screen said done with no weights. Confidence 0.8.
 
 import AVFoundation
 #if os(iOS)
@@ -971,6 +974,9 @@ final class AppCore {
                     #endif
                 }
             }
+            // Believe the disk, not the return: offline, the downloader returns instead of throwing. A short
+            // download throws here, so iOS hears it failed and the row says why.
+            try LocalModelInventory().requireComplete(modelID: modelID)
             #if os(iOS)
                 continued?.finish(success: true)
             #endif
