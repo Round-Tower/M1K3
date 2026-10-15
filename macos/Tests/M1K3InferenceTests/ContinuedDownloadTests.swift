@@ -116,6 +116,24 @@ struct ContinuedDownloadWiringScanTests {
         #expect(fetchAt.lowerBound < checkAt.lowerBound && checkAt.lowerBound < successAt.lowerBound)
     }
 
+    @Test("'iOS carries it' is true only while the task is attached: a foreground expiry hands it back")
+    func carriedOnlyWhileAttached() throws {
+        // Set from the submission alone, the flag outlived an expiry in the foreground (the person cancels from
+        // the Dynamic Island): the download carried on as an ordinary one with the screen allowed to sleep and the
+        // row still saying "keeps downloading if you leave", so auto-lock suspended it and the file restarted.
+        let task = try Self.code("M1K3iOSApp/ContinuedDownloadTask.swift")
+        let attach = try #require(task.components(separatedBy: "private func attach(").dropFirst().first)
+            .components(separatedBy: "private func expired()").first ?? ""
+        #expect(attach.contains("onCarry(true)"))
+        let expired = try #require(task.components(separatedBy: "private func expired()").dropFirst().first)
+        let releasedAt = try #require(expired.range(of: "onCarry(false)"))
+        let stopAt = try #require(expired.range(of: "ContinuedDownload.expiryStopsDownload(appIsActive:"))
+        #expect(releasedAt.lowerBound < stopAt.lowerBound)
+        let core = try Self.code("M1K3iOSApp/AppCore.swift")
+        #expect(!core.contains("brainDownloadContinues = continued != nil"))
+        #expect(core.contains("self?.brainDownloadContinues = carried"))
+    }
+
     @Test("while iOS carries the download the screen may sleep, and the row says the person can leave")
     func copyAndKeepAwake() throws {
         let root = try Self.code("M1K3iOSApp/RootView.swift")

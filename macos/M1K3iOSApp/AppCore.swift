@@ -126,6 +126,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — `downloadWeights` checks the disk
 //  (`LocalModelInventory.requireComplete`) before telling iOS the continued download succeeded: offline, the fetcher
 //  returns instead of throwing, and the Lock Screen said done with no weights. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — `brainDownloadContinues` follows the task
+//  (ContinuedDownloadTask's `onCarry`), not the submission: after a foreground expiry the screen stays awake again and
+//  the row stops promising the download survives leaving. Confidence 0.7 (verify on the phone).
 
 import AVFoundation
 #if os(iOS)
@@ -957,10 +960,13 @@ final class AppCore {
     /// foreground download.
     private func downloadWeights(modelID: String, tier: BrainTier, generation: Int) async throws {
         #if os(iOS)
-            let continued = ContinuedDownloadTask.begin(ContinuedDownload(tier: tier)) { [weak self] in
-                self?.warmTask?.cancel()
-            }
-            brainDownloadContinues = continued != nil
+            // "iOS carries it" follows the task, not the submission: true once the system starts it, false again
+            // if an expiry in the foreground lets it go (the download then carries on as an ordinary one).
+            let continued = ContinuedDownloadTask.begin(
+                ContinuedDownload(tier: tier),
+                onCarry: { [weak self] carried in self?.brainDownloadContinues = carried },
+                onStop: { [weak self] in self?.warmTask?.cancel() }
+            )
             defer { brainDownloadContinues = false }
         #endif
         do {

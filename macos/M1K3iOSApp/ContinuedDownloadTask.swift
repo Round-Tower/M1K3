@@ -11,6 +11,9 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-12, Confidence 0.65 (the SDK's rules are followed to the letter; the
 //  background run, the system UI and cancelling from it are verify-on-device). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — `onCarry`: whether iOS is carrying the download
+//  follows the task (true at attach, false at an expiry), not the submission. A foreground expiry used to leave the
+//  app saying it was carried, so the screen could sleep and the transfer restarted. Confidence 0.65.
 //
 
 #if os(iOS)
@@ -29,17 +32,24 @@
 
         private var task: BGContinuedProcessingTask?
         private var lastFraction: Double = 0
+        private let onCarry: @MainActor (Bool) -> Void
         private let onStop: @MainActor () -> Void
 
-        private init(onStop: @escaping @MainActor () -> Void) {
+        private init(onCarry: @escaping @MainActor (Bool) -> Void, onStop: @escaping @MainActor () -> Void) {
+            self.onCarry = onCarry
             self.onStop = onStop
         }
 
         /// Ask iOS to carry the download. nil when it won't (identifier not permitted, submission refused, or the
         /// system busy: `.fail` rather than queue, because a queued task would start after the download it was for):
-        /// the download then runs as an ordinary foreground one. `onStop` runs when an expiry in the background ends
-        /// it, such as the person cancelling it from the system UI.
-        static func begin(_ plan: ContinuedDownload, onStop: @escaping @MainActor () -> Void) -> ContinuedDownloadTask? {
+        /// the download then runs as an ordinary foreground one. `onCarry` says whether iOS is carrying it right now:
+        /// true once the system starts the task, false when an expiry lets it go. `onStop` runs when an expiry in
+        /// the background ends it, such as the person cancelling it from the system UI.
+        static func begin(
+            _ plan: ContinuedDownload,
+            onCarry: @escaping @MainActor (Bool) -> Void,
+            onStop: @escaping @MainActor () -> Void
+        ) -> ContinuedDownloadTask? {
             if !registered.contains(plan.identifier) {
                 let accepted = BGTaskScheduler.shared.register(forTaskWithIdentifier: plan.identifier, using: .main) { task in
                     MainActor.assumeIsolated {
@@ -56,7 +66,7 @@
                 }
                 registered.insert(plan.identifier)
             }
-            let download = ContinuedDownloadTask(onStop: onStop)
+            let download = ContinuedDownloadTask(onCarry: onCarry, onStop: onStop)
             current = download // before submit: the system may start the task at once
             let request = BGContinuedProcessingTaskRequest(
                 identifier: plan.identifier, title: plan.title, subtitle: plan.subtitle
@@ -92,6 +102,7 @@
                 Task { @MainActor in self?.expired() }
             }
             Self.log.notice("continued download: running")
+            onCarry(true) // only now may the screen sleep and the row say the person can leave
         }
 
         private func expired() {
@@ -100,6 +111,8 @@
             task?.setTaskCompleted(success: false)
             task = nil
             if Self.current === self { Self.current = nil }
+            // In the foreground the download carries on as an ordinary one: keep the screen awake again.
+            onCarry(false)
             if ContinuedDownload.expiryStopsDownload(appIsActive: active) { onStop() }
         }
     }
