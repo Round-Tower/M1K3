@@ -120,6 +120,24 @@ struct IOSAutoSpeakWiringScanTests {
         #expect(branch.contains("return"))
     }
 
+    @Test("a Private Cloud turn gets the local send's hooks: spoken, superseding, and its earcon")
+    func privateCloudTurnSpoken() throws {
+        // Speech, highlight and earcons are on-device; nothing new leaves. Before this, Speak answers was silent on
+        // a PCC answer and a half-read earlier answer kept talking over it.
+        let core = try Self.code("M1K3iOSApp/AppCore.swift")
+        let pcc = try #require(core.components(separatedBy: "func sendPrivateCloud(").dropFirst().first)
+            .components(separatedBy: "\n    }\n").first ?? ""
+        let gateAt = try #require(pcc.range(of: "guard privateCloudSendAllowed()"))
+        let beginAt = try #require(pcc.range(of: "beginAutoSpeakSession()"))
+        let sendAt = try #require(pcc.range(of: "await chat.sendPrivateCloud("))
+        let earconAt = try #require(pcc.range(of: "playTurnEarcon("))
+        // After the gate (a refused send starts nothing), before the send (it pins this turn's answer).
+        #expect(gateAt.lowerBound < beginAt.lowerBound && beginAt.lowerBound < sendAt.lowerBound)
+        #expect(sendAt.lowerBound < earconAt.lowerBound)
+        let send = try #require(core.components(separatedBy: "func send(_ text: String").dropFirst().first)
+        #expect(send.prefix(1500).contains("playTurnEarcon("))
+    }
+
     @Test("stop and leaving the app end it; Settings has the switch on the shared key")
     func stops() throws {
         let core = try Self.code("M1K3iOSApp/AppCore.swift")

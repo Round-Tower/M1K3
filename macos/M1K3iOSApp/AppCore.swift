@@ -119,6 +119,10 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — `autoSpeakGeneration` and `answerAudioHeld`: an
 //  auto-speak session's end touches only what it still owns, and the answer's duck is held from its first sentence
 //  (AppCore+AutoSpeak). Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — a Private Cloud turn gets the local send's
+//  on-device hooks: an auto-speak session (after the gate, before the send) and the turn earcon (`playTurnEarcon`,
+//  shared with `send`). Speak answers was silent on PCC, and a half-read answer talked over it. Nothing new leaves:
+//  the consent gate and the request are untouched. Confidence 0.75 (verify on an iOS 27 phone with PCC).
 
 import AVFoundation
 #if os(iOS)
@@ -388,10 +392,14 @@ final class AppCore {
         guard privateCloudSendAllowed(), let backend = Self.privateCloudBackend else { return false }
         let gate = privateCloudState(consent: privateCloudConsentPersisted)
         avatar.setActivity(.thinking)
+        // The local send's hooks, which are all on-device (speech, highlight, earcon): Speak answers reads this
+        // answer too, and the session supersedes a half-read earlier one. Before the send: it pins this turn.
+        beginAutoSpeakSession()
         await chat.sendPrivateCloud(
             consent, includeConversation: includeConversation, backend: backend,
             gate: gate, localBrainName: selectedBrain.displayName
         )
+        playTurnEarcon(chat.messages.last.flatMap { $0.role == .assistant ? $0 : nil })
         if case .speaking = avatar.state.activity {} else { avatar.resetToIdle() }
         await refreshPrivateCloudStatus()
         return true
@@ -1102,19 +1110,27 @@ final class AppCore {
         // question (the assistant bubble is removed) — only an assistant row
         // is an answer.
         let answer = chat.messages.last.flatMap { $0.role == .assistant ? $0 : nil }
+        playTurnEarcon(answer)
         if case .failed? = answer?.status {
             avatar.setActivity(.error)
-            soundEffects.play(.error)
         } else {
             avatar.setEmotion(.happy)
             avatar.resetToIdle()
-            // The answer is home; a stopped one earns no landing chime (the Mac's rule).
-            if let answer, answer.interrupted != true { soundEffects.play(.answerLanded) }
             // A real, unstopped answer counts toward the rating ask;
             // ChatScreen consumes it when it's earned.
             if let answer, ReviewPromptPolicy.isWin(answerFailed: false, interrupted: answer.interrupted == true) {
                 reviewLedger.recordCompletedTurn()
             }
+        }
+    }
+
+    /// How a typed turn ended (local or Private Cloud), as an earcon: the error tone for a failure, the landing
+    /// chime for an answer that's home. A stopped answer earns no chime (the Mac's rule), and nothing landed, none.
+    private func playTurnEarcon(_ answer: ChatMessage?) {
+        if case .failed? = answer?.status {
+            soundEffects.play(.error)
+        } else if let answer, answer.interrupted != true {
+            soundEffects.play(.answerLanded)
         }
     }
 

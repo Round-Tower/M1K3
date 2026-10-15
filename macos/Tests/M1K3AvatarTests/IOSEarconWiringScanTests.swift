@@ -11,6 +11,8 @@
 //  Prior: none (new file).
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — voice mode's start is the onboarding chime now (VoiceModeEarcons), and the
 //  earcon session guard also waits out an auto-spoken answer. Confidence 0.6.
+//  Review: Kev + claude-opus-5.5, 2026-10-15 — a turn's earcon is one helper (`playTurnEarcon`) shared by the local
+//  and Private Cloud sends; the pin follows it. Confidence 0.6.
 //
 
 import Foundation
@@ -47,7 +49,10 @@ struct IOSEarconWiringScanTests {
     func moments() throws {
         let core = try Self.code("M1K3iOSApp/AppCore.swift")
         let send = core.components(separatedBy: "func send(_ text: String").dropFirst().first ?? ""
-        #expect(send.contains("soundEffects.play(.error)") && send.contains("soundEffects.play(.answerLanded)"))
+        // Both send paths (local and Private Cloud) share one helper; send() asks it.
+        #expect(send.prefix(1500).contains("playTurnEarcon(answer)"))
+        let earcon = core.components(separatedBy: "private func playTurnEarcon(").dropFirst().first ?? ""
+        #expect(earcon.contains("soundEffects.play(.error)") && earcon.contains("soundEffects.play(.answerLanded)"))
         let voice = try Self.code("M1K3iOSApp/AppCore+Voice.swift")
         // Voice mode opens on the onboarding's chime (VoiceModeEarcons, pinned in VoiceModeEarconsTests).
         for effect in ["VoiceModeEarcons.enter", ".voiceExit", ".endpointHeard"] {
