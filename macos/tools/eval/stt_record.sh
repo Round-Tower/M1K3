@@ -19,6 +19,8 @@
 # longer trip err_return (grep's exit 1, head's SIGPIPE on grep); code-quality-reviewer.
 # Review: claude-opus-5-5, 2026-10-15: --prompts FILE, for the held-out set
 # (stt_prompts_heldout.txt). The default stays stt_prompts.txt.
+# Review: claude-opus-5-5, 2026-10-15: extra.txt joins the default set only, never a --prompts set
+# (#613 bot nit: personal lines would leak into a held-out run).
 
 emulate -L zsh
 setopt err_return pipe_fail
@@ -49,11 +51,13 @@ if [[ $device == default ]]; then
   [[ -n $device ]] || { print -u2 "no microphone found: pick one with --list-devices, then --device N"; return 2 }
 fi
 
+custom_prompts=${prompts_file:+1}
 [[ -n $prompts_file ]] || prompts_file=$here/stt_prompts.txt
 [[ -f $prompts_file ]] || { print -u2 "no prompts file: $prompts_file"; return 2 }
 prompts=( ${(f)"$(grep -v -e '^#' -e '^[[:space:]]*$' $prompts_file || true)"} )
 extra=~/.cache/m1k3-stt-corpus/extra.txt
-[[ -f $extra ]] && prompts+=( ${(f)"$(grep -v -e '^#' -e '^[[:space:]]*$' $extra || true)"} )
+# Personal extras join the default corpus only: a --prompts set (held-out) stays exactly as written.
+[[ -z $custom_prompts && -f $extra ]] && prompts+=( ${(f)"$(grep -v -e '^#' -e '^[[:space:]]*$' $extra || true)"} )
 mkdir -p $out
 print "Recording ${#prompts} prompts into $out (mic: $device). q quits, s skips, r redoes the last."
 
