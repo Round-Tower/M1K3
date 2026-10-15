@@ -93,6 +93,8 @@
 //  `statusLine` (Downloading N% / <1%, then Waking), says to keep M1K3 open, and names a stall. Confidence 0.75.
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — while iOS carries the download, the line says the person can leave.
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — the Send button stops an auto-spoken answer too (`stoppable`).
+//  Review: Kev + claude-opus-5.5, 2026-10-15 — doc only: `brainLoadRow`'s comment sits on it again (`stoppable` had
+//  landed between them). Confidence 0.95.
 
 import M1K3Avatar
 import M1K3Chat
@@ -423,14 +425,14 @@ struct ChatScreen: View {
         }
     }
 
-    /// "Downloading Lil… 3%" while the bytes come ("<1%" once they start, never a frozen "0%"), "Waking Lil…" for the
-    /// load after them. While downloading, a line under the bar says to keep M1K3 open, and names a stall (TestFlight
-    /// 505: "Lil Waking seems to hang at 0%"). The screen stays on meanwhile (RootView).
     /// The Send button's Stop face: while an answer generates, and while one is read aloud (chat auto-speak).
     private var stoppable: Bool {
         core.chat.isResponding || core.isSpeakingAnswer
     }
 
+    /// "Downloading Lil… 3%" while the bytes come ("<1%" once they start, never a frozen "0%"), "Waking Lil…" for the
+    /// load after them. While downloading, a line under the bar says to keep M1K3 open, and names a stall (TestFlight
+    /// 505: "Lil Waking seems to hang at 0%"). The screen stays on meanwhile (RootView).
     private var brainLoadRow: some View {
         let name = core.selectedBrain.displayName
         return Group {
