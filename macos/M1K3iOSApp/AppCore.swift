@@ -116,6 +116,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-15 — `downloadWeights`' progress closure captures `self` weakly itself, the
 //  house pattern (AppEnvironment+Downloads): the inner `[weak self]` alone left the outer closure holding it strongly,
 //  and the compiler warned. Same behaviour. Confidence 0.9 (the iOS build's warning is gone).
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — `autoSpeakGeneration` and `answerAudioHeld`: an
+//  auto-speak session's end touches only what it still owns, and the answer's duck is held from its first sentence
+//  (AppCore+AutoSpeak). Confidence 0.75.
 
 import AVFoundation
 #if os(iOS)
@@ -247,6 +250,10 @@ final class AppCore {
     private(set) var brainStall = DownloadStallWatch()
     /// The chat auto-speak session (AppCore+AutoSpeak); nil when idle.
     @ObservationIgnored var autoSpeakTask: Task<Void, Never>?
+    /// Bumped per auto-speak session: a session's end touches only state it still owns.
+    @ObservationIgnored var autoSpeakGeneration = 0
+    /// An auto-spoken answer holds the ducking speech session (taken at its first sentence, released at its end).
+    @ObservationIgnored var answerAudioHeld = false
     /// An answer is being read aloud: the Send button shows Stop until it's done.
     var isSpeakingAnswer = false
     /// Set when voice mode opens on its chime: the first listen then skips its tick (VoiceModeEarcons).

@@ -11,16 +11,24 @@
 //  • the switch is live: off mid-answer goes quiet on the next tick (Settings also stops speech at once);
 //  • a failed turn speaks nothing further (the error earcon carries it).
 //  The phone's addition: a speech session for the answer (`.playback` / `.spokenAudio`, ducking the user's music,
-//  heard on a muted phone like the voice sample), released when the answer ends so the music comes back up.
+//  heard on a muted phone like the voice sample), taken at the first sentence and released when the answer ends so
+//  the music comes back up (AnswerAudioSessionPolicy says who may release it).
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-12, Confidence 0.65 (a port of the Mac's tested-in-use loop over pinned
 //  seams; how it feels on the phone is verify-on-device). Prior: AppEnvironment+AutoSpeak (Kev + claude-fable-5).
 //  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — a sentence that polishes to nothing is skipped
 //  (`SpeechTextPolish.spokenSentence`): the whole-answer fallback read a streamed Source trailer's URLs aloud, which
 //  is what 7ac9c1fd set out to stop. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — who owns the session. (1) A session's end is
+//  generation-checked: a superseded session's late defer no longer flips its successor's Stop back to Send or releases
+//  the successor's audio (it used to check only `voiceLoop`). (2) The duck starts at the first sentence, not the
+//  send, so music plays on through a generation (a Lil turn can run minutes; a refused send held it ~10 s). (3) A new
+//  session lets a predecessor's duck go first, in order. (4) The session helpers are the readout's and voice mode's
+//  (`activateSampleAudioSession` / `deactivateVoiceAudioSession`), not a third copy. Confidence 0.7 (rules pinned in
+//  AnswerAudioSessionPolicyTests; the sound is verify-by-ear on the phone, music playing).
 //
 
-import AVFoundation
+import Foundation
 import M1K3Chat
 import M1K3Inference
 import M1K3Voice
@@ -40,20 +48,17 @@ extension AppCore {
         guard autoSpeakWouldServe, !chat.isResponding else { return }
         let superseding = autoSpeakTask != nil
         cancelAutoSpeak()
+        autoSpeakGeneration += 1
+        let generation = autoSpeakGeneration
         let baselineCount = chat.messages.count
         autoSpeakTask = Task { @MainActor [weak self] in
-            defer {
-                if let self, !Task.isCancelled { self.autoSpeakTask = nil }
-                self?.isSpeakingAnswer = false
-                // Let the music back up, unless voice mode has just taken the session (releasing would kill its mic).
-                Task { @MainActor [weak self] in
-                    guard self?.voiceLoop == nil else { return }
-                    await Self.releaseAnswerAudioSession()
-                }
-            }
+            // Ownership by generation, not by cancellation: a superseded session's defer can run long after its
+            // successor started (parked in speakAndWait until the stop resumes it), and must touch nothing then.
+            defer { self?.autoSpeakSessionEnded(generation: generation) }
             if superseding { await self?.stopSpeakingAnswer() }
-            await Self.activateAnswerAudioSession()
-            self?.isSpeakingAnswer = true
+            // A new answer starts with the music up: a predecessor's duck is let go here, in order, before this
+            // answer takes the session at its first sentence (not for the whole generation).
+            await self?.releaseAnswerAudio()
             var folder = StreamedAnswerFolder(
                 stopMatcher: { FollowUpSplit.trailerStart(in: $0) }, leakGuard: Self.spokenLeakGuard
             )
@@ -71,6 +76,8 @@ extension AppCore {
             while !Task.isCancelled {
                 guard let self, self.autoSpeakWouldServe else { return }
                 if let message = pinnedMessage() {
+                    // Stop stays up from the answer's arrival until its last sentence (a refused send never shows it).
+                    if !self.isSpeakingAnswer { self.isSpeakingAnswer = true }
                     for sentence in folder.ingest(message.text) {
                         guard !Task.isCancelled else { return }
                         await self.speakAnswerSentence(sentence)
@@ -119,23 +126,37 @@ extension AppCore {
     /// sentence that polishes to nothing (a Sources trailer streams in as its own) is skipped, never read raw.
     private func speakAnswerSentence(_ text: String) async {
         guard let spoken = SpeechTextPolish.spokenSentence(text) else { return }
+        if !answerAudioHeld {
+            // The first sentence takes the session: heard on a muted phone, the user's music ducked while M1K3
+            // talks (the readout's and the sample's session). Marked held BEFORE the hop, so a stop during it
+            // still releases.
+            answerAudioHeld = true
+            await Self.activateSampleAudioSession()
+            guard !Task.isCancelled else { return }
+        }
         speechHighlight.beginUtterance(text: spoken)
         await speakAndWait(spoken)
     }
 
-    /// Heard on a muted phone (the voice sample's session) and ducking the user's music while M1K3 talks.
-    private nonisolated static func activateAnswerAudioSession() async {
-        await Task.detached(priority: .userInitiated) {
-            let session = AVAudioSession.sharedInstance()
-            try? session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
-            try? session.setActive(true)
-        }.value
+    /// The session's end: finished, failed, stopped or superseded. Only the current session cleans up; a superseded
+    /// one's late defer would flip its successor's Stop back to Send and pull the session out from under it.
+    private func autoSpeakSessionEnded(generation: Int) {
+        let isCurrent = generation == autoSpeakGeneration
+        let release = AnswerAudioSessionPolicy.releaseWhenAnswerEnds(
+            isCurrent: isCurrent, holdsSession: answerAudioHeld, voiceModeActive: voiceLoop != nil
+        )
+        guard isCurrent else { return }
+        autoSpeakTask = nil
+        isSpeakingAnswer = false
+        // The hold ends with the answer; voice mode, if it has just taken over, keeps the session it activated.
+        answerAudioHeld = false
+        if release { Task { await Self.deactivateVoiceAudioSession() } }
     }
 
-    /// The answer is over: let the user's music back up.
-    private nonisolated static func releaseAnswerAudioSession() async {
-        await Task.detached(priority: .utility) {
-            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
-        }.value
+    /// Let the user's music back up, if an auto-spoken answer holds the session.
+    private func releaseAnswerAudio() async {
+        guard answerAudioHeld else { return }
+        answerAudioHeld = false
+        await Self.deactivateVoiceAudioSession()
     }
 }

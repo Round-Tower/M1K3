@@ -70,6 +70,10 @@
 //  answer is one utterance per sentence, so the release waits while `autoSpeakTask` holds the session (it releases its
 //  own when the answer ends). Read from the code, not heard: without it ducked music would come back up between
 //  sentences. Confidence 0.75 (verify-by-ear on the phone, music playing, Speak answers on).
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — that release asks
+//  `AnswerAudioSessionPolicy.releaseWhenUtteranceEnds` (pure, truth-tabled) with `answerAudioHeld`, which an answer
+//  sets at its first sentence: a sample played during a generation now releases its own duck.
+//  `deactivateVoiceAudioSession` is internal so the answer's release reuses it. Confidence 0.75.
 
 import AVFoundation
 import Foundation
@@ -116,7 +120,9 @@ extension AppCore {
                     // A readout or a sample ended outside voice mode: give the audio back so
                     // music ducked by the playback session returns (#597 follow-up). Not between
                     // the sentences of an auto-spoken answer: that session releases itself at the end.
-                    if autoSpeakTask == nil {
+                    if AnswerAudioSessionPolicy.releaseWhenUtteranceEnds(
+                        voiceModeActive: voiceLoop != nil, answerHoldsSession: answerAudioHeld
+                    ) {
                         Task { await Self.deactivateVoiceAudioSession() }
                     }
                 }
@@ -457,7 +463,9 @@ extension AppCore {
         }.value
     }
 
-    private nonisolated static func deactivateVoiceAudioSession() async {
+    /// Every release of the speech session goes through here (voice mode's exit, a readout's end, an auto-spoken
+    /// answer's end), so ducked music comes back up.
+    nonisolated static func deactivateVoiceAudioSession() async {
         await Task.detached(priority: .utility) {
             do {
                 try AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)

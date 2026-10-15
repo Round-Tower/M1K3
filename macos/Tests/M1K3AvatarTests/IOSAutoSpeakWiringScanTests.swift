@@ -36,27 +36,61 @@ struct IOSAutoSpeakWiringScanTests {
         #expect(beginAt.lowerBound < sendAt.lowerBound)
     }
 
-    @Test("spoken answers get a speech session (heard on a muted phone, music ducked), released after")
+    @Test("spoken answers play under the readout's speech session (muted phone heard, music ducked), released after")
     func audioSession() throws {
         let auto = try Self.code("M1K3iOSApp/AppCore+AutoSpeak.swift")
-        #expect(auto.contains("setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])"))
-        #expect(auto.contains("setActive(false, options: .notifyOthersOnDeactivation)"))
+        // One copy of the session config: the readout's / sample's activate and voice mode's deactivate.
+        #expect(auto.contains("await Self.activateSampleAudioSession()"))
+        #expect(auto.contains("Self.deactivateVoiceAudioSession()"))
+        #expect(!auto.contains("setCategory("))
+        let output = try Self.code("M1K3iOSApp/AppCore+VoiceOutput.swift")
+        #expect(output.contains("setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])"))
         // An earcon between two sentences must not flip the session back to ambient mid-answer.
         let core = try Self.code("M1K3iOSApp/AppCore.swift")
         #expect(core.contains("guard voiceLoop == nil, autoSpeakTask == nil else { return }"))
     }
 
-    @Test("an auto-spoken answer keeps its session between sentences: only the answer's own end releases it")
+    @Test("an auto-spoken answer keeps its session between sentences: the utterance-end release asks the policy")
     func sessionHeldBetweenSentences() throws {
-        // Each sentence is one utterance, so onSpeakingEnded fires between two sentences. Its release (for a readout
-        // or a sample) waits while auto-speak holds the session, or ducked music swells back between sentences and the
-        // next one starts on a session that was just deactivated.
+        // Each sentence is one utterance, so onSpeakingEnded fires between two sentences. The rule (release unless
+        // voice mode has the session or an answer holds it) is AnswerAudioSessionPolicyTests.utteranceEnd; this pins
+        // that the shell asks it, with the hold an answer takes at its first sentence, before releasing.
         let voice = try Self.code("M1K3iOSApp/AppCore+Voice.swift")
         let ended = try #require(voice.components(separatedBy: "speech.onSpeakingEnded = {").dropFirst().first)
         let block = ended.components(separatedBy: "speech.onTimelineReady").first ?? ""
-        let guardAt = try #require(block.range(of: "if autoSpeakTask == nil"), "the release ignores auto-speak")
+        let askAt = try #require(
+            block.range(of: "AnswerAudioSessionPolicy.releaseWhenUtteranceEnds("), "the release ignores auto-speak"
+        )
+        #expect(block.contains("answerHoldsSession: answerAudioHeld"))
         let releaseAt = try #require(block.range(of: "deactivateVoiceAudioSession()"))
-        #expect(guardAt.lowerBound < releaseAt.lowerBound)
+        #expect(askAt.lowerBound < releaseAt.lowerBound)
+    }
+
+    @Test("a session's end is generation-owned and asks the policy; the duck starts at the first sentence")
+    func sessionOwnership() throws {
+        // The rule is AnswerAudioSessionPolicyTests.answerEnd; these pin the shell's half of it.
+        let auto = try Self.code("M1K3iOSApp/AppCore+AutoSpeak.swift")
+        let begin = try #require(auto.components(separatedBy: "func beginAutoSpeakSession()").dropFirst().first)
+        // Every session gets its own generation, and its defer hands that generation to the end handler.
+        #expect(begin.contains("autoSpeakGeneration += 1"))
+        #expect(begin.contains("defer { self?.autoSpeakSessionEnded(generation: generation) }"))
+        // No activation at the start of the session: the first sentence takes it.
+        let loopAt = try #require(begin.range(of: "while !Task.isCancelled"))
+        #expect(!begin[..<loopAt.lowerBound].contains("activateSampleAudioSession"))
+        #expect(begin[..<loopAt.lowerBound].contains("await self?.releaseAnswerAudio()"))
+        let sentence = try #require(auto.components(separatedBy: "func speakAnswerSentence(").dropFirst().first)
+        let holdAt = try #require(sentence.range(of: "answerAudioHeld = true"))
+        let activateAt = try #require(sentence.range(of: "await Self.activateSampleAudioSession()"))
+        #expect(holdAt.lowerBound < activateAt.lowerBound)
+        // The end: only the current generation touches Stop and the session, and the release asks the policy.
+        let ended = try #require(
+            auto.components(separatedBy: "func autoSpeakSessionEnded(generation: Int)").dropFirst().first
+        )
+        #expect(ended.contains("generation == autoSpeakGeneration"))
+        #expect(ended.contains("AnswerAudioSessionPolicy.releaseWhenAnswerEnds("))
+        let guardAt = try #require(ended.range(of: "guard isCurrent else { return }"))
+        let stopFaceAt = try #require(ended.range(of: "isSpeakingAnswer = false"))
+        #expect(guardAt.lowerBound < stopFaceAt.lowerBound)
     }
 
     @Test("both auto-speak loops (phone and Mac) skip a sentence that polishes to nothing, never read it raw")
