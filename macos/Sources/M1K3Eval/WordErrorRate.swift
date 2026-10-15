@@ -21,6 +21,8 @@
 //  Review: claude-opus-5-5, 2026-10-15: an ordinal no longer joins a digit word ("one
 //  second" had folded to 3rd; code-quality-reviewer). Still scored as errors: "eight
 //  thirty" vs "8:30", "a hundred", "three point five", "per cent". Confidence 0.8.
+//  Review: claude-opus-5-5, 2026-10-15: #611's nits: the digit-run note says punctuation
+//  doesn't break a run; the -or list gains the -ored and -hood forms. Confidence 0.8.
 
 import Foundation
 
@@ -88,8 +90,9 @@ public enum WordErrorRate {
 
     /// Adjacent digit words are one number however they were grouped: "087 555 1234",
     /// "0875551234" and "zero eight seven, five five five, ..." all read "0875551234".
-    /// The cost: a misheard grouping ("23" for "2, 3") is free, and a wrong digit inside a
-    /// long run is one error, so number-heavy lines score a little kind.
+    /// Punctuation doesn't break a run either ("5. 6 people" reads "56 people"): boundaries
+    /// are gone by now. The cost: a misheard grouping ("23" for "2, 3") is free, and a wrong
+    /// digit inside a long run is one error, so number-heavy lines score a little kind.
     private static func joinDigitRuns(_ words: [String]) -> [String] {
         var out: [String] = []
         for word in words {
@@ -115,6 +118,9 @@ public enum WordErrorRate {
     private static let currencies: Set = ["euro", "euros"]
     private static let ourWords: [String: String] = [
         "harbor": "harbour", "harbors": "harbours", "color": "colour", "colors": "colours",
+        "colored": "coloured", "honored": "honoured", "favored": "favoured", "flavored": "flavoured",
+        "neighborhood": "neighbourhood", "neighborhoods": "neighbourhoods", "labor": "labour",
+        "rumor": "rumour", "rumors": "rumours", "savor": "savour", "vapor": "vapour",
         "favor": "favour", "favorite": "favourite", "honor": "honour", "flavor": "flavour",
         "neighbor": "neighbour", "neighbors": "neighbours", "behavior": "behaviour", "humor": "humour",
         "center": "centre", "theater": "theatre", "meter": "metre", "kilometer": "kilometre",
