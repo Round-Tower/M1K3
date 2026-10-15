@@ -34,6 +34,7 @@
 //  breadcrumbs ("it was slow", TestFlight). Confidence 0.9.
 //
 
+//  Review: claude-opus-5-5, 2026-10-15: `sound-context` for SoundContextListener.
 import Foundation
 import os
 
@@ -87,6 +88,8 @@ public enum M1K3Log {
         case voice
         /// Speech-to-text (WhisperKit + Apple Speech).
         case stt
+        /// Room sounds from SoundAnalysis's built-in classifier (SoundContext).
+        case soundContext = "sound-context"
         /// Earcons / sound effects.
         case sfx
         /// Knowledge corpus retrieval primitives (FTS / vector / fusion).
