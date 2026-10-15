@@ -69,7 +69,6 @@
 import M1K3Avatar
 import M1K3Chat
 import M1K3Inference
-import M1K3LanguageModel
 import M1K3Screengrab
 import StoreKit
 import SwiftUI
@@ -98,15 +97,6 @@ struct ChatScreen: View {
     @State private var pendingFiles: [FileAttachment] = []
     @State private var attachmentError: String?
     @FocusState private var inputFocused: Bool
-
-    // MARK: - Private Cloud Compute (always-on by default)
-
-    @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
-    @State private var privateCloudArming = PrivateCloudArming(
-        isOn: AppCore.privateCloudEnabled(),
-        consent: UserDefaults.standard.object(forKey: PrivateCloudArming.consentDefaultsKey) as? Bool
-    )
-    @State private var privateCloudPending: PendingPrivateCloudSend?
 
     private var chatting: Bool {
         !core.chat.messages.isEmpty
@@ -219,23 +209,6 @@ struct ChatScreen: View {
                     attach(urls)
                 }
             }
-            .sheet(item: $privateCloudPending) { pending in
-                PrivateCloudConsentSheet(
-                    consent: pending.consent,
-                    onSend: { includeConversation in
-                        privateCloudPending = nil
-                        privateCloudArming.consented(
-                            includeConversation: includeConversation, seen: pending.onDeviceShown
-                        )
-                        sendToPrivateCloud(pending.consent, includeConversation: includeConversation)
-                    },
-                    onCancel: {
-                        privateCloudPending = nil
-                        privateCloudArming.declined()
-                    }
-                )
-            }
-            .task { await core.refreshPrivateCloudStatus() }
             .onChange(of: core.selectedBrain) {
                 if !core.selectedBrain.supportsImageInput {
                     AttachmentStore.discard(pendingAttachments)
@@ -654,22 +627,6 @@ struct ChatScreen: View {
 
     private func send() {
         guard canSend else { return }
-        let onDevice = ChatSession.onDeviceMessageIDs(core.chat.messages)
-        let action: PrivateCloudArming.Action = core.voiceLoop != nil ? .local : privateCloudArming.action(
-            control: privateCloudControl, hasAttachments: hasStagedAttachments, onDeviceMessages: onDevice
-        )
-        switch action {
-        case .askConsent:
-            privateCloudPending = PendingPrivateCloudSend(
-                consent: core.chat.privateCloudConsent(for: draft), onDeviceShown: onDevice
-            )
-            return
-        case let .sendDirect(includeConversation):
-            sendToPrivateCloud(core.chat.privateCloudConsent(for: draft), includeConversation: includeConversation)
-            return
-        case .local:
-            break
-        }
         var text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         if !pendingFiles.isEmpty {
             let fileContext = pendingFiles.map(\.contextBlock).joined(separator: "\n\n")
@@ -681,26 +638,6 @@ struct ChatScreen: View {
         pendingFiles = []
         inputFocused = false
         Task { await core.send(text, images: images) }
-    }
-
-    private var hasStagedAttachments: Bool {
-        !pendingAttachments.isEmpty || !pendingFiles.isEmpty
-    }
-
-    private var privateCloudControl: PrivateCloudRung.Control {
-        PrivateCloudRung.control(core.privateCloudState(consent: privateCloudConsent))
-    }
-
-    private func sendToPrivateCloud(_ consent: PrivateCloudTurn.Consent, includeConversation: Bool) {
-        guard core.privateCloudSendAllowed(),
-              consent.conversationID == nil || consent.conversationID == core.chat.activeConversationID,
-              !hasStagedAttachments
-        else { return }
-        draft = ""
-        pendingAttachments = []
-        pendingFiles = []
-        inputFocused = false
-        Task { await core.sendPrivateCloud(consent, includeConversation: includeConversation) }
     }
 
     // MARK: - Attachments

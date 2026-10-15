@@ -84,10 +84,6 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — chat auto-speak (AppCore+AutoSpeak; Kev: "voice on with Kokoro"): a session
 //  begins before each send, Stop also stops the voice (`isSpeakingAnswer` keeps Stop showing while it talks), and an
 //  earcon never flips the session mid-answer. Voice mode's first listen defers to its chime. Confidence 0.65.
-//  Review: Kev + claude-opus-4-6, 2026-10-12 — Private Cloud Compute wired for iOS (Kev: "selectable always on,
-//  if not default to leverage"): PCC backend resolved at launch, always-on toggle (default ON), egress clause
-//  includes PCC, sendPrivateCloud mirrors the Mac. Consent is once (ADR 0010). Confidence 0.7 (verify on device
-//  after Kev enables the portal capability).
 
 import AVFoundation
 #if os(iOS)
@@ -103,7 +99,6 @@ import M1K3Inference
 import M1K3Knowledge
 import M1K3KnowledgeTools
 import M1K3Kokoro
-import M1K3LanguageModel
 import M1K3LogCore
 import M1K3Memory
 import M1K3MemoryChatBridge
@@ -269,71 +264,6 @@ final class AppCore {
     /// `homeBrainActive`, readable off the main actor (the egress clause, per turn).
     nonisolated static let homeBrainLive = Mutex(false)
 
-    // MARK: - Private Cloud Compute (always-on by default on iPhone)
-
-    private static let privateCloudLog = M1K3Log.logger(.security)
-
-    nonisolated static let privateCloudBackend: (any PrivateCloudAnswering)? = {
-        if let live = PrivateCloudBackends.live() { return live }
-        #if DEBUG
-            return PrivateCloudEchoBackend.fromEnvironment(ProcessInfo.processInfo.environment)
-        #else
-            return nil
-        #endif
-    }()
-
-    var privateCloudStatus: PrivateCloudStatus?
-
-    /// Whether PCC is enabled in Settings — absent (first launch) means ON.
-    nonisolated static func privateCloudEnabled() -> Bool {
-        let defaults = UserDefaults.standard
-        return defaults.object(forKey: privateCloudEnabledKey) == nil
-            || defaults.bool(forKey: privateCloudEnabledKey)
-    }
-
-    func privateCloudState(consent: Bool?) -> PrivateCloudState {
-        PrivateCloudState(
-            backendPresent: Self.privateCloudBackend != nil,
-            available: privateCloudStatus?.available ?? true,
-            consent: consent,
-            managedOff: UserDefaults.standard.bool(forKey: PrivateCloudRung.managedOffDefaultsKey),
-            quota: privateCloudStatus?.quota ?? .unknown
-        )
-    }
-
-    var privateCloudConsentPersisted: Bool? {
-        ChatEgressConsent.persisted(in: .standard)
-    }
-
-    func refreshPrivateCloudStatus() async {
-        guard let backend = Self.privateCloudBackend else { return }
-        privateCloudStatus = await backend.status()
-    }
-
-    func privateCloudSendAllowed() -> Bool {
-        guard isReady else { return false }
-        guard Self.privateCloudBackend != nil else { return false }
-        guard Self.privateCloudEnabled() else { return false }
-        let gate = privateCloudState(consent: privateCloudConsentPersisted)
-        guard PrivateCloudRung.escalation(armed: true, gate) == .privateCloud else { return false }
-        return true
-    }
-
-    @discardableResult
-    func sendPrivateCloud(_ consent: PrivateCloudTurn.Consent, includeConversation: Bool) async -> Bool {
-        guard privateCloudSendAllowed(), let backend = Self.privateCloudBackend else { return false }
-        let gate = privateCloudState(consent: privateCloudConsentPersisted)
-        avatar.setActivity(.thinking)
-        beginAutoSpeakSession()
-        await chat.sendPrivateCloud(
-            consent, includeConversation: includeConversation, backend: backend,
-            gate: gate, localBrainName: selectedBrain.displayName
-        )
-        if case .speaking = avatar.state.activity {} else { avatar.resetToIdle() }
-        await refreshPrivateCloudStatus()
-        return true
-    }
-
     /// The Settings web toggle — absent means allowed (the shipped default). One reader for
     /// the palette and the egress clause, so the two can't disagree (#485 review).
     nonisolated static func webSearchAllowed() -> Bool {
@@ -363,10 +293,6 @@ final class AppCore {
     /// deliberately NOT shared spelling with the Mac (it has no Home tier).
     nonisolated static let homeBrainActiveKey = "brainLink.homeActive"
     nonisolated static let webSearchEnabledKey = "webSearchEnabled"
-    /// PCC always-on toggle — default ON on iPhone (Kev, 2026-10-12: "selectable always on,
-    /// if not default to leverage"). The Mac's brain-picker per-message escalation is overkill
-    /// on a phone where the local brain is smaller; PCC gives the best answers out of the box.
-    nonisolated static let privateCloudEnabledKey = "privateCloudEnabled"
     /// Shared spelling with the Mac (AppEnvironment.selectedVoiceTierKey).
     nonisolated static let selectedVoiceTierKey = "selectedVoiceTier"
     /// The full-bleed reactive avatar behind chat — default ON; the Settings
@@ -1194,16 +1120,10 @@ final class AppCore {
                     spoken: defaults.bool(forKey: VoiceModeDefaults.activeKey)
                 )
             },
-            // What can leave this device this turn (#482): web search, the Home brain
-            // (the paired Mac answers over Wi‑Fi), and Private Cloud Compute.
+            // What can leave this device this turn (#482): web search, and the Home brain
+            // (the paired Mac answers over Wi‑Fi). No Private Cloud Compute on iOS.
             egressClauseProvider: {
-                let pccOn = Self.privateCloudBackend != nil && Self.privateCloudEnabled()
-                let facts = EgressFacts(
-                    webSearch: Self.webSearchAllowed(),
-                    privateCloudOffered: pccOn,
-                    privateCloudDefault: pccOn,
-                    brainIsHome: Self.homeBrainLive.withLock { $0 }
-                )
+                let facts = EgressFacts(webSearch: Self.webSearchAllowed(), brainIsHome: Self.homeBrainLive.withLock { $0 })
                 return EgressDisclosure.clause(facts, device: HostPlatform.thisDevice)
             },
             // The Mac's tool router, mirrored (flagged; Mini only unless `toolRouterAllTiers`).
