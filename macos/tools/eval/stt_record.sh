@@ -10,11 +10,16 @@
 #
 # Signed: Kev + claude-opus-5-5, 2026-10-15, Confidence 0.7 (ffmpeg's avfoundation input;
 # verify-by-run: the mic grant goes to the terminal app on the first take). Prior: Unknown.
+# Review: claude-opus-5-5, 2026-10-15: Kev's first run printed nothing; the device listing's
+# exit 251 tripped err_return. list_devices swallows it.
 
 emulate -L zsh
 setopt err_return pipe_fail
 
 here=${0:A:h}
+# ffmpeg's -list_devices always exits non-zero (no input to open): under err_return and
+# pipe_fail that quit the script silently before its first line (2026-10-15), so swallow it.
+list_devices() { ffmpeg -hide_banner -f avfoundation -list_devices true -i "" 2>&1 || true }
 out=~/.cache/m1k3-stt-corpus/$(date +%F)
 device=default
 from=1
@@ -23,14 +28,14 @@ while (( $# )); do
     --out) out=$2; shift 2 ;;
     --device) device=$2; shift 2 ;;
     --from) from=$2; shift 2 ;;
-    --list-devices) ffmpeg -hide_banner -f avfoundation -list_devices true -i "" 2>&1 | grep -A20 'audio devices'; return 0 ;;
+    --list-devices) list_devices | grep -A20 'audio devices'; return 0 ;;
     *) print -u2 "unknown flag $1"; return 2 ;;
   esac
 done
 command -v ffmpeg >/dev/null || { print -u2 "needs ffmpeg (brew install ffmpeg)"; return 2 }
 if [[ $device == default ]]; then
   # The first device named a microphone: index 0 is often a virtual device (Zoom's records silence).
-  device=$(ffmpeg -hide_banner -f avfoundation -list_devices true -i "" 2>&1 \
+  device=$(list_devices \
     | sed -n '/audio devices/,$p' | grep -i 'microphone' | head -1 | sed -E 's/.*\[([0-9]+)\].*/\1/')
   [[ -n $device ]] || { print -u2 "no microphone found: pick one with --list-devices, then --device N"; return 2 }
 fi
