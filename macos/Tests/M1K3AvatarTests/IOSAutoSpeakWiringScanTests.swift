@@ -105,6 +105,21 @@ struct IOSAutoSpeakWiringScanTests {
         #expect(!mac.contains("await self.speak(sentence)"))
     }
 
+    @Test("an answer's speaker button is Stop while an answer is being auto-spoken, never a second reading")
+    func speakerButtonStopsAutoSpeak() throws {
+        // speech.stop() alone skips only the current sentence (the loop speaks the next), and between two sentences
+        // isSpeaking() is false, so a tap queued a second reading over the live session.
+        let output = try Self.code("M1K3iOSApp/AppCore+VoiceOutput.swift")
+        let read = try #require(output.components(separatedBy: "func readAloud(_ text: String)").dropFirst().first)
+        let checkAt = try #require(read.range(of: "if autoSpeakTask != nil {"))
+        let toggleAt = try #require(read.range(of: "await speech.isSpeaking()"))
+        #expect(checkAt.lowerBound < toggleAt.lowerBound)
+        let branch = read[checkAt.lowerBound...].prefix(200)
+        #expect(branch.contains("cancelAutoSpeak()"))
+        #expect(branch.contains("await stopSpeakingAnswer()"))
+        #expect(branch.contains("return"))
+    }
+
     @Test("stop and leaving the app end it; Settings has the switch on the shared key")
     func stops() throws {
         let core = try Self.code("M1K3iOSApp/AppCore.swift")

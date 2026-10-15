@@ -33,6 +33,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — `activateSampleAudioSession` is internal: chat
 //  auto-speak plays under the same session instead of keeping its own copy (which swallowed errors unlogged).
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — readAloud knows about chat auto-speak (master's
+//  button and the branch's auto-speak met in the merge): a tap while an answer is being auto-spoken stops the whole
+//  answer, where it used to skip one sentence or queue a second reading over it. Confidence 0.8 (verify on the phone).
 //
 
 import AVFoundation
@@ -126,6 +129,13 @@ extension AppCore {
     /// ends (AppCore+Voice), so ducked music comes back.
     func readAloud(_ text: String) {
         guard !isVoiceModeActive, !chat.isResponding else { return }
+        // While an answer is being auto-spoken, the button is its Stop: `speech.stop()` alone would skip only the
+        // current sentence (the loop speaks the next), and between sentences a tap would queue a second reading.
+        if autoSpeakTask != nil {
+            cancelAutoSpeak()
+            Task { await stopSpeakingAnswer() }
+            return
+        }
         let polished = SpeechTextPolish.polish(text)
         let spoken = polished.isEmpty ? text : polished
         Task {
