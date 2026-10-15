@@ -66,6 +66,10 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-13 (#597 follow-up) — speech that ends outside voice mode releases the
 //  audio session (.notifyOthersOnDeactivation), so music a readout ducked comes back; entering voice mode stops a
 //  readout before the mic opens. Confidence 0.8 (verify-by-launch, with music playing).
+//  Review: Kev + claude-opus-5.5, 2026-10-15 — merging the branch's chat auto-speak with that release: an auto-spoken
+//  answer is one utterance per sentence, so the release waits while `autoSpeakTask` holds the session (it releases its
+//  own when the answer ends). Read from the code, not heard: without it ducked music would come back up between
+//  sentences. Confidence 0.75 (verify-by-ear on the phone, music playing, Speak answers on).
 
 import AVFoundation
 import Foundation
@@ -110,8 +114,11 @@ extension AppCore {
                 } else {
                     avatar.resetToIdle()
                     // A readout or a sample ended outside voice mode: give the audio back so
-                    // music ducked by the playback session returns (#597 follow-up).
-                    Task { await Self.deactivateVoiceAudioSession() }
+                    // music ducked by the playback session returns (#597 follow-up). Not between
+                    // the sentences of an auto-spoken answer: that session releases itself at the end.
+                    if autoSpeakTask == nil {
+                        Task { await Self.deactivateVoiceAudioSession() }
+                    }
                 }
             }
         }

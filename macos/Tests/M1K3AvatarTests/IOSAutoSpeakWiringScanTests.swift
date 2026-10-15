@@ -8,6 +8,9 @@
 //  felt beat is verify-on-device; these pin the wiring.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-12, Confidence 0.6 (text tripwires). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-15 — `sessionHeldBetweenSentences`: master's #597 follow-up releases the
+//  audio session whenever speech ends outside voice mode, and an auto-spoken answer ends one utterance per sentence,
+//  so that release must wait while auto-speak holds the session. Confidence 0.6 (a text tripwire; verify-by-ear).
 //
 
 import Foundation
@@ -41,6 +44,19 @@ struct IOSAutoSpeakWiringScanTests {
         // An earcon between two sentences must not flip the session back to ambient mid-answer.
         let core = try Self.code("M1K3iOSApp/AppCore.swift")
         #expect(core.contains("guard voiceLoop == nil, autoSpeakTask == nil else { return }"))
+    }
+
+    @Test("an auto-spoken answer keeps its session between sentences: only the answer's own end releases it")
+    func sessionHeldBetweenSentences() throws {
+        // Each sentence is one utterance, so onSpeakingEnded fires between two sentences. Its release (for a readout
+        // or a sample) waits while auto-speak holds the session, or ducked music swells back between sentences and the
+        // next one starts on a session that was just deactivated.
+        let voice = try Self.code("M1K3iOSApp/AppCore+Voice.swift")
+        let ended = try #require(voice.components(separatedBy: "speech.onSpeakingEnded = {").dropFirst().first)
+        let block = ended.components(separatedBy: "speech.onTimelineReady").first ?? ""
+        let guardAt = try #require(block.range(of: "if autoSpeakTask == nil"), "the release ignores auto-speak")
+        let releaseAt = try #require(block.range(of: "deactivateVoiceAudioSession()"))
+        #expect(guardAt.lowerBound < releaseAt.lowerBound)
     }
 
     @Test("stop and leaving the app end it; Settings has the switch on the shared key")
