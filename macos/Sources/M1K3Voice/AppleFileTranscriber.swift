@@ -16,6 +16,8 @@
 //  clips without it. Confidence 0.75.
 //  Review: claude-opus-5-5, 2026-10-15: the copy goes in chunks, zeroes its silence
 //  explicitly, takes an empty clip, and is deleted on any failure (code-quality-reviewer).
+//  Review: claude-opus-5-5, 2026-10-15: #611's bot nits: the reader task is cancelled when
+//  analyze throws; the silence fill says why floatChannelData is safe.
 
 import AVFoundation
 import Foundation
@@ -59,6 +61,7 @@ public enum AppleFileTranscriber {
             let collected = Task {
                 try await transcriber.results.reduce(into: [String]()) { $0.append(String($1.text.characters)) }
             }
+            defer { collected.cancel() } // a throwing analyze must not leave the reader running
             try await analyze(file, modules: [transcriber], context: context)
             return try join(await collected.value)
         case .dictation:
@@ -70,6 +73,7 @@ public enum AppleFileTranscriber {
             let collected = Task {
                 try await transcriber.results.reduce(into: [String]()) { $0.append(String($1.text.characters)) }
             }
+            defer { collected.cancel() } // a throwing analyze must not leave the reader running
             try await analyze(file, modules: [transcriber], context: context)
             return try join(await collected.value)
         }
@@ -121,8 +125,11 @@ public enum AppleFileTranscriber {
             var silent = AVAudioFrameCount(seconds * format.sampleRate)
             while silent > 0 {
                 buffer.frameLength = min(chunk, silent)
-                for channel in 0 ..< Int(format.channelCount) {
-                    buffer.floatChannelData.map { memset($0[channel], 0, Int(buffer.frameLength) * 4) }
+                // processingFormat is always deinterleaved float32, so floatChannelData is set.
+                if let channels = buffer.floatChannelData {
+                    for channel in 0 ..< Int(format.channelCount) {
+                        memset(channels[channel], 0, Int(buffer.frameLength) * MemoryLayout<Float>.size)
+                    }
                 }
                 try sink.write(from: buffer)
                 silent -= buffer.frameLength

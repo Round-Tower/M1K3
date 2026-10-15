@@ -9,6 +9,7 @@
 //  Review: claude-opus-5-5, 2026-10-15: Kev's first real corpus showed three formatting
 //  gaps scored as errors: a digit run grouped differently, a currency, US spelling. Pinned.
 //  Review: claude-opus-5-5, 2026-10-15: "one second" folded to 3rd (review catch). Pinned.
+//  Review: claude-opus-5-5, 2026-10-15: the -ored and -hood spellings (#611 nit). Pinned.
 
 @testable import M1K3Eval
 import Testing
@@ -88,6 +89,8 @@ struct WordErrorRateTests {
         #expect(errors("summarise the notes", "summarize the notes") == 0)
         #expect(errors("walk to the harbour", "walk to the harbor") == 0)
         #expect(errors("the colour of the sky", "the color of the sky") == 0)
+        #expect(errors("a quiet neighbourhood", "a quiet neighborhood") == 0)
+        #expect(errors("the coloured lights", "the colored lights") == 0)
         #expect(errors("walk to the harbour", "walk to the arbour") == 1)
     }
 
