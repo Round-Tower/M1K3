@@ -1,7 +1,7 @@
 #!/usr/bin/env zsh
 # stt_record.sh — record the speech-to-text eval corpus: one clip per prompt, your voice.
 #
-#   macos/tools/eval/stt_record.sh [--out DIR] [--device N] [--list-devices] [--from N]
+#   macos/tools/eval/stt_record.sh [--out DIR] [--prompts FILE] [--device N] [--list-devices] [--from N]
 #
 # Shows each line of stt_prompts.txt (plus ~/.cache/m1k3-stt-corpus/extra.txt, if present) in
 # large type. Enter starts recording, Enter stops; r re-records the last clip; s skips; q quits.
@@ -17,6 +17,8 @@
 # and a quit driven through a pty. Confidence 0.8.
 # Review: claude-opus-5-5, 2026-10-15: the no-microphone message and empty prompt files no
 # longer trip err_return (grep's exit 1, head's SIGPIPE on grep); code-quality-reviewer.
+# Review: claude-opus-5-5, 2026-10-15: --prompts FILE, for the held-out set
+# (stt_prompts_heldout.txt). The default stays stt_prompts.txt.
 
 emulate -L zsh
 setopt err_return pipe_fail
@@ -28,11 +30,13 @@ list_devices() { ffmpeg -hide_banner -f avfoundation -list_devices true -i "" 2>
 out=~/.cache/m1k3-stt-corpus/$(date +%F)
 device=default
 from=1
+prompts_file=''
 while (( $# )); do
   case $1 in
     --out) out=$2; shift 2 ;;
     --device) device=$2; shift 2 ;;
     --from) from=$2; shift 2 ;;
+    --prompts) prompts_file=$2; shift 2 ;;
     --list-devices) list_devices | grep -A20 'audio devices' || true; return 0 ;;
     *) print -u2 "unknown flag $1"; return 2 ;;
   esac
@@ -45,7 +49,9 @@ if [[ $device == default ]]; then
   [[ -n $device ]] || { print -u2 "no microphone found: pick one with --list-devices, then --device N"; return 2 }
 fi
 
-prompts=( ${(f)"$(grep -v -e '^#' -e '^[[:space:]]*$' $here/stt_prompts.txt || true)"} )
+[[ -n $prompts_file ]] || prompts_file=$here/stt_prompts.txt
+[[ -f $prompts_file ]] || { print -u2 "no prompts file: $prompts_file"; return 2 }
+prompts=( ${(f)"$(grep -v -e '^#' -e '^[[:space:]]*$' $prompts_file || true)"} )
 extra=~/.cache/m1k3-stt-corpus/extra.txt
 [[ -f $extra ]] && prompts+=( ${(f)"$(grep -v -e '^#' -e '^[[:space:]]*$' $extra || true)"} )
 mkdir -p $out

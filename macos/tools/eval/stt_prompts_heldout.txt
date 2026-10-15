@@ -1,0 +1,37 @@
+# Held-out prompts for NameRepair and the polish pass (2026-10-15). None of these names appear
+# in stt_prompts.txt or the Moira held-out set: record in a different room or with other
+# headphones if you can, so this set tests a second condition as well as unseen names.
+#   macos/tools/eval/stt_record.sh --prompts macos/tools/eval/stt_prompts_heldout.txt --out ~/.cache/m1k3-stt-corpus/heldout-kev
+
+# Names (score NameRepair with these in the names list, plus distractors)
+We're meeting Ciarán and Sadhbh in Lahinch on Sunday.
+Did Colm ever get back from Ennistymon?
+Book the train to Listowel and a taxi on to Ballinskelligs.
+Darragh recommended a café in Bantry.
+Remind me that Méabh's birthday is the ninth.
+The ferry to Inis Mór leaves from Rossaveal at ten.
+Deirdre said the walk at Glendalough was quiet.
+Ask Fiachra whether Doolin has a free campsite.
+Róisín is flying into Knock on Thursday evening.
+We stayed two nights in Dunmanway last summer.
+
+# M1K3 words
+Ask Big to check the knowledge graph for anything about WhisperKit.
+Turn on Private Cloud for this one question.
+Open the menu bar and switch to Mini.
+
+# Traps: ordinary words that sound like names in the list
+The kids walked to school in the rain.
+Stay calm and read me the next message.
+Don't abandon the draft, just shorten the ending.
+Move the picture up an inch on the left.
+The launch went well, so let's celebrate tonight.
+Can you find the notes from the board meeting?
+I need a new mallet for the tent pegs.
+
+# Everyday
+What's the weather doing tomorrow afternoon?
+Read me the last message from the plumber.
+Add bin bags and washing-up liquid to the list.
+How far is it to the nearest petrol station?
+Set a reminder to renew the car tax next week.
