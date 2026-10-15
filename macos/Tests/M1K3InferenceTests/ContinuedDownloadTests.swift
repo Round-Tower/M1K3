@@ -134,6 +134,21 @@ struct ContinuedDownloadWiringScanTests {
         #expect(core.contains("self?.brainDownloadContinues = carried"))
     }
 
+    @Test("a download that ends before the system starts its task withdraws the request")
+    func finishBeforeAttachCancelsTheRequest() throws {
+        // Otherwise the request stays pending, the system may still show progress UI for a finished download, and
+        // its handler then completes the task as failed (nothing is current any more).
+        let task = try Self.code("M1K3iOSApp/ContinuedDownloadTask.swift")
+        let finish = try #require(task.components(separatedBy: "func finish(success: Bool)").dropFirst().first)
+            .components(separatedBy: "private func attach(").first ?? ""
+        let unattachedAt = try #require(finish.range(of: "if task == nil {"))
+        let cancelAt = try #require(
+            finish.range(of: "BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: identifier)")
+        )
+        #expect(unattachedAt.lowerBound < cancelAt.lowerBound)
+        #expect(task.contains("ContinuedDownloadTask(identifier: plan.identifier,"))
+    }
+
     @Test("while iOS carries the download the screen may sleep, and the row says the person can leave")
     func copyAndKeepAwake() throws {
         let root = try Self.code("M1K3iOSApp/RootView.swift")

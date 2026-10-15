@@ -14,6 +14,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — `onCarry`: whether iOS is carrying the download
 //  follows the task (true at attach, false at an expiry), not the submission. A foreground expiry used to leave the
 //  app saying it was carried, so the screen could sleep and the transfer restarted. Confidence 0.65.
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — `finish` before the system attached withdraws
+//  the pending request (`BGTaskScheduler.cancel(taskRequestWithIdentifier:)`). Confidence 0.65 (device-only).
 //
 
 #if os(iOS)
@@ -30,12 +32,19 @@
         private weak static var current: ContinuedDownloadTask?
         private static let log = M1K3Log.logger(.iosCore)
 
+        /// The submitted request's identifier, to withdraw it if the download ends before the system starts it.
+        private let identifier: String
         private var task: BGContinuedProcessingTask?
         private var lastFraction: Double = 0
         private let onCarry: @MainActor (Bool) -> Void
         private let onStop: @MainActor () -> Void
 
-        private init(onCarry: @escaping @MainActor (Bool) -> Void, onStop: @escaping @MainActor () -> Void) {
+        private init(
+            identifier: String,
+            onCarry: @escaping @MainActor (Bool) -> Void,
+            onStop: @escaping @MainActor () -> Void
+        ) {
+            self.identifier = identifier
             self.onCarry = onCarry
             self.onStop = onStop
         }
@@ -66,7 +75,7 @@
                 }
                 registered.insert(plan.identifier)
             }
-            let download = ContinuedDownloadTask(onCarry: onCarry, onStop: onStop)
+            let download = ContinuedDownloadTask(identifier: plan.identifier, onCarry: onCarry, onStop: onStop)
             current = download // before submit: the system may start the task at once
             let request = BGContinuedProcessingTaskRequest(
                 identifier: plan.identifier, title: plan.title, subtitle: plan.subtitle
@@ -89,6 +98,11 @@
         }
 
         func finish(success: Bool) {
+            if task == nil {
+                // A fast download can end before the system starts the task: withdraw the request, or it stays
+                // pending and the system may show progress for a download that's already done.
+                BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: identifier)
+            }
             task?.setTaskCompleted(success: success)
             task = nil
             if Self.current === self { Self.current = nil }
