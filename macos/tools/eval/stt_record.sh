@@ -1,0 +1,70 @@
+#!/usr/bin/env zsh
+# stt_record.sh — record the speech-to-text eval corpus: one clip per prompt, your voice.
+#
+#   macos/tools/eval/stt_record.sh [--out DIR] [--device N] [--list-devices] [--from N]
+#
+# Shows each line of stt_prompts.txt (plus ~/.cache/m1k3-stt-corpus/extra.txt, if present) in
+# large type. Enter starts recording, Enter stops; r re-records the last clip; s skips; q quits.
+# Each clip is saved as clip-NN.wav (16 kHz mono) beside clip-NN.txt (the reference). The corpus
+# is your voice: it lives in ~/.cache/m1k3-stt-corpus/<date>/ and never in the repo.
+#
+# Signed: Kev + claude-opus-5-5, 2026-10-15, Confidence 0.7 (ffmpeg's avfoundation input;
+# verify-by-run: the mic grant goes to the terminal app on the first take). Prior: Unknown.
+
+emulate -L zsh
+setopt err_return pipe_fail
+
+here=${0:A:h}
+out=~/.cache/m1k3-stt-corpus/$(date +%F)
+device=default
+from=1
+while (( $# )); do
+  case $1 in
+    --out) out=$2; shift 2 ;;
+    --device) device=$2; shift 2 ;;
+    --from) from=$2; shift 2 ;;
+    --list-devices) ffmpeg -hide_banner -f avfoundation -list_devices true -i "" 2>&1 | grep -A20 'audio devices'; return 0 ;;
+    *) print -u2 "unknown flag $1"; return 2 ;;
+  esac
+done
+command -v ffmpeg >/dev/null || { print -u2 "needs ffmpeg (brew install ffmpeg)"; return 2 }
+if [[ $device == default ]]; then
+  # The first device named a microphone: index 0 is often a virtual device (Zoom's records silence).
+  device=$(ffmpeg -hide_banner -f avfoundation -list_devices true -i "" 2>&1 \
+    | sed -n '/audio devices/,$p' | grep -i 'microphone' | head -1 | sed -E 's/.*\[([0-9]+)\].*/\1/')
+  [[ -n $device ]] || { print -u2 "no microphone found: pick one with --list-devices, then --device N"; return 2 }
+fi
+
+prompts=( ${(f)"$(grep -v '^#' $here/stt_prompts.txt | grep -v '^[[:space:]]*$')"} )
+extra=~/.cache/m1k3-stt-corpus/extra.txt
+[[ -f $extra ]] && prompts+=( ${(f)"$(grep -v '^#' $extra | grep -v '^[[:space:]]*$')"} )
+mkdir -p $out
+print "Recording ${#prompts} prompts into $out (mic: $device). q quits, s skips, r redoes the last."
+
+take() {  # $1 = clip path stem; records until Enter
+  local stem=$1
+  ffmpeg -hide_banner -loglevel error -y -f avfoundation -i ":$device" -ac 1 -ar 16000 "$stem.wav" &
+  local pid=$!
+  read -s "?  ● recording… Enter to stop"
+  kill -INT $pid 2>/dev/null; wait $pid 2>/dev/null
+  print "\r  ✓ saved $(basename $stem).wav                "
+}
+
+i=$from
+while (( i <= ${#prompts} )); do
+  line=${prompts[i]}
+  stem=$out/clip-$(printf %02d $i)
+  print -P "\n%B[$i/${#prompts}]%b"
+  print -P "%B%F{yellow}  $line%f%b"
+  read -k1 -s "key?  Enter: record · s: skip · r: redo previous · q: quit "
+  print
+  case $key in
+    q) break ;;
+    s) (( i++ )); continue ;;
+    r) (( i > from )) && (( i-- )); continue ;;
+  esac
+  print -r -- "$line" > "$stem.txt"
+  take $stem
+  (( i++ ))
+done
+print "\nDone: $(ls $out/*.wav 2>/dev/null | wc -l | tr -d ' ') clips in $out"
