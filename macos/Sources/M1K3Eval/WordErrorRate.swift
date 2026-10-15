@@ -14,6 +14,10 @@
 //  Signed: Kev + claude-opus-5-5, 2026-10-15, Confidence 0.8 (pinned; the number
 //  folding covers cardinals to the millions and ordinals, not years or times).
 //  Prior: Unknown.
+//  Review: claude-opus-5-5, 2026-10-15: Kev's first corpus scored three formatting gaps as
+//  errors (Apple's 0875551234 vs a grouped reading, "€462.50", Whisper's US "summarize" and
+//  "harbor"): adjacent digit words now join, euro is dropped, -ize/-or fold to -ise/-our.
+//  Confidence 0.8.
 
 import Foundation
 
@@ -59,9 +63,7 @@ public enum WordErrorRate {
         for (index, character) in characters.enumerated() {
             if character.isLetter || character.isNumber {
                 word.append(character)
-            } else if character == ":", !word.isEmpty, word.allSatisfy(\.isNumber),
-                      index + 1 < characters.count, characters[index + 1].isNumber
-            {
+            } else if character == ":", isClockColon(at: index, in: characters, after: word) {
                 word.append(character) // a clock time ("8:30") stays one word
             } else if character == "-" || character.isWhitespace {
                 flush()
@@ -71,8 +73,49 @@ public enum WordErrorRate {
             }
         }
         flush()
-        return foldTimes(foldNumbers(tokens.filter { !fillers.contains($0) })).filter { $0 != boundary }
+        let words = foldTimes(foldNumbers(tokens.filter { !fillers.contains($0) }))
+            .filter { $0 != boundary && !currencies.contains($0) }
+            .map(irishSpelling)
+        return joinDigitRuns(words)
     }
+
+    private static func isClockColon(at index: Int, in characters: [Character], after word: String) -> Bool {
+        !word.isEmpty && word.allSatisfy(\.isNumber) && index + 1 < characters.count && characters[index + 1].isNumber
+    }
+
+    /// Adjacent digit words are one number however they were grouped: "087 555 1234",
+    /// "0875551234" and "zero eight seven, five five five, ..." all read "0875551234".
+    private static func joinDigitRuns(_ words: [String]) -> [String] {
+        var out: [String] = []
+        for word in words {
+            if word.allSatisfy(\.isNumber), let last = out.last, last.allSatisfy(\.isNumber) {
+                out[out.count - 1] = last + word
+            } else {
+                out.append(word)
+            }
+        }
+        return out
+    }
+
+    /// One spelling per word: American "-ize" and "-or" read as the Irish "-ise" and "-our".
+    private static func irishSpelling(_ word: String) -> String {
+        if let irish = ourWords[word] { return irish }
+        for (american, irish) in [("ize", "ise"), ("izes", "ises"), ("ized", "ised"), ("izing", "ising")]
+            where word.count > american.count + 2 && word.hasSuffix(american)
+        {
+            return String(word.dropLast(american.count)) + irish
+        }
+        return word
+    }
+
+    /// A currency is formatting: "€20" and "twenty euro" both read "20" (the symbol is punctuation).
+    private static let currencies: Set = ["euro", "euros"]
+    private static let ourWords: [String: String] = [
+        "harbor": "harbour", "harbors": "harbours", "color": "colour", "colors": "colours",
+        "favor": "favour", "favorite": "favourite", "honor": "honour", "flavor": "flavour",
+        "neighbor": "neighbour", "neighbors": "neighbours", "behavior": "behaviour", "humor": "humour",
+        "center": "centre", "theater": "theatre", "meter": "metre", "kilometer": "kilometre",
+    ]
 
     /// Spoken clock times as digits: "half past 8" and "8:30" both read "8:30";
     /// "quarter past 3" "3:15", "quarter to 9" "8:45", "8 oclock" and "8:00" both "8".
@@ -108,7 +151,8 @@ public enum WordErrorRate {
     private static let fillers: Set = ["um", "umm", "uh", "uhh", "er", "erm", "hmm", "mm"]
 
     private static let units: [String: Int] = [
-        "zero": 0, "oh": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+        "zero": 0, "oh": 0, "one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7,
+        "eight": 8, "nine": 9,
         "ten": 10, "eleven": 11, "twelve": 12, "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16,
         "seventeen": 17, "eighteen": 18, "nineteen": 19,
     ]
@@ -165,7 +209,7 @@ public enum WordErrorRate {
             } else if let scale = scales[token], inRun {
                 total += max(current, 1) * scale; current = 0; onlyDigits = false; runLength += 1
             } else if token == "and", inRun, current % 100 == 0, current + total > 0,
-                      index + 1 < tokens.count, units[tokens[index + 1]] != nil || tens[tokens[index + 1]] != nil
+                      isNumberWord(at: index + 1, in: tokens)
             {
                 // "four hundred AND sixty-two": part of the number.
             } else if let value = ordinals[token] {
@@ -180,6 +224,10 @@ public enum WordErrorRate {
         }
         emit()
         return out
+    }
+
+    private static func isNumberWord(at index: Int, in tokens: [String]) -> Bool {
+        index < tokens.count && (units[tokens[index]] != nil || tens[tokens[index]] != nil)
     }
 
     private static func ordinal(_ value: Int) -> String {

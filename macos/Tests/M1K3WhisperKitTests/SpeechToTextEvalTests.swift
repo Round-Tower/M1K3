@@ -18,6 +18,8 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-15, Confidence 0.65 (engine glue; the scoring
 //  and pairing it relies on are pinned in M1K3EvalTests). Prior: Unknown.
+//  Review: claude-opus-5-5, 2026-10-15: the arms moved into engines(...) (lint: body length);
+//  the summary pads names itself, since %-34@ doesn't pad an NSString.
 
 import AVFoundation
 import Foundation
@@ -39,24 +41,7 @@ struct SpeechToTextEvalTests {
         let locale = Locale(identifier: env["M1K3_STT_LOCALE"] ?? "en_IE")
         let (vocabulary, oracle) = try vocabularyList(clips: clips)
 
-        let whisper = WhisperKitBatchTranscriber(
-            model: WhisperModelVariant.defaultVariant.modelID,
-            downloadBase: cache.appendingPathComponent("m1k3-stt-eval/whisper")
-        )
-        try await whisper.prepareModel { _ in }
-
-        let vocabArm = oracle ? "analyzer+vocab (oracle names)" : "analyzer+vocab"
-        typealias Engine = @Sendable (URL) async throws -> String
-        let arms: [(String, Engine)] = [
-            ("analyzer (shipped, fast)", { try await AppleFileTranscriber.transcribe($0, locale: locale, module: .speech(fast: true)) }),
-            ("analyzer (accurate)", { try await AppleFileTranscriber.transcribe($0, locale: locale, module: .speech(fast: false)) }),
-            (vocabArm, { try await AppleFileTranscriber.transcribe($0, locale: locale, module: .speech(fast: true), vocabulary: vocabulary) }),
-            ("dictation", { try await AppleFileTranscriber.transcribe($0, locale: locale, module: .dictation) }),
-            ("dictation+vocab", { try await AppleFileTranscriber.transcribe($0, locale: locale, module: .dictation, vocabulary: vocabulary) }),
-            ("whisper \(WhisperModelVariant.defaultVariant.rawValue)", { url in
-                try await whisper.transcribe(fileURL: url).map(\.text).joined(separator: " ")
-            }),
-        ]
+        let arms = try await engines(locale: locale, vocabulary: vocabulary, oracle: oracle)
 
         var results: [SpeechToTextArm] = []
         var transcripts: [String] = []
@@ -70,9 +55,11 @@ struct SpeechToTextEvalTests {
                     let heard = try await engine(clip.audio)
                     let elapsed = clock.now - start
                     let score = WordErrorRate.score(reference: clip.reference, hypothesis: heard)
-                    arm.add(score, audioSeconds: seconds, processingSeconds: Double(elapsed.components.seconds)
-                        + Double(elapsed.components.attoseconds) / 1e18)
-                    transcripts.append("[\(name)] \(clip.id) \(score.errors)/\(score.words)\n  ref: \(clip.reference)\n  hyp: \(heard)")
+                    let processing = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18
+                    arm.add(score, audioSeconds: seconds, processingSeconds: processing)
+                    transcripts.append(
+                        "[\(name)] \(clip.id) \(score.errors)/\(score.words)\n  ref: \(clip.reference)\n  hyp: \(heard)"
+                    )
                 } catch {
                     arm.fail(clip: clip.id, reason: String(describing: error))
                 }
@@ -80,7 +67,9 @@ struct SpeechToTextEvalTests {
             results.append(arm)
         }
 
-        let report = SpeechToTextReport(date: Self.today(), clips: clips.count, locale: locale.identifier, arms: results)
+        let report = SpeechToTextReport(
+            date: Self.today(), clips: clips.count, locale: locale.identifier, arms: results
+        )
         let out = env["M1K3_STT_OUT"].map(URL.init(fileURLWithPath:))
             ?? corpus.appendingPathComponent("report.json")
         try report.encoded().write(to: out)
@@ -88,17 +77,44 @@ struct SpeechToTextEvalTests {
             to: corpus.appendingPathComponent("transcripts.txt"), atomically: true, encoding: .utf8
         )
         for arm in results {
-            print(String(format: "STT %-34@ WER %5.1f%%  RTF %.3f  failed %d",
-                         arm.name, arm.wordErrorRate * 100, arm.realTimeFactor, arm.failures.count))
+            let name = arm.name.padding(toLength: 34, withPad: " ", startingAt: 0)
+            print(String(format: "STT %@ WER %5.1f%%  RTF %.3f  failed %d",
+                         name, arm.wordErrorRate * 100, arm.realTimeFactor, arm.failures.count))
         }
         print("STT report: \(out.path)")
         #expect(results.allSatisfy { $0.words > 0 || !$0.failures.isEmpty })
     }
 
+    private typealias Engine = @Sendable (URL) async throws -> String
+
+    /// The arms, in report order. Whisper downloads into the eval's own cache first.
+    private func engines(locale: Locale, vocabulary: [String], oracle: Bool) async throws -> [(String, Engine)] {
+        let whisper = WhisperKitBatchTranscriber(
+            model: WhisperModelVariant.defaultVariant.modelID,
+            downloadBase: cache.appendingPathComponent("m1k3-stt-eval/whisper")
+        )
+        try await whisper.prepareModel { _ in }
+        func apple(_ module: AppleFileTranscriber.Module, vocabulary: [String] = []) -> Engine {
+            { try await AppleFileTranscriber.transcribe($0, locale: locale, module: module, vocabulary: vocabulary) }
+        }
+        let vocabArm = oracle ? "analyzer+vocab (oracle names)" : "analyzer+vocab"
+        return [
+            ("analyzer (shipped, fast)", apple(.speech(fast: true))),
+            ("analyzer (accurate)", apple(.speech(fast: false))),
+            (vocabArm, apple(.speech(fast: true), vocabulary: vocabulary)),
+            ("dictation", apple(.dictation)),
+            ("dictation+vocab", apple(.dictation, vocabulary: vocabulary)),
+            ("whisper \(WhisperModelVariant.defaultVariant.rawValue)", { url in
+                try await whisper.transcribe(fileURL: url).map(\.text).joined(separator: " ")
+            }),
+        ]
+    }
+
     private func corpusDirectory() throws -> URL {
         if let path = env["M1K3_STT_CORPUS"] { return URL(fileURLWithPath: path) }
         let root = cache.appendingPathComponent("m1k3-stt-corpus")
-        let folders = try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: [.isDirectoryKey])
+        let folders = try FileManager.default
+            .contentsOfDirectory(at: root, includingPropertiesForKeys: [.isDirectoryKey])
             .filter { (try? $0.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true }
             .sorted { $0.lastPathComponent < $1.lastPathComponent }
         return try #require(folders.last, "no corpus under \(root.path)")

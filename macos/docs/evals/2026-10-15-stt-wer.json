@@ -1,0 +1,79 @@
+{
+  "arms" : [
+    {
+      "audioSeconds" : 124.341375,
+      "errors" : 37,
+      "failures" : [
+
+      ],
+      "name" : "analyzer (shipped, fast)",
+      "processingSeconds" : 6.0445673740000005,
+      "realTimeFactor" : 0.048612679198697946,
+      "wordErrorRate" : 0.10662824207492795,
+      "words" : 347
+    },
+    {
+      "audioSeconds" : 124.341375,
+      "errors" : 31,
+      "failures" : [
+
+      ],
+      "name" : "analyzer (accurate)",
+      "processingSeconds" : 5.412180001,
+      "realTimeFactor" : 0.04352678262565458,
+      "wordErrorRate" : 0.0893371757925072,
+      "words" : 347
+    },
+    {
+      "audioSeconds" : 124.341375,
+      "errors" : 37,
+      "failures" : [
+
+      ],
+      "name" : "analyzer+vocab (oracle names)",
+      "processingSeconds" : 5.765733377,
+      "realTimeFactor" : 0.046370191555304904,
+      "wordErrorRate" : 0.10662824207492795,
+      "words" : 347
+    },
+    {
+      "audioSeconds" : 124.341375,
+      "errors" : 39,
+      "failures" : [
+
+      ],
+      "name" : "dictation",
+      "processingSeconds" : 7.829502335000001,
+      "realTimeFactor" : 0.06296779599710878,
+      "wordErrorRate" : 0.11239193083573487,
+      "words" : 347
+    },
+    {
+      "audioSeconds" : 124.341375,
+      "errors" : 36,
+      "failures" : [
+
+      ],
+      "name" : "dictation+vocab",
+      "processingSeconds" : 10.484990795000002,
+      "realTimeFactor" : 0.08432423073172547,
+      "wordErrorRate" : 0.1037463976945245,
+      "words" : 347
+    },
+    {
+      "audioSeconds" : 124.341375,
+      "errors" : 29,
+      "failures" : [
+
+      ],
+      "name" : "whisper small.en",
+      "processingSeconds" : 12.033839334999998,
+      "realTimeFactor" : 0.09678065193504574,
+      "wordErrorRate" : 0.08357348703170028,
+      "words" : 347
+    }
+  ],
+  "clips" : 30,
+  "date" : "2026-10-15",
+  "locale" : "en_IE"
+}

@@ -6,6 +6,8 @@
 //  punctuation, a fada, "fifteen" vs "15", fillers), mishearing always does.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-15, Confidence 0.85. Prior: Unknown.
+//  Review: claude-opus-5-5, 2026-10-15: Kev's first real corpus showed three formatting
+//  gaps scored as errors: a digit run grouped differently, a currency, US spelling. Pinned.
 
 @testable import M1K3Eval
 import Testing
@@ -23,7 +25,9 @@ struct WordErrorRateTests {
     }
 
     @Test("case and punctuation are formatting, not errors") func caseAndPunctuationAreFormatting() {
-        #expect(errors("Remind me to call the dentist tomorrow morning.", "remind me to call the dentist, tomorrow morning") == 0)
+        #expect(errors(
+            "Remind me to call the dentist tomorrow morning.", "remind me to call the dentist, tomorrow morning"
+        ) == 0)
         #expect(errors("What's on my calendar for Friday?", "whats on my calendar for friday") == 0)
         #expect(errors("I’m running late", "I'm running late") == 0)
     }
@@ -50,7 +54,9 @@ struct WordErrorRateTests {
         #expect(errors("at three", "at 3") == 0)
         // Digits read one by one are a digit string; a pause or comma ends the group.
         #expect(errors("zero eight seven, five five five, one two three four", "087 555 1234") == 0)
-        #expect(errors("flight EI 712", "flight EI seven twelve") == 2)
+        // However the digits are grouped: Apple writes a phone number as one run (Kev's corpus).
+        #expect(errors("zero eight seven, five five five, one two three four", "0875551234") == 0)
+        #expect(errors("flight EI 712", "flight EI seven twelve") == 0)
         // A wrong number is a wrong word.
         #expect(errors("fifteen minutes", "50 minutes") == 1)
     }
@@ -66,6 +72,21 @@ struct WordErrorRateTests {
         #expect(errors("half past eight", "8:15") > 0)
     }
 
+    @Test("a currency is formatting, said or symbolised")
+    func aCurrencyIsFormatting() {
+        #expect(errors("four hundred and sixty-two euro fifty", "€462.50") == 0)
+        #expect(errors("it was twenty euros", "it was €20") == 0)
+        #expect(errors("twenty euro", "twenty pounds") == 1)
+    }
+
+    @Test("American and Irish spelling are the same word")
+    func americanAndIrishSpellingMatch() {
+        #expect(errors("summarise the notes", "summarize the notes") == 0)
+        #expect(errors("walk to the harbour", "walk to the harbor") == 0)
+        #expect(errors("the colour of the sky", "the color of the sky") == 0)
+        #expect(errors("walk to the harbour", "walk to the arbour") == 1)
+    }
+
     @Test("fillers are dropped on both sides") func fillersAreDroppedOnBoth() {
         #expect(errors("Can you, um, find the article", "can you find the article") == 0)
         #expect(errors("can you find the article", "can you uh find the article") == 0)
@@ -79,7 +100,10 @@ struct WordErrorRateTests {
 
     @Test("a corpus rate weights by words, not clips") func aCorpusRateWeightsBy() {
         let total = WordErrorRate.corpus([
-            WordErrorRate.score(reference: "remind me to call the dentist tomorrow morning before ten", hypothesis: "remind me to call the dentist tomorrow morning before 10"),
+            WordErrorRate.score(
+                reference: "remind me to call the dentist tomorrow morning before ten",
+                hypothesis: "remind me to call the dentist tomorrow morning before 10"
+            ),
             WordErrorRate.score(reference: "short line", hypothesis: "sport line"),
         ])
         #expect(total.errors == 1)

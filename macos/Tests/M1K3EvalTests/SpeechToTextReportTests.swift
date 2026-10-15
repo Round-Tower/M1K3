@@ -7,6 +7,7 @@
 //  counted rather than dropped).
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-15, Confidence 0.85. Prior: Unknown.
+//  Review: claude-opus-5-5, 2026-10-15: failable String(bytes:encoding:) for the JSON (lint).
 
 import Foundation
 @testable import M1K3Eval
@@ -50,7 +51,7 @@ struct SpeechToTextReportTests {
         var arm = SpeechToTextArm(name: "whisper")
         arm.add(WordErrorRate.Score(errors: 0, words: 3), audioSeconds: 1, processingSeconds: 2)
         let report = SpeechToTextReport(date: "2026-10-15", clips: 1, locale: "en_IE", arms: [arm])
-        let json = try String(decoding: report.encoded(), as: UTF8.self)
+        let json = try #require(String(bytes: report.encoded(), encoding: .utf8))
         #expect(json.contains("\"arms\""))
         let arms = try #require(json.range(of: "\"arms\""))
         let clips = try #require(json.range(of: "\"clips\""))

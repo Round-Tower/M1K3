@@ -11,6 +11,9 @@
 //  Signed: Kev + claude-opus-5-5, 2026-10-15, Confidence 0.7 (Speech glue, run
 //  by the gated eval only; the module options mirror AnalyzerLiveRecognition).
 //  Prior: Unknown.
+//  Review: claude-opus-5-5, 2026-10-15: every clip now ends on 1 s of silence
+//  (withTrailingSilence): on Kev's corpus DictationTranscriber dropped the last words of 8/30
+//  clips without it. Confidence 0.75.
 
 import AVFoundation
 import Foundation
@@ -27,12 +30,18 @@ public enum AppleFileTranscriber {
     public enum Failure: Error, Equatable {
         case unsupportedLocale(String)
         case assetNotInstalled(String)
+        case unreadableAudio(String)
     }
+
+    /// Silence fed after the clip, as a live mic keeps running after the speaker stops.
+    public static let trailingSilenceSeconds = 1.0
 
     public static func transcribe(
         _ url: URL, locale: Locale, module: Module, vocabulary: [String] = []
     ) async throws -> String {
-        let file = try AVAudioFile(forReading: url)
+        let padded = try withTrailingSilence(url, seconds: trailingSilenceSeconds)
+        defer { try? FileManager.default.removeItem(at: padded) }
+        let file = try AVAudioFile(forReading: padded)
         let context = AnalysisContext()
         if !vocabulary.isEmpty { context.contextualStrings[.general] = vocabulary }
         switch module {
@@ -66,7 +75,9 @@ public enum AppleFileTranscriber {
 
     /// Context first, then the file, then finish: the file initializer's `analysisContext:`
     /// left the output byte-identical with and without a vocabulary (2026-10-15).
-    private static func analyze(_ file: AVAudioFile, modules: [any SpeechModule], context: AnalysisContext) async throws {
+    private static func analyze(
+        _ file: AVAudioFile, modules: [any SpeechModule], context: AnalysisContext
+    ) async throws {
         let analyzer = SpeechAnalyzer(modules: modules)
         if !context.contextualStrings.isEmpty { try await analyzer.setContext(context) }
         if let last = try await analyzer.analyzeSequence(from: file) {
@@ -83,6 +94,28 @@ public enum AppleFileTranscriber {
         if await SpeechTranscriber.installedLocales.contains(where: { $0.identifier == locale.identifier }) { return }
         if await AssetInventory.status(forModules: [module]) == .installed { return }
         throw Failure.assetNotInstalled(locale.identifier)
+    }
+
+    /// A temporary copy of the clip with silence after it. DictationTranscriber drops the last
+    /// words of a clip that ends on speech (Kev's corpus, 2026-10-15: "at half past [eight]",
+    /// "what I [said]"; finalizing through the end of input didn't help, 1 s of silence did).
+    static func withTrailingSilence(_ url: URL, seconds: Double) throws -> URL {
+        let source = try AVAudioFile(forReading: url)
+        let format = source.processingFormat
+        let out = FileManager.default.temporaryDirectory
+            .appendingPathComponent("m1k3-stt-\(UUID().uuidString).caf")
+        let sink = try AVAudioFile(forWriting: out, settings: format.settings)
+        let capacity = AVAudioFrameCount(max(source.length, 1))
+        guard let audio = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: capacity),
+              let silence = AVAudioPCMBuffer(
+                  pcmFormat: format, frameCapacity: AVAudioFrameCount(seconds * format.sampleRate)
+              )
+        else { throw Failure.unreadableAudio(url.lastPathComponent) }
+        try source.read(into: audio)
+        silence.frameLength = silence.frameCapacity // a fresh buffer is zeroed: silence
+        try sink.write(from: audio)
+        try sink.write(from: silence)
+        return out
     }
 
     private static func join(_ segments: [String]) -> String {
