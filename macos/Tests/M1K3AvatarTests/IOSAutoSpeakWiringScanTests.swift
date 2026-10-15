@@ -59,6 +59,18 @@ struct IOSAutoSpeakWiringScanTests {
         #expect(guardAt.lowerBound < releaseAt.lowerBound)
     }
 
+    @Test("both auto-speak loops (phone and Mac) skip a sentence that polishes to nothing, never read it raw")
+    func trailerSentenceSkipped() throws {
+        // The pure rule is SpeechTextPolishTests.trailerSentenceIsSilent; this pins that both shells use it.
+        let phone = try Self.code("M1K3iOSApp/AppCore+AutoSpeak.swift")
+        #expect(phone.contains("guard let spoken = SpeechTextPolish.spokenSentence(text) else { return }"))
+        #expect(!phone.contains("polished.isEmpty ? text : polished"))
+        let mac = try Self.code("M1K3App/AppEnvironment+AutoSpeak.swift")
+        #expect(mac.contains("guard let spoken = SpeechTextPolish.spokenSentence(sentence) else { continue }"))
+        #expect(mac.contains("let spoken = folder.flush().flatMap(SpeechTextPolish.spokenSentence)"))
+        #expect(!mac.contains("await self.speak(sentence)"))
+    }
+
     @Test("stop and leaving the app end it; Settings has the switch on the shared key")
     func stops() throws {
         let core = try Self.code("M1K3iOSApp/AppCore.swift")

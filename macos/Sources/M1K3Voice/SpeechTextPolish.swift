@@ -52,6 +52,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — the Sources-block scan is linear: each list line
 //  must run to its own end, so a long bullet or digit run that isn't the tail no longer backtracks exponentially.
 //  Confidence 0.9 (a 400-character run pinned; the old form never finished it).
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — `spokenSentence`: auto-speak's per-sentence
+//  lane skips a sentence that polishes to nothing instead of reading it raw (a streamed Source trailer's URLs).
+//  Confidence 0.9.
 //
 
 import Foundation
@@ -72,6 +75,15 @@ public enum SpeechTextPolish {
         result = normalizeCurlyPunctuation(result)
         result = tidyWhitespace(result)
         return result
+    }
+
+    /// One streamed sentence of a longer answer (chat auto-speak), polished, or nil when nothing speakable is left:
+    /// a Sources trailer streams in as a sentence of its own and polishes to "". Whole-answer speech keeps its raw
+    /// fallback, because an empty utterance strands the voice loop's wait for the end; a skipped sentence strands
+    /// nothing, and the raw fallback would read the trailer's URLs aloud.
+    public static func spokenSentence(_ text: String) -> String? {
+        let polished = polish(text)
+        return polished.isEmpty ? nil : polished
     }
 
     // MARK: - The name

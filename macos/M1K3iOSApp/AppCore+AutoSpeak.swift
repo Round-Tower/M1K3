@@ -15,6 +15,9 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-12, Confidence 0.65 (a port of the Mac's tested-in-use loop over pinned
 //  seams; how it feels on the phone is verify-on-device). Prior: AppEnvironment+AutoSpeak (Kev + claude-fable-5).
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — a sentence that polishes to nothing is skipped
+//  (`SpeechTextPolish.spokenSentence`): the whole-answer fallback read a streamed Source trailer's URLs aloud, which
+//  is what 7ac9c1fd set out to stop. Confidence 0.8.
 //
 
 import AVFoundation
@@ -112,10 +115,10 @@ extension AppCore {
         resumePendingSpeech()
     }
 
-    /// One sentence, polished for speech (URLs to hosts, citation tokens dropped) and highlighted as it plays.
+    /// One sentence, polished for speech (URLs to hosts, citation tokens dropped) and highlighted as it plays. A
+    /// sentence that polishes to nothing (a Sources trailer streams in as its own) is skipped, never read raw.
     private func speakAnswerSentence(_ text: String) async {
-        let polished = SpeechTextPolish.polish(text)
-        let spoken = polished.isEmpty ? text : polished
+        guard let spoken = SpeechTextPolish.spokenSentence(text) else { return }
         speechHighlight.beginUtterance(text: spoken)
         await speakAndWait(spoken)
     }
