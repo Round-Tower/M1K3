@@ -280,3 +280,27 @@ extension SpeechTextPolishTests {
         #expect(SpeechTextPolish.polish(text) == text)
     }
 }
+
+// Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — the inline attribution strip made its colon
+// optional, so ordinary asides that open with "from", "via" or "source" went missing from every spoken answer
+// (Mac and phone share this polish) while the screen still showed them.
+extension SpeechTextPolishTests {
+    @Test("an aside that opens with from / via / source is prose, not an attribution, and is spoken")
+    func keywordAsidesSurvive() {
+        for text in [
+            "The word salary (from the Latin salarium) means salt money.",
+            "The festival runs (from 3 to 5 pm) daily.",
+            "Take the N40 (via Douglas) to town.",
+            "The library (source code is on GitHub) is small.",
+        ] {
+            #expect(SpeechTextPolish.polish(text) == text, Comment(rawValue: text))
+        }
+    }
+
+    @Test("without a colon, an attribution goes only when all it names is a site")
+    func colonlessSiteAttributionStripped() {
+        #expect(SpeechTextPolish.polish("Rain expected (via met.ie).") == "Rain expected.")
+        #expect(SpeechTextPolish.polish("Population is 5 million (from cso.ie).") == "Population is 5 million.")
+        #expect(SpeechTextPolish.polish("Fares rise in May (source https://nta.ie/fares).") == "Fares rise in May.")
+    }
+}

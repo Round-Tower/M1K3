@@ -46,6 +46,9 @@
 //  Review: Kev + claude-opus-4-6, 2026-10-12 — singular "Source:" trailing block (was only
 //  "Sources:"); inline parenthetical source attributions "(Source: gov.ie)" stripped from speech.
 //  AFM on iPhone was speaking full URLs from web search results. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — the inline strip needs a colon after its key,
+//  or nothing but a site: with the colon optional, "(from the Latin salarium)" and "(via Douglas)" went silent on
+//  both platforms while the screen kept them. Confidence 0.9 (negative cases pinned).
 //
 
 import Foundation
@@ -282,11 +285,13 @@ public enum SpeechTextPolish {
     }
 
     /// Parenthetical source attributions: "(Source: gov.ie)" or
-    /// "(via gov.ie)" read as noise in speech. Only when keyed by Source/Via/From
-    /// inside parens, so "(an open source project)" survives.
+    /// "(via gov.ie)" read as noise in speech. Keyed by Source/Via/From inside
+    /// parens AND either a colon after the key or nothing but a site after it:
+    /// "(from the Latin salarium)", "(via Douglas)" and "(source code is on
+    /// GitHub)" are prose and still speak, as does "(an open source project)".
     private static func stripInlineSourceParens(_ text: String) -> String {
         text.replacing(
-            /\s*\((?:Source|Via|From):?\s+[^)]+\)/.ignoresCase(),
+            /\s*\((?:Source|Via|From)(?::\s*[^)]+|\s+(?:https?:\/\/)?[\w-]+(?:\.[\w-]+)+(?:\/[^\s)]*)?)\)/.ignoresCase(),
             with: ""
         )
     }
