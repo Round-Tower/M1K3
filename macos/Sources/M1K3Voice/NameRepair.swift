@@ -40,34 +40,76 @@ public struct NameRepair: Sendable {
     public static let nearExact = 0.92
     /// How far the best name must sound ahead of the next: below it, the span is ambiguous.
     public static let defaultMargin = 0.10
+    /// The bar for a single word of fewer than five sounds.
+    static let shortWord = 0.8
 
-    private let names: [(name: String, key: String)]
+    private let names: [Known]
     private let known: Set<String>
+    private let written: Set<String>
     private let threshold: Double
     private let margin: Double
 
+    private struct Known {
+        let name: String
+        let key: String
+        let words: Int
+    }
+
     public init(names: [String], threshold: Double = defaultThreshold, margin: Double = defaultMargin) {
-        self.names = names.map { ($0, Self.soundKey($0)) }.filter { !$0.key.isEmpty }
-        known = Set(names.map(Self.plain))
+        // One entry per name however often it's listed: a duplicate would tie itself and fail the margin.
+        var seen: Set<String> = []
+        self.names = names.compactMap { name in
+            let key = Self.soundKey(name)
+            guard !key.isEmpty, seen.insert(Self.plain(name)).inserted else { return nil }
+            return Known(name: name, key: key, words: name.split(whereSeparator: \.isWhitespace).count)
+        }
+        known = seen
+        written = Set(self.names.map(\.name))
         self.threshold = threshold
         self.margin = margin
     }
 
     public func repair(_ text: String) -> (text: String, repairs: [Repair]) {
         guard !names.isEmpty else { return (text, []) }
-        var words = text.split(separator: " ", omittingEmptySubsequences: true).map(String.init)
-        let bare = words.map { $0.trimmingCharacters(in: .punctuationCharacters.union(.symbols)) }
-        let swaps = choose(candidates(words: words, bare: bare))
+        var words = text.split(whereSeparator: \.isWhitespace).map(String.init)
+        let parts = words.map(Self.parts)
+        let swaps = choose(candidates(words: words, parts: parts)).filter { $0.name != nil }
+        // Nothing to repair: the text comes back exactly as it was, spacing and all.
+        guard !swaps.isEmpty else { return (text, []) }
         var repairs: [Repair] = []
         for swap in swaps.sorted(by: { $0.start > $1.start }) {
             guard let name = swap.name else { continue }
-            let last = words[swap.start + swap.count - 1]
-            let tail = String(last.reversed().prefix { $0.isPunctuation }.reversed())
-            let heard = bare[swap.start ..< swap.start + swap.count].joined(separator: " ")
+            let range = swap.start ..< swap.start + swap.count
+            let first = parts[swap.start], last = parts[range.upperBound - 1]
+            // The 's stays a possessive unless it was matched as part of the name ("Alohi's", Allihies).
+            let possessive = swap.ownsPossessive ? "" : last.possessive
+            let heard = parts[range].map(\.bare).joined(separator: " ") + (swap.ownsPossessive ? last.possessive : "")
             repairs.append(Repair(heard: heard, name: name, score: swap.score))
-            words.replaceSubrange(swap.start ..< swap.start + swap.count, with: [name + tail])
+            words.replaceSubrange(range, with: [first.lead + name + possessive + last.tail])
         }
         return (words.joined(separator: " "), repairs.reversed())
+    }
+
+    /// A word split into what wraps it and what is matched: `("(", "Bunion", "'s", "),")`.
+    private struct WordParts {
+        let lead: String
+        let bare: String
+        let possessive: String
+        let tail: String
+    }
+
+    private static func parts(_ word: String) -> WordParts {
+        let wrap = CharacterSet.punctuationCharacters.union(.symbols)
+        let lead = String(word.prefix { $0.unicodeScalars.allSatisfy(wrap.contains) })
+        let rest = word.dropFirst(lead.count)
+        let tail = String(rest.reversed().prefix { $0.unicodeScalars.allSatisfy(wrap.contains) }.reversed())
+        var bare = String(rest.dropLast(tail.count))
+        var possessive = ""
+        for suffix in ["'s", "’s"] where bare.count > suffix.count + 1 && bare.hasSuffix(suffix) {
+            possessive = suffix
+            bare = String(bare.dropLast(suffix.count))
+        }
+        return WordParts(lead: lead, bare: bare, possessive: possessive, tail: tail)
     }
 
     // MARK: - Choosing spans
@@ -76,15 +118,19 @@ public struct NameRepair: Sendable {
         let score: Double
         let start: Int
         let count: Int
-        /// nil: an ambiguous span that claims its words untouched.
+        /// nil: a span that claims its words untouched (ambiguous, or already the name).
         let name: String?
+        /// The last word's 's was matched as sound, not kept as a possessive.
+        var ownsPossessive = false
     }
 
-    private func candidates(words: [String], bare: [String]) -> [Candidate] {
+    private func candidates(words: [String], parts: [WordParts]) -> [Candidate] {
+        let bare = parts.map(\.bare)
         // A capital that only opens a sentence says nothing about a name.
         var starts: Set = [0]
-        for (index, word) in words.enumerated() where word.last.map({ ".?!".contains($0) }) == true {
-            starts.insert(index + 1)
+        for (index, word) in words.enumerated() {
+            let end = word.reversed().drop { "\"'’”)]".contains($0) }.first
+            if let end, ".?!…".contains(end) { starts.insert(index + 1) }
         }
         let locked = Set(bare.indices.filter {
             known.contains(Self.plain(bare[$0])) || Self.lockedWords.contains(bare[$0].lowercased())
@@ -102,9 +148,13 @@ public struct NameRepair: Sendable {
                     span[$0].first?.isUppercase == true && !starts.contains(start + $0)
                 }
                 if !capped, count == 1 { continue } // a lone lowercase word is an ordinary word
-                let key = Self.soundKey(span.joined(separator: " "))
-                guard key.count >= 4 else { continue }
-                if let candidate = best(key: key, start: start, count: count, capped: capped) {
+                if written.contains(span.joined(separator: " ")) {
+                    // Already the name as written ("Liquid Glass"): claim it so nothing inside is touched.
+                    found.append(Candidate(score: 1, start: start, count: count, name: nil))
+                } else if let candidate = bestOfPossessive(
+                    span: span, possessive: parts[start + count - 1].possessive,
+                    start: start, count: count, capped: capped
+                ) {
                     found.append(candidate)
                 }
             }
@@ -112,25 +162,57 @@ public struct NameRepair: Sendable {
         return found
     }
 
-    private func best(key: String, start: Int, count: Int, capped: Bool) -> Candidate? {
-        let scored = names
-            .filter { abs(count - $0.name.split(separator: " ").count) <= (count == 3 ? 2 : 1) }
-            .map { (score: Self.similarity(key, $0.key), name: $0.name) }
-            .sorted { $0.score > $1.score }
-        guard let top = scored.first, top.score >= (capped ? threshold : max(threshold, Self.nearExact)) else {
-            return nil
-        }
-        if scored.count > 1, top.score - scored[1].score < margin {
-            return Candidate(score: top.score, start: start, count: count, name: nil)
-        }
-        return Candidate(score: top.score, start: start, count: count, name: top.name)
+    /// A trailing 's is a possessive or part of the sound ("Alohi's"): both readings, the better kept.
+    private func bestOfPossessive(
+        span: [String], possessive: String, start: Int, count: Int, capped: Bool
+    ) -> Candidate? {
+        let spoken = span.joined(separator: " ")
+        let plainRead = best(key: Self.soundKey(spoken), start: start, count: count, capped: capped)
+        guard !possessive.isEmpty else { return plainRead }
+        let sounded = (span.dropLast() + [span[count - 1] + possessive]).joined(separator: " ")
+        guard var whole = best(key: Self.soundKey(sounded), start: start, count: count, capped: capped),
+              whole.score > (plainRead?.score ?? 0)
+        else { return plainRead }
+        whole.ownsPossessive = true
+        return whole
     }
 
-    /// Best first (longer spans win ties); a span overlapping a taken one is dropped.
+    /// The best and runner-up names for a span. A name whose length alone keeps it below
+    /// `threshold - margin` can be neither a winner nor a close runner-up, so it is skipped.
+    private func best(key: String, start: Int, count: Int, capped: Bool) -> Candidate? {
+        guard key.count >= 4 else { return nil } // three sounds match too much
+        let bar = capped ? threshold : max(threshold, Self.nearExact)
+        let floor = threshold - margin
+        let keyLength = Double(key.count)
+        var top: (score: Double, name: String)?
+        var second = 0.0
+        for known in names where abs(count - known.words) <= (count == 3 ? 2 : 1) {
+            let length = Double(known.key.count)
+            guard 1 - abs(keyLength - length) / max(keyLength, length) >= floor else { continue }
+            let score = Self.similarity(key, known.key)
+            if score > (top?.score ?? -1) {
+                second = top?.score ?? second
+                top = (score, known.name)
+            } else if score > second {
+                second = score
+            }
+        }
+        // A short single word needs more than one swapped sound: at four sounds a substitution
+        // scores 0.75 ("Cole" would be Colm), while a dropped one scores 0.8 ("Gron", Gráinne).
+        let short = count == 1 && key.count < 5
+        guard let top, top.score >= (short ? max(bar, Self.shortWord) : bar) else { return nil }
+        let name = top.score - second < margin ? nil : top.name
+        return Candidate(score: top.score, start: start, count: count, name: name)
+    }
+
+    /// Best first (longer spans, then earlier, win ties); a span overlapping a taken one is dropped.
     private func choose(_ candidates: [Candidate]) -> [Candidate] {
         var taken = IndexSet()
         var chosen: [Candidate] = []
-        for candidate in candidates.sorted(by: { ($0.score, $0.count) > ($1.score, $1.count) }) {
+        let ordered = candidates.sorted {
+            ($0.score, $0.count, -$0.start) > ($1.score, $1.count, -$1.start)
+        }
+        for candidate in ordered {
             let range = candidate.start ..< candidate.start + candidate.count
             guard !taken.intersects(integersIn: range) else { continue }
             taken.insert(integersIn: range)
@@ -171,14 +253,15 @@ public struct NameRepair: Sendable {
 
     static func similarity(_ a: String, _ b: String) -> Double {
         guard !a.isEmpty, !b.isEmpty else { return 0 }
-        let x = Array(a), y = Array(b)
+        let x = Array(a.utf8), y = Array(b.utf8) // keys are ASCII
         var previous = Array(0 ... y.count)
+        var row = previous
         for i in 1 ... x.count {
-            var row = [i] + Array(repeating: 0, count: y.count)
+            row[0] = i
             for j in 1 ... y.count {
                 row[j] = min(previous[j] + 1, row[j - 1] + 1, previous[j - 1] + (x[i - 1] == y[j - 1] ? 0 : 1))
             }
-            previous = row
+            swap(&previous, &row)
         }
         return 1 - Double(previous[y.count]) / Double(max(x.count, y.count))
     }

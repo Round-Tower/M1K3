@@ -85,6 +85,60 @@ struct NameRepairTests {
         #expect(repair.score >= NameRepair.defaultThreshold)
     }
 
+    @Test("punctuation around a repaired span is kept, both sides")
+    func punctuationIsKept() {
+        #expect(repaired("He said \"Karen 2 Hill\" loudly.") == "He said \"Carrauntoohil\" loudly.")
+        #expect(repaired("A day trip (Don Leary) is fine.") == "A day trip (Dún Laoghaire) is fine.")
+        #expect(repaired("Have you climbed Karen 2 Hill?") == "Have you climbed Carrauntoohil?")
+    }
+
+    @Test("a possessive keeps its 's, and a known name's possessive is left alone")
+    func possessivesKeepTheirS() {
+        #expect(repaired("The beach at Bally Bunion's end.") == "The beach at Ballybunion's end.")
+        #expect(repaired("I saw Colm's car.") == "I saw Colm's car.")
+        // A recogniser's 's can be the end of the name itself.
+        let allihies = NameRepair(names: ["Allihies"])
+        #expect(allihies.repair("The pub in Alohi's was busy.").text == "The pub in Allihies was busy.")
+    }
+
+    @Test("a name listed twice still repairs")
+    func duplicateNamesStillRepair() {
+        let repair = NameRepair(names: ["Carrauntoohil", "Carrauntoohil", "carrauntoohil"])
+        #expect(repair.repair("We climbed Karen 2 Hill.").text == "We climbed Carrauntoohil.")
+    }
+
+    @Test("text with nothing to repair comes back byte for byte")
+    func untouchedTextIsVerbatim() {
+        let text = "We left  at eight.\nCall me later,\tplease."
+        #expect(repaired(text) == text)
+    }
+
+    @Test("a correct multi-word name is not reported as a repair")
+    func correctNameIsNotARepair() {
+        let result = NameRepair(names: names).repair("Check the Liquid Glass toolbar and Gougane Barra.")
+        #expect(result.repairs.isEmpty)
+        #expect(result.text == "Check the Liquid Glass toolbar and Gougane Barra.")
+    }
+
+    @Test("a short single word needs more than one swapped sound")
+    func shortWordIsNotSwapped() {
+        #expect(NameRepair(names: ["Colm"]).repair("I told Cole about it.").text == "I told Cole about it.")
+        #expect(NameRepair(names: ["Gráinne"]).repair("Owen and Gron are here.").text == "Owen and Gráinne are here.")
+    }
+
+    @Test("a weekday stays even when a name sounds like it")
+    func weekdayIsLocked() {
+        #expect(NameRepair(names: ["Mundee"]).repair("We met on Monday at noon.").text == "We met on Monday at noon.")
+    }
+
+    @Test("a near miss inside the margin is refused, outside it is taken")
+    func marginDecides() {
+        // "Dermid" sounds exactly like Diarmuid (1.0) and nearly like Dermot (0.83).
+        let text = "I met Dermid today."
+        #expect(NameRepair(names: ["Dermot", "Diarmuid"], margin: 0.2).repair(text).text == text)
+        #expect(NameRepair(names: ["Dermot", "Diarmuid"], margin: 0.1).repair(text).text == "I met Diarmuid today.")
+    }
+
     @Test("no names, no change")
     func emptyListIsIdentity() {
         let text = "We climbed Karen 2 Hill."
