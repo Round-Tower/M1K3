@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { BASH_DENIES, BASH_WARNINGS, bareCommand, denyFor, xcodeprojMessage } from '../hooks/guard'
+import { BASH_DENIES, BASH_WARNINGS, bareCommand, checkoutOf, denyFor, leavesCheckout, xcodeprojMessage } from '../hooks/guard'
 
 describe('guard', () => {
   test('the CLAUDE.md nevers are denied, by rule', () => {
@@ -24,6 +24,9 @@ describe('guard', () => {
       'echo x >| .claude/project-memory.md',
       "echo x > '.claude/project-memory.md'",
       'git push origin "master"',
+      'git push origin master; echo pushed',
+      '(git push origin master)',
+      'git push origin main&& echo ok',
       'echo "# block" > .claude/project-memory.md',
       'hf download mlx-community/Qwen3-8B-4bit',
       'huggingface-cli download some/model',
@@ -93,6 +96,43 @@ describe('guard', () => {
 
     await $.tool.call({ tool: 'Bash', command: 'git push -u origin claude/m1k3-mod' })
     expect(ran).toBe(1)
+  })
+
+  test('a push from another repo is that repo\'s business', () => {
+    const home = '/Users/k', checkout = '/Users/k/Dev/m1k3'
+    // ~/.agent-context pushes to its own main (2026-10-14: the guard refused it).
+    expect(leavesCheckout('cd ~/.agent-context; git push origin main', home, checkout)).toBe(true)
+    expect(leavesCheckout('cd /tmp/other && git push origin master', home, checkout)).toBe(true)
+    // Any folder named for M1K3 counts as M1K3 (a sibling worktree looks the same): denied, the safe side.
+    expect(leavesCheckout('cd "/Users/k/Dev/m1k3-site" && git push origin main', home, checkout)).toBe(false)
+    // Still this checkout: denied as before.
+    expect(leavesCheckout('git push origin master', home, checkout)).toBe(false)
+    expect(leavesCheckout('cd macos && git push origin master', home, checkout)).toBe(false)
+    expect(leavesCheckout('cd ~/Dev/m1k3/macos && git push origin master', home, checkout)).toBe(false)
+    expect(leavesCheckout('cd /Users/k/Dev/m1k3 && git push origin master', home, checkout)).toBe(false)
+    // The last cd before the push decides; one after it doesn't count.
+    expect(leavesCheckout('cd ~/.agent-context; cd ~/Dev/m1k3; git push origin master', home, checkout)).toBe(false)
+    expect(leavesCheckout('git push origin master; cd /tmp', home, checkout)).toBe(false)
+    // Unknown home or a cd - / $VAR: stay safe, deny.
+    expect(leavesCheckout('cd ~/.agent-context; git push origin main', undefined, checkout)).toBe(false)
+    expect(leavesCheckout('cd - && git push origin master', home, checkout)).toBe(false)
+    expect(leavesCheckout('cd "$REPO" && git push origin master', home, checkout)).toBe(false)
+    expect(checkoutOf('/Users/k/Dev/m1k3/.claude/skills/m1k3')).toBe('/Users/k/Dev/m1k3')
+    // Review on the fold: a worktree session's cd back into the main checkout (or another M1K3
+    // worktree) is still M1K3; a cd that doesn't persist doesn't count; every push must leave.
+    const worktree = '/Users/k/Dev/m1k3/.claude/worktrees/x'
+    expect(leavesCheckout('cd /Users/k/Dev/m1k3 && git push origin master', home, worktree)).toBe(false)
+    expect(leavesCheckout('cd /Users/k/Dev/M1K3-wt/foo && git push origin master', home, checkout)).toBe(false)
+    expect(leavesCheckout('( cd /tmp ) && git push origin master', home, checkout)).toBe(false)
+    expect(leavesCheckout('x=$(cd /tmp; pwd); git push origin master', home, checkout)).toBe(false)
+    expect(leavesCheckout('cd /tmp & git push origin master', home, checkout)).toBe(false)
+    expect(leavesCheckout('cd /tmp && git push origin main && cd ~/Dev/m1k3 && git push origin master', home, checkout)).toBe(false)
+    expect(leavesCheckout('cd /tmp/../Users/k/Dev/m1k3 && git push origin master', home, checkout)).toBe(false)
+    expect(leavesCheckout('(cd ~/.agent-context && git push origin main)', home, checkout)).toBe(true)
+    expect(leavesCheckout('cd /tmp/other || exit; git push origin main', home, checkout)).toBe(true)
+    // A plugin root that isn't under .claude/skills names no checkout: nothing is allowed.
+    expect(checkoutOf('/opt/plugins/m1k3')).toBeUndefined()
+    expect(leavesCheckout('cd /tmp && git push origin main', home, undefined)).toBe(false)
   })
 
   test('the session memory takes no Write or Edit', async ($, on) => {
