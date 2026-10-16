@@ -47,6 +47,11 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-13 — `speak(_:narrator:mood:)`: the speak tool's emotion reaches the voice
 //  as a VoiceMood (pace + pitch) on the utterance, not only the face (#576 §1). Neutral, the default, is today's
 //  utterance. Confidence 0.8 (pinned by VoiceMoodTests; the sound is verify-by-launch).
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — every voice turn goes through VoiceTurnPreparer (Kev: "let's
+//  wire what we've built"): NameRepair toward the names in memory (KnownNames, learned at voice-mode entry),
+//  and the room line the listen heard (read at stop, before the provider is dropped) as a per-turn clause
+//  through `voiceTurnClause`, never in the question. The song verdict is logged in shadow. Confidence 0.7:
+//  verify-by-launch owed.
 
 import AppKit
 import AVFoundation
@@ -304,6 +309,7 @@ extension AppEnvironment {
         // these numbers from the same complaint. The endpointer also learns Kev's
         // own pause rhythm on top of the preset (2026-08-11), so these values only
         // have to be right for the first pause of a session.
+        setHearsRoom(true)
         let controller = VoiceLoopController(
             dependencies: makeVoiceLoopDependencies(),
             cadence: ScreengrabHarness.current.isActive ? .screengrab : .conversational
@@ -326,6 +332,7 @@ extension AppEnvironment {
         guard let controller = voiceLoop else { return }
         controller.exit()
         voiceLoop = nil
+        setHearsRoom(false)
         // Close the input device: the exit above stops the LISTEN, but the
         // engine stayed prepared with voice processing on, which held a
         // Bluetooth headset in its 16 kHz call profile until the app quit
@@ -386,10 +393,40 @@ extension AppEnvironment {
         voiceUpgradeOffered = false
     }
 
+    /// The voice turn's room line (VoiceTurnPreparer), read by the responder's `voiceClauseProvider`.
+    nonisolated static let voiceTurnClause = TurnClauseSlot()
+
+    /// The room classifier (SoundContext) runs only in voice mode: dictation and the MCP listen
+    /// don't need it, and turning it off frees its 63 MB.
+    func setHearsRoom(_ on: Bool) {
+        for case let apple as AppleSpeechTranscriber in transcription.providers {
+            apple.hearsRoom = on
+        }
+    }
+
     private func makeVoiceLoopDependencies() -> VoiceLoopController.Dependencies {
         // Cache the recogniser each listen started, so stop hits that engine
         // even if the router's preference changes mid-session.
         var activeProvider: (any TranscriptionProvider)?
+        // NameRepair + the room line (VoiceTurnPreparer). What the listen heard is read when it
+        // stops, because the provider is dropped there and the turn runs after.
+        let turns = VoiceTurnPreparer()
+        turns.learnNames(KnownNames.from(
+            facts: ((try? memoryStore?.allMemories()) ?? []).map(\.text),
+            userName: UserDefaults.standard.string(forKey: Self.userDisplayNameKey)
+        ))
+        var lastHeard: SoundContext?
+        // One voice turn into the chat. A turn superseded by barge-in finds the chat still
+        // answering and its send returns at once: it must not touch the room line, and the
+        // line only counts as said once a turn really carried it.
+        let sendVoiceTurn: @MainActor (String) async -> Void = { [weak self] question in
+            guard let self else { return }
+            let prepared = turns.prepare(question, heard: lastHeard)
+            let token = chat.isResponding ? nil : Self.voiceTurnClause.set(prepared.soundClause)
+            if token != nil { turns.delivered(prepared) }
+            await chat.send(prepared.question)
+            if let token { Self.voiceTurnClause.clear(token) }
+        }
         return VoiceLoopController.Dependencies(
             startListening: { [weak self] in
                 // Strong-bind up front: nested @Sendable closures below may not
@@ -463,6 +500,8 @@ extension AppEnvironment {
                 }
             },
             stopListening: {
+                // A second stop (the machine sends several) must not wipe what the listen heard.
+                if let activeProvider { lastHeard = (activeProvider as? SoundContextProviding)?.soundContext }
                 activeProvider?.stopListening()
                 activeProvider = nil
             },
@@ -471,7 +510,7 @@ extension AppEnvironment {
                     return .failure(VoiceTurnFailure(message: "M1K3 is shutting down."))
                 }
                 soundEffects.play(.endpointHeard) // got it — one soft tick down
-                await chat.send(question)
+                await sendVoiceTurn(question)
                 guard let last = chat.messages.last, last.role == .assistant else {
                     return .failure(VoiceTurnFailure(message: "No answer arrived."))
                 }
@@ -563,7 +602,7 @@ extension AppEnvironment {
                         foldForward(message.text)
                     }
                 }
-                await chat.send(question)
+                await sendVoiceTurn(question)
                 poller.cancel()
                 guard let settled = pinnedMessage() else {
                     return .failure(VoiceTurnFailure(message: "No answer arrived."))

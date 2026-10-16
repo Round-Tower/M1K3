@@ -16,11 +16,15 @@
 //  (speech 30/30 and talking over music 30/30 taken; no turn vetoed while M1K3 itself
 //  plays, or on one burst of music: a majority of windows must be music).
 //
-//  Not wired: the listener (SoundContextListener) and where the line goes are
-//  Kev's call. Only labels are ever kept, never audio.
+//  Wired 2026-10-16 (Kev: "let's wire what we've built"): AppleSpeechTranscriber
+//  feeds the listener, VoiceTurnPreparer logs the verdict in SHADOW (every turn is
+//  still taken) and SoundContextGate hands the line to the brain. Only labels are
+//  ever kept, never audio.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-15, Confidence 0.75 (one speaker, Apple's
 //  loops for music; the thresholds are starting points). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — `hasAlert` for SoundContextGate; the header
+//  now says where it's wired. The verdict vetoes nothing yet: shadow until live logs agree.
 
 import Foundation
 
@@ -83,6 +87,14 @@ public struct SoundContext: Sendable, Equatable {
     public var verdict: Verdict {
         let song = windows >= 2 && speechWindows == 0 && musicWindows * 2 > windows
         return song && !ownPlayback ? .musicWithoutSpeech : .take
+    }
+
+    /// A sound heard well enough to mention that needs attention (an alarm, a siren, the door,
+    /// a phone, a baby crying): SoundContextGate says these every turn.
+    public var hasAlert: Bool {
+        seen.contains { label, stats in
+            (stats.count >= 2 || stats.best >= Self.certain) && (Self.vocabulary[label]?.rank ?? .max) <= 1
+        }
     }
 
     /// Up to three sounds, most pressing first; nil when the room was only a voice.

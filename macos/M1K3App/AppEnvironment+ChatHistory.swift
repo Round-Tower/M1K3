@@ -548,6 +548,8 @@ extension AppEnvironment {
             // What can leave this Mac this turn (#482), from the live settings — the
             // persona alone said "nothing leaves unless they ask", which was false.
             egressClauseProvider: { EgressDisclosure.clause(Self.egressFacts(), device: HostPlatform.thisDevice) },
+            // What the mic heard during a voice turn (VoiceTurnPreparer), set for that turn only.
+            voiceClauseProvider: { Self.voiceTurnClause.clause },
             // What's open beside the chat (the review panel's rendered page) — a
             // snapshot the web view updates on load; nil when no page is showing.
             browserContextProvider: { ReviewModel.liveContext.withLock { $0 } },

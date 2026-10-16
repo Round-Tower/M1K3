@@ -165,6 +165,9 @@
 //  `InferenceIntent.thinking` around the whole turn task (#555): plain route and synthesis now honour Auto.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — #555 review fold: `runAgentTurn` takes the turn's one decision
 //  (`thinkingEnabled`) instead of re-reading the mode, so a mid-turn voice toggle can't split the turn.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — `voiceClauseProvider`: a voice turn's room line (what the
+//  mic heard, SoundContextGate) joins `turnClauses()`. A clause, never the question: it stays out of the
+//  chat history and memory distillation by construction.
 
 import Foundation
 import M1K3Agent
@@ -238,6 +241,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// An eval-only clause on HOW to reason (the think-steer arms, 2026-10-10);
     /// nil in production — no shell passes one.
     private let styleClauseProvider: @Sendable () -> String?
+    /// What the mic heard during a voice turn ("music (guitar)"), set by the voice shell for
+    /// that turn only (TurnClauseSlot); nil for typed turns.
+    private let voiceClauseProvider: @Sendable () -> String?
     /// What's open beside the chat right now (the review panel's rendered page),
     /// or nil — the app reads a snapshot the web view updates on load.
     private let browserContextProvider: (@Sendable () -> BrowserContext?)?
@@ -271,7 +277,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         groundingBudgetProvider: @escaping @Sendable () -> Int = { GroundingBudget.defaultTokenBudget },
         ageClauseProvider: @escaping @Sendable () -> String? = { nil },
         egressClauseProvider: @escaping @Sendable () -> String? = { nil },
-        styleClauseProvider: @escaping @Sendable () -> String? = { nil }, // swiftformat:disable:next unusedArguments
+        styleClauseProvider: @escaping @Sendable () -> String? = { nil },
+        voiceClauseProvider: @escaping @Sendable () -> String? = { nil }, // swiftformat:disable:next unusedArguments
         browserContextProvider: (@Sendable () -> BrowserContext?)? = nil,
         todoContextProvider: (@Sendable () -> String?)? = nil,
         plainRouteProvider: (@Sendable () -> PlainTurnRoute?)? = nil,
@@ -293,6 +300,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         self.ageClauseProvider = ageClauseProvider
         self.egressClauseProvider = egressClauseProvider
         self.styleClauseProvider = styleClauseProvider
+        self.voiceClauseProvider = voiceClauseProvider
         self.browserContextProvider = browserContextProvider
         self.todoContextProvider = todoContextProvider
         self.defersHeavyGenerationProvider = defersHeavyGenerationProvider
@@ -909,7 +917,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// The per-turn policy clauses every prompt carries: the age band and what can
     /// leave the device (#482). nil entries are dropped by the callers' compactMap.
     private func turnClauses() -> [String?] {
-        [ageClauseProvider(), egressClauseProvider(), styleClauseProvider()]
+        [ageClauseProvider(), egressClauseProvider(), styleClauseProvider(), voiceClauseProvider()]
     }
 
     /// One full agent turn into `continuation`: run the loop (conclusion tail
