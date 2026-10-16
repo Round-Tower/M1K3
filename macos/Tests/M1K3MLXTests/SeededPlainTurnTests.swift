@@ -120,6 +120,18 @@ struct SeededPlainTurnTests {
         #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [true, true], slidingWindow: 1024) == .exactPrefill)
     }
 
+    /// The kill switch (`-wrappedPersonaSeed NO`) restores the old build too, not only the old decline:
+    /// a windowed model whose persona fits its window goes back to sample-and-trim (review, 2026-10-16).
+    @Test("with wrapped seeds off, a windowed model builds as before")
+    func wrappedSeedsOffRestoresTheOldBuild() {
+        #expect(SeededPlainTurn.seedBuild(
+            freshLayersTrimmable: [true, true], slidingWindow: 1024, wrappedSeeds: false
+        ) == .sampleAndTrim)
+        #expect(SeededPlainTurn.seedBuild(
+            freshLayersTrimmable: [true, false], slidingWindow: 1024, wrappedSeeds: false
+        ) == .exactPrefill)
+    }
+
     @Test("an exact seed is reusable even though its layers can never be trimmed")
     func exactSeedReusesWithoutTrim() {
         let plan = SeededPlainTurn.plan(seed: [1, 10, 11, 12], full: [1, 10, 11, 12, 20, 21], seedIsExact: true)

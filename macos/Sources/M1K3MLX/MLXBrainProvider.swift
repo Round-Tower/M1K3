@@ -815,6 +815,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         // Resolved OUTSIDE the closure: touching `self.configuration` inside it
         // makes the closure async and `perform`'s overload no longer matches.
         let reusableWindow = Self.slidingWindow(forModelID: modelIdentifier, configDirectory: configDirectory)
+        let wrappedSeeds = Self.wrappedPersonaSeedsEnabled()
         let built: PrefixBox = try await container.perform { context in
             // System-block token ids, no assistant opener. Lenient templates
             // render a system-only array; strict ones (Qwen3.5) reject it and
@@ -827,13 +828,14 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             // An EMPTY box is the "declined" signal — keeping the closure's
             // return type unchanged keeps `perform`'s overload resolution happy.
             guard Self.prefixWorthBuilding(
-                tokens: ids.count, window: reusableWindow, wrappedSeeds: Self.wrappedPersonaSeedsEnabled()
+                tokens: ids.count, window: reusableWindow, wrappedSeeds: wrappedSeeds
             ) else {
                 return PrefixBox(cache: [], tokenIDs: [])
             }
             let cache = try context.model.newCache(parameters: parameters)
             let build = SeededPlainTurn.seedBuild(
-                freshLayersTrimmable: cache.map(\.isTrimmable), slidingWindow: reusableWindow
+                freshLayersTrimmable: cache.map(\.isTrimmable), slidingWindow: reusableWindow,
+                wrappedSeeds: wrappedSeeds
             )
             if build == .exactPrefill {
                 // A recurrent layer (LFM2's, Qwen3.5's MambaCache) can never be
@@ -865,6 +867,8 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             // (the temporalOrder crash). A wrapped prefix can't be linearly
             // reused anyway; leave it untrimmed — the cross-turn gate rejects a
             // non-trimmable seed downstream, so it just re-prefills, never reuses.
+            // Since 2026-10-16 a windowed model only lands here with the kill switch
+            // on (`-wrappedPersonaSeed NO`); otherwise it takes the exact build above.
             let trimmed = CrossTurnCacheReuse.cacheReusable(layersTrimmable: cache.map(\.isTrimmable))
             if trimmed {
                 for layer in cache {

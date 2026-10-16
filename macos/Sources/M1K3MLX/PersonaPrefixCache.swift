@@ -25,6 +25,7 @@
 //  at launch on Lil (1,747 / 2,426 / 3,349-token prefixes, 3.17 GB RSS); the capacity comment carries it.
 //  Review: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85 — a slot carries the prefix's
 //  `LMOutput.State` beside its cache: Qwen3.5 on MLXVLM can't extend a seed without its rope delta.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — Big's exact wrapped seeds now take slots too (the comment said none).
 //
 
 import Foundation
@@ -98,8 +99,9 @@ final class PersonaPrefixCache: @unchecked Sendable {
     /// launch, 2026-09-26 (M1 Max, #415): plain 1,747 / headless 2,426 /
     /// interactive 3,349 tokens — at ~78 KB/token (36 layers × 8 KV heads × 128
     /// dims, 8-bit KV) the third slot is ~136 MB, all three ~590 MB, and the
-    /// process sat at 3.17 GB RSS with Lil resident. Big stores none (its
-    /// persona overruns the 1024-token sliding window, see renderPersonaPrefix).
+    /// process sat at 3.17 GB RSS with Lil resident. Big stored none until
+    /// 2026-10-16; its exact wrapped seeds now take these slots too (unmeasured on Big:
+    /// the per-step snapshot is the check owed).
     ///
     /// DESKTOP only (#415 review): iOS/visionOS live under a jetsam limit where
     /// the failure is a kill, not a slowdown, so mobile keeps the two slots it
