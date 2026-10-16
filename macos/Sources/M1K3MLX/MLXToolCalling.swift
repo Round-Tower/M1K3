@@ -82,6 +82,8 @@
 //  agent loop can steer a retry; `rejectionSummary` is the safe string that goes back into the prompt.
 //  Review: Kev + claude-opus-5-5, 2026-10-16 — a gemma persona seed past its sliding window (now built exact)
 //  keeps tool turns out of checkpoint mode: they prefill fresh, as before. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — same day, the veto lifted: Big's tool turns take checkpoints off
+//  the wrapped seed (copy and extend, never trim), proved by the probe's tool arm on Big. Confidence 0.75.
 
 import Foundation
 import M1K3Inference
@@ -937,10 +939,7 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         self.seedSource = seedSource
         self.adoptTail = adoptTail
         let usesCheckpoints = seed.map {
-            ExactPrefixReuse.usesCheckpoints(
-                seedExact: $0.exact, seedLayersTrimmable: $0.cache.map(\.isTrimmable),
-                seedWrapsWindow: $0.cache.contains { $0 is RotatingKVCache && !$0.isTrimmable }
-            )
+            ExactPrefixReuse.usesCheckpoints(seedExact: $0.exact, seedLayersTrimmable: $0.cache.map(\.isTrimmable))
         } ?? false
         self.usesCheckpoints = usesCheckpoints
         if usesCheckpoints, let seed {

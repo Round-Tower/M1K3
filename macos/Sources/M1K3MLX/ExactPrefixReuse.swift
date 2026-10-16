@@ -31,6 +31,8 @@
 //  checkpoint mode (#509 follow-up: peak RSS per step). The curve itself is verify-by-launch.
 //  Review: Kev + claude-opus-5-5, 2026-10-16 — `usesCheckpoints(…seedWrapsWindow:)`: a gemma seed past its
 //  sliding window stays out of checkpoint mode (unmeasured on RotatingKVCache, challenger). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — the veto is gone: tool turns on Big take checkpoints off the wrapped
+//  seed, after the probe's tool arm (seed → turn → rolling checkpoint → turn) matched a fresh prefill on Big.
 
 import Foundation
 
@@ -47,12 +49,11 @@ enum ExactPrefixReuse {
     /// Whether a session keeps checkpoints instead of rolling its live cache: the
     /// seed is exact AND some layer can't be trimmed. Trimmable caches keep the
     /// live-cache path; a seed nobody vouched exact holds a sampled position.
-    ///
-    /// `seedWrapsWindow`: the seed is an exact gemma persona past its sliding window
-    /// (a wrapped RotatingKVCache, untrimmable too). Checkpoints on a rotating cache
-    /// are unmeasured, so tool turns keep their full prefill for it (2026-10-16).
-    static func usesCheckpoints(seedExact: Bool, seedLayersTrimmable: [Bool], seedWrapsWindow: Bool = false) -> Bool {
-        !seedWrapsWindow && seedExact && seedLayersTrimmable.contains(false)
+    /// A gemma seed past its sliding window (a wrapped RotatingKVCache) is one more
+    /// untrimmable layer: checkpoints only ever copy and extend, never trim, which the
+    /// tool arm of `wrappedSeedEquivalenceProbe` proved on Big (2026-10-16).
+    static func usesCheckpoints(seedExact: Bool, seedLayersTrimmable: [Bool]) -> Bool {
+        seedExact && seedLayersTrimmable.contains(false)
     }
 
     /// The label for the per-step memory snapshot MLXToolTurnSession logs after

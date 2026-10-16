@@ -19,6 +19,9 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-16, Confidence 0.7 (compiles against the
 //  pinned mlx-swift-lm; the verdict is whatever the run reports). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — the tool arm: a seed carrying tool specs, extended
+//  by turn one, copied as the rolling checkpoint, then extended by turn two (MLXToolTurnSession's
+//  checkpoint path) against a fresh prefill of turn two. The gate for lifting the checkpoint veto.
 
 import Foundation
 import M1K3Inference
@@ -50,7 +53,17 @@ extension MLXBrainProvider {
             if line.hasPrefix("PASS") { passed += 1 }
             lines.append("  [\(index)] \(line)")
         }
-        lines.append("  → \(passed)/\(prompts.count) PASS")
+        // Tool arm: two turns through the checkpoint path (seed → turn 1 → rolling copy → turn 2).
+        let toolTurns: [(String, String, String)] = [
+            ("What's the weather in Cork today?", "Let me check that for you.", "And tomorrow?"),
+            (long, "That's a long road. Shall I look up the villages?", "Yes, the first three please."),
+        ]
+        for (index, turn) in toolTurns.enumerated() {
+            let line = await compareToolArms(container: container, persona: persona, turn: turn)
+            if line.hasPrefix("PASS") { passed += 1 }
+            lines.append("  [tool \(index)] \(line)")
+        }
+        lines.append("  → \(passed)/\(prompts.count + toolTurns.count) PASS")
         return lines.joined(separator: "\n")
     }
 
@@ -75,51 +88,129 @@ extension MLXBrainProvider {
                 guard full.count > seed.count + 1, full.starts(with: seed) else {
                     return "ERROR seed is not a prefix of the render (seed \(seed.count), full \(full.count))"
                 }
-                let model = context.model
-
-                // A: one fresh prefill of everything but the last token, then the last token.
-                let fresh = try model.newCache(parameters: parameters)
-                try Self.prefillExactly(Array(full.dropLast()), into: fresh, state: nil, parameters: parameters, model: model)
-
-                // B: the seed exactly, a deep copy (as PersonaPrefixCache hands out), then the suffix.
-                let seedCache = try model.newCache(parameters: parameters)
-                try Self.prefillExactly(seed, into: seedCache, state: nil, parameters: parameters, model: model)
-                let wrapped = seedCache.contains { !$0.isTrimmable }
-                let seeded = seedCache.map { $0.copy() }
-                let suffix = Array(full[seed.count ..< (full.count - 1)])
-                if !suffix.isEmpty {
-                    try Self.prefillExactly(suffix, into: seeded, state: nil, parameters: parameters, model: model)
-                }
-
-                // C, the control: fresh again at another chunk size (both A and C are right).
-                var controlParameters = parameters
-                controlParameters.prefill = .init(stepSize: Self.controlStepSize)
-                let control = try model.newCache(parameters: controlParameters)
-                try Self.prefillExactly(
-                    Array(full.dropLast()), into: control, state: nil, parameters: controlParameters, model: model
-                )
-
-                let last = full[full.count - 1]
-                let logitsA = Self.step(last, cache: fresh, model: model)
-                let logitsB = Self.step(last, cache: seeded, model: model)
-                let logitsC = Self.step(last, cache: control, model: model)
-                let gapB = Self.maxGap(logitsA, logitsB), gapC = Self.maxGap(logitsA, logitsC)
-                let greedyA = Self.greedy(from: logitsA, cache: fresh, model: model)
-                let greedyB = Self.greedy(from: logitsB, cache: seeded, model: model)
-                let greedyC = Self.greedy(from: logitsC, cache: control, model: model)
-                let agreeB = zip(greedyA, greedyB).prefix { $0 == $1 }.count
-                let agreeC = zip(greedyA, greedyC).prefix { $0 == $1 }.count
-                let sameTop = greedyA.first == greedyB.first
-                let pass = sameTop && agreeB >= min(Self.greedyMustMatch, agreeC)
-                let text = context.tokenizer.decode(tokenIds: greedyB).replacingOccurrences(of: "\n", with: " ")
-                return "\(pass ? "PASS" : "FAIL") seed=\(seed.count) suffix=\(suffix.count + 1) wrapped=\(wrapped) "
-                    + "seed: maxΔ=\(String(format: "%.3f", gapB)) greedy=\(agreeB)/\(Self.seedProbeGreedyTokens) · "
-                    + "control: maxΔ=\(String(format: "%.3f", gapC)) greedy=\(agreeC)/\(Self.seedProbeGreedyTokens) "
-                    + "top1=\(sameTop) «\(text.prefix(50))»"
+                return try self.verdict(context: context, full: full, seed: seed, checkpoints: [], parameters: parameters)
             }
         } catch {
             return "ERROR \(String(describing: error).prefix(120))"
         }
+    }
+
+    /// Two tool turns: the render of turn one is the rolling checkpoint turn two extends.
+    private func compareToolArms(
+        container: ModelContainer, persona: String, turn: (String, String, String)
+    ) async -> String {
+        let parameters = generateParameters
+        do {
+            return try await container.perform { context in
+                guard let upstream = (context.tokenizer as? TransformersTokenizerAdapter)?.upstream else {
+                    return "ERROR no template tokenizer"
+                }
+                let specs = Self.probeToolSpecs
+                let seedInputs = MLXToolMapping.seedInputs(
+                    persona: persona, specs: specs, format: self.resolvedToolCallFormat ?? .json
+                )
+                let system = ["role": "system", "content": seedInputs.system]
+                let first = [system, ["role": "user", "content": turn.0]]
+                let second = first + [["role": "assistant", "content": turn.1], ["role": "user", "content": turn.2]]
+                let render = { (messages: [[String: String]]) in
+                    try upstream.applyChatTemplate(
+                        messages: messages, chatTemplate: nil, addGenerationPrompt: true,
+                        truncation: false, maxLength: nil, tools: seedInputs.specs
+                    )
+                }
+                let full1 = try render(first), full2 = try render(second)
+                let seed = try self.systemBlockIDs(context: context, persona: persona, specs: specs)
+                // The rolling checkpoint holds turn one's render up to its last token. When turn
+                // two re-renders turn one differently, the session falls back to the pristine seed
+                // ("checkpoint diverged"), so the arm measures that path instead and says so.
+                let rolling = full1.count - 1
+                guard full1.starts(with: seed), full2.starts(with: seed), full2.count > seed.count + 1 else {
+                    return "ERROR seed is not a prefix (seed \(seed.count), turn1 \(full1.count), turn2 \(full2.count))"
+                }
+                let nests = rolling > seed.count && full2.count > rolling + 1 && full2.starts(with: full1.prefix(rolling))
+                let split = zip(full1, full2).prefix { $0 == $1 }.count
+                let note = nests ? "" : " (turn 2 splits from turn 1 at \(split)/\(rolling): "
+                    + "«\(context.tokenizer.decode(tokenIds: Array(full1[max(0, split - 2) ..< min(full1.count, split + 6)])))» vs "
+                    + "«\(context.tokenizer.decode(tokenIds: Array(full2[max(0, split - 2) ..< min(full2.count, split + 6)])))»)"
+                let line = try self.verdict(
+                    context: context, full: full2, seed: seed, checkpoints: nests ? [rolling] : [], parameters: parameters
+                )
+                return (line + note).replacingOccurrences(of: "\n", with: "⏎")
+            }
+        } catch {
+            return "ERROR \(String(describing: error).prefix(120))"
+        }
+    }
+
+    /// Two small read-only tools, enough to put a tool palette in the seed.
+    static let probeToolSpecs: [ToolSpec] = [
+        probeSpec("web_search", "Search the web for current information.", query: "What to search for."),
+        probeSpec("datetime", "The current date and time.", query: nil),
+    ]
+
+    private static func probeSpec(_ name: String, _ description: String, query: String?) -> ToolSpec {
+        var properties: [String: any Sendable] = [:]
+        if let query {
+            properties["query"] = ["type": "string", "description": query] as [String: any Sendable]
+        }
+        let parameters: [String: any Sendable] = [
+            "type": "object", "properties": properties, "required": query == nil ? [String]() : ["query"],
+        ]
+        let function: [String: any Sendable] = ["name": name, "description": description, "parameters": parameters]
+        return ["type": "function", "function": function]
+    }
+
+    /// A: fresh prefill of `full`. B: the seed exactly, deep-copied, extended to each
+    /// checkpoint (copying there, as the rolling checkpoint is a copy), then to the end.
+    /// C: fresh again at another chunk size. Must run inside `container.perform`.
+    private func verdict(
+        context: ModelContext, full: [Int], seed: [Int], checkpoints: [Int], parameters: GenerateParameters
+    ) throws -> String {
+        let model = context.model
+
+        // A: one fresh prefill of everything but the last token, then the last token.
+        let fresh = try model.newCache(parameters: parameters)
+        try Self.prefillExactly(Array(full.dropLast()), into: fresh, state: nil, parameters: parameters, model: model)
+
+        // B: the seed exactly, a deep copy (as PersonaPrefixCache hands out), then the suffix
+        // in stages; at each checkpoint the session keeps a copy and the next turn extends it.
+        let seedCache = try model.newCache(parameters: parameters)
+        try Self.prefillExactly(seed, into: seedCache, state: nil, parameters: parameters, model: model)
+        let wrapped = seedCache.contains { !$0.isTrimmable }
+        var seeded = seedCache.map { $0.copy() }
+        var from = seed.count
+        for stop in checkpoints + [full.count - 1] where stop > from {
+            try Self.prefillExactly(Array(full[from ..< stop]), into: seeded, state: nil, parameters: parameters, model: model)
+            if stop != full.count - 1 { seeded = seeded.map { $0.copy() } }
+            from = stop
+        }
+
+        // C, the control: fresh again at another chunk size (both A and C are right).
+        var controlParameters = parameters
+        controlParameters.prefill = .init(stepSize: Self.controlStepSize)
+        let control = try model.newCache(parameters: controlParameters)
+        try Self.prefillExactly(
+            Array(full.dropLast()), into: control, state: nil, parameters: controlParameters, model: model
+        )
+
+        let last = full[full.count - 1]
+        let logitsA = Self.step(last, cache: fresh, model: model)
+        let logitsB = Self.step(last, cache: seeded, model: model)
+        let logitsC = Self.step(last, cache: control, model: model)
+        let gapB = Self.maxGap(logitsA, logitsB), gapC = Self.maxGap(logitsA, logitsC)
+        let greedyA = Self.greedy(from: logitsA, cache: fresh, model: model)
+        let greedyB = Self.greedy(from: logitsB, cache: seeded, model: model)
+        let greedyC = Self.greedy(from: logitsC, cache: control, model: model)
+        let agreeB = zip(greedyA, greedyB).prefix { $0 == $1 }.count
+        let agreeC = zip(greedyA, greedyC).prefix { $0 == $1 }.count
+        let sameTop = greedyA.first == greedyB.first
+        let pass = sameTop && agreeB >= min(Self.greedyMustMatch, agreeC)
+        let text = context.tokenizer.decode(tokenIds: greedyB).replacingOccurrences(of: "\n", with: " ")
+        return "\(pass ? "PASS" : "FAIL") seed=\(seed.count) suffix=\(full.count - seed.count) wrapped=\(wrapped) "
+            + "checkpoints=\(checkpoints.count) "
+            + "seed: maxΔ=\(String(format: "%.3f", gapB)) greedy=\(agreeB)/\(Self.seedProbeGreedyTokens) · "
+            + "control: maxΔ=\(String(format: "%.3f", gapC)) greedy=\(agreeC)/\(Self.seedProbeGreedyTokens) "
+            + "top1=\(sameTop) «\(text.prefix(50))»"
     }
 
     /// The control arm's chunk size: off the default grid on purpose.
