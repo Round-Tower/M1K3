@@ -77,6 +77,7 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-16 — voice turns go through VoiceTurnPreparer, as on the Mac: NameRepair
 //  toward the names in memory, the room line as a per-turn clause (`voiceTurnClause`), the song verdict in shadow.
 //  Confidence 0.7: verify-by-launch on the phone owed.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 (follow-up) — `lastHeard` clears when a listen starts (#618 review).
 
 import AVFoundation
 import Foundation
@@ -278,6 +279,7 @@ extension AppCore {
                 // Voice-first owns its turn boundary: recognizer finality is a
                 // segment boundary, not the end of the listen (FinalityPolicy).
                 let upstream = try transcriber.startListening(finality: .keepsListening)
+                lastHeard = nil // this listen's room, not the last one's
                 avatar.setActivity(.listening)
                 let firstListen = voiceFirstListenPending
                 voiceFirstListenPending = false

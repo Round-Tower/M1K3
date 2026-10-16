@@ -25,6 +25,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-13 — the speak tool's text says the emotion now sets the voice's
 //  pace (and pitch where the voice allows) as well as the face (#576 §1; the app maps it to a VoiceMood).
 //  Wording only. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — MCPVoiceError is a LocalizedError: the registry's log line read
+//  "MCPVoiceError error 1" on a live refused speak, hiding why. Confidence 0.95.
 //
 
 import Foundation
@@ -95,9 +97,14 @@ func jsonStringLiteral(_ s: String) -> String {
     return literal
 }
 
-/// A tool error with a clean, client-facing message.
-public struct MCPVoiceError: Error, CustomStringConvertible {
+/// A tool error with a clean, client-facing message. LocalizedError so the registry's
+/// `localizedDescription` log line carries the message, not "MCPVoiceError error 1".
+public struct MCPVoiceError: LocalizedError, CustomStringConvertible {
     public let description: String
+
+    public var errorDescription: String? {
+        description
+    }
 
     public init(_ description: String) {
         self.description = description

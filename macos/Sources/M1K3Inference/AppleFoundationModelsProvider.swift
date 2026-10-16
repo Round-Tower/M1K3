@@ -74,6 +74,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (4) — continueToolTurn gates the neutral image shape on the same
 //  runtime read that attaches the image (AFMToolPrompt.visionRoute / imagesAttachable): where none can ride the
 //  Prompt the turn is the honest `.cannotShow` reply, no session built (PR #526 third-pass review). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — the launch `afm window` line names WHY AFM read unavailable (a
+//  local build launched seconds after killing the last M1K3 logged "unavailable — floor" while AFM was fine). Logging only.
 import Foundation
 import M1K3LogCore
 import os
@@ -398,7 +400,10 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
         let reported = deviceContextSize()
         MiniContextWindow.record(reported: reported)
         let window = MiniContextWindow.current
-        let source = reported.map { "reported \($0)" } ?? "unavailable — floor"
+        // Why it's unavailable matters: modelNotReady at launch is transient (a just-killed
+        // M1K3 can leave the daemon busy), appleIntelligenceNotEnabled isn't.
+        let source = reported.map { "reported \($0)" }
+            ?? "unavailable (\(String(describing: SystemLanguageModel.default.availability))) — floor"
         log.notice("afm window: \(window, privacy: .public) tokens (\(source, privacy: .public))")
         return window
     }
