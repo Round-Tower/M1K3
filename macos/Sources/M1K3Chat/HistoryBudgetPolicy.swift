@@ -41,6 +41,11 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.85 — `measuredMiniBudget` sizes to the device window
 //  (`windowTokens`, default MiniContextWindow.current) and subtracts grounding's gain above its 4,096
 //  baseline, so a bigger window adds no overcommit. Byte-identical at 4,096.
+//
+//  Review: Kev + claude-opus-5-5, 2026-10-16, Confidence 0.75 — `spokenBigBudget`: a voice turn on Big replays
+//  about four exchanges. The voice rig measured the replay at ~70% of a steady-state spoken prompt (9–10 s of
+//  prefill before the first word). Kev's call after the measurement: cap it, Big only, argv kill switch.
+//  Open: does a follow-up four exchanges back still land? Re-run the rig's history script with the cap.
 
 import Foundation
 import M1K3Inference
@@ -184,12 +189,16 @@ public enum HistoryBudgetPolicy {
     /// prompt cost via `SystemLanguageModel.tokenCount(for:)` (macOS 26.4+),
     /// pass it here and Mini gets the measured budget instead of the conservative
     /// fallback — the [SPIKE] resolved. Nil = the old conservative path.
+    ///
+    /// `spoken`: a voice-mode turn. On Big it takes `spokenBigBudget` (the
+    /// tighter of the two, field by field); every other tier is unchanged.
     public static func budget(
         for tier: BrainTier?,
         reservedTokens: Int,
         generationTokens: Int,
         latencyCeilingTokens: Int = defaultLatencyCeilingTokens,
-        measuredMiniReserveTokens: Int? = nil
+        measuredMiniReserveTokens: Int? = nil,
+        spoken: Bool = false
     ) -> HistoryWindow.Budget {
         guard let tier, tier != .mini else {
             if let measured = measuredMiniReserveTokens {
@@ -197,12 +206,47 @@ public enum HistoryBudgetPolicy {
             }
             return conservativeMiniBudget
         }
-        return budget(
+        let typed = budget(
             for: tier,
             reservedTokens: reservedTokens,
             generationTokens: generationTokens,
             latencyCeilingTokens: latencyCeilingTokens
         )
+        guard spoken, tier == .big else { return typed }
+        let total = min(typed.totalChars, spokenBigBudget.totalChars)
+        return HistoryWindow.Budget(
+            totalChars: total,
+            perTurnChars: min(typed.perTurnChars, spokenBigBudget.perTurnChars, total),
+            maxTurns: min(typed.maxTurns, spokenBigBudget.maxTurns)
+        )
+    }
+
+    /// Big's replay on a SPOKEN turn: about four exchanges, where the typed window fills at about six
+    /// (its 16-turn count cap never binds on Big's ~600-char spoken answers; the char budget does).
+    ///
+    /// Measured with the voice rig (2026-10-16, ten turns from a new chat, Big): Big's spoken
+    /// answers run ~600 chars, so the typed ~7,400-char budget fills at twelve turns and then
+    /// evicts the oldest every turn. At that point the replay is ~70% of the prompt, about
+    /// 1,800 tokens and 9–10 s of prefill, all paid before the first word is spoken. Eight
+    /// turns measured 4,186 chars at 8.6 s of prefill against 11–13 s with a full window.
+    ///
+    /// Big only: the other tiers have not been through the rig. Lil prefills far faster
+    /// and Mini's replay is already small. Long-term memory is untouched; only how much of
+    /// the conversation is replayed word for word shrinks. `-spokenHistoryCap NO` turns it off.
+    ///
+    /// "Spoken" is voice mode being ON, the flag the spoken grounding budget reads too: a turn
+    /// typed while voice mode is on gets the cap as well.
+    public static let spokenBigBudget = HistoryWindow.Budget(
+        totalChars: 4400, perTurnChars: HistoryWindow.maxCharsPerTurn, maxTurns: 8
+    )
+
+    /// The argv kill switch for `spokenBigBudget` (`M1K3 -spokenHistoryCap NO`), read the way
+    /// the other in-app A/B overrides are: on macOS 27 `defaults write` never reaches the app.
+    public static func spokenCapEnabled(
+        arguments: [String: Any] = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
+    ) -> Bool {
+        guard let raw = arguments["spokenHistoryCap"] as? String else { return true }
+        return !["no", "0", "false", "off"].contains(raw.lowercased())
     }
 
     /// The `maxTokens` the app should construct the MLX provider with for

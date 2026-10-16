@@ -14,6 +14,9 @@
 //
 //  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.9 — the measured Mini replay is unchanged at 4,096 and
 //  grows at 8,192 without double-spending grounding's gain.
+//
+//  Review: Kev + claude-opus-5-5, 2026-10-16, Confidence 0.8 — the spoken cap: Big's voice replay holds about four
+//  exchanges, tightens only, leaves the other tiers alone, and has an argv kill switch.
 
 @testable import M1K3Chat
 import M1K3Inference
@@ -282,5 +285,62 @@ struct HistoryBudgetPolicyTests {
         #expect(tiny.totalChars >= 0)
         let historyTokens = Int(Double(tiny.totalChars) / HistoryBudgetPolicy.charsPerToken)
         #expect(historyTokens + persona + generation <= max(window, persona + generation))
+    }
+
+    // MARK: - Spoken replay (Big, voice mode)
+
+    private func live(_ tier: BrainTier?, spoken: Bool) -> HistoryWindow.Budget {
+        HistoryBudgetPolicy.budget(
+            for: tier,
+            reservedTokens: HistoryBudgetPolicy.liveReserveTokens,
+            generationTokens: HistoryBudgetPolicy.liveGenerationReserveTokens,
+            spoken: spoken
+        )
+    }
+
+    @Test("a spoken turn on Big replays about four exchanges, not the full window")
+    func spokenBigReplaysFourExchanges() {
+        let typed = live(.big, spoken: false)
+        let spoken = live(.big, spoken: true)
+        #expect(spoken.maxTurns == 8)
+        #expect(spoken.totalChars < typed.totalChars)
+        // The 2026-10-16 rig run: eight turns of Big's spoken answers measured 4,186 chars.
+        #expect(spoken.totalChars >= 4186)
+        #expect(spoken.perTurnChars <= spoken.totalChars)
+    }
+
+    @Test("an image on a spoken Big turn still keeps the per-turn cap inside the total")
+    func spokenBigWithImagesKeepsTheClamp() {
+        for images in 0 ... 12 {
+            let budget = live(.big, spoken: true).reservingImages(images)
+            #expect(budget.perTurnChars <= budget.totalChars)
+        }
+    }
+
+    @Test("spoken only tightens: every field is at most the typed figure")
+    func spokenOnlyTightens() {
+        for tier: BrainTier? in [.big, .lil, .mini, .pocket, nil] {
+            let typed = live(tier, spoken: false)
+            let spoken = live(tier, spoken: true)
+            #expect(spoken.totalChars <= typed.totalChars)
+            #expect(spoken.perTurnChars <= typed.perTurnChars)
+            #expect(spoken.maxTurns <= typed.maxTurns)
+        }
+    }
+
+    @Test("the spoken cap is Big's alone until another tier is measured")
+    func spokenLeavesOtherTiersAlone() {
+        for tier: BrainTier? in [.lil, .mini, .pocket, nil] {
+            #expect(live(tier, spoken: true) == live(tier, spoken: false))
+        }
+    }
+
+    @Test("the argv kill switch: -spokenHistoryCap NO turns the cap off, anything else leaves it on")
+    func spokenCapKillSwitch() {
+        #expect(HistoryBudgetPolicy.spokenCapEnabled(arguments: [:]))
+        #expect(HistoryBudgetPolicy.spokenCapEnabled(arguments: ["spokenHistoryCap": "YES"]))
+        for off in ["NO", "no", "0", "false", "off"] {
+            #expect(!HistoryBudgetPolicy.spokenCapEnabled(arguments: ["spokenHistoryCap": off]))
+        }
     }
 }

@@ -36,6 +36,8 @@
 //  (`whenUnset: true`): every tier, the group head and chains, on the 10-10 arm's evidence. iOS unchanged.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — `readAFMAvailability()`: the AFM availability probe off the main actor (the re-run sheet read it
 //  synchronously in onAppear). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — the history provider passes `spoken` (voice mode on, argv kill switch
+//  off): Big's voice replay holds about four exchanges (`HistoryBudgetPolicy.spokenBigBudget`). Confidence 0.75.
 
 import Foundation
 import M1K3Agent
@@ -488,13 +490,18 @@ extension AppEnvironment {
                 // head out past 8192). Read fresh each turn so a hot-swap re-sizes
                 // the window immediately. Mini uses exact token counts when measured
                 // (the [SPIKE] resolved — 3× replay uplift); falls back to the
-                // conservative budget before the measurement lands.
-                let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
+                // conservative budget before the measurement lands. A spoken turn on
+                // Big replays about four exchanges (`spokenBigBudget`, measured with the
+                // voice rig): the replay is what a voice user waits through before the
+                // first word. `-spokenHistoryCap NO` turns it off.
+                let defaults = UserDefaults.standard
+                let raw = defaults.string(forKey: Self.selectedBrainKey) ?? ""
                 return HistoryBudgetPolicy.budget(
                     for: BrainTier(persisted: raw),
                     reservedTokens: Self.historyReserveTokens,
                     generationTokens: Self.historyGenerationReserveTokens,
-                    measuredMiniReserveTokens: Self.measuredMiniReserve.withLock { $0 }
+                    measuredMiniReserveTokens: Self.measuredMiniReserve.withLock { $0 },
+                    spoken: defaults.bool(forKey: Self.voiceModeActiveKey) && HistoryBudgetPolicy.spokenCapEnabled()
                 )
             },
             maxIterationsProvider: {

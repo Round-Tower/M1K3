@@ -1,0 +1,11 @@
+# voice_rig.zsh default turns: one spoken line per row. `#` lines and blanks are skipped.
+# Plain turns (the persona seed + this turn's context):
+Hey Mike, how's it going?
+What's a good name for a black cat?
+# A follow-up: the history replay is the cost this one measures.
+Why that one?
+# A dispatched tool turn (the app runs datetime, a plain turn answers):
+What time is it?
+# An acting turn reaches the agent loop (the tool-session seed). Kept out of the default run:
+# it acts on the Mac. Uncomment to test it on purpose.
+# Open the M1K3 website in my browser.

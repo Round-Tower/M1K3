@@ -11,6 +11,7 @@
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.8. Prior: Unknown.
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — the plain prompt carries no date line and no
 //  remembered-thread cue (#428/#349). Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — pins `promptAnatomy` (history vs rest, in characters).
 //
 
 import Foundation
@@ -410,5 +411,29 @@ struct PlainTurnStreamTests {
         #expect(PlainTurnStream.clean("Hello") == "Hello")
         // PR #414 review: leading whitespace (a tokenizer artifact) must not ride into the bubble.
         #expect(PlainTurnStream.clean("  Well, hi") == "Well, hi")
+    }
+}
+
+/// 2026-10-16: the voice rig read ~1,900 tokens past Big's persona seed on every plain turn,
+/// and nothing said how much of it was the history replay. The challenger's step 0: measure
+/// the split before building a history cache or capping the window.
+struct PlainPromptAnatomyTests {
+    @Test("the anatomy line splits the prompt into the history replay and everything else")
+    func anatomySplitsHistory() {
+        let history = [
+            ChatTurn(role: .user, text: "The landlord is sending someone about the boiler."),
+            ChatTurn(role: .assistant, text: "Good, that's been a while coming."),
+        ]
+        let budget = HistoryWindow.Budget.default
+        let replay = HistoryWindow.render(history, budget: budget) ?? ""
+        let prompt = "identity\n\n" + replay + "\n\nRULES\n\nUSER: hi"
+        let line = AgentRAGResponder.promptAnatomy(prompt: prompt, history: history, budget: budget)
+        #expect(line == "prompt anatomy: \(prompt.count)c · history \(replay.count)c in 2 turns · rest \(prompt.count - replay.count)c")
+    }
+
+    @Test("no history reads as zero, not a missing field")
+    func anatomyWithoutHistory() {
+        let line = AgentRAGResponder.promptAnatomy(prompt: "USER: hi", history: [], budget: .default)
+        #expect(line == "prompt anatomy: 8c · history 0c in 0 turns · rest 8c")
     }
 }

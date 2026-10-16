@@ -60,12 +60,60 @@ anything. That is the whole game.
 
 ---
 
+### 1a. Driving it hands-free: the voice rig (2026-10-16)
+
+`tools/eval/voice_rig.zsh` speaks scripted turns at the running app and prints what each one cost:
+
+```bash
+macos/tools/eval/voice_rig.zsh                      # the default turns (voice_rig_turns.txt)
+macos/tools/eval/voice_rig.zsh --turns my.txt --out ~/tmp/rig --leave-on
+```
+
+How it works, and the traps it already paid for:
+
+- **Into voice mode:** ⌘⇧V through System Events. It needs Accessibility for the terminal. The Mac has no voice deep link on purpose: any web page could open one, and with it the mic.
+- **The user's voice is `say`**, a separate process playing through the speakers. M1K3's echo canceller removes only its own playback. So `m1k3 speak` can't stand in for the user, though `say` is heard.
+- **It paces on the app's log, never on `m1k3 status`.** A voice-mode turn leaves `answering` false. The first draft waited on it and spoke over M1K3. A turn is done when its `voice turn:` line lands and the mic re-arms after it.
+- **It speaks out loud.** Run it when nobody is talking near the Mac.
+
+`voice_rig_summary.py` turns the log into one row per turn: the route, the prompt tokens read past the persona seed, prefill, first audio, plus notes for name repairs and seed divergence.
+
+**The first reading, on master e632482d** (Big, M1 Max, after #620 gave Big its persona seed back):
+
+| # | route | prompt | prefill | 1st audio |
+|---|---|---|---|---|
+| 1 | plain (tools verdict) | 2139 | 11.4 s | 19.6 s |
+| 2 | plain (chat) | 1863 | 9.8 s | 15.4 s |
+| 3 | datetime | 1774 | 9.4 s | 9.8 s |
+| 4 | fetch_page | 1903 | 9.8 s | 3.0 s |
+
+The persona seed held on every turn: none diverged. What's left is the turn's own context, about 1,800–2,100 tokens, and the history replay is a large share of it. The plain route has no conversation tail (§2a's tail serves only the tool session, and it never stores on Big). In voice mode the room line sits in the preamble, ahead of the history. That is the next lever.
+
+**The history replay, measured and capped (2026-10-16).** `voice_rig.zsh --new-chat --turns voice_rig_history.txt`
+plays a ten-exchange conversation with follow-ups. The responder's `prompt anatomy:` line (the history and rest
+columns) shows Big's ~600-char spoken answers fill the typed ~7,400-char replay at twelve turns. From there it
+evicts the oldest every turn, and the replay is ~70% of the prompt. A spoken turn on Big now replays at most
+8 turns / 4,400 chars (`HistoryBudgetPolicy.spokenBigBudget`). This A/B is one build, one script, a new chat
+each time, and `M1K3 -spokenHistoryCap NO` for the off arm:
+
+| turns 7–10 (steady state) | prompt past the seed | prefill | first audio (non-search) |
+|---|---|---|---|
+| cap off | 2,025–2,680 tok | 10.4–13.8 s (mean 12.2) | 13.4–17.5 s (mean 15.9) |
+| cap on | 1,243–1,745 tok | 6.7–9.5 s (mean 8.4) | 9.0–13.2 s (mean 11.4) |
+
+About 3.8 s less prefill per turn once a chat is going, and first audio follows. Turns 1–5 are identical,
+since the cap doesn't bind before eight turns. The follow-up "What did you say about names earlier?" (turn 8)
+named the right cats with the cap on. Turn 4 had repeated them, though, so it sat inside the window: recall of
+something said once, five or more exchanges back, is owed (§6). The other tiers are uncapped until the rig
+measures them.
+
 ## 2. What we did about it
 
 | Change | Effect | Where |
 |---|---|---|
 | `spokenTokenBudget = 400` (was 1100) | ~1.2 s off every spoken turn | `GroundingBudgetPolicy` |
 | iOS gains a grounding budget at all | mobile had been running Big's 1100 on a 4096-token tier | `AppCore.swift` |
+| Big's spoken replay ≤ 8 turns / 4,400 chars | ~3.8 s less prefill per turn in steady state (§1a) | `HistoryBudgetPolicy.spokenBigBudget` |
 | Kokoro `preload()` warms the graph | first sentence of a launch no longer compiles Metal kernels | `KokoroSynthesizer` |
 
 The spoken budget is justified twice, and the second reason matters more than
@@ -298,13 +346,16 @@ On macOS none of it applies: the app is already running.
 
 ## 6. Owed
 
-- **A real spoken-turn reading from the instrument this doc is built on.** Every
-  number above comes from the MCP/chat/eval path; no HUMAN voice turn has yet
-  been timed end-to-end. First voice-mode run on a build carrying #120+#122
+- ~~A real spoken-turn reading~~: done 2026-10-16 by the voice rig (§1a), spoken
+  through the speakers rather than by a human. Originally: every number above came
+  from the MCP/chat/eval path, and no voice turn had been timed end-to-end. First voice-mode run on a build carrying #120+#122
   settles it — read with the `log show` line in §1, plus
   `rg 'seed=conversation'` for the tail engaging mid-conversation (the eval
   proved the mechanism 2026-08-13; the felt conversation is the remaining half).
 - The 400-token spoken budget's effect on answer **quality** is unmeasured.
+- Big's spoken history cap (§1a): a follow-up on something said ONCE, five or more exchanges back, is
+  untested (the rig script's turn 4 repeated the names turn 8 asked about). Lil and Mini have no spoken cap.
+  Run the rig on Lil before widening it.
 - The Kokoro graph warm's saving is verify-by-launch (metallib wall) — the
   `kokoro warm:` log line reports it.
 
@@ -317,3 +368,9 @@ on our own pin. Honest opens: the TTS model survey is from web sources and one
 repo README rather than a build, so treat the model list as a starting point and
 not a spec; no spoken turn has been measured by the new instrument yet.)
 Prior: Unknown.*
+
+*Review: Kev + claude-opus-5-5, 2026-10-16. §1a covers the voice rig and its first reading. The persona seed
+holds on Big now, so the turn's own context is the cost, and the plain route has no tail. Confidence 0.8.*
+
+*Review: Kev + claude-opus-5-5, 2026-10-16. §1a gains the history replay A/B: Big's spoken cap, both arms on
+one build, ~3.8 s less prefill per steady-state turn. The once-said-long-ago recall is owed. Confidence 0.75.*

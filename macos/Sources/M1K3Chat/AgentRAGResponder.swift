@@ -168,6 +168,11 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-16 — `voiceClauseProvider`: a voice turn's room line (what the
 //  mic heard, SoundContextGate) joins `turnClauses()`. A clause, never the question: it stays out of the
 //  chat history and memory distillation by construction.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — `promptAnatomy` logs a plain/dispatched prompt's history-vs-rest
+//  split (the challenger's step 0 before a history cache or a voice history cap on Big).
+//  Review: Kev + claude-opus-5-5, 2026-10-16 (pre-push review fold) — `runPlainTurn` reads the history
+//  budget once, so the anatomy line describes the window the prompt was built with (voice mode can flip
+//  between two reads).
 
 import Foundation
 import M1K3Agent
@@ -621,13 +626,15 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         continuation: AsyncStream<String>.Continuation
     ) async -> Bool {
         onActivity(.thinking(iteration: 0))
+        // Read once: the anatomy line below must describe the window this prompt was built with.
+        let historyBudget = historyBudgetProvider()
         let prompt = if let observation {
             // A dispatched turn: the date (not the identity line) and the age clause.
             Self.dispatchTurnPrompt(
                 question: question,
                 preamble: ([PromptContext.line(now: Date(), brainName: "")] + turnClauses())
                     .compactMap { $0 }.joined(separator: "\n\n"),
-                history: history, historyBudget: historyBudgetProvider(), observation: observation
+                history: history, historyBudget: historyBudget, observation: observation
             )
         } else {
             // No date line (#428/#349): on small talk it was the one concrete thing in the
@@ -638,10 +645,13 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 contextPreamble: ([PromptContext.identity(brainName: brainNameProvider())] + turnClauses())
                     .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n\n"),
                 chunks: chunks, memories: memories,
-                history: history, historyBudget: historyBudgetProvider(),
+                history: history, historyBudget: historyBudget,
                 ambient: browserContextProvider?()?.render(), todos: todoContextProvider?()
             )
         }
+        Self.log.notice(
+            "\(Self.promptAnatomy(prompt: prompt, history: history, budget: historyBudget), privacy: .public)"
+        )
         let generate: @Sendable () async -> Bool = { [provider] in
             var answer = PlainTurnStream()
             var answered = false
@@ -692,6 +702,16 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         return [contextPreamble, grounded, "USER: \(question)"]
             .filter { !$0.isEmpty }
             .joined(separator: "\n\n")
+    }
+
+    /// One log line splitting a plain or dispatched prompt into the history replay and the
+    /// rest (2026-10-16): the voice rig read ~1,900 tokens past Big's persona seed per turn,
+    /// and whether a history cache or a voice history cap is the lever depends on the split.
+    /// Characters, not tokens: M1K3Chat has no tokenizer; the ttft line has the token total.
+    static func promptAnatomy(prompt: String, history: [ChatTurn], budget: HistoryWindow.Budget) -> String {
+        let replay = HistoryWindow.render(history, budget: budget) ?? ""
+        let turns = replay.split(separator: "\n").filter { $0.hasPrefix("USER: ") || $0.hasPrefix("M1K3: ") }.count
+        return "prompt anatomy: \(prompt.count)c · history \(replay.count)c in \(turns) turns · rest \(prompt.count - replay.count)c"
     }
 
     /// A dispatched turn's prompt: the date, the history replay, the tool's result and
