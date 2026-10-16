@@ -54,6 +54,8 @@ Review: Kev + claude-fable-5.1, 2026-10-10 — `--think-steer` (the think-phase 
 in `kind_rows` / `kind_table` (median ~tokens and ms of the think block, from the new score fields).
 Review: Kev + claude-opus-5-5, 2026-10-10 — `--router off` (the live path, no route: the arm's like-for-like
 baseline); head/chain now need `dispatch` specifically.
+Review: Kev + claude-opus-5-5, 2026-10-16 — `--app-arg` (direct only): argv-domain A/B switches reach the exec
+(`direct_argv`), first for the wrapped-persona-seed arm (-wrappedPersonaSeed NO).
 """
 
 from __future__ import annotations
@@ -180,6 +182,12 @@ def direct_env(trig: dict[str, str], base: dict[str, str]) -> dict[str, str]:
     env.update(trig)
     env["M1K3_SELFTEST_OUT"] = "-"
     return env
+
+
+def direct_argv(binary: Path, app_args: list[str] | None) -> list[str]:
+    """The exec line for a direct run: the binary, then any argv-domain A/B overrides
+    (`--app-arg=-wrappedPersonaSeed --app-arg=NO`); on macOS 27 argv is the only way in."""
+    return [str(binary), *(app_args or [])]
 
 
 def dump_dir(container: Path, name: str) -> Path:
@@ -463,7 +471,7 @@ def run_direct(args, app: Path, trig: dict[str, str], plan: "InstancePlan") -> i
     print(f"▸ SelfTest (direct) → stdout → {log_path}")
     started = time.monotonic()
     with open(log_path, "w") as log:
-        proc = subprocess.Popen([str(binary)], env=direct_env(trig, os.environ), stdout=log, stderr=subprocess.STDOUT,
+        proc = subprocess.Popen(direct_argv(binary, args.app_arg), env=direct_env(trig, os.environ), stdout=log, stderr=subprocess.STDOUT,
                                 cwd=tempfile.gettempdir())
         try:
             subprocess.Popen(caffeinate_argv(proc.pid), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -534,6 +542,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="exec the bundle's binary with the trigger as env and read the report off stdout "
                          "(macOS 27: the container is closed to shells)")
     ap.add_argument("--log", help="direct mode: where to keep the raw stdout transcript (default: beside --save-to, or temp)")
+    ap.add_argument("--app-arg", action="append",
+                    help="direct mode: one argv word for the app, repeatable (--app-arg=-wrappedPersonaSeed --app-arg=NO)")
     args = ap.parse_args(argv)
 
     container = default_container()
@@ -548,6 +558,9 @@ def main(argv: list[str] | None = None) -> int:
         thinking=args.thinking, think_steer=args.think_steer, full_answers=args.full_answers,
         router=args.router, router_head=args.router_head, router_chain=args.router_chain,
     )
+    if args.app_arg and not args.direct:
+        print("✗ --app-arg needs --direct (an `open -a` launch carries no argv)", file=sys.stderr)
+        return 2
     if args.direct and args.dump_prompt:
         print("✗ --dump-prompt writes into the container, which --direct exists to avoid reading", file=sys.stderr)
         return 2
