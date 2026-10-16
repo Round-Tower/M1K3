@@ -762,6 +762,39 @@ struct AgentRAGResponderTests {
         #expect(try #require(provider.allPrompts.first).contains("EGRESS-FACTS"))
     }
 
+    /// Voice turns carry what the mic heard ("music (guitar)") as a per-turn clause, never in the question.
+    @Test("the voice clause rides the turn's grounding while it is set, and is gone once cleared")
+    func voiceClauseInjected() async throws {
+        let (store, embedder) = try await ingestedStore()
+        let provider = AgentScriptedProvider([
+            "CONCLUSION: The seal failed. [Plant Notes §3.2 Seals]",
+            "CONCLUSION: The seal failed. [Plant Notes §3.2 Seals]",
+        ])
+        let slot = TurnClauseSlot()
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider,
+            toolsProvider: { [] },
+            voiceClauseProvider: { slot.clause }
+        )
+        let token = slot.set("VOICE-ROOM")
+        _ = try await collect(responder.answerStreaming("What hydraulic seal failed on the conveyor under load?").stream)
+        slot.clear(token)
+        _ = try await collect(responder.answerStreaming("What hydraulic seal failed on the conveyor under load?").stream)
+        #expect(provider.allPrompts.first?.contains("VOICE-ROOM") == true)
+        #expect(provider.allPrompts.last?.contains("VOICE-ROOM") == false)
+    }
+
+    @Test("a stale token can't clear a newer turn's clause")
+    func clauseSlotTokens() {
+        let slot = TurnClauseSlot()
+        let old = slot.set("OLD")
+        let new = slot.set("NEW")
+        slot.clear(old)
+        #expect(slot.clause == "NEW")
+        slot.clear(new)
+        #expect(slot.clause == nil)
+    }
+
     @Test("tool use is reported as activity and reaches the answer")
     func toolUseFlow() async throws {
         let (store, embedder) = try await ingestedStore()

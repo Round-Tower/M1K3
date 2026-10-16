@@ -119,6 +119,10 @@
 //  Reproduced outside the app with and without the realign. Confidence 0.8 (one Mac, one rate pair).
 //  Review: same day (2), #435 review — the realign runs after the voice-processing back-out (a VP toggle
 //  reconfigures the unit and would discard it) and never under VPIO (unverified there). Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — `hearsRoom` (off unless the shell opts in): the tap also
+//  feeds a SoundContextListener, built off the audio thread on the first buffer and rebuilt on a format
+//  change, reset per listen; `soundContext` is what this listen heard. Its own lock, never nested in
+//  `lock`. Verify-by-launch owed (the stream path matched the file path in the eval, 60/60). Confidence 0.7.
 
 import AVFoundation
 import Foundation
@@ -136,6 +140,8 @@ import Speech
 ///   so a superseded session can never strip a successor's live tap. This second
 ///   lock is load-bearing for the whole session-lifetime race story — see the
 ///   `engineLock` declaration below for why it is deliberately separate from `lock`.
+/// A third, `soundLock`, guards only the room classifier (`hearsRoom`) and is never
+/// held together with either of the others.
 public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sendable {
     public let name = "Apple Speech"
 
@@ -175,6 +181,12 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// failing soft on a >2-channel device is a silent-capture risk and must
     /// log — once, not at tap-callback rate.
     private var mixdownFallbackLogged = false
+    /// Room context (SoundContext). Guarded by `soundLock`, its own lock: the tap takes it
+    /// only after releasing `lock`, never inside it.
+    private let soundLock = NSLock()
+    private var hearsRoomStored = false
+    private var soundListener: SoundContextListener?
+    private var soundListenerBuilding = false
     /// Observes `.AVAudioEngineConfigurationChange` so a route flip (a Bluetooth
     /// mic connecting, or capture forcing the A2DP→HFP profile switch) reinstalls
     /// the tap on the NEW input format instead of leaving it deaf on the old one.
@@ -216,6 +228,18 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// Why the current/most recent session ended without a word, when the
     /// recogniser (not the caller) ended it — see `lastFailure`. Guarded by `lock`.
     private var lastFailureMessage: String?
+
+    /// Whether listens also run SoundAnalysis's sound classifier (about 1.4% of real time,
+    /// 63 MB while on). Off by default: chat dictation and the MCP listen don't need it.
+    public var hearsRoom: Bool {
+        get { soundLock.withLock { hearsRoomStored } }
+        set {
+            soundLock.withLock {
+                hearsRoomStored = newValue
+                if !newValue { soundListener = nil }
+            }
+        }
+    }
 
     public init(locale: Locale = .current) {
         self.locale = locale
@@ -269,6 +293,8 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
 
     public func startListening(finality: FinalityPolicy) throws -> AsyncStream<TranscriptSegment> {
         stopListening()
+        // A new listen hears its own room: the last listen's sounds are forgotten.
+        soundLock.withLock { soundListener }?.reset()
         return AsyncStream { continuation in
             let generation = lock.withLock {
                 self.generation &+= 1
@@ -940,6 +966,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             let (legacyLive, analyzer) = self.lock.withLock { (self.request != nil, self.analyzer) }
             guard legacyLive || analyzer != nil else { return }
             let audible = MonoMixdown.mixIfNeeded(buffer)
+            self.feedSoundContext(audible)
             if let analyzer {
                 // SpeechAnalyzer path: meter the level for AnalyzerEndpoint, feed
                 // the analyzer outside `lock` (it converts), end if it's time.
@@ -1218,5 +1245,41 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         let segments = transcription.segments
         guard !segments.isEmpty else { return nil }
         return segments.reduce(0) { $0 + $1.confidence } / Float(segments.count)
+    }
+}
+
+// MARK: - Room context
+
+extension AppleSpeechTranscriber: SoundContextProviding {
+    public var soundContext: SoundContext? {
+        soundLock.withLock { soundListener }?.context
+    }
+
+    /// From the tap. The listener is built off the audio thread (it loads a 63 MB model), so
+    /// the first buffers of a session, or after a route change, go unheard.
+    private func feedSoundContext(_ buffer: AVAudioPCMBuffer) {
+        let (enabled, listener, building) = soundLock.withLock {
+            (hearsRoomStored, soundListener, soundListenerBuilding)
+        }
+        guard enabled else { return }
+        if let listener, listener.accepts(buffer.format) {
+            listener.append(buffer)
+            return
+        }
+        guard !building else { return }
+        soundLock.withLock { soundListenerBuilding = true }
+        nonisolated(unsafe) let format = buffer.format
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let built = SoundContextListener(format: format)
+            guard let self else { return }
+            soundLock.withLock {
+                soundListenerBuilding = false
+                guard hearsRoomStored else { return }
+                soundListener = built
+                // No classifier on this OS: stop trying on every buffer.
+                if built == nil { hearsRoomStored = false }
+            }
+            if built == nil { Self.log.error("room context unavailable: the sound classifier didn't build") }
+        }
     }
 }

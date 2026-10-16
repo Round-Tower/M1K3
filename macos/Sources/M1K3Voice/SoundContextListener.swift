@@ -9,18 +9,28 @@
 //
 //  `analyze(file:)` runs a file through the same request for the eval
 //  (SoundContextEvalTests). The live path is verify-by-launch, like the rest of
-//  the recogniser glue, and it is not wired.
+//  the recogniser glue; AppleSpeechTranscriber feeds it when `hearsRoom` is on.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-15, Confidence 0.7 (file path measured;
 //  the stream path matches it but is unlaunched). Prior: Unknown.
 //  Guards from the pre-push review: windows don't overlap, a stream compares by rate,
 //  channels and sample format (not layout), pending buffers are capped, a reset drops
 //  windows that began before it, and the caller marks the app's own playback.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — wired: `SoundContextProviding` and `accepts(_:)` for
+//  AppleSpeechTranscriber's tap. `noteOwnPlayback` has no caller yet: the verdict runs in shadow, and the
+//  dial-up (the one long sound M1K3 plays) only plays during a brain download.
 
 import AVFoundation
 import Foundation
 import os
 import SoundAnalysis
+
+/// A recogniser that also hears the room (AppleSpeechTranscriber with `hearsRoom` on).
+/// WhisperKit can't: its engine is sealed inside the package.
+public protocol SoundContextProviding: AnyObject {
+    /// What the current (or last) listen heard; nil when nothing is listening for it.
+    var soundContext: SoundContext? { get }
+}
 
 public final class SoundContextListener: @unchecked Sendable {
     private static let log = Logger(subsystem: "app.m1k3", category: "sound-context")
@@ -100,6 +110,11 @@ public final class SoundContextListener: @unchecked Sendable {
     /// M1K3 played audio during this listen: its music must not veto the user's turn.
     public func noteOwnPlayback() {
         observer.noteOwnPlayback()
+    }
+
+    /// Whether buffers in `other` can feed this listener (a route change can switch formats).
+    func accepts(_ other: AVAudioFormat) -> Bool {
+        Self.sameStream(other, format)
     }
 
     static func sameStream(_ a: AVAudioFormat, _ b: AVAudioFormat) -> Bool {
