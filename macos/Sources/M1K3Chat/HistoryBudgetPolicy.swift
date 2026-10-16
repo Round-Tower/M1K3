@@ -221,7 +221,8 @@ public enum HistoryBudgetPolicy {
         )
     }
 
-    /// Big's replay on a SPOKEN turn: about four exchanges instead of six.
+    /// Big's replay on a SPOKEN turn: about four exchanges, where the typed window fills at about six
+    /// (its 16-turn count cap never binds on Big's ~600-char spoken answers; the char budget does).
     ///
     /// Measured with the voice rig (2026-10-16, ten turns from a new chat, Big): Big's spoken
     /// answers run ~600 chars, so the typed ~7,400-char budget fills at twelve turns and then
@@ -232,6 +233,9 @@ public enum HistoryBudgetPolicy {
     /// Big only: the other tiers have not been through the rig. Lil prefills far faster
     /// and Mini's replay is already small. Long-term memory is untouched; only how much of
     /// the conversation is replayed word for word shrinks. `-spokenHistoryCap NO` turns it off.
+    ///
+    /// "Spoken" is voice mode being ON, the flag the spoken grounding budget reads too: a turn
+    /// typed while voice mode is on gets the cap as well.
     public static let spokenBigBudget = HistoryWindow.Budget(
         totalChars: 4400, perTurnChars: HistoryWindow.maxCharsPerTurn, maxTurns: 8
     )

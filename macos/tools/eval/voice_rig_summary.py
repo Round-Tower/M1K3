@@ -12,6 +12,8 @@ second look rides as a note: a name repair, a seed that diverged or was refused.
 Signed: Kev + claude-opus-5-5, 2026-10-16, Confidence 0.8 (pinned in test_voice_rig_summary.py
 on lines from the first rig run). Prior: none (new file).
 Review: same day — history / rest columns off the responder's `prompt anatomy:` line.
+Review: Kev + claude-opus-5-5, 2026-10-16 (pre-push review fold) — a tools verdict with no dispatch line is the
+agent loop: label it "agent", not "?" (the anatomy line is plain-route only, so its columns stay "—").
 """
 
 from __future__ import annotations
@@ -54,7 +56,7 @@ def turns(lines: list[str]) -> list[Turn]:
             continue
         if m := VERDICT.search(line):
             verdict = m.group(1)
-            current.route = f"plain ({verdict})" if verdict == "chat" else "?"
+            current.route = f"plain ({verdict})" if verdict == "chat" else "agent"
         elif m := DISPATCH.search(line):
             tool = m.group(1)
             current.route = f"plain ({verdict} verdict)" if tool == "none" else tool.rstrip(",")

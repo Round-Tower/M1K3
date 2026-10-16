@@ -1,6 +1,9 @@
 """Pins voice_rig_summary: one row per voice turn, read from the rig's app.log.
 
-The fixture lines are verbatim from the 2026-10-16 rig run on master e632482d (prefixes trimmed).
+The fixture lines are verbatim from the 2026-10-16 rig run on master e632482d (prefixes trimmed), except the
+`prompt anatomy:` line: that build did not log it yet, so its line is written in the later build's format.
+
+Signed: Kev + claude-opus-5-5, 2026-10-16, Confidence 0.8. Prior: Unknown.
 """
 
 from __future__ import annotations
@@ -60,3 +63,14 @@ def test_reads_the_prompt_anatomy_when_the_build_logs_it():
     assert [r.history_chars for r in rows] == [None, 3900, None]
     assert [r.rest_chars for r in rows] == [None, 2200, None]
     assert rows[1].history_turns == 6
+
+
+def test_a_tools_verdict_without_a_dispatch_is_the_agent_loop():
+    lines = [
+        "19:30:00.000 Df M1K3[1:1] [app.m1k3:stt] voice endpoint: complete thought · idle 2.6s · required 2.5s",
+        "19:30:00.300 Df M1K3[1:2] [app.m1k3:responder] tool router: action p=0.950",
+        "19:30:12.000 Df M1K3[1:1] [app.m1k3:stt] voice turn: first sentence 11000ms · synth 900ms · first audio 11900ms · answer 20000ms · 3 sentences",
+    ]
+    rows = vrs.turns(lines)
+    assert [r.route for r in rows] == ["agent"]
+    assert rows[0].history_chars is None

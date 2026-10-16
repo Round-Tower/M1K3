@@ -309,6 +309,14 @@ struct HistoryBudgetPolicyTests {
         #expect(spoken.perTurnChars <= spoken.totalChars)
     }
 
+    @Test("an image on a spoken Big turn still keeps the per-turn cap inside the total")
+    func spokenBigWithImagesKeepsTheClamp() {
+        for images in 0 ... 12 {
+            let budget = live(.big, spoken: true).reservingImages(images)
+            #expect(budget.perTurnChars <= budget.totalChars)
+        }
+    }
+
     @Test("spoken only tightens: every field is at most the typed figure")
     func spokenOnlyTightens() {
         for tier: BrainTier? in [.big, .lil, .mini, .pocket, nil] {

@@ -25,6 +25,9 @@
 # Signed: Kev + claude-opus-5-5, 2026-10-16, Confidence 0.75 (three runs on master e632482d:
 # the first two found the pacing bugs above; the third heard and answered 4/4). Prior: Unknown.
 # Review: same day — --new-chat (⌘N), so a history measurement starts from an empty replay.
+# Review: Kev + claude-opus-5-5, 2026-10-16 (pre-push review fold) — the mic re-arm must land AFTER the turn's
+# summary line (a stray re-arm before it let the next line talk over M1K3); a dead mic aborts instead of
+# speaking into it; any exit, Ctrl-C included, leaves voice mode if the rig entered it.
 
 emulate -L zsh
 setopt no_unset
@@ -47,7 +50,7 @@ while (( $# )); do
     --voice) voice=$2; shift 2 ;;
     --leave-on) leave_on=1; shift ;;
     --new-chat) new_chat=1; shift ;;
-    -h|--help) sed -n '2,26p' $0; exit 0 ;;
+    -h|--help) sed -n '2,24p' $0; exit 0 ;;
     *) print -u2 "unknown argument: $1"; exit 2 ;;
   esac
 done
@@ -61,6 +64,16 @@ status_of() { m1k3 status 2>/dev/null | python3 -c "import json,sys; print(json.
 count() { local c; c=$(grep -c -- "$1" $log 2>/dev/null); print ${c:-0} }
 wait_count() { # pattern target timeout_s
   local i=0; while (( $(count "$1") < $2 )); do sleep 1; (( ++i >= $3 )) && return 1; done; return 0 }
+# The listen line must come AFTER the n-th turn summary, not merely raise the total: a re-arm logged before
+# the summary (a listen timeout, a barge-in cycle) satisfied the old count and the rig talked over M1K3.
+wait_listen_after_turn() { # n timeout_s
+  local i=0 ln
+  while :; do
+    ln=$(grep -n -- "voice turn:" $log 2>/dev/null | sed -n "${1}p" | cut -d: -f1)
+    [[ -n $ln ]] && (( $(tail -n +$ln $log | grep -c -- "voice listening on") >= 1 )) && return 0
+    sleep 1; (( ++i >= $2 )) && return 1
+  done
+}
 wait_status() { # key value timeout_s
   local i=0; while [[ $(status_of $1) != $2 ]]; do sleep 1; (( ++i >= $3 )) && return 1; done; return 0 }
 toggle_voice() {
@@ -71,19 +84,28 @@ toggle_voice() {
 [[ $(status_of brain) != None ]] || { print -u2 "✗ m1k3 status didn't answer: is M1K3 running with its MCP server up?"; exit 3 }
 /usr/bin/log stream --level info --style compact --predicate 'subsystem == "app.m1k3"' > $log 2>&1 &
 logpid=$!
-trap 'kill $logpid 2>/dev/null' EXIT
+entered=0
+cleanup() {
+  (( entered && ! leave_on )) && [[ $(status_of in_conversation) == True ]] && toggle_voice
+  kill $logpid 2>/dev/null
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
 sleep 2
 if (( new_chat )); then
-  if [[ $(status_of in_conversation) == True ]]; then toggle_voice; wait_status in_conversation False 20; fi
+  if [[ $(status_of in_conversation) == True ]]; then
+    toggle_voice && wait_status in_conversation False 20 || { print -u2 "✗ couldn't leave voice mode for --new-chat"; exit 3 }
+  fi
   osascript -e 'tell application "M1K3" to activate' -e 'delay 1' \
     -e 'tell application "System Events" to keystroke "n" using {command down}' >/dev/null
   sleep 2
 fi
 if [[ $(status_of in_conversation) != True ]]; then
   toggle_voice || { print -u2 "✗ the ⌘⇧V keystroke was refused: give the terminal Accessibility"; exit 3 }
-  wait_count "voice listening on" 1 30 || print "! the mic never armed"
+  entered=1
+  wait_count "voice listening on" 1 30 || { print -u2 "✗ the mic never armed: voice mode didn't start"; exit 3 }
 fi
-wait_status speaking False 120
+wait_status speaking False 120 || print "! M1K3 was still speaking after 120 s"
 sleep 3
 
 say_args=(-r $rate)
@@ -94,10 +116,10 @@ while IFS= read -r line; do
   (( ++n ))
   print "▸ [$n] $line"
   print "$(date +%T) RIG SAY [$n] $line" >> $out/rig.log
-  turns=$(count "voice turn:"); listens=$(count "voice listening on")
+  turns=$(count "voice turn:")
   say $say_args "$line"
   wait_count "voice turn:" $(( turns + 1 )) 240 || print "  ! no voice-turn line within 240 s"
-  wait_count "voice listening on" $(( listens + 1 )) 120 || print "  ! the mic did not re-arm within 120 s"
+  wait_listen_after_turn $(( turns + 1 )) 120 || print "  ! the mic did not re-arm within 120 s"
   print "$(date +%T) RIG DONE [$n]" >> $out/rig.log
   sleep 2
 done < $turns_file
