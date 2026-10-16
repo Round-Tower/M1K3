@@ -40,6 +40,8 @@
 //  change or Lil's plain chat breaks (the challenger's catch). Verify-by-launch: a Lil plain turn.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `plan(seed:full:seedIsExact:)`: the argument was still
 //  called `seedTrimmed` after 2026-09-26 made it the builder's `exact` (#509 follow-up). Rename only.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — the not-exact log no longer blames a wrapped window: windowed
+//  seeds are built exact now. Wording only.
 
 import Foundation
 import MLX
@@ -118,15 +120,15 @@ extension MLXBrainProvider {
                 }
                 if !seedExact, at == seedIDs.count {
                     // An exact prefix on a seed its builder could not vouch exact:
-                    // a persona that wrapped a sliding window keeps one sampled
-                    // token past its ids. (Recurrent LFM2 seeds are built exact
-                    // since 2026-09-26 and no longer land here.) Correct answer is
+                    // a sample-and-trim build that couldn't trim back. (Recurrent
+                    // seeds since 2026-09-26 and windowed gemma seeds since
+                    // 2026-10-16 are built exact and no longer land here.) Correct answer is
                     // a full prefill; say so without the divergence line, which
                     // would read as a bug.
                     mlxTTFTLog.notice(
                         """
                         \(label, privacy: .public): persona seed (\(seedIDs.count)tok) is not an exact \
-                        cache (a wrapped window) — full prefill, no reuse
+                        cache (sampled, not trimmed back) — full prefill, no reuse
                         """
                     )
                     cache = try context.model.newCache(parameters: parameters)

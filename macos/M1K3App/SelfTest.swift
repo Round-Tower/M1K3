@@ -405,6 +405,12 @@ enum SelfTest {
             if SelfTestEnv.value("M1K3_SELFTEST_PREFIX") == "1" {
                 emit(await llm.personaPrefixInvariantProbe())
             }
+            // 3f. Optional wrapped-seed equivalence (M1K3_SELFTEST_SEEDEQ=1): fresh prefill vs
+            // persona seed + suffix, logits and greedy tokens — the proof before gemma reuses a
+            // seed longer than its sliding window.
+            if SelfTestEnv.value("M1K3_SELFTEST_SEEDEQ") == "1" {
+                emit(await llm.wrappedSeedEquivalenceProbe())
+            }
         } catch {
             emit("✗ MLX generate stage: \(error)")
         }

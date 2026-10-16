@@ -12,6 +12,7 @@
 //  Signed: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.85, Prior: none (new file).
 //  The arithmetic is pinned here; the copy/prefill/state plumbing is verify-by-launch.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — pins `stepSnapshotLabel`, the per-step RAM snapshot's label.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — a seed that wrapped gemma's sliding window takes checkpoint mode.
 //
 
 import Foundation
@@ -89,5 +90,18 @@ struct ExactPrefixReuseTests {
         // A seed nobody vouched exact holds a sampled position: never appended to.
         #expect(!ExactPrefixReuse.usesCheckpoints(seedExact: false, seedLayersTrimmable: [false]))
         #expect(!ExactPrefixReuse.usesCheckpoints(seedExact: true, seedLayersTrimmable: []))
+    }
+
+    /// 2026-10-16: an exact gemma seed past its sliding window is untrimmable too (a wrapped
+    /// RotatingKVCache). Plain turns already extend a copy of it; tool turns now do the same
+    /// through checkpoints (proved on Big by the tool arm of `wrappedSeedEquivalenceProbe`), so
+    /// the rotating layer is just one more layer that can't be trimmed. `-wrappedPersonaSeed NO`
+    /// declines the seed itself, which keeps tool turns on a full prefill.
+    @Test("a seed that wrapped a sliding window takes checkpoint mode like any untrimmable seed")
+    func wrappedSeedUsesCheckpoints() {
+        // gemma-4: full-attention layers trim, the wrapped sliding layers don't.
+        #expect(ExactPrefixReuse.usesCheckpoints(seedExact: true, seedLayersTrimmable: [true, false, false, true]))
+        // A wrapped seed built the old way (sample, no trim) is still never appended to.
+        #expect(!ExactPrefixReuse.usesCheckpoints(seedExact: false, seedLayersTrimmable: [true, false]))
     }
 }

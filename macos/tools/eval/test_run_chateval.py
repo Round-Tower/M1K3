@@ -415,3 +415,9 @@ def test_kind_rows_carry_the_think_phase_medians():
     table = rc.kind_table(rows)
     assert "200" in table and "4000" in table
 
+
+
+def test_direct_argv_appends_app_args_after_the_binary():
+    # The A/B arms that live in argv (e.g. -wrappedPersonaSeed NO) ride the exec's argument domain.
+    assert rc.direct_argv(Path("/x/M1K3"), ["-wrappedPersonaSeed", "NO"]) == ["/x/M1K3", "-wrappedPersonaSeed", "NO"]
+    assert rc.direct_argv(Path("/x/M1K3"), None) == ["/x/M1K3"]

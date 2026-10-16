@@ -11,8 +11,9 @@
 //  about the persona, and appending to that cache would be positionally wrong
 //  KV. Never trims. A seed is only as exact as its cache: reuse also requires
 //  the caller to vouch (`seedIsExact`) that the cache was trimmed back to its
-//  ids — a seed that wrapped a sliding window was not, and falls back to a
-//  full prefill (correct, unoptimised) instead of appending one position off.
+//  ids — a seed that wrapped a sliding window by the old sample-and-trim build was
+//  not, and falls back to a full prefill (correct, unoptimised) instead of
+//  appending one position off. Since 2026-10-16 a windowed model builds exact.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-06, Confidence 0.9. Prior: Unknown
 //  Review: claude-fable-5.1, 2026-09-06 — PR #240 review 1: the header claimed
@@ -34,6 +35,12 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `seedTrimmed` → `seedIsExact`: the flag has carried
 //  the builder's `exact` since 2026-09-26 (trimmed back OR prefilled without a sample), and the old
 //  name read as the first half only. Rename, no logic change.
+//
+//  Review: Kev + claude-opus-5-5, 2026-10-16, Confidence 0.75 — `seedBuild` takes the sliding window:
+//  a windowed model (gemma-4, Big) always gets the exact build, so a persona past its 1,024-token window
+//  is an exact seed `plan` can append to (a copy, never trimmed). Equivalence measured on Big by
+//  `wrappedSeedEquivalenceProbe` (M1K3_SELFTEST_SEEDEQ).
+//  Review: same day, review fold — `wrappedSeeds` false restores the old build as well as the old decline.
 
 import Foundation
 
@@ -67,9 +74,14 @@ enum SeededPlainTurn {
 
     /// `freshLayersTrimmable`: `isTrimmable` of each layer of a fresh
     /// `newCache` — false only on recurrent/state caches, which can never be
-    /// trimmed back after a sampled token.
-    static func seedBuild(freshLayersTrimmable: [Bool]) -> SeedBuild {
-        !freshLayersTrimmable.isEmpty && freshLayersTrimmable.allSatisfy { $0 } ? .sampleAndTrim : .exactPrefill
+    /// trimmed back after a sampled token. `slidingWindow`: the model's rotating
+    /// window, if any. A fresh rotating layer reads trimmable, but a persona near
+    /// or past the window wraps during the build and can't be trimmed back after,
+    /// so a windowed model always takes the exact build (2026-10-16, gemma-4).
+    /// `wrappedSeeds` false (`-wrappedPersonaSeed NO`) restores the old build too.
+    static func seedBuild(freshLayersTrimmable: [Bool], slidingWindow: Int?, wrappedSeeds: Bool = true) -> SeedBuild {
+        guard slidingWindow == nil || !wrappedSeeds else { return .exactPrefill }
+        return !freshLayersTrimmable.isEmpty && freshLayersTrimmable.allSatisfy { $0 } ? .sampleAndTrim : .exactPrefill
     }
 
     /// `seed`: the exact token ids the persona cache holds. `full`: the token

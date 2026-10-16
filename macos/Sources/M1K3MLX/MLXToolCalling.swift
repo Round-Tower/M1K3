@@ -80,6 +80,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#418) — a turn whose every call was rejected (and not
 //  repaired) now returns `.rejectedToolCalls(reason:text:)` from both loops instead of `.text`, so the
 //  agent loop can steer a retry; `rejectionSummary` is the safe string that goes back into the prompt.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — Big's tool turns take checkpoints off its wrapped persona seed
+//  (copy and extend, never trim). The pristine-seed path is proved by the probe's tool arm on Big; the rolling
+//  checkpoint's nesting on gemma is unmeasured (it never nested in the probe). Confidence 0.75.
 
 import Foundation
 import M1K3Inference

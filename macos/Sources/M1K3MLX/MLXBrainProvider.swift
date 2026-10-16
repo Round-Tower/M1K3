@@ -123,6 +123,11 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-11 — `effectiveThinking` (#555): the template switch and the synthetic
 //  opener read the turn's `InferenceIntent.thinking` over the construction flag.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — comment only: the retired MTP/vision spikes no longer named as live. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — the persona seed past gemma's sliding window is built again,
+//  EXACT (`seedBuild` takes the window), for the plain path to append to: `prefixIsReusable` became
+//  `prefixWorthBuilding(…wrappedSeeds:)` behind `-wrappedPersonaSeed NO`. Live voice turns paid ~1.9k tokens
+//  of prefill each (12–16 s on M1 Max). Confidence 0.75 until the live A/B.
+
 import Foundation
 import Hub
 import M1K3Inference
@@ -810,6 +815,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         // Resolved OUTSIDE the closure: touching `self.configuration` inside it
         // makes the closure async and `perform`'s overload no longer matches.
         let reusableWindow = Self.slidingWindow(forModelID: modelIdentifier, configDirectory: configDirectory)
+        let wrappedSeeds = Self.wrappedPersonaSeedsEnabled()
         let built: PrefixBox = try await container.perform { context in
             // System-block token ids, no assistant opener. Lenient templates
             // render a system-only array; strict ones (Qwen3.5) reject it and
@@ -821,11 +827,16 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             // on every single turn.
             // An EMPTY box is the "declined" signal — keeping the closure's
             // return type unchanged keeps `perform`'s overload resolution happy.
-            guard Self.prefixIsReusable(tokens: ids.count, window: reusableWindow) else {
+            guard Self.prefixWorthBuilding(
+                tokens: ids.count, window: reusableWindow, wrappedSeeds: wrappedSeeds
+            ) else {
                 return PrefixBox(cache: [], tokenIDs: [])
             }
             let cache = try context.model.newCache(parameters: parameters)
-            let build = SeededPlainTurn.seedBuild(freshLayersTrimmable: cache.map(\.isTrimmable))
+            let build = SeededPlainTurn.seedBuild(
+                freshLayersTrimmable: cache.map(\.isTrimmable), slidingWindow: reusableWindow,
+                wrappedSeeds: wrappedSeeds
+            )
             if build == .exactPrefill {
                 // A recurrent layer (LFM2's, Qwen3.5's MambaCache) can never be
                 // trimmed, so the sampled position of the generate-and-trim build
@@ -856,6 +867,8 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             // (the temporalOrder crash). A wrapped prefix can't be linearly
             // reused anyway; leave it untrimmed — the cross-turn gate rejects a
             // non-trimmable seed downstream, so it just re-prefills, never reuses.
+            // Since 2026-10-16 a windowed model only lands here with the kill switch
+            // on (`-wrappedPersonaSeed NO`); otherwise it takes the exact build above.
             let trimmed = CrossTurnCacheReuse.cacheReusable(layersTrimmable: cache.map(\.isTrimmable))
             if trimmed {
                 for layer in cache {
@@ -1245,9 +1258,22 @@ extension MLXBrainProvider {
     /// `window` is the resolved sliding window (`slidingWindow(forModelID:configDirectory:)`);
     /// nil means dense attention, where any prefix stays trimmable. This is the
     /// predicate `renderPersonaPrefix` ships, so it is the one the tests pin.
-    static func prefixIsReusable(tokens: Int, window: Int?) -> Bool {
+    ///
+    /// 2026-10-16: built EXACT (`SeededPlainTurn.seedBuild` on a windowed model), a
+    /// prefix past the window IS reusable on the plain path, which only appends to a
+    /// copy and never trims (proved on Big by `wrappedSeedEquivalenceProbe`). So it is
+    /// built while `wrappedSeeds` is on; `-wrappedPersonaSeed NO` restores the decline.
+    static func prefixWorthBuilding(tokens: Int, window: Int?, wrappedSeeds: Bool) -> Bool {
         guard let window else { return true }
-        return tokens <= window
+        return tokens <= window || wrappedSeeds
+    }
+
+    /// The argv kill switch and A/B arm: `M1K3 -wrappedPersonaSeed NO`.
+    static func wrappedPersonaSeedsEnabled(
+        arguments: [String: Any] = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
+    ) -> Bool {
+        guard let raw = arguments["wrappedPersonaSeed"] as? String else { return true }
+        return !["no", "0", "false", "off"].contains(raw.lowercased())
     }
 
     /// Whether a caller-requested KV capacity (`maxKVSize`) means anything for

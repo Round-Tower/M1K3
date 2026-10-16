@@ -545,14 +545,22 @@ struct MLXBrainProviderTests {
     /// it cost 12.5 SECONDS of prefill per launch and per brain swap to produce
     /// a cache nothing could ever use. The old code documented that it was
     /// wasted and built it regardless — knowing is not the same as not doing.
-    @Test("a prefix longer than the sliding window is never reusable, so never worth building")
+    ///
+    /// 2026-10-16: built EXACT (no sampled token, SeededPlainTurn.seedBuild), a wrapped seed is
+    /// reusable after all on the plain path, which only ever appends to a copy, so it's built
+    /// again unless `-wrappedPersonaSeed NO` turns that off (the A/B and the escape hatch).
+    @Test("a prefix longer than the sliding window is built only while wrapped seeds are on")
     func prefixReusabilityFollowsTheWindow() {
         let big = "mlx-community/gemma-4-12B-it-4bit"
         #expect(MLXBrainProvider.slidingWindow(forModelID: big) == 1024)
         let bigWindow = MLXBrainProvider.slidingWindow(forModelID: big)
-        #expect(!MLXBrainProvider.prefixIsReusable(tokens: 1878, window: bigWindow))
-        #expect(MLXBrainProvider.prefixIsReusable(tokens: 1024, window: bigWindow), "exactly the window fits")
-        #expect(!MLXBrainProvider.prefixIsReusable(tokens: 1025, window: bigWindow))
+        for tokens in [1022, 1023, 1024, 1878] {
+            #expect(MLXBrainProvider.prefixWorthBuilding(tokens: tokens, window: bigWindow, wrappedSeeds: true))
+        }
+        #expect(!MLXBrainProvider.prefixWorthBuilding(tokens: 1878, window: bigWindow, wrappedSeeds: false))
+        #expect(MLXBrainProvider.prefixWorthBuilding(tokens: 1024, window: bigWindow, wrappedSeeds: false),
+                "exactly the window fits")
+        #expect(!MLXBrainProvider.prefixWorthBuilding(tokens: 1025, window: bigWindow, wrappedSeeds: false))
 
         // No sliding window on Lil (Qwen3.5-4B, the shipped id since #517): a
         // prefix of any size is worth building. Its MambaCache layers are never
@@ -561,7 +569,14 @@ struct MLXBrainProviderTests {
         let lil = "mlx-community/Qwen3.5-4B-MLX-4bit"
         #expect(MLXBrainProvider.slidingWindow(forModelID: lil) == nil)
         let lilWindow = MLXBrainProvider.slidingWindow(forModelID: lil)
-        #expect(MLXBrainProvider.prefixIsReusable(tokens: 1878, window: lilWindow))
+        #expect(MLXBrainProvider.prefixWorthBuilding(tokens: 1878, window: lilWindow, wrappedSeeds: false))
+    }
+
+    @Test("-wrappedPersonaSeed NO turns wrapped seeds off; anything else leaves them on")
+    func wrappedSeedKillSwitch() {
+        #expect(!MLXBrainProvider.wrappedPersonaSeedsEnabled(arguments: ["wrappedPersonaSeed": "NO"]))
+        #expect(MLXBrainProvider.wrappedPersonaSeedsEnabled(arguments: ["wrappedPersonaSeed": "YES"]))
+        #expect(MLXBrainProvider.wrappedPersonaSeedsEnabled(arguments: [:]))
     }
 
     /// Stream G hygiene: the window comes from config.json, not the repo name.
@@ -602,14 +617,14 @@ struct MLXBrainProviderTests {
             .write(to: dir.appendingPathComponent("config.json"), atomically: true, encoding: .utf8)
         let e4bWindow = MLXBrainProvider.slidingWindow(forModelID: e4b, configDirectory: dir)
         #expect(e4bWindow == 512)
-        #expect(!MLXBrainProvider.prefixIsReusable(tokens: 600, window: e4bWindow))
-        #expect(MLXBrainProvider.prefixIsReusable(tokens: 512, window: e4bWindow))
+        #expect(!MLXBrainProvider.prefixWorthBuilding(tokens: 600, window: e4bWindow, wrappedSeeds: false))
+        #expect(MLXBrainProvider.prefixWorthBuilding(tokens: 512, window: e4bWindow, wrappedSeeds: false))
 
         // E2B's published config.json (google + mlx-community, read 2026-10-09): 512, 35 layers.
         let e2b = "mlx-community/gemma-4-e2b-it-4bit"
         let e2bWindow = MLXBrainProvider.slidingWindow(forModelID: e2b, configDirectory: dir)
         #expect(e2bWindow == 512)
-        #expect(!MLXBrainProvider.prefixIsReusable(tokens: 600, window: e2bWindow))
+        #expect(!MLXBrainProvider.prefixWorthBuilding(tokens: 600, window: e2bWindow, wrappedSeeds: false))
 
         try #"{"model_type":"gemma4_unified","text_config":{"model_type":"gemma4_unified_text","sliding_window":1024}}"#
             .write(to: dir.appendingPathComponent("config.json"), atomically: true, encoding: .utf8)
