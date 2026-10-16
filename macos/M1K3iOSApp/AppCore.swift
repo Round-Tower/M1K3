@@ -129,6 +129,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — `brainDownloadContinues` follows the task
 //  (ContinuedDownloadTask's `onCarry`), not the submission: after a foreground expiry the screen stays awake again and
 //  the row stops promising the download survives leaving. Confidence 0.7 (verify on the phone).
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — the responder reads the voice turn's room line (`voiceClauseProvider`).
+//  Confidence 0.7 (verify on the phone).
 
 import AVFoundation
 #if os(iOS)
@@ -1304,6 +1306,8 @@ final class AppCore {
                 )
                 return EgressDisclosure.clause(facts, device: HostPlatform.thisDevice)
             },
+            // What the mic heard during a voice turn (VoiceTurnPreparer), set for that turn only.
+            voiceClauseProvider: { Self.voiceTurnClause.clause },
             // The Mac's tool router, mirrored (flagged; Mini only unless `toolRouterAllTiers`).
             plainRouteProvider: {
                 ToolRouterWiring.route(

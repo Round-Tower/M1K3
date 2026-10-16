@@ -3,7 +3,7 @@
 Kev's question: could the built-in sound classifier give M1K3 general context? `SoundContext`
 (pure) turns its windows into one short line for a turn ("music (guitar), a dog barking") and a
 verdict: a listen with music or singing and no speaker isn't a turn (the old "wrote down the
-lyrics" bug). `SoundContextListener` is the SoundAnalysis glue. Neither is wired.
+lyrics" bug). `SoundContextListener` is the SoundAnalysis glue. Wired on 2026-10-16 (see the end).
 
 `SNClassifySoundRequest(.version1)`: 303 labels, 1.5 s windows. Cost: 124 s of audio in 1.7 s
 including model load (about 1.4% of real time), 63 MB resident. There is no TV or radio class:
@@ -86,3 +86,17 @@ All mixes are digital: no room, no speakers, no microphone between the music and
 speaker, quiet clips (peaks about -25 dBFS). Apple Loops are short and produced; no commercial
 song with a lead vocal is in the set. The speech-floor sweep above used the default overlapping
 windows; the final rule doesn't overlap. The thresholds are starting points, not tuned live.
+
+## Wired (2026-10-16)
+
+Kev: "let's wire what we've built". Following the advice above:
+
+- `AppleSpeechTranscriber.hearsRoom` (on only while voice mode is, Mac and iOS) feeds the listener from the mic tap;
+  WhisperKit listens hear nothing (its engine is sealed), so they carry no line.
+- The verdict runs in **shadow**: `VoiceTurnPreparer` logs `sound context (shadow): would not take…`
+  at `.notice` and takes the turn anyway. A veto needs live logs with no wrongly dropped turn first.
+- The line reaches the brain as a per-turn clause (`voiceClauseProvider`), alerts every turn, the rest
+  on change (`SoundContextGate`). It is never part of the question, so it never reaches the chat
+  history or memory distillation.
+- `noteOwnPlayback` has no caller yet: the only long sound M1K3 plays, the dial-up, plays during a
+  brain download. Wire it before the veto goes live.

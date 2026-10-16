@@ -74,6 +74,9 @@
 //  `AnswerAudioSessionPolicy.releaseWhenUtteranceEnds` (pure, truth-tabled) with `answerAudioHeld`, which an answer
 //  sets at its first sentence: a sample played during a generation now releases its own duck.
 //  `deactivateVoiceAudioSession` is internal so the answer's release reuses it. Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — voice turns go through VoiceTurnPreparer, as on the Mac: NameRepair
+//  toward the names in memory, the room line as a per-turn clause (`voiceTurnClause`), the song verdict in shadow.
+//  Confidence 0.7: verify-by-launch on the phone owed.
 
 import AVFoundation
 import Foundation
@@ -148,6 +151,8 @@ extension AppCore {
         // the mode announces itself through the shared defaults slot — the same
         // one the Mac shell has written since voice-first shipped.
         UserDefaults.standard.set(true, forKey: VoiceModeDefaults.activeKey)
+        // The room classifier (SoundContext) runs only in voice mode; off frees its 63 MB.
+        (transcriber as? AppleSpeechTranscriber)?.hearsRoom = true
         let controller = VoiceLoopController(
             dependencies: makeVoiceLoopDependencies(),
             cadence: .conversational
@@ -179,6 +184,7 @@ extension AppCore {
         soundEffects.play(.voiceExit) // dematerialising: the enter sweep, mirrored
         controller.exit()
         voiceLoop = nil
+        (transcriber as? AppleSpeechTranscriber)?.hearsRoom = false
         voicePauseNote = nil
         removeAudioSessionObservers()
         UserDefaults.standard.set(false, forKey: VoiceModeDefaults.activeKey)
@@ -243,8 +249,28 @@ extension AppCore {
 
     // MARK: - Loop dependencies
 
+    /// The voice turn's room line (VoiceTurnPreparer), read by the responder's `voiceClauseProvider`.
+    nonisolated static let voiceTurnClause = TurnClauseSlot()
+
     private func makeVoiceLoopDependencies() -> VoiceLoopController.Dependencies {
-        VoiceLoopController.Dependencies(
+        // NameRepair toward the names in memory, and the room line the listen heard (read at stop).
+        let turns = VoiceTurnPreparer()
+        turns.learnNames(KnownNames.from(
+            facts: ((try? memoryStore?.allMemories()) ?? []).map(\.text), userName: nil
+        ))
+        var lastHeard: SoundContext?
+        // One voice turn into the chat. A turn superseded by barge-in finds the chat still
+        // answering and its send returns at once: it must not touch the room line, and the
+        // line only counts as said once a turn really carried it.
+        let sendVoiceTurn: @MainActor (String) async -> Void = { [weak self] question in
+            guard let self else { return }
+            let prepared = turns.prepare(question, heard: lastHeard)
+            let token = chat.isResponding ? nil : Self.voiceTurnClause.set(prepared.soundClause)
+            if token != nil { turns.delivered(prepared) }
+            await chat.send(prepared.question)
+            if let token { Self.voiceTurnClause.clear(token) }
+        }
+        return VoiceLoopController.Dependencies(
             startListening: { [weak self] in
                 guard let self else {
                     throw VoiceTurnFailure(message: "M1K3 is shutting down.")
@@ -282,6 +308,7 @@ extension AppCore {
                 }
             },
             stopListening: { [weak self] in
+                lastHeard = (self?.transcriber as? SoundContextProviding)?.soundContext
                 self?.transcriber.stopListening()
             },
             runTurn: { [weak self] question in
@@ -290,7 +317,7 @@ extension AppCore {
                 }
                 avatar.setActivity(.thinking)
                 soundEffects.play(.endpointHeard) // got it: one soft tick down
-                await chat.send(question)
+                await sendVoiceTurn(question)
                 guard let last = chat.messages.last, last.role == .assistant else {
                     return .failure(VoiceTurnFailure(message: "No answer arrived."))
                 }
@@ -379,7 +406,7 @@ extension AppCore {
                         foldForward(message.text)
                     }
                 }
-                await chat.send(question)
+                await sendVoiceTurn(question)
                 poller.cancel()
                 guard let settled = pinnedMessage() else {
                     return .failure(VoiceTurnFailure(message: "No answer arrived."))
