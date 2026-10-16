@@ -131,6 +131,8 @@
 //  the row stops promising the download survives leaving. Confidence 0.7 (verify on the phone).
 //  Review: Kev + claude-opus-5-5, 2026-10-16 — the responder reads the voice turn's room line (`voiceClauseProvider`).
 //  Confidence 0.7 (verify on the phone).
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — the history provider passes `spoken`, mirroring the Mac. It only bites
+//  on Big, which mobile excludes, so phone behaviour is unchanged.
 
 import AVFoundation
 #if os(iOS)
@@ -1274,12 +1276,15 @@ final class AppCore {
                 // ask its unbounded KV cache for more than the window the 3.5 GB
                 // floor was measured against. Read fresh each turn (hot-swap).
                 // Mini uses exact token counts when measured (the [SPIKE] resolved).
-                let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
+                // `spoken` mirrors the Mac; it only bites on Big, which mobile excludes.
+                let defaults = UserDefaults.standard
+                let raw = defaults.string(forKey: Self.selectedBrainKey) ?? ""
                 return HistoryBudgetPolicy.budget(
                     for: BrainTier(persisted: raw),
                     reservedTokens: Self.historyReserveTokens,
                     generationTokens: Self.historyGenerationReserveTokens,
-                    measuredMiniReserveTokens: Self.measuredMiniReserve.withLock { $0 }
+                    measuredMiniReserveTokens: Self.measuredMiniReserve.withLock { $0 },
+                    spoken: defaults.bool(forKey: VoiceModeDefaults.activeKey) && HistoryBudgetPolicy.spokenCapEnabled()
                 )
             },
             groundingBudgetProvider: {
