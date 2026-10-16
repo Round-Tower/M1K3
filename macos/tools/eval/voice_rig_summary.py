@@ -11,6 +11,7 @@ second look rides as a note: a name repair, a seed that diverged or was refused.
 
 Signed: Kev + claude-opus-5-5, 2026-10-16, Confidence 0.8 (pinned in test_voice_rig_summary.py
 on lines from the first rig run). Prior: none (new file).
+Review: same day — history / rest columns off the responder's `prompt anatomy:` line.
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ FIRST_AUDIO = re.compile(r"voice turn: .*first audio (\d+)ms")
 VERDICT = re.compile(r"tool router: (\w+) p=")
 DISPATCH = re.compile(r"tool dispatch: (\S+)")
 REPAIR = re.compile(r"name repair: .* \((\d\.\d+)\)")
+ANATOMY = re.compile(r"prompt anatomy: \d+c · history (\d+)c in (\d+) turns · rest (\d+)c")
 SEED_TROUBLE = re.compile(r"persona seed .*(?:not a prefix|not an exact)|seed reuse refused")
 
 
@@ -33,6 +35,9 @@ class Turn:
     prompt_tokens: int | None = None
     prefill_ms: int | None = None
     first_audio_ms: int | None = None
+    history_chars: int | None = None
+    history_turns: int | None = None
+    rest_chars: int | None = None
     notes: list[str] = field(default_factory=list)
 
 
@@ -55,6 +60,8 @@ def turns(lines: list[str]) -> list[Turn]:
             current.route = f"plain ({verdict} verdict)" if tool == "none" else tool.rstrip(",")
         elif m := STREAM.search(line):
             current.prompt_tokens, current.prefill_ms = int(m.group(1)), int(m.group(2))
+        elif m := ANATOMY.search(line):
+            current.history_chars, current.history_turns, current.rest_chars = map(int, m.groups())
         elif m := REPAIR.search(line):
             current.notes.append(f"name repair {m.group(1)}")
         elif SEED_TROUBLE.search(line):
@@ -71,11 +78,13 @@ def _s(ms: int | None) -> str:
 
 
 def table(rows: list[Turn]) -> str:
-    out = [f"{'#':>2}  {'route':<22} {'prompt':>7} {'prefill':>8} {'1st audio':>9}  notes",
-           "-" * 66]
+    out = [f"{'#':>2}  {'route':<22} {'prompt':>7} {'history':>12} {'rest':>6} {'prefill':>8} {'1st audio':>9}  notes",
+           "-" * 86]
     for i, r in enumerate(rows, 1):
         prompt = "—" if r.prompt_tokens is None else f"{r.prompt_tokens}"
-        out.append(f"{i:>2}  {r.route:<22} {prompt:>7} {_s(r.prefill_ms):>8} {_s(r.first_audio_ms):>9}  "
+        hist = "—" if r.history_chars is None else f"{r.history_chars}c/{r.history_turns}t"
+        rest = "—" if r.rest_chars is None else f"{r.rest_chars}c"
+        out.append(f"{i:>2}  {r.route:<22} {prompt:>7} {hist:>12} {rest:>6} {_s(r.prefill_ms):>8} {_s(r.first_audio_ms):>9}  "
                    + ", ".join(r.notes))
     return "\n".join(out)
 

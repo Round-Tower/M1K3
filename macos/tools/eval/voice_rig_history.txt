@@ -1,0 +1,12 @@
+# voice_rig.zsh --new-chat --turns voice_rig_history.txt: a ten-exchange conversation that fills Big's
+# history replay, with follow-ups that only make sense with the history ("why that one?").
+Hey Mike, how's it going?
+I'm thinking of getting a cat. What should I know first?
+What about a black cat, any good names?
+Why that one?
+Would a cat be okay in a small apartment?
+How much does a cat cost per month, roughly?
+Should I get two instead of one?
+What did you say about names earlier?
+Okay, what should I buy before the cat arrives?
+Thanks Mike, that's really helpful.

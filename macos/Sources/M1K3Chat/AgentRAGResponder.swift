@@ -168,6 +168,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-16 — `voiceClauseProvider`: a voice turn's room line (what the
 //  mic heard, SoundContextGate) joins `turnClauses()`. A clause, never the question: it stays out of the
 //  chat history and memory distillation by construction.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — `promptAnatomy` logs a plain/dispatched prompt's history-vs-rest
+//  split (the challenger's step 0 before a history cache or a voice history cap on Big).
 
 import Foundation
 import M1K3Agent
@@ -642,6 +644,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 ambient: browserContextProvider?()?.render(), todos: todoContextProvider?()
             )
         }
+        Self.log.notice(
+            "\(Self.promptAnatomy(prompt: prompt, history: history, budget: historyBudgetProvider()), privacy: .public)"
+        )
         let generate: @Sendable () async -> Bool = { [provider] in
             var answer = PlainTurnStream()
             var answered = false
@@ -692,6 +697,16 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         return [contextPreamble, grounded, "USER: \(question)"]
             .filter { !$0.isEmpty }
             .joined(separator: "\n\n")
+    }
+
+    /// One log line splitting a plain or dispatched prompt into the history replay and the
+    /// rest (2026-10-16): the voice rig read ~1,900 tokens past Big's persona seed per turn,
+    /// and whether a history cache or a voice history cap is the lever depends on the split.
+    /// Characters, not tokens: M1K3Chat has no tokenizer; the ttft line has the token total.
+    static func promptAnatomy(prompt: String, history: [ChatTurn], budget: HistoryWindow.Budget) -> String {
+        let replay = HistoryWindow.render(history, budget: budget) ?? ""
+        let turns = replay.split(separator: "\n").filter { $0.hasPrefix("USER: ") || $0.hasPrefix("M1K3: ") }.count
+        return "prompt anatomy: \(prompt.count)c · history \(replay.count)c in \(turns) turns · rest \(prompt.count - replay.count)c"
     }
 
     /// A dispatched turn's prompt: the date, the history replay, the tool's result and

@@ -15,6 +15,7 @@ LOG = """\
 19:22:20.590 Df M1K3[1:1] [app.m1k3:stt] voice turn: first sentence 18712ms · synth 906ms · first audio 19618ms · answer 33112ms · 5 sentences
 19:22:51.842 Df M1K3[1:1] [app.m1k3:stt] voice endpoint: complete thought · idle 2.8s · required 2.5s
 19:22:52.199 Df M1K3[1:2] [app.m1k3:responder] tool router: chat p=0.037
+19:22:52.300 Df M1K3[1:2] [app.m1k3:responder] prompt anatomy: 6100c · history 3900c in 6 turns · rest 2200c
 19:23:10.521 Df M1K3[1:4] [app.m1k3:ttft] stream [mlx-community/gemma-4-12B-it-4bit]: prompt=1863tok prefill=9847ms decode=238tok @28tok/s
 19:23:31.900 Df M1K3[1:1] [app.m1k3:stt] voice turn: first sentence 14310ms · synth 1080ms · first audio 15390ms · answer 40057ms · 10 sentences
 19:24:51.631 Df M1K3[1:1] [app.m1k3:stt] voice endpoint: complete thought · idle 2.7s · required 2.5s
@@ -52,3 +53,10 @@ def test_table_has_a_header_and_a_row_per_turn():
     assert lines[0].split()[:2] == ["#", "route"]
     assert len(lines) == 2 + 3  # header, rule, three turns
     assert "19.6 s" in lines[2]
+
+
+def test_reads_the_prompt_anatomy_when_the_build_logs_it():
+    rows = vrs.turns(LOG.splitlines())
+    assert [r.history_chars for r in rows] == [None, 3900, None]
+    assert [r.rest_chars for r in rows] == [None, 2200, None]
+    assert rows[1].history_turns == 6

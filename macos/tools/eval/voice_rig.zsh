@@ -1,11 +1,13 @@
 #!/usr/bin/env zsh
 # voice_rig.zsh — drive the running Mac M1K3's voice mode hands-free and read back what each turn cost.
 #
-#   macos/tools/eval/voice_rig.zsh [--turns FILE] [--out DIR] [--rate WPM] [--voice NAME] [--leave-on]
+#   macos/tools/eval/voice_rig.zsh [--turns FILE] [--out DIR] [--rate WPM] [--voice NAME] [--new-chat] [--leave-on]
 #
 # One spoken line per row of FILE (default: voice_rig_turns.txt; `#` lines and blanks skipped). The rig:
 #   1. tees every app.m1k3 log line to <out>/app.log (`log stream`, from before the first word);
-#   2. enters voice mode with ⌘⇧V through System Events, unless `m1k3 status` says it is already on;
+#   2. enters voice mode with ⌘⇧V through System Events, unless `m1k3 status` says it is already on.
+#      --new-chat first starts a fresh conversation (⌘N, voice mode off): voice joins the open chat
+#      otherwise, so its history replay starts however full that chat already is;
 #   3. speaks each line with macOS `say` through the speakers. A separate process on purpose: M1K3's
 #      echo canceller removes its own playback, so the `m1k3 speak` CLI cannot be the user;
 #   4. paces on the app's own log, never on a timer: a turn is done when its `voice turn:` summary
@@ -22,6 +24,7 @@
 #
 # Signed: Kev + claude-opus-5-5, 2026-10-16, Confidence 0.75 (three runs on master e632482d:
 # the first two found the pacing bugs above; the third heard and answered 4/4). Prior: Unknown.
+# Review: same day — --new-chat (⌘N), so a history measurement starts from an empty replay.
 
 emulate -L zsh
 setopt no_unset
@@ -32,6 +35,7 @@ out=""
 rate=175
 voice=""
 leave_on=0
+new_chat=0
 while (( $# )); do
   case $1 in
     --turns|--out|--rate|--voice) (( $# >= 2 )) || { print -u2 -- "$1 needs a value"; exit 2 } ;;
@@ -42,7 +46,8 @@ while (( $# )); do
     --rate) rate=$2; shift 2 ;;
     --voice) voice=$2; shift 2 ;;
     --leave-on) leave_on=1; shift ;;
-    -h|--help) sed -n '2,24p' $0; exit 0 ;;
+    --new-chat) new_chat=1; shift ;;
+    -h|--help) sed -n '2,26p' $0; exit 0 ;;
     *) print -u2 "unknown argument: $1"; exit 2 ;;
   esac
 done
@@ -68,6 +73,12 @@ toggle_voice() {
 logpid=$!
 trap 'kill $logpid 2>/dev/null' EXIT
 sleep 2
+if (( new_chat )); then
+  if [[ $(status_of in_conversation) == True ]]; then toggle_voice; wait_status in_conversation False 20; fi
+  osascript -e 'tell application "M1K3" to activate' -e 'delay 1' \
+    -e 'tell application "System Events" to keystroke "n" using {command down}' >/dev/null
+  sleep 2
+fi
 if [[ $(status_of in_conversation) != True ]]; then
   toggle_voice || { print -u2 "✗ the ⌘⇧V keystroke was refused: give the terminal Accessibility"; exit 3 }
   wait_count "voice listening on" 1 30 || print "! the mic never armed"
