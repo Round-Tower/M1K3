@@ -68,6 +68,14 @@ private func text(_ result: CallTool.Result) -> String? {
 }
 
 struct VoiceMCPToolsTests {
+    /// The registry logs `localizedDescription`; without LocalizedError it read "MCPVoiceError error 1"
+    /// (the 2026-10-16 live log), losing why a speak was refused.
+    @Test("a tool error's localized description is its message")
+    func errorDescribesItself() {
+        let error: Error = MCPVoiceError("M1K3 is in a voice conversation")
+        #expect(error.localizedDescription == "M1K3 is in a voice conversation")
+    }
+
     @Test("the voice surface is speak, stop_speaking, get_status, listen")
     func surface() {
         let registry = MCPToolRegistry(makeVoiceToolDefinitions(handlers: makeHandlers(log: HandlerLog())))

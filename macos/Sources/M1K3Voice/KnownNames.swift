@@ -8,7 +8,8 @@
 //  facts are read as text. A lone capital opening a sentence is skipped ("Prefers
 //  short answers"); a run of two or more there counts ("Lough Hyne is near…"),
 //  less an opener word or verb that leads it ("Prefers Python" gives Python).
-//  Words under three letters or with a digit (AI, M1K3) are never names.
+//  Words under three letters or with a digit (AI, M1K3) are never names. Facts
+//  arrive newest first (MemoryStore.allMemories), so past `limit` the newest win.
 //
 //  NameRepair only ever repairs TOWARD a name in this list and never touches a
 //  name already heard right, so a repaired turn can't put a new name into memory.
@@ -16,6 +17,8 @@
 //  toward as faithfully as a right one: garbage in, garbage out.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-16, Confidence 0.75. Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 (follow-up) — openers are a word list (the "-s" rule ate
+//  Charles); the cap keeps the newest facts' names, pinned by a test.
 
 import Foundation
 
@@ -42,10 +45,13 @@ public enum KnownNames {
         return names
     }
 
-    /// Words that open a fact without being part of a name.
+    /// Words that open a fact without being part of a name. A list, not a rule: "anything ending
+    /// in s" also ate Charles and Thomas (#618 review).
     private static let openers: Set<String> = [
         "the", "a", "an", "their", "his", "her", "our", "my", "your", "they", "she", "he", "it", "this",
         "that", "user", "has", "had", "is", "was", "wants", "needs", "prefers", "likes", "loves", "uses",
+        "enjoys", "lives", "works", "plays", "owns", "speaks", "studies", "visits", "hates", "runs",
+        "drives", "reads", "writes", "builds", "codes", "listens", "watches", "follows", "supports",
     ]
 
     /// Capitalised runs in one sentence. Punctuation after a word ends its run.
@@ -56,7 +62,7 @@ public enum KnownNames {
         func close() {
             // A run opening the sentence sheds a leading opener or verb ("Prefers Python", "The Burren").
             if runStart == 0, run.count >= 2, let first = run.first,
-               openers.contains(first.lowercased()) || (first.count > 4 && first.hasSuffix("s"))
+               openers.contains(first.lowercased())
             {
                 run.removeFirst()
                 runStart = 1

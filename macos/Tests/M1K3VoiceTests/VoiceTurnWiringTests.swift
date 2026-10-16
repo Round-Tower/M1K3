@@ -41,6 +41,25 @@ struct KnownNamesTests {
         #expect(Set(names) == ["Python", "Burren"])
     }
 
+    @Test("a first name ending in s survives a sentence start (#618 review)")
+    func keepsNamesEndingInS() {
+        let names = KnownNames.from(facts: ["Charles Murphy is Kev's uncle.", "Thomas Kelly plays hurling."], userName: nil)
+        #expect(Set(names) == ["Charles Murphy", "Kev", "Thomas Kelly"])
+    }
+
+    @Test("past the limit the earliest facts win: the store hands them over newest first")
+    func limitKeepsNewest() {
+        /// Letters only: a word with a digit is never a name.
+        func word(_ index: Int) -> String {
+            let letters = Array("abcdefghijklmnopqrstuvwxyz")
+            return "Bally" + String(letters[index / 26]) + String(letters[index % 26])
+        }
+        let facts = (0 ..< KnownNames.limit + 20).map { "Visited \(word($0))." }
+        let names = KnownNames.from(facts: ["Talks to Aoife."] + facts, userName: nil)
+        #expect(names.count == KnownNames.limit)
+        #expect(names.first == "Aoife")
+    }
+
     @Test("each name once, the user's first")
     func dedupes() {
         let names = KnownNames.from(facts: ["Talks to Aoife.", "Aoife rang about Aoife's car."], userName: "Aoife")

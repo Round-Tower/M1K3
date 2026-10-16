@@ -16,6 +16,9 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-16, Confidence 0.75 (NameRepair measured on
 //  one speaker; the verdict unmeasured live). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 (after Kev's live run) — the shadow verdict caught a song twice
+//  ("hands hands la", "latest news": both music, per Kev). `delivered` now logs the room line reaching the
+//  brain, and `learnNames` the names' shape and a private sample (300 names hit the cap from 450 memories).
 
 import Foundation
 import os
@@ -54,7 +57,11 @@ public final class VoiceTurnPreparer {
             return
         }
         repair = NameRepair(names: names)
-        Self.sttLog.notice("name repair: \(names.count, privacy: .public) known names")
+        // The count is public; a sample of the names (private) is there to judge what memory yields.
+        let multiWord = names.filter { $0.contains(" ") }.count
+        Self.sttLog.notice(
+            "name repair: \(names.count, privacy: .public) known names (\(multiWord, privacy: .public) of several words); newest: \(names.prefix(12).joined(separator: ", "), privacy: .private)"
+        )
     }
 
     public func prepare(_ question: String, heard: SoundContext?) -> Prepared {
@@ -76,5 +83,11 @@ public final class VoiceTurnPreparer {
     /// The prepared turn really went to the brain: its room line counts as said.
     public func delivered(_ prepared: Prepared) {
         gate.commit(prepared.heard)
+        // The proof the line reached the brain (the 2026-10-16 live run couldn't tell).
+        if let clause = prepared.soundClause {
+            Self.soundLog.notice(
+                "room line → brain (\(clause.count, privacy: .public) chars, alert: \(prepared.heard?.hasAlert == true, privacy: .public)): \(prepared.heard?.contextLine ?? "", privacy: .private)"
+            )
+        }
     }
 }

@@ -52,6 +52,8 @@
 //  and the room line the listen heard (read at stop, before the provider is dropped) as a per-turn clause
 //  through `voiceTurnClause`, never in the question. The song verdict is logged in shadow. Confidence 0.7:
 //  verify-by-launch owed.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 (follow-up) — `lastHeard` clears when a listen starts, so a turn can
+//  never carry the previous listen's room (#618 review).
 
 import AppKit
 import AVFoundation
@@ -445,6 +447,7 @@ extension AppEnvironment {
                 // their submit-on-finality is a feature there.
                 let stream = try provider.startListening(finality: .keepsListening)
                 activeProvider = provider
+                lastHeard = nil // this listen's room, not the last one's
                 // Which engine served, and whether it can keep the room out of the
                 // mic, is the first question when someone reports M1K3 talking over
                 // the music or answering something they didn't say.

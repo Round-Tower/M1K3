@@ -100,3 +100,16 @@ Kev: "let's wire what we've built". Following the advice above:
   history or memory distillation.
 - `noteOwnPlayback` has no caller yet: the only long sound M1K3 plays, the dial-up, plays during a
   brain download. Wire it before the veto goes live.
+
+## First live run (2026-10-16, Kev, Mac, Big)
+
+Eight voice turns in 13 minutes, some with music playing. The shadow verdict fired on three:
+
+- "hands hands la" (3 words): song lyrics, sent to web search as if asked. A true catch.
+- "latest news" (2 words): Kev never said it, so the music did. A true catch, and it also ran a
+  web search.
+- One 6-word turn: not yet attributed.
+
+Of the attributed ones, no false vetoes so far. That is two data points, not a rate, and the veto
+stays in shadow. The run also showed what the log couldn't prove: whether the room line reached the
+brain. `VoiceTurnPreparer.delivered` now logs it.
