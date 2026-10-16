@@ -60,6 +60,35 @@ anything. That is the whole game.
 
 ---
 
+### 1a. Driving it hands-free: the voice rig (2026-10-16)
+
+`tools/eval/voice_rig.zsh` speaks scripted turns at the running app and prints what each one cost:
+
+```bash
+macos/tools/eval/voice_rig.zsh                      # the default turns (voice_rig_turns.txt)
+macos/tools/eval/voice_rig.zsh --turns my.txt --out ~/tmp/rig --leave-on
+```
+
+How it works, and the traps it already paid for:
+
+- **Into voice mode:** ⌘⇧V through System Events. It needs Accessibility for the terminal. The Mac has no voice deep link on purpose: any web page could open one, and with it the mic.
+- **The user's voice is `say`**, a separate process playing through the speakers. M1K3's echo canceller removes only its own playback. So `m1k3 speak` can't stand in for the user, though `say` is heard.
+- **It paces on the app's log, never on `m1k3 status`.** A voice-mode turn leaves `answering` false. The first draft waited on it and spoke over M1K3. A turn is done when its `voice turn:` line lands and the mic re-arms after it.
+- **It speaks out loud.** Run it when nobody is talking near the Mac.
+
+`voice_rig_summary.py` turns the log into one row per turn: the route, the prompt tokens read past the persona seed, prefill, first audio, plus notes for name repairs and seed divergence.
+
+**The first reading, on master e632482d** (Big, M1 Max, after #620 gave Big its persona seed back):
+
+| # | route | prompt | prefill | 1st audio |
+|---|---|---|---|---|
+| 1 | plain (tools verdict) | 2139 | 11.4 s | 19.6 s |
+| 2 | plain (chat) | 1863 | 9.8 s | 15.4 s |
+| 3 | datetime | 1774 | 9.4 s | 9.8 s |
+| 4 | fetch_page | 1903 | 9.8 s | 3.0 s |
+
+The persona seed held on every turn: none diverged. What's left is the turn's own context, about 1,800–2,100 tokens, and the history replay is a large share of it. The plain route has no conversation tail (§2a's tail serves only the tool session, and it never stores on Big). In voice mode the room line sits in the preamble, ahead of the history. That is the next lever.
+
 ## 2. What we did about it
 
 | Change | Effect | Where |
@@ -298,9 +327,9 @@ On macOS none of it applies: the app is already running.
 
 ## 6. Owed
 
-- **A real spoken-turn reading from the instrument this doc is built on.** Every
-  number above comes from the MCP/chat/eval path; no HUMAN voice turn has yet
-  been timed end-to-end. First voice-mode run on a build carrying #120+#122
+- ~~A real spoken-turn reading~~: done 2026-10-16 by the voice rig (§1a), spoken
+  through the speakers rather than by a human. Originally: every number above came
+  from the MCP/chat/eval path, and no voice turn had been timed end-to-end. First voice-mode run on a build carrying #120+#122
   settles it — read with the `log show` line in §1, plus
   `rg 'seed=conversation'` for the tail engaging mid-conversation (the eval
   proved the mechanism 2026-08-13; the felt conversation is the remaining half).
@@ -317,3 +346,6 @@ on our own pin. Honest opens: the TTS model survey is from web sources and one
 repo README rather than a build, so treat the model list as a starting point and
 not a spec; no spoken turn has been measured by the new instrument yet.)
 Prior: Unknown.*
+
+*Review: Kev + claude-opus-5-5, 2026-10-16. §1a covers the voice rig and its first reading. The persona seed
+holds on Big now, so the turn's own context is the cost, and the plain route has no tail. Confidence 0.8.*
