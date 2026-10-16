@@ -80,6 +80,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#418) — a turn whose every call was rejected (and not
 //  repaired) now returns `.rejectedToolCalls(reason:text:)` from both loops instead of `.text`, so the
 //  agent loop can steer a retry; `rejectionSummary` is the safe string that goes back into the prompt.
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — a gemma persona seed past its sliding window (now built exact)
+//  keeps tool turns out of checkpoint mode: they prefill fresh, as before. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -935,7 +937,10 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         self.seedSource = seedSource
         self.adoptTail = adoptTail
         let usesCheckpoints = seed.map {
-            ExactPrefixReuse.usesCheckpoints(seedExact: $0.exact, seedLayersTrimmable: $0.cache.map(\.isTrimmable))
+            ExactPrefixReuse.usesCheckpoints(
+                seedExact: $0.exact, seedLayersTrimmable: $0.cache.map(\.isTrimmable),
+                seedWrapsWindow: $0.cache.contains { $0 is RotatingKVCache && !$0.isTrimmable }
+            )
         } ?? false
         self.usesCheckpoints = usesCheckpoints
         if usesCheckpoints, let seed {

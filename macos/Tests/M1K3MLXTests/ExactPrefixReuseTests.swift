@@ -90,4 +90,17 @@ struct ExactPrefixReuseTests {
         #expect(!ExactPrefixReuse.usesCheckpoints(seedExact: false, seedLayersTrimmable: [false]))
         #expect(!ExactPrefixReuse.usesCheckpoints(seedExact: true, seedLayersTrimmable: []))
     }
+
+    /// 2026-10-16: an exact gemma seed past its sliding window is untrimmable too (a wrapped
+    /// RotatingKVCache), so it would slip into checkpoint mode, unmeasured on rotating caches
+    /// (challenger). Tool turns keep today's path for it: no reuse, a full prefill.
+    @Test("a seed that wrapped a sliding window keeps tool turns out of checkpoint mode")
+    func wrappedSeedSkipsCheckpoints() {
+        #expect(!ExactPrefixReuse.usesCheckpoints(
+            seedExact: true, seedLayersTrimmable: [true, false], seedWrapsWindow: true
+        ))
+        #expect(ExactPrefixReuse.usesCheckpoints(
+            seedExact: true, seedLayersTrimmable: [true, false], seedWrapsWindow: false
+        ))
+    }
 }

@@ -86,13 +86,13 @@ struct SeededPlainTurnTests {
     /// forward-only prefill that never samples, so there is nothing to trim.
     @Test("a fully trimmable fresh cache keeps the sample-and-trim build")
     func trimmableCacheSamplesAndTrims() {
-        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [true, true, true]) == .sampleAndTrim)
+        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [true, true, true], slidingWindow: nil) == .sampleAndTrim)
     }
 
     @Test("any untrimmable layer (a recurrent MambaCache) gets the exact, sample-free prefill")
     func recurrentLayerGetsExactPrefill() {
-        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [true, false, true]) == .exactPrefill)
-        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [false]) == .exactPrefill)
+        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [true, false, true], slidingWindow: nil) == .exactPrefill)
+        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [false], slidingWindow: nil) == .exactPrefill)
     }
 
     /// The exact prefill runs no KVCachePlan, so its seed is stored full-precision.
@@ -103,12 +103,21 @@ struct SeededPlainTurnTests {
     /// that needs it: the sample build left its seed one position long, never reused.
     @Test("a quantizing hybrid gets the exact prefill too")
     func quantizedHybridGetsExactPrefill() {
-        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [true, false]) == .exactPrefill)
+        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [true, false], slidingWindow: nil) == .exactPrefill)
     }
 
     @Test("no layers at all is not evidence of trimmability — exact prefill")
     func emptyCacheTakesExactPrefill() {
-        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: []) == .exactPrefill)
+        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [], slidingWindow: nil) == .exactPrefill)
+    }
+
+    /// 2026-10-16: a sliding-window model (gemma-4) gets the exact build at ANY persona length. Past the
+    /// window the sample-and-trim build wraps and can't be trimmed back, so the seed was never exact and
+    /// never reused; and at 1023 or 1024 tokens the sampled position alone pushes it to the window's edge
+    /// (challenger). Fresh rotating layers ARE trimmable, so trimmability can't be what decides.
+    @Test("a sliding window always gets the exact, sample-free build")
+    func slidingWindowGetsExactPrefill() {
+        #expect(SeededPlainTurn.seedBuild(freshLayersTrimmable: [true, true], slidingWindow: 1024) == .exactPrefill)
     }
 
     @Test("an exact seed is reusable even though its layers can never be trimmed")

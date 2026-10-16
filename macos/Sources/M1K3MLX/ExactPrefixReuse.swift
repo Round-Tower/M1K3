@@ -29,7 +29,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — the header says where "flat per step" stops (image
 //  turns); `stepSnapshotLabel` names the per-step memory snapshot MLXToolTurnSession now logs in
 //  checkpoint mode (#509 follow-up: peak RSS per step). The curve itself is verify-by-launch.
-//
+//  Review: Kev + claude-opus-5-5, 2026-10-16 — `usesCheckpoints(…seedWrapsWindow:)`: a gemma seed past its
+//  sliding window stays out of checkpoint mode (unmeasured on RotatingKVCache, challenger). Confidence 0.85.
 
 import Foundation
 
@@ -46,8 +47,12 @@ enum ExactPrefixReuse {
     /// Whether a session keeps checkpoints instead of rolling its live cache: the
     /// seed is exact AND some layer can't be trimmed. Trimmable caches keep the
     /// live-cache path; a seed nobody vouched exact holds a sampled position.
-    static func usesCheckpoints(seedExact: Bool, seedLayersTrimmable: [Bool]) -> Bool {
-        seedExact && seedLayersTrimmable.contains(false)
+    ///
+    /// `seedWrapsWindow`: the seed is an exact gemma persona past its sliding window
+    /// (a wrapped RotatingKVCache, untrimmable too). Checkpoints on a rotating cache
+    /// are unmeasured, so tool turns keep their full prefill for it (2026-10-16).
+    static func usesCheckpoints(seedExact: Bool, seedLayersTrimmable: [Bool], seedWrapsWindow: Bool = false) -> Bool {
+        !seedWrapsWindow && seedExact && seedLayersTrimmable.contains(false)
     }
 
     /// The label for the per-step memory snapshot MLXToolTurnSession logs after
