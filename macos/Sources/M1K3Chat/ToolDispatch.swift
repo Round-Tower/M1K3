@@ -177,18 +177,6 @@ public enum ToolDispatch {
         "today", "tonight", "right now", "currently",
     ]
 
-    /// A reference lookup about now goes to the web instead. With chains on, Apple's pick sent
-    /// "Who won the All-Ireland hurling final this year?" to lookup_fact in 3/3 trials (its menu
-    /// line says "changeable fact"), and a reference source answers a this-year question stale:
-    /// the 2026-09-12 "isn't searching the internet much" miss again. Only when web_search is on
-    /// offer this turn (web search off changes nothing); the chained pick is corrected too, and
-    /// `chain` drops a repeat if both become web_search.
-    ///
-    /// A single pick reads the whole question; in a chain each pick reads only its own query, its
-    /// half of the ask (the 10-10 `all` cell: "the current date … and the founding year of Cork"
-    /// sent the fact half to the web on the date half's "current"). The limit: a chained query is
-    /// Apple's rewrite, and a rewrite that drops "this year" stays lookup_fact (pinned), as does a
-    /// chain head with an empty query. The `all` cells' rewrites kept their cue.
     /// A web read on a request to OPEN a page becomes the action pick (#622): "Open the M1K3
     /// website in my browser" picked fetch_page, and M1K3 read the site aloud instead of opening
     /// it. The request opens on the verb (open, launch, visit, go to: after "please", "can you",
@@ -220,11 +208,24 @@ public enum ToolDispatch {
     /// reads, so "Open the BBC website and read me the headlines" would open it and guess (challenger).
     private static let readCues = [
         "tell", "read", "summarise", "summarize", "what", "find", "check", "list", "give", "how", "when", "who",
+        "show", "see", "look", "explain", "describe", "search",
     ]
     private static let webThings = [
         "website", "site", "page", "web page", "webpage", "link", "url", "browser", "homepage",
     ]
 
+    /// A reference lookup about now goes to the web instead. With chains on, Apple's pick sent
+    /// "Who won the All-Ireland hurling final this year?" to lookup_fact in 3/3 trials (its menu
+    /// line says "changeable fact"), and a reference source answers a this-year question stale:
+    /// the 2026-09-12 "isn't searching the internet much" miss again. Only when web_search is on
+    /// offer this turn (web search off changes nothing); the chained pick is corrected too, and
+    /// `chain` drops a repeat if both become web_search.
+    ///
+    /// A single pick reads the whole question; in a chain each pick reads only its own query, its
+    /// half of the ask (the 10-10 `all` cell: "the current date … and the founding year of Cork"
+    /// sent the fact half to the web on the date half's "current"). The limit: a chained query is
+    /// Apple's rewrite, and a rewrite that drops "this year" stays lookup_fact (pinned), as does a
+    /// chain head with an empty query. The `all` cells' rewrites kept their cue.
     public static func recencyCorrected(_ pick: ToolPick, palette: [any AgentTool], question: String) -> ToolPick {
         guard palette.contains(where: { $0.name == "web_search" }) else { return pick }
         func aboutNow(_ text: String) -> Bool {

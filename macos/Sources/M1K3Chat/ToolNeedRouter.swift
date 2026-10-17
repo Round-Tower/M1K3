@@ -96,28 +96,52 @@ public enum ToolNeedRouter {
     /// "earlier in this chat" from "earlier, another day", and `recent_activity` then put another
     /// chat's facts in the answer. A turn that names a past session (yesterday, a weekday, last
     /// week) or one of the user's stores (notes, calendar, a recording) is left to the gate.
+    ///
+    /// Acting on what was said ("Open the link you mentioned", "Play the song you recommended")
+    /// keeps its tools (`actionCues`), and the responder only overrides a verdict below
+    /// `pointsBackCeiling`: the gate's grey zone, where look-backs scored 0.4–0.7.
     public static func pointsBackInChat(_ question: String) -> Bool {
-        ToolGroupRouter.mentions(question, any: saidCues)
-            && !ToolGroupRouter.mentions(question, any: pastSessionCues + storeCues + nowCues)
+        // "just now" and "earlier today" point back in THIS chat; they aren't the now/today of a fresh ask.
+        let text = question.lowercased()
+            .replacingOccurrences(of: "just now", with: "just")
+            .replacingOccurrences(of: "earlier today", with: "earlier")
+        return ToolGroupRouter.mentions(text, any: saidCues)
+            && !ToolGroupRouter.mentions(text, any: pastSessionCues + storeCues + nowCues + actionCues)
     }
+
+    /// Above this the gate is sure a tool is wanted (a past-session look-back scores ~0.87).
+    public static let pointsBackCeiling = 0.8
 
     /// "<who> [just] <said>" in the past tense, or "<did|do> <who> <say>": a present form alone is
     /// an everyday request ("Can you tell me the weather?", "Can you recommend…"), challenger
     /// 2026-10-17, so it counts only after did/do ("did you say", "do you mean").
     static let saidCues: [String] = {
         let who = ["you", "i", "we"]
-        let past = [
-            "said", "mentioned", "suggested", "told", "talked", "discussed", "recommended", "meant", "picked", "listed",
-        ]
+        let past = ["said", "mentioned", "suggested", "told", "talked", "discussed", "recommended", "picked", "listed"]
         let present = ["say", "mention", "suggest", "tell", "talk", "discuss", "recommend", "mean", "pick", "list"]
+        // "you meant" asks about M1K3's words; "I meant" corrects the user's own last turn (a fresh ask).
         let pastCues = who.flatMap { who in past.flatMap { ["\(who) \($0)", "\(who) just \($0)"] } }
-        let askedCues = ["did", "do"].flatMap { aux in who.flatMap { who in present.map { "\(aux) \(who) \($0)" } } }
-        return pastCues + askedCues
+            + ["you meant", "you just meant"]
+        // "did" with any verb; "do" only where it asks about words ("What laptop do you recommend?" is a fresh ask).
+        let didCues = who.flatMap { who in present.map { "did \(who) \($0)" } }
+        let wordVerbs = ["say", "mean", "mention", "tell", "talk", "discuss"]
+        let doCues = who.flatMap { who in wordVerbs.map { "do \(who) \($0)" } }
+        return pastCues + didCues + doCues
     }()
 
     /// The turn wants something current, or complains about an action ("I told you to set a
     /// timer"): not a look-back, whatever verb it uses.
-    static let nowCues = ToolDispatch.nowCues + ["now", "tomorrow", "told you to", "asked you to"]
+    static let nowCues = ToolDispatch.nowCues + [
+        "now", "tomorrow", "told you to", "asked you to",
+        "weather", "forecast", "rain", "price", "prices", "score", "scores", "news", "traffic",
+    ]
+
+    /// Acting on what was said needs the tool that acts (code review, 2026-10-17).
+    static let actionCues = [
+        "remind", "set", "timer", "alarm", "schedule", "book", "send", "text", "message", "call", "play",
+        "open", "launch", "run", "save", "add", "create", "write", "copy",
+        "link", "url", "site", "website", "page", "browser",
+    ]
 
     static let pastSessionCues = [
         "yesterday", "last week", "last night", "last time", "last month", "last weekend", "last session",

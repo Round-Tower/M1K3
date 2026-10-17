@@ -609,13 +609,6 @@ extension AppEnvironment {
     /// eased it to 2 or 1, making multi-tool turns structurally impossible.
     nonisolated static let baseMaxIterations = 5
 
-    /// Conservative fixed reserve (tokens) for the NON-history parts of the prompt
-    /// — persona+exemplars (~1130) + tools spec (~600) + grounding chunks (~1100)
-    /// + goal/context line (~170). Subtracted from the tier's window before the
-    /// conversation replay gets what's left. Bigger = safer (less history, less
-    /// chance of crossing gemma's 8192). Tune from the `ttft` token-count log
-    /// (the [SPIKE]) — this is a verify-by-launch estimate, not a measured fact.
-    /// MLX tiers still use this; Mini uses `measuredMiniReserve` when available.
     /// The replay window the next turn gets: one home for the responder's replay and ChatSession's
     /// rolling distillation trigger (#629), so they can't drift. Brain-aware long context: a wide
     /// replay on the dense-Qwen lil (~32K window), a hard clamp on gemma-4 (big, whose
@@ -636,6 +629,13 @@ extension AppEnvironment {
         )
     }
 
+    /// Conservative fixed reserve (tokens) for the NON-history parts of the prompt
+    /// — persona+exemplars (~1130) + tools spec (~600) + grounding chunks (~1100)
+    /// + goal/context line (~170). Subtracted from the tier's window before the
+    /// conversation replay gets what's left. Bigger = safer (less history, less
+    /// chance of crossing gemma's 8192). Tune from the `ttft` token-count log
+    /// (the [SPIKE]) — this is a verify-by-launch estimate, not a measured fact.
+    /// MLX tiers still use this; Mini uses `measuredMiniReserve` when available.
     nonisolated static let historyReserveTokens = HistoryBudgetPolicy.liveReserveTokens
 
     /// Exact Mini reserve measured via `SystemLanguageModel.tokenCount(for:)` at

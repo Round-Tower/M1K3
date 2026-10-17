@@ -98,6 +98,8 @@ struct ToolNeedRouterFixtureTests {
         "Who did I say is coming to stay, and why does that matter for the cat?",
         "What was the name you suggested a minute ago?",
         "Can you repeat what you just said?",
+        "What did you say just now?",
+        "What was that name you mentioned earlier today?",
         "What did you mean by that?",
         "Which one did you recommend?",
     ])
@@ -123,6 +125,16 @@ struct ToolNeedRouterFixtureTests {
         "I told you to set a timer.",
         "What's the latest on what you told me about the election?",
         "We talked about booking flights, what are prices now?",
+        // Code review, 2026-10-17: acting on what was said, corrections, and do-you-recommend asks.
+        "Open the link you mentioned.",
+        "Play the song you recommended.",
+        "Set a timer for the length you mentioned.",
+        "Remind me about what you suggested.",
+        "Add what we discussed to my list.",
+        "No, I meant Cork, Ireland. What's the weather there?",
+        "You said it would be sunny. Will it rain this weekend?",
+        "What laptop do you recommend?",
+        "Which restaurants near me do you recommend?",
     ])
     func doesNotPointBack(question: String) {
         #expect(!ToolNeedRouter.pointsBackInChat(question))

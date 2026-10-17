@@ -297,6 +297,28 @@ struct PlainTurnRouteTests {
         #expect(picks.withLock { $0 } == 1)
     }
 
+    /// Code review, 2026-10-17: a confident tools verdict (a past-session look-back sits ~0.87)
+    /// keeps the picker even when the words point back: the override is for the gate's grey zone.
+    @Test("a confident tools verdict keeps the picker even when the words point back")
+    func confidentToolsVerdictKeepsThePicker() async throws {
+        let picks = Mutex(0)
+        let route = PlainTurnRoute(
+            decide: { _ in .init(verdict: .tools, probability: 0.9) }, instructions: nil,
+            pick: { @Sendable _, _ in
+                picks.withLock { $0 += 1 }
+                return ToolPick(tool: ToolPick.noTool, query: "")
+            }
+        )
+        let provider = RouteProvider(["Here it is."])
+        let responder = try AgentRAGResponder(
+            store: KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
+            toolsProvider: { [NoteTool()] }, plainRouteProvider: { route }
+        )
+        let history = [ChatTurn(role: .user, text: "hi"), ChatTurn(role: .assistant, text: "hello")]
+        _ = try await answer(responder, "What did you say about names earlier?", history: history)
+        #expect(picks.withLock { $0 } == 1)
+    }
+
     @Test("#438 review: a tools verdict's plain fallback keeps its excerpts, and lists them")
     func toolsVerdictPlainFallbackKeepsExcerpts() async throws {
         let (store, embedder) = try await plantNotes()

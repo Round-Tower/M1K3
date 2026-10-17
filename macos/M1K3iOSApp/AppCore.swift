@@ -434,8 +434,6 @@ final class AppCore {
     /// `nonisolated` (like the Mac AppEnvironment's keys) so the responder's
     /// @Sendable per-turn closures can read them off the main actor.
     nonisolated static let selectedBrainKey = "selectedBrain"
-    /// The history window's reserves — the policy's own figures, shared with the
-    /// Mac shell so the two cannot drift.
     /// The Mac's brain-aware replay window, mirrored (PR #234 review 6): pocket's 8k window is a
     /// HARD budget on a 4 GB phone — the tier-blind default (8000 chars) plus an uncapped decode
     /// could ask its unbounded KV cache for more than the window the 3.5 GB floor was measured
@@ -454,6 +452,8 @@ final class AppCore {
         )
     }
 
+    /// The history window's reserves — the policy's own figures, shared with the
+    /// Mac shell so the two cannot drift.
     nonisolated static let historyReserveTokens = HistoryBudgetPolicy.liveReserveTokens
     nonisolated static let historyGenerationReserveTokens = HistoryBudgetPolicy.liveGenerationReserveTokens
     /// Exact Mini reserve — measured on the Mac, shared via the policy's

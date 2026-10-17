@@ -521,7 +521,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // #622: a turn about what was said in THIS chat is the replay's to answer. The gate can't
         // tell "earlier" here from "earlier, another day", and a tool's output put another chat's
         // facts in the answer. Only with history: on a fresh chat there is nothing to point back at.
-        let pointsBack = gate?.verdict == .tools && !history.isEmpty && ToolNeedRouter.pointsBackInChat(question)
+        let pointsBack = gate?.verdict == .tools && !history.isEmpty
+            && (gate?.probability ?? 1) < ToolNeedRouter.pointsBackCeiling
+            && ToolNeedRouter.pointsBackInChat(question)
         let decision = pointsBack
             ? gate.map { ToolNeedRouter.Decision(verdict: .chat, probability: $0.probability) }
             : gate

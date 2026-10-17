@@ -279,6 +279,7 @@ struct ToolDispatchOpenTests {
         ("Open the BBC website and read me the headlines", "fetch_page"),
         ("Visit Cork's tourism site and tell me the opening hours", "web_search"),
         ("Go to the page about Allihies and summarise it", "fetch_page"),
+        ("Open bbc.com and show me the headlines", "fetch_page"),
     ])
     func readsStay(question: String, tool: String) {
         let pick = ToolPick(tool: tool, query: "")

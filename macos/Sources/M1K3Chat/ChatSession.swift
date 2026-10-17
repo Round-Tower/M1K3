@@ -384,6 +384,7 @@ public final class ChatSession {
     /// exit/launch path; above it, a long live session's early turns become
     /// retrievable facts shortly after they fall out of context — closing the
     /// mid-session amnesia gap the wider window alone can't.
+    /// The backlog at the WIDEST window; the live trigger keys on `replayTurns() + rollingDistillBatch` (#629).
     nonisolated static let rollingDistillBacklog = HistoryWindow.maxTurns + rollingDistillBatch
     /// The small batch past the window, so it fires every few exchanges rather than every turn.
     nonisolated static let rollingDistillBatch = 4
