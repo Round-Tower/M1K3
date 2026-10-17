@@ -26,7 +26,8 @@
 //  exchanges on got a confabulated answer. A budget with `earlierUserChars` now opens the replay with the
 //  evicted USER turns in their own words (answers dropped: they are long and re-derivable), newest-first
 //  within that allowance, overhead counted. Zero, the default, renders today's block byte for byte.
-//  Open: the recall probe on the dispatch route (5 runs), and that gemma doesn't re-answer an earlier question.
+//  Probe (voice rig, Big, cap on): the once-said fact recalled 4/4 readable runs on the dispatch route, and no run
+//  re-answered a traced question; +20–50 prompt tokens. Open: a horizon past ~8 user lines (#629).
 //
 
 import Foundation

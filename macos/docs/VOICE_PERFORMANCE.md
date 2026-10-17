@@ -107,13 +107,30 @@ named the right cats with the cap on. Turn 4 had repeated them, though, so it sa
 something said once, five or more exchanges back, is owed (§6). The other tiers are uncapped until the rig
 measures them.
 
+**The cap's cost, then its fix (#626, 2026-10-17).** That owed recall check failed. "My sister is coming to stay,
+she's allergic to cats" was said once at turn 2, and five kitten questions later turn 8 asked "who did I say is
+coming to stay?". The cap had evicted turn 2, and Big confabulated from a `recent_activity` result about another
+chat. With the cap off it answered right. The fix keeps the cap and lets evicted turns leave a trace. The spoken
+replay now opens with the evicted USER turns in their own words (`USER (earlier): …`, 600 chars,
+`HistoryWindow.Budget.earlierUserChars`). M1K3's answers are dropped: they are long and can be said again.
+
+| probe (cap on) | turn 8 answer |
+|---|---|
+| before the trace | "you're getting two cats because of your own loneliness" ❌ |
+| with the trace, 4 readable runs (a 5th ran, its transcript didn't read back) | "your sister … is coming to stay … she's really allergic to cats" ✅ 4/4, all on the dispatch route |
+
+None of the four re-answered the traced kitten questions. The trace is cheap because spoken user lines are short:
+on the ten-turn script it added 20–50 prompt tokens at turns 8–10 over the cap alone (`8t+3e` … `8t+5e` in the
+rig's history column), well inside run-to-run noise. Steady-state prefill held at a mean of 7.8 s for turns 7–10.
+"What did you say about names earlier?" still named Nyx and Vesper.
+
 ## 2. What we did about it
 
 | Change | Effect | Where |
 |---|---|---|
 | `spokenTokenBudget = 400` (was 1100) | ~1.2 s off every spoken turn | `GroundingBudgetPolicy` |
 | iOS gains a grounding budget at all | mobile had been running Big's 1100 on a 4096-token tier | `AppCore.swift` |
-| Big's spoken replay ≤ 8 turns / 4,400 chars | ~3.8 s less prefill per turn in steady state (§1a) | `HistoryBudgetPolicy.spokenBigBudget` |
+| Big's spoken replay ≤ 8 turns / 4,400 chars, plus a 600-char trace of evicted user turns | ~3.8 s less prefill per turn in steady state; recall of a once-said fact kept (§1a) | `HistoryBudgetPolicy.spokenBigBudget`, `HistoryWindow` |
 | Kokoro `preload()` warms the graph | first sentence of a launch no longer compiles Metal kernels | `KokoroSynthesizer` |
 
 The spoken budget is justified twice, and the second reason matters more than
@@ -353,9 +370,14 @@ On macOS none of it applies: the app is already running.
   `rg 'seed=conversation'` for the tail engaging mid-conversation (the eval
   proved the mechanism 2026-08-13; the felt conversation is the remaining half).
 - The 400-token spoken budget's effect on answer **quality** is unmeasured.
-- Big's spoken history cap (§1a): a follow-up on something said ONCE, five or more exchanges back, is
-  untested (the rig script's turn 4 repeated the names turn 8 asked about). Lil and Mini have no spoken cap.
-  Run the rig on Lil before widening it.
+- ~~Big's spoken history cap (§1a): a follow-up on something said ONCE, five or more exchanges back~~:
+  measured 2026-10-17. It failed, then was fixed by the earlier-user trace (#626). Still open:
+  - The trace is recency-only: 600 chars holds about 8 spoken user lines, so a fact further back still
+    depends on memory distillation, which fires on the old 16-turn window (#629).
+  - Facts M1K3 stated ("I suggested Nyx") aren't traced.
+  - Lil and Mini have no spoken cap. Run the rig on Lil before widening it.
+- In every recall run the turn-8 answer also borrowed "two new feline roommates" from another chat via
+  `recent_activity`, a routing miss (#622) the trace can't fix.
 - The Kokoro graph warm's saving is verify-by-launch (metallib wall) — the
   `kokoro warm:` log line reports it.
 
@@ -374,3 +396,6 @@ holds on Big now, so the turn's own context is the cost, and the plain route has
 
 *Review: Kev + claude-opus-5-5, 2026-10-16. §1a gains the history replay A/B: Big's spoken cap, both arms on
 one build, ~3.8 s less prefill per steady-state turn. The once-said-long-ago recall is owed. Confidence 0.75.*
+
+*Review: Kev + claude-opus-5-5, 2026-10-17. §1a: the cap's recall cost and its fix, the earlier-user trace (#626).
+4/4 readable probe runs recalled the once-said fact on the dispatch route; it adds 20–50 tokens. Confidence 0.75.*

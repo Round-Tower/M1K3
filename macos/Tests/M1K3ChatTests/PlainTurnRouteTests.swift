@@ -444,8 +444,9 @@ struct PlainPromptAnatomyTests {
             [ChatTurn(role: .user, text: "Fact \(n)."), ChatTurn(role: .assistant, text: "ok")]
         }
         let budget = HistoryWindow.Budget(totalChars: 8000, perTurnChars: 1500, maxTurns: 4, earlierUserChars: 600)
-        let line = AgentRAGResponder.promptAnatomy(prompt: "x", history: history, budget: budget)
         let replay = HistoryWindow.render(history, budget: budget) ?? ""
-        #expect(line.hasSuffix(" in 4 turns · rest \(1 - replay.count)c · earlier 4"))
+        let prompt = "identity\n\n" + replay + "\n\nUSER: hi"
+        let line = AgentRAGResponder.promptAnatomy(prompt: prompt, history: history, budget: budget)
+        #expect(line.hasSuffix(" in 4 turns · rest \(prompt.count - replay.count)c · earlier 4"))
     }
 }

@@ -4,6 +4,7 @@ The fixture lines are verbatim from the 2026-10-16 rig run on master e632482d (p
 `prompt anatomy:` line: that build did not log it yet, so its line is written in the later build's format.
 
 Signed: Kev + claude-opus-5-5, 2026-10-16, Confidence 0.8. Prior: Unknown.
+Review: Kev + claude-opus-5-5, 2026-10-17 — pins the anatomy line's ` · earlier N` trace count (#626).
 """
 
 from __future__ import annotations

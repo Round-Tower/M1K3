@@ -246,4 +246,32 @@ struct HistoryWindowTests {
         #expect(budget.earlierUserChars == 600)
         #expect(budget.perTurnChars <= budget.totalChars)
     }
+
+    @Test("only answers evicted: no trace and no lone elision line")
+    func onlyAnswersEvictedNoTrace() {
+        let turns = [ChatTurn(role: .assistant, text: "An opening line.")] + chat.suffix(4)
+        let text = HistoryWindow.render(turns, budget: budget(earlier: 1000)) ?? ""
+        #expect(!text.contains(HistoryWindow.earlierElision))
+    }
+
+    @Test("an allowance too small for the elision renders today's block")
+    func tinyAllowanceIsToday() {
+        let tiny = HistoryWindow.render(chat, budget: budget(earlier: 50)) ?? ""
+        #expect(tiny == HistoryWindow.render(chat, budget: budget(earlier: 0)))
+    }
+
+    @Test("when the newest turn alone overflows totalChars, the trace adds at most earlierUserChars on top")
+    func overflowingNewestTurnPlusTrace() {
+        let turns = [
+            ChatTurn(role: .user, text: Self.fact),
+            ChatTurn(role: .assistant, text: "ok"),
+            ChatTurn(role: .user, text: String(repeating: "n", count: 900)),
+        ]
+        let small = HistoryWindow.Budget(totalChars: 200, perTurnChars: 900, maxTurns: 8, earlierUserChars: 300)
+        let traced = HistoryWindow.render(turns, budget: small) ?? ""
+        let untraced = HistoryWindow.Budget(totalChars: 200, perTurnChars: 900, maxTurns: 8)
+        let plain = HistoryWindow.render(turns, budget: untraced) ?? ""
+        #expect(traced.contains("Rachel"))
+        #expect(traced.count <= plain.count + small.earlierUserChars)
+    }
 }
