@@ -1,6 +1,7 @@
 """Pins release_tag.py: the only door into an Xcode Cloud build since 2026-10-17.
 
 Signed: Kev + claude-opus-5-5, 2026-10-17, Confidence 0.85. Prior: none (new file).
+Review: Kev + claude-opus-5-5, 2026-10-17 (#637) — cut()'s failed-push cleanup, the dry run, and an unreadable origin.
 """
 
 from __future__ import annotations
@@ -74,3 +75,62 @@ def test_remote_tags_are_matched_on_the_commit_they_peel_to():
 
 def test_no_remote_tags_means_none_at_any_commit():
     assert rt.release_tags_in("", "07b1cabe36d1eb79a2ce629743a1e8c79765b398") == []
+
+
+class FakeGit:
+    """Records git calls; answers each by its first argument."""
+
+    def __init__(self, answers):
+        self.calls = []
+        self.answers = answers
+
+    def __call__(self, *args):
+        import subprocess
+
+        self.calls.append(args)
+        code, out = self.answers.get(args[0], (0, ""))
+        return subprocess.CompletedProcess(args, code, stdout=out, stderr="boom" if code else "")
+
+
+def test_a_failed_push_deletes_the_local_tag_so_it_never_reads_as_shipped(monkeypatch):
+    sha = "07b1cabe36d1eb79a2ce629743a1e8c79765b398"
+    fake = FakeGit({
+        "rev-parse": (0, sha + "\n"),
+        "show": (0, 'MARKETING_VERSION: "1.1.0"\n'),
+        "push": (1, ""),
+    })
+    monkeypatch.setattr(rt, "git", fake)
+    monkeypatch.setattr(rt, "ci_conclusion", lambda _: "success")
+    monkeypatch.setattr(rt, "remote_release_tags_at", lambda _: [])
+    assert rt.cut(None, None, confirm=True) == 2
+    made = [c for c in fake.calls if c[:2] == ("tag", "-a")]
+    deleted = [c for c in fake.calls if c[:2] == ("tag", "-d")]
+    assert made and deleted and deleted[0][2] == made[0][2]
+
+
+def test_a_dry_run_never_tags_or_pushes(monkeypatch):
+    sha = "07b1cabe36d1eb79a2ce629743a1e8c79765b398"
+    fake = FakeGit({"rev-parse": (0, sha + "\n"), "show": (0, 'MARKETING_VERSION: "1.1.0"\n')})
+    monkeypatch.setattr(rt, "git", fake)
+    monkeypatch.setattr(rt, "ci_conclusion", lambda _: "success")
+    monkeypatch.setattr(rt, "remote_release_tags_at", lambda _: [])
+    assert rt.cut(None, None, confirm=False) == 0
+    assert not [c for c in fake.calls if c[0] in ("tag", "push")]
+
+
+def test_an_unreadable_origin_stops_the_cut_rather_than_reading_as_untagged(monkeypatch):
+    sha = "07b1cabe36d1eb79a2ce629743a1e8c79765b398"
+    # Everything else would cut: a valid version, green CI. Only origin's tags are unreadable.
+    fake = FakeGit({"rev-parse": (0, sha + "\n"), "show": (0, 'MARKETING_VERSION: "1.1.0"\n')})
+    monkeypatch.setattr(rt, "git", fake)
+    monkeypatch.setattr(rt, "ci_conclusion", lambda _: "success")
+    monkeypatch.setattr(rt, "remote_release_tags_at", lambda _: None)
+    assert rt.cut(None, None, confirm=True) == 2
+    assert not [c for c in fake.calls if c[0] in ("tag", "push")]
+
+
+def test_a_failed_ls_remote_reads_as_unreadable_not_as_no_tags(monkeypatch):
+    monkeypatch.setattr(rt, "git", FakeGit({"ls-remote": (128, "")}))
+    assert rt.remote_release_tags_at("07b1cabe36d1eb79a2ce629743a1e8c79765b398") is None
+    monkeypatch.setattr(rt, "git", FakeGit({"ls-remote": (0, "")}))
+    assert rt.remote_release_tags_at("07b1cabe36d1eb79a2ce629743a1e8c79765b398") == []

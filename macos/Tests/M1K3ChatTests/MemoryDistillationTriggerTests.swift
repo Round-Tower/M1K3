@@ -16,6 +16,8 @@
 //  Tests that only check distiller.callCount/calls (never store contents) only needed the
 //  triviality fix.
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — #629: the rolling backlog follows the replay window in effect.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — capture off means never: turns sent or delivered with capture off are
+//  never distilled later, and switching it off drops the pending backlog too (pinned).
 
 import Foundation
 @testable import M1K3Chat
@@ -160,12 +162,15 @@ private struct Fixture {
     let history: WatermarkHistoryStore
     let distiller: RecordingDistiller
     let store: KnowledgeStore
+    /// The memory-capture setting, flippable mid-test.
+    let capture: CaptureSwitch
 
     init(
         script: [Result<[String], Error>] = [.success(["Kev lives in Cork."])],
         autoCapture: Bool = true,
         replayTurns: Int = HistoryWindow.maxTurns
     ) throws {
+        capture = CaptureSwitch(autoCapture)
         history = WatermarkHistoryStore()
         distiller = RecordingDistiller(script)
         store = try KnowledgeStore()
@@ -181,13 +186,29 @@ private struct Fixture {
             responder: EchoResponder(),
             history: history,
             distillation: coordinator,
-            autoCaptureEnabled: { autoCapture },
+            autoCaptureEnabled: { [capture] in capture.isOn },
             replayTurns: { replayTurns }
         )
     }
 
     func exchange(_ text: String) async {
         await session.send(text)
+    }
+}
+
+/// The memory-capture setting as a flippable reference (Mutex itself can't sit in a struct).
+private final class CaptureSwitch: Sendable {
+    private let state: Mutex<Bool>
+    init(_ on: Bool) {
+        state = Mutex(on)
+    }
+
+    var isOn: Bool {
+        state.withLock { $0 }
+    }
+
+    func set(_ on: Bool) {
+        state.withLock { $0 = on }
     }
 }
 
@@ -369,6 +390,48 @@ struct MemoryDistillationTriggerTests {
         }
         await f.session.distillationTask?.value
         #expect(f.distiller.callCount == 1)
+    }
+
+    /// 2026-10-17: a voice-rig run with capture OFF was distilled anyway at the next normal
+    /// launch: its turns sat past the watermark, and the launch catch-up took them.
+    @Test("turns exchanged with capture off are never distilled later, even once capture is back on")
+    func captureOffTurnsStayUndistilled() async throws {
+        let f = try Fixture(autoCapture: false)
+        for i in 1 ... 3 {
+            await f.exchange("my private fact \(i) about living in Cork")
+        }
+        let id = f.session.activeConversationID
+        #expect(try f.history.distilledWatermark(id: id) == f.session.messages.count)
+
+        f.capture.set(true) // capture back on: leaving the chat distills nothing old
+        f.session.startNewConversation()
+        await f.session.distillationTask?.value
+        #expect(f.distiller.callCount == 0)
+    }
+
+    /// The design call (review fold): capture is one integer watermark, so switching it off and
+    /// sending drops the not-yet-distilled turns from before the switch too. Off means off.
+    @Test("switching capture off and sending drops the undistilled turns from before the switch as well")
+    func captureOffDropsThePendingBacklog() async throws {
+        let f = try Fixture()
+        for i in 1 ... 2 { // under the rolling backlog: nothing distilled yet
+            await f.exchange("an earlier fact \(i) about living in Cork")
+        }
+        f.capture.set(false)
+        await f.exchange("a private fact about living in Cork")
+        f.capture.set(true)
+        f.session.startNewConversation()
+        await f.session.distillationTask?.value
+        #expect(f.distiller.callCount == 0)
+    }
+
+    @Test("a background answer that lands with capture off is skipped too")
+    func captureOffBackgroundAnswerIsSkipped() async throws {
+        let f = try Fixture(autoCapture: false)
+        await f.exchange("look into the Cork weather history for me")
+        await f.session.deliverBackgroundAnswer("Cork has had a mild autumn on record.")
+        let id = f.session.activeConversationID
+        #expect(try f.history.distilledWatermark(id: id) == f.session.messages.count)
     }
 
     @Test("a short session does NOT distill mid-stream — cost stays off the hot path")

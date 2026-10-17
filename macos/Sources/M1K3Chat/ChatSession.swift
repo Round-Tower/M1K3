@@ -76,6 +76,11 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — #629: the rolling distillation trigger keys on the replay window in
 //  effect (`replayTurns`, read per turn), not HistoryWindow's widest: Big's spoken cap replays 8 turns, so a spoken
 //  session's early turns sat ~12 messages neither replayed nor distilled. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — capture off means never: the watermark follows the transcript while
+//  memory capture is off, so the launch catch-up can't distill those turns later (a capture-off voice-rig run was).
+//  Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 (pre-push review fold) — `skipCaptureOffTurns` also after a background
+//  answer, logs a failed write, and the distill task never moves the watermark backwards. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -865,12 +870,14 @@ public final class ChatSession {
             Self.leakLog.error("prompt-leak guard: background answer reproduced the persona")
             messages.append(ChatMessage(role: .assistant, text: PersonaLeakGuard.refusal, status: .complete))
             await persistActiveConversation()
+            skipCaptureOffTurns()
             return
         }
         var message = ChatMessage(role: .assistant, text: polished, status: .complete)
         message.followUps = followUps
         messages.append(message)
         await persistActiveConversation()
+        skipCaptureOffTurns()
     }
 
     /// Land the output of an Install & Run into the transcript as a
@@ -1070,7 +1077,8 @@ public final class ChatSession {
     /// on delete (deletion is discard intent). The titling blueprint throughout:
     /// id + count captured at spawn, defer cleanup, task exposed for tests.
     /// Watermark advances ONLY on success (a throw leaves the slice for the
-    /// next trigger to retry).
+    /// next trigger to retry), or when capture is off (`skipCaptureOffTurns`),
+    /// and it never moves backwards.
     func scheduleDistillationIfNeeded() {
         // Exit/launch path: never distil while a response is actively streaming
         // (it would contend with the user's turn for the model). The rolling
@@ -1088,8 +1096,17 @@ public final class ChatSession {
     /// (112 review nit: the old comment claimed the latch was already down).
     /// Single-flight + watermark guards in `spawnDistillation` keep it from
     /// over-firing.
+    ///
+    /// With capture OFF, each turn that lands moves the watermark to the transcript's end
+    /// (`skipCaptureOffTurns`): turns exchanged then aren't distilled at the next launch's catch-up
+    /// or on leaving the chat, whatever the setting says by then (2026-10-17: a capture-off
+    /// voice-rig run was distilled at the next normal launch).
     func scheduleRollingDistillationIfNeeded() {
-        guard let history, distillation != nil, autoCaptureEnabled() else { return }
+        guard let history, distillation != nil else { return }
+        guard autoCaptureEnabled() else {
+            skipCaptureOffTurns()
+            return
+        }
         let watermark = (try? history.distilledWatermark(id: activeConversationID)) ?? 0
         guard Self.shouldRollingDistill(
             messageCount: messages.count, watermark: watermark, replayTurns: replayTurns()
@@ -1170,7 +1187,27 @@ public final class ChatSession {
         distillationTask = Task { [weak self] in
             defer { self?.distillationTask = nil }
             guard (try? await distillation.distillAndStore(turns: turns)) != nil else { return }
-            try? history.setDistilledWatermark(id: conversationID, count: snapshotCount)
+            // Never backwards: a capture-off skip may have moved it past this snapshot meanwhile
+            // (this task runs on the main actor, so the read and the write can't interleave).
+            let current = (try? history.distilledWatermark(id: conversationID)) ?? 0
+            try? history.setDistilledWatermark(id: conversationID, count: max(current, snapshotCount))
+        }
+    }
+
+    /// Capture OFF means never: mark every turn so far as handled, so the launch catch-up or
+    /// leaving the chat can't distill it once capture is back on. Fail-closed by design: turns
+    /// from before the switch that weren't distilled yet are dropped too ("off" was asked for
+    /// with them on screen). Called wherever a turn lands: the tail of both send paths and a
+    /// background answer.
+    func skipCaptureOffTurns() {
+        guard let history, !autoCaptureEnabled() else { return }
+        do {
+            try history.setDistilledWatermark(id: activeConversationID, count: messages.count)
+        } catch {
+            let reason = error.localizedDescription
+            Self.log.error(
+                "capture off: turns not marked skipped, may be distilled later: \(reason, privacy: .public)"
+            )
         }
     }
 

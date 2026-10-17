@@ -20,6 +20,10 @@ Review: Kev + claude-opus-5-5, 2026-10-17 — Xcode Cloud starts only on `releas
 month's compute ran out building every master push). `wait` defaults to the newest release tag,
 and a commit no release tag points at stops at once with the command that cuts one, instead of
 waiting an hour for a run that will never start. Confidence 0.85.
+Review: Kev + claude-opus-5-5, 2026-10-17 (#637) — `--commit` resolves to a full sha (a short one read as
+untagged), and a failed tag fetch is an error, not a stale local list. Confidence 0.85.
+Review: Kev + claude-opus-5-5, 2026-10-17 (review fold) — an unreadable origin stops `wait` (4) instead of reading as
+"no tag", and a failed peel of the newest tag reads as unreadable. Both pinned. Confidence 0.85.
 """
 from __future__ import annotations
 
@@ -95,22 +99,36 @@ def build_states(number: str, platforms: tuple[str, ...]) -> dict[str, str]:
     return states
 
 
-def latest_release() -> tuple[str, str]:
-    """(tag, commit) of the newest release tag on origin, or ("", "") when there is none."""
-    git("fetch", "-q", "origin", RELEASE_TAGS)
+def resolve_commit(arg: str) -> str:
+    """The full sha for a commit-ish ("" if it isn't one): ls-remote holds full oids (#637)."""
+    out = git("rev-parse", "--verify", "--end-of-options", f"{arg}^{{commit}}")
+    return out.stdout.strip() if out.returncode == 0 else ""
+
+
+def latest_release() -> tuple[str, str] | None:
+    """(tag, commit) of the newest release tag on origin, ("", "") when there is none, or None
+    when origin couldn't be read (a stale local list could name an old release, #637)."""
+    if git("fetch", "-q", "origin", RELEASE_TAGS).returncode != 0:
+        return None
     tags = git("tag", "--list", f"{PREFIX}*", "--sort=-creatordate").stdout.split()
     if not tags:
         return "", ""
-    return tags[0], git("rev-list", "-n", "1", tags[0]).stdout.strip()
+    peeled = git("rev-list", "-n", "1", tags[0])
+    return (tags[0], peeled.stdout.strip()) if peeled.returncode == 0 else None
 
 
 def run_wait(commit: str, timeout: int) -> int:
     pid = product_id()
     # Xcode Cloud starts only on release tags: an untagged commit never gets a run.
-    if run_for_commit(recent_runs(pid), commit) is None and not remote_release_tags_at(commit):
-        print(f"commit {commit[:8]}: no release tag points at it, so Xcode Cloud will not build it."
-              f" Cut one: ./release_tag.py cut --commit {commit} --confirm", flush=True)
-        return 4
+    if run_for_commit(recent_runs(pid), commit) is None:
+        tags = remote_release_tags_at(commit)
+        if tags is None:
+            print("could not read release tags from origin", flush=True)
+            return 4
+        if not tags:
+            print(f"commit {commit[:8]}: no release tag points at it, so Xcode Cloud will not build it."
+                  f" Cut one: ./release_tag.py cut --commit {commit} --confirm", flush=True)
+            return 4
     deadline = time.monotonic() + timeout
     last = ""
     while True:
@@ -150,8 +168,17 @@ def main() -> int:
         for platform, state in build_states(args.build, SHIPPING_PLATFORMS).items():
             print(f"{platform} build {args.build}: {state}")
         return 0
-    tag, tagged = latest_release() if not args.commit else ("", "")
-    commit = args.commit or tagged
+    if args.commit:
+        tag, commit = "", resolve_commit(args.commit)
+        if not commit:
+            print(f"no such commit: {args.commit}", flush=True)
+            return 4
+    else:
+        newest = latest_release()
+        if newest is None:
+            print("could not fetch release tags from origin; pass --commit SHA", flush=True)
+            return 4
+        tag, commit = newest
     if not commit:
         print("no release tag yet: cut one with ./release_tag.py cut --confirm", flush=True)
         return 4
