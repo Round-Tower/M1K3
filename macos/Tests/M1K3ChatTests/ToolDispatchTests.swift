@@ -274,6 +274,11 @@ struct ToolDispatchOpenTests {
         ("Show me the news", "web_search"),
         ("Summarise https://m1k3.app", "fetch_page"),
         ("Open the news for today", "web_search"),
+        // Challenger, 2026-10-17: an open that also asks for a read keeps the read (the action
+        // agent has open_link but no web reads, so it would open the page and guess the rest).
+        ("Open the BBC website and read me the headlines", "fetch_page"),
+        ("Visit Cork's tourism site and tell me the opening hours", "web_search"),
+        ("Go to the page about Allihies and summarise it", "fetch_page"),
     ])
     func readsStay(question: String, tool: String) {
         let pick = ToolPick(tool: tool, query: "")

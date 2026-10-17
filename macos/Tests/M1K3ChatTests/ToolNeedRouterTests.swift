@@ -114,6 +114,15 @@ struct ToolNeedRouterFixtureTests {
         "Check my calendar for what I told Anna.",
         "What's the weather in Cork tomorrow?",
         "Thanks Mike, that's really helpful.",
+        // Challenger, 2026-10-17: everyday requests whose verbs read like a look-back.
+        "Can you tell me the weather in Cork?",
+        "Could you tell me the time?",
+        "Can you recommend a podcast?",
+        "Can you suggest somewhere to eat near me?",
+        "Can you call my mum?",
+        "I told you to set a timer.",
+        "What's the latest on what you told me about the election?",
+        "We talked about booking flights, what are prices now?",
     ])
     func doesNotPointBack(question: String) {
         #expect(!ToolNeedRouter.pointsBackInChat(question))

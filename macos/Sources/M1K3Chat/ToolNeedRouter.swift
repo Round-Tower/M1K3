@@ -98,17 +98,26 @@ public enum ToolNeedRouter {
     /// week) or one of the user's stores (notes, calendar, a recording) is left to the gate.
     public static func pointsBackInChat(_ question: String) -> Bool {
         ToolGroupRouter.mentions(question, any: saidCues)
-            && !ToolGroupRouter.mentions(question, any: pastSessionCues + storeCues)
+            && !ToolGroupRouter.mentions(question, any: pastSessionCues + storeCues + nowCues)
     }
 
-    /// "<who> [just] <said>": the speaker of the thing the turn points back at.
+    /// "<who> [just] <said>" in the past tense, or "<did|do> <who> <say>": a present form alone is
+    /// an everyday request ("Can you tell me the weather?", "Can you recommend…"), challenger
+    /// 2026-10-17, so it counts only after did/do ("did you say", "do you mean").
     static let saidCues: [String] = {
-        let verbs = [
-            "said", "say", "mentioned", "mention", "suggested", "suggest", "told", "tell", "talked", "talk",
-            "discussed", "recommended", "recommend", "meant", "mean", "called", "call", "picked", "listed",
+        let who = ["you", "i", "we"]
+        let past = [
+            "said", "mentioned", "suggested", "told", "talked", "discussed", "recommended", "meant", "picked", "listed",
         ]
-        return ["you", "i", "we"].flatMap { who in verbs.flatMap { ["\(who) \($0)", "\(who) just \($0)"] } }
+        let present = ["say", "mention", "suggest", "tell", "talk", "discuss", "recommend", "mean", "pick", "list"]
+        let pastCues = who.flatMap { who in past.flatMap { ["\(who) \($0)", "\(who) just \($0)"] } }
+        let askedCues = ["did", "do"].flatMap { aux in who.flatMap { who in present.map { "\(aux) \(who) \($0)" } } }
+        return pastCues + askedCues
     }()
+
+    /// The turn wants something current, or complains about an action ("I told you to set a
+    /// timer"): not a look-back, whatever verb it uses.
+    static let nowCues = ToolDispatch.nowCues + ["now", "tomorrow", "told you to", "asked you to"]
 
     static let pastSessionCues = [
         "yesterday", "last week", "last night", "last time", "last month", "last weekend", "last session",

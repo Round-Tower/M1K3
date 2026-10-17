@@ -193,9 +193,12 @@ public enum ToolDispatch {
     /// website in my browser" picked fetch_page, and M1K3 read the site aloud instead of opening
     /// it. The request opens on the verb (open, launch, visit, go to: after "please", "can you",
     /// "Mike") and names a web thing (a website, site, page, link, URL, browser, or a domain), so
-    /// "Open the news" and "Open question: …" stay reads. The action's agent turn has open_link.
+    /// "Open the news" and "Open question: …" stay reads, and so does an open that also asks for a
+    /// read ("…and read me the headlines"). The action's agent turn has open_link.
     public static func openCorrected(_ pick: ToolPick, question: String) -> ToolPick {
-        guard webSourced.contains(pick.tool), asksToOpenWebPage(question) else { return pick }
+        guard webSourced.contains(pick.tool), asksToOpenWebPage(question),
+              !ToolGroupRouter.mentions(question, any: readCues)
+        else { return pick }
         return ToolPick(tool: ToolPick.action, query: pick.query)
     }
 
@@ -212,6 +215,11 @@ public enum ToolDispatch {
 
     private static let openLeads: Set<String> = [
         "please", "can", "could", "would", "will", "you", "hey", "mike", "m1k3", "just", "ok", "okay",
+    ]
+    /// An open that also asks for a read keeps the read: the action agent has open_link but no web
+    /// reads, so "Open the BBC website and read me the headlines" would open it and guess (challenger).
+    private static let readCues = [
+        "tell", "read", "summarise", "summarize", "what", "find", "check", "list", "give", "how", "when", "who",
     ]
     private static let webThings = [
         "website", "site", "page", "web page", "webpage", "link", "url", "browser", "homepage",
