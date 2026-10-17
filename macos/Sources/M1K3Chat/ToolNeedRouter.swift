@@ -33,6 +33,9 @@
 //  guess (≥ 0.9); the noisy English misreads are low-confidence. Confidence 0.8.
 //  Review: same day, PR #414 review (fe9a04ac) — that fold read a long turn with NO language
 //  signal (the recognizer's nil: digits, emoji) as English; it abstains again. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — `pointsBackInChat` (#622): a turn about what was said in this
+//  chat is the replay's to answer, not a tool's; past sessions and the user's stores are left to the gate.
+//  Pinned so no tool-use fixture trips it. Confidence 0.75 (word cues; the rig replay is owed).
 //
 
 import Foundation
@@ -86,6 +89,38 @@ public enum ToolNeedRouter {
         let p = embed(question).flatMap(probability)
         return Decision(verdict: verdict(probability: p), probability: p)
     }
+
+    /// Does the turn ask about what was said in THIS conversation ("what did you say about names
+    /// earlier?", "who did I say is coming?")? The responder answers such a turn from the replay
+    /// when the chat has history (#622): the gate scores it 0.4–0.7, a sentence vector can't tell
+    /// "earlier in this chat" from "earlier, another day", and `recent_activity` then put another
+    /// chat's facts in the answer. A turn that names a past session (yesterday, a weekday, last
+    /// week) or one of the user's stores (notes, calendar, a recording) is left to the gate.
+    public static func pointsBackInChat(_ question: String) -> Bool {
+        ToolGroupRouter.mentions(question, any: saidCues)
+            && !ToolGroupRouter.mentions(question, any: pastSessionCues + storeCues)
+    }
+
+    /// "<who> [just] <said>": the speaker of the thing the turn points back at.
+    static let saidCues: [String] = {
+        let verbs = [
+            "said", "say", "mentioned", "mention", "suggested", "suggest", "told", "tell", "talked", "talk",
+            "discussed", "recommended", "recommend", "meant", "mean", "called", "call", "picked", "listed",
+        ]
+        return ["you", "i", "we"].flatMap { who in verbs.flatMap { ["\(who) \($0)", "\(who) just \($0)"] } }
+    }()
+
+    static let pastSessionCues = [
+        "yesterday", "last week", "last night", "last time", "last month", "last weekend", "last session",
+        "the other day", "days ago", "weeks ago", "months ago", "this morning", "previous", "another chat",
+        "other chat", "our chat", "our conversation", "that conversation", "session",
+        "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+    ]
+
+    static let storeCues = [
+        "note", "notes", "calendar", "reminder", "reminders", "todo", "todos", "email", "emails", "document",
+        "documents", "file", "files", "recording", "recorded", "meeting", "search", "look up", "web", "online",
+    ]
 }
 
 /// How a turn the router reads as plain chat is answered: `decide` is the

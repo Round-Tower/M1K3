@@ -33,6 +33,8 @@
 //  Review: Kev + claude-opus-4-6, 2026-10-12 — pickerInstructions: meta/self-referential questions ("what can
 //  you do", "who are you", greetings, "help") now explicitly route to none. On iPhone AFM picked web_search for
 //  "what can you do?" and returned gov.ie transport advice. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — `openCorrected` (#622): a web read on a request to open a page
+//  becomes the action pick; Apple picked fetch_page for "Open the M1K3 website" and M1K3 read it aloud. Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -187,6 +189,34 @@ public enum ToolDispatch {
     /// sent the fact half to the web on the date half's "current"). The limit: a chained query is
     /// Apple's rewrite, and a rewrite that drops "this year" stays lookup_fact (pinned), as does a
     /// chain head with an empty query. The `all` cells' rewrites kept their cue.
+    /// A web read on a request to OPEN a page becomes the action pick (#622): "Open the M1K3
+    /// website in my browser" picked fetch_page, and M1K3 read the site aloud instead of opening
+    /// it. The request opens on the verb (open, launch, visit, go to: after "please", "can you",
+    /// "Mike") and names a web thing (a website, site, page, link, URL, browser, or a domain), so
+    /// "Open the news" and "Open question: …" stay reads. The action's agent turn has open_link.
+    public static func openCorrected(_ pick: ToolPick, question: String) -> ToolPick {
+        guard webSourced.contains(pick.tool), asksToOpenWebPage(question) else { return pick }
+        return ToolPick(tool: ToolPick.action, query: pick.query)
+    }
+
+    static func asksToOpenWebPage(_ question: String) -> Bool {
+        let words = ToolGroupRouter.words(question).drop { openLeads.contains(String($0)) }
+        guard let verb = words.first.map(String.init) else { return false }
+        let opens = ["open", "launch", "visit"].contains(verb) || (verb == "go" && words.dropFirst().first == "to")
+        let domain = question.range(
+            of: #"(https?://|\b[a-z0-9-]+\.(com|ie|org|net|io|dev|app|co|uk|eu)\b)"#,
+            options: [.regularExpression, .caseInsensitive]
+        ) != nil
+        return opens && (domain || ToolGroupRouter.mentions(question, any: webThings))
+    }
+
+    private static let openLeads: Set<String> = [
+        "please", "can", "could", "would", "will", "you", "hey", "mike", "m1k3", "just", "ok", "okay",
+    ]
+    private static let webThings = [
+        "website", "site", "page", "web page", "webpage", "link", "url", "browser", "homepage",
+    ]
+
     public static func recencyCorrected(_ pick: ToolPick, palette: [any AgentTool], question: String) -> ToolPick {
         guard palette.contains(where: { $0.name == "web_search" }) else { return pick }
         func aboutNow(_ text: String) -> Bool {

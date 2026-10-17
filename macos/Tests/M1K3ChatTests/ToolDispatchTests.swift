@@ -11,6 +11,7 @@
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.8. Prior: Unknown.
 //
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — chainPicks pin (#512).
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — the open guard (#622): a web read on an open ask is an action.
 //  Review: Kev + claude-opus-5-5, 2026-10-10 — the recency guard (lookup about now → web; unchanged
 //  otherwise or with web search off; the chained pick too).
 
@@ -249,5 +250,39 @@ struct ToolDispatchRecencyTests {
         let fixed = ToolDispatch.recencyCorrected(pick, palette: palette, question: question)
         let web = ToolPick(tool: "web_search", query: "newest iPhone")
         #expect(fixed == ToolPick(tool: "datetime", query: "", then: [web]))
+    }
+}
+
+/// #622: "Open the M1K3 website in my browser" picked fetch_page, and M1K3 read the site aloud
+/// instead of opening it. A web read on a request to open a page becomes the action pick.
+struct ToolDispatchOpenTests {
+    @Test("a web read on a request to open a page becomes an action", arguments: [
+        ("Open the M1K3 website in my browser.", "fetch_page"),
+        ("Can you open m1k3.app for me?", "fetch_page"),
+        ("Please go to bbc.com", "web_search"),
+        ("Mike, open that link", "fetch_page"),
+        ("Launch the Apple developer site", "web_search"),
+    ])
+    func openBecomesAction(question: String, tool: String) {
+        let pick = ToolPick(tool: tool, query: "https://m1k3.app")
+        #expect(ToolDispatch.openCorrected(pick, question: question).tool == ToolPick.action)
+    }
+
+    @Test("reads stay reads", arguments: [
+        ("What does the M1K3 website say about pricing?", "fetch_page"),
+        ("Open question: is the moon hollow?", "web_search"),
+        ("Show me the news", "web_search"),
+        ("Summarise https://m1k3.app", "fetch_page"),
+        ("Open the news for today", "web_search"),
+    ])
+    func readsStay(question: String, tool: String) {
+        let pick = ToolPick(tool: tool, query: "")
+        #expect(ToolDispatch.openCorrected(pick, question: question) == pick)
+    }
+
+    @Test("only web reads are corrected: a device or knowledge pick is left alone")
+    func onlyWebReads() {
+        let pick = ToolPick(tool: "search_knowledge", query: "boiler")
+        #expect(ToolDispatch.openCorrected(pick, question: "Open my notes on the boiler website") == pick)
     }
 }
