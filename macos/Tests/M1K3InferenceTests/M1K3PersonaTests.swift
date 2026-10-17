@@ -25,6 +25,7 @@
 //  profileCharacterCap (compose truncated the old 920-char profile to 400); bound 5,500 → 5,300. Confidence 0.9.
 //  Review: Kev + claude-opus-5.5, 2026-10-17 — pins the one-message FOLLOW-UP rule (the old wording
 //  read as a contradiction to Lil on Always-think). Confidence 0.85.
+//  Review: same day (#633 A/B fold) — and pins that the rule no longer invites a question into the answer.
 //
 
 import CryptoKit
@@ -228,8 +229,11 @@ struct M1K3PersonaTests {
         // states the bar, the harness's exemplar-echo check does not see this.
         #expect(prompt.contains("never invent one"))
         #expect(prompt.contains("walk through it"))
-        // Curiosity lives in the reply, not only in the FOLLOWUPS trailer.
-        #expect(prompt.contains("your own questions go in your answer"))
+        // The FOLLOWUPS line holds no question of M1K3's own, and nothing in the rule invites one
+        // into the answer: "your own questions go in your answer" raised question endings 36 → 44/117
+        // on Lil (#633 A/B, 2026-10-17). Curiosity is the "be curious back" move above.
+        #expect(prompt.contains("never a question from you"))
+        #expect(!prompt.contains("your own questions go in your answer"))
     }
 
     /// 2026-10-17: the follow-up is ONE tap-to-send message in the user's words, not up to three

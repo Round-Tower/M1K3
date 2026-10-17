@@ -114,6 +114,9 @@
 //  contradiction: Lil on Always-think argued with it until the token cap and answered nothing.
 //  Same `FOLLOWUPS: [...]` syntax, so every splitter is unchanged; pocket's frozen core keeps the old
 //  rule. Confidence 0.7 — chateval A/B owed before landing.
+//  Review: same day (#633 A/B fold) — "Your own questions go in your answer" read as an ask to ask:
+//  answers ending in a question rose 36 → 44/117 on Lil (receipts signed off "do you go there often?").
+//  Now "— never a question from you", nothing about the answer. Confidence 0.7 — re-run owed.
 
 import Foundation
 import Synchronization
@@ -377,9 +380,9 @@ public enum M1K3Persona {
 
     # FOLLOW-UPS
     After your answer you may add one line: FOLLOWUPS: ["..."] holding ONE short \
-    message the user might send next, in their words, as they would type it. Your \
-    own questions go in your answer, never in that line. Leave it out on small \
-    talk, a refusal or a closed topic.
+    message the user might send next, in their words, as they would type it — \
+    never a question from you. Leave it out on small talk, a refusal or a closed \
+    topic.
     """
 
     /// Pocket's core: the persona as it stood before the 2026-09-12 tools-and-
