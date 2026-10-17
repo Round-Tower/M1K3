@@ -38,6 +38,8 @@
 //  Pinned so no tool-use fixture trips it. Confidence 0.75 (word cues; the rig replay is owed).
 //  Review: Kev + claude-opus-5.5, 2026-10-17 — `PlainTurnStream` tells an answer from reasoning
 //  alone (`hasAnswer`, `thoughtWithoutAnswering`): a think-to-the-cap stream had read as answered.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — `thinkingPastBudget`: open reasoning over the thinking cap;
+//  closed reasoning never counts, so an answer on its way is never cut. Confidence 0.85.
 //  Confidence 0.85.
 //
 
@@ -222,12 +224,23 @@ public struct PlainTurnStream {
     /// extends the last yield (the consumer folds snapshots) and the reasoning stays shown.
     /// Reasoning that already closed gets no second close: it would sit in the bubble as text.
     var closedReasoning: String {
+        sent + (reasoningIsClosed ? "\n\n" : "\n</think>\n\n")
+    }
+
+    /// Reasoning still open, and longer than `budget` characters: the think phase has run past
+    /// the cap (`ThinkingPolicy.thinkingBudgetCharacters`). Closed reasoning never counts.
+    public func thinkingPastBudget(_ budget: Int) -> Bool {
+        guard !reasoningIsClosed, let reasoning = ReasoningSplit.split(sent).reasoning else { return false }
+        return reasoning.count > budget
+    }
+
+    /// The last close tag comes after the last open tag (or there is a close and no open).
+    private var reasoningIsClosed: Bool {
         func last(_ tags: [String]) -> String.Index? {
             tags.compactMap { sent.range(of: $0, options: .backwards)?.lowerBound }.max()
         }
         let close = last(ReasoningSplit.closeTags)
-        let isClosed = close.map { close in last(ReasoningSplit.openTags).map { close > $0 } ?? true } ?? false
-        return sent + (isClosed ? "\n\n" : "\n</think>\n\n")
+        return close.map { close in last(ReasoningSplit.openTags).map { close > $0 } ?? true } ?? false
     }
 
     // The label cut from a WHOLE answer so far; nil while it could still become the label.

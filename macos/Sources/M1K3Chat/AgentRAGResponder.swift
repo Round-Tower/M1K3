@@ -183,6 +183,9 @@
 //  `withThinking(false)`, after the shown reasoning, and an empty retry hands over to the
 //  fallbacks. Live on Always-think, Lil's reasoning-only stream left an empty bubble.
 //  Confidence 0.8 — the retry pays a second prefill; verify-by-launch owed.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — the thinking cap: open reasoning past `thinkingBudget`
+//  (default `ThinkingPolicy.thinkingBudgetCharacters`) stops the think phase and takes the straight-answer
+//  path above. Confidence 0.75 — the capped arm decides the figure.
 
 import Foundation
 import M1K3Agent
@@ -211,6 +214,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// The user's reasoning preference, read fresh each turn (Settings picker:
     /// Auto / Always think / Fast answers) — same per-turn pattern as tools.
     private let thinkingModeProvider: @Sendable () -> ThinkingMode
+    /// Open reasoning, in characters, a plain or dispatched turn streams before it is cut
+    /// (nil at init: `ThinkingPolicy.thinkingBudgetCharacters`).
+    private let thinkingBudget: Int
     /// The active brain's display name (e.g. "Lil M1K3"), read fresh each turn so
     /// a runtime hot-swap is reflected — same per-turn pattern as `toolsProvider`.
     /// Empty when unknown (tests / simple callers); the context line omits it then.
@@ -284,6 +290,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         maxIterations: Int = 5,
         sourceCollector: ToolSourceCollector? = nil,
         thinkingModeProvider: @escaping @Sendable () -> ThinkingMode = { .auto },
+        thinkingBudget: Int? = nil,
         brainNameProvider: @escaping @Sendable () -> String = { "" },
         fastThinkingProvider: @escaping @Sendable () -> Bool = { false },
         historyBudgetProvider: @escaping @Sendable () -> HistoryWindow.Budget = { .default },
@@ -308,6 +315,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         self.maxIterations = maxIterations
         self.sourceCollector = sourceCollector
         self.thinkingModeProvider = thinkingModeProvider
+        self.thinkingBudget = thinkingBudget ?? ThinkingPolicy.thinkingBudgetCharacters
         self.brainNameProvider = brainNameProvider
         self.maxIterationsProvider = maxIterationsProvider
         self.fastThinkingProvider = fastThinkingProvider
@@ -675,13 +683,19 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         Self.log.notice(
             "\(Self.promptAnatomy(prompt: prompt, history: history, budget: historyBudget), privacy: .public)"
         )
-        let generate: @Sendable () async -> Bool = { [provider] in
+        let generate: @Sendable () async -> Bool = { [provider, thinkingBudget] in
             var answer = PlainTurnStream()
             for await chunk in provider.generateStreaming(prompt: prompt) {
                 if Task.isCancelled { break }
                 // Cumulative out, whatever came in: the consumer folds snapshots.
                 guard let clean = answer.ingest(chunk) else { continue }
                 continuation.yield(clean)
+                // The thinking cap: leaving the loop ends the stream, whose termination
+                // cancels the generation, and the turn answers straight below.
+                if answer.thinkingPastBudget(thinkingBudget) {
+                    Self.log.notice("plain turn thinking passed its budget (\(thinkingBudget) chars) — cutting it")
+                    break
+                }
             }
             // Reasoning alone is no answer (2026-10-17): a think phase cut at the token cap
             // left an empty bubble, and no fallback ran because it had streamed. Answer once

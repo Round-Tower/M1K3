@@ -21,6 +21,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `ThinkingModeResolver`: the Mac's
 //  inline provider closure became a shared pure function so the iOS shell reads
 //  the same default, keys and voice-fast rule (#198).
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — `thinkingBudgetCharacters`: the think phase's cap.
+//  Confidence 0.7 — the figure is ~1,000 tokens, chosen before the capped arm ran; see its doc.
 //
 
 import Foundation
@@ -79,6 +81,15 @@ public enum ThinkingModeResolver {
 }
 
 enum ThinkingPolicy {
+    /// How much open reasoning a plain or dispatched turn may stream before it is cut and
+    /// answered straight (`AgentRAGResponder.runPlainTurn`). About 1,000 tokens at ~4 chars a
+    /// token. Measured 2026-10-17 on Lil, Always-think against Auto: chat 34/39 both, reasoning,
+    /// code, knowledge and instruction asks 28/30 both, at ~145–180 s a turn against ~15 s. Lil
+    /// thought 2,500–4,500 tokens before answering a sum, and never closed under ~1,400 on chat,
+    /// so a cap this size cuts most think phases short: the shown thought is the price of a
+    /// bounded turn. The agent loop's tool turns are not capped here.
+    static let thinkingBudgetCharacters = 4000
+
     /// Words at or above which a question earns the think phase regardless
     /// of other signals.
     private static let longQuestionWordCount = 12
