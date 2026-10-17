@@ -33,8 +33,9 @@ should read `1.0.0`).
 1. Pick the new version by the scheme above.
 2. Update `MARKETING_VERSION`, `versionName`, and `versionCode` (derived) in
    one commit: `chore(release): v<X.Y.Z>`.
-3. Merge to `master` → Xcode Cloud archives with the new version and mints the
-   build number itself.
+3. Merge to `master`, then cut a release tag (`macos/tools/asc/release_tag.py cut --confirm`):
+   the tag starts Xcode Cloud, which archives the new version and mints the build number
+   itself. A merge alone builds nothing on Xcode Cloud (2026-10-17).
 4. Android: build the AAB from the same commit; Play rejects a reused
    `versionCode`, which is the guard the scheme exists to satisfy.
 
@@ -43,4 +44,6 @@ Signed: Kev + claude-sonnet-5, 2026-09-01, Confidence 0.9 (the Mac half is the
 already-live Xcode Cloud behaviour, written down; the Android scheme is the
 standard derivable-versionCode pattern, chosen ahead of the first Play upload
 so there is no legacy integer to migrate around). Prior: none (new file).
+Review: Kev + claude-opus-5-5, 2026-10-17 — step 3: a release tag starts Xcode Cloud, not the merge
+(the compute hours ran out on per-merge archives). Confidence 0.85.
 -->

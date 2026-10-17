@@ -101,7 +101,7 @@ Anything a cold session needs on turn one belongs below, not there.
 - `.info` / `.debug` do not persist in OSLogStore; breadcrumbs are `.notice`+.
 - Read the store (`itunes.apple.com/lookup?id=`) before saying what users have.
 - **Releasing (Mac + iOS on one build):** follow the runbook in `macos/tools/asc/README.md`:
-  `builds.py wait` → install N from TestFlight and **relaunch** M1K3 → `verify_build.py --build N`
+  `release_tag.py cut --confirm` (Kev's call) → `builds.py wait` → install N from TestFlight and **relaunch** M1K3 → `verify_build.py --build N`
   → `submit.py cancel/attach/submit --platform ALL --confirm`. **Verify before any cancel**: a
   cancel loses the queue spot (2026-10-05: both were cancelled before the build was checked).
   `submit` refuses an unstamped build unless `--why`. Relaunching matters until #491, because the
@@ -160,6 +160,11 @@ Anything a cold session needs on turn one belongs below, not there.
   turn inherits it; anything outside a turn (a bare eval arm, a utility) scopes its own `withThinking`
   or gets the construction flag, i.e. thinks to the cap. Before the fix the plain route did exactly that:
   20/44 with 11 empty answers at a 133 s median turn (`macos/docs/evals/2026-10-11-lil-555-router-*.json`).
+- **Xcode Cloud builds only `release*` tags (Kev, 2026-10-17).** Merging to master starts no
+  TestFlight build: the month's compute hours ran out by the 15th when every master push archived
+  Mac + iOS. A build starts when `macos/tools/asc/release_tag.py cut --confirm` tags a green
+  master commit; cutting one is Kev's call. A run CANCELED seconds after creation with no reason
+  means the hours are spent, not a broken workflow. The nightly DMG still ships master's Mac app.
 - **Router retrains move both heads (2026-10-17, #631).** `tools/router/train_tool_router.py` rewrites the gate
   (`ToolNeedRouterWeights`) AND the group head (`ToolGroupRouterWeights`). A gate fix ships the gate alone: restore
   the group head from master unless the router chateval arm has run on the new one. Its floor drop dispatched in-chat
@@ -262,4 +267,6 @@ path: a deep link is required, and the event's UI draft submission (platform nul
 `submit --platform ALL` until #605. Both hit live on the 1.1 release. Confidence 0.85.
 Review: Kev + claude-opus-5-5, 2026-10-14 — #605 lands: `submit` adopts the event's platform-less draft;
 the carry-forward keeps the UI fallback until an API run proves it. Confidence 0.7.
+Review: Kev + claude-opus-5-5, 2026-10-17 — Xcode Cloud builds only `release*` tags (`release_tag.py cut`):
+the compute hours ran out on per-merge archives. Confidence 0.85.
 -->
