@@ -7,6 +7,8 @@
 //  it must refuse rather than guess (a wrong name is worse than a garbled one).
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-15, Confidence 0.8. Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — an ordinary English word in the list ("Local", from a branding
+//  line in memory) is locked but never a target: it swapped a rightly heard "Rachel" (#627).
 
 @testable import M1K3Voice
 import Testing
@@ -152,5 +154,43 @@ struct NameRepairTests {
         // The recogniser's guess and the name fold to the same sound: why the repair is confident.
         #expect(NameRepair.soundKey("Karen 2 Hill") == NameRepair.soundKey("Carrauntoohil"))
         #expect(NameRepair.soundKey("launch") != NameRepair.soundKey("Ballybunion"))
+    }
+
+    // MARK: - Ordinary words in the list (#627)
+
+    /// The live bug: "Local" reached the list from a branding line in memory, and "Rachel" (rakal)
+    /// is one sound from it (lakal), 0.80 against a 0.75 bar.
+    private let rachel = "My sister Rachel is coming to stay next month."
+
+    @Test("without the word check, an ordinary word in the list steals a rightly heard name")
+    func ordinaryWordStealsWithoutTheCheck() {
+        let repair = NameRepair(names: ["Local", "Aoife"], ordinaryWords: { _ in [] })
+        #expect(repair.repair(rachel).text == "My sister Local is coming to stay next month.")
+    }
+
+    @Test("an ordinary English word in the list is never a target", arguments: ["Local", "Offline", "Cork"])
+    func ordinaryWordIsNoTarget(word: String) {
+        let repair = NameRepair(names: [word, "Aoife"], ordinaryWords: { Set($0.filter { $0 == word }) })
+        #expect(repair.repair(rachel).text == rachel)
+        #expect(repair.repair("We took the train from Kork.").text == "We took the train from Kork.")
+    }
+
+    @Test("an ordinary word in the list stays locked: it is never repaired toward something else")
+    func ordinaryWordStaysLocked() {
+        let repair = NameRepair(names: ["Local", "Locan"], ordinaryWords: { Set($0.filter { $0 == "Local" }) })
+        #expect(repair.repair("Is the Local model ready?").text == "Is the Local model ready?")
+    }
+
+    @Test("names of several words are kept as targets even when a word is ordinary")
+    func multiWordNamesStay() {
+        let repair = NameRepair(names: ["Liquid Glass"], ordinaryWords: { words in Set(words) })
+        #expect(repair.repair("Check the Liquid Glas toolbar.").text == "Check the Liquid Glass toolbar.")
+    }
+
+    @Test("the default word check: English words in, Irish and personal names out",
+          .enabled(if: NameRepair.ordinaryEnglishWords(["local"]) == ["local"]))
+    func defaultWordCheck() {
+        let words = ["Local", "Offline", "Cork", "Rachel", "Aoife", "Niamh", "Siobhán", "Carrauntoohil", "Kev"]
+        #expect(NameRepair.ordinaryEnglishWords(words) == ["Local", "Offline", "Cork"])
     }
 }
