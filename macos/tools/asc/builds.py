@@ -22,6 +22,8 @@ and a commit no release tag points at stops at once with the command that cuts o
 waiting an hour for a run that will never start. Confidence 0.85.
 Review: Kev + claude-opus-5-5, 2026-10-17 (#637) — `--commit` resolves to a full sha (a short one read as
 untagged), and a failed tag fetch is an error, not a stale local list. Confidence 0.85.
+Review: Kev + claude-opus-5-5, 2026-10-17 (review fold) — an unreadable origin stops `wait` (4) instead of reading as
+"no tag", and a failed peel of the newest tag reads as unreadable. Both pinned. Confidence 0.85.
 """
 from __future__ import annotations
 

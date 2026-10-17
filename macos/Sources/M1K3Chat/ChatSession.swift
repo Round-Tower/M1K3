@@ -1097,9 +1097,10 @@ public final class ChatSession {
     /// Single-flight + watermark guards in `spawnDistillation` keep it from
     /// over-firing.
     ///
-    /// With capture OFF the watermark follows the transcript instead: turns exchanged then are
-    /// never distilled, at the next launch's catch-up or on leaving the chat, whatever the setting
-    /// says by then (2026-10-17: a capture-off voice-rig run was distilled at the next normal launch).
+    /// With capture OFF, each turn that lands moves the watermark to the transcript's end
+    /// (`skipCaptureOffTurns`): turns exchanged then aren't distilled at the next launch's catch-up
+    /// or on leaving the chat, whatever the setting says by then (2026-10-17: a capture-off
+    /// voice-rig run was distilled at the next normal launch).
     func scheduleRollingDistillationIfNeeded() {
         guard let history, distillation != nil else { return }
         guard autoCaptureEnabled() else {

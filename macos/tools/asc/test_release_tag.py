@@ -120,7 +120,17 @@ def test_a_dry_run_never_tags_or_pushes(monkeypatch):
 
 def test_an_unreadable_origin_stops_the_cut_rather_than_reading_as_untagged(monkeypatch):
     sha = "07b1cabe36d1eb79a2ce629743a1e8c79765b398"
-    monkeypatch.setattr(rt, "git", FakeGit({"rev-parse": (0, sha + "\n")}))
+    # Everything else would cut: a valid version, green CI. Only origin's tags are unreadable.
+    fake = FakeGit({"rev-parse": (0, sha + "\n"), "show": (0, 'MARKETING_VERSION: "1.1.0"\n')})
+    monkeypatch.setattr(rt, "git", fake)
     monkeypatch.setattr(rt, "ci_conclusion", lambda _: "success")
     monkeypatch.setattr(rt, "remote_release_tags_at", lambda _: None)
     assert rt.cut(None, None, confirm=True) == 2
+    assert not [c for c in fake.calls if c[0] in ("tag", "push")]
+
+
+def test_a_failed_ls_remote_reads_as_unreadable_not_as_no_tags(monkeypatch):
+    monkeypatch.setattr(rt, "git", FakeGit({"ls-remote": (128, "")}))
+    assert rt.remote_release_tags_at("07b1cabe36d1eb79a2ce629743a1e8c79765b398") is None
+    monkeypatch.setattr(rt, "git", FakeGit({"ls-remote": (0, "")}))
+    assert rt.remote_release_tags_at("07b1cabe36d1eb79a2ce629743a1e8c79765b398") == []

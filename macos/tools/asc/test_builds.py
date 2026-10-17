@@ -74,3 +74,23 @@ def test_the_newest_release_tag_and_its_commit(monkeypatch):
     assert builds.latest_release() == ("release-1.1.0-20261018-aaaa", "aaaa1111")
     monkeypatch.setattr(builds, "git", _Git({"tag": (0, "")}))
     assert builds.latest_release() == ("", "")
+
+
+def test_latest_release_reads_a_failed_peel_as_unreadable(monkeypatch):
+    monkeypatch.setattr(builds, "git", _Git({"tag": (0, "release-x\n"), "rev-list": (128, "")}))
+    assert builds.latest_release() is None
+
+
+def _no_run(monkeypatch, tags):
+    monkeypatch.setattr(builds, "product_id", lambda: "p")
+    monkeypatch.setattr(builds, "recent_runs", lambda _pid: [])
+    monkeypatch.setattr(builds, "remote_release_tags_at", lambda _sha: tags)
+
+
+def test_wait_stops_on_an_untagged_commit_and_on_an_unreadable_origin(monkeypatch, capsys):
+    _no_run(monkeypatch, [])
+    assert builds.run_wait("07b1cabe36d1eb79a2ce629743a1e8c79765b398", timeout=1) == 4
+    assert "release_tag.py cut" in capsys.readouterr().out
+    _no_run(monkeypatch, None)
+    assert builds.run_wait("07b1cabe36d1eb79a2ce629743a1e8c79765b398", timeout=1) == 4
+    assert "could not read release tags" in capsys.readouterr().out

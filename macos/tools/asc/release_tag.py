@@ -90,7 +90,10 @@ def remote_release_tags_at(sha: str) -> list[str] | None:
     """What origin holds, not this clone: a tag whose push failed must not read as shipped.
     None when origin can't be read (an error is not "no tag": that would invite a duplicate cut)."""
     out = git("ls-remote", "--tags", "origin", f"refs/tags/{PREFIX}*")
-    return release_tags_in(out.stdout, sha) if out.returncode == 0 else None
+    if out.returncode != 0:
+        print(f"git ls-remote: {out.stderr.strip()}", flush=True)
+        return None
+    return release_tags_in(out.stdout, sha)
 
 
 def ci_conclusion(sha: str) -> str | None:
