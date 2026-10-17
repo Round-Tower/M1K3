@@ -108,6 +108,12 @@
 //  Big recited it as its privacy answer. Now "their memories and documents never leave on their own" (a
 //  search query can carry their words — #485 review); the specifics ride the per-turn EgressDisclosure. Pocket's core is untouched (its edits need a
 //  pocket security re-run). Confidence 0.75 — Mini eval re-run; Lil/Big live re-check owed.
+//  Review: Kev + claude-opus-5.5, 2026-10-17 — FOLLOW-UPS asks for ONE suggestion, worded as the
+//  user's next message (Kev: "autocomplete of the next user chat turn"), not up to 3 questions. The
+//  old "A question YOU want answered belongs in your reply, not in that line" read as a
+//  contradiction: Lil on Always-think argued with it until the token cap and answered nothing.
+//  Same `FOLLOWUPS: [...]` syntax, so every splitter is unchanged; pocket's frozen core keeps the old
+//  rule. Confidence 0.7 — chateval A/B owed before landing.
 
 import Foundation
 import Synchronization
@@ -370,10 +376,10 @@ public enum M1K3Persona {
     - Never repeat a tool call with the same argument.
 
     # FOLLOW-UPS
-    After your answer, add one line: FOLLOWUPS: ["...", "...", "..."] — up to 3 \
-    short next questions the user might ask, as a JSON array. Omit the line \
-    entirely if nothing natural fits (small talk, a refusal, a closed topic). A \
-    question YOU want answered belongs in your reply, not in that line.
+    After your answer you may add one line: FOLLOWUPS: ["..."] holding ONE short \
+    message the user might send next, in their words, as they would type it. Your \
+    own questions go in your answer, never in that line. Leave it out on small \
+    talk, a refusal or a closed topic.
     """
 
     /// Pocket's core: the persona as it stood before the 2026-09-12 tools-and-

@@ -13,6 +13,8 @@
 //  remembered-thread cue (#428/#349). Confidence 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-10-16 — pins `promptAnatomy` (history vs rest, in characters).
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — and its ` · earlier N` count of the trace (#626).
+//  Review: Kev + claude-opus-5.5, 2026-10-17 — a plain turn that thinks to the cap without answering
+//  answers straight after it (the live Always-think dead bubble); the fake records the turn's thinking.
 //
 
 import Foundation
@@ -26,13 +28,13 @@ import Testing
 // MARK: - Fakes
 
 /// Streams scripted responses word by word (cumulative, like AFM), records each
-/// prompt, the instructions override in force for it, and every turn re-arm.
+/// prompt, the instructions and thinking decision in force for it, and every turn re-arm.
 private final class RouteProvider: InferenceProvider, TurnWarmable, @unchecked Sendable {
     let name = "route-scripted"
     let isAvailable = true
-    private let state = Mutex<(responses: [String], prompts: [String], instructions: [String?], warms: [String?])>(
-        ([], [], [], [])
-    )
+    private let state = Mutex<(
+        responses: [String], prompts: [String], instructions: [String?], thinking: [Bool?], warms: [String?]
+    )>(([], [], [], [], []))
 
     /// `deltas`: the responses are the PIECES of one answer, streamed as deltas
     /// (the MLX shape), rather than one scripted answer per call.
@@ -47,6 +49,7 @@ private final class RouteProvider: InferenceProvider, TurnWarmable, @unchecked S
         state.withLock {
             $0.prompts.append(prompt)
             $0.instructions.append(InferenceIntent.instructions)
+            $0.thinking.append(InferenceIntent.thinking)
             return $0.responses.isEmpty ? "" : $0.responses.removeFirst()
         }
     }
@@ -85,6 +88,10 @@ private final class RouteProvider: InferenceProvider, TurnWarmable, @unchecked S
         state.withLock { $0.instructions }
     }
 
+    var thinking: [Bool?] {
+        state.withLock { $0.thinking }
+    }
+
     var warms: [String?] {
         state.withLock { $0.warms }
     }
@@ -111,11 +118,13 @@ private func responder(
     _ provider: RouteProvider,
     route: PlainTurnRoute?,
     consulted: Consulted = Consulted(),
-    egress: String? = nil
+    egress: String? = nil,
+    mode: ThinkingMode = .auto
 ) throws -> AgentRAGResponder {
     try AgentRAGResponder(
         store: KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
         toolsProvider: { [NoteTool()] },
+        thinkingModeProvider: { mode },
         egressClauseProvider: { egress },
         plainRouteProvider: route.map { route in
             { @Sendable in
@@ -322,6 +331,51 @@ struct PlainTurnRouteTests {
         #expect(provider.warms.count == 1, "one re-arm, the agent turn's: \(provider.warms)")
     }
 
+    /// 2026-10-17, live on Always-think: Lil argued with the FOLLOWUPS rule until the cap, never
+    /// closed </think>, and the bubble came up empty. The reasoning counted as "answered", so no
+    /// fallback ran. Now the turn closes the reasoning and answers once more, thinking off.
+    @Test("a plain turn that thinks to the cap without answering answers straight after it")
+    func thoughtToCapAnswersStraight() async throws {
+        let provider = RouteProvider(["<think>Wait, re-reading the FOLLOWUPS rule again", "Ray's grand, by the sound of it."])
+        let text = try await answer(responder(provider, route: chat(.chat), mode: .always), "how's Ray?")
+        let split = ReasoningSplit.split(text)
+        #expect(split.answer == "Ray's grand, by the sound of it.")
+        #expect(split.reasoning?.contains("FOLLOWUPS rule") == true, "the reasoning stays on show")
+        #expect(provider.prompts.count == 2)
+        #expect(provider.prompts.first == provider.prompts.last, "the same prompt, answered straight")
+        #expect(provider.thinking == [true, false])
+        #expect(provider.warms.count == 1, "answered: one re-arm")
+    }
+
+    /// PR review: reasoning that DID close, with nothing after it, is answered straight too, and
+    /// the retry must not add a second close (a stray `</think>` would sit in the bubble).
+    @Test("closed reasoning with an empty answer retries without a second close tag", arguments: [
+        "<think>Round and round</think>", "Round and round</think>",
+    ])
+    func closedEmptyRetriesWithOneClose(first: String) async throws {
+        let provider = RouteProvider([first, "Canberra."])
+        let text = try await answer(responder(provider, route: chat(.chat), mode: .always), "capital of Australia?")
+        #expect(ReasoningSplit.split(text).answer == "Canberra.")
+        #expect(text.components(separatedBy: "</think>").count == 2, "exactly one close: \(text)")
+        #expect(provider.thinking.last == false)
+    }
+
+    @Test("reasoning that closes into an answer is one generation")
+    func closedReasoningIsOneGeneration() async throws {
+        let provider = RouteProvider(["<think>Easy one.</think> Canberra."])
+        let text = try await answer(responder(provider, route: chat(.chat), mode: .always), "capital of Australia?")
+        #expect(ReasoningSplit.split(text).answer == "Canberra.")
+        #expect(provider.prompts.count == 1)
+    }
+
+    @Test("thinking to the cap and then nothing hands the turn to the agent, never a blank bubble")
+    func thoughtToCapThenEmptyFallsBack() async throws {
+        let provider = RouteProvider(["<think>Round and round", "", "CONCLUSION: Canberra."])
+        let text = try await answer(responder(provider, route: chat(.chat), mode: .always), "capital of Australia?")
+        #expect(ReasoningSplit.split(text).answer.contains("Canberra"))
+        #expect(provider.prompts.count == 3)
+    }
+
     @Test("a turn with images never consults the router")
     func imagesSkipRouter() async throws {
         let consulted = Consulted()
@@ -412,6 +466,24 @@ struct PlainTurnStreamTests {
         #expect(PlainTurnStream.clean("Hello") == "Hello")
         // PR #414 review: leading whitespace (a tokenizer artifact) must not ride into the bubble.
         #expect(PlainTurnStream.clean("  Well, hi") == "Well, hi")
+    }
+
+    @Test("an answer is text outside the reasoning; a stream cut mid-thought has none")
+    func answerVersusReasoning() {
+        func stream(_ chunks: String...) -> PlainTurnStream {
+            var stream = PlainTurnStream()
+            chunks.forEach { _ = stream.ingest($0) }
+            return stream
+        }
+        #expect(!stream().hasAnswer)
+        #expect(stream("Hi").hasAnswer)
+        #expect(stream("<think>", "hmm, the rule says").hasAnswer == false)
+        #expect(stream("<think>", "hmm, the rule says").thoughtWithoutAnswering)
+        #expect(stream("<think>hmm</think>", " Hi").hasAnswer)
+        #expect(!stream("<think>hmm</think>", " Hi").thoughtWithoutAnswering)
+        // The template pre-opens the block, so a model may emit only the close.
+        #expect(stream("hmm</think>").thoughtWithoutAnswering)
+        #expect(!stream("Hi").thoughtWithoutAnswering)
     }
 }
 

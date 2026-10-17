@@ -23,6 +23,8 @@
 //  Standard and pocket renders unchanged. Confidence 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-09-29 (#451 review fold) — the full-profile test builds exactly
 //  profileCharacterCap (compose truncated the old 920-char profile to 400); bound 5,500 → 5,300. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-17 — pins the one-message FOLLOW-UP rule (the old wording
+//  read as a contradiction to Lil on Always-think). Confidence 0.85.
 //
 
 import CryptoKit
@@ -227,7 +229,21 @@ struct M1K3PersonaTests {
         #expect(prompt.contains("never invent one"))
         #expect(prompt.contains("walk through it"))
         // Curiosity lives in the reply, not only in the FOLLOWUPS trailer.
-        #expect(prompt.contains("belongs in your reply"))
+        #expect(prompt.contains("your own questions go in your answer"))
+    }
+
+    /// 2026-10-17: the follow-up is ONE tap-to-send message in the user's words, not up to three
+    /// questions, and the rule no longer reads as a contradiction (Lil on Always-think argued with
+    /// "A question YOU want answered belongs in your reply, not in that line" until the token cap).
+    @Test("the follow-up is one message in the user's words, in the trailer syntax every splitter reads")
+    func followUpIsOneUserMessage() {
+        let core = M1K3Persona.corePrompt
+        #expect(core.contains(#"FOLLOWUPS: ["..."]"#))
+        #expect(!core.contains("up to 3"))
+        #expect(core.contains("in their words, as they"))
+        #expect(!core.contains("belongs in your reply, not in that line"))
+        // Pocket's frozen core keeps its own rule (its hash pins it).
+        #expect(M1K3Persona.pocketCorePrompt.contains("up to 3"))
     }
 
     @Test("the exemplar prompt = core + exemplars, within the cached-path budget")
