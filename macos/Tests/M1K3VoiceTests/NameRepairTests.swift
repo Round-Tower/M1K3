@@ -8,12 +8,17 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-15, Confidence 0.8. Prior: Unknown.
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — an ordinary English word in the list ("Local", from a branding
-//  line in memory) is locked but never a target: it swapped a rightly heard "Rachel" (#627).
+//  line in memory) is locked but never a target: it swapped a rightly heard "Rachel" (#627). The guard tests
+//  inject no word check, so they stay hermetic. Confidence 0.85.
 
 @testable import M1K3Voice
 import Testing
 
 struct NameRepairTests {
+    /// The guards' tests run without the OS word check, so they pin the guards (and don't move with the OS
+    /// vocabulary): "inch" stays because the trap guard holds, not because "Inch" stopped being a target.
+    static let noWordCheck: @Sendable ([String]) -> Set<String> = { _ in [] }
+
     /// The corpus names plus distractors: most of a real list never comes up.
     private let names = [
         "Carrauntoohil", "Dún Laoghaire", "Clonakilty", "Gougane Barra", "Aoife", "Oisín", "Ballybunion",
@@ -23,7 +28,7 @@ struct NameRepairTests {
     ]
 
     private func repaired(_ text: String) -> String {
-        NameRepair(names: names).repair(text).text
+        NameRepair(names: names, ordinaryWords: Self.noWordCheck).repair(text).text
     }
 
     @Test("a misheard name becomes the known one", arguments: [
@@ -72,14 +77,14 @@ struct NameRepairTests {
     @Test("an ambiguous span is left alone rather than guessed")
     func ambiguityIsRefused() {
         // Two known names sound alike to the heard word: guessing could store the wrong one.
-        let repair = NameRepair(names: ["Sinéad", "Shinead"]).repair("I met Shinade yesterday.")
+        let repair = NameRepair(names: ["Sinéad", "Shinead"], ordinaryWords: Self.noWordCheck).repair("I met Shinade yesterday.")
         #expect(repair.text == "I met Shinade yesterday.")
         #expect(repair.repairs.isEmpty)
     }
 
     @Test("each repair reports what was heard, the name and the score")
     func repairsAreReported() throws {
-        let result = NameRepair(names: names).repair("The ferry from Don Leary leaves at eight.")
+        let result = NameRepair(names: names, ordinaryWords: Self.noWordCheck).repair("The ferry from Don Leary leaves at eight.")
         let repair = try #require(result.repairs.first)
         #expect(result.repairs.count == 1)
         #expect(repair.heard == "Don Leary")
@@ -99,13 +104,13 @@ struct NameRepairTests {
         #expect(repaired("The beach at Bally Bunion's end.") == "The beach at Ballybunion's end.")
         #expect(repaired("I saw Colm's car.") == "I saw Colm's car.")
         // A recogniser's 's can be the end of the name itself.
-        let allihies = NameRepair(names: ["Allihies"])
+        let allihies = NameRepair(names: ["Allihies"], ordinaryWords: Self.noWordCheck)
         #expect(allihies.repair("The pub in Alohi's was busy.").text == "The pub in Allihies was busy.")
     }
 
     @Test("a name listed twice still repairs")
     func duplicateNamesStillRepair() {
-        let repair = NameRepair(names: ["Carrauntoohil", "Carrauntoohil", "carrauntoohil"])
+        let repair = NameRepair(names: ["Carrauntoohil", "Carrauntoohil", "carrauntoohil"], ordinaryWords: Self.noWordCheck)
         #expect(repair.repair("We climbed Karen 2 Hill.").text == "We climbed Carrauntoohil.")
     }
 
@@ -117,34 +122,34 @@ struct NameRepairTests {
 
     @Test("a correct multi-word name is not reported as a repair")
     func correctNameIsNotARepair() {
-        let result = NameRepair(names: names).repair("Check the Liquid Glass toolbar and Gougane Barra.")
+        let result = NameRepair(names: names, ordinaryWords: Self.noWordCheck).repair("Check the Liquid Glass toolbar and Gougane Barra.")
         #expect(result.repairs.isEmpty)
         #expect(result.text == "Check the Liquid Glass toolbar and Gougane Barra.")
     }
 
     @Test("a short single word needs more than one swapped sound")
     func shortWordIsNotSwapped() {
-        #expect(NameRepair(names: ["Colm"]).repair("I told Cole about it.").text == "I told Cole about it.")
-        #expect(NameRepair(names: ["Gráinne"]).repair("Owen and Gron are here.").text == "Owen and Gráinne are here.")
+        #expect(NameRepair(names: ["Colm"], ordinaryWords: Self.noWordCheck).repair("I told Cole about it.").text == "I told Cole about it.")
+        #expect(NameRepair(names: ["Gráinne"], ordinaryWords: Self.noWordCheck).repair("Owen and Gron are here.").text == "Owen and Gráinne are here.")
     }
 
     @Test("a weekday stays even when a name sounds like it")
     func weekdayIsLocked() {
-        #expect(NameRepair(names: ["Mundee"]).repair("We met on Monday at noon.").text == "We met on Monday at noon.")
+        #expect(NameRepair(names: ["Mundee"], ordinaryWords: Self.noWordCheck).repair("We met on Monday at noon.").text == "We met on Monday at noon.")
     }
 
     @Test("a near miss inside the margin is refused, outside it is taken")
     func marginDecides() {
         // "Dermid" sounds exactly like Diarmuid (1.0) and nearly like Dermot (0.83).
         let text = "I met Dermid today."
-        #expect(NameRepair(names: ["Dermot", "Diarmuid"], margin: 0.2).repair(text).text == text)
-        #expect(NameRepair(names: ["Dermot", "Diarmuid"], margin: 0.1).repair(text).text == "I met Diarmuid today.")
+        #expect(NameRepair(names: ["Dermot", "Diarmuid"], margin: 0.2, ordinaryWords: Self.noWordCheck).repair(text).text == text)
+        #expect(NameRepair(names: ["Dermot", "Diarmuid"], margin: 0.1, ordinaryWords: Self.noWordCheck).repair(text).text == "I met Diarmuid today.")
     }
 
     @Test("no names, no change")
     func emptyListIsIdentity() {
         let text = "We climbed Karen 2 Hill."
-        #expect(NameRepair(names: []).repair(text).text == text)
+        #expect(NameRepair(names: [], ordinaryWords: Self.noWordCheck).repair(text).text == text)
     }
 
     @Test("the sound key folds spelling to sound")
@@ -187,10 +192,18 @@ struct NameRepairTests {
         #expect(repair.repair("Check the Liquid Glas toolbar.").text == "Check the Liquid Glass toolbar.")
     }
 
-    @Test("the default word check: English words in, Irish and personal names out",
+    @Test("a one-word name that isn't an ordinary word is still a target with the check on")
+    func realNameStillATarget() {
+        let repair = NameRepair(names: ["Local", "Clodagh"], ordinaryWords: { Set($0.filter { $0 == "Local" }) })
+        #expect(repair.repair("I met Clodda at the station.").text == "I met Clodagh at the station.")
+        #expect(repair.ordinaryWordsLocked == 1)
+    }
+
+    @Test("the default word check knows English words and not Irish names",
           .enabled(if: NameRepair.ordinaryEnglishWords(["local"]) == ["local"]))
     func defaultWordCheck() {
-        let words = ["Local", "Offline", "Cork", "Rachel", "Aoife", "Niamh", "Siobhán", "Carrauntoohil", "Kev"]
-        #expect(NameRepair.ordinaryEnglishWords(words) == ["Local", "Offline", "Cork"])
+        // The OS vocabulary differs by release (CI runs an older macOS): pin only the clear cases.
+        let ordinary = NameRepair.ordinaryEnglishWords(["Local", "Aoife", "Niamh", "Siobhán", "Carrauntoohil"])
+        #expect(ordinary == ["Local"])
     }
 }

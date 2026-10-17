@@ -8,6 +8,8 @@
 //  and the one gate both shells read.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.85. Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — pins #622's held-out rig lines: thanks and news go tool-free,
+//  past-session look-backs keep their tools. Confidence 0.8 (the OS sentence embedding can shift scores).
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — `routeSeesThroughFacades`: the Mac responder holds
 //  the app's RuntimeInferenceProvider, which the route never saw through (build 373 shipped
 //  with the router dead on the Mac). A runtime-shaped façade pins it. Confidence 0.9.
@@ -81,6 +83,19 @@ struct ToolNeedRouterFixtureTests {
         // Spike, frozen threshold: 28/74 of all no-tool fixtures. Chat-shaped kinds sit
         // higher; the floor pins "the router does something", not a tuned number.
         #expect(free.count * 4 >= chat.count, "only \(free.count)/\(chat.count) chat fixtures went tool-free")
+    }
+
+    /// #622: lines the voice rig sent to tools, held out of training. Thanks, news and a plain question
+    /// sit near 0.05–0.10 against a ~0.32 threshold; the look-backs at a past session sit near 0.87.
+    @Test("mid-conversation turns go tool-free; look-backs at a past session keep their tools", arguments: [
+        ("Thanks Mike, that's really helpful.", ToolNeedRouter.Verdict.chat),
+        ("My sister Rachel is coming to stay next month, and she's really allergic to cats.", .chat),
+        ("Do cats really need a scratching post?", .chat),
+        ("What did we talk about yesterday?", .tools),
+        ("Mike, what's on my calendar tomorrow?", .tools),
+    ])
+    func conversationalTurns(prompt: String, verdict: ToolNeedRouter.Verdict) {
+        #expect(ToolNeedRouter.verdict(for: prompt, embed: embedder.vector) == verdict)
     }
 
     /// Challenger review, 2026-09-26: NLLanguageRecognizer reads "hi" as Catalan,

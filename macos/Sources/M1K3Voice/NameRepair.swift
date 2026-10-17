@@ -18,8 +18,8 @@
 //  sounds nearly as close. Measured in docs/evals/2026-10-15-stt.md: at these
 //  defaults, 92 right swaps to 3 wrong over both sets, no trap word touched.
 //
-//  Pure and not wired: where the names come from, keeping repaired names out of
-//  memory distillation, and whether it runs at all are open (Kev).
+//  Wired by VoiceTurnPreparer (#618) with KnownNames from memory. Pure apart from the
+//  default word check, which reads the system English word embedding once per build.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-15, Confidence 0.7 (tuned on one speaker
 //  and a synthetic held-out voice; challenger reviewed). Prior: Unknown.
@@ -28,7 +28,8 @@
 //  never a target (#627). "Local" came into the list from a branding line in memory and took a rightly heard
 //  "Rachel" (rakal/lakal, 0.80). STT writes ordinary words right, so they never need repairing toward; the
 //  word check is the system English embedding's vocabulary. On the 2026-10-15 corpus (180 transcripts, 87
-//  names) it drops Mallow and Inch, both trap pairs, and changes no repair.
+//  names) it drops Mallow and Inch, both trap pairs, and changes no repair. Confidence 0.75. Open: places and
+//  people named with ordinary words (Cork, Grace) are no longer repaired toward, measured on one speaker only.
 
 import Foundation
 import NaturalLanguage
@@ -50,6 +51,8 @@ public struct NameRepair: Sendable {
     static let shortWord = 0.8
 
     private let names: [Known]
+    /// One-word names kept as locks only, because the word check called them ordinary words.
+    public let ordinaryWordsLocked: Int
     private let known: Set<String>
     private let written: Set<String>
     private let threshold: Double
@@ -79,6 +82,7 @@ public struct NameRepair: Sendable {
         }
         let ordinary = ordinaryWords(all.filter { $0.words == 1 }.map(\.name))
         self.names = all.filter { $0.words > 1 || !ordinary.contains($0.name) }
+        ordinaryWordsLocked = all.count - self.names.count
         known = seen
         written = Set(all.map(\.name))
         self.threshold = threshold
