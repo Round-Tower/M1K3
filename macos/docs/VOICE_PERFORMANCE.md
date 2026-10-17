@@ -71,6 +71,7 @@ macos/tools/eval/voice_rig.zsh --turns my.txt --out ~/tmp/rig --leave-on
 
 How it works, and the traps it already paid for:
 
+- **Memory capture off first:** launch the app with `--args -memoryAutoCapture NO`. Otherwise the scripted chats are distilled into the user's real memory: the 2026-10-16/17 runs left about 15 invented facts ("has a sister named Local", "decided to get two cats"). The rig refuses to start without the flag (`--allow-memory` overrides), and `--check` tests that without touching the app.
 - **Into voice mode:** ⌘⇧V through System Events. It needs Accessibility for the terminal. The Mac has no voice deep link on purpose: any web page could open one, and with it the mic.
 - **The user's voice is `say`**, a separate process playing through the speakers. M1K3's echo canceller removes only its own playback. So `m1k3 speak` can't stand in for the user, though `say` is heard.
 - **It paces on the app's log, never on `m1k3 status`.** A voice-mode turn leaves `answering` false. The first draft waited on it and spoke over M1K3. A turn is done when its `voice turn:` line lands and the mic re-arms after it.
@@ -399,3 +400,5 @@ one build, ~3.8 s less prefill per steady-state turn. The once-said-long-ago rec
 
 *Review: Kev + claude-opus-5-5, 2026-10-17. §1a: the cap's recall cost and its fix, the earlier-user trace (#626).
 4/4 readable probe runs recalled the once-said fact on the dispatch route; it adds 20–50 tokens. Confidence 0.75.*
+
+*Review: Kev + claude-opus-5-5, 2026-10-17. §1a: the rig refuses to run while memory capture is on.*
