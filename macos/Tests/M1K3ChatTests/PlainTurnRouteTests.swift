@@ -12,6 +12,7 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — the plain prompt carries no date line and no
 //  remembered-thread cue (#428/#349). Confidence 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-10-16 — pins `promptAnatomy` (history vs rest, in characters).
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — and its ` · earlier N` count of the trace (#626).
 //
 
 import Foundation
@@ -435,5 +436,17 @@ struct PlainPromptAnatomyTests {
     func anatomyWithoutHistory() {
         let line = AgentRAGResponder.promptAnatomy(prompt: "USER: hi", history: [], budget: .default)
         #expect(line == "prompt anatomy: 8c · history 0c in 0 turns · rest 8c")
+    }
+
+    @Test("traced earlier lines are counted apart from the kept turns")
+    func anatomyCountsTheTrace() {
+        let history = (1 ... 6).flatMap { n in
+            [ChatTurn(role: .user, text: "Fact \(n)."), ChatTurn(role: .assistant, text: "ok")]
+        }
+        let budget = HistoryWindow.Budget(totalChars: 8000, perTurnChars: 1500, maxTurns: 4, earlierUserChars: 600)
+        let replay = HistoryWindow.render(history, budget: budget) ?? ""
+        let prompt = "identity\n\n" + replay + "\n\nUSER: hi"
+        let line = AgentRAGResponder.promptAnatomy(prompt: prompt, history: history, budget: budget)
+        #expect(line.hasSuffix(" in 4 turns · rest \(prompt.count - replay.count)c · earlier 4"))
     }
 }

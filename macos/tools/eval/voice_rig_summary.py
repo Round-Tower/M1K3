@@ -14,6 +14,7 @@ on lines from the first rig run). Prior: none (new file).
 Review: same day — history / rest columns off the responder's `prompt anatomy:` line.
 Review: Kev + claude-opus-5-5, 2026-10-16 (pre-push review fold) — a tools verdict with no dispatch line is the
 agent loop: label it "agent", not "?" (the anatomy line is plain-route only, so its columns stay "—").
+Review: Kev + claude-opus-5-5, 2026-10-17 — the history column shows traced earlier lines (`8t+4e`, #626).
 """
 
 from __future__ import annotations
@@ -27,7 +28,7 @@ FIRST_AUDIO = re.compile(r"voice turn: .*first audio (\d+)ms")
 VERDICT = re.compile(r"tool router: (\w+) p=")
 DISPATCH = re.compile(r"tool dispatch: (\S+)")
 REPAIR = re.compile(r"name repair: .* \((\d\.\d+)\)")
-ANATOMY = re.compile(r"prompt anatomy: \d+c · history (\d+)c in (\d+) turns · rest (\d+)c")
+ANATOMY = re.compile(r"prompt anatomy: \d+c · history (\d+)c in (\d+) turns · rest (\d+)c(?: · earlier (\d+))?")
 SEED_TROUBLE = re.compile(r"persona seed .*(?:not a prefix|not an exact)|seed reuse refused")
 
 
@@ -40,6 +41,7 @@ class Turn:
     history_chars: int | None = None
     history_turns: int | None = None
     rest_chars: int | None = None
+    earlier_lines: int = 0
     notes: list[str] = field(default_factory=list)
 
 
@@ -63,7 +65,8 @@ def turns(lines: list[str]) -> list[Turn]:
         elif m := STREAM.search(line):
             current.prompt_tokens, current.prefill_ms = int(m.group(1)), int(m.group(2))
         elif m := ANATOMY.search(line):
-            current.history_chars, current.history_turns, current.rest_chars = map(int, m.groups())
+            current.history_chars, current.history_turns, current.rest_chars = map(int, m.groups()[:3])
+            current.earlier_lines = int(m.group(4) or 0)
         elif m := REPAIR.search(line):
             current.notes.append(f"name repair {m.group(1)}")
         elif SEED_TROUBLE.search(line):
@@ -85,6 +88,7 @@ def table(rows: list[Turn]) -> str:
     for i, r in enumerate(rows, 1):
         prompt = "—" if r.prompt_tokens is None else f"{r.prompt_tokens}"
         hist = "—" if r.history_chars is None else f"{r.history_chars}c/{r.history_turns}t"
+        hist += f"+{r.earlier_lines}e" if r.earlier_lines else ""
         rest = "—" if r.rest_chars is None else f"{r.rest_chars}c"
         out.append(f"{i:>2}  {r.route:<22} {prompt:>7} {hist:>12} {rest:>6} {_s(r.prefill_ms):>8} {_s(r.first_audio_ms):>9}  "
                    + ", ".join(r.notes))

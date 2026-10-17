@@ -173,6 +173,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-16 (pre-push review fold) — `runPlainTurn` reads the history
 //  budget once, so the anatomy line describes the window the prompt was built with (voice mode can flip
 //  between two reads).
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — the anatomy line counts the earlier-user trace (` · earlier N`, #626),
+//  so the voice rig can see it on a live turn without logging any text.
 
 import Foundation
 import M1K3Agent
@@ -710,8 +712,11 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// Characters, not tokens: M1K3Chat has no tokenizer; the ttft line has the token total.
     static func promptAnatomy(prompt: String, history: [ChatTurn], budget: HistoryWindow.Budget) -> String {
         let replay = HistoryWindow.render(history, budget: budget) ?? ""
-        let turns = replay.split(separator: "\n").filter { $0.hasPrefix("USER: ") || $0.hasPrefix("M1K3: ") }.count
+        let lines = replay.split(separator: "\n")
+        let turns = lines.filter { $0.hasPrefix("USER: ") || $0.hasPrefix("M1K3: ") }.count
+        let earlier = lines.filter { $0.hasPrefix(HistoryWindow.earlierLabel) }.count
         return "prompt anatomy: \(prompt.count)c · history \(replay.count)c in \(turns) turns · rest \(prompt.count - replay.count)c"
+            + (earlier > 0 ? " · earlier \(earlier)" : "")
     }
 
     /// A dispatched turn's prompt: the date, the history replay, the tool's result and
