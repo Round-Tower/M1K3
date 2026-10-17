@@ -111,16 +111,22 @@ def latest_release() -> tuple[str, str] | None:
     tags = git("tag", "--list", f"{PREFIX}*", "--sort=-creatordate").stdout.split()
     if not tags:
         return "", ""
-    return tags[0], git("rev-list", "-n", "1", tags[0]).stdout.strip()
+    peeled = git("rev-list", "-n", "1", tags[0])
+    return (tags[0], peeled.stdout.strip()) if peeled.returncode == 0 else None
 
 
 def run_wait(commit: str, timeout: int) -> int:
     pid = product_id()
     # Xcode Cloud starts only on release tags: an untagged commit never gets a run.
-    if run_for_commit(recent_runs(pid), commit) is None and not remote_release_tags_at(commit):
-        print(f"commit {commit[:8]}: no release tag points at it, so Xcode Cloud will not build it."
-              f" Cut one: ./release_tag.py cut --commit {commit} --confirm", flush=True)
-        return 4
+    if run_for_commit(recent_runs(pid), commit) is None:
+        tags = remote_release_tags_at(commit)
+        if tags is None:
+            print("could not read release tags from origin", flush=True)
+            return 4
+        if not tags:
+            print(f"commit {commit[:8]}: no release tag points at it, so Xcode Cloud will not build it."
+                  f" Cut one: ./release_tag.py cut --commit {commit} --confirm", flush=True)
+            return 4
     deadline = time.monotonic() + timeout
     last = ""
     while True:

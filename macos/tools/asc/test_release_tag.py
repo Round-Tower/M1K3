@@ -1,6 +1,7 @@
 """Pins release_tag.py: the only door into an Xcode Cloud build since 2026-10-17.
 
 Signed: Kev + claude-opus-5-5, 2026-10-17, Confidence 0.85. Prior: none (new file).
+Review: Kev + claude-opus-5-5, 2026-10-17 (#637) — cut()'s failed-push cleanup, the dry run, and an unreadable origin.
 """
 
 from __future__ import annotations
@@ -115,3 +116,11 @@ def test_a_dry_run_never_tags_or_pushes(monkeypatch):
     monkeypatch.setattr(rt, "remote_release_tags_at", lambda _: [])
     assert rt.cut(None, None, confirm=False) == 0
     assert not [c for c in fake.calls if c[0] in ("tag", "push")]
+
+
+def test_an_unreadable_origin_stops_the_cut_rather_than_reading_as_untagged(monkeypatch):
+    sha = "07b1cabe36d1eb79a2ce629743a1e8c79765b398"
+    monkeypatch.setattr(rt, "git", FakeGit({"rev-parse": (0, sha + "\n")}))
+    monkeypatch.setattr(rt, "ci_conclusion", lambda _: "success")
+    monkeypatch.setattr(rt, "remote_release_tags_at", lambda _: None)
+    assert rt.cut(None, None, confirm=True) == 2

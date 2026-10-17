@@ -18,7 +18,7 @@ newest release tag) waits for the build. Cutting a release is Kev's call; the dr
 what would be pushed.
 
 Signed: Kev + claude-opus-5-5, 2026-10-17, Confidence 0.85. Prior: none (new file).
-Review: Kev + claude-opus-5-5, 2026-10-17 (#637) — tests pin cut()'s failed-push cleanup and the dry run; docstring rewrapped.
+Review: Kev + claude-opus-5-5, 2026-10-17 (#637 + review fold) — an unreadable origin is an error, not "no tag"; tests pin cut()'s failed-push cleanup and the dry run; docstring rewrapped.
 """
 from __future__ import annotations
 
@@ -86,10 +86,11 @@ def git(*args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["git", *args], cwd=HERE, capture_output=True, text=True, check=False)
 
 
-def remote_release_tags_at(sha: str) -> list[str]:
-    """What origin holds, not this clone: a tag whose push failed must not read as shipped."""
+def remote_release_tags_at(sha: str) -> list[str] | None:
+    """What origin holds, not this clone: a tag whose push failed must not read as shipped.
+    None when origin can't be read (an error is not "no tag": that would invite a duplicate cut)."""
     out = git("ls-remote", "--tags", "origin", f"refs/tags/{PREFIX}*")
-    return release_tags_in(out.stdout, sha)
+    return release_tags_in(out.stdout, sha) if out.returncode == 0 else None
 
 
 def ci_conclusion(sha: str) -> str | None:
@@ -128,6 +129,9 @@ def cut(commit: str | None, why: str | None, confirm: bool) -> int:
         return 2
     on_master = git("merge-base", "--is-ancestor", sha, "origin/master").returncode == 0
     existing = remote_release_tags_at(sha)
+    if existing is None:
+        print("could not read release tags from origin", flush=True)
+        return 2
     ci = ci_conclusion(sha)
     ok, code, reason = plan(on_master, ci, existing, why)
     if not ok:

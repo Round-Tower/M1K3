@@ -24,6 +24,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-13 — `deleteAllFeedback()`: the user's Clear ratings now that the phone
 //  shows them (no default, like recordFeedback). Confidence 0.9 (PhoneAnswerActionsTests).
 //
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — the watermark doc: it also covers turns skipped because memory
+//  capture was off, and ChatSession never moves it backwards. Docs only.
 
 import Foundation
 import GRDB
@@ -68,11 +70,13 @@ public protocol ChatHistoryPersisting: Sendable {
     @discardableResult
     func delete(id: UUID) throws -> Bool
     /// How many leading transcript messages the memory distiller has already
-    /// processed (0 = never distilled; unknown id reads 0). NO protocol
+    /// processed, or skipped on purpose because memory capture was off
+    /// (0 = never distilled; unknown id reads 0). NO protocol
     /// default on purpose: a silent no-op conformer would invisibly break
     /// double-distill protection.
     func distilledWatermark(id: UUID) throws -> Int
-    /// Advance the watermark after a successful distillation. No-op for
+    /// Advance the watermark after a successful distillation, or past turns
+    /// exchanged with capture off. ChatSession never moves it backwards. No-op for
     /// unknown ids (the setTitle precedent — distillation races deletion).
     func setDistilledWatermark(id: UUID, count: Int) throws
     /// Record (or replace) the feedback on one answer. NO protocol default —

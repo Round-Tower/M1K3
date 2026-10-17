@@ -16,6 +16,8 @@
 //  Tests that only check distiller.callCount/calls (never store contents) only needed the
 //  triviality fix.
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — #629: the rolling backlog follows the replay window in effect.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — capture off means never: turns sent or delivered with capture off are
+//  never distilled later, and switching it off drops the pending backlog too (pinned).
 
 import Foundation
 @testable import M1K3Chat
@@ -405,6 +407,31 @@ struct MemoryDistillationTriggerTests {
         f.session.startNewConversation()
         await f.session.distillationTask?.value
         #expect(f.distiller.callCount == 0)
+    }
+
+    /// The design call (review fold): capture is one integer watermark, so switching it off and
+    /// sending drops the not-yet-distilled turns from before the switch too. Off means off.
+    @Test("switching capture off and sending drops the undistilled turns from before the switch as well")
+    func captureOffDropsThePendingBacklog() async throws {
+        let f = try Fixture()
+        for i in 1 ... 2 { // under the rolling backlog: nothing distilled yet
+            await f.exchange("an earlier fact \(i) about living in Cork")
+        }
+        f.capture.set(false)
+        await f.exchange("a private fact about living in Cork")
+        f.capture.set(true)
+        f.session.startNewConversation()
+        await f.session.distillationTask?.value
+        #expect(f.distiller.callCount == 0)
+    }
+
+    @Test("a background answer that lands with capture off is skipped too")
+    func captureOffBackgroundAnswerIsSkipped() async throws {
+        let f = try Fixture(autoCapture: false)
+        await f.exchange("look into the Cork weather history for me")
+        await f.session.deliverBackgroundAnswer("Cork has had a mild autumn on record.")
+        let id = f.session.activeConversationID
+        #expect(try f.history.distilledWatermark(id: id) == f.session.messages.count)
     }
 
     @Test("a short session does NOT distill mid-stream — cost stays off the hot path")
