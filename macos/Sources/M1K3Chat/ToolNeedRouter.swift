@@ -36,6 +36,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — `pointsBackInChat` (#622): a turn about what was said in this
 //  chat is the replay's to answer, not a tool's; past sessions and the user's stores are left to the gate.
 //  Pinned so no tool-use fixture trips it. Confidence 0.75 (word cues; the rig replay is owed).
+//  Review: Kev + claude-opus-5.5, 2026-10-17 — `PlainTurnStream` tells an answer from reasoning
+//  alone (`hasAnswer`, `thoughtWithoutAnswering`): a think-to-the-cap stream had read as answered.
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -197,6 +200,34 @@ public struct PlainTurnStream {
         guard let clean = Self.clean(raw), clean.count > sent.count, clean.hasPrefix(sent) else { return nil }
         sent = clean
         return clean
+    }
+
+    /// The stream holds answer text, not only reasoning. A think-phase stream cut at the
+    /// token cap before `</think>` is all reasoning: no answer, however much it yielded.
+    public var hasAnswer: Bool {
+        !ReasoningSplit.split(sent).answer.isEmpty
+    }
+
+    /// Reasoning came back and no answer did: the model thought to the cap (2026-10-17,
+    /// live on Always-think: Lil argued with the FOLLOWUPS rule until it ran out), or closed
+    /// its reasoning and stopped. Needs an open or close tag in the stream: the MLX provider
+    /// yields the opener a pre-opened template swallows (`thinkPrefixNeeded`), so a brain
+    /// that streams bare reasoning with neither would still read as answered.
+    public var thoughtWithoutAnswering: Bool {
+        let split = ReasoningSplit.split(sent)
+        return split.answer.isEmpty && !(split.reasoning ?? "").isEmpty
+    }
+
+    /// The snapshot so far with its reasoning closed, so an answer generated after it
+    /// extends the last yield (the consumer folds snapshots) and the reasoning stays shown.
+    /// Reasoning that already closed gets no second close: it would sit in the bubble as text.
+    var closedReasoning: String {
+        func last(_ tags: [String]) -> String.Index? {
+            tags.compactMap { sent.range(of: $0, options: .backwards)?.lowerBound }.max()
+        }
+        let close = last(ReasoningSplit.closeTags)
+        let isClosed = close.map { close in last(ReasoningSplit.openTags).map { close > $0 } ?? true } ?? false
+        return sent + (isClosed ? "\n\n" : "\n</think>\n\n")
     }
 
     // The label cut from a WHOLE answer so far; nil while it could still become the label.

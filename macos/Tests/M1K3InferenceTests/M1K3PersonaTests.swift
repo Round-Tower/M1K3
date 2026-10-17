@@ -23,6 +23,9 @@
 //  Standard and pocket renders unchanged. Confidence 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-09-29 (#451 review fold) — the full-profile test builds exactly
 //  profileCharacterCap (compose truncated the old 920-char profile to 400); bound 5,500 → 5,300. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-17 — pins the one-message FOLLOW-UP rule (the old wording
+//  read as a contradiction to Lil on Always-think). Confidence 0.85.
+//  Review: same day (#633 A/B fold) — and pins that the rule no longer invites a question into the answer.
 //
 
 import CryptoKit
@@ -226,8 +229,25 @@ struct M1K3PersonaTests {
         // states the bar, the harness's exemplar-echo check does not see this.
         #expect(prompt.contains("never invent one"))
         #expect(prompt.contains("walk through it"))
-        // Curiosity lives in the reply, not only in the FOLLOWUPS trailer.
-        #expect(prompt.contains("belongs in your reply"))
+        // The FOLLOWUPS line holds no question of M1K3's own, and nothing in the rule invites one
+        // into the answer: "your own questions go in your answer" raised question endings 36 → 44/117
+        // on Lil (#633 A/B, 2026-10-17). Curiosity is the "be curious back" move above.
+        #expect(prompt.contains("never a question from you"))
+        #expect(!prompt.contains("your own questions go in your answer"))
+    }
+
+    /// 2026-10-17: the follow-up is ONE tap-to-send message in the user's words, not up to three
+    /// questions, and the rule no longer reads as a contradiction (Lil on Always-think argued with
+    /// "A question YOU want answered belongs in your reply, not in that line" until the token cap).
+    @Test("the follow-up is one message in the user's words, in the trailer syntax every splitter reads")
+    func followUpIsOneUserMessage() {
+        let core = M1K3Persona.corePrompt
+        #expect(core.contains(#"FOLLOWUPS: ["..."]"#))
+        #expect(!core.contains("up to 3"))
+        #expect(core.contains("in their words, as they"))
+        #expect(!core.contains("belongs in your reply, not in that line"))
+        // Pocket's frozen core keeps its own rule (its hash pins it).
+        #expect(M1K3Persona.pocketCorePrompt.contains("up to 3"))
     }
 
     @Test("the exemplar prompt = core + exemplars, within the cached-path budget")

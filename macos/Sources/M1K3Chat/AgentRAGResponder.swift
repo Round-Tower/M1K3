@@ -178,6 +178,11 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — #622: with history, a tools verdict on a turn that points back at
 //  this chat (`ToolNeedRouter.pointsBackInChat`) answers from the replay, logged "(points back in this chat)";
 //  a web read on an "open the website" ask becomes the action pick (`ToolDispatch.openCorrected`). Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-17 — a plain or dispatched turn that thinks to the cap
+//  without closing `</think>` no longer counts as answered: it answers once more under
+//  `withThinking(false)`, after the shown reasoning, and an empty retry hands over to the
+//  fallbacks. Live on Always-think, Lil's reasoning-only stream left an empty bubble.
+//  Confidence 0.8 — the retry pays a second prefill; verify-by-launch owed.
 
 import Foundation
 import M1K3Agent
@@ -672,15 +677,33 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         )
         let generate: @Sendable () async -> Bool = { [provider] in
             var answer = PlainTurnStream()
-            var answered = false
             for await chunk in provider.generateStreaming(prompt: prompt) {
                 if Task.isCancelled { break }
                 // Cumulative out, whatever came in: the consumer folds snapshots.
                 guard let clean = answer.ingest(chunk) else { continue }
-                answered = true
                 continuation.yield(clean)
             }
-            return answered
+            // Reasoning alone is no answer (2026-10-17): a think phase cut at the token cap
+            // left an empty bubble, and no fallback ran because it had streamed. Answer once
+            // more, thinking off, after the shown reasoning — even on Always-think, whose
+            // think phase has just been spent. Nothing back from that: the caller's fallback.
+            // Cancelled: the consumer has gone, so no fallback either (PR review).
+            if Task.isCancelled { return true }
+            guard answer.thoughtWithoutAnswering else { return answer.hasAnswer }
+            Self.log.notice("plain turn thought to the cap without answering — answering straight")
+            // Closed now, not with the retry's first piece: an empty retry hands over to the
+            // agent, whose answer must land after `</think>`, not inside the open reasoning.
+            let closed = answer.closedReasoning
+            continuation.yield(closed)
+            return await InferenceIntent.withThinking(false) {
+                var retry = PlainTurnStream()
+                for await chunk in provider.generateStreaming(prompt: prompt) {
+                    if Task.isCancelled { break }
+                    guard let clean = retry.ingest(chunk) else { continue }
+                    continuation.yield(closed + clean)
+                }
+                return retry.hasAnswer || Task.isCancelled
+            }
         }
         // `InferenceIntent` warns against an override on the chat provider: AFM's
         // PrewarmSlot drops a warm session whose instructions don't match. Crossed on

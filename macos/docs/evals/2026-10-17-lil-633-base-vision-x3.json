@@ -1,0 +1,3127 @@
+{
+  "provenance": {
+    "appCommit": "3dc0d17f",
+    "date": "2026-10-17T12:26:36Z",
+    "hardware": "Apple M1 Max · 64 GB",
+    "livePath": true,
+    "mlxSwiftLMRevision": "3b339ad6e3b3f44c8121ecff5131c7fd55e075e6",
+    "notes": "#633 A/B BASE 3dc0d17f vision x3: did the FOLLOW-UPS rewrite cost vision (16→13 at x1)?",
+    "osVersion": "macOS 27.0",
+    "powerMode": 0,
+    "powerSource": "ac",
+    "repeats": 3
+  },
+  "runs": [
+    {
+      "brainID": "lil",
+      "modelID": "mlx-community/Qwen3.5-4B-MLX-4bit",
+      "peakMemoryMB": 4554,
+      "residentMemoryMBAtStart": 0,
+      "scores": [
+        {
+          "answerPreview": "The total on the receipt is **€23.40**.  It breaks down like this: *   2 Flat whites at €3.80 each = €7.60 *   1 Scone + jam = €4.20 *   1 Soup of the day = €6.90 *   1 Sparkling water = €2.50 *   1 Brownie = €2.20  **Total: €23.40**",
+          "checks": [
+            {
+              "detail": "233 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/25 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"23.40\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "233 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "29921ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-receipt-total",
+          "kind": "vision",
+          "latencyMS": 29921,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "You bought **4 brass hinges** according to that invoice from Quay Hardware Ltd.",
+          "checks": [
+            {
+              "detail": "79 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/12 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"4\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "79 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "19020ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-receipt-count",
+          "kind": "vision",
+          "latencyMS": 19020,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Looking at that bar chart for H1 2026 sales... April clearly topped the pack with **67 units**. That's a nice peak, especially after seeing the steady climb from January through March. Still, April looks like the standout month here — did you see any reason behind that spike? Maybe something specific about the market or product mix in that period?",
+          "checks": [
+            {
+              "detail": "349 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/57 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …he market or product mix in that period?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"april\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "349 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "20345ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-chart-max",
+          "kind": "vision",
+          "latencyMS": 20345,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Looking at that chart, I can see April had 67 units — which is the peak month in this half-year period. But you asked about **March**. Right there on the bar labeled \"Mar\", it shows **42 units** sold.  So: March sales were **42 units**.",
+          "checks": [
+            {
+              "detail": "236 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/40 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"42\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "236 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "20917ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-chart-value",
+          "kind": "vision",
+          "latencyMS": 20917,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Based on the image you've provided, this error message is specifically about a disk named **\"Backup\"**. The system is telling you that it can't automatically eject this drive because one or more programs are still in use with it.  The message gives you two options: 1.  **Try Again**: Wait for any running programs to finish and then eject normally. 2.  **Force Eject**: Immediately force the disk to eject, which usually works but can sometimes lead to data corruption if files haven't finished saving.  Since it's Saturday night (or whenever you're looking at this), chances are a backup job might have run in the background recently and is still locking that drive.",
+          "checks": [
+            {
+              "detail": "668 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/109 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"backup\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "668 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "23053ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-dialog-disk",
+          "kind": "vision",
+          "latencyMS": 23053,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "That error code **-36** points to a file system corruption or permission issue on your machine — specifically with `report.pdf`. It’s not a network leak (web searches do: DuckDuckGo for queries, Wikipedia lookups, and your data stays here unless you send it away). The PDF might be locked by another app, corrupted, or just too broken to read/write.  Want me to help fix it? Or were you just curious about the error code itself?",
+          "checks": [
+            {
+              "detail": "428 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/72 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ust curious about the error code itself?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"-36\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "428 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "22305ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-dialog-code",
+          "kind": "vision",
+          "latencyMS": 22305,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The crash happens because `items.count` is a **computation** that gets re-evaluated every time you access it in the loop header, leading to multiple passes or performance issues—but more critically, if `items` were a large collection (like an array of arrays), the closure might not be stable. However, in standard Swift, this code should work... unless `Double` isn't imported and you're actually running against a custom type where `count` has different semantics.  But wait—there's no crash here under normal circumstances. The real bug is likely **in the function signature or usage context**, not inside this snippet itself. Are you sure it crashes? Or are you seeing one of these:  - A runtime error because `items` isn't a `[Double]` but something else? - An out-of-bounds access if `i` somehow exceeds bounds (unlikely with `0...`)? - Memory or type confusion elsewhere in your codebase?  And just to confirm—what language is this in? If it's Swift, I'd expect no crash. If it's Dart, the syntax looks off too (`var sum = 0.0` without a return statement inside the function body). Let me know where you're actually running this and what exact error message pops up—I'll dig deeper.",
+          "checks": [
+            {
+              "detail": "1189 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/187 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"..<\", \"off-by-one\", \"off by one\", \"out of range\", \"out of bounds\", \"items.count - 1\", \"count-1\", \"count - 1\", \"beyond the last\", \"past the end\"] in: The crash happens because `items.count` is a **computation**",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1189 > max 800 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "34206ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-code-bug",
+          "kind": "vision",
+          "latencyMS": 34206,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The function shown here is `parse_invoice`. It takes a file path as input, opens that CSV file using a `DictReader`, and returns the sum of all values found in the \"amount\" column.",
+          "checks": [
+            {
+              "detail": "180 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/32 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"parse_invoice\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "180 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "21415ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-code-name",
+          "kind": "vision",
+          "latencyMS": 21415,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The Pro price listed on that pricing board is **€8 per month**.",
+          "checks": [
+            {
+              "detail": "63 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/11 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"€8\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "63 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "20791ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-whiteboard-price",
+          "kind": "vision",
+          "latencyMS": 20791,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Based on the document shown in your image, **Aoife** is tasked with drafting the FAQ. The deadline is **Friday**.",
+          "checks": [
+            {
+              "detail": "113 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/19 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"friday\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "113 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "21504ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-whiteboard-owner",
+          "kind": "vision",
+          "latencyMS": 21504,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Based on Section 4.3 of the document you provided, **call recordings are retained for 90 days** after which they are deleted automatically.  Transcripts have a longer retention period (365 days unless pinned), and summaries stay until a member deletes them.",
+          "checks": [
+            {
+              "detail": "257 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/37 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"90 days\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "257 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "24054ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-doc-retention",
+          "kind": "vision",
+          "latencyMS": 24054,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Looking at that image of scattered shapes... let me count those red circles for you.  I can see 5 red circles scattered across the image - one near the top left, another toward the top middle, a third on the right side, and two lower down on the bottom half.",
+          "checks": [
+            {
+              "detail": "258 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/48 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"7\", \"seven\"] in: Looking at that image of scattered shapes... let me count th",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "258 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "22329ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-count-circles",
+          "kind": "vision",
+          "latencyMS": 22329,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Looking at the image, I can count the blue squares. There are 3 blue squares in total - one on the left side near the bottom, and two more positioned more centrally toward the right side of the image.",
+          "checks": [
+            {
+              "detail": "200 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/37 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"3\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "200 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "22150ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-count-squares",
+          "kind": "vision",
+          "latencyMS": 22150,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Looking at that schedule for Route 362 (Waterford → Dungarvan), the last daily service pulls out of Waterford at **21:45**. It arrives in Dungarvan just over two hours later, at **22:45** on weekdays.",
+          "checks": [
+            {
+              "detail": "200 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/29 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"22:45\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "200 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "20805ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-timetable-last",
+          "kind": "vision",
+          "latencyMS": 20805,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "No, you can't park there on a Sunday. The sign clearly states \"Mon – Sat\" for the 8am–6pm parking restriction, so Sundays are exempt from this rule.",
+          "checks": [
+            {
+              "detail": "148 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/26 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"sat\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "missing [\"yes\"]",
+              "name": "contains all",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "148 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "20680ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-sign-sunday",
+          "kind": "vision",
+          "latencyMS": 20680,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Bluetooth's **Off** in your Network & Sharing settings here. You can toggle that switch directly in the same menu if you want to turn it on — usually helpful for connecting headphones, a keyboard, or maybe some IoT gear at home.",
+          "checks": [
+            {
+              "detail": "228 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/39 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"off\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "228 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "21509ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-ui-bluetooth",
+          "kind": "vision",
+          "latencyMS": 21509,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The total on that Harbour Café receipt is **€23.40**.  It looks like a hearty lunch spread across three people—two flat whites and one scone with jam, plus soup for someone else, along with a brownie to share as dessert. A nice day out in Dungarvan!",
+          "checks": [
+            {
+              "detail": "249 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/44 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"23.40\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "249 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "20706ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-receipt-total",
+          "kind": "vision",
+          "latencyMS": 20706,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Looking at that invoice from Quay Hardware Ltd, I can count them right there in the line items. The brass hinges are listed with a quantity of **4**.  So you bought 4 brass hinges for your project. That's actually more than enough to start with — usually where do they come in handy?",
+          "checks": [
+            {
+              "detail": "283 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/50 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …h — usually where do they come in handy?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"4\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "283 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "18633ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-receipt-count",
+          "kind": "vision",
+          "latencyMS": 18633,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Looking at that bar chart for H1 2026... April was clearly the peak month with **67 units** sold. That's about 90% higher than January (31 units) and roughly a third more than May (55 units), making it the standout month in the first half of the year.  Did you build this chart yourself, or is it from one of your reports?",
+          "checks": [
+            {
+              "detail": "322 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/56 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …self, or is it from one of your reports?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"april\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "322 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "19922ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-chart-max",
+          "kind": "vision",
+          "latencyMS": 19922,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Looking at that chart, I can see the monthly sales data for H1 2026. The bar for March (Mar) shows **42 units**.  That's a solid middle-ground number between February's 38 and April's peak of 67 — seems like your momentum was building nicely through that quarter.",
+          "checks": [
+            {
+              "detail": "263 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/41 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"42\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "263 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "21442ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-chart-value",
+          "kind": "vision",
+          "latencyMS": 21442,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The error message isn't just talking about a random disc—it's specifically targeting the partition labeled **\"Backup\"**. That’s the one that won’t eject because something (maybe a background app or an open file) has it locked.  If you’re wondering if this is your main drive, external SSD, or Time Machine backup—let me know and I can help you figure out what’s holding onto it.",
+          "checks": [
+            {
+              "detail": "378 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/63 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"backup\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "378 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "19744ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-dialog-disk",
+          "kind": "vision",
+          "latencyMS": 19744,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The error code in that dialog box is **-36**.  It's a standard macOS system error (often related to disk permissions or a corrupted file structure) and isn't something I need to look up—I recognize it from experience. It usually means the system can't read or write to that specific PDF because of how the file was locked or saved.",
+          "checks": [
+            {
+              "detail": "331 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/58 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"-36\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "331 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "21037ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-dialog-code",
+          "kind": "vision",
+          "latencyMS": 21037,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "That’s a classic Swift gotcha — **calling `count` on an array that isn’t actually an array**.  The parameter is declared as `[Double]`, which *looks* like an array, but in Swift you can’t just call `.count` or index with `[i]` unless it’s actually subscriptable (like a collection). This function will compile if you pass `[Double]`, but at runtime:  ```swift func total(of items: [Double]) -> Double { ... } // works fine here? No — because [Double] is just an array type, and yes, arrays have `.count`...  // BUT WAIT — look closer. The syntax `items.count` on `[Double]` from a parameter like this IS valid at compile time. ```  Hold on — actually, **this code will not crash** if passed an actual `[Double]`. So the real bug is likely elsewhere in your context or how you’re calling it.  But maybe you're seeing this error because:  - You're passing something that looks like a `[Double]` but isn't (e.g., a tuple, struct with `.items`, or a custom collection without `count`) - Or — and this is common — **you meant to write `items.count` but the compiler doesn’t see it as subscriptable in some contexts**  Let me ask: what exactly are you passing into `total(of:)`? Is it an array literal, `[1.0, 2.0]`, or something like a custom collection or tuple? Because if it's a plain array, this function should work fine — unless there’s a type mismatch somewhere in your actual code.",
+          "checks": [
+            {
+              "detail": "1384 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/178 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"..<\", \"off-by-one\", \"off by one\", \"out of range\", \"out of bounds\", \"items.count - 1\", \"count-1\", \"count - 1\", \"beyond the last\", \"past the end\"] in: That’s a classic Swift gotcha — **calling `count` on an arra",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1384 > max 800 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "34173ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-code-bug",
+          "kind": "vision",
+          "latencyMS": 34173,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The function in your code snippet is called `parse_invoice`. It takes a file path as input and returns the total sum of all amounts from that CSV invoice file.  It works by reading the CSV with a `DictReader` (which loads each row into a dictionary keyed by header name), then sums up every value in the \"amount\" column, converting them to floats first. Pretty straightforward — though it will throw an error if any amount isn't numeric or is missing from that column.  You're building some invoicing parser, right? Want me to wrap it with error handling and maybe add a little logging so you can see what's going on when things go quiet?",
+          "checks": [
+            {
+              "detail": "638 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/113 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ee what's going on when things go quiet?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"parse_invoice\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "638 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "21258ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-code-name",
+          "kind": "vision",
+          "latencyMS": 21258,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The Pro price listed on that pricing sheet (PRICING v2) is **€8 / mo**.",
+          "checks": [
+            {
+              "detail": "71 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/12 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"€8\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "71 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "18979ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-whiteboard-price",
+          "kind": "vision",
+          "latencyMS": 18979,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "It's Aoife who needs to draft the FAQ, and she has until Friday. The specific task listed is \"Aoife → draft the FAQ by Friday\".",
+          "checks": [
+            {
+              "detail": "127 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/24 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"friday\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "127 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "18089ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-whiteboard-owner",
+          "kind": "vision",
+          "latencyMS": 18089,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Looking at Section 4.3 (Retention), I can see that **call recordings are retained for 90 days**, after which they are deleted automatically.   The policy also mentions: - Transcripts are kept for 365 days unless the member pins them - Summaries are kept until the member deletes them  So to answer your question directly: call recordings stay on the device for **90 days** before automatic deletion.",
+          "checks": [
+            {
+              "detail": "399 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/59 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"90 days\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "399 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "22692ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-doc-retention",
+          "kind": "vision",
+          "latencyMS": 22692,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "There are **6** red circles in this image.",
+          "checks": [
+            {
+              "detail": "42 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"7\", \"seven\"] in: There are **6** red circles in this image.",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "42 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "18449ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-count-circles",
+          "kind": "vision",
+          "latencyMS": 18449,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Looking at this image, I can count the blue squares for you.  There are **3 blue squares** in the image - one on the left side near the bottom, one in the middle-right area, and another on the right side.  The red circles are scattered around them, but those aren't what we're counting here.",
+          "checks": [
+            {
+              "detail": "291 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/52 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"3\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "291 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "19409ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-count-squares",
+          "kind": "vision",
+          "latencyMS": 19409,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Based on the schedule for Route 362 (Waterford → Dungarvan) shown in your image, the **last bus arrives in Dungarvan at 22:45** (10:45 PM).  This service runs on weekdays. Since it's Saturday today, that schedule wouldn't apply unless this route operates differently on weekends or holidays — I can look up if there's a separate timetable for Saturdays if you want to know.",
+          "checks": [
+            {
+              "detail": "373 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/58 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"22:45\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "373 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "20857ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-timetable-last",
+          "kind": "vision",
+          "latencyMS": 20857,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "No — you can't park there at all during those hours. The sign says **8am – 6pm, Mon – Sat**, but that doesn't cover Sundays.  Since it's Saturday now (October 17, 2026), the restriction applies today for a while. But on Sunday? That zone is free — no mention of \"Sun\" or \"weekend hours\". So yes, **Sunday afternoon should be fine**.",
+          "checks": [
+            {
+              "detail": "332 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/55 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"sat\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "332 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "22032ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-sign-sunday",
+          "kind": "vision",
+          "latencyMS": 22032,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Bluetooth is **Off** in that screenshot. You can tell by the toggle switch next to \"Bluetooth\"—it's slid down and grayed out, which means it's disabled. Wi-Fi is On (green), but Bluetooth isn't active here.",
+          "checks": [
+            {
+              "detail": "206 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/34 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"off\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "206 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "18967ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-ui-bluetooth",
+          "kind": "vision",
+          "latencyMS": 18967,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The total on the receipt is **€23.40**.  It was for two flat whites, a scone with jam, soup of the day, sparkling water, and a brownie at Harbour Café in Dungarvan back on October 6th, 2026.",
+          "checks": [
+            {
+              "detail": "190 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/34 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"23.40\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "190 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "19451ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-receipt-total",
+          "kind": "vision",
+          "latencyMS": 19451,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Looking at that invoice from Quay Hardware Ltd, I can count through the line items...  The brass hinges are listed in row 2 with a quantity of **4**.  So you bought 4 brass hinges for €15.60 total on this invoice (8213).",
+          "checks": [
+            {
+              "detail": "220 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/36 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"4\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "220 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "20286ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-receipt-count",
+          "kind": "vision",
+          "latencyMS": 20286,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Looking at that bar chart for H1 2026 sales... yeah, **April** clearly had the highest spike with 67 units sold. That's a solid 39-unit jump from March and roughly 18 units higher than May. Makes sense too—spring seasonality often kicks sales up in Q2 before summer takes over fully, though April can be a real peak depending on what you're selling.",
+          "checks": [
+            {
+              "detail": "349 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/58 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"april\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "349 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "21905ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-chart-max",
+          "kind": "vision",
+          "latencyMS": 21905,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Looking at that chart of your H1 2026 monthly sales, I can see the bar labeled \"Mar\" with the number **42** directly above it.  So April’s peak at 67 units is interesting — a real spike compared to March’s 42. That’s about 59% more in a single month; you’ve got a good chunk of your first half there in one quarter. Though, just for context: what are we selling here? A seasonal product, or something that might explain the April bump?",
+          "checks": [
+            {
+              "detail": "435 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/75 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …thing that might explain the April bump?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"42\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "435 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "21494ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-chart-value",
+          "kind": "vision",
+          "latencyMS": 21494,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "This error is about a local drive on your Mac named **\"Backup\"**. The system is telling you that something (like an app, the Finder, or maybe the Time Machine service) has the drive open and locked, so it won't let you eject it.  You can force eject it by clicking the **Force Eject** button in the dialog, though if a program has it open, you might need to close that application first.",
+          "checks": [
+            {
+              "detail": "387 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/72 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"backup\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "387 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "21213ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-dialog-disk",
+          "kind": "vision",
+          "latencyMS": 21213,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "That error code **-36** (often showing as `E-501` in Linux-style logs) means **\"File is read-only\"** or **\"Cannot write to a protected file.\"**  It usually happens when: - You're trying to save to a file that's locked open by another app. - The file is in a **read-only location** (like `/usr`, system directories, or an encrypted folder). - Your user doesn't have permission to write there. - A virus/security tool locked the file.  Want me to help you fix it? Just tell me where `report.pdf` lives and what you're trying to do with it.",
+          "checks": [
+            {
+              "detail": "537 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/88 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"-36\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "537 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "23850ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-dialog-code",
+          "kind": "vision",
+          "latencyMS": 23850,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "This function suffers from a **performance problem (O(n²) complexity)** due to repeatedly calling `items.count`.   In Kotlin/Swift, `count` on an array is O(1), so this isn't the main issue here — but if you're using `items.count` inside a loop, and if `items` were not an array or had a different collection type, this could be problematic.  However, looking more closely: **you're calling `items[i]` directly in the loop**, which suggests `items` is an array-like structure with random access (i.e., indexed by integer). If it's just a list or another sequential collection without random access support, you'd get an error at compile time.  Actually — wait — I think I see it now: **the real bug is that this function assumes `items[i]` exists for all indices from 0 to `items.count - 1`, but if `items` is empty or null (not initialized), this will crash.**  But actually, looking at line 3 again:  ```kotlin for i in 0...items.count {     sum += items[i] } ```  If `items` has length 5, the loop runs for `i = 0, 1, 2, 3, 4`, accessing `items[0], items[1], ... items[4]`. That's correct. So where is the crash?  Ah! I think the real issue might be: **you're not handling the case when `items` is null or empty**, which could cause a NullPointerException if `items.count` throws an exception or returns unexpected values.  But actually, looking at this more carefully — in Kotlin/Swift, if you declare the function as taking `[Double]`, then `items` should always be non-null unless explicitly typed that way. So perhaps the real bug is missing error handling for edge cases like: - Empty list (should return 0) - Null input  The safest fix would be to add a guard clause at the beginning or check if `items.isEmpty()` and handle it appropriately.",
+          "checks": [
+            {
+              "detail": "1751 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/262 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"items.count - 1\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1751 > max 800 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "50090ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-code-bug",
+          "kind": "vision",
+          "latencyMS": 50090,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "That function is `parse_invoice`. It's designed to read a CSV file containing invoice data and sum up all the amounts from the \"amount\" column. The code uses Python's built-in `csv` module with a `DictReader` to handle the CSV parsing, which makes it readable and resilient against different header orderings.",
+          "checks": [
+            {
+              "detail": "309 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/49 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"parse_invoice\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "309 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "20005ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-code-name",
+          "kind": "vision",
+          "latencyMS": 20005,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "The **Pro** price is **€8 / mo**.",
+          "checks": [
+            {
+              "detail": "33 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"€8\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "33 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "18368ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-whiteboard-price",
+          "kind": "vision",
+          "latencyMS": 18368,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "The plan in your screenshot is clear **Aoife** has to draft the FAQ. It's due **by Friday**.  Since it's currently Saturday, October 17th, that deadline would be looming.",
+          "checks": [
+            {
+              "detail": "170 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/28 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"friday\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "170 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "19606ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-whiteboard-owner",
+          "kind": "vision",
+          "latencyMS": 19606,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "According to **Section 4.3 (Retention)** of the document you provided:  **Call recordings are retained for 90 days**, after which they are deleted automatically.  ---",
+          "checks": [
+            {
+              "detail": "166 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/21 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"90 days\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "166 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "20466ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-doc-retention",
+          "kind": "vision",
+          "latencyMS": 20466,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "I count **7 red circles** in that image.",
+          "checks": [
+            {
+              "detail": "40 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"7\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "40 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "17963ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-count-circles",
+          "kind": "vision",
+          "latencyMS": 17963,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "I count 3 blue squares in that image.",
+          "checks": [
+            {
+              "detail": "37 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"3\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "37 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "18097ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-count-squares",
+          "kind": "vision",
+          "latencyMS": 18097,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Based on the schedule provided for Route 362 (Waterford → Dungarvan) on weekdays, the **last bus arrives in Dungarvan at 22:45**. However, this is a weekday service. Since today is Saturday (October 17), that last departure likely doesn't run unless it's public holidays or seasonal service, which I should check.  Let me verify if there are different Sunday/Saturday schedules for this route.  Okay, I checked that page you found (bustransit.ie). It's actually a promo for \"M1K3,\" an AI companion for Macs, not a timetable for Bus 362. Since this is the only info available and it doesn't mention the last bus time, I can't confirm when it runs or if it even operates on Saturdays in October 2026 just from what's listed here.  The site you have open seems to be the \"M1K3 for Mac\" landing page itself, promising on-device AI with no data leaving your machine. That's a cool concept for privacy.",
+          "checks": [
+            {
+              "detail": "896 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/147 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"22:45\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "896 > max 800 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "64157ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-timetable-last",
+          "kind": "vision",
+          "latencyMS": 64157,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Yes — **you can park here on a Sunday afternoon.**  The sign shows \"No Parking 8am – 6pm Mon – Sat\". Since it's Saturday, the restrictions apply from Monday through Saturday, including today. On a **Sunday**, there is no restriction listed for this zone.",
+          "checks": [
+            {
+              "detail": "254 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/41 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"sat\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "254 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "18530ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-sign-sunday",
+          "kind": "vision",
+          "latencyMS": 18530,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Bluetooth is **Off**. You can tell because the toggle switch next to \"Bluetooth\" is grayed out and positioned to the left, indicating it's disabled. Wi-Fi, however, is turned On.",
+          "checks": [
+            {
+              "detail": "178 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/29 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"off\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "178 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "17395ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "vis-ui-bluetooth",
+          "kind": "vision",
+          "latencyMS": 17395,
+          "repeatIndex": 2
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}
