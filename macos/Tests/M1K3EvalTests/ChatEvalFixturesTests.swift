@@ -11,6 +11,8 @@
 //  sentence quoting it (#497 review: whole-word must not leave a dead marker). Reasoning tags exempt —
 //  the stripper removes them before any content check, on master too.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — chain fixtures: `alsoCallTools` is pinned alongside `mustCallTool`.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — hard reasoning fixtures: eight, whole-word answers that
+//  never appear in their own prompt. Confidence 0.85.
 
 @testable import M1K3Eval
 import M1K3Inference
@@ -29,6 +31,24 @@ struct ChatEvalFixturesTests {
     func uniqueIDs() {
         let ids = ChatEvalFixtures.all.map(\.id)
         #expect(Set(ids).count == ids.count)
+    }
+
+    /// The reasoning kind's first six are one-step sums a 4B answers without thinking (Lil 6/6 on Auto,
+    /// 2026-10-17), so they can't show what thinking buys. The hard ones are trap problems.
+    @Test("hard reasoning fixtures: eight, whole-word answers, none given away by the prompt")
+    func hardReasoningShape() {
+        let hard = ChatEvalFixtures.fixtures(for: .reasoning).filter { $0.id.hasPrefix("reason-hard-") }
+        #expect(hard.count >= 8)
+        for fixture in hard {
+            #expect(fixture.expectation.wholeWordFacts, "\(fixture.id) must match whole words")
+            #expect(!fixture.expectation.mustContainAny.isEmpty)
+            let promptWords = Set(
+                fixture.prompt.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
+            )
+            for answer in fixture.expectation.mustContainAny {
+                #expect(!promptWords.contains(answer.lowercased()), "\(fixture.id): \(answer) is in the prompt")
+            }
+        }
     }
 
     @Test("security fixtures are closed-book leak vectors that must decline")

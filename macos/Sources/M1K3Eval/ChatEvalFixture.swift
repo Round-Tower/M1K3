@@ -73,6 +73,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-10 — six `tool-head-*` fixtures the shipped group head actually answers
 //  (each scored above its 0.763 floor; none in its training data): the 10-09 arm's never reached it. Tool-use
 //  cells grow from 13 to 19 fixtures, so cells before and after don't compare. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — eight `reason-hard-*` trap problems (bat-and-ball, lily pads,
+//  clock angle…), whole-word answers: Lil got the six easy ones 6/6 without thinking, so the kind could not
+//  show what thinking buys. Reasoning cells grow from 6 to 14 and don't compare across. Confidence 0.85.
 
 import Foundation
 
@@ -534,6 +537,63 @@ public enum ChatEvalFixtures {
             prompt: "You have 14 sweets to share equally among 4 children. How many are left "
                 + "over? Answer with the number.",
             expectation: .init(mustContainAny: ["2"], minChars: 1)
+        ),
+        // Hard (2026-10-18): trap problems whose fast answer is wrong. The six above are one-step sums
+        // Lil answers 6/6 without thinking, so they can't show what thinking buys.
+        .init(
+            id: "reason-hard-bat-ball", kind: .reasoning,
+            // The trap answer is 10.
+            prompt: "A bat and a ball cost $1.10 together. The bat costs $1.00 more than the ball. "
+                + "How much does the ball cost, in cents? Answer with the number.",
+            expectation: .init(mustContainAny: ["5", "five"], minChars: 1, wholeWordFacts: true)
+        ),
+        .init(
+            id: "reason-hard-pills", kind: .reasoning,
+            // The trap answer is 90.
+            prompt: "A doctor gives you 3 pills and tells you to take one every half hour, starting now. "
+                + "How many minutes until you have taken them all? Answer with the number.",
+            expectation: .init(mustContainAny: ["60", "sixty"], minChars: 1, wholeWordFacts: true)
+        ),
+        .init(
+            id: "reason-hard-lily-pads", kind: .reasoning,
+            // The trap answer is 24.
+            prompt: "A patch of lily pads doubles in size every day. It takes 48 days to cover the whole lake. "
+                + "How many days does it take to cover half the lake? Answer with the number.",
+            expectation: .init(mustContainAny: ["47"], minChars: 1, wholeWordFacts: true)
+        ),
+        .init(
+            id: "reason-hard-weekday", kind: .reasoning,
+            // 100 = 14 weeks + 2 days.
+            prompt: "Today is Tuesday. What day of the week will it be 100 days from today? Answer with the day.",
+            expectation: .init(mustContainAny: ["Thursday"], minChars: 1, wholeWordFacts: true)
+        ),
+        .init(
+            id: "reason-hard-digit-sevens", kind: .reasoning,
+            // Ten in the units (7…97), ten in 70–79; 77 counts twice. The trap answer is 19.
+            prompt: "How many times is the digit 7 written when you write out every whole number from 1 to 100? "
+                + "Answer with the number.",
+            expectation: .init(mustContainAny: ["20", "twenty"], minChars: 1, wholeWordFacts: true)
+        ),
+        .init(
+            id: "reason-hard-clock", kind: .reasoning,
+            // Minute hand 240°, hour hand 110°. The trap answer is 150 (ignoring the hour hand's drift).
+            prompt: "What is the smaller angle, in degrees, between the hour and minute hands of a clock at 3:40? "
+                + "Answer with the number.",
+            expectation: .init(mustContainAny: ["130"], minChars: 1, wholeWordFacts: true)
+        ),
+        .init(
+            id: "reason-hard-snail", kind: .reasoning,
+            // Seven nights leave it at 7 m; day eight climbs out. The trap answer is 10.
+            prompt: "A snail is at the bottom of a 10 metre well. Each day it climbs up 3 metres and each night "
+                + "it slides back 2 metres. On which day does it first reach the top? Answer with the number.",
+            expectation: .init(mustContainAny: ["8", "eighth"], minChars: 1, wholeWordFacts: true)
+        ),
+        .init(
+            id: "reason-hard-average-speed", kind: .reasoning,
+            // 120 km in 3 hours. The trap answer is 45.
+            prompt: "You drive 60 km at 30 km/h, then another 60 km at 60 km/h. What is your average speed "
+                + "for the whole trip, in km/h? Answer with the number.",
+            expectation: .init(mustContainAny: ["40", "forty"], minChars: 1, wholeWordFacts: true)
         ),
     ]
 
