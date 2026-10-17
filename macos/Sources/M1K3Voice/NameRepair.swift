@@ -18,14 +18,21 @@
 //  sounds nearly as close. Measured in docs/evals/2026-10-15-stt.md: at these
 //  defaults, 92 right swaps to 3 wrong over both sets, no trap word touched.
 //
-//  Pure and not wired: where the names come from, keeping repaired names out of
-//  memory distillation, and whether it runs at all are open (Kev).
+//  Wired by VoiceTurnPreparer (#618) with KnownNames from memory. Pure apart from the
+//  default word check, which reads the system English word embedding once per build.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-15, Confidence 0.7 (tuned on one speaker
 //  and a synthetic held-out voice; challenger reviewed). Prior: Unknown.
 //  Open: a held-out set read by a real second speaker before the thresholds are trusted.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — a one-word name that is an ordinary English word is locked but
+//  never a target (#627). "Local" came into the list from a branding line in memory and took a rightly heard
+//  "Rachel" (rakal/lakal, 0.80). STT writes ordinary words right, so they never need repairing toward; the
+//  word check is the system English embedding's vocabulary. On the 2026-10-15 corpus (180 transcripts, 87
+//  names) it drops Mallow and Inch, both trap pairs, and changes no repair. Confidence 0.75. Open: places and
+//  people named with ordinary words (Cork, Grace) are no longer repaired toward, measured on one speaker only.
 
 import Foundation
+import NaturalLanguage
 
 public struct NameRepair: Sendable {
     public struct Repair: Sendable, Equatable {
@@ -44,6 +51,8 @@ public struct NameRepair: Sendable {
     static let shortWord = 0.8
 
     private let names: [Known]
+    /// One-word names kept as locks only, because the word check called them ordinary words.
+    public let ordinaryWordsLocked: Int
     private let known: Set<String>
     private let written: Set<String>
     private let threshold: Double
@@ -55,18 +64,36 @@ public struct NameRepair: Sendable {
         let words: Int
     }
 
-    public init(names: [String], threshold: Double = defaultThreshold, margin: Double = defaultMargin) {
+    /// `ordinaryWords`: which of the given one-word names are ordinary words. They stay known (locked,
+    /// never repaired) but are never a target: a recogniser writes "Local" or "Cork" right, so the
+    /// only swaps toward them take a word that was heard right ("Rachel" → "Local", #627).
+    public init(
+        names: [String],
+        threshold: Double = defaultThreshold,
+        margin: Double = defaultMargin,
+        ordinaryWords: ([String]) -> Set<String> = NameRepair.ordinaryEnglishWords
+    ) {
         // One entry per name however often it's listed: a duplicate would tie itself and fail the margin.
         var seen: Set<String> = []
-        self.names = names.compactMap { name in
+        let all: [Known] = names.compactMap { name in
             let key = Self.soundKey(name)
             guard !key.isEmpty, seen.insert(Self.plain(name)).inserted else { return nil }
             return Known(name: name, key: key, words: name.split(whereSeparator: \.isWhitespace).count)
         }
+        let ordinary = ordinaryWords(all.filter { $0.words == 1 }.map(\.name))
+        self.names = all.filter { $0.words > 1 || !ordinary.contains($0.name) }
+        ordinaryWordsLocked = all.count - self.names.count
         known = seen
-        written = Set(self.names.map(\.name))
+        written = Set(all.map(\.name))
         self.threshold = threshold
         self.margin = margin
+    }
+
+    /// The words among `words` that the system's English word embedding knows, as given. Empty when
+    /// the embedding isn't on the device, which leaves every name a target (the behaviour before #627).
+    public static func ordinaryEnglishWords(_ words: [String]) -> Set<String> {
+        guard !words.isEmpty, let english = NLEmbedding.wordEmbedding(for: .english) else { return [] }
+        return Set(words.filter { english.contains($0.lowercased()) })
     }
 
     public func repair(_ text: String) -> (text: String, repairs: [Repair]) {

@@ -2,6 +2,13 @@
 # voice_rig.zsh — drive the running Mac M1K3's voice mode hands-free and read back what each turn cost.
 #
 #   macos/tools/eval/voice_rig.zsh [--turns FILE] [--out DIR] [--rate WPM] [--voice NAME] [--new-chat] [--leave-on]
+#                                  [--allow-memory] [--check]
+#
+# The app must run with memory capture off, or the rig's scripted chats become facts about the
+# user ("has a sister named Local", "decided to get two cats"): launch it with
+#   open ~/Applications/M1K3.app --args -memoryAutoCapture NO
+# The rig refuses otherwise; --allow-memory overrides. --check runs only that check (and the
+# status one) and exits: it never touches the app.
 #
 # One spoken line per row of FILE (default: voice_rig_turns.txt; `#` lines and blanks skipped). The rig:
 #   1. tees every app.m1k3 log line to <out>/app.log (`log stream`, from before the first word);
@@ -25,6 +32,9 @@
 # Signed: Kev + claude-opus-5-5, 2026-10-16, Confidence 0.75 (three runs on master e632482d:
 # the first two found the pacing bugs above; the third heard and answered 4/4). Prior: Unknown.
 # Review: same day — --new-chat (⌘N), so a history measurement starts from an empty replay.
+# Review: Kev + claude-opus-5-5, 2026-10-17 — refuses to run while memory capture is on: the 10-16/17 runs wrote
+# ~15 scripted "facts" into Kev's real memory (#627's "sister named Local" among them). The first guard grepped
+# `ps` and matched its own grep, so an empty-turns "test" drove voice mode on Kev's live session: hence --check.
 # Review: Kev + claude-opus-5-5, 2026-10-16 (pre-push review fold) — the mic re-arm must land AFTER the turn's
 # summary line (a stray re-arm before it let the next line talk over M1K3); a dead mic aborts instead of
 # speaking into it; any exit, Ctrl-C included, leaves voice mode if the rig entered it.
@@ -39,6 +49,8 @@ rate=175
 voice=""
 leave_on=0
 new_chat=0
+allow_memory=0
+check_only=0
 while (( $# )); do
   case $1 in
     --turns|--out|--rate|--voice) (( $# >= 2 )) || { print -u2 -- "$1 needs a value"; exit 2 } ;;
@@ -50,7 +62,9 @@ while (( $# )); do
     --voice) voice=$2; shift 2 ;;
     --leave-on) leave_on=1; shift ;;
     --new-chat) new_chat=1; shift ;;
-    -h|--help) sed -n '2,24p' $0; exit 0 ;;
+    --allow-memory) allow_memory=1; shift ;;
+    --check) check_only=1; shift ;;
+    -h|--help) sed -n '2,30p' $0; exit 0 ;;
     *) print -u2 "unknown argument: $1"; exit 2 ;;
   esac
 done
@@ -82,6 +96,15 @@ toggle_voice() {
 }
 
 [[ $(status_of brain) != None ]] || { print -u2 "✗ m1k3 status didn't answer: is M1K3 running with its MCP server up?"; exit 3 }
+# The app's own argv by pid: grepping `ps -axo args=` for the flag matched the grep itself (2026-10-17).
+app_pid=$(pgrep -f "M1K3.app/Contents/MacOS/M1K3( |$)" | head -1)
+app_args=${app_pid:+$(ps -o args= -p $app_pid)}
+if (( ! allow_memory )) && [[ $app_args != *"-memoryAutoCapture NO"* ]]; then
+  print -u2 "✗ M1K3 is capturing memories: the rig's scripted chats would become facts about the user."
+  print -u2 "  Relaunch with: open ~/Applications/M1K3.app --args -memoryAutoCapture NO   (or pass --allow-memory)"
+  exit 3
+fi
+(( check_only )) && { print "✓ M1K3 answers, memory capture off ($app_args)"; exit 0 }
 /usr/bin/log stream --level info --style compact --predicate 'subsystem == "app.m1k3"' > $log 2>&1 &
 logpid=$!
 entered=0

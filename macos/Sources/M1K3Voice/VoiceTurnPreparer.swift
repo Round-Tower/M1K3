@@ -19,6 +19,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-16 (after Kev's live run) — the shadow verdict caught a song twice
 //  ("hands hands la", "latest news": both music, per Kev). `delivered` now logs the room line reaching the
 //  brain, and `learnNames` the names' shape and a private sample (300 names hit the cap from 450 memories).
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — `learnNames` logs how many ordinary words NameRepair kept as locks
+//  (#627), so a device without the word embedding shows up as 0. Confidence 0.8.
 
 import Foundation
 import os
@@ -62,6 +64,9 @@ public final class VoiceTurnPreparer {
         Self.sttLog.notice(
             "name repair: \(names.count, privacy: .public) known names (\(multiWord, privacy: .public) of several words); newest: \(names.prefix(12).joined(separator: ", "), privacy: .private)"
         )
+        // 0 with ordinary words in the list means the system word embedding was missing: #627 is back.
+        let locked = repair.ordinaryWordsLocked
+        Self.sttLog.notice("name repair: \(locked, privacy: .public) ordinary words kept as locks, not targets")
     }
 
     public func prepare(_ question: String, heard: SoundContext?) -> Prepared {
