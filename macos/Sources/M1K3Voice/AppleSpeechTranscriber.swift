@@ -124,6 +124,15 @@
 //  change, reset per listen; `soundContext` is what this listen heard. Its own lock, never nested in
 //  `lock`. Verify-by-launch owed (the stream path matched the file path in the eval, 60/60). Confidence 0.7.
 
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — Mac voice processing comes back behind argv
+//  (`-macVoiceProcessing YES`, VoiceProcessingPolicy): decided before the device pin, which now runs only
+//  without it (the pin broke VPIO by the third listen); the tap takes channel 0 of VPIO's nine identical
+//  channels; and a watchdog (`VoiceProcessingWatchdog`: two looks a deadline apart, more after a
+//  route-change reinstall, which restarts the count) backs a starved listen out to the plain mic for the
+//  rest of the engagement (`releaseAudioHardware` re-arms). The channel-count back-out is gone: 9 channels
+//  is VPIO's healthy shape. `echoCancellationLive` is `lock`-guarded so a reader never waits on an engine
+//  start. Confidence 0.7: probes, verify-by-launch owed.
+
 import AVFoundation
 import Foundation
 import os
@@ -225,6 +234,20 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// The last input-device census we logged (dedup, same reason as
     /// `lastLoggedVPDecision`).
     private var lastLoggedInputDevice: String?
+    /// The Mac's voice-processing opt-in (argv `-macVoiceProcessing YES`), read once.
+    private let macVoiceProcessingOptIn = VoiceProcessingPolicy.macOptIn()
+    /// VPIO starved this engagement (`VoiceProcessingWatchdog`), so listens stay on
+    /// the plain mic until `releaseAudioHardware`. Guarded by `engineLock`.
+    private var voiceProcessingStarved = false
+    /// The watchdog saw VPIO deliver on the latest listen. Guarded by `lock`, not
+    /// `engineLock`, so a reader never waits out an engine start.
+    private var echoCancellationLiveStored = false
+    /// Bumped by every tap install (guarded by `engineLock`), so the watchdog can
+    /// tell a route-change reinstall restarted the buffer count since its last look.
+    private var tapInstalls: UInt64 = 0
+    /// Buffers the tap has delivered since it was installed: the watchdog's one
+    /// signal. Guarded by `lock` (the tap already takes it per buffer).
+    private var tapBuffersSinceInstall = 0
     /// Why the current/most recent session ended without a word, when the
     /// recogniser (not the caller) ended it — see `lastFailure`. Guarded by `lock`.
     private var lastFailureMessage: String?
@@ -239,6 +262,14 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
                 if !newValue { soundListener = nil }
             }
         }
+    }
+
+    /// True once voice processing (echo cancellation) is confirmed delivering audio
+    /// on the latest listen: the one state in which the mic may hear the room while
+    /// M1K3 speaks. False on a plain mic, before the watchdog's check, and after a
+    /// starve. Cleared by `releaseAudioHardware`.
+    public var echoCancellationLive: Bool {
+        lock.withLock { echoCancellationLiveStored }
     }
 
     public init(locale: Locale = .current) {
@@ -368,6 +399,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             audioEngine.inputNode.removeTap(onBus: 0)
             engineOwner = nil
             installedTapFormat = nil
+            lock.withLock { echoCancellationLiveStored = false }
         }
     }
 
@@ -506,7 +538,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             continuation.finish()
             return
         case .started:
-            break
+            armVoiceProcessingWatchdog(generation)
         }
 
         // COMMIT-POINT EPILOGUE: the engine is now RUNNING and we owned it through
@@ -578,7 +610,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             continuation.finish()
             return
         case .started:
-            break
+            armVoiceProcessingWatchdog(generation)
         }
         // Commit-point epilogue, as in begin(): a stop that landed between the
         // start and here may have run its engine teardown before we owned it.
@@ -836,6 +868,13 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     @discardableResult
     private func installInputTap() -> Bool {
         let inputNode = audioEngine.inputNode
+        // A new tap starts the watchdog's count and verdict over, even one that
+        // never installs (the old tap is already gone).
+        tapInstalls &+= 1
+        lock.withLock {
+            tapBuffersSinceInstall = 0
+            echoCancellationLiveStored = false
+        }
         // Keep the engine on the device the USER selected. `AVAudioEngine`
         // resolves its input device once and does not follow a later default
         // change; on this Mac (macOS 27.0) the input node inherited a
@@ -844,16 +883,18 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         // storm — while the selected headset sat unused. Re-pinning per listen
         // (engine stopped here) is the fix `VoiceProcessingPolicy` alone could
         // not be: no VP toggle unbinds a wrongly-chosen device. 2026-09-12.
-        pinInputToDefaultDevice(inputNode)
-        // BEFORE reading the format: voice processing CHANGES it (VPIO renders
-        // mono at the device rate), so a format read first would install a tap
-        // that no longer matches the node. Whether to have it on at all is
-        // `VoiceProcessingPolicy`'s call (2026-09-12): on the Mac a Bluetooth
-        // input under VPIO delivered NO buffers at all, so a headset listens
-        // plain — it needs no echo cancellation, the speaker is on the ear.
+        // Since 2026-10-17 the pin runs only WITHOUT voice processing (below): under
+        // VPIO the unit reports the speakers as its device, and re-pointing it at
+        // the mic broke the third listen.
+        // BEFORE reading the format: voice processing CHANGES it, so a format read
+        // first would install a tap that no longer matches the node. Whether to
+        // have it on at all is `VoiceProcessingPolicy`'s call: mobile always; the
+        // Mac only opted in, on a positively non-Bluetooth input, and never again
+        // this engagement once the watchdog has seen it starve.
         let inputIsBluetooth = InputDeviceTransport.defaultInputIsBluetooth()
         let wantsVoiceProcessing = VoiceProcessingPolicy.shouldEnable(
-            platform: VoiceProcessingPolicy.current, inputIsBluetooth: inputIsBluetooth
+            platform: VoiceProcessingPolicy.current, inputIsBluetooth: inputIsBluetooth,
+            macOptIn: macVoiceProcessingOptIn && !voiceProcessingStarved
         )
         // The one line that says which way the policy went — a mute listen
         // with no engine error is otherwise unreadable from the log. Logged
@@ -867,7 +908,13 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         if wantsVoiceProcessing {
             enableVoiceProcessing(on: inputNode)
         } else {
-            disableVoiceProcessingIfOn(inputNode, reason: "Bluetooth input")
+            disableVoiceProcessingIfOn(
+                inputNode, reason: voiceProcessingStarved ? "starved this engagement" : "off for this route"
+            )
+        }
+        let voiceProcessed = inputNode.isVoiceProcessingEnabled
+        if VoiceProcessingPolicy.pinsInputDevice(voiceProcessing: voiceProcessed) {
+            pinInputToDefaultDevice(inputNode)
         }
         // Give the I/O unit's OUTPUT element a render source. With voice
         // processing on, the engine's I/O unit is a VPIO whose output bus
@@ -885,23 +932,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             audioEngine.mainMixerNode.outputVolume = 0
         }
         var nodeFormat = inputNode.outputFormat(forBus: 0)
-        // Ground truth beats the transport read: if VPIO handed back a
-        // >2-channel format (a Bluetooth headset or an aggregate-routed
-        // input), the recogniser will STARVE on it — back voice processing
-        // out and re-read the raw device (2026-09-12). DORMANT while
-        // `shouldEnable` is false on the Mac (see VoiceProcessingPolicy).
-        if wantsVoiceProcessing,
-           VoiceProcessingPolicy.shouldBackOutVoiceProcessing(
-               platform: VoiceProcessingPolicy.current, channelCount: nodeFormat.channelCount
-           )
-        {
-            Self.log.notice(
-                "stt voice processing backed out — VPIO format was \(nodeFormat.channelCount, privacy: .public)ch (route starves the recogniser)"
-            )
-            disableVoiceProcessingIfOn(inputNode, reason: "VPIO format \(nodeFormat.channelCount)ch")
-            nodeFormat = inputNode.outputFormat(forBus: 0)
-        }
-        // After the back-out: toggling voice processing reconfigures the unit and would
+        // After the voice-processing toggle: toggling reconfigures the unit and would
         // discard a realign made before it (#435 review).
         if realignClientRate(inputNode) {
             nodeFormat = inputNode.outputFormat(forBus: 0)
@@ -953,6 +984,9 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         // format and the validation, so a mismatch is impossible by construction.
         // `format` above is still the gate + log signal; the buffer arrives in the
         // node's live format and `MonoMixdown` downmixes whatever channel count.
+        let firstChannel = VoiceProcessingPolicy.takesFirstChannel(
+            platform: VoiceProcessingPolicy.current, voiceProcessing: voiceProcessed
+        )
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: nil) { [weak self] buffer, _ in
             // Multi-channel devices go MONO before the recognizer: SFSpeech
             // accepts >2-channel buffers and silently never produces a partial
@@ -963,9 +997,12 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             // `self` check alone can't do that (this object is an app-lifetime
             // singleton; sessions are generation-scoped, and it's the nil'd
             // request that marks teardown — post-merge review, #127).
-            let (legacyLive, analyzer) = self.lock.withLock { (self.request != nil, self.analyzer) }
+            let (legacyLive, analyzer) = self.lock.withLock { () -> (Bool, AnalyzerLiveRecognition?) in
+                self.tapBuffersSinceInstall += 1
+                return (self.request != nil, self.analyzer)
+            }
             guard legacyLive || analyzer != nil else { return }
-            let audible = MonoMixdown.mixIfNeeded(buffer)
+            let audible = MonoMixdown.mixIfNeeded(buffer, voiceProcessed: firstChannel)
             self.feedSoundContext(audible)
             if let analyzer {
                 // SpeechAnalyzer path: meter the level for AnalyzerEndpoint, feed
@@ -1065,7 +1102,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// listen: build 375's "The microphone couldn't start" (2026-09-27, Kev's MacBook).
     /// Reproduced outside the app both ways; `reset()` does not clear it, this does.
     /// Never under voice processing: VPIO does its own rate handling, and this path has
-    /// only been verified on the plain HAL unit (voice processing is off on the Mac).
+    /// only been verified on the plain HAL unit (Mac voice processing is opt-in, 2026-10-17).
     /// True when it changed the format.
     @discardableResult
     private func realignClientRate(_ inputNode: AVAudioInputNode) -> Bool {
@@ -1126,6 +1163,72 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         }
     }
 
+    /// Check that voice processing is delivering audio (`VoiceProcessingWatchdog`).
+    /// A no-op without it (the plain mic has no starve) and on iOS (`applies`).
+    private func armVoiceProcessingWatchdog(_ generation: UInt64) {
+        guard VoiceProcessingWatchdog.applies(platform: VoiceProcessingPolicy.current) else { return }
+        let installs = engineLock.withLock { () -> UInt64? in
+            guard engineOwner == generation, audioEngine.inputNode.isVoiceProcessingEnabled else { return nil }
+            return tapInstalls
+        }
+        guard let installs else { return }
+        scheduleVoiceProcessingCheck(generation, check: 1, installsAtLastLook: installs)
+    }
+
+    private func scheduleVoiceProcessingCheck(_ generation: UInt64, check: Int, installsAtLastLook: UInt64) {
+        let (seconds, attoseconds) = VoiceProcessingWatchdog.deadline.components
+        let delay = Double(seconds) + Double(attoseconds) / 1e18
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + delay) { [weak self] in
+            self?.checkVoiceProcessing(generation, check: check, installsAtLastLook: installsAtLastLook)
+        }
+    }
+
+    /// One look, under `engineLock` with the same ownership checks as the
+    /// route-change handler, so a stopped or superseded listen is left alone.
+    /// Starved: mark the engagement, then reinstall the tap plain (VP off, the pin
+    /// back on) and restart, exactly the route-change reinstall. The live session
+    /// keeps its recogniser; the tap reads it fresh per buffer.
+    private func checkVoiceProcessing(_ generation: UInt64, check: Int, installsAtLastLook: UInt64) {
+        engineLock.withLock {
+            guard engineOwner == generation,
+                  lock.withLock({ generation == self.generation }),
+                  audioEngine.inputNode.isVoiceProcessingEnabled else { return }
+            let seen = lock.withLock { tapBuffersSinceInstall }
+            let decision = VoiceProcessingWatchdog.decision(
+                buffersSeen: seen, check: check, reinstalledSinceLastCheck: tapInstalls != installsAtLastLook
+            )
+            switch decision {
+            case .live:
+                lock.withLock { echoCancellationLiveStored = true }
+                Self.log.notice(
+                    "stt echo cancellation live (\(seen, privacy: .public) buffers by look \(check, privacy: .public))"
+                )
+            case .recheck:
+                Self.log.notice("stt voice processing silent at look \(check, privacy: .public) — looking again")
+                scheduleVoiceProcessingCheck(generation, check: check + 1, installsAtLastLook: tapInstalls)
+            case .starved:
+                voiceProcessingStarved = true
+                Self.log.error(
+                    """
+                    stt voice processing starved (no audio in \(check, privacy: .public) looks) \
+                    — plain mic for this engagement
+                    """
+                )
+                if audioEngine.isRunning { audioEngine.stop() }
+                audioEngine.inputNode.removeTap(onBus: 0)
+                // Route not ready: ownership stands, and the configuration-change
+                // observer reinstalls when it is.
+                guard installInputTap() else { return }
+                if audioEngine.inputNode.isVoiceProcessingEnabled {
+                    // The disable threw (logged in disableVoiceProcessingIfOn): the
+                    // tap is back on the starved unit and this listen stays deaf.
+                    Self.log.error("stt voice processing would not turn off — this listen may hear nothing")
+                }
+                restartEngineAfterConfigurationChange()
+            }
+        }
+    }
+
     /// Let go of the audio hardware between engagements: no live session →
     /// stop the engine, drop the tap, turn voice processing off and reset the
     /// graph so the HAL closes the input device. Left prepared, the I/O unit
@@ -1144,6 +1247,10 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             disableVoiceProcessingIfOn(audioEngine.inputNode, reason: "session over")
             audioEngine.reset()
             installedTapFormat = nil
+            // A new engagement gets a fresh try: the starve follows the system's
+            // device set, which can change between engagements.
+            voiceProcessingStarved = false
+            lock.withLock { echoCancellationLiveStored = false }
             return true
         }
         if released {

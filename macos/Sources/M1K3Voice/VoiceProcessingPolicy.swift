@@ -40,7 +40,20 @@
 //  parks voice mode. Confidence 0.85 (verify-by-launch on the rebuild).
 //  Review: Kev + claude-opus-5, 2026-09-13 — shouldBackOutVoiceProcessing documented as DORMANT
 //  (unreachable while shouldEnable is false on the Mac), kept as the re-enable safety net. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — the September cause was HALF ours. Standalone probes on
+//  macOS 27.0 (MacBook Pro mic): VPIO works (9 identical channels, ~10 buffers/s, three relistens clean)
+//  until `pinInputToDefaultDevice` re-points the unit, which reports the SPEAKERS as its device under
+//  VPIO, back at the mic: -10875 and zero buffers by the third listen. The other half is the system's:
+//  later the same clean probe got 7 channels and zero buffers once the device set shifted (a Continuity
+//  iPhone mic and an empty aggregate appeared). So: `pinsInputDevice` skips the pin under VPIO, the Mac
+//  opts in behind argv (`-macVoiceProcessing YES`, positive non-Bluetooth only), and
+//  `VoiceProcessingWatchdog` replaces the channel-count back-out — 9 channels is VPIO's healthy shape,
+//  so that guard would have backed out every good listen. Echo payoff, measured: the recogniser read
+//  21/21 of M1K3's spoken words off the mic with VPIO off, 0/21 with it on. Confidence 0.7: probes,
+//  not yet a launch.
 //
+
+import Foundation
 
 public enum VoiceProcessingPolicy {
     public enum Platform: Sendable, Equatable {
@@ -57,44 +70,44 @@ public enum VoiceProcessingPolicy {
         #endif
     }
 
-    /// Turn voice processing on for this listen? NEVER on the Mac (2026-09-12,
-    /// macOS 27.0). Enabling Apple's voice-processing I/O builds a system
-    /// AGGREGATE device (`AUVPAggregate`: input + output for echo cancellation)
-    /// that the engine's input node then binds to and the recogniser STARVES on
-    /// — a 9-channel format, `audioDuration 0`, twelve empty listens in 400 ms,
-    /// voice mode parked mutely. It reproduced on the built-in mic AND a
-    /// Bluetooth headset; the one configuration that held all night was VP off.
-    /// The `inputIsBluetooth` hint is retained for the caller's log but no
-    /// longer gates the Mac (it read the aggregate's transport in-sandbox, not
-    /// the device's, so it could not be trusted). Echo is handled by muting the
-    /// mic while M1K3 speaks, not by VPIO. iOS keeps VPIO — its path is
-    /// device-verified and does not exhibit the aggregate starve.
-    public static func shouldEnable(platform: Platform, inputIsBluetooth _: Bool?) -> Bool {
+    /// Turn voice processing on for this listen? Mobile always. The Mac only when
+    /// opted in (`macOptIn`, argv `-macVoiceProcessing YES`) AND the input is
+    /// POSITIVELY not Bluetooth: a headset under VPIO delivered zero buffers
+    /// (2026-09-12) and needs no echo cancellation anyway, and an unknown transport
+    /// fails safe, since a wrongly-off built-in only loses echo cancellation while a
+    /// wrongly-on headset goes deaf. Even opted in, VPIO on macOS 27.0 can starve
+    /// when the system's device set shifts (2026-10-17), so the transcriber runs
+    /// `VoiceProcessingWatchdog` and backs a starved listen out.
+    public static func shouldEnable(platform: Platform, inputIsBluetooth: Bool?, macOptIn: Bool = false) -> Bool {
         switch platform {
         case .mobile: true
-        case .mac: false
+        case .mac: macOptIn && inputIsBluetooth == false
         }
     }
 
-    /// After voice processing is enabled, the mic format the engine hands back
-    /// is the ground truth the transport read could not give us. On the Mac,
-    /// VPIO over a Bluetooth headset — or over ANY route that resolves through
-    /// a system aggregate device (`~:AMS2_Aggregate`, which a prior VPIO
-    /// session leaves behind) — renders a >2-channel format the recogniser is
-    /// then STARVED on (zero buffers, `audioDuration 0`, the instant-endpoint
-    /// storm). A clean built-in mic under VPIO renders 1 channel. So a
-    /// post-enable format with more than two channels is the reliable, in-app
-    /// signal to back voice processing OUT and relisten on the raw device —
-    /// self-healing where `defaultInputIsBluetooth()` (which reads the
-    /// aggregate's non-Bluetooth transport in-sandbox) silently lies. Mobile
-    /// keeps VPIO regardless (its path is device-verified). 2026-09-12.
-    ///
-    /// DORMANT today: `shouldEnable` returns false on the Mac, so the one call
-    /// site (`AppleSpeechTranscriber.installInputTap`) never reaches this. It is
-    /// kept, test-pinned, as the safety net for the day Mac voice processing is
-    /// re-enabled — not as a live guard (#306 review).
-    public static func shouldBackOutVoiceProcessing(platform: Platform, channelCount: UInt32) -> Bool {
-        platform == .mac && channelCount > 2
+    /// The Mac opt-in, read from argv (`M1K3 -macVoiceProcessing YES`; on macOS 27
+    /// `defaults write` never reaches the sandboxed app). Absent means off.
+    public static func macOptIn(
+        arguments: [String: Any] = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
+    ) -> Bool {
+        guard let raw = arguments["macVoiceProcessing"] as? String else { return false }
+        return ["yes", "1", "true", "on"].contains(raw.lowercased())
+    }
+
+    /// Pin the engine's input unit to the user's selected mic for this listen?
+    /// Only WITHOUT voice processing. Under VPIO the unit's current device reads as
+    /// the OUTPUT device (it drives an input + output aggregate), so the pin saw a
+    /// "wrong" device and re-pointed it at the mic, and the third listen failed to
+    /// start (-10875, zero buffers; measured 2026-10-17). VPIO picks its own route.
+    public static func pinsInputDevice(voiceProcessing: Bool) -> Bool {
+        !voiceProcessing
+    }
+
+    /// Take channel 0 instead of the mixdown sum? Mac VPIO copies its one processed
+    /// signal to all nine channels (measured 2026-10-17), so the sum would clip it
+    /// ninefold. iOS keeps the mixdown it had: its VPIO shape is unmeasured here.
+    public static func takesFirstChannel(platform: Platform, voiceProcessing: Bool) -> Bool {
+        platform == .mac && voiceProcessing
     }
 
     /// Feed the VPIO output bus a silent source (mobile: ~330 render errors a
@@ -103,5 +116,41 @@ public enum VoiceProcessingPolicy {
     /// headset, and the headset held in its call profile after the listen.
     public static func feedsSilentOutputSource(platform: Platform) -> Bool {
         platform == .mobile
+    }
+}
+
+/// Did voice processing come up? On macOS 27.0 a starved VPIO tap never delivers a
+/// single buffer (7-channel format, zero buffers over 3 s), while a healthy one
+/// delivers ~10 a second from the start (2026-10-17). So the transcriber looks
+/// `deadline` after the engine starts, and again a deadline later if it heard
+/// nothing: still nothing means back voice processing out and relisten plain, for
+/// the rest of the engagement. A route-change reinstall restarts the tap's count
+/// (VPIO's own start can post one), so a reinstall since the last look earns
+/// another, up to `maxChecks`: a healthy start must never be written off.
+public enum VoiceProcessingWatchdog {
+    public enum Decision: Sendable, Equatable {
+        case live
+        case recheck
+        case starved
+    }
+
+    /// The most looks a listen gets (about 2.4 s), however many reinstalls.
+    public static let maxChecks = 4
+
+    /// Several buffers of slack for a healthy tap, short enough that a starved
+    /// listen recovers before the user has finished their first words.
+    public static let deadline: Duration = .milliseconds(600)
+
+    /// The Mac only: iOS keeps VPIO on every route (`shouldEnable`), so a back-out
+    /// there would just turn it back on.
+    public static func applies(platform: VoiceProcessingPolicy.Platform) -> Bool {
+        platform == .mac
+    }
+
+    /// `check` counts from 1. `buffersSeen` is since the tap's latest install.
+    public static func decision(buffersSeen: Int, check: Int, reinstalledSinceLastCheck: Bool) -> Decision {
+        if buffersSeen > 0 { return .live }
+        if check < 2 || (reinstalledSinceLastCheck && check < maxChecks) { return .recheck }
+        return .starved
     }
 }
