@@ -85,6 +85,61 @@ struct ToolNeedRouterFixtureTests {
         #expect(free.count * 4 >= chat.count, "only \(free.count)/\(chat.count) chat fixtures went tool-free")
     }
 
+    /// #622: a question that points back at this conversation is answered from it, never a tool's
+    /// output, when the chat has history. Not one tool-use fixture may trip it.
+    @Test("no tool-use fixture reads as pointing back at the chat")
+    func toolAsksNeverPointBack() {
+        let tripped = ChatEvalFixtures.toolUse.filter { ToolNeedRouter.pointsBackInChat($0.prompt) }
+        #expect(tripped.isEmpty, "tripped: \(tripped.map(\.prompt))")
+    }
+
+    @Test("questions about what was said in this chat point back", arguments: [
+        "What did you say about names earlier?",
+        "Who did I say is coming to stay, and why does that matter for the cat?",
+        "What was the name you suggested a minute ago?",
+        "Can you repeat what you just said?",
+        "What did you say just now?",
+        "What was that name you mentioned earlier today?",
+        "What did you mean by that?",
+        "Which one did you recommend?",
+    ])
+    func pointsBack(question: String) {
+        #expect(ToolNeedRouter.pointsBackInChat(question))
+    }
+
+    @Test("past sessions and the user's stores do not", arguments: [
+        "What did we talk about yesterday?",
+        "What did you say last week about the garage?",
+        "What did I tell you on Monday?",
+        "Search my notes for what I said about the boiler.",
+        "What did I say in the meeting recording?",
+        "Check my calendar for what I told Anna.",
+        "What's the weather in Cork tomorrow?",
+        "Thanks Mike, that's really helpful.",
+        // Challenger, 2026-10-17: everyday requests whose verbs read like a look-back.
+        "Can you tell me the weather in Cork?",
+        "Could you tell me the time?",
+        "Can you recommend a podcast?",
+        "Can you suggest somewhere to eat near me?",
+        "Can you call my mum?",
+        "I told you to set a timer.",
+        "What's the latest on what you told me about the election?",
+        "We talked about booking flights, what are prices now?",
+        // Code review, 2026-10-17: acting on what was said, corrections, and do-you-recommend asks.
+        "Open the link you mentioned.",
+        "Play the song you recommended.",
+        "Set a timer for the length you mentioned.",
+        "Remind me about what you suggested.",
+        "Add what we discussed to my list.",
+        "No, I meant Cork, Ireland. What's the weather there?",
+        "You said it would be sunny. Will it rain this weekend?",
+        "What laptop do you recommend?",
+        "Which restaurants near me do you recommend?",
+    ])
+    func doesNotPointBack(question: String) {
+        #expect(!ToolNeedRouter.pointsBackInChat(question))
+    }
+
     /// #622: lines the voice rig sent to tools, held out of training. Thanks, news and a plain question
     /// sit near 0.05–0.10 against a ~0.32 threshold; the look-backs at a past session sit near 0.87.
     @Test("mid-conversation turns go tool-free; look-backs at a past session keep their tools", arguments: [

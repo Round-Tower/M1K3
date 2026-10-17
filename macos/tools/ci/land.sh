@@ -11,6 +11,8 @@
 # Signed: Kev + claude-fable-5.1, 2026-09-12, Confidence 0.85 (each step is the
 # one used by hand on #287–#293; the worktree hint is printed, never executed,
 # because the script usually runs from inside that worktree). Prior: Unknown
+# Review: Kev + claude-opus-5-5, 2026-10-17 — the closing hint: a merge builds nothing on Xcode Cloud now
+# (release tags only); it names release_tag.py instead of the run list. Confidence 0.9.
 set -euo pipefail
 
 pr="${1:?usage: land.sh <PR> [pr_watch flags]}"; shift
@@ -44,4 +46,4 @@ if [[ -n "$top" && "$top" != "$main" ]]; then
   echo "== this is a linked worktree; from the main tree run:"
   echo "   rm -rf '$top' && git -C '$main' worktree prune && git -C '$main' branch -D '$branch'"
 fi
-echo "== next: git -C '$main' pull --ff-only origin master · check the Xcode Cloud run list in ~2 min"
+echo "== next: git -C '$main' pull --ff-only origin master · a merge builds nothing on Xcode Cloud: to ship one, macos/tools/asc/release_tag.py cut --confirm"

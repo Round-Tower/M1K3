@@ -13,6 +13,7 @@
 //  remembered-thread cue (#428/#349). Confidence 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-10-16 — pins `promptAnatomy` (history vs rest, in characters).
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — and its ` · earlier N` count of the trace (#626).
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — #622: pointing back at this chat skips the picker, with history only.
 //  Review: Kev + claude-opus-5.5, 2026-10-17 — a plain turn that thinks to the cap without answering
 //  answers straight after it (the live Always-think dead bubble); the fake records the turn's thinking.
 //
@@ -268,6 +269,63 @@ struct PlainTurnRouteTests {
         #expect(!provider.prompts.contains { $0.contains("failed under load") })
         // The sources name only what could reach a prompt.
         #expect(!sources.contains { $0.itemTitle == "Plant Notes" })
+    }
+
+    /// #622: "What did you say about names earlier?" scored tools (0.66), Apple's picker ran
+    /// recent_activity, and another chat's facts reached the answer. With history, a question that
+    /// points back at this chat is the replay's: one plain generation, no picker.
+    @Test("a question pointing back at this chat answers from it, with history; without, the picker runs")
+    func pointingBackSkipsThePicker() async throws {
+        let picks = Mutex(0)
+        let route = PlainTurnRoute(
+            decide: { _ in .init(verdict: .tools, probability: 0.66) }, instructions: nil,
+            pick: { @Sendable _, _ in
+                picks.withLock { $0 += 1 }
+                return ToolPick(tool: ToolPick.noTool, query: "")
+            }
+        )
+        let history = [
+            ChatTurn(role: .user, text: "Any good names for a black cat?"),
+            ChatTurn(role: .assistant, text: "Nyx, Onyx or Vesper."),
+        ]
+        let provider = RouteProvider(["I suggested Nyx, Onyx and Vesper."])
+        let responder = try AgentRAGResponder(
+            store: KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
+            toolsProvider: { [NoteTool()] }, plainRouteProvider: { route }
+        )
+        _ = try await answer(responder, "What did you say about names earlier?", history: history)
+        #expect(picks.withLock { $0 } == 0)
+        #expect(provider.prompts.count == 1)
+
+        let fresh = RouteProvider(["Nothing yet."])
+        let freshResponder = try AgentRAGResponder(
+            store: KnowledgeStore(), embedder: HashingEmbeddingService(), provider: fresh,
+            toolsProvider: { [NoteTool()] }, plainRouteProvider: { route }
+        )
+        _ = try await answer(freshResponder, "What did you say about names earlier?")
+        #expect(picks.withLock { $0 } == 1)
+    }
+
+    /// Code review, 2026-10-17: a confident tools verdict (a past-session look-back sits ~0.87)
+    /// keeps the picker even when the words point back: the override is for the gate's grey zone.
+    @Test("a confident tools verdict keeps the picker even when the words point back")
+    func confidentToolsVerdictKeepsThePicker() async throws {
+        let picks = Mutex(0)
+        let route = PlainTurnRoute(
+            decide: { _ in .init(verdict: .tools, probability: 0.9) }, instructions: nil,
+            pick: { @Sendable _, _ in
+                picks.withLock { $0 += 1 }
+                return ToolPick(tool: ToolPick.noTool, query: "")
+            }
+        )
+        let provider = RouteProvider(["Here it is."])
+        let responder = try AgentRAGResponder(
+            store: KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
+            toolsProvider: { [NoteTool()] }, plainRouteProvider: { route }
+        )
+        let history = [ChatTurn(role: .user, text: "hi"), ChatTurn(role: .assistant, text: "hello")]
+        _ = try await answer(responder, "What did you say about names earlier?", history: history)
+        #expect(picks.withLock { $0 } == 1)
     }
 
     @Test("#438 review: a tools verdict's plain fallback keeps its excerpts, and lists them")

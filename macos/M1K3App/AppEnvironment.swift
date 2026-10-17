@@ -119,6 +119,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-13 — Built-in speaks in the best installed system voice (#584):
 //  `BestSystemVoice.pick` once at launch onto both Built-in paths (`builtinSpeech`, the Effectful renderer);
 //  nil leaves the system default. Logged (.notice, identifier only). Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — ChatSession gets `replayTurns` (#629): rolling distillation follows
+//  the replay window in effect. Confidence 0.8.
 
 import AppKit
 import Foundation
@@ -1116,7 +1118,9 @@ final class AppEnvironment {
                 // memory graph (was corpus-only — the empty-graph root cause).
                 graph: memoryStore.map { DistilledFactGraphAdapter(store: $0) as any DistilledFactGraphWriting }
             ),
-            autoCaptureEnabled: { Self.memoryAutoCaptureEnabled() }
+            autoCaptureEnabled: { Self.memoryAutoCaptureEnabled() },
+            // The rolling distillation trigger follows the replay window in effect (#629).
+            replayTurns: { Self.liveHistoryBudget().maxTurns }
         )
 
         // Calls: encrypted-at-rest store (key from the Keychain), indexed into the

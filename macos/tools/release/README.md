@@ -68,7 +68,7 @@ The Apple mobile/spatial surface is the native SwiftUI shell under
 effort). The on-device ladder is **Mini + Lil only** (Big is excluded on mobile;
 `M1K3iOSApp/AppCore.swift`). Release path: the SAME Xcode Cloud `Release` workflow
 as the Mac — a second Archive action (`M1K3iOS`, platform iOS) uploads into the one
-universal `app.m1k3` record on every master merge (`../../docs/XCODE_CLOUD_RELEASE.md`
+universal `app.m1k3` record on every release tag (`../asc/release_tag.py`; `../../docs/XCODE_CLOUD_RELEASE.md`
 §3). No local script: Xcode Cloud signs and exports itself. The lane's
 preconditions (universal bundle ID, privacy manifest, own Info.plist) are pinned
 by `../ci/check_store_targets.py`. See `../../docs/IOS_VISIONOS_PORT.md`.

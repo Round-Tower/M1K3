@@ -133,6 +133,8 @@
 //  Confidence 0.7 (verify on the phone).
 //  Review: Kev + claude-opus-5-5, 2026-10-16 — the history provider passes `spoken`, mirroring the Mac. It only bites
 //  on Big, which mobile excludes, so phone behaviour is unchanged.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — `liveHistoryBudget()` mirrors the Mac's, feeding the replay and
+//  ChatSession's rolling distillation trigger (#629). Confidence 0.8.
 
 import AVFoundation
 #if os(iOS)
@@ -432,6 +434,24 @@ final class AppCore {
     /// `nonisolated` (like the Mac AppEnvironment's keys) so the responder's
     /// @Sendable per-turn closures can read them off the main actor.
     nonisolated static let selectedBrainKey = "selectedBrain"
+    /// The Mac's brain-aware replay window, mirrored (PR #234 review 6): pocket's 8k window is a
+    /// HARD budget on a 4 GB phone — the tier-blind default (8000 chars) plus an uncapped decode
+    /// could ask its unbounded KV cache for more than the window the 3.5 GB floor was measured
+    /// against. Mini uses exact token counts when measured (the [SPIKE] resolved). `spoken` mirrors
+    /// the Mac; it only bites on Big, which mobile excludes. One home for the responder's replay
+    /// and ChatSession's rolling distillation trigger (#629).
+    nonisolated static func liveHistoryBudget() -> HistoryWindow.Budget {
+        let defaults = UserDefaults.standard
+        let raw = defaults.string(forKey: selectedBrainKey) ?? ""
+        return HistoryBudgetPolicy.budget(
+            for: BrainTier(persisted: raw),
+            reservedTokens: historyReserveTokens,
+            generationTokens: historyGenerationReserveTokens,
+            measuredMiniReserveTokens: measuredMiniReserve.withLock { $0 },
+            spoken: defaults.bool(forKey: VoiceModeDefaults.activeKey) && HistoryBudgetPolicy.spokenCapEnabled()
+        )
+    }
+
     /// The history window's reserves — the policy's own figures, shared with the
     /// Mac shell so the two cannot drift.
     nonisolated static let historyReserveTokens = HistoryBudgetPolicy.liveReserveTokens
@@ -665,7 +685,9 @@ final class AppCore {
                 fallback: slot,
                 graph: memoryStore.map { DistilledFactGraphAdapter(store: $0) as any DistilledFactGraphWriting }
             ),
-            autoCaptureEnabled: { Self.memoryAutoCaptureEnabled() }
+            autoCaptureEnabled: { Self.memoryAutoCaptureEnabled() },
+            // The rolling distillation trigger follows the replay window in effect (#629).
+            replayTurns: { Self.liveHistoryBudget().maxTurns }
         )
 
         // Caption memory: a deleted chat forgets its Photo memories.
@@ -1270,22 +1292,8 @@ final class AppCore {
                 return BrainTier(persisted: raw)?.prefersFastThinking ?? false
             },
             historyBudgetProvider: {
-                // The Mac's brain-aware replay window, mirrored (PR #234 review 6):
-                // pocket's 8k window is a HARD budget on a 4 GB phone — the
-                // tier-blind default (8000 chars) plus an uncapped decode could
-                // ask its unbounded KV cache for more than the window the 3.5 GB
-                // floor was measured against. Read fresh each turn (hot-swap).
-                // Mini uses exact token counts when measured (the [SPIKE] resolved).
-                // `spoken` mirrors the Mac; it only bites on Big, which mobile excludes.
-                let defaults = UserDefaults.standard
-                let raw = defaults.string(forKey: Self.selectedBrainKey) ?? ""
-                return HistoryBudgetPolicy.budget(
-                    for: BrainTier(persisted: raw),
-                    reservedTokens: Self.historyReserveTokens,
-                    generationTokens: Self.historyGenerationReserveTokens,
-                    measuredMiniReserveTokens: Self.measuredMiniReserve.withLock { $0 },
-                    spoken: defaults.bool(forKey: VoiceModeDefaults.activeKey) && HistoryBudgetPolicy.spokenCapEnabled()
-                )
+                // Read fresh each turn (hot-swap).
+                Self.liveHistoryBudget()
             },
             groundingBudgetProvider: {
                 // This shell had NO budget provider at all until 2026-08-13, so

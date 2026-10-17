@@ -36,7 +36,8 @@ jobs:
   # compile mobile ones). A package-only PR is gated by `swift test` (~4 min)
   # instead of ~20. Every PUSH (master, develop) still builds all three, so a
   # package rename that breaks a shell is caught on the push run within the
-  # hour and fixed forward — with Xcode Cloud and the nightly DMG behind it.
+  # hour and fixed forward — with the nightly DMG behind it (Xcode Cloud builds only
+  # release tags since 2026-10-17, so it no longer sees every merge).
   # pr_watch reads a skipped job as green.
   changes:
     name: Detect compilable changes
@@ -171,9 +172,9 @@ jobs:
     if: needs.changes.outputs.swift == 'true' && (github.event_name == 'push' || needs.changes.outputs.shell == 'true')
     # `swift test` compiles only the SwiftPM PACKAGE. The app shell (M1K3App/:
     # AppEnvironment + its extensions, SelfTest, MCPHostController, IssueReporter,
-    # every SwiftUI view) is an Xcode target that otherwise compiles ONLY in
-    # Xcode Cloud, post-merge — so a break there passes every PR check and first
-    # fails at release time, disconnected from its cause. This builds it unsigned
+    # every SwiftUI view) is an Xcode target that otherwise compiles ONLY at
+    # release time (Xcode Cloud on a release tag) — so a break there passes every
+    # PR check and first fails then, disconnected from its cause. This builds it unsigned
     # (no secrets, no archive) purely to prove it COMPILES + links on each PR.
     runs-on: macos-26
     timeout-minutes: 60
@@ -441,3 +442,5 @@ jobs:
 # the three xcodebuild jobs pass COMPILATION_CACHE_ENABLE_CACHING=NO, since a fresh runner's empty
 # cache only adds the first-build overhead (+8% measured). Persisting the cache here is a separate
 # experiment (size vs the 10 GB cache cap). Confidence 0.85.
+# Review: Kev + claude-opus-5-5, 2026-10-17 — comments only: Xcode Cloud builds release tags, not every merge,
+# so the nightly DMG is the post-merge backstop and the app shell compiles in Xcode Cloud only at release time.
