@@ -13,10 +13,12 @@ The tag names the version, the day and the commit: `release-1.1.0-20261017-07b1c
 only on a commit that is on origin/master and whose GitHub `CI` run concluded success (`--why`
 overrides a red or unfinished CI, never "not on master"). A commit already carrying a release tag
 ON ORIGIN is not tagged again (a failed push deletes its local tag). The version is read from
-project.yml at the tagged commit; the day is UTC. After a push, `./builds.py wait` (default: the newest release tag) waits for
-the build. Cutting a release is Kev's call; the dry run shows what would be pushed.
+project.yml at the tagged commit; the day is UTC. After a push, `./builds.py wait` (default: the
+newest release tag) waits for the build. Cutting a release is Kev's call; the dry run shows
+what would be pushed.
 
 Signed: Kev + claude-opus-5-5, 2026-10-17, Confidence 0.85. Prior: none (new file).
+Review: Kev + claude-opus-5-5, 2026-10-17 (#637) — tests pin cut()'s failed-push cleanup and the dry run; docstring rewrapped.
 """
 from __future__ import annotations
 
