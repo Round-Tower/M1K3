@@ -160,6 +160,10 @@ Anything a cold session needs on turn one belongs below, not there.
   turn inherits it; anything outside a turn (a bare eval arm, a utility) scopes its own `withThinking`
   or gets the construction flag, i.e. thinks to the cap. Before the fix the plain route did exactly that:
   20/44 with 11 empty answers at a 133 s median turn (`macos/docs/evals/2026-10-11-lil-555-router-*.json`).
+- **Router retrains move both heads (2026-10-17, #631).** `tools/router/train_tool_router.py` rewrites the gate
+  (`ToolNeedRouterWeights`) AND the group head (`ToolGroupRouterWeights`). A gate fix ships the gate alone: restore
+  the group head from master unless the router chateval arm has run on the new one. Its floor drop dispatched in-chat
+  look-backs to `recent_activity`. Score held-out lines first, and keep the rig's lines out of training.
 - **An eval must wire like the app.** Chat-path chateval runs need `--router dispatch`: the Mac app routes
   every tier (`ToolRouterWiring.allTiersEnabled(whenUnset: true)`, ADR 0009's `toolRouterAllTiers`), and the
   default live arm has no router, so it never takes the plain route. When an eval disagrees
