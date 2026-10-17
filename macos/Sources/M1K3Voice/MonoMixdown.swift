@@ -5,9 +5,9 @@
 //  Tap-side downmix for multi-channel input devices. SFSpeech accepts
 //  >2-channel buffers and then silently never produces a partial — no error,
 //  no transcript, "it just continues to listen" (Kev's 9-channel aggregate,
-//  2026-08-14). VPIO would normally render the mic mono, but voice processing
-//  doesn't engage on aggregate devices (AppleSpeechTranscriber's own
-//  enableVoiceProcessing note), so the tap sees the raw device format.
+//  2026-08-14): the tap sees the raw device format. Mac voice processing (opt-in
+//  since 2026-10-17) is the other multi-channel case, and takes channel 0 instead
+//  (`voiceProcessed`, see the Review below).
 //
 //  Channels are SUMMED, not averaged: on an aggregate device the live mic is
 //  ONE channel beside silent siblings, and averaging would divide real speech
@@ -26,6 +26,9 @@
 //  Signed: Kev + claude-fable-5, 2026-08-14, Confidence 0.85 (core pinned on
 //  arrays; the adapter is mechanical pointer glue and the live-device proof
 //  is the deploy). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — `voiceProcessed`: Mac VPIO (opt-in, see VoiceProcessingPolicy)
+//  hands back ONE processed signal copied to all nine channels (measured: identical RMS and peak on each),
+//  so summing would clip it ninefold. Voice-processed audio takes channel 0. Confidence 0.85.
 
 import AVFoundation
 
@@ -34,6 +37,13 @@ public enum MonoMixdown {
     /// Pure core: sum per-frame across channels, clamped to [-1, 1].
     /// Expects equal-length channels; frames beyond a short channel read as
     /// absent. Empty input → empty output.
+    /// Voice-processed audio: VPIO copies its one processed signal to every
+    /// channel, so channel 0 IS the mix (a sum would clip it). Otherwise `mix`.
+    public static func mix(_ channels: [[Float]], voiceProcessed: Bool) -> [Float] {
+        guard voiceProcessed else { return mix(channels) }
+        return channels.first ?? []
+    }
+
     public static func mix(_ channels: [[Float]]) -> [Float] {
         guard let frames = channels.map(\.count).max(), frames > 0 else { return [] }
         var out = [Float](repeating: 0, count: frames)
@@ -48,7 +58,7 @@ public enum MonoMixdown {
     /// Buffer adapter: returns the buffer itself for 1–2 channels (or any
     /// shape it can't read); otherwise a fresh mono buffer at the same sample
     /// rate and frame length, produced by `mix`.
-    public static func mixIfNeeded(_ buffer: AVAudioPCMBuffer) -> AVAudioPCMBuffer {
+    public static func mixIfNeeded(_ buffer: AVAudioPCMBuffer, voiceProcessed: Bool = false) -> AVAudioPCMBuffer {
         let channelCount = Int(buffer.format.channelCount)
         let frames = Int(buffer.frameLength)
         guard channelCount > 2, frames > 0,
@@ -63,9 +73,9 @@ public enum MonoMixdown {
               let out = mono.floatChannelData
         else { return buffer }
 
-        let mixed = mix((0 ..< channelCount).map { channel in
+        let mixed = mix((0 ..< (voiceProcessed ? 1 : channelCount)).map { channel in
             Array(UnsafeBufferPointer(start: source[channel], count: frames))
-        })
+        }, voiceProcessed: voiceProcessed)
         mono.frameLength = buffer.frameLength
         for (index, sample) in mixed.enumerated() {
             out[0][index] = sample
