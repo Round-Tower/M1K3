@@ -22,6 +22,8 @@ month's compute hours by the 15th). Merging to master builds nothing; cutting a 
 ```
 ./release_tag.py cut                                  # dry run: the tag it would push, and CI on that commit
 ./release_tag.py cut --confirm                        # Kev's call: tags origin/master (green CI) and pushes → a build starts
+                                                      # (the tag's day is UTC; an older, superseded master commit
+                                                      #  reads CI `cancelled` and needs --why)
 ./builds.py wait                                      # the newest release tag's build is VALID on Mac + iOS → N
 # install build N from TestFlight on this Mac, launch M1K3
 ./verify_build.py --build N                           # running app is N and answers MCP → stamps N

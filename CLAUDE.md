@@ -268,5 +268,5 @@ path: a deep link is required, and the event's UI draft submission (platform nul
 Review: Kev + claude-opus-5-5, 2026-10-14 — #605 lands: `submit` adopts the event's platform-less draft;
 the carry-forward keeps the UI fallback until an API run proves it. Confidence 0.7.
 Review: Kev + claude-opus-5-5, 2026-10-17 — Xcode Cloud builds only `release*` tags (`release_tag.py cut`):
-the compute hours ran out on per-merge archives. Router retrains move both heads. Confidence 0.85.
+the compute hours ran out on per-merge archives. Confidence 0.85.
 -->

@@ -12,7 +12,8 @@ before a VM started). Master merges are now free; a TestFlight build is a delibe
 The tag names the version, the day and the commit: `release-1.1.0-20261017-07b1cabe`. It is cut
 only on a commit that is on origin/master and whose GitHub `CI` run concluded success (`--why`
 overrides a red or unfinished CI, never "not on master"). A commit already carrying a release tag
-is not tagged again. After a push, `./builds.py wait` (default: the newest release tag) waits for
+ON ORIGIN is not tagged again (a failed push deletes its local tag). The version is read from
+project.yml at the tagged commit; the day is UTC. After a push, `./builds.py wait` (default: the newest release tag) waits for
 the build. Cutting a release is Kev's call; the dry run shows what would be pushed.
 
 Signed: Kev + claude-opus-5-5, 2026-10-17, Confidence 0.85. Prior: none (new file).
@@ -32,7 +33,7 @@ PREFIX = "release"
 # with the remote's ("would clobber existing tag", seen on 2026.09.11).
 RELEASE_TAGS = f"+refs/tags/{PREFIX}*:refs/tags/{PREFIX}*"
 HERE = Path(__file__).resolve().parent
-PROJECT_YML = HERE.parents[1] / "project.yml"
+PROJECT_YML = "macos/project.yml"  # read AT the tagged commit, never from this checkout
 
 # --------------------------------------------------------------------------- #
 # Pure (unit-pinned)
@@ -46,6 +47,21 @@ def tag_name(version: str, day: dt.date, sha: str) -> str:
 def marketing_version(project_yml: str) -> str | None:
     match = re.search(r'MARKETING_VERSION:\s*"?([0-9][0-9A-Za-z.\-]*)"?', project_yml)
     return match.group(1) if match else None
+
+
+def release_tags_in(ls_remote: str, sha: str) -> list[str]:
+    """The release tags in `git ls-remote --tags` output that point at `sha`. An annotated tag's
+    own id is not the commit: its `^{}` line is. A lightweight tag has none: its id is the commit."""
+    peeled: dict[str, str] = {}
+    direct: dict[str, str] = {}
+    for line in ls_remote.splitlines():
+        oid, _, ref = line.partition("\t")
+        name = ref.removeprefix("refs/tags/")
+        if name.endswith("^{}"):
+            peeled[name[:-3]] = oid
+        elif name:
+            direct[name] = oid
+    return sorted(name for name, oid in direct.items() if peeled.get(name, oid) == sha)
 
 
 def plan(on_master: bool, ci: str | None, existing: list[str], why: str | None) -> tuple[bool, int, str]:
@@ -68,11 +84,27 @@ def git(*args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["git", *args], cwd=HERE, capture_output=True, text=True, check=False)
 
 
+def remote_release_tags_at(sha: str) -> list[str]:
+    """What origin holds, not this clone: a tag whose push failed must not read as shipped."""
+    out = git("ls-remote", "--tags", "origin", f"refs/tags/{PREFIX}*")
+    return release_tags_in(out.stdout, sha)
+
+
 def ci_conclusion(sha: str) -> str | None:
-    out = subprocess.run(
-        ["gh", "run", "list", "--commit", sha, "--workflow", "ci.yml", "--json", "status,conclusion", "--limit", "1"],
-        cwd=HERE, capture_output=True, text=True, check=False,
-    )
+    # The master push run: a ff/rebase merge's PR run shares the sha. A superseded older master
+    # commit reads `cancelled` (ci.yml cancels in progress), so cutting one needs --why.
+    try:
+        out = subprocess.run(
+            ["gh", "run", "list", "--commit", sha, "--workflow", "ci.yml", "--event", "push",
+             "--branch", "master", "--json", "status,conclusion", "--limit", "1"],
+            cwd=HERE, capture_output=True, text=True, check=False,
+        )
+    except FileNotFoundError:
+        print("gh is not installed: CI can't be read", flush=True)
+        return None
+    if out.returncode != 0:
+        print(f"gh: {out.stderr.strip()}", flush=True)
+        return None
     try:
         runs = json.loads(out.stdout or "[]")
     except json.JSONDecodeError:
@@ -87,22 +119,24 @@ def cut(commit: str | None, why: str | None, confirm: bool) -> int:
     if git("fetch", "-q", "origin", "master", RELEASE_TAGS).returncode != 0:
         print("could not fetch origin", flush=True)
         return 2
-    sha = git("rev-parse", commit or "origin/master").stdout.strip()
-    if not sha:
+    resolved = git("rev-parse", "--verify", "--end-of-options", f"{commit or 'origin/master'}^{{commit}}")
+    sha = resolved.stdout.strip()
+    if resolved.returncode != 0 or not sha:
         print(f"no such commit: {commit}", flush=True)
         return 2
     on_master = git("merge-base", "--is-ancestor", sha, "origin/master").returncode == 0
-    existing = git("tag", "--points-at", sha, "--list", f"{PREFIX}*").stdout.split()
+    existing = remote_release_tags_at(sha)
     ci = ci_conclusion(sha)
     ok, code, reason = plan(on_master, ci, existing, why)
     if not ok:
         print(f"{sha[:8]}: {reason}", flush=True)
         return code
-    version = marketing_version(PROJECT_YML.read_text())
+    version = marketing_version(git("show", f"{sha}:{PROJECT_YML}").stdout)
     if not version:
-        print(f"no MARKETING_VERSION in {PROJECT_YML}", flush=True)
+        print(f"no MARKETING_VERSION in {PROJECT_YML} at {sha[:8]}", flush=True)
         return 2
-    tag = tag_name(version, dt.datetime.now(dt.UTC).date(), sha)
+    # The UTC day (near midnight in Ireland it can be the next or previous one).
+    tag = tag_name(version, dt.datetime.now(dt.timezone.utc).date(), sha)
     subject = git("log", "-1", "--format=%s", sha).stdout.strip()
     note = f"M1K3 {version} for TestFlight (Xcode Cloud Release)\n\n{subject}" + (f"\n\nCI override: {why}" if ci != "success" else "")
     print(f"{tag} → {sha[:8]} {subject}", flush=True)
@@ -110,12 +144,14 @@ def cut(commit: str | None, why: str | None, confirm: bool) -> int:
     if not confirm:
         print("dry run: pass --confirm to tag and push (this starts an Xcode Cloud build)", flush=True)
         return 0
-    if git("tag", "-a", tag, sha, "-m", note).returncode != 0:
-        print(f"could not create {tag}", flush=True)
+    made = git("tag", "-a", tag, sha, "-m", note)
+    if made.returncode != 0:
+        print(f"could not create {tag}: {made.stderr.strip()}", flush=True)
         return 2
     pushed = git("push", "origin", tag)
     if pushed.returncode != 0:
-        print(f"push failed: {pushed.stderr.strip()}", flush=True)
+        git("tag", "-d", tag)  # no local-only tag left behind to read as shipped next time
+        print(f"push failed, local tag removed: {pushed.stderr.strip()}", flush=True)
         return 2
     print(f"pushed {tag}; next: ./builds.py wait --commit {sha}", flush=True)
     return 0

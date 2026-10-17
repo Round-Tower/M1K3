@@ -29,7 +29,7 @@ import time
 from typing import Any
 
 from asc import APP_ID, call
-from release_tag import PREFIX, RELEASE_TAGS, git
+from release_tag import PREFIX, RELEASE_TAGS, git, remote_release_tags_at
 from submit import SHIPPING_PLATFORMS
 
 # --------------------------------------------------------------------------- #
@@ -104,18 +104,13 @@ def latest_release() -> tuple[str, str]:
     return tags[0], git("rev-list", "-n", "1", tags[0]).stdout.strip()
 
 
-def release_tags_at(commit: str) -> list[str]:
-    git("fetch", "-q", "origin", RELEASE_TAGS)
-    return git("tag", "--points-at", commit, "--list", f"{PREFIX}*").stdout.split()
-
-
 def run_wait(commit: str, timeout: int) -> int:
+    pid = product_id()
     # Xcode Cloud starts only on release tags: an untagged commit never gets a run.
-    if run_for_commit(recent_runs(product_id()), commit) is None and not release_tags_at(commit):
+    if run_for_commit(recent_runs(pid), commit) is None and not remote_release_tags_at(commit):
         print(f"commit {commit[:8]}: no release tag points at it, so Xcode Cloud will not build it."
               f" Cut one: ./release_tag.py cut --commit {commit} --confirm", flush=True)
         return 4
-    pid = product_id()
     deadline = time.monotonic() + timeout
     last = ""
     while True:

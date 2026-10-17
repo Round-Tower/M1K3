@@ -1,6 +1,7 @@
 # Xcode Cloud — Release Pipeline Runbook (macOS → TestFlight)
 
-How "merge to `master` → TestFlight, gated on a passing test run" is configured.
+How "a `release*` tag → TestFlight, gated on a passing test run" is configured (it was
+"merge to `master` → TestFlight" until the compute hours ran out on 2026-10-15; §3).
 This is the **build/sign/distribute** layer; the GitHub Actions `ci.yml` PR gate and
 the nightly Developer-ID DMG are separate (see *How it composes* at the end).
 
@@ -60,7 +61,7 @@ separate Developer-ID DMG path (`tools/release/release-macos.sh`).
 3. **Archive** — **Scheme:** `M1K3` · **Platform:** macOS · **Distribution:** *TestFlight (Internal) and App Store*.
 4. **Archive — iOS** (added 2026-09-02) — **Scheme:** `M1K3iOS` · **Platform:** iOS ·
    **Distribution:** *TestFlight (Internal) and App Store*. Same workflow, same
-   push, same build number: one master merge mints a Mac build AND an iPhone/iPad
+   tag, same build number: one release tag mints a Mac build AND an iPhone/iPad
    build into the one universal `app.m1k3` record. Added via the API (a `PATCH
    /v1/ciWorkflows/{id}` appending an `ARCHIVE` action with `platform: IOS`,
    `scheme: M1K3iOS`, `buildDistributionAudience: APP_STORE_ELIGIBLE`) — the UI
@@ -135,7 +136,7 @@ separate Developer-ID DMG path (`tools/release/release-macos.sh`).
 
 ### Build number
 - Enable **"Automatically manage build numbers"** (Xcode Cloud increments per build), so
-  every master merge produces a uniquely-numbered TestFlight build without a repo commit.
+  every release tag produces a uniquely-numbered TestFlight build without a repo commit.
   `MARKETING_VERSION` stays the single source of truth in `macos/project.yml`.
 
 ---

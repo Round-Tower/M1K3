@@ -53,3 +53,24 @@ def test_a_commit_that_already_has_a_release_tag_is_not_tagged_twice():
     ok, code, why = rt.plan(on_master=True, ci="success", existing=["release-1.1.0-20261017-07b1cabe"], why=None)
     assert (ok, code) == (False, 0)
     assert "release-1.1.0-20261017-07b1cabe" in why
+
+
+LS_REMOTE = """\
+1111111111111111111111111111111111111111\trefs/tags/release-1.1.0-20261017-07b1cabe
+07b1cabe36d1eb79a2ce629743a1e8c79765b398\trefs/tags/release-1.1.0-20261017-07b1cabe^{}
+3dc0d17f00000000000000000000000000000000\trefs/tags/release-lightweight
+"""
+
+
+def test_remote_tags_are_matched_on_the_commit_they_peel_to():
+    # An annotated tag's own object id is not the commit: only its ^{} line is.
+    assert rt.release_tags_in(LS_REMOTE, "07b1cabe36d1eb79a2ce629743a1e8c79765b398") == [
+        "release-1.1.0-20261017-07b1cabe"
+    ]
+    assert rt.release_tags_in(LS_REMOTE, "1111111111111111111111111111111111111111") == []
+    # A lightweight tag has no ^{} line: its id IS the commit.
+    assert rt.release_tags_in(LS_REMOTE, "3dc0d17f00000000000000000000000000000000") == ["release-lightweight"]
+
+
+def test_no_remote_tags_means_none_at_any_commit():
+    assert rt.release_tags_in("", "07b1cabe36d1eb79a2ce629743a1e8c79765b398") == []
