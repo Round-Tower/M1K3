@@ -76,6 +76,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — #629: the rolling distillation trigger keys on the replay window in
 //  effect (`replayTurns`, read per turn), not HistoryWindow's widest: Big's spoken cap replays 8 turns, so a spoken
 //  session's early turns sat ~12 messages neither replayed nor distilled. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — capture off means never: the watermark follows the transcript while
+//  memory capture is off, so the launch catch-up can't distill those turns later (a capture-off voice-rig run was).
+//  Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -1088,8 +1091,16 @@ public final class ChatSession {
     /// (112 review nit: the old comment claimed the latch was already down).
     /// Single-flight + watermark guards in `spawnDistillation` keep it from
     /// over-firing.
+    ///
+    /// With capture OFF the watermark follows the transcript instead: turns exchanged then are
+    /// never distilled, at the next launch's catch-up or on leaving the chat, whatever the setting
+    /// says by then (2026-10-17: a capture-off voice-rig run was distilled at the next normal launch).
     func scheduleRollingDistillationIfNeeded() {
-        guard let history, distillation != nil, autoCaptureEnabled() else { return }
+        guard let history, distillation != nil else { return }
+        guard autoCaptureEnabled() else {
+            try? history.setDistilledWatermark(id: activeConversationID, count: messages.count)
+            return
+        }
         let watermark = (try? history.distilledWatermark(id: activeConversationID)) ?? 0
         guard Self.shouldRollingDistill(
             messageCount: messages.count, watermark: watermark, replayTurns: replayTurns()
