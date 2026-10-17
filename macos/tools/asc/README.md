@@ -16,8 +16,13 @@ runs through `uv` with its own deps. No `--with` incantation, no Intel-Python tr
 
 Verify before you cancel: once a submission is cancelled, its place in the queue is gone.
 
+Xcode Cloud starts **only on `release*` tags** (2026-10-17: building every master push spent the
+month's compute hours by the 15th). Merging to master builds nothing; cutting a release does:
+
 ```
-./builds.py wait                                      # origin/master's build is VALID on Mac + iOS → N
+./release_tag.py cut                                  # dry run: the tag it would push, and CI on that commit
+./release_tag.py cut --confirm                        # Kev's call: tags origin/master (green CI) and pushes → a build starts
+./builds.py wait                                      # the newest release tag's build is VALID on Mac + iOS → N
 # install build N from TestFlight on this Mac, launch M1K3
 ./verify_build.py --build N                           # running app is N and answers MCP → stamps N
 ./submit.py cancel --platform ALL --confirm --wait    # only if a submission is live
@@ -51,7 +56,8 @@ bytes disagree: stop). Lil's 2026-10-08 pin (#517) took this route and passed on
 | `precheck.py` | The pre-submit checklist: build attached + VALID, screenshots per display type, availability (V2), price schedule, keyword trademarks, promo cap, support URL. | no |
 | `keywords.py scan` / `apply` | Trademark + cap scan of name, subtitle and keywords on every platform's newest version; `apply` PATCHes one localization. Keywords LOCK while in review. | apply only |
 | `submit.py status` / `submit` / `cancel` / `attach` | Review submissions per platform, or `--platform ALL` (Mac + iOS): create → add the newest version → `submitted:true`; a queued one is nothing to do; `cancel` is `canceled:true` (the queue position is the price), and `--wait` holds until the version is editable; `attach --build N` puts a VALID build with export compliance answered on an editable version and reads it back. `submit --confirm` refuses a build `verify_build.py` hasn't stamped, unless `--why`. | submit / cancel / attach + `--confirm` |
-| `builds.py wait` / `status` | Which Xcode Cloud run built a commit (default `origin/master`), then wait for its Mac + iOS builds to process VALID. A CANCELED run means a later run carries the commit. | no |
+| `release_tag.py cut` / `list` | Tags a commit on origin/master whose GitHub CI passed as `release-<version>-<yyyymmdd>-<sha8>` and pushes it: the only thing that starts an Xcode Cloud build. Dry run unless `--confirm`; refuses off-master commits (exit 3) and a red or unfinished CI (exit 4) unless `--why`; a commit already tagged is left alone. | `--confirm` only (a git tag) |
+| `builds.py wait` / `status` | Which Xcode Cloud run built a commit (default: the newest release tag's), then wait for its Mac + iOS builds to process VALID. A commit no release tag points at stops at once (exit 4) with the `cut` command. A CANCELED run means a later run carries the commit. | no |
 | `verify_build.py --build N` | The installed `/Applications/M1K3.app` is build N, it is running, and its MCP server answers `initialize` with instructions; stamps N for `submit`. Reads the MCP token in-process, never prints it. | a local stamp only |
 | `review_notes.py show` / `set` | App Review Information notes on every platform's newest version, checked against `fastlane/review_notes.txt`'s rule: both inbound listeners (MCP server, Brain at Home) must be named — the 2026-09-16 `network.server` rejection. `precheck.py` runs the same check. | set + `--confirm` |
 | `promo.py show` / `set` | Promotional text (170 chars) — the one field that goes live without a build. | set + `--confirm` |
@@ -75,6 +81,8 @@ only — the paste-ready text is `fastlane/FEATURING_NOMINATION.md`).
 Signed: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.85
 Format: MurphySig v0.4 (https://murphysig.dev/spec)
 Prior: none (new directory). The Lexy tools this ports are credited per file.
+Review: Kev + claude-opus-5-5, 2026-10-17 — `release_tag.py` and the runbook's first step: Xcode Cloud builds only
+`release*` tags now, and `builds.py wait` defaults to the newest one. Confidence 0.85.
 -->
 
 Tests: one `test_<tool>.py` per tool with pure logic to pin (`promo.py` has none — every function is a request; the global pre-commit hook's rule for new source files; the shared `test_asc_tools.py` was split on 2026-09-16). CI runs `pytest tools/asc`.

@@ -15,7 +15,7 @@ the nightly Developer-ID DMG are separate (see *How it composes* at the end).
 | Layer | Tool | Trigger | Job |
 |---|---|---|---|
 | PR gate | GitHub Actions `ci.yml` | every PR | `swift test` (macos-26) + Python smoke + Claude review — fast |
-| **Release** | **Xcode Cloud** | push to `master` | Analyze → **Test** (`M1K3.xcworkspace` / `M1K3-Tests`) → Archive → **TestFlight** (+ `swift test` belt-gate in `ci_post_clone`) |
+| **Release** | **Xcode Cloud** | a `release*` tag (`tools/asc/release_tag.py cut`) | Analyze → **Test** (`M1K3.xcworkspace` / `M1K3-Tests`) → Archive → **TestFlight** (+ `swift test` belt-gate in `ci_post_clone`) |
 | Nightly DMG | GitHub Actions cron | nightly | Developer-ID notarized `.dmg` → GitHub Release |
 
 Xcode Cloud manages signing natively (cloud signing via your ASC API key) — **no
@@ -48,10 +48,11 @@ separate Developer-ID DMG path (`tools/release/release-macos.sh`).
 - **macOS:** latest available image.
 
 ### Start Conditions
-- **Branch Changes** → **`master`** (i.e. on every merge/push to master).
-- *(Optional)* **Files and Folders → Custom:** skip docs-only churn. Suggested
-  "don't build" globs: `**/*.md`, `marketing/**`, `site/**`, `docs/**`,
-  `**/project-memory.md`. (Keeps a README merge from minting a TestFlight build.)
+- **Tag Changes** → tags beginning with **`release`**, auto-cancel on (since 2026-10-17).
+  It was **Branch Changes → `master`** until then: with several merges a day each archiving Mac
+  and iOS, the month's compute hours ran out by the 15th and every later run was cancelled
+  before a VM started. Cut a tag with `tools/asc/release_tag.py cut --confirm`: it tags only a
+  commit on master whose GitHub CI passed.
 
 ### Actions — Analyze → Test → Archive
 1. **Analyze** — **Scheme:** `M1K3` · **Platform:** macOS.
@@ -192,7 +193,7 @@ fi
 
 ## 5. Verification & rollback
 
-- **First run:** merge a trivial change to `master` → watch the Xcode Cloud build: Test ✅ →
+- **First run:** `tools/asc/release_tag.py cut --confirm` → watch the Xcode Cloud build: Test ✅ →
   Archive ✅ → appears in TestFlight → installable by the internal group.
 - **Prove the gate:** push a deliberately-failing test on a throwaway branch merged to a
   scratch base → confirm Archive/TestFlight **do not** run.
@@ -204,7 +205,7 @@ fi
 ## 6. How it composes
 
 - **PR** → GitHub Actions `ci.yml` (fast gate; merge-blocker).
-- **Merge to `master`** → Xcode Cloud `Release` (Analyze → native **Test** via `M1K3.xcworkspace`/`M1K3-Tests` → Archive → TestFlight; `swift test` belt-gate in `ci_post_clone`; optional MLX smoke per §4).
+- **Merge to `master`** → nothing on Xcode Cloud. **`release_tag.py cut --confirm`** → Xcode Cloud `Release` (Analyze → native **Test** via `M1K3.xcworkspace`/`M1K3-Tests` → Archive → TestFlight; `swift test` belt-gate in `ci_post_clone`; optional MLX smoke per §4).
 - **Nightly** → GitHub Actions cron → Developer-ID notarized `.dmg` → rolling `nightly` GitHub
   Release (the off-store / Homebrew-cask path; separate signing creds, not this pipeline).
 - **Metadata** → `fastlane mac metadata` (`deliver`) — text/screenshots only, run when copy changes.
@@ -220,3 +221,7 @@ package. Confidence isn't higher because the ASC-side wiring — point the Test 
 workspace/scheme — is a manual one-time step done in App Store Connect, not the repo, and the
 first real Release run is the proof. Prior: Kev + claude-opus-4-8, 2026-06-19 (the swift-test
 post-clone gate, now kept as the belt-and-suspenders layer).*
+
+*Review: Kev + claude-opus-5-5, 2026-10-17. The Release workflow starts on `release*` tags, not master pushes:
+the month's compute hours ran out by the 15th with every merge archiving Mac + iOS. `tools/asc/release_tag.py`
+cuts the tag on a green master commit. Confidence 0.85.*

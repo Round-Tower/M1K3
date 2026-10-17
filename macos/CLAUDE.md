@@ -27,10 +27,11 @@ xcodebuild -scheme M1K3 -destination 'platform=macOS' -skipPackagePluginValidati
   `swift test --parallel` gates every compilable PR; the App-shell and iOS+visionOS
   xcodebuild jobs run on a PR only when the diff touches what they compile, and on every
   Swift-touching push to master/develop (a docs- or tools-only push skips them). Python under `tools/` is tested by the guards job, not the
-  Swift job. **Pushing to `master` starts Xcode Cloud → TestFlight** — the one `Release`
-  workflow archives `M1K3` + `M1K3iOS` into the single `app.m1k3` store record, so a master
-  push is a release action; `tools/ci/check_store_targets.py` pins the bundle-ID /
-  privacy-manifest / Info.plist invariants it depends on.
+  Swift job. **A `release*` tag starts Xcode Cloud → TestFlight** (`tools/asc/release_tag.py cut`;
+  a master push no longer does, since 2026-10-17's compute-hours outage) — the one `Release`
+  workflow archives `M1K3` + `M1K3iOS` into the single `app.m1k3` store record;
+  `tools/ci/check_store_targets.py` pins the bundle-ID / privacy-manifest / Info.plist
+  invariants it depends on.
 - **No short wall-clock bounds in tests.** Swift Testing starts every test at once; on the
   3-core runner wall time is mostly pool wait. Separate the two outcomes by ≥ 30 s or
   assert which side acted (`tools/ci/check_wall_clock_bounds.py` enforces it).
@@ -121,3 +122,5 @@ requires eight checks now, and the gate reads them live (#558); "no required sta
 <!-- Review: Kev + claude-opus-5-5, 2026-10-13, Confidence 0.8 — Build & test: `--disable-xctest` (no test
 imports XCTest) and tools/dev/tdd.sh, the one-target inner loop; `swift test --filter` rebuilt every
 dependent test bundle and ran an empty XCTest pass. -->
+<!-- Review: Kev + claude-opus-5-5, 2026-10-17, Confidence 0.85 — CI: a `release*` tag starts Xcode Cloud, not a
+master push (the compute hours ran out on per-merge archives); `tools/asc/release_tag.py cut` cuts one. -->

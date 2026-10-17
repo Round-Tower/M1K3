@@ -5,9 +5,9 @@
 # ///
 """Which Xcode Cloud build carries a commit, and is it ready to ship.
 
-  builds.py wait [--commit SHA] [--timeout 3600]   wait for the run that built SHA (default:
-                                                   origin/master), then for its Mac + iOS builds
-                                                   to process VALID; prints the build number
+  builds.py wait [--commit SHA] [--timeout 3600]   wait for the run that built SHA (default: the
+                                                   newest release tag's commit), then for its Mac +
+                                                   iOS builds to process VALID; prints the build number
   builds.py status --build N                       processing state per platform
 
 Why: on 2026-10-04/05 this loop was hand-written four times (448, 450, 452, 453). Two merges
@@ -16,17 +16,20 @@ canceled run for your commit means "look at the next one", not "failed". Read-on
 
 Signed: Kev + claude-opus-5-5, 2026-10-05, Confidence 0.85, Prior: Unknown. The pure half
 is pinned in test_builds.py; the API shapes are the ones the 2026-10-05 release polled live.
+Review: Kev + claude-opus-5-5, 2026-10-17 — Xcode Cloud starts only on `release*` tags now (the
+month's compute ran out building every master push). `wait` defaults to the newest release tag,
+and a commit no release tag points at stops at once with the command that cuts one, instead of
+waiting an hour for a run that will never start. Confidence 0.85.
 """
 from __future__ import annotations
 
 import argparse
-import subprocess
 import sys
 import time
-from pathlib import Path
 from typing import Any
 
 from asc import APP_ID, call
+from release_tag import PREFIX, RELEASE_TAGS, git
 from submit import SHIPPING_PLATFORMS
 
 # --------------------------------------------------------------------------- #
@@ -92,17 +95,26 @@ def build_states(number: str, platforms: tuple[str, ...]) -> dict[str, str]:
     return states
 
 
-def master_head() -> str:
-    """origin/master as it is on GitHub now: a stale local ref would wait on an older build."""
-    here = Path(__file__).resolve().parent
-    fetched = subprocess.run(["git", "fetch", "-q", "origin", "master"], cwd=here, check=False).returncode == 0
-    if not fetched:
-        return ""  # main() then asks for --commit rather than trust a stale ref
-    out = subprocess.run(["git", "rev-parse", "origin/master"], cwd=here, capture_output=True, text=True, check=False)
-    return out.stdout.strip()
+def latest_release() -> tuple[str, str]:
+    """(tag, commit) of the newest release tag on origin, or ("", "") when there is none."""
+    git("fetch", "-q", "origin", RELEASE_TAGS)
+    tags = git("tag", "--list", f"{PREFIX}*", "--sort=-creatordate").stdout.split()
+    if not tags:
+        return "", ""
+    return tags[0], git("rev-list", "-n", "1", tags[0]).stdout.strip()
+
+
+def release_tags_at(commit: str) -> list[str]:
+    git("fetch", "-q", "origin", RELEASE_TAGS)
+    return git("tag", "--points-at", commit, "--list", f"{PREFIX}*").stdout.split()
 
 
 def run_wait(commit: str, timeout: int) -> int:
+    # Xcode Cloud starts only on release tags: an untagged commit never gets a run.
+    if run_for_commit(recent_runs(product_id()), commit) is None and not release_tags_at(commit):
+        print(f"commit {commit[:8]}: no release tag points at it, so Xcode Cloud will not build it."
+              f" Cut one: ./release_tag.py cut --commit {commit} --confirm", flush=True)
+        return 4
     pid = product_id()
     deadline = time.monotonic() + timeout
     last = ""
@@ -134,7 +146,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
     w = sub.add_parser("wait")
-    w.add_argument("--commit", default=None, help="default: origin/master")
+    w.add_argument("--commit", default=None, help="default: the newest release tag's commit")
     w.add_argument("--timeout", type=int, default=3600)
     s = sub.add_parser("status")
     s.add_argument("--build", required=True)
@@ -143,10 +155,13 @@ def main() -> int:
         for platform, state in build_states(args.build, SHIPPING_PLATFORMS).items():
             print(f"{platform} build {args.build}: {state}")
         return 0
-    commit = args.commit or master_head()
+    tag, tagged = latest_release() if not args.commit else ("", "")
+    commit = args.commit or tagged
     if not commit:
-        print("could not fetch origin/master; pass --commit SHA", flush=True)
+        print("no release tag yet: cut one with ./release_tag.py cut --confirm", flush=True)
         return 4
+    if tag:
+        print(f"waiting on {tag}", flush=True)
     return run_wait(commit, args.timeout)
 
 
