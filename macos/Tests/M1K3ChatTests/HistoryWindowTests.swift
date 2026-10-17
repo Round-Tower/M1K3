@@ -7,6 +7,8 @@
 //  prefill, which fights the TTFT work, so the window must stay small.
 //
 //  Signed: Kev + claude-fable-5, 2026-06-10, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — the earlier-user trace (#626): user turns the window evicts
+//  leave their own words above the replay, within `earlierUserChars`; zero keeps every caller byte-identical.
 //
 
 import Foundation
@@ -135,5 +137,113 @@ struct HistoryWindowTests {
     @Test("whitespace-only turns are skipped")
     func skipsEmptyTurns() {
         #expect(HistoryWindow.render([ChatTurn(role: .assistant, text: "  \n ")]) == nil)
+    }
+
+    // MARK: - The earlier-user trace (#626)
+
+    private static let fact = "My sister Rachel is coming to stay, and she's allergic to cats."
+    /// Six exchanges; the user's second turn holds the fact a later follow-up asks for.
+    private let chat: [ChatTurn] = (1 ... 6).flatMap { n in
+        [
+            ChatTurn(role: .user, text: n == 2 ? Self.fact : "Question \(n)?"),
+            ChatTurn(role: .assistant, text: "Answer \(n). " + String(repeating: "a", count: 300)),
+        ]
+    }
+
+    private func budget(earlier: Int) -> HistoryWindow.Budget {
+        HistoryWindow.Budget(totalChars: 4000, perTurnChars: 1500, maxTurns: 4, earlierUserChars: earlier)
+    }
+
+    /// The trace: everything from the header up to the first kept USER line.
+    private func trace(_ text: String) -> String {
+        let kept = text.range(of: "\nUSER: ")?.lowerBound ?? text.endIndex
+        return String(text[..<kept])
+    }
+
+    @Test("with no earlier allowance an evicted turn leaves nothing (today's window, byte for byte)")
+    func earlierOffIsToday() {
+        let off = HistoryWindow.render(chat, budget: budget(earlier: 0)) ?? ""
+        let threeField = HistoryWindow.Budget(totalChars: 4000, perTurnChars: 1500, maxTurns: 4)
+        let legacy = HistoryWindow.render(chat, budget: threeField) ?? ""
+        #expect(off == legacy)
+        #expect(!off.contains("Rachel"))
+        #expect(!off.contains(HistoryWindow.earlierLabel))
+    }
+
+    @Test("evicted user turns open the replay in their own words, oldest first; evicted answers leave nothing")
+    func evictedUserTurnsLeaveATrace() {
+        let text = HistoryWindow.render(chat, budget: budget(earlier: 1000)) ?? ""
+        let earlier = trace(text)
+        #expect(text.hasPrefix("CONVERSATION SO FAR"))
+        #expect(earlier.contains(HistoryWindow.earlierLabel + "My sister Rachel is coming to stay"))
+        #expect(earlier.contains(HistoryWindow.earlierElision))
+        // maxTurns 4 keeps exchanges 5 and 6, so exchanges 1–4 are evicted: their user lines are traced in order…
+        let order = ["Question 1?", "Rachel", "Question 4?"].map { earlier.range(of: $0)?.lowerBound }
+        #expect(order.allSatisfy { $0 != nil })
+        let found = order.compactMap(\.self)
+        #expect(found == found.sorted())
+        // …none of the evicted answers come with them, and the kept window is today's.
+        #expect(!earlier.contains("Answer"))
+        let legacy = HistoryWindow.render(chat, budget: budget(earlier: 0)) ?? ""
+        #expect(text.hasSuffix(String(legacy.dropFirst(HistoryWindow.header.count))))
+    }
+
+    @Test("turns cut by the turn ceiling (not just the char budget) reach the trace")
+    func turnCeilingEvictionsAreTraced() {
+        let long = (1 ... 10).flatMap { n in
+            [ChatTurn(role: .user, text: "Fact \(n)."), ChatTurn(role: .assistant, text: "ok")]
+        }
+        let ceiling = HistoryWindow.Budget(totalChars: 8000, perTurnChars: 1500, maxTurns: 8, earlierUserChars: 600)
+        let earlier = trace(HistoryWindow.render(long, budget: ceiling) ?? "")
+        #expect(earlier.contains("Fact 1."))
+        #expect(earlier.contains("Fact 6."))
+        #expect(!earlier.contains("Fact 7."))
+    }
+
+    @Test("the trace spends at most earlierUserChars, overhead included, dropping the OLDEST user turns first")
+    func earlierHonoursItsBudget() {
+        let tight = budget(earlier: 90)
+        let text = HistoryWindow.render(chat, budget: tight) ?? ""
+        let earlier = trace(text).dropFirst(HistoryWindow.header.count)
+        #expect(earlier.count <= tight.earlierUserChars)
+        #expect(earlier.contains("Question 4?"))
+        #expect(!earlier.contains("Question 1?"))
+    }
+
+    @Test("a long evicted user turn is cut to the trace's per-line cap")
+    func earlierLinesAreCapped() {
+        let ramble = ChatTurn(role: .user, text: String(repeating: "w", count: 2000))
+        let long = [ramble, ChatTurn(role: .assistant, text: "ok")] + chat.suffix(4)
+        let text = HistoryWindow.render(long, budget: budget(earlier: 3000)) ?? ""
+        #expect(text.contains(HistoryWindow.earlierLabel + "www"))
+        #expect(!text.contains(String(repeating: "w", count: HistoryWindow.earlierPerLineChars + 1)))
+    }
+
+    @Test("nothing evicted, no trace")
+    func noEvictionNoTrace() {
+        let text = HistoryWindow.render(Array(chat.suffix(4)), budget: budget(earlier: 1000)) ?? ""
+        #expect(!text.contains(HistoryWindow.earlierLabel))
+        #expect(!text.contains(HistoryWindow.earlierElision))
+    }
+
+    @Test("the whole block stays within totalChars + earlierUserChars (the rotating-KV bound, extended)")
+    func earlierKeepsTheHardBound() {
+        let turns = (1 ... 40).flatMap { _ in
+            [
+                ChatTurn(role: .user, text: String(repeating: "u", count: 900)),
+                ChatTurn(role: .assistant, text: String(repeating: "q", count: 4000)),
+            ]
+        }
+        let bound = HistoryWindow.Budget(totalChars: 3000, perTurnChars: 2900, maxTurns: 16, earlierUserChars: 1000)
+        let text = HistoryWindow.render(turns, budget: bound) ?? ""
+        #expect(text.contains(HistoryWindow.earlierLabel))
+        #expect(text.count <= bound.totalChars + bound.earlierUserChars)
+    }
+
+    @Test("reserving room for images keeps the earlier allowance")
+    func imagesKeepTheTrace() {
+        let budget = budget(earlier: 600).reservingImages(1)
+        #expect(budget.earlierUserChars == 600)
+        #expect(budget.perTurnChars <= budget.totalChars)
     }
 }

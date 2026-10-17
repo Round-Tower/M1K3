@@ -74,3 +74,16 @@ def test_a_tools_verdict_without_a_dispatch_is_the_agent_loop():
     rows = vrs.turns(lines)
     assert [r.route for r in rows] == ["agent"]
     assert rows[0].history_chars is None
+
+
+def test_counts_the_earlier_trace_when_the_anatomy_line_has_one():
+    lines = [
+        "19:30:00.000 Df M1K3[1:1] [app.m1k3:stt] voice endpoint: complete thought · idle 2.6s · required 2.5s",
+        "19:30:00.300 Df M1K3[1:2] [app.m1k3:responder] tool router: chat p=0.050",
+        "19:30:00.400 Df M1K3[1:2] [app.m1k3:responder] prompt anatomy: 6000c · history 4100c in 8 turns · rest 1900c · earlier 4",
+        "19:30:12.000 Df M1K3[1:1] [app.m1k3:stt] voice turn: first sentence 9000ms · synth 900ms · first audio 9900ms · answer 20000ms · 3 sentences",
+    ]
+    rows = vrs.turns(lines)
+    assert rows[0].history_turns == 8
+    assert rows[0].earlier_lines == 4
+    assert "4100c/8t+4e" in vrs.table(rows)

@@ -46,6 +46,9 @@
 //  about four exchanges. The voice rig measured the replay at ~70% of a steady-state spoken prompt (9–10 s of
 //  prefill before the first word). Kev's call after the measurement: cap it, Big only, argv kill switch.
 //  Open: does a follow-up four exchanges back still land? Re-run the rig's history script with the cap.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — the Open answered no (#626: a once-said fact was evicted and Big
+//  confabulated). Kev picked the proper fix: `spokenBigBudget` carries a 600-char earlier-user trace
+//  (HistoryWindow), threaded through the spoken merge inside the typed window. Confidence 0.7 until the probe.
 
 import Foundation
 import M1K3Inference
@@ -217,7 +220,9 @@ public enum HistoryBudgetPolicy {
         return HistoryWindow.Budget(
             totalChars: total,
             perTurnChars: min(typed.perTurnChars, spokenBigBudget.perTurnChars, total),
-            maxTurns: min(typed.maxTurns, spokenBigBudget.maxTurns)
+            maxTurns: min(typed.maxTurns, spokenBigBudget.maxTurns),
+            // The trace rides inside what the typed replay was allowed (the rotating-window clamp).
+            earlierUserChars: min(spokenBigBudget.earlierUserChars, max(0, typed.totalChars - total))
         )
     }
 
@@ -236,8 +241,12 @@ public enum HistoryBudgetPolicy {
     ///
     /// "Spoken" is voice mode being ON, the flag the spoken grounding budget reads too: a turn
     /// typed while voice mode is on gets the cap as well.
+    ///
+    /// Evicted USER turns leave a trace (`earlierUserChars`, #626): with the cap alone, "my sister is
+    /// coming" said once at turn 2 was gone by turn 8 and Big confabulated an answer. 600 chars is
+    /// about 170 tokens, ~0.8 s of the ~3.8 s the cap saves, and holds 5–8 spoken user lines.
     public static let spokenBigBudget = HistoryWindow.Budget(
-        totalChars: 4400, perTurnChars: HistoryWindow.maxCharsPerTurn, maxTurns: 8
+        totalChars: 4400, perTurnChars: HistoryWindow.maxCharsPerTurn, maxTurns: 8, earlierUserChars: 600
     )
 
     /// The argv kill switch for `spokenBigBudget` (`M1K3 -spokenHistoryCap NO`), read the way

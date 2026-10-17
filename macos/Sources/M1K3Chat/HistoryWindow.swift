@@ -21,6 +21,12 @@
 //  The 6×400 window was far more conservative than the model or Mac needs and
 //  mangled M1K3's own answers; budget-governed windowing gives real multi-turn
 //  headroom while keeping prefill bounded. Tune from the TTFT logs at ⌘R.
+//  Review: Kev + claude-opus-5-5, 2026-10-17, Confidence 0.7 — the earlier-user trace (#626). With Big's spoken
+//  cap the window evicts a fact the user said once (turn 2's "my sister is coming"), and the follow-up six
+//  exchanges on got a confabulated answer. A budget with `earlierUserChars` now opens the replay with the
+//  evicted USER turns in their own words (answers dropped: they are long and re-derivable), newest-first
+//  within that allowance, overhead counted. Zero, the default, renders today's block byte for byte.
+//  Open: the recall probe on the dispatch route (5 runs), and that gemma doesn't re-answer an earlier question.
 //
 
 import Foundation
@@ -62,11 +68,16 @@ public enum HistoryWindow {
         public var perTurnChars: Int
         /// Hard ceiling on turn count (caps a long run of tiny turns).
         public var maxTurns: Int
+        /// Chars for the earlier-user trace: the user's own words from the turns the window
+        /// evicted, above the kept turns. Zero (the default) renders no trace. Charged on TOP of
+        /// `totalChars`, so a caller with a hard bound budgets the sum.
+        public var earlierUserChars: Int
 
-        public init(totalChars: Int, perTurnChars: Int, maxTurns: Int) {
+        public init(totalChars: Int, perTurnChars: Int, maxTurns: Int, earlierUserChars: Int = 0) {
             self.totalChars = totalChars
             self.perTurnChars = perTurnChars
             self.maxTurns = maxTurns
+            self.earlierUserChars = earlierUserChars
         }
 
         /// Today's conservative shipped window — the no-opt-in default.
@@ -88,7 +99,8 @@ public enum HistoryWindow {
             return Budget(
                 totalChars: total,
                 perTurnChars: min(perTurnChars, total),
-                maxTurns: maxTurns
+                maxTurns: maxTurns,
+                earlierUserChars: earlierUserChars
             )
         }
     }
@@ -105,14 +117,15 @@ public enum HistoryWindow {
     /// own overhead (6-char "USER: "/"M1K3: " label + the truncation ellipsis).
     /// `HistoryBudgetPolicy`'s budgets clear the ~59-char total by thousands,
     /// making the block provably ≤ `totalChars` at every wired call site.
+    ///
+    /// With `earlierUserChars` > 0 the block opens with the earlier-user trace: see `earlierTrace`.
     static func render(_ turns: [ChatTurn], budget: Budget = .default) -> String? {
-        let usable = turns
+        let all = turns
             .map { ChatTurn(role: $0.role, text: $0.text.trimmingCharacters(in: .whitespacesAndNewlines)) }
             .filter { !$0.text.isEmpty }
-            .suffix(budget.maxTurns)
+        let usable = all.suffix(budget.maxTurns)
         guard !usable.isEmpty else { return nil }
 
-        let header = "CONVERSATION SO FAR (context for the new question):\n"
         var kept: [String] = []
         // Seed with the header so `total` tracks the REAL rendered size — the
         // stated invariant used to omit header + separators (~67 chars of
@@ -130,7 +143,39 @@ public enum HistoryWindow {
         }
         guard !kept.isEmpty else { return nil }
 
-        return header + kept.reversed().joined(separator: "\n")
+        // Everything older than the kept turns, whether the char budget or the turn ceiling cut it.
+        let trace = earlierTrace(all.dropLast(kept.count), chars: budget.earlierUserChars)
+        return header + (trace.map { $0 + "\n" } ?? "") + kept.reversed().joined(separator: "\n")
+    }
+
+    static let header = "CONVERSATION SO FAR (context for the new question):\n"
+    /// Marks a traced line: the user's words from a turn the window no longer replays in full.
+    static let earlierLabel = "USER (earlier): "
+    /// Closes the trace, so the model knows the replies are missing on purpose.
+    static let earlierElision = "[M1K3's replies to those earlier lines are left out.]"
+    /// Per-line cap in the trace: long enough for a spoken ramble, short enough that one can't eat it.
+    static let earlierPerLineChars = 240
+
+    /// The user's own words from the evicted turns, newest-first until `chars` is spent, rendered
+    /// oldest-first and closed by `earlierElision`. Every char of it (labels, joiners, the elision
+    /// and the newline before the kept turns) is charged to `chars`, so the whole block stays within
+    /// `totalChars + earlierUserChars`. Nil when nothing was evicted or nothing fits.
+    ///
+    /// User turns only: they are short and they carry what the user told M1K3 ("my sister is
+    /// coming"). M1K3's answers are ~600 chars each when spoken and can be said again.
+    private static func earlierTrace(_ evicted: some Collection<ChatTurn>, chars: Int) -> String? {
+        let overhead = earlierElision.count + 2 // its own joiner + the newline before the kept turns
+        guard chars > overhead else { return nil }
+        var lines: [String] = []
+        var spent = overhead
+        for turn in evicted.reversed() where turn.role == .user {
+            let line = earlierLabel + truncate(turn.text, max: earlierPerLineChars)
+            guard spent + line.count + 1 <= chars else { break }
+            lines.append(line)
+            spent += line.count + 1
+        }
+        guard !lines.isEmpty else { return nil }
+        return lines.reversed().joined(separator: "\n") + "\n" + earlierElision
     }
 
     private static func truncate(_ text: String, max: Int) -> String {

@@ -17,6 +17,8 @@
 //
 //  Review: Kev + claude-opus-5-5, 2026-10-16, Confidence 0.8 — the spoken cap: Big's voice replay holds about four
 //  exchanges, tightens only, leaves the other tiers alone, and has an argv kill switch.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — the spoken budget carries the earlier-user trace (#626) and still fits
+//  inside the typed window.
 
 @testable import M1K3Chat
 import M1K3Inference
@@ -307,6 +309,24 @@ struct HistoryBudgetPolicyTests {
         // The 2026-10-16 rig run: eight turns of Big's spoken answers measured 4,186 chars.
         #expect(spoken.totalChars >= 4186)
         #expect(spoken.perTurnChars <= spoken.totalChars)
+    }
+
+    @Test("a spoken turn on Big traces evicted user turns, and the trace fits inside the typed window")
+    func spokenBigTracesEarlierTurns() {
+        let typed = live(.big, spoken: false)
+        let spoken = live(.big, spoken: true)
+        #expect(spoken.earlierUserChars == HistoryBudgetPolicy.spokenBigBudget.earlierUserChars)
+        #expect(spoken.earlierUserChars > 0)
+        // The rotating-window clamp: the trace rides inside what the typed replay was allowed.
+        #expect(spoken.totalChars + spoken.earlierUserChars <= typed.totalChars)
+    }
+
+    @Test("no trace on typed turns or other tiers")
+    func traceIsSpokenBigOnly() {
+        #expect(live(.big, spoken: false).earlierUserChars == 0)
+        for tier: BrainTier? in [.lil, .mini, .pocket, nil] {
+            #expect(live(tier, spoken: true).earlierUserChars == 0)
+        }
     }
 
     @Test("an image on a spoken Big turn still keeps the per-turn cap inside the total")
