@@ -175,6 +175,9 @@
 //  between two reads).
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — the anatomy line counts the earlier-user trace (` · earlier N`, #626),
 //  so the voice rig can see it on a live turn without logging any text.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — #622: with history, a tools verdict on a turn that points back at
+//  this chat (`ToolNeedRouter.pointsBackInChat`) answers from the replay, logged "(points back in this chat)";
+//  a web read on an "open the website" ask becomes the action pick (`ToolDispatch.openCorrected`). Confidence 0.75.
 
 import Foundation
 import M1K3Agent
@@ -514,10 +517,23 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // palette and the agent loop for one streamed generation. Images always
         // take the agent turn, which is where the vision path lives.
         let plainRoute = images.isEmpty && !tools.isEmpty ? plainRouteProvider?() : nil
-        let decision = plainRoute.map { $0.decide(question) }
+        let gate = plainRoute.map { $0.decide(question) }
+        // #622: a turn about what was said in THIS chat is the replay's to answer. The gate can't
+        // tell "earlier" here from "earlier, another day", and a tool's output put another chat's
+        // facts in the answer. Only with history: on a fresh chat there is nothing to point back at.
+        let pointsBack = gate?.verdict == .tools && !history.isEmpty
+            && (gate?.probability ?? 1) < ToolNeedRouter.pointsBackCeiling
+            && ToolNeedRouter.pointsBackInChat(question)
+        let decision = pointsBack
+            ? gate.map { ToolNeedRouter.Decision(verdict: .chat, probability: $0.probability) }
+            : gate
         if let decision {
             let score = decision.probability.map { String(format: "%.3f", $0) } ?? "none"
-            Self.log.notice("tool router: \(decision.verdict == .chat ? "chat" : "tools", privacy: .public) p=\(score, privacy: .public)")
+            let verdict = decision.verdict == .chat ? "chat" : "tools"
+            let why = pointsBack ? " (points back in this chat)" : ""
+            Self.log.notice(
+                "tool router: \(verdict, privacy: .public) p=\(score, privacy: .public)\(why, privacy: .public)"
+            )
         }
         let routeInstructions = plainRoute?.instructions
         let routesPlain = decision?.verdict == .chat
@@ -816,7 +832,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             return .agent(tools)
         }
         // A reference lookup about now goes to the web (2026-10-10: "this year" picked lookup_fact).
-        let pick = ToolDispatch.recencyCorrected(picked, palette: tools, question: question)
+        // An "open the website" ask read the page aloud (#622): opening is an action.
+        let pick = ToolDispatch.openCorrected(
+            ToolDispatch.recencyCorrected(picked, palette: tools, question: question), question: question
+        )
         if pick.tool == ToolPick.noTool {
             Self.log.notice("tool dispatch: none — a plain turn answers")
             return await plain()

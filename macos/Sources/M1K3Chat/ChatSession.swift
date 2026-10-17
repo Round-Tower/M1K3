@@ -73,6 +73,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-13 — `loadAnswerRatings()` (one read off the main actor: count + eval-
 //  fixture JSONL) and `clearAnswerRatings()`, for the phone's Settings export and Clear (Kev is rating answers on
 //  iOS). Read from the store, so it spans every conversation. Confidence 0.9 (PhoneAnswerActionsTests).
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — #629: the rolling distillation trigger keys on the replay window in
+//  effect (`replayTurns`, read per turn), not HistoryWindow's widest: Big's spoken cap replays 8 turns, so a spoken
+//  session's early turns sat ~12 messages neither replayed nor distilled. Confidence 0.8.
 
 import Foundation
 import M1K3Inference
@@ -346,6 +349,9 @@ public final class ChatSession {
     /// Read fresh at every trigger — the Settings toggle applies immediately
     /// (the thinkingModeProvider pattern).
     let autoCaptureEnabled: @Sendable () -> Bool
+    /// The turns the live replay keeps right now (`HistoryWindow.Budget.maxTurns`, read per turn):
+    /// the rolling trigger keys on it, so a narrower window (Big's spoken cap, 8) distills sooner.
+    let replayTurns: @Sendable () -> Int
     /// Resolves the resident brain's display name at answer-finalization, so
     /// each answer is STAMPED with the brain that produced it (feedback
     /// traceability). MainActor-isolated (ChatSession is @MainActor), so it
@@ -378,12 +384,17 @@ public final class ChatSession {
     /// exit/launch path; above it, a long live session's early turns become
     /// retrievable facts shortly after they fall out of context — closing the
     /// mid-session amnesia gap the wider window alone can't.
-    nonisolated static let rollingDistillBacklog = HistoryWindow.maxTurns + 4
+    /// The backlog at the WIDEST window; the live trigger keys on `replayTurns() + rollingDistillBatch` (#629).
+    nonisolated static let rollingDistillBacklog = HistoryWindow.maxTurns + rollingDistillBatch
+    /// The small batch past the window, so it fires every few exchanges rather than every turn.
+    nonisolated static let rollingDistillBatch = 4
 
     /// Pure policy (so it's TDD'd without the async machinery): is the
     /// undistilled backlog large enough to distill now?
-    nonisolated static func shouldRollingDistill(messageCount: Int, watermark: Int) -> Bool {
-        messageCount - watermark >= rollingDistillBacklog
+    nonisolated static func shouldRollingDistill(
+        messageCount: Int, watermark: Int, replayTurns: Int = HistoryWindow.maxTurns
+    ) -> Bool {
+        messageCount - watermark >= replayTurns + rollingDistillBatch
     }
 
     public init(
@@ -391,13 +402,15 @@ public final class ChatSession {
         history: (any ChatHistoryPersisting)? = nil,
         titler: (any ConversationTitling)? = nil,
         distillation: MemoryDistillationCoordinator? = nil,
-        autoCaptureEnabled: @escaping @Sendable () -> Bool = { true }
+        autoCaptureEnabled: @escaping @Sendable () -> Bool = { true },
+        replayTurns: @escaping @Sendable () -> Int = { HistoryWindow.Budget.default.maxTurns }
     ) {
         self.responder = responder
         self.history = history
         self.titler = titler
         self.distillation = distillation
         self.autoCaptureEnabled = autoCaptureEnabled
+        self.replayTurns = replayTurns
         // Relaunch restores the most recent conversation — the same feel the
         // single-transcript file gave, now one of many.
         if let history,
@@ -1078,7 +1091,9 @@ public final class ChatSession {
     func scheduleRollingDistillationIfNeeded() {
         guard let history, distillation != nil, autoCaptureEnabled() else { return }
         let watermark = (try? history.distilledWatermark(id: activeConversationID)) ?? 0
-        guard Self.shouldRollingDistill(messageCount: messages.count, watermark: watermark) else { return }
+        guard Self.shouldRollingDistill(
+            messageCount: messages.count, watermark: watermark, replayTurns: replayTurns()
+        ) else { return }
         spawnDistillation()
     }
 

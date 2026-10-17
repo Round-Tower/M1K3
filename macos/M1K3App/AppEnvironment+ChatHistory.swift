@@ -38,6 +38,8 @@
 //  synchronously in onAppear). Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-10-16 — the history provider passes `spoken` (voice mode on, argv kill switch
 //  off): Big's voice replay holds about four exchanges (`HistoryBudgetPolicy.spokenBigBudget`). Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — `liveHistoryBudget()`: one home for the replay window, read by the
+//  responder and by ChatSession's rolling distillation trigger (#629). Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -483,27 +485,8 @@ extension AppEnvironment {
                 let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
                 return BrainTier(persisted: raw)?.prefersFastThinking ?? false
             },
-            historyBudgetProvider: {
-                // Brain-aware long context: a wide conversation replay on the
-                // dense-Qwen lil (~32K window), a hard clamp on gemma-4
-                // (big, whose RotatingKVCache silently rotates the persona/grounding
-                // head out past 8192). Read fresh each turn so a hot-swap re-sizes
-                // the window immediately. Mini uses exact token counts when measured
-                // (the [SPIKE] resolved — 3× replay uplift); falls back to the
-                // conservative budget before the measurement lands. A spoken turn on
-                // Big replays about four exchanges (`spokenBigBudget`, measured with the
-                // voice rig): the replay is what a voice user waits through before the
-                // first word. `-spokenHistoryCap NO` turns it off.
-                let defaults = UserDefaults.standard
-                let raw = defaults.string(forKey: Self.selectedBrainKey) ?? ""
-                return HistoryBudgetPolicy.budget(
-                    for: BrainTier(persisted: raw),
-                    reservedTokens: Self.historyReserveTokens,
-                    generationTokens: Self.historyGenerationReserveTokens,
-                    measuredMiniReserveTokens: Self.measuredMiniReserve.withLock { $0 },
-                    spoken: defaults.bool(forKey: Self.voiceModeActiveKey) && HistoryBudgetPolicy.spokenCapEnabled()
-                )
-            },
+            // Read fresh each turn so a hot-swap re-sizes the window immediately.
+            historyBudgetProvider: { Self.liveHistoryBudget() },
             maxIterationsProvider: {
                 // Prudent Compute is ALWAYS ON (2026-07-13, Kev-approved — was an
                 // opt-in toggle): CoolHeadPolicy trims the agent loop to the LIVE
@@ -625,6 +608,26 @@ extension AppEnvironment {
     /// (call → observe → conclude); two calls needed 5, and CoolHeadPolicy
     /// eased it to 2 or 1, making multi-tool turns structurally impossible.
     nonisolated static let baseMaxIterations = 5
+
+    /// The replay window the next turn gets: one home for the responder's replay and ChatSession's
+    /// rolling distillation trigger (#629), so they can't drift. Brain-aware long context: a wide
+    /// replay on the dense-Qwen lil (~32K window), a hard clamp on gemma-4 (big, whose
+    /// RotatingKVCache silently rotates the persona/grounding head out past 8192). Mini uses exact
+    /// token counts when measured (the [SPIKE] resolved — 3× replay uplift); falls back to the
+    /// conservative budget before the measurement lands. A spoken turn on Big replays about four
+    /// exchanges (`spokenBigBudget`, measured with the voice rig): the replay is what a voice user
+    /// waits through before the first word. `-spokenHistoryCap NO` turns it off.
+    nonisolated static func liveHistoryBudget() -> HistoryWindow.Budget {
+        let defaults = UserDefaults.standard
+        let raw = defaults.string(forKey: selectedBrainKey) ?? ""
+        return HistoryBudgetPolicy.budget(
+            for: BrainTier(persisted: raw),
+            reservedTokens: historyReserveTokens,
+            generationTokens: historyGenerationReserveTokens,
+            measuredMiniReserveTokens: measuredMiniReserve.withLock { $0 },
+            spoken: defaults.bool(forKey: voiceModeActiveKey) && HistoryBudgetPolicy.spokenCapEnabled()
+        )
+    }
 
     /// Conservative fixed reserve (tokens) for the NON-history parts of the prompt
     /// — persona+exemplars (~1130) + tools spec (~600) + grounding chunks (~1100)

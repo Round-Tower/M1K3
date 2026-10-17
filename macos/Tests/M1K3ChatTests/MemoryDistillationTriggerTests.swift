@@ -15,6 +15,7 @@
 //  to share a real content token with whatever the fixture's scripted fact says ("lives"/"Cork").
 //  Tests that only check distiller.callCount/calls (never store contents) only needed the
 //  triviality fix.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — #629: the rolling backlog follows the replay window in effect.
 
 import Foundation
 @testable import M1K3Chat
@@ -162,7 +163,8 @@ private struct Fixture {
 
     init(
         script: [Result<[String], Error>] = [.success(["Kev lives in Cork."])],
-        autoCapture: Bool = true
+        autoCapture: Bool = true,
+        replayTurns: Int = HistoryWindow.maxTurns
     ) throws {
         history = WatermarkHistoryStore()
         distiller = RecordingDistiller(script)
@@ -179,7 +181,8 @@ private struct Fixture {
             responder: EchoResponder(),
             history: history,
             distillation: coordinator,
-            autoCaptureEnabled: { autoCapture }
+            autoCaptureEnabled: { autoCapture },
+            replayTurns: { replayTurns }
         )
     }
 
@@ -347,6 +350,25 @@ struct MemoryDistillationTriggerTests {
         let id = f.session.activeConversationID
         #expect(try f.history.distilledWatermark(id: id) == f.session.messages.count)
         #expect(try f.store.allItems(kind: .memory).count == 1)
+    }
+
+    /// #629: Big's spoken cap replays 8 turns, not 16. Keyed to the old window, a spoken
+    /// session's early turns sat ~12 messages neither replayed nor distilled.
+    @Test("the rolling backlog follows the replay window in effect, not the widest one")
+    func rollingFollowsTheWindowInEffect() {
+        #expect(ChatSession.shouldRollingDistill(messageCount: 12, watermark: 0, replayTurns: 8))
+        #expect(!ChatSession.shouldRollingDistill(messageCount: 11, watermark: 0, replayTurns: 8))
+        #expect(!ChatSession.shouldRollingDistill(messageCount: 12, watermark: 0, replayTurns: HistoryWindow.maxTurns))
+    }
+
+    @Test("a session on a narrower window distills mid-stream sooner")
+    func narrowWindowDistillsSooner() async throws {
+        let f = try Fixture(replayTurns: 8)
+        for i in 1 ... 6 { // 12 messages: past 8 + 4, under the default 16 + 4
+            await f.exchange("fact number \(i) about living in Cork")
+        }
+        await f.session.distillationTask?.value
+        #expect(f.distiller.callCount == 1)
     }
 
     @Test("a short session does NOT distill mid-stream — cost stays off the hot path")

@@ -33,6 +33,8 @@
 //  Review: Kev + claude-opus-4-6, 2026-10-12 — pickerInstructions: meta/self-referential questions ("what can
 //  you do", "who are you", greetings, "help") now explicitly route to none. On iPhone AFM picked web_search for
 //  "what can you do?" and returned gov.ie transport advice. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — `openCorrected` (#622): a web read on a request to open a page
+//  becomes the action pick; Apple picked fetch_page for "Open the M1K3 website" and M1K3 read it aloud. Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -173,6 +175,43 @@ public enum ToolDispatch {
     static let nowCues = [
         "this year", "this season", "this month", "this week", "latest", "newest", "most recent",
         "today", "tonight", "right now", "currently",
+    ]
+
+    /// A web read on a request to OPEN a page becomes the action pick (#622): "Open the M1K3
+    /// website in my browser" picked fetch_page, and M1K3 read the site aloud instead of opening
+    /// it. The request opens on the verb (open, launch, visit, go to: after "please", "can you",
+    /// "Mike") and names a web thing (a website, site, page, link, URL, browser, or a domain), so
+    /// "Open the news" and "Open question: …" stay reads, and so does an open that also asks for a
+    /// read ("…and read me the headlines"). The action's agent turn has open_link.
+    public static func openCorrected(_ pick: ToolPick, question: String) -> ToolPick {
+        guard webSourced.contains(pick.tool), asksToOpenWebPage(question),
+              !ToolGroupRouter.mentions(question, any: readCues)
+        else { return pick }
+        return ToolPick(tool: ToolPick.action, query: pick.query)
+    }
+
+    static func asksToOpenWebPage(_ question: String) -> Bool {
+        let words = ToolGroupRouter.words(question).drop { openLeads.contains(String($0)) }
+        guard let verb = words.first.map(String.init) else { return false }
+        let opens = ["open", "launch", "visit"].contains(verb) || (verb == "go" && words.dropFirst().first == "to")
+        let domain = question.range(
+            of: #"(https?://|\b[a-z0-9-]+\.(com|ie|org|net|io|dev|app|co|uk|eu)\b)"#,
+            options: [.regularExpression, .caseInsensitive]
+        ) != nil
+        return opens && (domain || ToolGroupRouter.mentions(question, any: webThings))
+    }
+
+    private static let openLeads: Set<String> = [
+        "please", "can", "could", "would", "will", "you", "hey", "mike", "m1k3", "just", "ok", "okay",
+    ]
+    /// An open that also asks for a read keeps the read: the action agent has open_link but no web
+    /// reads, so "Open the BBC website and read me the headlines" would open it and guess (challenger).
+    private static let readCues = [
+        "tell", "read", "summarise", "summarize", "what", "find", "check", "list", "give", "how", "when", "who",
+        "show", "see", "look", "explain", "describe", "search",
+    ]
+    private static let webThings = [
+        "website", "site", "page", "web page", "webpage", "link", "url", "browser", "homepage",
     ]
 
     /// A reference lookup about now goes to the web instead. With chains on, Apple's pick sent

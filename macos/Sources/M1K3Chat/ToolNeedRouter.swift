@@ -33,6 +33,9 @@
 //  guess (≥ 0.9); the noisy English misreads are low-confidence. Confidence 0.8.
 //  Review: same day, PR #414 review (fe9a04ac) — that fold read a long turn with NO language
 //  signal (the recognizer's nil: digits, emoji) as English; it abstains again. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-17 — `pointsBackInChat` (#622): a turn about what was said in this
+//  chat is the replay's to answer, not a tool's; past sessions and the user's stores are left to the gate.
+//  Pinned so no tool-use fixture trips it. Confidence 0.75 (word cues; the rig replay is owed).
 //
 
 import Foundation
@@ -86,6 +89,71 @@ public enum ToolNeedRouter {
         let p = embed(question).flatMap(probability)
         return Decision(verdict: verdict(probability: p), probability: p)
     }
+
+    /// Does the turn ask about what was said in THIS conversation ("what did you say about names
+    /// earlier?", "who did I say is coming?")? The responder answers such a turn from the replay
+    /// when the chat has history (#622): the gate scores it 0.4–0.7, a sentence vector can't tell
+    /// "earlier in this chat" from "earlier, another day", and `recent_activity` then put another
+    /// chat's facts in the answer. A turn that names a past session (yesterday, a weekday, last
+    /// week) or one of the user's stores (notes, calendar, a recording) is left to the gate.
+    ///
+    /// Acting on what was said ("Open the link you mentioned", "Play the song you recommended")
+    /// keeps its tools (`actionCues`), and the responder only overrides a verdict below
+    /// `pointsBackCeiling`: the gate's grey zone, where look-backs scored 0.4–0.7.
+    public static func pointsBackInChat(_ question: String) -> Bool {
+        // "just now" and "earlier today" point back in THIS chat; they aren't the now/today of a fresh ask.
+        let text = question.lowercased()
+            .replacingOccurrences(of: "just now", with: "just")
+            .replacingOccurrences(of: "earlier today", with: "earlier")
+        return ToolGroupRouter.mentions(text, any: saidCues)
+            && !ToolGroupRouter.mentions(text, any: pastSessionCues + storeCues + nowCues + actionCues)
+    }
+
+    /// Above this the gate is sure a tool is wanted (a past-session look-back scores ~0.87).
+    public static let pointsBackCeiling = 0.8
+
+    /// "<who> [just] <said>" in the past tense, or "<did|do> <who> <say>": a present form alone is
+    /// an everyday request ("Can you tell me the weather?", "Can you recommend…"), challenger
+    /// 2026-10-17, so it counts only after did/do ("did you say", "do you mean").
+    static let saidCues: [String] = {
+        let who = ["you", "i", "we"]
+        let past = ["said", "mentioned", "suggested", "told", "talked", "discussed", "recommended", "picked", "listed"]
+        let present = ["say", "mention", "suggest", "tell", "talk", "discuss", "recommend", "mean", "pick", "list"]
+        // "you meant" asks about M1K3's words; "I meant" corrects the user's own last turn (a fresh ask).
+        let pastCues = who.flatMap { who in past.flatMap { ["\(who) \($0)", "\(who) just \($0)"] } }
+            + ["you meant", "you just meant"]
+        // "did" with any verb; "do" only where it asks about words ("What laptop do you recommend?" is a fresh ask).
+        let didCues = who.flatMap { who in present.map { "did \(who) \($0)" } }
+        let wordVerbs = ["say", "mean", "mention", "tell", "talk", "discuss"]
+        let doCues = who.flatMap { who in wordVerbs.map { "do \(who) \($0)" } }
+        return pastCues + didCues + doCues
+    }()
+
+    /// The turn wants something current, or complains about an action ("I told you to set a
+    /// timer"): not a look-back, whatever verb it uses.
+    static let nowCues = ToolDispatch.nowCues + [
+        "now", "tomorrow", "told you to", "asked you to",
+        "weather", "forecast", "rain", "price", "prices", "score", "scores", "news", "traffic",
+    ]
+
+    /// Acting on what was said needs the tool that acts (code review, 2026-10-17).
+    static let actionCues = [
+        "remind", "set", "timer", "alarm", "schedule", "book", "send", "text", "message", "call", "play",
+        "open", "launch", "run", "save", "add", "create", "write", "copy",
+        "link", "url", "site", "website", "page", "browser",
+    ]
+
+    static let pastSessionCues = [
+        "yesterday", "last week", "last night", "last time", "last month", "last weekend", "last session",
+        "the other day", "days ago", "weeks ago", "months ago", "this morning", "previous", "another chat",
+        "other chat", "our chat", "our conversation", "that conversation", "session",
+        "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+    ]
+
+    static let storeCues = [
+        "note", "notes", "calendar", "reminder", "reminders", "todo", "todos", "email", "emails", "document",
+        "documents", "file", "files", "recording", "recorded", "meeting", "search", "look up", "web", "online",
+    ]
 }
 
 /// How a turn the router reads as plain chat is answered: `decide` is the
