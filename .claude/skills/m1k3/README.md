@@ -13,6 +13,14 @@ hot-reloads when a file here changes. Three things, one plugin:
 
 ### What the guard does not catch
 
+The master push rule is this checkout's: when the last `cd` before every push names an
+absolute or `~` path that isn't M1K3 (`cd ~/.agent-context; git push origin main`), the
+push is that repo's business and runs. M1K3 is the checkout, a worktree's main checkout,
+or any folder named for it (`m1k3-site` included: the safe side). A `cd` that doesn't
+persist (a closed subshell, `$(…)`, `&`, `|`) or can't be resolved (`cd -`, `$VAR`, a
+relative hop) keeps the deny. Not followed: `pushd`, a `cd` that fails (`cd /x || true`),
+or a symlink into the checkout.
+
 It is a guard against the accidental, not the determined. A `tee`, `cp`, `mv`,
 `sed -i` or `rm` on the session memory passes; so does a push to master from
 a script file, or one wrapped in `bash -c "…"`, `eval`, `git -C <dir>` or
