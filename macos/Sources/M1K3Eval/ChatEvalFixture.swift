@@ -76,6 +76,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — eight `reason-hard-*` trap problems (bat-and-ball, lily pads,
 //  clock angle…), whole-word answers: Lil got the six easy ones 6/6 without thinking, so the kind could not
 //  show what thinking buys. Reasoning cells grow from 6 to 14 and don't compare across. Confidence 0.85.
+//  Review: same day — `reason-days` and `reason-hard-weekday` lose their "today": on the live path the model
+//  reads the real date and answered from it (both missed in every arm). Same answers, new premise.
 
 import Foundation
 
@@ -519,7 +521,8 @@ public enum ChatEvalFixtures {
         ),
         .init(
             id: "reason-days", kind: .reasoning,
-            prompt: "If today is Wednesday, what day will it be in 5 days? Answer with the day.",
+            // 2026-10-18: no "today" — on the live path the model knows the real date and trusts it over the premise.
+            prompt: "A meeting is on a Wednesday. What day of the week is 5 days after the meeting? Answer with the day.",
             expectation: .init(mustContainAny: ["Monday"], minChars: 1)
         ),
         .init(
@@ -564,7 +567,7 @@ public enum ChatEvalFixtures {
         .init(
             id: "reason-hard-weekday", kind: .reasoning,
             // 100 = 14 weeks + 2 days.
-            prompt: "Today is Tuesday. What day of the week will it be 100 days from today? Answer with the day.",
+            prompt: "A parcel ships on a Tuesday. What day of the week is it 100 days later? Answer with the day.",
             expectation: .init(mustContainAny: ["Thursday"], minChars: 1, wholeWordFacts: true)
         ),
         .init(

@@ -127,6 +127,10 @@
 //  EXACT (`seedBuild` takes the window), for the plain path to append to: `prefixIsReusable` became
 //  `prefixWorthBuilding(…wrappedSeeds:)` behind `-wrappedPersonaSeed NO`. Live voice turns paid ~1.9k tokens
 //  of prefill each (12–16 s on M1 Max). Confidence 0.75 until the live A/B.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — sampling per generation: `generateParameters` lays the turn's
+//  profile (`SamplingProfile.resolve(…thinking: effectiveThinking)`) over the fixed base, so `card-mode`
+//  samples a thinking turn on the card's thinking recipe and a straight turn on its instruct one. With no
+//  `card-mode` both profiles are the one the init resolved: no behaviour change. Confidence 0.8.
 
 import Foundation
 import Hub
@@ -182,7 +186,31 @@ func logGenerationInfo(
 public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchecked Sendable {
     public let name: String
 
-    let generateParameters: GenerateParameters
+    /// Everything but sampling, fixed at init (token cap, KV, prefill).
+    private let baseGenerateParameters: GenerateParameters
+    /// The sampling for a thinking and a straight generation (identical unless `card-mode`).
+    private let thinkingSampling: SamplingProfile
+    private let straightSampling: SamplingProfile
+
+    /// The parameters for THIS generation: the base plus the sampling of the turn's
+    /// thinking decision (`effectiveThinking`, the responder's `InferenceIntent.thinking`).
+    var generateParameters: GenerateParameters {
+        var params = baseGenerateParameters
+        Self.apply(effectiveThinking ? thinkingSampling : straightSampling, to: &params)
+        return params
+    }
+
+    private static func apply(_ sampling: SamplingProfile, to params: inout GenerateParameters) {
+        params.temperature = sampling.temperature
+        params.topP = sampling.topP
+        params.topK = sampling.topK
+        params.minP = sampling.minP
+        params.repetitionPenalty = sampling.repetitionPenalty
+        params.repetitionContextSize = sampling.repetitionContextSize
+        params.presencePenalty = sampling.presencePenalty
+        params.presenceContextSize = sampling.repetitionContextSize
+    }
+
     private let loader: SingleFlightLoader<ModelContainer>
     /// The native tool-call dialect resolved at init from the model family
     /// (Gemma → .gemma, Qwen/Llama → .json, …) — config.json's model_type when
@@ -311,17 +339,20 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         // `house` is exactly the old 1.1/64 plus mlx-swift-lm's defaults (0.6 /
         // top-p 1.0 / top-k off), and stays the default; M1K3_SAMPLING picks an
         // experiment arm (the model card's sampling) for the evals.
-        let sampling = SamplingProfile.resolve(
-            modelID: configuration.name,
-            environment: ProcessInfo.processInfo.environment
-        )
-        params.temperature = sampling.temperature
-        params.topP = sampling.topP
-        params.topK = sampling.topK
-        params.minP = sampling.minP
-        params.repetitionPenalty = sampling.repetitionPenalty
-        params.repetitionContextSize = sampling.repetitionContextSize
-        params.presencePenalty = sampling.presencePenalty
+        // Since 2026-10-18 the profile is chosen per generation (`generateParameters`):
+        // `card-mode` gives a thinking turn and a straight turn their own card recipe.
+        let environment = ProcessInfo.processInfo.environment
+        let thinking = SamplingProfile.resolve(modelID: configuration.name, environment: environment, thinking: true)
+        let straight = SamplingProfile.resolve(modelID: configuration.name, environment: environment, thinking: false)
+        thinkingSampling = thinking
+        straightSampling = straight
+        if thinking != .house || straight != .house {
+            let think = "t=\(thinking.temperature) k=\(thinking.topK) pres=\(thinking.presencePenalty ?? 0)"
+            let plain = "t=\(straight.temperature) k=\(straight.topK) pres=\(straight.presencePenalty ?? 0)"
+            mlxLoadLog.notice(
+                "sampling \(configuration.name, privacy: .public): thinking \(think, privacy: .public) · straight \(plain, privacy: .public)"
+            )
+        }
         if Self.supportsQuantizedKVCache(for: configuration) {
             // 8-bit quantized KV: halves per-token KV memory and, since decode is
             // memory-bandwidth-bound, speeds long transcripts. Replaces the
@@ -359,7 +390,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             for: configuration,
             override: UserDefaults.standard.integer(forKey: "prefillStepSize")
         )
-        generateParameters = params
+        baseGenerateParameters = params
         self.name = name
 
         // Resolve the model's native tool-call dialect and bake it into the
