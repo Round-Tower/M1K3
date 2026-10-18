@@ -126,3 +126,32 @@ def test_the_legal_pages_say_what_they_are_in_the_title():
         title = re.search(r"<title>(.*?)</title>", text, re.DOTALL).group(1)
         assert needle in title, f"{slug}: <title> is {title!r}"
         assert "Round Tower Software Ltd" in text, slug
+
+
+# The policy says every page serves its own fonts, scripts and models, with one named exception:
+# the experimental /vr demo loads three.js from jsDelivr. A new third-party load must be named
+# on the privacy page before it ships, so this list is the policy's twin.
+THIRD_PARTY_LOADS = {"vr.html": {"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"}}
+EXTERNAL_SRC = re.compile(r'<(?:script|link|img|iframe|video|audio|source)[^>]+(?:src|href)="(https?://[^"]+)"')
+
+
+def test_no_page_loads_a_third_party_asset_the_privacy_policy_does_not_name():
+    for page in sorted(SITE.glob("*.html")):
+        text = page.read_text(encoding="utf-8")
+        loads = set()
+        for tag_src in EXTERNAL_SRC.findall(text):
+            # a <link rel="canonical"/"license"> or a plain <a> is a reference, not a load
+            if tag_src.startswith("https://m1k3.app/"):
+                continue
+            loads.add(tag_src)
+        assert loads == THIRD_PARTY_LOADS.get(page.name, set()), f"{page.name} loads {sorted(loads)}"
+    privacy = (SITE / "privacy.html").read_text(encoding="utf-8")
+    assert "jsDelivr" in privacy and 'href="/vr"' in privacy
+
+
+def test_the_legal_pages_are_in_the_sitemap_and_llms_txt():
+    sitemap = (SITE / "sitemap.xml").read_text(encoding="utf-8")
+    llms = (SITE / "llms.txt").read_text(encoding="utf-8")
+    for slug in LEGAL:
+        assert f"<loc>https://m1k3.app/{slug}</loc>" in sitemap, slug
+        assert f"(https://m1k3.app/{slug})" in llms, slug
