@@ -32,6 +32,7 @@ PAGES: list[tuple[str, str]] = [
     ("install.html", "install"),
     ("agents.html", "agents"),
     ("privacy.html", "privacy"),
+    ("terms.html", "terms"),
     ("mcp-knowledge-server.html", "mcp-knowledge-server"),
     ("vs-ollama.html", "vs-ollama"),
     ("private-chatgpt-alternative-mac.html", "private-chatgpt-alternative-mac"),

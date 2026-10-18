@@ -101,3 +101,28 @@ def test_every_footer_links_every_guide():
 def test_every_page_names_its_canonical_url():
     for page in sorted(SITE.glob("*.html")):
         assert '<link rel="canonical" href="https://m1k3.app/' in page.read_text(encoding="utf-8"), page.name
+
+
+# Directory listings (There's An AI For That, 2026-10-18) refuse a submission unless the site
+# links a Privacy Policy AND a Terms of Service. Both live as pages; every footer points at them.
+LEGAL = ("privacy", "terms")
+
+
+def test_every_footer_links_the_privacy_policy_and_the_terms():
+    pages = [p for p in sorted(SITE.glob("*.html")) if "<footer>" in p.read_text(encoding="utf-8")]
+    assert len(pages) >= 10, "the footer scan stopped finding pages"
+    for slug in LEGAL:
+        assert (SITE / f"{slug}.html").is_file(), slug
+    for page in pages:
+        footer = re.search(r"<footer>.*?</footer>", page.read_text(encoding="utf-8"), re.DOTALL).group(0)
+        for slug in LEGAL:
+            assert f'href="/{slug}"' in footer, f"{page.name}'s footer does not link /{slug}"
+
+
+def test_the_legal_pages_say_what_they_are_in_the_title():
+    # A reviewer lands on the page and reads the tab: it must say "Privacy Policy" / "Terms".
+    for slug, needle in (("privacy", "Privacy Policy"), ("terms", "Terms of Service")):
+        text = (SITE / f"{slug}.html").read_text(encoding="utf-8")
+        title = re.search(r"<title>(.*?)</title>", text, re.DOTALL).group(1)
+        assert needle in title, f"{slug}: <title> is {title!r}"
+        assert "Round Tower Software Ltd" in text, slug

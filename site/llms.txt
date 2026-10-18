@@ -65,8 +65,10 @@ Key facts:
 - [Install M1K3](https://m1k3.app/install): the two-minute wizard — get the app (Mac App Store / Homebrew / DMG), say hello to Mini, flip the MCP switch, `m1k3 login` with its token, `m1k3 connect <client>`, verify with `m1k3 status`; the same recipe as plain text for agents at https://m1k3.app/install.txt
 - [Connect your coding agent to M1K3](https://m1k3.app/agents): the on-ramp for Claude Code, Codex, Cursor, VS Code and Zed — `brew install --cask round-tower/tap/m1k3`, `m1k3 login` (the server's access token), then `m1k3 connect <client>`, the per-client snippets with their Authorization header, the AGENTS.md resident block, and what the loopback server will not do
 - [M1K3 for Teams](https://m1k3.app/teams): the paid line for organisations — the same on-device brains, an institutional memory and a tuned persona on the organisation's own Apple Silicon under its own domain; on-prem only, design-partner pilots
-- [Is M1K3 really private?](https://m1k3.app/privacy): the privacy architecture — what runs on-device, the documented network crossings (opt-in model downloads, web search that is on by default with one switch to turn it off, updates, and the opt-in Private Cloud Compute rung), and how to verify
+- [Privacy Policy — is M1K3 really private?](https://m1k3.app/privacy): the privacy policy and the privacy architecture — what runs on-device, the documented network crossings (opt-in model downloads, web search that is on by default with one switch to turn it off, updates, and the opt-in Private Cloud Compute rung), and how to verify
 - [What Golden Gate actually ships for on-device AI](https://m1k3.app/golden-gate-on-device-ai): macOS 27 probe — model quality 93%, token counting API, Adapter API removed, no custom executor protocol; what changed and what didn't, measured on the live runtime
+
+- [Terms of Service](https://m1k3.app/terms): the licence each copy comes under (Apple's standard EULA for store copies, FSL-1.1-ALv2 for the DMG, cask and source), models under their publishers' licences, AI answers are not advice, as-is, Irish law with consumer carve-outs
 
 ## Optional
 
