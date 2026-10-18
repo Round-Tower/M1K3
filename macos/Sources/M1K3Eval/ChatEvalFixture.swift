@@ -78,6 +78,8 @@
 //  show what thinking buys. Reasoning cells grow from 6 to 14 and don't compare across. Confidence 0.85.
 //  Review: same day — `reason-days` and `reason-hard-weekday` lose their "today": on the live path the model
 //  reads the real date and answered from it (both missed in every arm). Same answers, new premise.
+//  Review: same day — twelve more `reason-hard-*` traps (socks, fence posts, chimes, pipes…), 20 in all, so
+//  the prompting arms can show a 2-point move; `reason-remainder` takes "two" as well as "2". Confidence 0.8.
 
 import Foundation
 
@@ -539,7 +541,8 @@ public enum ChatEvalFixtures {
             // remainder fails. Keeps the "answer with the number" terse contract.
             prompt: "You have 14 sweets to share equally among 4 children. How many are left "
                 + "over? Answer with the number.",
-            expectation: .init(mustContainAny: ["2"], minChars: 1)
+            // "two" since 2026-10-18: Lil answered "leaves two in the bag" and failed on the digit.
+            expectation: .init(mustContainAny: ["2", "two"], minChars: 1)
         ),
         // Hard (2026-10-18): trap problems whose fast answer is wrong. The six above are one-step sums
         // Lil answers 6/6 without thinking, so they can't show what thinking buys.
@@ -597,6 +600,91 @@ public enum ChatEvalFixtures {
             prompt: "You drive 60 km at 30 km/h, then another 60 km at 60 km/h. What is your average speed "
                 + "for the whole trip, in km/h? Answer with the number.",
             expectation: .init(mustContainAny: ["40", "forty"], minChars: 1, wholeWordFacts: true)
+        ),
+        // Hard, round two (2026-10-18): twelve more traps, so a 2-point move isn't noise.
+        .init(
+            id: "reason-hard-socks", kind: .reasoning,
+            // The trap answers are 2 and 11.
+            prompt: "A drawer holds 10 red socks and 10 blue socks, mixed, and the room is dark. How many socks must you "
+                + "take out to be sure of a matching pair? Answer with the number.",
+            expectation: .init(mustContainAny: ["3", "three"], minChars: 1, wholeWordFacts: true)
+        ),
+        .init(
+            id: "reason-hard-fence", kind: .reasoning,
+            // 10 gaps, so 11 posts. The trap answer is 10.
+            prompt: "A straight fence is 50 metres long with a post every 5 metres, including a post at each end. How "
+                + "many posts are there? Answer with the number.",
+            expectation: .init(mustContainAny: ["11", "eleven"], minChars: 1, wholeWordFacts: true)
+        ),
+        .init(
+            id: "reason-hard-percent", kind: .reasoning,
+            // 100 → 150 → 75. The trap answer is 0.
+            prompt: "A price rises by 50% and then falls by 50%. By what percent is the final price lower than the "
+                + "original? Answer with the number.",
+            expectation: .init(mustContainAny: ["25"], minChars: 1, wholeWordFacts: true)
+        ),
+        .init(
+            id: "reason-hard-handshakes", kind: .reasoning,
+            // 7 × 6 / 2. The trap answers are 42 and 49.
+            prompt: "Seven people meet and each shakes hands once with every other person. How many handshakes happen? "
+                + "Answer with the number.",
+            expectation: .init(mustContainAny: ["21"], minChars: 1, wholeWordFacts: true)
+        ),
+        .init(
+            id: "reason-hard-overlap", kind: .reasoning,
+            // 24 play something; 18 + 15 − 24.
+            prompt: "Of 30 students, 18 play football, 15 play tennis and 6 play neither. How many play both? Answer "
+                + "with the number.",
+            expectation: .init(mustContainAny: ["9", "nine"], minChars: 1, wholeWordFacts: true)
+        ),
+        .init(
+            id: "reason-hard-pipes", kind: .reasoning,
+            // 1/2 + 1/3 = 5/6 an hour, so 6/5 h. The trap answer is 150 (the mean).
+            prompt: "One pipe fills a tank in 2 hours and another fills it in 3 hours. Running together, how many "
+                + "minutes do they take to fill it? Answer with the number.",
+            expectation: .init(mustContainAny: ["72"], minChars: 1, wholeWordFacts: true)
+        ),
+        .init(
+            id: "reason-hard-ages", kind: .reasoning,
+            // a + 4 = 2(a − 5).
+            prompt: "In 4 years Ana will be twice as old as she was 5 years ago. How old is Ana now? Answer with the "
+                + "number.",
+            expectation: .init(mustContainAny: ["14", "fourteen"], minChars: 1, wholeWordFacts: true)
+        ),
+        .init(
+            id: "reason-hard-stairs", kind: .reasoning,
+            // 3 flights in 30 s, so 9 flights. The trap answer is 75.
+            prompt: "Walking up from floor 1 to floor 4 takes 30 seconds. At the same pace, how many seconds does it "
+                + "take from floor 1 to floor 10? Answer with the number.",
+            expectation: .init(mustContainAny: ["90", "ninety"], minChars: 1, wholeWordFacts: true)
+        ),
+        .init(
+            id: "reason-hard-rope", kind: .reasoning,
+            // 5 pieces need 4 cuts. The trap answer is 5.
+            prompt: "You cut a 15-metre rope into pieces 3 metres long. Each cut takes one minute. How many minutes does "
+                + "the cutting take? Answer with the number.",
+            expectation: .init(mustContainAny: ["4", "four"], minChars: 1, wholeWordFacts: true)
+        ),
+        .init(
+            id: "reason-hard-chimes", kind: .reasoning,
+            // 5 gaps in 5 s, so 11 gaps. The trap answer is 10.
+            prompt: "A clock takes 5 seconds to strike 6 at six o'clock, timed from the first strike to the last. How "
+                + "many seconds does it take to strike 12 at noon? Answer with the number.",
+            expectation: .init(mustContainAny: ["11", "eleven"], minChars: 1, wholeWordFacts: true)
+        ),
+        .init(
+            id: "reason-hard-digit-threes", kind: .reasoning,
+            // 3, 13, 23, 33, 43 (5) plus 30–39 in the tens (10).
+            prompt: "You write out every whole number from 1 to 50. How many times do you write the digit 3? Answer with "
+                + "the number.",
+            expectation: .init(mustContainAny: ["15", "fifteen"], minChars: 1, wholeWordFacts: true)
+        ),
+        .init(
+            id: "reason-hard-trains", kind: .reasoning,
+            // 150 km/h closing speed, 2 hours.
+            prompt: "Two trains start 300 km apart and head toward each other, one at 70 km/h and the other at 80 km/h. "
+                + "How many minutes until they meet? Answer with the number.",
+            expectation: .init(mustContainAny: ["120"], minChars: 1, wholeWordFacts: true)
         ),
     ]
 

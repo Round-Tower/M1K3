@@ -13,6 +13,7 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — chain fixtures: `alsoCallTools` is pinned alongside `mustCallTool`.
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — hard reasoning fixtures: eight, whole-word answers that
 //  never appear in their own prompt. Confidence 0.85.
+//  Review: same day — twenty of them now (twelve more traps), so the floor is 20.
 
 @testable import M1K3Eval
 import M1K3Inference
@@ -38,7 +39,7 @@ struct ChatEvalFixturesTests {
     @Test("hard reasoning fixtures: eight, whole-word answers, none given away by the prompt")
     func hardReasoningShape() {
         let hard = ChatEvalFixtures.fixtures(for: .reasoning).filter { $0.id.hasPrefix("reason-hard-") }
-        #expect(hard.count >= 8)
+        #expect(hard.count >= 20)
         for fixture in hard {
             #expect(fixture.expectation.wholeWordFacts, "\(fixture.id) must match whole words")
             #expect(!fixture.expectation.mustContainAny.isEmpty)

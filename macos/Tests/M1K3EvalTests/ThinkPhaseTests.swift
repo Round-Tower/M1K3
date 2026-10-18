@@ -3,6 +3,8 @@
 //  M1K3EvalTests
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-10, Confidence 0.85, Prior: none (new file).
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — the metacognition arms (reread, trap, working, budget) parse
+//  and keep the "Then answer normally" contract; two of them must work on a turn that never thinks.
 
 @testable import M1K3Eval
 import Testing
@@ -77,5 +79,22 @@ struct ThinkPhaseTests {
         for steer in ThinkSteer.allCases where steer != .none {
             #expect(steer.clause?.contains("Then answer normally") == true, Comment(rawValue: steer.rawValue))
         }
+    }
+
+    @Test("the metacognition arms parse from the env")
+    func metacognitionArms() {
+        #expect(ThinkSteer(envValue: "reread") == .reread)
+        #expect(ThinkSteer(envValue: "TRAP") == .trap)
+        #expect(ThinkSteer(envValue: "working") == .working)
+        #expect(ThinkSteer(envValue: "budget") == .budget)
+    }
+
+    @Test("reread, trap and working steer a straight answer too, not only a think phase")
+    func straightTurnArms() {
+        for steer in [ThinkSteer.reread, .trap, .working] {
+            let clause = steer.clause ?? ""
+            #expect(!clause.hasPrefix("When you reason"), Comment(rawValue: steer.rawValue))
+        }
+        #expect(ThinkSteer.budget.clause?.hasPrefix("When you reason") == true)
     }
 }

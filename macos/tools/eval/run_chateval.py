@@ -206,7 +206,7 @@ class RunOptions:
     dump_prompt: bool = False
     pcc: bool = False
     thinking: str | None = None  # None → the app's default (tier: production's shape)
-    think_steer: str | None = None  # none | terse | emoji | softcap — the think-steer A/B clause
+    think_steer: str | None = None  # none | terse | emoji | softcap | reread | trap | working | budget
     full_answers: bool = False  # whole answers in the document (bake-offs), not the 240-char excerpt
     router: str | None = None  # "dispatch": the app's own tool route, every tier on (the router arm)
     router_head: bool = False  # + the group head (toolGroupRouter); needs router
@@ -520,7 +520,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--kinds", default="", help="comma list of task kinds (default: all)")
     ap.add_argument("--repeats", type=int, default=1)
     ap.add_argument("--bare", action="store_true", help="bare provider.generate instead of the live path")
-    ap.add_argument("--think-steer", choices=["none", "terse", "emoji", "softcap"],
+    ap.add_argument("--think-steer", choices=["none", "terse", "emoji", "softcap", "reread", "trap", "working", "budget"],
                     help="the think-steer A/B clause appended to the turn's rules (M1K3_SELFTEST_CHATEVAL_THINK_STEER)")
     ap.add_argument("--thinking", choices=THINKING_MODES,
                     help="how every arm thinks: tier (production's shape, the app default), always, fast")
