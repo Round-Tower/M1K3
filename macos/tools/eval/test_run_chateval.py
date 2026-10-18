@@ -315,6 +315,14 @@ def test_full_answers_rides_the_trigger_only_when_asked():
     assert trig["M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS"] == "1"
 
 
+def test_calculator_rides_the_trigger_only_when_asked():
+    assert "M1K3_SELFTEST_CHATEVAL_CALCULATOR" not in rc.build_trigger(
+        base_opts(), container=CONTAINER, power_source="ac", powermode=None, commit=None, mlx_rev=None)
+    trig = rc.build_trigger(base_opts(calculator=True), container=CONTAINER, power_source="ac",
+                            powermode=None, commit=None, mlx_rev=None)
+    assert trig["M1K3_SELFTEST_CHATEVAL_CALCULATOR"] == "1"
+
+
 def test_summary_shows_peak_memory_when_recorded(tmp_path):
     ok = {"fixtureID": "chat-x", "kind": "open-chat", "latencyMS": 9, "checks": [{"name": "non-empty", "outcome": "pass"}]}
     doc = tmp_path / "run.json"

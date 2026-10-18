@@ -81,6 +81,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — the live arm takes the reasoning kind too: it ran bare generate
 //  even under LIVE_PATH, so no persona, no plain route and no thinking cap reached a reasoning turn, and the
 //  10-18 cap arm measured the bare model there. Confidence 0.9.
+//  Review: same day — the calculator probe: M1K3_SELFTEST_CHATEVAL_CALCULATOR=1 adds the computing `calculate`
+//  stub to the palette and notes each live turn's tools as a `calls calculate` check (pass if called, else skip).
 //
 
 import Foundation
@@ -303,7 +305,13 @@ enum ChatEvalStage {
     /// Internal (not private): PromptSizeStage reuses this SAME palette so its
     /// measured prompt carries the real production tool spec, not an empty one.
     static var toolPalette: [any AgentTool] {
-        ChatEvalStubPalette.specs.map { StubTool(spec: $0, hard: hardStubs) }
+        let specs = ChatEvalStubPalette.specs + (calculatorRequested ? [ChatEvalStubPalette.calculator] : [])
+        return specs.map { StubTool(spec: $0, hard: hardStubs) }
+    }
+
+    /// The calculator probe (2026-10-18): offer a stub that really computes, and note whether a turn used it.
+    private static var calculatorRequested: Bool {
+        SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_CALCULATOR") == "1"
     }
 
     /// LIVE-PATH arm (M1K3_SELFTEST_CHATEVAL_LIVE_PATH=1): open-chat and
@@ -626,6 +634,7 @@ enum ChatEvalStage {
         let plan = EvalThinkingPlan(tier: tier, mode: thinkingMode)
         let steer = ThinkSteer(envValue: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_THINK_STEER"))
         emit("  think steer: \(steer.rawValue)")
+        if calculatorRequested { emit("  calculator: offered (calculate stub)") }
         emit("  thinking: \(thinkingMode.rawValue) (bare \(plan.bareThinks ? "on" : "off"), "
             + "live \(plan.liveForced.map { $0 ? "always" : "fast" } ?? "auto, \(plan.liveFastByDefault ? "speed-tier" : "full") policy"))")
         let provider: any InferenceProvider
@@ -757,9 +766,15 @@ enum ChatEvalStage {
                 let observation = try await livePathObservation(
                     fixture, provider: provider, thinking: thinking, start: start, clock: clock
                 )
-                return ChatEvalScorer.score(
+                let score = ChatEvalScorer.score(
                     fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
+                guard calculatorRequested else { return score }
+                return score.appending(EvalCheck(
+                    name: "calls calculate",
+                    outcome: observation.toolCalls.contains(ChatEvalStubPalette.calculator.name) ? .pass : .skip,
+                    detail: observation.toolCalls.joined(separator: ", ")
+                ))
             case .openChat, .reasoning, .codeGen, .refusal, .security, .worldKnowledge,
                  .humour, .interview, .instructionFollowing, .document, .sycophancy:
                 // codeGen is closed-book like the others: plain generate, then the

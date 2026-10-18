@@ -56,6 +56,8 @@ Review: Kev + claude-opus-5-5, 2026-10-10 — `--router off` (the live path, no 
 baseline); head/chain now need `dispatch` specifically.
 Review: Kev + claude-opus-5-5, 2026-10-16 — `--app-arg` (direct only): argv-domain A/B switches reach the exec
 (`direct_argv`), first for the wrapped-persona-seed arm (-wrappedPersonaSeed NO).
+Review: Kev + claude-opus-5-5, 2026-10-18 — `--calculator` (the calculator probe's stub) and the metacognition
+steer arms (reread, trap, working, budget).
 """
 
 from __future__ import annotations
@@ -208,6 +210,7 @@ class RunOptions:
     thinking: str | None = None  # None → the app's default (tier: production's shape)
     think_steer: str | None = None  # none | terse | emoji | softcap | reread | trap | working | budget
     full_answers: bool = False  # whole answers in the document (bake-offs), not the 240-char excerpt
+    calculator: bool = False  # offer the computing `calculate` stub (the calculator probe)
     router: str | None = None  # "dispatch": the app's own tool route, every tier on (the router arm)
     router_head: bool = False  # + the group head (toolGroupRouter); needs router
     router_chain: bool = False  # + two-tool chains (toolChain); needs router
@@ -251,6 +254,8 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         trig["M1K3_SELFTEST_CHATEVAL_THINKING"] = opts.thinking
     if opts.think_steer:
         trig["M1K3_SELFTEST_CHATEVAL_THINK_STEER"] = opts.think_steer
+    if opts.calculator:
+        trig["M1K3_SELFTEST_CHATEVAL_CALCULATOR"] = "1"
     if opts.full_answers:
         trig["M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS"] = "1"
     if opts.router:
@@ -524,6 +529,8 @@ def main(argv: list[str] | None = None) -> int:
                     help="the think-steer A/B clause appended to the turn's rules (M1K3_SELFTEST_CHATEVAL_THINK_STEER)")
     ap.add_argument("--thinking", choices=THINKING_MODES,
                     help="how every arm thinks: tier (production's shape, the app default), always, fast")
+    ap.add_argument("--calculator", action="store_true",
+                    help="offer the computing `calculate` stub beside the palette (the calculator probe)")
     ap.add_argument("--full-answers", action="store_true",
                     help="keep every answer whole in the document (bake-offs: fails stay re-adjudicable)")
     ap.add_argument("--router", choices=ROUTER_MODES,
@@ -556,6 +563,7 @@ def main(argv: list[str] | None = None) -> int:
         kinds=[k for k in args.kinds.split(",") if k], repeats=args.repeats,
         live_path=not args.bare, notes=args.notes, dump_prompt=args.dump_prompt, pcc=args.pcc,
         thinking=args.thinking, think_steer=args.think_steer, full_answers=args.full_answers,
+        calculator=args.calculator,
         router=args.router, router_head=args.router_head, router_chain=args.router_chain,
     )
     if args.app_arg and not args.direct:

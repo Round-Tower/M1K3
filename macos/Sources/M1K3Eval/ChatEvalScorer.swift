@@ -76,6 +76,7 @@
 //  cells before this date do not compare with cells after it.
 //  Review: Kev + claude-opus-5-5, 2026-10-10 — a score carries its route stage (`routeStage`, optional, nil omitted),
 //  the observation its `routeStages`, and `EvalToolLog` collects a live-path turn's tools. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — `ChatEvalScore.appending(_:)` (the calculator probe's tool note).
 
 import Foundation
 import M1K3Inference
@@ -204,6 +205,15 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
         self.routeStage = routeStage
         self.thinkChars = thinkChars
         self.thinkMS = thinkMS
+    }
+
+    /// The same score with one more check — the calculator probe notes the turn's tools this way.
+    public func appending(_ check: EvalCheck) -> ChatEvalScore {
+        ChatEvalScore(
+            fixtureID: fixtureID, kind: kind, checks: checks + [check], latencyMS: latencyMS,
+            answerPreview: answerPreview, repeatIndex: repeatIndex, routeStage: routeStage,
+            thinkChars: thinkChars, thinkMS: thinkMS
+        )
     }
 
     /// The same score stamped as trial `index` — the stage scores each repeat
