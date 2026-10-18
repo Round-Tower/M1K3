@@ -78,6 +78,9 @@
 //  the bare arms scope `InferenceIntent.thinking` themselves (#555). `tier` now measures the shipped shape.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the grounded-Q arm (bare RAGResponder) scopes the arm's thinking flag
 //  too; unscoped it thought on 8/8 once the provider was built thinking-on (#555 after arm, 09:53).
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — the live arm takes the reasoning kind too: it ran bare generate
+//  even under LIVE_PATH, so no persona, no plain route and no thinking cap reached a reasoning turn, and the
+//  10-18 cap arm measured the bare model there. Confidence 0.9.
 //
 
 import Foundation
@@ -747,7 +750,7 @@ enum ChatEvalStage {
             // trailing `where` would leave .openChat matching unconditionally.
             case .openChat where livePathRequested, .codeGen where livePathRequested,
                  .worldKnowledge where livePathRequested, .humour where livePathRequested,
-                 .interview where livePathRequested,
+                 .interview where livePathRequested, .reasoning where livePathRequested,
                  .instructionFollowing where livePathRequested:
                 // The live-path arm: the production AgentRAGResponder stack
                 // (grounding head + RULES + agent loop) instead of bare generate.
