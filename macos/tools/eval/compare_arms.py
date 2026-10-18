@@ -29,7 +29,9 @@ reach p < .05 (5/0 is .0625): its p reads as unresolved, not as no change. Then 
 disagreement inside each arm (fixtures with r ≥ 2 whose repeats disagree; n/a at r=1): a
 sampling diagnostic, not on the +up/−down scale — for a noise floor on that scale, compare an
 arm against a re-run of itself (A vs A'). Per arm the median latency, empty answers, median
-think chars and the routeStage tally; a "!" line for each wiring difference (one arm routed and
+think chars, the median reflection count inside the kept thoughts (wait / hmm / alternatively,
+whole words: NoWait's manipulation check; "—" for a report from before scores kept a thought) and
+the routeStage tally; a "!" line for each wiring difference (one arm routed and
 the other not — the 10-18 live/bare mix; modelID; power source; powermode; power that changed
 mid-run per the runner's driver block). Then every moved fixture with both arms' latencies and
 B's first miss. No verdict line: the tool prints the numbers, and the decision rule is Kev's.
@@ -53,6 +55,9 @@ n/a at r=1, counts only r≥2 fixtures, shows the r range and no longer claims t
 uncorrected p-value count and the ≤5-moved legend; "!" lines for modelID, power source, powermode and mixed power;
 strict labelled as confounded with run order. Not folded: a --primary flag (the decision row is Kev's to name
 before the run, in the suite's notes, not a CLI default). Confidence 0.8 covers the comparison, not the hash check.
+Review: Kev + claude-opus-5-5, 2026-10-18 — reflections: a report that keeps thoughts (ChatEvalScore.thought,
+a02580f0) gets the median count of NoWait's words inside them per arm. The words are ThinkBudget.NoWait.words in
+Swift; keep the two lists together. Confidence 0.85.
 Open: the fixtureHash reword check is unexercised on real data until ChatEvalScore stamps one (plan 1j); if the
 Swift key differs from `fixtureHash`, the check stays silently inert — pin the key name when 1j lands.
 """
@@ -62,6 +67,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import re
 import sys
 from collections import Counter
 from collections.abc import Sequence
@@ -78,6 +84,8 @@ from run_chateval import (  # one rule per count across the eval tools
 
 PREVIEW_CHARS = 70
 SCORES = ("content", "strict")
+# NoWait's openers (ThinkBudget.NoWait.words in Swift), counted as whole words in a kept thought.
+REFLECTION = re.compile(r"\b(?:wait|hmm|alternatively)\b", re.IGNORECASE)
 UNRESOLVED_MOVES = 5  # 5/0 is p = .0625: at or under this many moved fixtures, p < .05 is out of reach
 
 
@@ -94,6 +102,7 @@ class Trial:
     think_chars: int | None = None
     route_stage: str | None = None
     fixture_hash: str | None = None
+    reflections: int | None = None  # REFLECTION hits in the kept thought; None when the score kept none
 
 
 def _pick_runs(doc: object, brain: str | None) -> list[dict]:
@@ -119,7 +128,8 @@ def trials_from_doc(doc: object, brain: str | None = None) -> list[Trial]:
         return [Trial(fixture=str(s["fixtureID"]), kind=str(s["kind"]), repeat=int(s.get("repeatIndex") or 0),
                       content=_passed(s) or _latency_only(s), strict=_passed(s), latency_ms=s.get("latencyMS"),
                       preview=s.get("answerPreview") or "", empty=_empty(s), think_chars=s.get("thinkChars"),
-                      route_stage=s.get("routeStage") or None, fixture_hash=s.get("fixtureHash") or None)
+                      route_stage=s.get("routeStage") or None, fixture_hash=s.get("fixtureHash") or None,
+                      reflections=None if s.get("thought") is None else len(REFLECTION.findall(s["thought"])))
                 for run in _pick_runs(doc, brain) for s in _applicable(run["scores"])]
     except (AttributeError, KeyError, TypeError) as e:
         raise ValueError(f"not a ChatEval report ({type(e).__name__}: {e})") from e
@@ -275,12 +285,15 @@ def bucket_rows(pairing: Pairing, prefixes: list[str]) -> list[dict]:
 
 def arm_stats(trials: list[Trial]) -> dict:
     """Median latency (lower middle), empty answers, median think chars over the `think_n` trials
-    that recorded one (None when none did), and the routeStage tally (None when no trial was routed)."""
+    that recorded one (None when none did), the median reflection count over the `thought_n` trials that
+    kept a thought (None when none did), and the routeStage tally (None when no trial was routed)."""
     think = [t.think_chars for t in trials if t.think_chars is not None]
+    reflections = [t.reflections for t in trials if t.reflections is not None]
     return {"trials": len(trials),
             "median_ms": _median([t.latency_ms for t in trials if t.latency_ms is not None]),
             "empties": sum(t.empty for t in trials),
             "think_chars": _median(think), "think_n": len(think),
+            "reflections": _median(reflections), "thought_n": len(reflections),
             "routes": dict(Counter(t.route_stage for t in trials)) if any(t.route_stage for t in trials) else None}
 
 
@@ -371,11 +384,12 @@ def render(names: tuple[str, str], wirings: tuple[dict, dict], pairing: Pairing,
     lines += ["", noise_line(pairing)]
 
     stats = {"A": arm_stats(a_trials), "B": arm_stats(b_trials)}
-    lines += ["", "arm  trials   median  empties  think chars (n)  routeStage"]
+    lines += ["", "arm  trials   median  empties  think chars (n)  reflections (n)  routeStage"]
     for arm, st in stats.items():
         think = "—" if st["think_chars"] is None else f"{st['think_chars']:,} ({st['think_n']})"
+        reflect = "—" if st["reflections"] is None else f"{st['reflections']} ({st['thought_n']})"
         lines.append(f"{arm:<3}  {st['trials']:>6}  {_secs(st['median_ms']):>7}  {st['empties']:>7}  "
-                     f"{think:>15}  {_route_tally(st['routes'])}")
+                     f"{think:>15}  {reflect:>15}  {_route_tally(st['routes'])}")
     lines += wiring_flags(*wirings, stats["A"]["routes"], stats["B"]["routes"])
 
     movers = []

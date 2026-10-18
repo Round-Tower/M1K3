@@ -9,6 +9,8 @@ strict and empty are run_chateval's own rules (pinned against kind_rows); unequa
 count by repeatIndex; the noise floor is n/a at r=1 and counts only r≥2 fixtures; Δ pp, the p-value count and the
 wiring flags (model, power, powermode, mixed power, route); --kinds, --exclude, --brain and the dropped line driven
 through main; the "all" row parsed, not substring-matched.
+Review: Kev + claude-opus-5-5, 2026-10-18 — the kept thought (ChatEvalScore.thought, a02580f0): the reflection
+count inside it, per arm, is NoWait's manipulation check; whole words only, and no thought is no count.
 """
 
 import json
@@ -240,7 +242,31 @@ def test_arm_stats_median_empties_think_and_route():
 def test_arm_stats_without_think_or_route_fields():
     stats = ca.arm_stats(trials(*runs(True, True)))
     assert stats["think_chars"] is None and stats["think_n"] == 0
+    assert stats["reflections"] is None and stats["thought_n"] == 0
     assert stats["routes"] is None
+
+
+def test_arm_stats_count_reflections_inside_the_kept_thoughts():
+    scores = [score("f", repeat=0, thought="Wait, 12 - 5. Hmm. Alternatively count up. wait— yes 7."),
+              score("f", repeat=1, thought="12 minus 5 is 7. The waiter brings hmmus."),  # whole words only
+              score("g", repeat=0, thought="WAIT. hmm."),
+              score("g", repeat=1)]  # nothing thought: no count, not a zero
+    stats = ca.arm_stats(trials(*scores))
+    assert [t.reflections for t in trials(*scores)] == [4, 0, 2, None]
+    assert stats["reflections"] == 2  # the lower middle of 0, 2, 4
+    assert stats["thought_n"] == 3
+
+
+def test_a_report_that_keeps_thoughts_prints_the_reflection_column(tmp_path, capsys):
+    a = tmp_path / "a.json"
+    b = tmp_path / "b.json"
+    a.write_text(json.dumps(doc(*runs(True, True, thought="Wait. Hmm. Wait."))))
+    b.write_text(json.dumps(doc(*runs(True, True, thought="Seven."))))
+    assert ca.main([str(a), str(b)]) == 0
+    table = capsys.readouterr().out.split("arm  trials", 1)[1]
+    header, row_a, row_b = table.splitlines()[:3]
+    assert "reflections (n)" in header
+    assert row_a.split()[-3:-1] == ["3", "(2)"] and row_b.split()[-3:-1] == ["0", "(2)"]  # before the route tally
 
 
 def test_a_document_with_several_brains_needs_brain():
