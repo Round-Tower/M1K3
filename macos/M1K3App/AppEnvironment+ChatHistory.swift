@@ -40,6 +40,8 @@
 //  off): Big's voice replay holds about four exchanges (`HistoryBudgetPolicy.spokenBigBudget`). Confidence 0.75.
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — `liveHistoryBudget()`: one home for the replay window, read by the
 //  responder and by ChatSession's rolling distillation trigger (#629). Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — `thinkingBudget`: the character cut stands aside while the
+//  budget-forcing arm (`-thinkBudgetTokens`) closes the thought; nil (the responder's 4,000) otherwise. Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -473,6 +475,8 @@ extension AppEnvironment {
                     voiceThinkingEnabled: defaults.bool(forKey: Self.voiceModeThinkingKey)
                 )
             },
+            // The budget-forcing arm (`-thinkBudgetTokens`) closes the thought itself: no character cut.
+            thinkingBudget: ThinkBudget.characterCap(for: ThinkBudget.request(from: .standard)),
             brainNameProvider: {
                 // The persisted brain tier, read fresh each turn so a runtime
                 // hot-swap names the new brain on the next answer. Empty → omitted.

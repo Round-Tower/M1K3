@@ -131,6 +131,9 @@
 //  profile (`SamplingProfile.resolve(…thinking: effectiveThinking)`) over the fixed base, so `card-mode`
 //  samples a thinking turn on the card's thinking recipe and a straight turn on its instruct one. With no
 //  `card-mode` both profiles are the one the init resolved: no behaviour change. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — `thinkBudgetRequest`: the budget-forcing arm (`-thinkBudgetTokens N`,
+//  ThinkBudget) read once at init; the unseeded session forces `</think>` at the budget like the seeded turn
+//  (MLXBrainProvider+ThinkBudget). Off when absent: no behaviour change. Confidence 0.75, verify-by-launch owed.
 
 import Foundation
 import Hub
@@ -191,6 +194,8 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
     /// The sampling for a thinking and a straight generation (identical unless `card-mode`).
     private let thinkingSampling: SamplingProfile
     private let straightSampling: SamplingProfile
+    /// The budget-forcing arm (`-thinkBudgetTokens N`), read once at init; nil (the default) is off.
+    let thinkBudgetRequest: ThinkBudget.Request?
 
     /// The parameters for THIS generation: the base plus the sampling of the turn's
     /// thinking decision (`effectiveThinking`, the responder's `InferenceIntent.thinking`).
@@ -391,6 +396,13 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             override: UserDefaults.standard.integer(forKey: "prefillStepSize")
         )
         baseGenerateParameters = params
+        // Budget forcing (2026-10-18): argv only, off unless an eval arm asks.
+        thinkBudgetRequest = ThinkBudget.request(from: .standard)
+        if let request = thinkBudgetRequest {
+            mlxLoadLog.notice(
+                "thinking budget \(configuration.name, privacy: .public): \(request.tokens) tokens, transition \(request.transition.rawValue, privacy: .public)"
+            )
+        }
         self.name = name
 
         // Resolve the model's native tool-call dialect and bake it into the
@@ -594,7 +606,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             }
             return Self.normaliseThinkPrefix(collected.withLock { $0 }, preOpened: thinkPrefixNeeded)
         }
-        let session = makeUpstreamSession(container)
+        let session = await makeUpstreamSession(container, label: "generate")
         var raw = ""
         for try await event in session.streamDetails(to: prompt, images: [], videos: []) {
             if let piece = event.chunk { raw += piece }
@@ -631,7 +643,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
                                 continuation.yield(piece)
                             }
                         } else {
-                            let session = makeUpstreamSession(container)
+                            let session = await makeUpstreamSession(container, label: "stream")
                             for try await event in session.streamDetails(to: prompt, images: [], videos: []) {
                                 if let chunk = event.chunk { continuation.yield(chunk) }
                                 if let info = event.info {
@@ -736,11 +748,18 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         override ?? M1K3Persona.compactPrompt(for: variant)
     }
 
-    private func makeUpstreamSession(_ container: ModelContainer) -> ChatSession {
+    private func makeUpstreamSession(_ container: ModelContainer, label: String) async -> ChatSession {
+        let parameters = generateParameters
+        // The budget-forcing arm rides this path too, so an unseeded turn isn't the one that runs long.
+        var components = GenerationComponents()
+        if let budget = thinkBudgetTokens(parameters: parameters) {
+            components = await thinkBudgetComponents(budget, tokenizer: container.tokenizer, label: label)
+        }
         let session = ChatSession(
             container,
             instructions: Self.plainTurnInstructions(override: InferenceIntent.instructions, variant: personaVariant),
-            generateParameters: generateParameters
+            generateParameters: parameters,
+            components: components
         )
         if let context = thinkingAdditionalContext {
             session.additionalContext = context

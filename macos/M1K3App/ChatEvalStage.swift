@@ -83,6 +83,8 @@
 //  10-18 cap arm measured the bare model there. Confidence 0.9.
 //  Review: same day — the calculator probe: M1K3_SELFTEST_CHATEVAL_CALCULATOR=1 adds the computing `calculate`
 //  stub to the palette and notes each live turn's tools as a `calls calculate` check (pass if called, else skip).
+//  Review: same day — the eval responder takes the same character-cut stand-aside as the app under
+//  `--app-arg=-thinkBudgetTokens`, so the budget-forcing arm wires like the app. Confidence 0.8.
 //
 
 import Foundation
@@ -374,6 +376,8 @@ enum ChatEvalStage {
             store: store, embedder: MLXEmbeddingService(), provider: provider,
             toolsProvider: { palette }, maxIterations: 3,
             thinkingModeProvider: { Self.thinkingMode(thinking) },
+            // The budget-forcing arm (`--app-arg=-thinkBudgetTokens`) closes the thought itself: no character cut.
+            thinkingBudget: ThinkBudget.characterCap(for: ThinkBudget.request(from: .standard)),
             fastThinkingProvider: { thinking.liveFastByDefault },
             // The Mac's clauses (#482, mirrors MiniLiveEvalTests): no declared age band, web
             // search on (the default), PCC offered (its switch on — the fuller clause, so the

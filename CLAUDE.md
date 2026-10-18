@@ -34,8 +34,10 @@ Anything a cold session needs on turn one belongs below, not there.
   (a fresh worktree builds in 112 s, 171 s without it), so never wipe DerivedData or the cache to
   "fix" a build without evidence. Land with `land.sh`. Run independent reviews, builds and CI watches
   in parallel (background tasks plus Monitor), not one after another.
-- **No brain auditions for now (Kev, 2026-10-13):** make the current brains better; don't scout new
-  models.
+- **Auditions are open again (Kev, 2026-10-18; lifts the 10-13 hold):** "I'm open to new auditions, always
+  looking for the next shiny new things." A challenger runs the same chateval arms as the brain it would
+  replace, wired like the app, and wins on paired per-question results, not an aggregate; never pre-seed
+  its weights with `hf download`.
 - **Landing a PR:** `macos/tools/ci/land.sh <PR> [--passes N]` gates on
   `pr_watch.py` (required CI green on the head sha, review passes read against
   that head, each owed pass ending `VERDICT: APPROVE @ <full 40-char head sha>`;
