@@ -18,6 +18,8 @@
 //  working (one or two lines of shown working, checked once). budget steers a think phase: judge the
 //  difficulty first, stop once the answer has been checked. terse (10-10) shortened nothing. Confidence 0.6:
 //  first drafts again; the run decides.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — `thought(_:)`: the block's text, so a score can keep the thinking
+//  itself (Kev: eval the thinking process, not only the answer; NoWait's check is a count inside it). Confidence 0.85.
 
 import Foundation
 
@@ -57,6 +59,14 @@ public enum ThinkPhase {
         let think = afterOpen[..<close.lowerBound].count
         let answer = before + afterOpen[close.upperBound...].count
         return ThinkPhaseMetrics(thinkChars: think, answerChars: answer, unclosed: false)
+    }
+
+    /// The text `measure` counts: the first block, to its close or (unclosed) to the end. nil with no block.
+    public static func thought(_ raw: String) -> String? {
+        guard let open = raw.range(of: openTag) else { return nil }
+        let afterOpen = raw[open.upperBound...]
+        guard let close = afterOpen.range(of: closeTag) else { return String(afterOpen) }
+        return String(afterOpen[..<close.lowerBound])
     }
 }
 

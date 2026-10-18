@@ -77,6 +77,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-10 — a score carries its route stage (`routeStage`, optional, nil omitted),
 //  the observation its `routeStages`, and `EvalToolLog` collects a live-path turn's tools. Confidence 0.9.
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — `ChatEvalScore.appending(_:)` (the calculator probe's tool note).
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — `ChatEvalScore.thought`: the whole think block, kept (optional, nil
+//  omitted), so an arm that changes how Lil thinks (NoWait, budget forcing) is read inside the thought, not only
+//  by its length. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -190,11 +193,15 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
     /// predate them (a non-optional with a default still throws on old JSON).
     public let thinkChars: Int?
     public let thinkMS: Int?
+    /// The think block itself (`ThinkPhase.thought`), whole: unlike the answer it is not excerpted, because
+    /// the thinking is what an arm like NoWait changes, and a count inside it is that arm's check. nil when
+    /// nothing was thought; optional, so documents from before it decode.
+    public let thought: String?
 
     public init(
         fixtureID: String, kind: TaskKind, checks: [EvalCheck], latencyMS: Int,
         answerPreview: String? = nil, repeatIndex: Int = 0, routeStage: String? = nil,
-        thinkChars: Int? = nil, thinkMS: Int? = nil
+        thinkChars: Int? = nil, thinkMS: Int? = nil, thought: String? = nil
     ) {
         self.fixtureID = fixtureID
         self.kind = kind
@@ -205,6 +212,7 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
         self.routeStage = routeStage
         self.thinkChars = thinkChars
         self.thinkMS = thinkMS
+        self.thought = thought
     }
 
     /// The same score with one more check — the calculator probe notes the turn's tools this way.
@@ -212,7 +220,7 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
         ChatEvalScore(
             fixtureID: fixtureID, kind: kind, checks: checks + [check], latencyMS: latencyMS,
             answerPreview: answerPreview, repeatIndex: repeatIndex, routeStage: routeStage,
-            thinkChars: thinkChars, thinkMS: thinkMS
+            thinkChars: thinkChars, thinkMS: thinkMS, thought: thought
         )
     }
 
@@ -222,7 +230,7 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
         ChatEvalScore(
             fixtureID: fixtureID, kind: kind, checks: checks, latencyMS: latencyMS,
             answerPreview: answerPreview, repeatIndex: index, routeStage: routeStage,
-            thinkChars: thinkChars, thinkMS: thinkMS
+            thinkChars: thinkChars, thinkMS: thinkMS, thought: thought
         )
     }
 
@@ -894,7 +902,8 @@ public enum ChatEvalScorer {
                 let think = ThinkPhase.measure(observation.rawText)
                 return observation.rawText.contains(ThinkPhase.openTag) ? think.thinkChars : nil
             }(),
-            thinkMS: observation.thinkMS
+            thinkMS: observation.thinkMS,
+            thought: ThinkPhase.thought(observation.rawText)
         )
     }
 
