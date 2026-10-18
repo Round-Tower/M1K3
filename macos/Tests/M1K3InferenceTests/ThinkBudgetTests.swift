@@ -8,6 +8,8 @@
 //  on the thought. Off unless asked for; the arm decides whether it ships.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-18, Confidence 0.8, Prior: none (new file).
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — the NoWait arm (`-thinkWaitPenalty P`): argv parsing, the
+//  spellings it pushes down, and that it only touches a thought. Confidence 0.8.
 
 import Foundation
 @testable import M1K3Inference
@@ -79,5 +81,34 @@ struct ThinkBudgetTests {
     func characterCap() {
         #expect(ThinkBudget.characterCap(for: nil) == nil, "nil: the responder's own default")
         #expect(ThinkBudget.characterCap(for: ThinkBudget.Request(tokens: 1024, transition: .close)) == .max)
+    }
+
+    @Test("NoWait is off unless argv asks: no key, zero, a negative or junk is no penalty")
+    func noWaitOffByDefault() {
+        #expect(ThinkBudget.NoWait.penalty(from: defaults([:])) == nil)
+        #expect(ThinkBudget.NoWait.penalty(from: defaults(["thinkWaitPenalty": "0"])) == nil)
+        #expect(ThinkBudget.NoWait.penalty(from: defaults(["thinkWaitPenalty": "-3"])) == nil)
+        #expect(ThinkBudget.NoWait.penalty(from: defaults(["thinkWaitPenalty": "lots"])) == nil)
+        #expect(ThinkBudget.NoWait.penalty(from: defaults(["thinkWaitPenalty": "1e-50"])) == nil, "zero as a Float")
+    }
+
+    @Test("NoWait reads argv's string as a logit penalty and applies it only inside a thought")
+    func noWaitReadsArgv() {
+        #expect(ThinkBudget.NoWait.penalty(from: defaults(["thinkWaitPenalty": "100"])) == 100)
+        #expect(ThinkBudget.NoWait.penalty(from: defaults(["thinkWaitPenalty": "2.5"])) == 2.5)
+        #expect(ThinkBudget.NoWait.penalty(for: 5, preOpenedThinking: true) == 5)
+        #expect(ThinkBudget.NoWait.penalty(for: 5, preOpenedThinking: false) == nil)
+        #expect(ThinkBudget.NoWait.penalty(for: nil, preOpenedThinking: true) == nil)
+    }
+
+    @Test("NoWait's spellings: each opener in either case, starting a line or after a space, once")
+    func noWaitSpellings() {
+        let spellings = ThinkBudget.NoWait.spellings
+        for word in ["Wait", "wait", "Hmm", "hmm", "Alternatively", "alternatively"] {
+            #expect(spellings.contains(word))
+            #expect(spellings.contains(" " + word))
+        }
+        #expect(Set(spellings).count == spellings.count)
+        #expect(spellings.count == ThinkBudget.NoWait.words.count * 4)
     }
 }

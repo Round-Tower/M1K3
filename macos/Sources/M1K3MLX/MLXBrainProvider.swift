@@ -134,6 +134,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — `thinkBudgetRequest`: the budget-forcing arm (`-thinkBudgetTokens N`,
 //  ThinkBudget) read once at init; the unseeded session forces `</think>` at the budget like the seeded turn
 //  (MLXBrainProvider+ThinkBudget). Off when absent: no behaviour change. Confidence 0.75, verify-by-launch owed.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — `thinkWaitPenaltyRequest`: the NoWait arm (`-thinkWaitPenalty P`),
+//  read once at init beside the budget and composed into the same components. Off when absent. Confidence 0.75.
 
 import Foundation
 import Hub
@@ -196,6 +198,8 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
     private let straightSampling: SamplingProfile
     /// The budget-forcing arm (`-thinkBudgetTokens N`), read once at init; nil (the default) is off.
     let thinkBudgetRequest: ThinkBudget.Request?
+    /// The NoWait arm (`-thinkWaitPenalty P`), read once at init; nil (the default) is off.
+    let thinkWaitPenaltyRequest: Float?
 
     /// The parameters for THIS generation: the base plus the sampling of the turn's
     /// thinking decision (`effectiveThinking`, the responder's `InferenceIntent.thinking`).
@@ -402,6 +406,10 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             mlxLoadLog.notice(
                 "thinking budget \(configuration.name, privacy: .public): \(request.tokens) tokens, transition \(request.transition.rawValue, privacy: .public)"
             )
+        }
+        thinkWaitPenaltyRequest = ThinkBudget.NoWait.penalty(from: .standard)
+        if let penalty = thinkWaitPenaltyRequest {
+            mlxLoadLog.notice("nowait \(configuration.name, privacy: .public): penalty \(penalty)")
         }
         self.name = name
 
@@ -750,10 +758,14 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
 
     private func makeUpstreamSession(_ container: ModelContainer, label: String) async -> ChatSession {
         let parameters = generateParameters
-        // The budget-forcing arm rides this path too, so an unseeded turn isn't the one that runs long.
+        // The thinking arms ride this path too, so an unseeded turn isn't the one that runs long.
         var components = GenerationComponents()
-        if let budget = thinkBudgetTokens(parameters: parameters) {
-            components = await thinkBudgetComponents(budget, tokenizer: container.tokenizer, label: label)
+        let budget = thinkBudgetTokens(parameters: parameters)
+        let waitPenalty = thinkWaitPenalty()
+        if budget != nil || waitPenalty != nil {
+            components = await thinkingComponents(
+                budget: budget, waitPenalty: waitPenalty, tokenizer: container.tokenizer, label: label
+            )
         }
         let session = ChatSession(
             container,

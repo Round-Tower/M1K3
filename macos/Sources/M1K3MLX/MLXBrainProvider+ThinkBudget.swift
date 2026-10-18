@@ -7,14 +7,20 @@
 //  transition and `</think>` through the normal sampling loop, so the KV cache, the stream and the
 //  answer all carry on from the cut thought. Qwen3.5's protocol ships no declared transition
 //  (`thinkTagsWithEnableThinking` names none on purpose), so the arm supplies its own: that is the
-//  opt-in the library asks for, and the eval is the validation it asks for.
+//  opt-in the library asks for, and the eval is the validation it asks for. The NoWait arm
+//  (`-thinkWaitPenalty P`) adds `ThoughtWordPenalty` to the same components; either arm runs alone.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-18, Confidence 0.7, Prior: none (new file).
 //  Open: verify-by-launch owed (a `thinking budget` notice and a closed thought on an Always turn).
 //  The tool session (MLXToolCalling) is not budgeted: Qwen3.5 may open `<tool_call>` from a thought.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — the NoWait arm (`-thinkWaitPenalty P`, ThinkBudget.NoWait) rides
+//  the same components: `ThoughtWordPenalty` pushes the openers down until the thought closes. Both arms are
+//  optional and compose; empty components still mean the default path. Confidence 0.65, verify-by-launch owed
+//  (the `nowait` notice naming the single-token spellings it found).
 
 import Foundation
 import M1K3Inference
+import MLX
 import MLXLMCommon
 
 extension MLXBrainProvider {
@@ -27,39 +33,125 @@ extension MLXBrainProvider {
         )
     }
 
-    /// Components that force the close at `budget` tokens; empty components when `budget` is nil, or
-    /// when the library refuses the setup (logged, and the turn thinks unbudgeted rather than failing).
-    func thinkBudgetComponents(
-        _ budget: Int?,
+    /// This generation's NoWait penalty: nil when the arm is off or the turn isn't thinking.
+    func thinkWaitPenalty() -> Float? {
+        ThinkBudget.NoWait.penalty(for: thinkWaitPenaltyRequest, preOpenedThinking: thinkPrefixNeeded)
+    }
+
+    /// Components for this generation's thinking arms: the forced close at `budget` tokens and the NoWait
+    /// penalty, either or both. Empty components when both are nil; an arm the library or tokenizer refuses is
+    /// logged and dropped, and the turn thinks without it rather than failing.
+    func thinkingComponents(
+        budget: Int?,
+        waitPenalty: Float?,
         tokenizer: any MLXLMCommon.Tokenizer,
         label: String
     ) -> GenerationComponents {
-        guard let budget, let transition = thinkBudgetRequest?.transition else { return GenerationComponents() }
-        do {
-            let configuration = try ThinkingBudgetConfiguration(
-                maximumTokenCount: budget,
-                minimumAnswerTokenCount: ThinkBudget.answerReserve,
-                transitionOverride: ReasoningBudgetTransition(
-                    beforeEndDelimiter: transition.beforeClose,
-                    afterEndDelimiter: transition.afterClose
+        var components = GenerationComponents()
+        if let budget, let transition = thinkBudgetRequest?.transition {
+            do {
+                let configuration = try ThinkingBudgetConfiguration(
+                    maximumTokenCount: budget,
+                    minimumAnswerTokenCount: ThinkBudget.answerReserve,
+                    transitionOverride: ReasoningBudgetTransition(
+                        beforeEndDelimiter: transition.beforeClose,
+                        afterEndDelimiter: transition.afterClose
+                    )
                 )
-            )
-            let components = try GenerationComponents().applyingThinkingBudget(
-                configuration, reasoning: .thinkTagsWithEnableThinking, tokenizer: tokenizer
-            ) { diagnostic in
+                components = try components.applyingThinkingBudget(
+                    configuration, reasoning: .thinkTagsWithEnableThinking, tokenizer: tokenizer
+                ) { diagnostic in
+                    mlxTTFTLog.notice(
+                        "\(label, privacy: .public): thinking budget stood down — \(String(describing: diagnostic), privacy: .public)"
+                    )
+                }
                 mlxTTFTLog.notice(
-                    "\(label, privacy: .public): thinking budget stood down — \(String(describing: diagnostic), privacy: .public)"
+                    "\(label, privacy: .public): thinking budget \(budget) tokens, transition \(transition.rawValue, privacy: .public)"
+                )
+            } catch {
+                mlxTTFTLog.error(
+                    "\(label, privacy: .public): thinking budget refused (\(error.localizedDescription, privacy: .public)) — unbudgeted"
                 )
             }
-            mlxTTFTLog.notice(
-                "\(label, privacy: .public): thinking budget \(budget) tokens, transition \(transition.rawValue, privacy: .public)"
+        }
+        if let waitPenalty {
+            components = appendingNoWait(to: components, penalty: waitPenalty, tokenizer: tokenizer, label: label)
+        }
+        return components
+    }
+
+    /// NoWait: penalise every opener spelling the tokenizer holds as ONE token (a split spelling's first piece
+    /// starts other words too, so it is left alone), until the thought's `</think>` is sampled.
+    private func appendingNoWait(
+        to components: GenerationComponents,
+        penalty: Float,
+        tokenizer: any MLXLMCommon.Tokenizer,
+        label: String
+    ) -> GenerationComponents {
+        var found: [String] = []
+        var ids: [Int] = []
+        for spelling in ThinkBudget.NoWait.spellings {
+            let encoded = tokenizer.encode(text: spelling, addSpecialTokens: false)
+            if encoded.count == 1, !ids.contains(encoded[0]) {
+                found.append(spelling)
+                ids.append(encoded[0])
+            }
+        }
+        let close = tokenizer.encode(text: "</think>", addSpecialTokens: false)
+        guard close.count == 1, !ids.isEmpty else {
+            mlxTTFTLog.error(
+                "\(label, privacy: .public): nowait refused (</think> is \(close.count) tokens, \(ids.count) openers) — off"
             )
             return components
-        } catch {
-            mlxTTFTLog.error(
-                "\(label, privacy: .public): thinking budget refused (\(error.localizedDescription, privacy: .public)) — unbudgeted"
-            )
-            return GenerationComponents()
         }
+        let names = found.map { "\"\($0)\"" }.joined(separator: " ")
+        mlxTTFTLog.notice(
+            "\(label, privacy: .public): nowait penalty \(penalty) on \(ids.count) tokens: \(names, privacy: .public)"
+        )
+        let closeID = close[0], tokenIDs = ids
+        return components.appendingLogitProcessor {
+            ThoughtWordPenalty(tokenIDs: tokenIDs, penalty: penalty, closeID: closeID)
+        }
+    }
+}
+
+/// NoWait's logit processor: subtracts `penalty` from `tokenIDs` until the thought's `</think>` is sampled. It
+/// reads each sampled token one step late (the budget processor's pipelining: `item` on the newest token would
+/// idle the GPU), so the token after `</think>` is still penalised; that token is the answer's leading newline.
+struct ThoughtWordPenalty: LogitProcessor {
+    private let indices: MLXArray
+    private let maxID: Int
+    private let penalty: Float
+    private let closeID: Int
+    private var thinking = true
+    private var pending: MLXArray?
+
+    init(tokenIDs: [Int], penalty: Float, closeID: Int) {
+        indices = MLXArray(tokenIDs.map(UInt32.init))[.newAxis, 0...]
+        maxID = tokenIDs.max() ?? 0
+        self.penalty = penalty
+        self.closeID = closeID
+    }
+
+    mutating func prompt(_: MLXArray) {
+        thinking = true
+        pending = nil
+    }
+
+    func process(logits: MLXArray) -> MLXArray {
+        // An id past the logits means the tokenizer and the weights disagree: leave the logits alone.
+        guard thinking, maxID < logits.dim(-1) else { return logits }
+        let pushed = takeAlong(logits, indices, axis: -1) - penalty
+        return putAlong(logits, indices, values: pushed, axis: -1)
+    }
+
+    mutating func didSample(token: MLXArray) {
+        guard thinking else { return }
+        if let previous = pending, previous.item(Int.self) == closeID {
+            thinking = false
+            pending = nil
+            return
+        }
+        pending = token
     }
 }

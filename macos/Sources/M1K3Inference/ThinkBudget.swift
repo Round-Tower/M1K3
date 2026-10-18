@@ -15,6 +15,9 @@
 //  Signed: Kev + claude-opus-5-5, 2026-10-18, Confidence 0.75, Prior: none (new file).
 //  Open: an eval arm until it beats the character cut on the hard traps; whether a 4B model answers
 //  well from a thought cut short is exactly what the arm measures. Qwen's guidance: budgets above 1,024.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — `NoWait`, a second arm (`-thinkWaitPenalty P`) from a Reddit tip
+//  Kev passed on: push "Wait" / "Hmm" / "Alternatively" down while thinking, so the thought stops re-opening an
+//  answer it already has. Confidence 0.6: re-checks are also how a model catches a trick question.
 
 import Foundation
 
@@ -81,5 +84,40 @@ public enum ThinkBudget {
     /// responder's own default.
     public static func characterCap(for request: Request?) -> Int? {
         request == nil ? nil : .max
+    }
+}
+
+public extension ThinkBudget {
+    /// NoWait (Wang et al., "Wait, We Don't Need to 'Wait'!", Findings of EMNLP 2025, arXiv 2506.08343): subtract a
+    /// penalty from the self-reflection openers' logits while the model thinks. The paper reports thoughts 27–51%
+    /// shorter with accuracy mostly held, but its Table 6 is mixed for Qwen3-4B (AMC 2023 93.8 → 95.5, AIME 2025
+    /// 70.0 → 56.7) and it finds distilled models underthink without the re-checks, so the arm measures it on our
+    /// traps rather than trusting the average.
+    ///
+    /// argv: `M1K3 -thinkWaitPenalty 100` (100 bans the openers; 3–5 nudges them). Off when absent. It shapes the
+    /// thought but doesn't bound it, so the character cut stays unless `-thinkBudgetTokens` is also set. Like the
+    /// budget it rides the plain turn only: a thought on the tool session (MLXToolCalling) is not penalised.
+    enum NoWait {
+        /// The argv key for the penalty, subtracted from the openers' logits.
+        public static let penaltyKey = "thinkWaitPenalty"
+        /// The openers, capitalised. The paper's longer list (but, now, check, again…) also cuts plain sentences.
+        public static let words = ["Wait", "Hmm", "Alternatively"]
+
+        /// Every spelling a tokenizer may hold as one token: either case, starting a line or after a space.
+        public static var spellings: [String] {
+            words.flatMap { word in [word, word.lowercased()].flatMap { [$0, " " + $0] } }
+        }
+
+        /// The penalty argv asked for, or nil (the shipping default: none).
+        public static func penalty(from defaults: UserDefaults) -> Float? {
+            // Narrowed before the test: a Double too small for a Float would read as on and subtract nothing.
+            let penalty = Float(defaults.double(forKey: penaltyKey))
+            return penalty > 0 ? penalty : nil
+        }
+
+        /// The penalty for one generation: only when it opens a thought, like the token budget.
+        public static func penalty(for requested: Float?, preOpenedThinking: Bool) -> Float? {
+            preOpenedThinking ? requested : nil
+        }
     }
 }

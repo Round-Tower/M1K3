@@ -44,6 +44,8 @@
 //  seeds are built exact now. Wording only.
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — both generate calls take the budget-forcing components
 //  (`-thinkBudgetTokens`); empty components when it's off, so the default path is unchanged. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — and the NoWait arm's (`-thinkWaitPenalty`), through the same
+//  `thinkingComponents`. Confidence 0.8.
 
 import Foundation
 import MLX
@@ -71,6 +73,7 @@ extension MLXBrainProvider {
         )
         let parameters = generateParameters
         let thinkBudget = thinkBudgetTokens(parameters: parameters)
+        let waitPenalty = thinkWaitPenalty()
         let thinkingContext = thinkingAdditionalContext
         let model = modelIdentifier
         let seedIDs = seed.tokenIDs
@@ -148,8 +151,10 @@ extension MLXBrainProvider {
                 cache = try context.model.newCache(parameters: parameters)
                 input = prepared
             }
-            // The budget-forcing arm (`-thinkBudgetTokens`): empty components when it's off.
-            let components = thinkBudgetComponents(thinkBudget, tokenizer: context.tokenizer, label: label)
+            // The thinking arms (`-thinkBudgetTokens`, `-thinkWaitPenalty`): empty components when they're off.
+            let components = thinkingComponents(
+                budget: thinkBudget, waitPenalty: waitPenalty, tokenizer: context.tokenizer, label: label
+            )
             let stream: AsyncStream<Generation>
             do {
                 stream = try MLXLMCommon.generate(
