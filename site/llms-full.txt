@@ -6,7 +6,7 @@
 > on-device — local brains, live voice, a knowledge graph, a memory graph, and an
 > MCP server on loopback. Made by Round Tower, Ireland.
 
-Sources, in order: https://m1k3.app/install, https://m1k3.app/agents, https://m1k3.app/privacy, https://m1k3.app/mcp-knowledge-server, https://m1k3.app/vs-ollama, https://m1k3.app/private-chatgpt-alternative-mac, https://m1k3.app/local-llm-mac-guide, https://m1k3.app/brains, https://m1k3.app/golden-gate-on-device-ai, https://m1k3.app/teams, https://m1k3.app/companions, https://m1k3.app/install.txt.
+Sources, in order: https://m1k3.app/install, https://m1k3.app/agents, https://m1k3.app/privacy, https://m1k3.app/terms, https://m1k3.app/mcp-knowledge-server, https://m1k3.app/vs-ollama, https://m1k3.app/private-chatgpt-alternative-mac, https://m1k3.app/local-llm-mac-guide, https://m1k3.app/brains, https://m1k3.app/golden-gate-on-device-ai, https://m1k3.app/teams, https://m1k3.app/companions, https://m1k3.app/install.txt.
 
 ---
 
@@ -409,7 +409,7 @@ Nothing. M1K3 is free for humans — no account, no subscription, no telemetry. 
 
 ## Is M1K3 really private?
 
-Updated 2026-10-11 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable
+Updated 2026-10-18 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable
 
 Short answer: yes — by architecture, not by promise. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the knowledge store encrypted under a key held in your Keychain. The MCP server binds to 127.0.0.1 and is off by default. The network is used in exactly four documented cases: one-time model downloads when you ask for them (brains, semantic memory, sharper speech recognition and the M1K3 Voice, from Hugging Face, plus one voice-styles file from GitHub), web search, which is on by default so answers can be current, with one switch in Settings to turn it off, updates via the channel you installed from, and — only if you turn it on in Settings — sending one message at a time to Apple's Private Cloud Compute. No telemetry, no account, no analytics. With Private Cloud Compute off, the default, pull the ethernet cable mid-conversation and M1K3 doesn't notice.
 
@@ -532,6 +532,108 @@ It binds to 127.0.0.1 — loopback, unreachable from other machines — and it's
 **Q: What happens if I turn on Private Cloud Compute?**
 
 A cloud button appears next to the message field. Tap it and M1K3 shows you exactly what's about to leave — the message, plus the conversation so far only if you tick it, never your memories, documents, tools, calendar, or location — before it sends to Apple's Private Cloud Compute. Apple's own guarantee: “no user data is retained in any form after the response is returned.” (https://security.apple.com/blog/private-cloud-compute/) Every PCC answer is labelled; leave the switch off and none of this applies.
+
+### Privacy policy
+
+Everything above is the architecture. This section is the policy, in the form a directory, a reviewer or a regulator expects, and it says the same thing in fewer words. Effective 2026-10-18.
+
+- Who is responsible. Round Tower Software Ltd, a company registered in Ireland (“Round Tower”), makes M1K3 and runs this website. Contact: hello@round-tower.ie.
+
+- What the app collects about you: nothing. M1K3 has no account, no sign-in, no telemetry, no analytics, no crash reporter of its own and no advertising. Round Tower receives no data from the app and keeps no record of who uses it. Your conversations, documents, memories, call transcripts and settings are stored only on your device, inside the app's sandbox container; the knowledge and memory stores and call transcripts are encrypted with a key held in your Keychain. The four network crossings listed above go to those third parties under their own privacy policies, and none of them goes through Round Tower: model downloads (the ones you ask for, and the Mini fallback on first run on a Mac without Apple Intelligence) from Hugging Face and GitHub; web tools, on by default with one switch to turn them off, which send the query M1K3 writes to DuckDuckGo and fetch Wikipedia summaries and the pages you ask it to read directly from those sites; updates through the channel you installed from; and, only if you turn it on, the one message you choose to send to Apple's Private Cloud Compute.
+
+- Apple. If you installed M1K3 from the App Store, Apple handles the download, any update and any opt-in crash and usage sharing you have enabled in your Apple account, under Apple's privacy policy (https://www.apple.com/legal/privacy/).
+
+- This website. m1k3.app sets no cookies and runs no analytics. Fonts, scripts and the 3D fox are served from this domain, with one exception: the experimental /vr demo loads the three.js library from the jsDelivr CDN, so your browser sends that CDN an ordinary request for the file. The site is hosted on Netlify, acting as Round Tower's processor, whose servers may keep ordinary short-lived access logs (IP address, requested page, browser string) for security and operation under Netlify's privacy policy (https://www.netlify.com/privacy/); Round Tower is the controller for those logs, keeps the host's analytics off, and does not export them or combine them with anything.
+
+- Email. If you write to us, we keep your message and address to deal with it (our legitimate interest in answering you) and delete the thread within twelve months of the last reply, unless it concerns a security report or a contract, which we keep for as long as that matter needs. We use them only to reply and do not add you to any list.
+
+- Your rights. Under the GDPR and equivalent laws you can ask what personal data we hold about you, have it corrected or deleted, object to its processing and complain to a supervisory authority; in Ireland that is the Data Protection Commission (https://www.dataprotection.ie). Because the app sends us nothing, a request will usually find nothing on our side beyond any email you sent us. Data inside the app is yours to delete directly: forget a memory from within M1K3, or remove the app and its container.
+
+- Children. M1K3 is a general-purpose tool and is not directed at children. We knowingly collect no personal data from anyone, children included; a parent or guardian who believes a child has sent us data by email can ask us to delete it.
+
+- Changes. When this page changes, the date at the top changes with it, and the page's git history (https://github.com/Round-Tower/M1K3/commits/master/site/privacy.html) is the public record of every edit. The Terms of Service are a separate page.
+
+---
+
+## Source: https://m1k3.app/terms
+
+## Terms of Service
+
+Effective 2026-10-18 · Round Tower Software Ltd, Ireland · written to be read, not skimmed past
+
+Short version: M1K3 is free software that runs on your own device. There is no account, no subscription and no Round Tower server behind it, so there is very little for these terms to govern. They say which licence each copy comes under, that the AI's answers are suggestions and not advice, that you are responsible for how you use them, and that the software is provided as-is to the extent your local law allows. Your statutory rights as a consumer are not touched. The Privacy Policy is a separate page.
+
+### 1. Who we are
+
+M1K3 is made by Round Tower Software Ltd (“Round Tower”, “we”), a company registered in Ireland. You can reach us at hello@round-tower.ie. These terms cover the M1K3 apps for Mac, iPhone and iPad, the M1K3 command-line helper, and this website, m1k3.app. M1K3 for Teams is sold under a separate written agreement, and that agreement governs where the two differ.
+
+### 2. The licence your copy comes under
+
+M1K3 reaches you by one of three doors, and each carries its own licence:
+
+- Mac App Store, App Store and TestFlight. Copies installed through Apple are licensed to you under Apple's standard Licensed Application End User License Agreement (https://www.apple.com/legal/internet-services/itunes/dev/stdeula/). Apple is not a party to these terms and has no obligation to provide support for M1K3.
+
+- The Developer ID download and the Homebrew cask. The signed, notarized DMG from GitHub and the round-tower/tap cask are builds of the public source, and the Functional Source License, FSL-1.1-ALv2 (https://github.com/Round-Tower/M1K3/blob/master/LICENSE) applies to them.
+
+- The source. The repository is source-available under the same FSL-1.1-ALv2 (revisions published before 2026-09-09 remain under the Apache-2.0 grant they were published with, as the NOTICE records). Every version becomes Apache-2.0 two years after it is published. Internal use, personal use, study and non-commercial research are permitted purposes at no charge; offering M1K3 to others as a competing product is not. The NOTICE (https://github.com/Round-Tower/M1K3/blob/master/NOTICE) file records the licensing history.
+
+The M1K3 name, the M mark, the app icon, the companion faces, the artwork and the M1K3 Voice are trademarks and brand assets of Round Tower, all rights reserved, and are not part of any of the grants above. The trademark policy (https://github.com/Round-Tower/M1K3/blob/master/TRADEMARKS.md) says what you may do with them and how to ask for more.
+
+### 3. Models and other third-party software
+
+M1K3 is an engine. The language models it runs are made by others and the app downloads them, once, from their publishers: the ones you ask for, and the small Mini fallback on first run on a Mac without Apple Intelligence. Apple Foundation Models ship with the operating system; Gemma, Qwen, LFM and the speech, voice and embedding models come from Hugging Face and GitHub. Each is governed by its publisher's own licence, which M1K3 does not alter. The brains page names each model and pins its exact revision. Apple's Private Cloud Compute, when you turn it on, is Apple's service under Apple's terms. The web tools, when they are on, send the query M1K3 writes to DuckDuckGo under DuckDuckGo's terms, and fetch Wikipedia summaries and the pages you ask it to read directly from those sites. The open-source libraries M1K3 builds on are credited in the repository's NOTICE and in the app.
+
+### 4. What the AI's answers are
+
+M1K3 generates text and speech with statistical language models. Its answers can be wrong, out of date, incomplete or confidently made up, and a smaller on-device model is more likely to do so than a frontier one. Treat every answer as a draft from a capable but fallible assistant. M1K3 is not a doctor, a lawyer, a financial adviser, an engineer of record or an emergency service, and nothing it says is professional advice. You decide what to do with an answer, and you are responsible for that decision and for checking anything that matters.
+
+The agent tools act on your instruction and on your machine. Read what a tool is about to do before you let it, as you would with any script.
+
+### 5. What you agree to
+
+For a copy of the source or the DMG, the licence in section 2 is what governs what you may do with the software. The points below are the acceptable use of the apps, the helper and this website:
+
+- Use M1K3 only where it is lawful to do so, and in a way that respects other people's rights, including their privacy and their copyright.
+
+- Do not use M1K3 to harass, deceive, defraud or harm anyone.
+
+- Do not strip the attribution or provenance notices from the source, or distribute a fork under the M1K3 name or with its brand assets.
+
+- Do not attempt to attack, overload or interfere with this website or with Round Tower's systems. Security research on your own copy of the app is welcome; the security policy (https://github.com/Round-Tower/M1K3/blob/master/SECURITY.md) says how to report what you find.
+
+- Follow the licence that applies to your copy, as set out in section 2.
+
+### 6. Your data and your content
+
+What you type, say, drop into or record with M1K3 stays yours, and it stays on your device apart from the web searches and page reads M1K3 runs for you while the web tools are on (the default; one switch in Settings turns them off) and anything you choose to send to Private Cloud Compute. Round Tower never receives it, never stores it and claims no rights in it or in the answers M1K3 produces for you. The Privacy Policy describes the complete list of moments the app can touch the network and what leaves in each one.
+
+### 7. No warranty
+
+M1K3 is free, and it is provided as-is and as-available, without warranty of any kind, express or implied, including fitness for a particular purpose, accuracy and non-infringement, to the fullest extent permitted by law. We do not promise that it will be available, uninterrupted or free of defects, or that any model will keep working as its publisher updates it or as Apple updates the operating system. Where you obtained M1K3 through Apple, the warranty terms of Apple's standard EULA apply to that copy.
+
+### 8. Limitation of liability
+
+To the fullest extent permitted by law, Round Tower will not be liable for any indirect, incidental, special, consequential or punitive loss, or for any loss of data, profit, goodwill or opportunity, arising from your use of or inability to use M1K3 or from anything it generates. Where liability cannot be excluded, it is limited to the greater of the amount you paid Round Tower for M1K3 in the twelve months before the claim, which for the free app is nothing, and fifty euro. Nothing in these terms excludes or limits liability for death or personal injury caused by negligence, for fraud, or for anything else that cannot be excluded under the law that applies to you.
+
+### 9. Consumer rights
+
+If you are a consumer in the European Union, the United Kingdom or elsewhere, you have statutory rights that these terms cannot take away, and nothing here is meant to. Where a term here conflicts with a mandatory protection of the law of the country you live in, that protection wins.
+
+### 10. Ending things
+
+There is no account to close. Stop using M1K3 and delete the app, and your copy's licence ends with it. The data the app stored stays on your device until you remove it too: anything you asked M1K3 to remember can be forgotten from inside the app, and the rest lives in the app's container (~/Library/Containers/app.m1k3 on a Mac) and one Keychain item, which deleting the app does not remove on its own. Round Tower may stop distributing M1K3, or a particular version of it, at any time. The licences already granted on published source remain as granted.
+
+### 11. Changes to these terms
+
+We may update these terms as the product changes. The current version is always at this address, with its effective date at the top, and the page's git history (https://github.com/Round-Tower/M1K3/commits/master/site/terms.html) is the public record of every change. A change applies to versions released and use after its effective date, never backwards, and section 9 still applies; if you do not accept a change, stop using M1K3 as described in section 10.
+
+### 12. Law and disputes
+
+These terms are governed by the law of Ireland, and the courts of Ireland have jurisdiction, except that if you are a consumer you keep the right to bring a claim in, and under the law of, the country where you live. If any part of these terms is found unenforceable, the rest stands.
+
+### 13. Contact
+
+Questions, complaints or a request to use the marks: hello@round-tower.ie. Round Tower Software Ltd, Ireland. We reply to real people, by hand.
 
 ---
 
