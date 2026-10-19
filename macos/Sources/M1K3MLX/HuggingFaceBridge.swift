@@ -35,6 +35,9 @@
 //  downloads, so its copy never read fully present: every launch asked the Hub (a revision GET, a tree GET, ~14
 //  HEADs) and hashed 1.27 GB twice, three times offline. `resolveRevision` keeps the full pin. Confidence 0.85 —
 //  the launch-log check (verified once, then skipping network) is owed.
+//  Review: same day (pre-push review fold, security pass) — `fetchedCut`: the cut stands for the pin only when it
+//  keeps every pinned weight shard, so a tokenizer-only pattern list can't verify, write a receipt or reclaim the
+//  quarantine on no weight evidence (latent: no caller sets a tokenizer source today).
 //
 
 import Foundation
@@ -306,7 +309,8 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
     ///
     /// Judged by the pinned files `patterns` fetches (2026-10-19): the embedder's pin lists a
     /// README.md no load downloads, so "every pinned file" was never on disk and every launch
-    /// asked the Hub. A cut with no files has nothing to attest and never skips.
+    /// asked the Hub. Without a fetched cut (`fetchedCut`) there is nothing safe to attest, so
+    /// it never skips.
     static func shouldSkipNetworkFetch(
         useLatest: Bool,
         directory: URL,
@@ -314,20 +318,29 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
         patterns: [String],
         repoID: String
     ) -> Bool {
-        guard !useLatest, let pin else { return false }
-        let fetched = pin.restricted(toFilesMatching: patterns)
-        guard !fetched.files.isEmpty else { return false }
-        return WeightIntegrityScan.isFullyPresentAndVerified(directory: directory, pin: fetched, repoID: repoID)
+        guard !useLatest, let pin, let cut = fetchedCut(pin, patterns: patterns) else { return false }
+        return WeightIntegrityScan.isFullyPresentAndVerified(directory: directory, pin: cut, repoID: repoID)
     }
 
-    /// The pin a download matching `patterns` is judged by: the pinned files it fetches, so a
-    /// fresh download reads `.verified` and writes its receipt instead of `.incomplete` forever.
-    /// An empty cut keeps the full pin: a vacuous `.verified` would write an empty receipt and
-    /// reclaim the quarantine on no evidence. Nil (unpinned) stays nil.
+    /// The pin a download matching `patterns` is judged by: its fetched cut, so a fresh download
+    /// reads `.verified` and writes its receipt instead of `.incomplete` forever; otherwise the
+    /// full pin, as before the cut. Nil (unpinned) stays nil.
     static func enforcedPin(_ pin: WeightIntegrity.Pin?, patterns: [String]) -> WeightIntegrity.Pin? {
         guard let pin else { return nil }
-        let fetched = pin.restricted(toFilesMatching: patterns)
-        return fetched.files.isEmpty ? pin : fetched
+        return fetchedCut(pin, patterns: patterns) ?? pin
+    }
+
+    /// The pinned files `patterns` fetches, when that cut may stand for the whole pin: it keeps
+    /// every pinned weight shard. An empty cut, or one that drops a shard (a tokenizer-only
+    /// `*.json` / `*.jinja` list), would read `.verified` with no weight evidence, write that
+    /// receipt and reclaim the quarantine, so it is nil and the full pin judges instead.
+    static func fetchedCut(_ pin: WeightIntegrity.Pin, patterns: [String]) -> WeightIntegrity.Pin? {
+        let cut = pin.restricted(toFilesMatching: patterns)
+        let shards = { (files: [String: WeightIntegrity.PinnedFile]) in
+            Set(files.keys.filter { $0.hasSuffix(".safetensors") })
+        }
+        guard !cut.files.isEmpty, shards(cut.files) == shards(pin.files) else { return nil }
+        return cut
     }
 
     /// Errors worth falling back to a verified local copy for (#72 item 2) —

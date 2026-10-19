@@ -11,6 +11,7 @@
 //  Signed: Kev + claude-fable-5, 2026-06-10, Confidence 0.8, Prior: Unknown
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — the fast path and the post-download check are judged by the pinned
 //  files the download's patterns fetch: the embedder's pinned README.md never arrives, so every launch asked the Hub.
+//  Review: same day (pre-push review fold) — a cut that drops a weight shard never stands for the pin.
 //
 
 import Foundation
@@ -227,6 +228,24 @@ struct HuggingFaceBridgeTests {
         #expect(!WeightIntegrityScan.receiptExists(forModelAt: fixture.url))
         #expect(HubApiDownloader.enforcedPin(pin, patterns: Self.loaderPatterns) == pin)
         #expect(HubApiDownloader.enforcedPin(nil, patterns: Self.loaderPatterns) == nil)
+    }
+
+    /// A tokenizer-only pattern list keeps the JSONs and drops the shard: verifying that cut would write a receipt
+    /// and reclaim the quarantine with no weight checked. The full pin judges instead (pre-push security fold).
+    @Test("a cut that drops a weight shard neither skips the network nor narrows the judgement")
+    func cutWithoutTheShardsNeverStands() throws {
+        let fixture = try FixtureDirectory()
+        try fixture.write("weights", to: "model.safetensors")
+        try fixture.write("{}", to: "config.json")
+        let pin = Self.fixturePin(contents: ["model.safetensors": "weights", "config.json": "{}"])
+        let tokenizerOnly = ["*.json", "*.jinja"]
+
+        #expect(HubApiDownloader.fetchedCut(pin, patterns: tokenizerOnly) == nil)
+        #expect(!HubApiDownloader.shouldSkipNetworkFetch(
+            useLatest: false, directory: fixture.url, pin: pin, patterns: tokenizerOnly, repoID: "org/repo"
+        ))
+        #expect(!WeightIntegrityScan.receiptExists(forModelAt: fixture.url))
+        #expect(HubApiDownloader.enforcedPin(pin, patterns: tokenizerOnly) == pin)
     }
 
     @Test("a download is judged by the pinned files its patterns fetch")

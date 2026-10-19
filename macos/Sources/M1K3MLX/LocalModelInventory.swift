@@ -30,6 +30,7 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — `installState` counts only the pinned files a download fetches
 //  (`HubApiDownloader.enforcedPin`): the embedder's pinned README.md never arrives, so Settings read it "Partly
 //  downloaded" with a Resume button. Brain pins list nothing outside the patterns, so brains are unchanged.
+//  Review: same day (pre-push review fold) — the doc comment says so.
 
 import Foundation
 import Hub
@@ -65,9 +66,10 @@ public struct LocalModelInventory: Sendable {
 
     /// Whether the download is whole, for Settings > Brains & downloads. A pinned repo is
     /// `.complete` only when every pinned weight shard is present at its pinned size and every
-    /// other pinned file is present (sizes are not compared there: a post-download template
-    /// patch may legitimately change them). An unpinned repo is `.complete` once any weights
-    /// exist. Anything else with bytes in the folder is `.partial`. Stat calls only, no hashing.
+    /// other pinned file a download fetches (`weightPatterns`) is present (sizes are not compared
+    /// there: a post-download template patch may legitimately change them). An unpinned repo is
+    /// `.complete` once any weights exist. Anything else with bytes in the folder is `.partial`.
+    /// Stat calls only, no hashing.
     public func installState(modelID: String) -> InstallState {
         installState(modelID: modelID, pin: PinnedWeights.pin(for: modelID))
     }

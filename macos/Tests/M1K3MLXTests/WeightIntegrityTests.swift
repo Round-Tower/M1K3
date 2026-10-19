@@ -409,15 +409,16 @@ struct PinnedWeightsTests {
         }
     }
 
-    /// Hub matches with fnmatch on the repo-relative path, and `*` crosses `/`: `*.json` fetches
-    /// `1_Pooling/config.json`. The cut must read the path the same way, or a fetched file goes unjudged.
+    /// Hub matches with fnmatch on the repo-relative path, case-sensitive, and `*` crosses `/`: `*.json`
+    /// fetches `1_Pooling/config.json`, never `config.JSON`. The cut must read the path the same way.
     @Test("a pin cut to download patterns keeps nested matches and drops what the loader never fetches")
     func restrictedToPatterns() {
         let file = WeightIntegrity.PinnedFile(size: 1, sha256: "x")
         let pin = WeightIntegrity.Pin(revision: String(repeating: "a", count: 40), files: [
             "model.safetensors": file, "1_Pooling/config.json": file, "chat_template.jinja": file,
-            "README.md": file, "Model.SAFETENSORS.txt": file,
+            "README.md": file, "config.JSON": file,
         ])
+        // "config.JSON" is kept only by a case-folding matcher; Hub's fnmatch(…, 0) never fetches it.
         let cut = pin.restricted(toFilesMatching: ["*.safetensors", "*.json", "*.jinja"])
         #expect(cut.files.keys.sorted() == ["1_Pooling/config.json", "chat_template.jinja", "model.safetensors"])
         #expect(cut.revision == pin.revision)
