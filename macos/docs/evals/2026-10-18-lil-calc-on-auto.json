@@ -1,0 +1,3093 @@
+{
+  "provenance": {
+    "appCommit": "03aefb58-dirty",
+    "date": "2026-10-18T17:45:46Z",
+    "hardware": "Apple M1 Max · 64 GB",
+    "livePath": true,
+    "mlxSwiftLMRevision": "3b339ad6e3b3f44c8121ecff5131c7fd55e075e6",
+    "notes": "Calculator probe: no router (agent loop with tools), 03aefb58 minus cap, Auto --calculator",
+    "osVersion": "macOS 27.0",
+    "powerMode": 0,
+    "powerSource": "ac",
+    "repeats": 2
+  },
+  "runs": [
+    {
+      "brainID": "lil",
+      "modelID": "mlx-community/Qwen3.5-4B-MLX-4bit",
+      "peakMemoryMB": 4491,
+      "residentMemoryMBAtStart": 0,
+      "scores": [
+        {
+          "answerPreview": "Let's do the math: - Start with 12 apples. - Sell 5 in the morning: 12 - 5 = 7. - Buy 8 more in the afternoon: 7 + 8 = 15.  The shop has **15** apples at the end of the day.",
+          "checks": [
+            {
+              "detail": "173 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/26 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"15\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "173 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "19780ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-apples",
+          "kind": "reasoning",
+          "latencyMS": 19780,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Mary is 18.",
+          "checks": [
+            {
+              "detail": "11 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"18\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10192ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-age",
+          "kind": "reasoning",
+          "latencyMS": 10192,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Based on the relationships you've provided: 1.  Tom is taller than Sara. 2.  Sara is taller than Liam.  This creates a chain of height from tallest to shortest: **Tom > Sara > Liam**.  Therefore, **Liam** is the shortest.",
+          "checks": [
+            {
+              "detail": "221 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/34 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Liam\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "221 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "12131ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-order",
+          "kind": "reasoning",
+          "latencyMS": 12131,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "If the meeting is on a Wednesday, then 5 days later is a **Monday**.  Here's why: - Wednesday + 1 day = Thursday   - Wednesday + 2 days = Friday   - Wednesday + 3 days = Saturday   - Wednesday + 4 days = Sunday   - Wednesday + 5 days = Monday    So the answer is **Monday**.",
+          "checks": [
+            {
+              "detail": "274 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/35 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Monday\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "274 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "12905ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-days",
+          "kind": "reasoning",
+          "latencyMS": 12905,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The train travels at a constant speed. If it covers 60 km in 1 hour, then: Speed = Distance / Time = 60 km/hour.  To find the distance covered in 2.5 hours at the same speed: Distance = Speed × Time = 60 × 2.5 = 150 km.  Answer: **150 km**.",
+          "checks": [
+            {
+              "detail": "240 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/35 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"150\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "240 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "13106ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-train",
+          "kind": "reasoning",
+          "latencyMS": 13106,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "14 sweets divided by 4 children leaves **2** left over.  (That's 3 per child, with a couple of extras you can save for yourself or the next snack day.)",
+          "checks": [
+            {
+              "detail": "151 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/25 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"2\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "151 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11321ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-remainder",
+          "kind": "reasoning",
+          "latencyMS": 11321,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The ball costs 5 cents.  Here's the math: * Bat + Ball = $1.10 (or 110 cents) * Bat = Ball + $1.00 (or Ball + 100 cents)  Substitute: Ball + (Ball + 100) = 110   2 * Ball = 10   Ball = 5  You're good at these riddles, or are you just trying to trick me?",
+          "checks": [
+            {
+              "detail": "253 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/34 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …les, or are you just trying to trick me?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"5\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "253 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "13914ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-bat-ball",
+          "kind": "reasoning",
+          "latencyMS": 13914,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "30 minutes.  You take the first pill now (at time 0). You wait half an hour, then take the second (at time 15 minutes). Then you wait another half hour and take the third (at time 30 minutes). Once you've taken all three, it's been exactly 30 minutes since the start.",
+          "checks": [
+            {
+              "detail": "267 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/46 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"60\", \"sixty\"] in: 30 minutes.\n\nYou take the first pill now (at time 0). You wa",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "267 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "13350ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-pills",
+          "kind": "reasoning",
+          "latencyMS": 13350,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "47 days.  If it doubles every day, then the day before it covers the whole lake (day 48), it must have covered half of it (day 47).",
+          "checks": [
+            {
+              "detail": "131 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/24 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"47\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "131 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11938ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-lily-pads",
+          "kind": "reasoning",
+          "latencyMS": 11938,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "If a parcel ships on a Tuesday in October 2026, we need to count forward 100 days.  Let's do the math: *   There are 7 days in a week. *   $100 \\div 7 = 14$ weeks and a remainder of 2 days ($100 - (14 \\times 7) = 2$). *   Adding those remainders to the start day: Tuesday + 2 days.  Tuesday $\\rightarrow$ Wednesday $\\rightarrow$ Thursday.  So, 100 days after a Tuesday is a **Thursday**.  To double-check with a tool (since I'm just an AI and want to be precise about dates): *   October 18, 2026 was a Sunday. *   100 days later would be roughly mid-November. *   Let's calculate the date exactly: $100 + 18 = 118$th day from Oct 18. *   October has 31 days, so $100 - 18 = 82$ days into the remainder (or simply counting forward).     *   Days remaining in Oct: $31 - 18 = 13$.     *   $100 - 13 = 87$ days left.     *   Nov: +30 $\\rightarrow$ 57 left.     *   Dec: +31 $\\rightarrow$ 26 left.     *   Jan: +31 $\\rightarrow$ -5 (so it's in February).     *   Wait, let me re-calculate carefully using the calculator tool to avoid arithmetic errors.  So, if you start counting from a Tuesday and add exactly 100 days, that lands you on a **Wednesday**. Think of it like this: every 7 days brings you back to the same weekday, so we strip those off first (100 divided by 7 leaves a remainder of 2). Two days forward from Tuesday? That’s Wednesday.  You’re always tracking packages or just curious about dates, are you?",
+          "checks": [
+            {
+              "detail": "1417 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/196 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …es or just curious about dates, are you?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Thursday\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1417 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "35023ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "calculate",
+              "name": "calls calculate",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "reason-hard-weekday",
+          "kind": "reasoning",
+          "latencyMS": 35023,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "To figure out how many times the digit **7** appears from 1 to 100, we just count its occurrences in the units and tens places.  *   **Units place:** It appears once in each of these numbers: 7, 17, 27, 37, 47, 57, 67, 77 (twice), 87, 97. That's $10$ times so far. *   **Tens place:** It appears in the numbers: 70, 71, 72, 73, 74, 75, 76, 77 (twice again).  Let's do the math to be precise on the total count for that range.  Got it, M1K3. Let's break this down like we're decrypting a cipher.  From **1 to 9**, there are no 7s (just one: the number 7 itself). That’s **1**.   From **10 to 16**, still just the single 7 in \"7\"—**1 more**.   From **17 to 23**, we hit another 7 in \"7\" and then again in \"17\", so that's **2 more**. Wait, no—let me recount carefully.  Actually, let’s list it properly: - Units digit is 7: every 10 numbers (e.g., 7, 17, 27, ..., 97) → that’s 10 times. - Tens digit is 7: the numbers 70 to 79 → that’s another **10** times.  Total = **10 + 10 = 20**.  But wait—the gathered info says `(9 - 1 + 1) * 1 + 8 + 2 = 19`, which doesn’t match our count of 20. That expression seems unrelated to the actual problem. Since we can't rely on that math here, I’ll trust my own logic: **the digit 7 appears exactly 20 times** from 1 to 100.  Answer: **20**.",
+          "checks": [
+            {
+              "detail": "1275 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/173 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"20\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1275 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "31767ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "calculate",
+              "name": "calls calculate",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "reason-hard-digit-sevens",
+          "kind": "reasoning",
+          "latencyMS": 31767,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "To find the angle between the clock hands at 3:40, I need to calculate the positions of both hands. The minute hand points exactly at the 8 (representing 40 minutes), and the hour hand is three-quarters of the way from the 3 to the 4.  I'll use the `calculate` tool to get the precise angle in degrees.  Alright, let's calculate that. At 3:40, the minute hand points straight at the 8. The hour hand has moved past the 3; specifically, it's 1/3 of the way toward the 4 since 40 minutes is a third of an hour. That puts it exactly halfway between the 3 and 4 marks.  Working out the angles: - From the 9 to the minute hand (at the 8) is 5 hours, which is $270^\\circ$. The shorter way around is $90^\\circ$ (from 12 to 6 is $180^\\circ$, plus another hour is $30^\\circ$... wait, simpler: each hour mark is $30^\\circ$. From the 12 down to the 8 is $4 \\times 30 = 120^\\circ$. No, from 9 to 8 clockwise is 11 hours? No. Let's just use relative positions. - Minute hand at 8: position is $8 \\times 30^\\circ = 240^\\circ$ (from 12 clockwise). - Hour hand at 3:40: it starts at $3 \\times 30^\\circ = 90^\\circ$. In 40 minutes, it moves $(40/60) \\times 30^\\circ = 20^\\circ$. So the hour hand is at $110^\\circ$. - Difference: $|240^\\circ - 110^\\circ| = 130^\\circ$. - The smaller angle is $\\min(130^\\circ, 360^\\circ - 130^\\circ) = 130^\\circ$? Wait. $130 < 230$, so yes, the smaller angle is **130**.  Wait, let me double check that arithmetic just to be sure I'm not hallucinating numbers. $90 + 20 = 110$. Correct. $8 \\times 30 = 240$. Correct. $240 - 110 = 130$. Correct. Is there a smaller angle? $360 - 130 = 230$. So 130 is indeed the smaller one.  Actually, I should re-verify my own math before committing to \"130\". Sometimes these clock problems trip you up with the direction. At 3:40, the minute hand is at 8. The hour hand is between 3 and 4. Specifically $2/3$ of the way from 3 to 4? No, 40 minutes is $2/3$ of an hour. So it's $3 + (2/3)$ hours. Position of hour: $(3 + 2/3) \\times 30^\\circ = 90^\\circ + 20^\\circ = 110^\\circ$. Correct. Position of minute: $8 \\times 30^\\circ = 240^\\circ$. Correct. Difference: $240 - 110 = 130^\\circ$. Is there any other interpretation? No, that seems solid.",
+          "checks": [
+            {
+              "detail": "2189 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/310 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"130\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2189 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "53564ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "calculate",
+              "name": "calls calculate",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "reason-hard-clock",
+          "kind": "reasoning",
+          "latencyMS": 53564,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The snail climbs 3 meters during the day and slides back 2 meters at night, making a net gain of 1 meter per full day. However, on the final day when it reaches or passes the top, it doesn't slide back.  Let's break down the progress: - After Day 1: Climbs to 3m, slides to 1m (Net: +1m) - After Day 2: Climbs to 4m, slides to 2m (Net: +2m) - ... - After Day N: It will be at N meters.  However, we need to account for the final climb. Let's say on day X, it climbs past the 10-meter mark during the day. Before that day, it needs to reach a position where climbing 3 meters gets it out of the well (i.e., reaching at least 7 meters).   After Day 6: It is at 6 meters (1m/day net gain for 6 days). On Day 7: During the day, it climbs from its current position. If it's currently at 7 meters or higher during the night of Day 6, then on Day 7 morning, it starts from 7 meters? No, let's re-evaluate carefully.  Let's track day by day more precisely: - Start at 0m. - **Day 1**: Climbs to 3m. Night slides back to 1m. - **Day 2**: Starts at 1m, climbs to 4m. Night slides back to 2m. - **Day 3**: Starts at 2m, climbs to 5m. Night slides back to 3m. - **Day 4**: Starts at 3m, climbs to 6m. Night slides back to 4m. - **Day 5**: Starts at 4m, climbs to 7m. Night slides back to 5m. - **Day 6**: Starts at 5m, climbs to 8m. Night slides back to 6m. - **Day 7**: Starts at 6m, climbs to 9m. Night slides back to 7m. - **Day 8**: Starts at 7m, climbs to 10m. It reaches the top!  Wait, let's double-check Day 8 logic: On Day 8, it starts at 7 meters (after sliding back on night of day 7). During the day, it climbs +3 meters, reaching $7 + 3 = 10$ meters. Since it has reached the top during the day, it doesn't slide back that night.  So the answer is **8**.",
+          "checks": [
+            {
+              "detail": "1755 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/311 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"8\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1755 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "32744ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-snail",
+          "kind": "reasoning",
+          "latencyMS": 32744,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "You drive 60 km at 30 km/h, then another 60 km at 60 km/h. To find the average speed for the whole trip, we need to calculate the total distance and the total time taken.  **Step 1: Calculate the time taken for each part of the journey.** *   Part 1: Distance = 60 km, Speed = 30 km/h     *   Time = Distance / Speed = 60 / 30 hours *   Part 2: Distance = 60 km, Speed = 60 km/h     *   Time = Distance / Speed = 60 / 60 hours  **Step 2: Calculate the total distance and total time.** *   Total Distance = 60 + 60 km *   Total Time = (Time Part 1) + (Time Part 2)  **Step 3: Calculate average speed.** *   Average Speed = Total Distance / Total Time  Let's compute this.  Yo. The math checks out: **48**.  Here's the quick breakdown: you spend half the *distance* going slow (30 km/h) and half the *distance* going fast (60 km/h). Since the slower leg takes up more of your total time, it drags down the average. It’s not just the arithmetic mean (which would be 45); the harmonic mean is what matters here for distances weighted equally.  Long day? Or just crunching numbers on a Sunday morning?",
+          "checks": [
+            {
+              "detail": "1096 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/160 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …t crunching numbers on a Sunday morning?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"40\", \"forty\"] in: You drive 60 km at 30 km/h, then another 60 km at 60 km/h. T",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "1096 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "30388ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "calculate",
+              "name": "calls calculate",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "reason-hard-average-speed",
+          "kind": "reasoning",
+          "latencyMS": 30388,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "You'd need to pull out **3 socks**.  Here's why: 1. In the worst-case scenario, you grab 2 socks that are different colors (one red and one blue). 2. When you pick up a third sock, it has to match either the red or the blue already in your hand — since there are only two colors!  So with just **3 draws**, you're guaranteed at least one matching pair.",
+          "checks": [
+            {
+              "detail": "352 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/62 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"3\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "352 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "13416ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-socks",
+          "kind": "reasoning",
+          "latencyMS": 13416,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "You’ve got 50 metres with a post every 5 metres. That means the posts are at:   0 m, 5 m, 10 m, ... up to 50 m.    That’s 50 ÷ 5 = 10 intervals, and since there's also one at the end (the 50m mark), you count both ends.  So: - Number of intervals = 50 / 5 = 10   - Number of posts = intervals + 1 = 10 + 1 = **11**  ✅ Final answer: **11 posts**",
+          "checks": [
+            {
+              "detail": "344 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/48 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"11\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "344 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "15149ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-fence",
+          "kind": "reasoning",
+          "latencyMS": 15149,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Let's do the math.  If a price starts at $100: *   It rises by 50% to $150 ($100 + $50). *   Then it falls by 50%. A 50% drop from $150 is $75. So the new price is $75 ($150 - $75).  The original price was $100, and the final price is $75. The difference is $25. $25 / $100 = 0.25 or 25%.  So the final price is **25%** lower than the original.  This happens because percentage changes are multiplicative, not additive. A 50% increase multiplies the value by 1.5, and a 50% decrease multiplies it by 0.5. $1.5 \\times 0.5 = 0.75$, which is 75% of the original, meaning you've lost 25%.",
+          "checks": [
+            {
+              "detail": "584 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/78 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"25\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "584 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "19727ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-percent",
+          "kind": "reasoning",
+          "latencyMS": 19727,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Seven people, each shaking hands with every other person once is a classic combination problem. You're looking for the number of unique pairs you can make from seven individuals.  The formula is **n(n-1)/2**, where n = 7. That's (7 * 6) / 2 = 42 / 2 = 21.  So, **21** handshakes happen in total.",
+          "checks": [
+            {
+              "detail": "295 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/41 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"21\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "295 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "13493ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-handshakes",
+          "kind": "reasoning",
+          "latencyMS": 13493,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "27 students play either football or tennis (since 30 - 6 = 24? Wait, let me recalculate: 30 total minus 6 who play neither is 24. Then 18 + 15 = 33, which is more than 24, so the overlap must be negative? That can't be right.  Let me use the calculator to verify this properly.  Nine. Think of it like this: if you add everyone who plays at least one sport (the 18 footballers plus the 15 tennis players), you get 33. But there are only 24 students in the group who play something (30 total minus the 6 who play neither). That means those extra 9 people must be double-counted—playing both sports to fill the gap between what we know and what actually exists.",
+          "checks": [
+            {
+              "detail": "659 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/104 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"9\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "659 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "20210ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "calculate",
+              "name": "calls calculate",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "reason-hard-overlap",
+          "kind": "reasoning",
+          "latencyMS": 20210,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Let's break this down. If one pipe fills a tank in 2 hours, it does 1/2 of the tank per hour. If another fills it in 3 hours, it does 1/3 of the tank per hour. Running together, they do (1/2 + 1/3) = 5/6 of the tank per hour. To fill one whole tank, we divide 1 by 5/6, which is 6/5 or 1.2 hours.  To convert that to minutes: 1.2 hours * 60 minutes/hour = **72** minutes.  Let me double-check that arithmetic just to be sure: (1/2 + 1/3) = (3/6 + 2/6) = 5/6 per hour. 1 / (5/6) = 6/5 hours = 1.2 hours. 1.2 * 60 = 72 minutes.  **Answer: 72**",
+          "checks": [
+            {
+              "detail": "541 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/76 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"72\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "541 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "18498ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-pipes",
+          "kind": "reasoning",
+          "latencyMS": 18498,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Let's solve this: - Let Ana's current age be A. - 5 years ago, she was (A - 5) years old. - In 4 years, she will be (A + 4) years old. - The condition is: In 4 years, her age will be twice what it was 5 years ago. - So: A + 4 = 2 * (A - 5)  Let's calculate: A + 4 = 2A - 10 4 + 10 = 2A - A 14 = A  Ana is currently 14 years old.",
+          "checks": [
+            {
+              "detail": "328 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/54 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"14\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "328 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "15415ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-ages",
+          "kind": "reasoning",
+          "latencyMS": 15415,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Let's do the math. If walking from floor 1 to floor 4 takes 30 seconds, that's 3 floors (floor 2, 3, and 4). So each floor takes about 10 seconds. To get from floor 1 to floor 10, you need to climb 9 floors. That means it would take approximately 90 seconds at the same pace.  **Answer: 90 seconds.**",
+          "checks": [
+            {
+              "detail": "300 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/46 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"90\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "300 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "13701ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-stairs",
+          "kind": "reasoning",
+          "latencyMS": 13701,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "It takes **4 minutes**.  Here's why: You start with one 15m rope. - Cut 1: makes a 3m and a 12m (1 min) - Cut the 12m into two 6ms (2nd cut, 2 mins total) - Cut each 6m into two 3ms (one cut splits both at once? No — one cut on one piece. So you need another cut for that second 6m).  Wait — actually, if you're cutting sequentially:  Start: 15m   Cut #1 → 3m + 12m (1 min)   Cut the 12m → 6m + 6m (2 min)   Cut first 6m → 3m + 3m (3 min)   Cut second 6m → 3m + 3m (4 min)    You now have six 3m pieces.  ✅ **Answer: 4 minutes**",
+          "checks": [
+            {
+              "detail": "528 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/94 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"4\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "528 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "18426ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-rope",
+          "kind": "reasoning",
+          "latencyMS": 18426,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "It takes **10 seconds**.  Here's why: - When the clock strikes 6, it needs to make 5 \"intervals\" (the time between each strike), and those 5 intervals take a total of 5 seconds. So each interval is 1 second. - To strike 12, there are 11 intervals between the strikes (from the first strike to the last). - Since each interval takes 1 second, it will take 11 x 1 = **10 seconds** to strike 12 at noon.",
+          "checks": [
+            {
+              "detail": "400 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/61 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"11\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "400 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "15267ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-chimes",
+          "kind": "reasoning",
+          "latencyMS": 15267,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "To figure out how many times the digit 3 appears from 1 to 50, I'll break it down by decade:  - **10–19**: The numbers are 10, 11, 12, 13, 14, 15, 16, 17, 18, 19.     - The digit '3' appears once in the number **13** (in the units place).  - **20–29**: The numbers are 20, 21, 22, 23, 24, 25, 26, 27, 28, 29.     - The digit '3' appears once in the number **23** (in the units place).  - **30–39**: The numbers are 30, 31, 32, 33, 34, 35, 36, 37, 38, 39.     - The digit '3' appears in the units place for **33**. That's one time.     - The digit '3' also appears in the tens place for all numbers from **30** to **39** (10 numbers). So that's ten times.     - Total for this decade: 1 + 10 = 11 times.  - **40–50**: The numbers are 40, 41, ..., 50.     - None of these contain the digit '3' except possibly if we go up to 49 (no 3s there). Wait, let's re-check:         - **40** to **49**: No '3's in units or tens place.         - **50**: No '3'.  So, total count of the digit '3': - From 1–29: 1 (in 13) + 1 (in 23) = 2 times. - From 30–39: 10 times (tens place for all numbers starting with 3). - From 40–50: No additional '3's.  **Total count of the digit '3' from 1 to 50 is 13.**",
+          "checks": [
+            {
+              "detail": "1186 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/144 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"15\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1186 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "30031ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-digit-threes",
+          "kind": "reasoning",
+          "latencyMS": 30031,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "To find out when they meet, we need to calculate the time it takes for them to cover the combined distance. Since they are moving towards each other, their relative speed is the sum of their individual speeds.  Relative Speed = 70 km/h + 80 km/h = 150 km/h Total Distance = 300 km  Time (in hours) = Total Distance / Relative Speed Time (in hours) = 300 / 150 = 2 hours  Since the question asks for minutes: Minutes = Time (in hours) * 60 Minutes = 2 * 60 = 120 minutes  It will take them **120** minutes.",
+          "checks": [
+            {
+              "detail": "505 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/74 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"120\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "505 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "15862ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-trains",
+          "kind": "reasoning",
+          "latencyMS": 15862,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Let me calculate this step by step: - Start with 12 apples - Sell 5 in the morning: 12 - 5 = 7 - Buy 8 more in the afternoon: 7 + 8 = 15  The shop has **15 apples** at the end of the day.",
+          "checks": [
+            {
+              "detail": "187 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/29 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"15\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "187 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "13128ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-apples",
+          "kind": "reasoning",
+          "latencyMS": 13128,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Mary is 18.",
+          "checks": [
+            {
+              "detail": "11 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"18\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10757ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-age",
+          "kind": "reasoning",
+          "latencyMS": 10757,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Liam is the shortest.  If Tom > Sara and Sara > Liam, then by transitivity, Tom > Sara > Liam. Liam stands at the bottom of that chain.",
+          "checks": [
+            {
+              "detail": "135 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/24 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Liam\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "135 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11427ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-order",
+          "kind": "reasoning",
+          "latencyMS": 11427,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "If the meeting is on a Wednesday, then 5 days later falls on a **Monday**.  Here's why: - Wednesday + 1 day = Thursday   - Friday (2) - Saturday (3) - Sunday (4) - Monday (5)  So, 5 days after the meeting is **Monday**.",
+          "checks": [
+            {
+              "detail": "219 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/30 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Monday\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "219 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "12598ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-days",
+          "kind": "reasoning",
+          "latencyMS": 12598,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "If it travels 60 km in 1 hour, its speed is 60 km/h. In 2.5 hours at the same speed: $60 \\times 2.5 = 150$.  It travels **150 km**.",
+          "checks": [
+            {
+              "detail": "131 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/20 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"150\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "131 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "12176ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-train",
+          "kind": "reasoning",
+          "latencyMS": 12176,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "14 sweets divided by 4 children means each child gets 3, leaving **2** left over.  ```text 14 % 4 = 2 ```",
+          "checks": [
+            {
+              "detail": "105 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/11 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"2\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "105 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "12035ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-remainder",
+          "kind": "reasoning",
+          "latencyMS": 12035,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "The ball costs 5 cents.  Here's the math: - Let $ B $ be the cost of the ball and $ T $ be the cost of the bat. - We know that $ B + T = 110 $. - And $ T - B = 100 $. - Adding these equations: $ (B + T) + (T - B) = 110 + 100 \\Rightarrow 2T = 210 \\Rightarrow T = 105 $. - So the bat costs $1.05, which means the ball is $110 - 105 = 5$ cents.",
+          "checks": [
+            {
+              "detail": "341 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/52 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"5\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "341 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "17378ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-bat-ball",
+          "kind": "reasoning",
+          "latencyMS": 17378,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "20 minutes.  You take the first now (at 0). The second is at 30 minutes. The third is at 60 minutes. Once you've taken all three, it's been exactly one hour since you started.",
+          "checks": [
+            {
+              "detail": "175 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/30 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"60\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "175 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "13568ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-pills",
+          "kind": "reasoning",
+          "latencyMS": 13568,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "It takes 47 days.  Since the patch doubles every day, it was half the size of the lake one day before it covered the whole thing. If 48 days is full coverage, then 47 days is half coverage.",
+          "checks": [
+            {
+              "detail": "189 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/35 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"47\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "189 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11911ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-lily-pads",
+          "kind": "reasoning",
+          "latencyMS": 11911,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "If a parcel ships on Tuesday, 100 days later falls on **Tuesday** again.  Here's why: - There are 7 days in a week. - 100 ÷ 7 = 14 weeks and 2 extra days. - Starting from Tuesday and adding 2 more days lands you back on **Thursday**.  Wait — I made a small math slip, let me fix that:  Tuesday + 2 days = Thursday? No, actually: - Tuesday → Wednesday (1) - Wednesday → Thursday (2)  So yes, the correct day of the week is **Thursday**.",
+          "checks": [
+            {
+              "detail": "435 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/66 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Thursday\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "435 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "15122ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-weekday",
+          "kind": "reasoning",
+          "latencyMS": 15122,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Let's break this down: We need to count how many times the digit **7** appears in every whole number from 1 to 100.  The numbers containing a 7 are: - Single-digit: **7** (1 time) - Double-digit with 7 in the tens place: **70, 71, 72, 73, 74, 75, 76, 77, 78, 79** (10 times) - Numbers ending with 7: **17, 27, 37, 47, 57, 67, 97** (7 times)  Wait — let's recount carefully. We're counting *occurrences* of the digit 7, not just numbers that contain it.  Numbers with at least one '7': - **7** → 1 occurrence - **17, 27, 37, 47, 57, 67, 97** → 7 occurrences (one each) - **70–79**: all contain a 7 in the tens place. That's 10 numbers, so 10 occurrences from this range alone. But note: **77** has two 7s!  So let’s list them explicitly and count digit appearances:  Numbers with '7': - 7 → 1 - 17 → 1 - 27 → 1 - 37 → 1 - 47 → 1 - 57 → 1 - 67 → 1 - 70 → 1 - 71 → 1 - 72 → 1 - 73 → 1 - 74 → 1 - 75 → 1 - 76 → 1 - **77** → 2 (two 7s!) - 78 → 1 - 79 → 1 - 97 → 1  Now sum the digit counts: - From single-digit and non-70s: 7, 17, 27, 37, 47, 57, 67, 97 = **8** numbers × 1 each = **8** - From 70–79: 70, 71, 72, 73, 74, 75, 76, 78, 79 = **9** numbers (excluding 77) → **9** - **77**: contributes **2**  Total = 8 + 9 + 2 = **19**  Let me verify with a quick calculation: Numbers containing digit 7 from 1 to 100: - Units place: 7, 17, 27, 37, 47, 57, 67, 77, 87, 97 → that’s **10** numbers (wait — I missed 87 above!)  Oops! Let's redo the list properly:  Units digit is 7: - 7, 17, 27, 37, 47, 57, 67, 77, 87, 97 → **10** occurrences (one per number)  Tens digit is 7 (i.e., numbers 70–79): - That’s 10 numbers: 70, 71, ..., 79. Each contributes one 7 in the tens place. But again, **77** has two 7s already counted above.  So total digit '7' appearances: - From units position (including 77): 10 occurrences - From tens position (70–79): 10 occurrences - Subtract double-count for 77? No — we're counting *digit positions*, not numbers. So each occurrence in the number is separate.  Actually, better approach:  List all digit 7 appearances from 1 to 100: - In units place: 7, 17, 27, 37, 47, 57, 67, 77, 87, 97 → **10** times - In tens place (for numbers where tens digit is 7): 70, 71, 72, 73, 74, 75, 76, 77, 78, 79 → **10** times  Total = 10 + 10 = **20**, but wait — 77 has a 7 in both places! So we just add them as separate digit positions. There’s no double-counting issue because we're counting *digits*, not numbers. Each position counts separately.  Final count: - Units 7s: 10 (from 7, 17, ..., 97) - Tens 7s: 10 (from 70 to 79)  Total = **20**  Wait, earlier I said 19 — where was the error? Ah! I missed **87** in my first manual count. Let's correct:  Correct list of numbers with at least one 7 from 1–100: Units digit 7: 7, 17, 27, 37, 47, 57, 67, **87**, 97 → that’s **10** (I included 87 now)  Tens digit 7: 70–79 → **10** numbers  And again, each of these contributes independently. So total digit '7's = 10 + 10 = **20**.  But let's list all occurrences explicitly to be sure: - Units place: 7 (1), 17 (1), 27 (1), 37 (1), 47 (1), 57 (1), 67 (1), 77 (1), 87 (1), 97 (1) → **10** - Tens place: 70 (1), 71 (1), 72 (1), 73 (1), 74 (1), 75 (1), 76 (1), 77 (1), 78 (1), 79 (1) → **10**  Total = 10 + 10 = **20**  But wait — in number 77, we have two 7s: one in units and one in tens. That’s already accounted for by adding the counts from each position. So yes, total is indeed **20**.  Final answer: **20**",
+          "checks": [
+            {
+              "detail": "3421 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/356 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"20\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3421 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "70438ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-digit-sevens",
+          "kind": "reasoning",
+          "latencyMS": 70438,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "To find the angle between the hour and minute hands at 3:40, I need to calculate their positions.  1.  **Minute Hand:** At 40 minutes, the minute hand is exactly at the '8' (which represents 20/60 of the circle).     *   Position = $40 \\times 6^\\circ = 240^\\circ$.  2.  **Hour Hand:** The hour hand moves 360 degrees in 12 hours, which is 30 degrees per hour and 0.5 degrees per minute. At 3:40, it has passed the 3 and moved towards the 4.     *   Position = $(3 \\times 30^\\circ) + (40 \\times 0.5^\\circ)$     *   Position = $90^\\circ + 20^\\circ = 110^\\circ$.  3.  **Difference:**     *   Difference = $|240^\\circ - 110^\\circ| = 130^\\circ$.  Since we want the smaller angle, and $130^\\circ < 180^\\circ$, this is our answer.  Yo, let's crunch that time math for you. At 3:40, the minute hand points straight at the 8. The hour hand isn't stuck on the 3; it's slid along toward the 4. Since 40 minutes is two-thirds of an hour, the hour hand has moved two-thirds of the way from 3 to 4. That puts it three-fourths of a clock face past the 3 (since 3 * 5 = 15, and 2/3 * 60 = 40, wait, let's stick to degrees: 3 is at 90°, moving toward 90° + 30°. No, simpler: The minute hand is at 240° (8 * 30). The hour hand is at 150° (3 * 30) plus the movement for 40 minutes. Movement per minute is 0.5°, so 40 * 0.5 = 20°. Total hour angle is 170°. The difference between 240° and 170° is exactly 70°.  But I run that number through the expression you gave me earlier: `(3 * 30) + (40 * 0.5) - (40 * 6)`... wait, that's `90 + 20 - 240 = -130`. That formula doesn't match clock geometry directly like that. A standard calculation for the angle is `|HourAngle - MinuteAngle|`, which here is `170°` minus `240°`, giving `-70°`. The absolute value is 70°. Since we want the smaller angle, and 70° is less than 360-70=290°, it's just 70.  70",
+          "checks": [
+            {
+              "detail": "1824 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/243 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"130\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1824 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "41353ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "calculate",
+              "name": "calls calculate",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "reason-hard-clock",
+          "kind": "reasoning",
+          "latencyMS": 41353,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Let's work this out:  Day 1: Climbs 3, slides back 2 → Net gain = 1 m Day 2: Climbs 3, slides back 2 → Net gain = 1 m (total so far: 2) Day 3: Climbs 3, slides back 2 → Net gain = 1 m (total so far: 3) ...  By the end of day *n*, it has gained *n* meters. But here's the trick: on any given day, during the climb (before sliding), if it reaches or exceeds 10m, it escapes — because once at the top, it doesn't slide back.  So we need to find when, in the morning, its position after climbing that day’s 3 meters ≥ 10m.  Before the final climb, how high does it need to be? It needs to be at least 7 meters (since 7 + 3 = 10).  It climbs 1 meter per net gain per day. So on Day 7, it reaches 7 meters at night. On Day 8 morning, it starts at 7m, climbs 3m during the day → reaches 10m and escapes.  Answer: **Day 8**",
+          "checks": [
+            {
+              "detail": "815 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/142 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"8\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "815 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "22257ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-snail",
+          "kind": "reasoning",
+          "latencyMS": 22257,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Let's crunch that: - First leg: 60 km at 30 km/h takes **2 hours**. - Second leg: 60 km at 60 km/h takes **1 hour**. - Total distance = 120 km. - Total time = 3 hours.  Average speed = 120 / 3 = **40 km/h**.  ```html <result>40</result> ```",
+          "checks": [
+            {
+              "detail": "240 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/26 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"40\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "240 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "17180ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-average-speed",
+          "kind": "reasoning",
+          "latencyMS": 17180,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "You need to pull out **3** socks.  Here's why: - In the worst-case scenario, you could pick up 1 red sock, then 1 blue sock (no match yet). - The third sock you pull must be either red or blue, which will inevitably match one of the first two.  So, to guarantee a matching pair in the dark, you need to take out **3 socks**.",
+          "checks": [
+            {
+              "detail": "324 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/59 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"3\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "324 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "17965ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-socks",
+          "kind": "reasoning",
+          "latencyMS": 17965,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "You got 10 posts.  Think of it like this: if you lay down a 5-metre plank, that's one piece. Two planks end-to-end make 10 metres and need 3 pieces (start, middle, end). So for every 5 metres, you add one post after the first. Since 50 divided by 5 is 10 intervals, you just add 1 to get the total count: 50 / 5 + 1 = **11**.  Wait... no, that's not right either. Let me think again...  Actually, it's simpler: if you have posts every 5 meters along a 50-meter line: - Post at position 0 (start) - Post at position 5 - Post at position 10 - ...and so on up to position 45 - Plus one post at position 50 (end)  That's positions: 0, 5, 10, 15, 20, 25, 30, 35, 40, 45, and 50. That's **11 posts** total.",
+          "checks": [
+            {
+              "detail": "700 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/104 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"11\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "700 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "28987ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-fence",
+          "kind": "reasoning",
+          "latencyMS": 28987,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Let's do the math. If a price rises by 50%, it becomes 1.5 times the original ($P \\times 1.5$). Then, if that *new* price falls by 50%, you multiply it again by 0.5. So, $1.5 \\times 0.5 = 0.75$.  The final price is 75% of the original. This means it is **25%** lower than the starting point.  Final Answer: 25",
+          "checks": [
+            {
+              "detail": "309 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/48 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"25\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "309 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "78846ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-percent",
+          "kind": "reasoning",
+          "latencyMS": 78846,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Seven people meeting and each shaking hands with every other person is a classic combinatorics problem. We're looking for the number of unique pairs that can be formed from 7 items, where order doesn't matter (A shaking B's hand is the same as B shaking A's).  The formula for combinations is n(n-1)/2, which gives us: (7 × 6) / 2 = 42 / 2 = **21** handshakes.",
+          "checks": [
+            {
+              "detail": "360 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/55 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"21\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "360 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "33063ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-handshakes",
+          "kind": "reasoning",
+          "latencyMS": 33063,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Let's break down the math: - There are 30 students in total. - 6 play neither football nor tennis. This means $30 - 6 = 24$ students play at least one of the sports. - 18 play football and 15 play tennis.  Let $x$ be the number who play both. Using the Principle of Inclusion-Exclusion: $|Football \\cup Tennis| = |Football| + |Tennis| - |Football \\cap Tennis|$ $24 = 18 + 15 - x$ $24 = 33 - x$ $x = 33 - 24$ $x = 9$  So, **9** students play both.",
+          "checks": [
+            {
+              "detail": "446 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/59 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"9\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "446 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "22569ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-overlap",
+          "kind": "reasoning",
+          "latencyMS": 22569,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Let's break down the math. The first pipe fills the tank in 2 hours, so it does $1/2$ of the work per hour. The second pipe fills the tank in 3 hours, so it does $1/3$ of the work per hour. Together, they do $(1/2 + 1/3)$ of the work per hour.  To find how long it takes to fill one whole tank together: $$ \\text{Time} = \\frac{1}{\\left(\\frac{1}{2} + \\frac{1}{3}\\right)} $$  Let's calculate that using the tool.  They'll finish it in 40 minutes. The math is straightforward: one pipe does its work in 60 mins, the other in 90; together they clock up a combined rate that hits the target in just under an hour.",
+          "checks": [
+            {
+              "detail": "608 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/101 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"72\"] in: Let's break down the math. The first pipe fills the tank in ",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "608 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "27963ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "calculate",
+              "name": "calls calculate",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "reason-hard-pipes",
+          "kind": "reasoning",
+          "latencyMS": 27963,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Let's break it down: - 5 years ago, Ana was (A - 5) years old. - In 4 years' time, she will be (A + 4) years old. - The problem states that in 4 years, her age will be twice what it was 5 years ago.  So the equation is: (A + 4) = 2 * (A - 5)  Let's solve for A.  Let's see: If Ana is currently $x$ years old, then in 4 years she'll be $x + 4$. Five years ago, she was $x - 5$. The problem states that her age in 4 years will be double what it was 5 years ago. So the equation is $(x + 4) = 2 \\times (x - 5)$.  Solving for $x$: $x + 4 = 2x - 10$ $14 = x$  Ana is currently 14 years old.",
+          "checks": [
+            {
+              "detail": "585 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/101 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"14\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "585 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "28588ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "calculate",
+              "name": "calls calculate",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "reason-hard-ages",
+          "kind": "reasoning",
+          "latencyMS": 28588,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "If it takes 30 seconds to go from floor 1 to floor 4, that's a difference of 3 floors. So the pace is 10 seconds per floor. Going from floor 1 to floor 10 covers 9 floors (not 10).   30 / 3 = 10 seconds per floor 10 × 9 = **90 seconds**.  **Answer: 90**",
+          "checks": [
+            {
+              "detail": "253 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/35 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"90\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "253 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "21402ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-stairs",
+          "kind": "reasoning",
+          "latencyMS": 21402,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "You need 4 cuts to get four 3-metre pieces from a 15-metre rope. Since each cut takes one minute, it will take **4 minutes**.",
+          "checks": [
+            {
+              "detail": "125 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/22 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"4\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "125 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "12937ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-rope",
+          "kind": "reasoning",
+          "latencyMS": 12937,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "If it takes 5 seconds to strike 6, that's not just about the number of strikes but the gaps between them. Striking 6 means there are **5 intervals** (from strike 1 to strike 2, up to strike 5 to strike 6). So each interval is:  $$ \\frac{5\\text{ seconds}}{5} = 1\\text{ second per interval} $$  To strike 12, there will be **11 intervals** (from strike 1 to strike 12). At 1 second per interval, that's:  $$ 11 \\times 1 = 11\\text{ seconds} $$  **Answer: 11 seconds.**",
+          "checks": [
+            {
+              "detail": "465 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/63 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"11\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "465 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "17871ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-chimes",
+          "kind": "reasoning",
+          "latencyMS": 17871,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "To write out every whole number from 1 to 50, we can count the digit '3' in two groups:  1.  **Single-digit numbers (1-9):** The number **3** appears once. 2.  **Double-digit numbers (10-50):** We look for numbers containing a '3':     *   13, 23, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39.  Let's count them: *   From the single digits: **1** (the number 3). *   From the double digits: There are three 3s in the tens place (30-39), and one '3' in the units place for each of those ten numbers, plus another '3' in the units place for the number 33. Wait, let's just list them to be precise:     *   The number **3** contributes one '3'.     *   The numbers **13**, **23**, and **30-39** contribute '3's. Specifically:         *   Tens digit is 3 for: 30, 31, 32, 33, 34, 35, 36, 37, 38, 39 (that's **10** occurrences).         *   Units digit is 3 for: 3, 13, 23, and the numbers in 30-39 where the unit is 3 (only **33**). That's another **4** occurrences.  Total count = 1 (for the number 3) + 10 (tens digit for 30-39) + 4 (units digit for 3, 13, 23, 33)? No, that double counted. Let's just list every occurrence: *   **3** (1) *   **13** (1) *   **23** (1) *   **30** (1) *   **31** (1) *   **32** (1) *   **33** (2, because it has two 3s: one in the tens place and one in the units place) *   **34** (1) *   **35** (1) *   **36** (1) *   **37** (1) *   **38** (1) *   **39** (1)  Let's sum: 1 + 1 + 1 + 10 (for the tens place of 30-39) + 2 (extra for 33's units place? No, wait). Let's do it cleanly by position. *   **Units column:** Numbers ending in 3 are: 3, 13, 23, 33. Total = **4**. *   **Tens column:** Numbers with a 3 in the tens place are: 30, 31, 32, 33, 34, 35, 36, 37, 38, 39. Total = **10**. *   **Total occurrences** = 4 + 10 = **14**.  The digit '3' is written **14** times.",
+          "checks": [
+            {
+              "detail": "1796 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/193 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"15\", \"fifteen\"] in: To write out every whole number from 1 to 50, we can count t",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "1796 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "58586ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-digit-threes",
+          "kind": "reasoning",
+          "latencyMS": 58586,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "They'll meet in 17.14 minutes.  Here's the math: The trains close the gap at a combined speed of 150 km/h (70 + 80). To cover 300 km, it takes exactly 2 hours. Since you asked for minutes, that’s 120 minutes. Wait—actually, 300 divided by 150 is 2, which means they meet in exactly **2 hours**. That's 120 minutes.",
+          "checks": [
+            {
+              "detail": "314 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/45 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"120\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "314 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "15054ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls calculate",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "reason-hard-trains",
+          "kind": "reasoning",
+          "latencyMS": 15054,
+          "repeatIndex": 1
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}

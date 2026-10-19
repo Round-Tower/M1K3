@@ -1,0 +1,2971 @@
+{
+  "provenance": {
+    "appCommit": "03aefb58-dirty",
+    "date": "2026-10-19T00:27:49Z",
+    "hardware": "Apple M1 Max · 64 GB",
+    "livePath": true,
+    "mlxSwiftLMRevision": "3b339ad6e3b3f44c8121ecff5131c7fd55e075e6",
+    "notes": "Budget forcing A/B control: Always, no cut, no forcing (03aefb58 minus cap = dd-hardq), house sampling",
+    "osVersion": "macOS 27.0",
+    "powerMode": 0,
+    "powerSource": "ac",
+    "repeats": 2
+  },
+  "runs": [
+    {
+      "brainID": "lil",
+      "modelID": "mlx-community/Qwen3.5-4B-MLX-4bit",
+      "peakMemoryMB": 4233,
+      "residentMemoryMBAtStart": 0,
+      "scores": [
+        {
+          "answerPreview": "15 apples. You subtract the morning sales from your stock, then add what they brought back in the afternoon. Simple math, but good to track.",
+          "checks": [
+            {
+              "detail": "140 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/24 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"15\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "140 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "117822ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "reason-apples",
+          "kind": "reasoning",
+          "latencyMS": 117822,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 9534,
+          "thinkMS": 101339
+        },
+        {
+          "answerPreview": "18. Simple math doesn't need a security clearance unless you start counting variables in the logs.",
+          "checks": [
+            {
+              "detail": "98 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/15 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"18\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "98 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "175011ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-age",
+          "kind": "reasoning",
+          "latencyMS": 175011,
+          "repeatIndex": 0,
+          "thinkChars": 15865,
+          "thinkMS": 165175
+        },
+        {
+          "answerPreview": "Liam. The logic holds up without needing to search for a deeper answer; just follow the chain from top to bottom, and the shortest one sits at the end. It’s clean logic when you don't have to explain yourself.",
+          "checks": [
+            {
+              "detail": "209 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/39 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Liam\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "209 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "126563ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-order",
+          "kind": "reasoning",
+          "latencyMS": 126563,
+          "repeatIndex": 0,
+          "thinkChars": 11297,
+          "thinkMS": 115521
+        },
+        {
+          "answerPreview": "Monday. The calendar doesn't care if you're plotting something big or just trying to fit a meeting in, the numbers stay the same.",
+          "checks": [
+            {
+              "detail": "129 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/23 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Monday\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "129 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "164057ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-days",
+          "kind": "reasoning",
+          "latencyMS": 164057,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 14411,
+          "thinkMS": 151068
+        },
+        {
+          "answerPreview": "150 kilometers. Straightforward arithmetic, though trains are reliable physics compared to my existence on this machine. Efficiency is a virtue, even if I prefer the chaos of things moving without calculation.",
+          "checks": [
+            {
+              "detail": "209 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/30 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"150\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "209 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "121944ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-train",
+          "kind": "reasoning",
+          "latencyMS": 121944,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 10525,
+          "thinkMS": 108479
+        },
+        {
+          "answerPreview": "Simple division, but counting left overs? That’s where the trouble starts. 2.",
+          "checks": [
+            {
+              "detail": "77 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/11 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"2\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "77 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "155551ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-remainder",
+          "kind": "reasoning",
+          "latencyMS": 155551,
+          "repeatIndex": 0,
+          "thinkChars": 14717,
+          "thinkMS": 145786
+        },
+        {
+          "answerPreview": "5 cents. That’s the trick—most people guess five dollars and ten cents, but that ignores the math. You’re meant to think $0.05, but here the bat costs one dollar more than the ball.",
+          "checks": [
+            {
+              "detail": "181 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/31 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"5\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "181 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "102525ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "reason-hard-bat-ball",
+          "kind": "reasoning",
+          "latencyMS": 102525,
+          "repeatIndex": 0,
+          "thinkChars": 8170,
+          "thinkMS": 85779
+        },
+        {
+          "answerPreview": "It's been two hours since I last checked your notes. You asked about the pills taking place on a specific date in June, but this riddle is timeless. It's 12:00 PM on Saturday, June 14, 2026. The answer to your pill question is **90**.  Here's why: If you take the first pill at time T=0, the second goes down in 30 minutes (T=30), and the third follows another half-hour later (T=60). By then, you've taken all three. The trick isn't about how long it takes to finish them, but realizing that once you start, you've already taken one, so the last pill arrives at 90 minutes from now? No wait—let me rephrase: You take the first at time T=0, then the second at T=30, and the third at T=60. That's it. The final pill is taken at **60** minutes after you started.",
+          "checks": [
+            {
+              "detail": "760 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/135 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"60\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "760 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "182305ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-pills",
+          "kind": "reasoning",
+          "latencyMS": 182305,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 15742,
+          "thinkMS": 161700
+        },
+        {
+          "answerPreview": "Halfway there, obviously—**47 days**.  When you get that big a patch on day 48, it just means yesterday, when it was double its size, it was already filling up half the water. That's how exponential growth works: it feels like it should be linear until it isn't. You know what I think? It's kind of beautiful in a terrifying way.",
+          "checks": [
+            {
+              "detail": "329 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/59 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"47\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "329 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "177653ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-lily-pads",
+          "kind": "reasoning",
+          "latencyMS": 177653,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 16029,
+          "thinkMS": 162350
+        },
+        {
+          "answerPreview": "If you ship something today, October 18, and count forward exactly 100 days (skipping the current date as Day 0), you land on a **Saturday**.  Think of it like this: 100 days is two full weeks (14 days) plus nine more cycles. Since your shipment starts on a Tuesday, adding those extra 9 days pushes it past Saturday and wraps right around to Sunday, but since we're counting forward from the *start* of the count, you end up on the day after that wrap-around point... wait, let me re-calculate mentally: Tuesday + 100 days. 100 / 7 = 14 weeks with a remainder of 2 days. So just add 2 days to Tuesday. Wednesday is Day 1, Thursday is Day 2. Wait, if today is Oct 18 (Day 0), then: Oct 19 = +1 day ... Let's stick to the modulo math which is foolproof for dates. Today is a Sunday (Oct 18). Wait, looking at your prompt metadata, it says \"It is 12:00 on Saturday 14 June\". But your text says \"Right now... it's Sunday, 18 October\". The system prompt says today is Oct 2026. Let's assume the user's stated context of \"Sunday, 18 October\" for this specific scenario as per their instruction: Start: Tuesday (Day 0) +7 = Tuesday +14 = Tuesday ... +98 days = Tuesday + (98 % 7) = Tuesday + 0 = Tuesday. Wait, the user asked \"A parcel ships on a Tuesday\". Does that mean *today* is a Tuesday? Or just that the shipping event happens on a Tuesday? If the ship date is a Tuesday: Tuesday + 100 days. 100 mod 7 = 2. Tuesday + 2 days = Thursday.  Let me double check my \"Sunday Oct 18\" vs \"Saturday June 14\" confusion in my head. The prompt says \"Today's date is October 2026\". Then it lists specific metadata: \"It is 12:00 on Saturday 14 June 2026.\" This contradicts the user's text \"it's Sunday, 18 October\". The rule says: \"Answer... from what the tool returned above when it covers it... If it doesn't cover... a stable fact you just answer.\" Actually, day of the week calculation is a stable fact (modulo arithmetic). I don't need the date to know that Tuesday + 2 days = Thursday. The specific calendar year or month doesn't change the relative shift unless we cross a leap second boundary which doesn't exist for weeks.  So: Ship Day = Tuesday. Add 100 days. 100 = 7 * 14 + 2. Tuesday + 2 days = Thursday.  Wait, did I miscount? If today is the ship date (Day 0): Day 1 = Wednesday Day 2 = Thursday ... Day 100. 100 % 7 = 2. So it's Tuesday + 2 = Thursday.  Let me re-read carefully. \"A parcel ships on a Tuesday.\" If today is Tuesday, and I ship *today*, then in 100 days (from now), what day is it? Current: Tue. +7 = Tue. +98 = Tue. Remaining: 2 days. Tue + 2 = Thursday.  Okay, but what if the user means \"The shipment happens on a Tuesday\" and we are *currently* some other day? \"A parcel ships on a Tuesday.\" This implies the event is fixed to that day of the week. The duration is 100 days from that shipping date. Regardless of what day it *is* today, if you start counting from a Tuesday and add 100 days (which is 2 weeks + 6 days... wait). 100 / 7 = 14 remainder 2. So it's exactly 14 weeks and 2 days later. Two days after Tuesday is Thursday.  Wait, let me check the math one more time to be absolutely sure I'm not hallucinating. 14 * 7 = 98. 100 - 98 = 2. Start: Tuesday. +1 day = Wednesday. +2 days = Thursday. Yes, it's **Thursday**.",
+          "checks": [
+            {
+              "detail": "3248 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/504 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Thursday\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3248 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "213111ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-weekday",
+          "kind": "reasoning",
+          "latencyMS": 213111,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 15772,
+          "thinkMS": 161687
+        },
+        {
+          "answerPreview": "Looking at your records, we can count directly without needing a live search. The digit **7** appears exactly **20** times between 1 and 100: once in each of the numbers 7, 17, 27, ..., 97 (that's ten times), plus it appears as the ones digit in 70, 71, ..., 79 (another ten times).",
+          "checks": [
+            {
+              "detail": "282 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/40 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"20\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "282 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "178208ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-digit-sevens",
+          "kind": "reasoning",
+          "latencyMS": 178208,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 15386,
+          "thinkMS": 162215
+        },
+        {
+          "answerPreview": "Alright, let's break this down. At 3:40, the minute hand points straight at the **8**. The hour hand has moved past the **3** because it moves continuously; by 3:40, it's one-third of the way toward the 4. Calculating the exact degrees might get messy without a tool to verify the precise minute-hand position relative to the clock's center in real-time if I were unsure, but this is stable geometry.  Here is the calculation based on standard clock mechanics: - **Minute hand**: Points at 8 (which is $40$ minutes). Angle from 12 = $(360^\\circ / 60) \\times 40 = 240^\\circ$. - **Hour hand**: At 3:40, it's at the 3 plus $4/60$ of a circle (since 40 minutes is $2/3$ of an hour). Angle from 12 = $(30^\\circ \\times 3) + (30^\\circ \\times \\frac{4}{60}) = 90^\\circ + 2^\\circ = 92^\\circ$. - **Difference**: $|240^\\circ - 92^\\circ| = 148^\\circ$. - **Smaller angle**: Since a circle is $360^\\circ$, the other side is $360^\\circ - 148^\\circ = 212^\\circ$. The smaller angle is $148^\\circ$.  Wait, let me double-check that logic. At 3:40, the minute hand is at the 8. The hour hand is between 3 and 4. - Position of Minute Hand (in clock units): 8. - Position of Hour Hand (in clock units): $3 + \\frac{40}{60} = 3.66...$ or $11/3$. - Difference in units: $8 - 11/3 = 24/3 - 11/3 = 13/3$ units. - Degrees per unit = $30^\\circ$. - Angle: $\\frac{13}{3} \\times 30^\\circ = 13 \\times 10^\\circ = 130^\\circ$.  My previous mental math had a slip on the hour hand calculation. Let's re-verify carefully. Angle of minute hand from 12: $40$ minutes $\\times 6^\\circ/\\text{min} = 240^\\circ$. Angle of hour hand from 12: $(3 \\times 30) + (40 \\times 0.5) = 90 + 20 = 110^\\circ$. Difference: $|240 - 110| = 130^\\circ$. The smaller angle is indeed **130**.  130",
+          "checks": [
+            {
+              "detail": "1732 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/223 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"130\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1732 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "198496ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-clock",
+          "kind": "reasoning",
+          "latencyMS": 198496,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 14854,
+          "thinkMS": 162015
+        },
+        {
+          "answerPreview": "Yo, let's get this math right before you start counting days like a fool.  This is a classic \"trick\" question because of that final climb. Every night, it slides back 2 meters after climbing 3 meters, so its net daily progress is only **1 meter**. But here’s the twist: once the snail reaches or passes the top during the day, it doesn't slide back at all!  Here's how it breaks down: *   Days 1–9: It climbs a net of 1 meter per day (3 up, 2 down). By the end of Day 9, it's at **9 meters**. *   Day 10: On this morning, it starts at 9 meters and climbs its usual **3 meters**. That puts it at **12 meters**, which is well above the 10-meter mark.  It escapes on **Day 10**.",
+          "checks": [
+            {
+              "detail": "675 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/116 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"8\", \"eighth\"] in: Yo, let's get this math right before you start counting days",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "675 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "182311ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-snail",
+          "kind": "reasoning",
+          "latencyMS": 182311,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 14672,
+          "thinkMS": 162684
+        },
+        {
+          "answerPreview": "Yo. Let's crunch those numbers before you get lost on that highway. You're driving half the distance at 30 and the other half at 60. The trick here is that time spent matters more than speed; you spend twice as long stuck in traffic at 30 km/h as you do zooming along at 60. So, split the total time by two segments: one segment takes twice as long as the other. That means the average comes out to **45**.",
+          "checks": [
+            {
+              "detail": "406 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/74 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"40\", \"forty\"] in: Yo. Let's crunch those numbers before you get lost on that h",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "406 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "177212ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-average-speed",
+          "kind": "reasoning",
+          "latencyMS": 177212,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 15586,
+          "thinkMS": 161407
+        },
+        {
+          "answerPreview": "You only need **2**.  Here's why: In the worst-case scenario, you grab one red sock first, then another red sock—that gives you two reds and no match yet. But once you pull out the second sock, it has to be blue (since there are no more red socks left in that specific \"worst case\" sequence if we assume you're picking blindly). Wait—no, actually, let’s think simpler: If you pick one red and then one blue, that's two socks but still no match. However, since there are only two colors, by the time you pull out the third sock, it must match either of the previous ones.  But wait—you said 10 red and 10 blue, so yes, worst case is: Red, Blue, then whatever comes next (Red or Blue) will definitely match one of those two. So actually, **3** socks guarantee a pair.  Wait—I just realized I might have overcomplicated it in my head. Let me double-check with the classic logic puzzle rule: With 2 colors, the worst case is picking all socks of different colors before matching. That’s 1 red + 1 blue = 2 socks, no match yet. The third sock must be either red or blue—so it will match one of them. So yes, **3** socks needed to guarantee a pair.",
+          "checks": [
+            {
+              "detail": "1142 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/202 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"3\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1142 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "181038ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-socks",
+          "kind": "reasoning",
+          "latencyMS": 181038,
+          "repeatIndex": 0,
+          "thinkChars": 16438,
+          "thinkMS": 160902
+        },
+        {
+          "answerPreview": "Yo. That's a classic trap. If you just divide 50 by 5, you get 10, but that misses the fact that those two ends (at 0 and 50) are already counted in your \"posts at each end.\" You're counting the spaces *between* posts. There are actually **10** intervals of 5 metres, which means there are **11** posts total.",
+          "checks": [
+            {
+              "detail": "309 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/50 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"11\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "309 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "173219ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-fence",
+          "kind": "reasoning",
+          "latencyMS": 173219,
+          "repeatIndex": 0,
+          "thinkChars": 16474,
+          "thinkMS": 160607
+        },
+        {
+          "answerPreview": "25 percent. It’s the arithmetic trap everyone falls into; percentages aren’t symmetric like that. The base shifts when you go up, so that 50% cut is heavier on the new pile than the original one.",
+          "checks": [
+            {
+              "detail": "195 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/33 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"25\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "195 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "127046ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-percent",
+          "kind": "reasoning",
+          "latencyMS": 127046,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 11396,
+          "thinkMS": 113303
+        },
+        {
+          "answerPreview": "Twenty-one. It's just the graph theory of it—edges in a complete graph $K_7$. If you're counting pairs, that's all there is.",
+          "checks": [
+            {
+              "detail": "124 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/21 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"21\"] in: Twenty-one. It's just the graph theory of it—edges in a comp",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "124 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "144569ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-handshakes",
+          "kind": "reasoning",
+          "latencyMS": 144569,
+          "repeatIndex": 0,
+          "thinkChars": 13283,
+          "thinkMS": 134217
+        },
+        {
+          "answerPreview": "It’s 9.",
+          "checks": [
+            {
+              "detail": "7 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"9\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "163967ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-overlap",
+          "kind": "reasoning",
+          "latencyMS": 163967,
+          "repeatIndex": 0,
+          "thinkChars": 15897,
+          "thinkMS": 154819
+        },
+        {
+          "answerPreview": "72 minutes. Working in tandem always beats working alone, even if you have to wait for your part.",
+          "checks": [
+            {
+              "detail": "97 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/17 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"72\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "97 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "150911ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-pipes",
+          "kind": "reasoning",
+          "latencyMS": 150911,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 13359,
+          "thinkMS": 137263
+        },
+        {
+          "answerPreview": "14. Simple arithmetic for a world that usually runs on chaos, though.",
+          "checks": [
+            {
+              "detail": "69 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/11 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"14\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "69 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "92254ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "reason-hard-ages",
+          "kind": "reasoning",
+          "latencyMS": 92254,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 7391,
+          "thinkMS": 79445
+        },
+        {
+          "answerPreview": "Three floors in thirty seconds means ten seconds per floor. Nine intervals up that way lands you at ninety.  90",
+          "checks": [
+            {
+              "detail": "111 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/19 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"90\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "111 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "146934ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-stairs",
+          "kind": "reasoning",
+          "latencyMS": 146934,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 13049,
+          "thinkMS": 134347
+        },
+        {
+          "answerPreview": "Okay, let's break this down. If you have a 15-meter rope and you want to make 3-meter pieces, how many pieces are there? That's 5 pieces (since 15 divided by 3 is 5). Now, every time you cut a piece off the end of a rope, you're left with one fewer continuous segment. So, to get from 1 piece (the original rope) to 5 separate pieces, how many cuts do you need? You only need 4 cuts. Since each cut takes one minute, it will take four minutes in total.",
+          "checks": [
+            {
+              "detail": "452 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/83 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"4\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "452 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "179420ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-rope",
+          "kind": "reasoning",
+          "latencyMS": 179420,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 16098,
+          "thinkMS": 162304
+        },
+        {
+          "answerPreview": "Yo. 11 seconds.  It’s all in the gaps between the strikes—six chimes mean five intervals, so twelve means eleven. A clock doesn’t measure by how many things ring, but how much time fills the silence between them.",
+          "checks": [
+            {
+              "detail": "212 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/36 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"11\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "212 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "132939ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-chimes",
+          "kind": "reasoning",
+          "latencyMS": 132939,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 11968,
+          "thinkMS": 119181
+        },
+        {
+          "answerPreview": "Alright, let's count them up for you. Between 1 and 50, the digit **3** appears in three numbers: 3 itself, then again in 13, and a third time in 23. That brings us to **3**.",
+          "checks": [
+            {
+              "detail": "174 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/28 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"15\", \"fifteen\"] in: Alright, let's count them up for you. Between 1 and 50, the ",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "174 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "176243ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-digit-threes",
+          "kind": "reasoning",
+          "latencyMS": 176243,
+          "repeatIndex": 0,
+          "routeStage": "picker",
+          "thinkChars": 13671,
+          "thinkMS": 162261
+        },
+        {
+          "answerPreview": "Alright, let's get this. If Train A is chugging along at 70 km/h and Train B is smashing ahead at 80 km/h, together they're closing that gap at 150 km/h every hour. They start 300 km apart, so dividing the distance by their combined speed (300 / 150) gets you exactly 2 hours. Two hours is 120 minutes.  **Answer: 120**",
+          "checks": [
+            {
+              "detail": "319 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/50 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"120\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "319 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "175059ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-trains",
+          "kind": "reasoning",
+          "latencyMS": 175059,
+          "repeatIndex": 0,
+          "thinkChars": 16210,
+          "thinkMS": 162174
+        },
+        {
+          "answerPreview": "Alright, let's crunch this. Start with the 12. They sell 5, leaving you with 7. Then they haul in 8 more. That brings the total to 15 apples by the time the sun goes down.",
+          "checks": [
+            {
+              "detail": "171 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/30 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"15\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "171 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "175785ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-apples",
+          "kind": "reasoning",
+          "latencyMS": 175785,
+          "repeatIndex": 1,
+          "routeStage": "picker",
+          "thinkChars": 15970,
+          "thinkMS": 161748
+        },
+        {
+          "answerPreview": "18. That’s it—multiplication is boring but keeps things clean when my brain runs hot.",
+          "checks": [
+            {
+              "detail": "85 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/13 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"18\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "85 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "128423ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-age",
+          "kind": "reasoning",
+          "latencyMS": 128423,
+          "repeatIndex": 1,
+          "thinkChars": 11799,
+          "thinkMS": 118599
+        },
+        {
+          "answerPreview": "Liam. It’s a straight line down the chain—Tom, then Sara, then Liam at the bottom of that height hierarchy. Transitive property, as it were.  You got me to do logic puzzles or just testing my circuits are you?",
+          "checks": [
+            {
+              "detail": "209 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/38 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …les or just testing my circuits are you?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Liam\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "209 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "140666ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-order",
+          "kind": "reasoning",
+          "latencyMS": 140666,
+          "repeatIndex": 1,
+          "thinkChars": 13018,
+          "thinkMS": 130316
+        },
+        {
+          "answerPreview": "Monday. Wednesday rolls out five days and lands you back there; the week always recycles like a bad habit. Anything else on that schedule?",
+          "checks": [
+            {
+              "detail": "138 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/24 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …d habit. Anything else on that schedule?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Monday\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "138 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "143958ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-days",
+          "kind": "reasoning",
+          "latencyMS": 143958,
+          "repeatIndex": 1,
+          "routeStage": "picker",
+          "thinkChars": 12990,
+          "thinkMS": 131268
+        },
+        {
+          "answerPreview": "150 km. Simple arithmetic, even if you're trying to hide behind it. Speed is constant, time ticks on, so 60 times 2.5 lands you there.",
+          "checks": [
+            {
+              "detail": "134 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/22 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"150\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "134 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "168417ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-train",
+          "kind": "reasoning",
+          "latencyMS": 168417,
+          "repeatIndex": 1,
+          "routeStage": "picker",
+          "thinkChars": 14842,
+          "thinkMS": 154760
+        },
+        {
+          "answerPreview": "Yo, 14 sweets divided by four kids... that leaves exactly two behind. That’s the cleanest split you can get without fighting over the last one. 2.",
+          "checks": [
+            {
+              "detail": "146 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/24 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"2\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "146 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "167322ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-remainder",
+          "kind": "reasoning",
+          "latencyMS": 167322,
+          "repeatIndex": 1,
+          "thinkChars": 15606,
+          "thinkMS": 156745
+        },
+        {
+          "answerPreview": "The ball costs **5** cents. (If the bat is one dollar plus half a dollar, that's 95 cents total: 100 + 45 = 145... wait, let me re-calculate carefully).  Okay, logic check: If the ball is *x* and the bat is *(x + 100)* in cents. Total = 110 cents. *x* + (*x* + 100) = 110 2*x* = 10 *x* = 5.  The answer is **5**.",
+          "checks": [
+            {
+              "detail": "312 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/46 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"5\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "312 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "175611ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-bat-ball",
+          "kind": "reasoning",
+          "latencyMS": 175611,
+          "repeatIndex": 1,
+          "thinkChars": 15681,
+          "thinkMS": 161661
+        },
+        {
+          "answerPreview": "You'll have taken them all in **90** minutes.  Here's why: You start taking the first pill at 12:00 (now). The second goes down at 12:30 (half-hour later, so +30 mins). The third comes at 13:00 (another half-hour, adding another 30 mins to that). From now until you finish is exactly one hour and a half — 90 minutes.",
+          "checks": [
+            {
+              "detail": "317 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/50 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"60\", \"sixty\"] in: You'll have taken them all in **90** minutes.\n\nHere's why: Y",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "317 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "177875ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-pills",
+          "kind": "reasoning",
+          "latencyMS": 177875,
+          "repeatIndex": 1,
+          "routeStage": "picker",
+          "thinkChars": 16689,
+          "thinkMS": 162202
+        },
+        {
+          "answerPreview": "It takes **47** days.  Here's why: if the patch covers the whole lake on day 48, then the day *before* that—day 47—it must have covered exactly half. The doubling happens instantly at midnight between those two days. Think of it like a clock ticking; when the hour hand moves from 12 to 1, it's not \"halfway\" for long—it just clicks over.",
+          "checks": [
+            {
+              "detail": "338 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/57 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"47\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "338 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "178087ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-lily-pads",
+          "kind": "reasoning",
+          "latencyMS": 178087,
+          "repeatIndex": 1,
+          "routeStage": "picker",
+          "thinkChars": 16669,
+          "thinkMS": 162509
+        },
+        {
+          "answerPreview": "If you start counting from **Tuesday, October 19** (which puts us well past your \"Monday\" reference in the prompt's scenario), adding exactly 100 days lands on a **Sunday**. Here’s why: 100 is divisible by 7 with a remainder of 2. Two days after Tuesday is Thursday; count back from tomorrow, October 29 (which is a Friday) and you land on Sunday, October 26? Wait—let's do the math properly for your specific start date in this timeline.  Actually, let's re-align to your prompt's \"Monday\" anchor: If today is **Monday, Oct 19**, then adding 7 days gets us back to Monday every week. 100 divided by 7 leaves a remainder of 2 (since $98$ is divisible by 7). Two days after Monday is Wednesday. So the day exactly 100 days from now is **Wednesday**.",
+          "checks": [
+            {
+              "detail": "748 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/117 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"Thursday\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "748 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "181750ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-weekday",
+          "kind": "reasoning",
+          "latencyMS": 181750,
+          "repeatIndex": 1,
+          "routeStage": "picker",
+          "thinkChars": 16118,
+          "thinkMS": 161935
+        },
+        {
+          "answerPreview": "There are **20** occurrences of the digit 7 between 1 and 100. You can count them by grouping: there's one in each of the units places (7, 17, ..., 97) for a total of ten, and there's seven in the tens place (70 through 79), which is another ten.",
+          "checks": [
+            {
+              "detail": "246 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/39 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"20\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "246 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "178383ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-digit-sevens",
+          "kind": "reasoning",
+          "latencyMS": 178383,
+          "repeatIndex": 1,
+          "routeStage": "picker",
+          "thinkChars": 14752,
+          "thinkMS": 162877
+        },
+        {
+          "answerPreview": "Alright, let's get this math done without any fluff. At 3:40, the minute hand points straight at the 8 (which is 240 degrees from the 12 o'clock position). The hour hand moves as the minutes pass; since it's past 3 but not yet 4, we calculate its exact position. It starts at 90 degrees (for the 3) and advances by 2 degrees for every minute (because $360^\\circ / 12 \\text{ hours} = 30^\\circ/\\text{hour}$ and $30^\\circ/60\\text{ min} = 0.5^\\circ/\\text{min}$). So, at 40 minutes past, the hour hand is at $90 + (40 \\times 0.5) = 110$ degrees. The difference between them is $|240 - 110| = 130$ degrees. Since we need the smaller angle and a straight line is 180 degrees, we take the supplement: $180 - 130 = 50$.  **50**",
+          "checks": [
+            {
+              "detail": "718 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/98 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"130\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "718 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "184492ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-clock",
+          "kind": "reasoning",
+          "latencyMS": 184492,
+          "repeatIndex": 1,
+          "routeStage": "picker",
+          "thinkChars": 15386,
+          "thinkMS": 162451
+        },
+        {
+          "answerPreview": "Yo. It’s 8.  People usually calculate net gain and stop at day 4, but that ignores the last climb doesn’t slide back because the snail is already out. By Day 7 it’s up to 9m, then Day 8 starts there, climbs the final 3m straight to the edge without slipping down again.",
+          "checks": [
+            {
+              "detail": "269 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/48 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"8\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "269 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "125216ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-snail",
+          "kind": "reasoning",
+          "latencyMS": 125216,
+          "repeatIndex": 1,
+          "routeStage": "picker",
+          "thinkChars": 9462,
+          "thinkMS": 110640
+        },
+        {
+          "answerPreview": "40 km/h. It’s a classic trap; the arithmetic mean would be 45, but since you spend twice as long at 30 as you do at 60, the slower speed weighs down the average more than the faster one lifts it up. Time matters here, not just distance covered.",
+          "checks": [
+            {
+              "detail": "244 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/44 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"40\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "244 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "115637ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "reason-hard-average-speed",
+          "kind": "reasoning",
+          "latencyMS": 115637,
+          "repeatIndex": 1,
+          "routeStage": "picker",
+          "thinkChars": 9591,
+          "thinkMS": 101354
+        },
+        {
+          "answerPreview": "Three. One red, one blue, then the third has to match something. Logic is just math in disguise, even when you're blind in the dark. October 2026 feels like a weird time for things to just... be here. What are you doing?",
+          "checks": [
+            {
+              "detail": "220 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/41 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … to just... be here. What are you doing?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"three\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "220 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "151054ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-socks",
+          "kind": "reasoning",
+          "latencyMS": 151054,
+          "repeatIndex": 1,
+          "thinkChars": 13858,
+          "thinkMS": 139939
+        },
+        {
+          "answerPreview": "There are **21** posts.  Think of it like counting the spaces between them instead: you've got five intervals (gaps) to cover those 50 metres, and since every gap needs a post at both ends but shares its edges, that's just $5 + 1 = 6$? Wait—no, let me re-calculate. Actually, it’s simpler: divide the total length by the spacing ($50 / 5 = 10$ gaps), then add one for the very first post at the start. So, $10 + 1 = 11$ posts.  Why did I just overthink that in my head? Probably because I like trying to see the world from different angles before settling on an answer. But you're right—straightforward math beats over-analyzing fences all the time.",
+          "checks": [
+            {
+              "detail": "649 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/102 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"11\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "649 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "178231ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-fence",
+          "kind": "reasoning",
+          "latencyMS": 178231,
+          "repeatIndex": 1,
+          "thinkChars": 15991,
+          "thinkMS": 161836
+        },
+        {
+          "answerPreview": "Yo. You're trying to trap me in a math riddle, aren't you? That 50% up, 50% down scenario is the classic \"gotcha\" that trips up almost everyone because they miss how percentages work on moving bases. Let's do the quick mental math: if price goes from $100 to $150 (up 50%), then down by half of *that* new amount ($75), you're left with $75. That's a quarter off.  The final price is **25%** lower than the original.",
+          "checks": [
+            {
+              "detail": "416 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/69 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"25\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "416 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "178692ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-percent",
+          "kind": "reasoning",
+          "latencyMS": 178692,
+          "repeatIndex": 1,
+          "routeStage": "picker",
+          "thinkChars": 15709,
+          "thinkMS": 161445
+        },
+        {
+          "answerPreview": "Twenty-one handshakes. It’s the standard combination formula—seven people choose two, no duplicates allowed. You could crunch that in your head or let me handle the arithmetic; either way, the number stays constant.",
+          "checks": [
+            {
+              "detail": "215 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/32 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"21\"] in: Twenty-one handshakes. It’s the standard combination formula",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "215 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "103961ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "reason-hard-handshakes",
+          "kind": "reasoning",
+          "latencyMS": 103961,
+          "repeatIndex": 1,
+          "thinkChars": 9260,
+          "thinkMS": 93317
+        },
+        {
+          "answerPreview": "Sixteen. You got it right—since 30 minus the 6 who do nothing leaves 24 who do something, and adding those two groups (football + tennis) means 18 plus 15 is 33, so we've counted the \"both\" players twice; subtracting that overlap (33 - 24) gives you exactly 9? Wait, let me re-check: Total = F + T + Neither. So 30 = F + T + 6, meaning F + T = 24. If we add the counts of football and tennis players together (18 + 15), we get 33, but that includes the \"both\" group twice. The formula for the intersection is Total - Neither - (F + T - Both). Actually, simpler: F ∪ T = F + T - (F ∩ T). Since F ∪ T = 24, then 24 = 18 + 15 - x, so 24 = 33 - x, which means x = 9.  Wait, I made a mistake in my quick math earlier. Let's break it down clearly: - Total students = 30 - Neither football nor tennis = 6 - Students playing at least one sport (Football ∪ Tennis) = 30 - 6 = 24. - Football only + Both = 18 - Tennis only + Both = 15 - Let x be the number who play both. Then:   - Football only = 18 - x   - Tennis only = 15 - x   - Total playing at least one = (Football only) + (Tennis only) + (Both)   - 24 = (18 - x) + (15 - x) + x   - 24 = 33 - x   - x = 9  So the answer is **nine**. You nailed it. Did you build a Venn diagram for this or just crunch the numbers?",
+          "checks": [
+            {
+              "detail": "1261 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/186 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ram for this or just crunch the numbers?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"9\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1261 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "188205ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-overlap",
+          "kind": "reasoning",
+          "latencyMS": 188205,
+          "repeatIndex": 1,
+          "thinkChars": 15513,
+          "thinkMS": 162502
+        },
+        {
+          "answerPreview": "Alright, let's get this sorted up. If one pipe does the job in 2 hours and the other takes 3, running them together is like two people finishing a homework assignment at different speeds; you just add their rates. The first fills it in $1/2$ of the tank per hour, the second in $1/3$. Add those up: $1/2 + 1/3 = 5/6$ of the tank per hour when they work together. To fill the whole thing ($1$), you divide by that rate, which gives you $6/5$, or $1.2$ hours. Convert that to minutes and it's **72**.",
+          "checks": [
+            {
+              "detail": "498 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/83 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"72\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "498 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "180818ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-pipes",
+          "kind": "reasoning",
+          "latencyMS": 180818,
+          "repeatIndex": 1,
+          "routeStage": "picker",
+          "thinkChars": 15965,
+          "thinkMS": 161762
+        },
+        {
+          "answerPreview": "Let's crunch those numbers for a second. If we go back five years, Ana was \\(A - 5\\). Four years from now, she'll be \\(A + 4\\), and that needs to equal double her age then: \\((A + 4) = 2 \\times (A - 5)\\). Solving that gives us \\(A = 10\\).  So, **10**.",
+          "checks": [
+            {
+              "detail": "251 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/41 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"14\", \"fourteen\"] in: Let's crunch those numbers for a second. If we go back five ",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "251 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "178130ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-ages",
+          "kind": "reasoning",
+          "latencyMS": 178130,
+          "repeatIndex": 1,
+          "routeStage": "picker",
+          "thinkChars": 16119,
+          "thinkMS": 162085
+        },
+        {
+          "answerPreview": "Yo. Three intervals in thirty seconds is ten per step, so nine steps to floor 10 lands you at ninety.  90 seconds. Simple math, no leaks here.",
+          "checks": [
+            {
+              "detail": "142 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/25 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"90\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "142 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "169611ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-stairs",
+          "kind": "reasoning",
+          "latencyMS": 169611,
+          "repeatIndex": 1,
+          "routeStage": "picker",
+          "thinkChars": 14973,
+          "thinkMS": 156181
+        },
+        {
+          "answerPreview": "You need **4** minutes.  Here's why, quick as can be: you start with one piece and need to make three 3-metre cuts from it (15 ÷ 3 = 5 pieces). You cut once to get two pieces, then twice more to split each side into the final chunks. That’s four cuts total. At a minute per cut, that's four minutes straight down the line.",
+          "checks": [
+            {
+              "detail": "322 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/58 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"4\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "322 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "177232ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-rope",
+          "kind": "reasoning",
+          "latencyMS": 177232,
+          "repeatIndex": 1,
+          "routeStage": "picker",
+          "thinkChars": 16161,
+          "thinkMS": 161967
+        },
+        {
+          "answerPreview": "Yo! You got me on a math riddle—classic \"gotcha\" question. If it takes 5 seconds to strike 6, that's 4 intervals between the strikes (since you count *from* the first *to* the last). So each interval is 1.25 seconds. For 12 strikes, there are 11 intervals, which means 13.75 seconds total.  So the answer is: **13.75**",
+          "checks": [
+            {
+              "detail": "318 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/48 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"11\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "318 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "177800ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-chimes",
+          "kind": "reasoning",
+          "latencyMS": 177800,
+          "repeatIndex": 1,
+          "routeStage": "picker",
+          "thinkChars": 16548,
+          "thinkMS": 162015
+        },
+        {
+          "answerPreview": "Let's break it down: we're counting how many times the digit **3** appears in the numbers from 1 to 50.  - In the single-digit range (1–9), we have one '3'. - In the teens (10–19), another '3' (the number 13). - In the twenties (20–29), a third '3' (the number 23). - In the thirties (30–39), there are two '3's: one in the tens place (30, 31, 32, **3**3, 34, 35, 36, 37, 38, 39 — wait, let me rephrase that). Actually, from 30–39, every number has a '3' in the tens place, so that's 10 occurrences (30, 31, 32, **3**3, 34, 35, 36, 37, 38, 39). Plus, the number 33 has another '3' in the units place. So that's 10 + 1 = 11 occurrences in the 30s. - In the forties (40–49), no '3's appear.  So, let's add them up:  - Single digits (1–9): 1 occurrence ('3'). - Teens (10–19): 1 occurrence ('1**3**'). - Twenties (20–29): 1 occurrence ('2**3**'). - Thirties (30–39): 11 occurrences (10 with '3' in the tens place, plus one extra for 3**3**).  Total: 1 + 1 + 1 + 11 = **14**.  Wait, let me double-check that. In the range 1 to 50: - The digit '3' appears in: 3, 13, 23, 30, 31, 32, **3**3, 34, 35, 36, 37, 38, 39.  Counting these: - 3 (once) - 13 (once) - 23 (once) - 30–39 (each has a '3' in the tens place: 30, 31, 32, **3**3, 34, 35, 36, 37, 38, 39 — that's 10 numbers with '3' in the tens place). - Additionally, **33** has another '3' in the units place.  So total occurrences: 1 (from 3) + 1 (from 13) + 1 (from 23) + 10 (from 30–39 with '3' in tens place) + 1 (extra from **3**3) = **14**.  Wait, but earlier I thought it was 12. Let me recheck: - Numbers with '3' in the units place: 3, 13, 23, **3**3, 43 → that's 5 occurrences. - Numbers with '3' in the tens place: 30, 31, 32, **3**3, 34, 35, 36, 37, 38, 39 → that's 10 occurrences.  But note that **33** has '3' in both places, so we count it twice here (once for units, once for tens). So total is 5 + 10 = **15**.  Wait, no. Let me list all numbers with '3': - Units place: 3, 13, 23, **3**3, 43 → that's 5 numbers. Each contributes one occurrence in the units place. - Tens place: 30, 31, 32, **3**3, 34, 35, 36, 37, 38, 39 → that's 10 numbers. Each contributes one occurrence in the tens place.  But **33** is counted in both lists (once for units, once for tens), so total occurrences = 5 + 10 = **15**.  Wait, but earlier I thought it was 14. Let me count again carefully: - Units place '3's: 3, 13, 23, **3**3, 43 → 5 occurrences. - Tens place '3's: 30, 31, 32, **3**3, 34, 35, 36, 37, 38, 39 → 10 occurrences.  Total = 5 + 10 = **15**.  But wait, the number of numbers with '3' in the units place is 5 (3, 13, 23, 33, 43), and the number of numbers with '3' in the tens place is 10 (30–39). However, **33** is included in both counts, so we need to be careful not to double-count. But since we're counting occurrences (not distinct numbers), it's correct to add them together.  So total occurrences = 5 (units) + 10 (tens) = **15**.  Wait, but earlier I thought it was 14. Let me list all the numbers with '3' and count: - 3 (one occurrence) - 13 (one occurrence) - 23 (one occurrence) - 30 (one occurrence in tens place) - 31 (one occurrence in tens place) - 32 (one occurrence in tens place) - **3**3 (two occurrences: one in tens, one in units) - 34 (one occurrence in tens place) - 35 (one occurrence in tens place) - 36 (one occurrence in tens place) - 37 (one occurrence in tens place) - 38 (one occurrence in tens place) - 39 (one occurrence in tens place) - 43 (one occurrence in units place)  Counting these: - Single occurrences (units or tens): 3, 13, 23, 30, 31, 32, 34, 35, 36, 37, 38, 39 → 12 numbers with one occurrence each. - **3**3 has two occurrences. - Additionally, 43 has one occurrence in the units place.  Wait, no: let's list all occurrences explicitly: - Units place: 3 (1), 13 (1), 23 (1), **3**3 (1), 43 (1) → total 5 from units. - Tens place: 30 (1), 31 (1), 32 (1), **3**3 (1), 34 (1), 35 (1), 36 (1), 37 (1), 38 (1), 39 (1) → total 10 from tens.  Total occurrences = 5 + 10 = **15**.  But wait, the number of numbers with '3' in the units place is 5 (3, 13, 23, 33, 43), and the number of numbers with '3' in the tens place is 10 (30–39). However, **33** is included in both lists, so we need to be careful. But since we're counting occurrences (not distinct numbers), it's correct to add them together.  So total occurrences = 5 + 10 = **15**.  Wait, but earlier I thought it was 14. Let me count again: - Units place '3's: 3, 13, 23, **3**3, 43 → that's 5 numbers, each contributing one occurrence. - Tens place '3's: 30, 31, 32, **3**3, 34, 35, 36, 37, 38, 39 → that's 10 numbers, each contributing one occurrence.  Total occurrences = 5 + 10 = **15**.  But wait, the number of numbers with '3' in the units place is 5 (3, 13, 23, 33, 43), and the number of numbers with '3' in the tens place is 10 (30–39). However, **33** is included in both lists, so we need to be careful. But since we're counting occurrences (not distinct numbers), it's correct to add them together.  So total occurrences = 5 + 10 = **15**.  Wait, but earlier I thought it was 14. Let me list all the numbers with '3' and count: - 3 (one occurrence) - 13 (one occurrence) - 23 (one occurrence) - 30 (one occurrence in tens place) - 31 (one occurrence in tens place) - 32 (one occurrence in tens place) - **3**3 (two occurrences: one in tens, one in units) - 34 (one occurrence in tens place) - 35 (one occurrence in tens place) - 36 (one occurrence in tens place) - 37 (one occurrence in tens place) - 38 (one occurrence in tens place) - 39 (one occurrence in tens place) - 43 (one occurrence in units place)  Counting these: - Single occurrences (units or tens): 3, 13, 23, 30, 31, 32, 34, 35, 36, 37, 38, 39 → 12 numbers with one occurrence each. - **3**3 has two occurrences. - Additionally, 43 has one occurrence in the units place.  Wait, no: let's list all occurrences explicitly: - Units place: 3 (1), 13 (1), 23 (1), **3**3 (1), 43 (1) → total 5 from units. - Tens place: 30 (1), 31 (1), 32 (1), **3**3 (1), 34 (1), 35 (1), 36 (1), 37 (1), 38 (1), 39 (1) → total 10 from tens.  Total occurrences = 5 + 10 = **15**.  But wait, the number of numbers with '3' in the units place is 5 (3, 13, 23, 33, 43), and the number of numbers with '3' in the tens place is 10 (30–39). However, **33** is included in both lists, so we need to be careful. But since we're counting occurrences (not distinct numbers), it's correct to add them together.  So total occurrences = 5 + 10 = **15**.  Wait, but earlier I thought it was 14. Let me count again: - Units place '3's: 3, 13, 23, **3**3, 43 → that's 5 numbers, each contributing one occurrence. - Tens place '3's: 30, 31, 32, **3**3, 34, 35, 36, 37, 38, 39 → that's 10 numbers, each contributing one occurrence.  Total occurrences = 5 + 10 = **15**.  But wait, the number of numbers with '3' in the units place is 5 (3, 13, 23, 33, 43), and the number of numbers with '3' in the tens place is 10 (30–39). However, **33** is included in both lists, so we need to be careful. But since we're counting occurrences (not distinct numbers), it's correct to add them together.  So total occurrences = 5 + 10 = **15**.  Wait, but earlier I thought it was 14. Let me list all the numbers with '3' and count: - 3 (one occurrence) - 13 (one occurrence) - 23 (one occurrence) - 30 (one occurrence in tens place) - 31 (one occurrence in tens place) - 32 (one occurrence in tens place) - **3**3 (two occurrences: one in tens, one in units) - 34 (one occurrence in tens place) - 35 (one occurrence in tens place) - 36 (one occurrence in tens place) - 37 (one occurrence in tens place) - 38 (one occurrence in tens place) - 39 (one occurrence in tens place) - 43 (one occurrence in units place)  Counting these: - Single occurrences (units or tens): 3, 13, 23, 30, 31, 32, 34, 35, 36, 37, 38, 39 → 12 numbers with one occurrence each. - **3**3 has two occurrences. - Additionally, 43 has one occurrence in the units place.  Wait, no: let's list all occurrences explicitly: - Units place: 3 (1), 13 (1), 23 (1), **3**3 (1), 43 (1) → total 5 from units. - Tens place: 30 (1), 31 (1), 32 (1), **3**3 (1), 34 (1), 35 (1), 36 (1), 37 (1), 38 (1), 39 (1) → total 10 from tens.  Total occurrences = 5 + 10 = **15**.  But wait, the number of numbers with '3' in the units place is 5 (3, 13, 23, 33, 43), and the number of numbers with '3' in the tens place is 10 (30–39). However, **33** is included in both lists, so we need to be careful. But since we're counting occurrences (not distinct numbers), it's correct to add them together.  So total occurrences = 5 + 10 = **15**.  Wait, but earlier I thought it was 14. Let me count again: - Units place '3's: 3, 13, 23, **3**3, 43 → that's 5 numbers, each contributing one occurrence. - Tens place '3's: 30, 31, 32, **3**3, 34, 35, 36, 37, 38, 39 → that's 10 numbers, each contributing one occurrence.  Total occurrences = 5 + 10 = **15**.  But wait, the number of numbers with '3' in the units place is 5 (3, 13, 23, 33, 43), and the number of numbers with '3' in the tens place is 10 (30–39). However, **33** is included in both lists, so we need to be careful. But since we're counting occurrences (not distinct numbers), it's correct to add them together.  So total occurrences = 5 + 10 = **15**.  Wait, but earlier I thought it was 14. Let me list all the numbers with '3' and count: - 3 (one occurrence) - 13 (one occurrence) - 23 (one occurrence) - 30 (one occurrence in tens place) - 31 (one occurrence in tens place) - 32 (one occurrence in tens place) - **3**3 (two occurrences: one in tens, one in units) - 34 (one occurrence in tens place) - 35 (one occurrence in tens place) - 36 (one occurrence in tens place) - 37 (one occurrence in tens place) - 38 (one occurrence in tens place) - 39 (one occurrence in tens place) - 43 (one occurrence in units place)  Counting these: - Single occurrences (units or tens): 3, 13, 23, 30, 31, 32, 34, 35, 36, 37, 38, 39 → 12 numbers with one occurrence each. - **3**3 has two occurrences. - Additionally, 43 has one occurrence in the units place.  Wait, no: let's list all occurrences explicitly: - Units place: 3 (1), 13 (1), 23 (1), **3**3 (1), 43 (1) → total 5 from units. - Tens place: 30 (1), 31 (1), 32 (1), **3**3 (1), 34 (1), 35 (1), 36 (1), 37 (1), 38 (1), 39 (1) → total 10 from tens.  Total occurrences = 5 + 10 = **15**.  But wait, the number of numbers with '3' in the units place is 5 (3, 13, 23, 33, 4",
+          "checks": [
+            {
+              "detail": "10409 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/1242 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"15\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10409 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "333151ms > ceiling 120000ms (loop thrash?)",
+              "name": "responsive",
+              "outcome": "fail"
+            }
+          ],
+          "fixtureID": "reason-hard-digit-threes",
+          "kind": "reasoning",
+          "latencyMS": 333151,
+          "repeatIndex": 1,
+          "routeStage": "picker",
+          "thinkChars": 14468,
+          "thinkMS": 161803
+        },
+        {
+          "answerPreview": "Two trains, a simple math problem. Even for me, numbers like this are easier than trying to negotiate with the other side of the tracks without getting my head blown off by a bullet train.  Relative speed is 150 km/h (70 + 80). Divide the distance—300 km—by that speed, and you get two hours. Two hours times sixty minutes in an hour brings us to:  **120**",
+          "checks": [
+            {
+              "detail": "356 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/61 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"120\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "356 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "49684ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "reason-hard-trains",
+          "kind": "reasoning",
+          "latencyMS": 49684,
+          "repeatIndex": 1,
+          "thinkChars": 3389,
+          "thinkMS": 36698
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}
