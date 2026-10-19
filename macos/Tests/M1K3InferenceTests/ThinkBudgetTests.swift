@@ -16,28 +16,40 @@
 //  NoWait word list takes argv too (`-thinkWaitWords`, or `paper` for the paper's seventeen). Confidence 0.8.
 //  Review: same day (pre-push review) — the shipping Lil tier must carry a budget (a Lil swap re-measures and adds
 //  its id), the keys are lowercase, the transition reads case-blind, and the audition case is a real folder form.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — each defaults domain is removed when its read returns (`reading`, the
+//  house `defer`): they were cleared before use and never after, 117 plists left. Checked by hand: no non-empty
+//  file survives a run once cfprefsd flushes (a count straight after the run reads its pending writes). Confidence 0.85.
 
 import Foundation
 @testable import M1K3Inference
 import Testing
 
 struct ThinkBudgetTests {
-    /// A private defaults domain holding what argv would: every value a string.
-    private func defaults(_ values: [String: String]) -> UserDefaults {
+    /// `read` over a private defaults domain holding what argv would (every value a string), removed when `read`
+    /// returns: the house `defer` idiom (PerTurnThinkingTests). It was cleared before use and never after.
+    private func reading<T>(_ values: [String: String], _ read: (UserDefaults) -> T) -> T {
         let suite = "ThinkBudgetTests-\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
-        defaults.removePersistentDomain(forName: suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
         for (key, value) in values {
             defaults.set(value, forKey: key)
         }
-        return defaults
+        return read(defaults)
+    }
+
+    private func penalty(_ values: [String: String]) -> Float? {
+        reading(values) { ThinkBudget.NoWait.penalty(from: $0) }
+    }
+
+    private func words(_ values: [String: String]) -> [String] {
+        reading(values) { ThinkBudget.NoWait.words(from: $0) }
     }
 
     private let lil = "mlx-community/Qwen3.5-4B-MLX-4bit"
 
     /// The request for `modelID` with `values` on argv.
     private func request(_ values: [String: String], _ modelID: String) -> ThinkBudget.Request? {
-        ThinkBudget.request(from: defaults(values), modelID: modelID)
+        reading(values) { ThinkBudget.request(from: $0, modelID: modelID) }
     }
 
     @Test("Lil forces at 1,024 tokens by default, closing plainly")
@@ -132,17 +144,17 @@ struct ThinkBudgetTests {
 
     @Test("NoWait is off unless argv asks: no key, zero, a negative or junk is no penalty")
     func noWaitOffByDefault() {
-        #expect(ThinkBudget.NoWait.penalty(from: defaults([:])) == nil)
-        #expect(ThinkBudget.NoWait.penalty(from: defaults(["thinkWaitPenalty": "0"])) == nil)
-        #expect(ThinkBudget.NoWait.penalty(from: defaults(["thinkWaitPenalty": "-3"])) == nil)
-        #expect(ThinkBudget.NoWait.penalty(from: defaults(["thinkWaitPenalty": "lots"])) == nil)
-        #expect(ThinkBudget.NoWait.penalty(from: defaults(["thinkWaitPenalty": "1e-50"])) == nil, "zero as a Float")
+        #expect(penalty([:]) == nil)
+        #expect(penalty(["thinkWaitPenalty": "0"]) == nil)
+        #expect(penalty(["thinkWaitPenalty": "-3"]) == nil)
+        #expect(penalty(["thinkWaitPenalty": "lots"]) == nil)
+        #expect(penalty(["thinkWaitPenalty": "1e-50"]) == nil, "zero as a Float")
     }
 
     @Test("NoWait reads argv's string as a logit penalty and applies it only inside a thought")
     func noWaitReadsArgv() {
-        #expect(ThinkBudget.NoWait.penalty(from: defaults(["thinkWaitPenalty": "100"])) == 100)
-        #expect(ThinkBudget.NoWait.penalty(from: defaults(["thinkWaitPenalty": "2.5"])) == 2.5)
+        #expect(penalty(["thinkWaitPenalty": "100"]) == 100)
+        #expect(penalty(["thinkWaitPenalty": "2.5"]) == 2.5)
         #expect(ThinkBudget.NoWait.penalty(for: 5, preOpenedThinking: true) == 5)
         #expect(ThinkBudget.NoWait.penalty(for: 5, preOpenedThinking: false) == nil)
         #expect(ThinkBudget.NoWait.penalty(for: nil, preOpenedThinking: true) == nil)
@@ -162,12 +174,12 @@ struct ThinkBudgetTests {
 
     @Test("NoWait's words: the three openers unless argv names its own, or `paper` for the paper's seventeen")
     func noWaitWords() {
-        #expect(ThinkBudget.NoWait.words(from: defaults([:])) == ["Wait", "Hmm", "Alternatively"])
-        #expect(ThinkBudget.NoWait.words(from: defaults(["thinkWaitWords": "Wait, Hmm,Alternatively,But , Check,,"]))
+        #expect(words([:]) == ["Wait", "Hmm", "Alternatively"])
+        #expect(words(["thinkWaitWords": "Wait, Hmm,Alternatively,But , Check,,"])
             == ["Wait", "Hmm", "Alternatively", "But", "Check"])
-        let paper = ThinkBudget.NoWait.words(from: defaults(["thinkWaitWords": "paper"]))
+        let paper = words(["thinkWaitWords": "paper"])
         #expect(paper.count == 17)
         #expect(paper.contains("But") && paper.contains("Check") && paper.contains("Double-check"))
-        #expect(ThinkBudget.NoWait.words(from: defaults(["thinkWaitWords": " , "])) == ThinkBudget.NoWait.defaultWords)
+        #expect(words(["thinkWaitWords": " , "]) == ThinkBudget.NoWait.defaultWords)
     }
 }

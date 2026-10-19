@@ -9,6 +9,8 @@
 //
 //  Signed: Kev + claude-opus-5, 2026-09-14, Confidence 0.9, Prior: Unknown
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — `foreignInstructionsSkipTheSlot` (PR #424 review).
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — each domain is removed when its read returns (house `defer`): they
+//  were cleared before use and never after, ~1,225 plists left.
 //
 
 import Foundation
@@ -28,28 +30,30 @@ struct AFMPrefixPrewarmTests {
         #expect(!AFMPrefixPrewarm.consultsSlot(override: "You write short titles…", standing: "persona"))
     }
 
-    private static func defaults(_ value: Any?) -> UserDefaults {
+    /// `isEnabled` over a private domain holding `value`, removed when it returns (the house `defer`; it was cleared
+    /// before use and never after).
+    private static func enabled(_ value: Any?) -> Bool {
         let name = "AFMPrefixPrewarmTests.\(UUID().uuidString)"
         let store = UserDefaults(suiteName: name)!
-        store.removePersistentDomain(forName: name)
+        defer { store.removePersistentDomain(forName: name) }
         if let value { store.set(value, forKey: AFMPrefixPrewarm.defaultsKey) }
-        return store
+        return AFMPrefixPrewarm.isEnabled(in: store)
     }
 
     @Test("on unless switched off — absent means on")
     func onByDefault() {
-        #expect(AFMPrefixPrewarm.isEnabled(in: Self.defaults(nil)))
-        #expect(AFMPrefixPrewarm.isEnabled(in: Self.defaults(true)))
-        #expect(!AFMPrefixPrewarm.isEnabled(in: Self.defaults(false)))
+        #expect(Self.enabled(nil))
+        #expect(Self.enabled(true))
+        #expect(!Self.enabled(false))
     }
 
     @Test("a launch argument's string reads the way the words say (-afm.prefixPrewarm NO)")
     func argumentDomainStrings() {
-        #expect(!AFMPrefixPrewarm.isEnabled(in: Self.defaults("NO")))
-        #expect(!AFMPrefixPrewarm.isEnabled(in: Self.defaults("false")))
-        #expect(!AFMPrefixPrewarm.isEnabled(in: Self.defaults("0")))
-        #expect(AFMPrefixPrewarm.isEnabled(in: Self.defaults("YES")))
-        #expect(AFMPrefixPrewarm.isEnabled(in: Self.defaults("1")))
+        #expect(!Self.enabled("NO"))
+        #expect(!Self.enabled("false"))
+        #expect(!Self.enabled("0"))
+        #expect(Self.enabled("YES"))
+        #expect(Self.enabled("1"))
     }
 
     @Test("a prefix-warm session serves only a prompt that begins with its prefix")
