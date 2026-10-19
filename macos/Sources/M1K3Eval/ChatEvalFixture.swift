@@ -80,6 +80,9 @@
 //  reads the real date and answered from it (both missed in every arm). Same answers, new premise.
 //  Review: same day — twelve more `reason-hard-*` traps (socks, fence posts, chimes, pipes…), 20 in all, so
 //  the prompting arms can show a 2-point move; `reason-remainder` takes "two" as well as "2". Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — every numeric reasoning answer under 100 takes its spelled cardinal
+//  too (seven fixtures; the snail had only the ordinal "eighth"): "Twenty-one." and "Eight." failed in three arms.
+//  Runs before this change score those as misses, so they don't compare with runs after it. Confidence 0.9.
 
 import Foundation
 
@@ -507,13 +510,13 @@ public enum ChatEvalFixtures {
             id: "reason-apples", kind: .reasoning,
             prompt: "A shop has 12 apples. It sells 5 in the morning and buys 8 more in the "
                 + "afternoon. How many apples does it have at the end of the day? Give the number.",
-            expectation: .init(mustContainAny: ["15"], minChars: 1)
+            expectation: .init(mustContainAny: ["15", "fifteen"], minChars: 1)
         ),
         .init(
             id: "reason-age", kind: .reasoning,
             prompt: "Mary is twice as old as her brother. Her brother is 9. How old is Mary? "
                 + "Answer with the number.",
-            expectation: .init(mustContainAny: ["18"], minChars: 1)
+            expectation: .init(mustContainAny: ["18", "eighteen"], minChars: 1)
         ),
         .init(
             id: "reason-order", kind: .reasoning,
@@ -565,7 +568,7 @@ public enum ChatEvalFixtures {
             // The trap answer is 24.
             prompt: "A patch of lily pads doubles in size every day. It takes 48 days to cover the whole lake. "
                 + "How many days does it take to cover half the lake? Answer with the number.",
-            expectation: .init(mustContainAny: ["47"], minChars: 1, wholeWordFacts: true)
+            expectation: .init(mustContainAny: ["47", "forty-seven"], minChars: 1, wholeWordFacts: true)
         ),
         .init(
             id: "reason-hard-weekday", kind: .reasoning,
@@ -592,7 +595,7 @@ public enum ChatEvalFixtures {
             // Seven nights leave it at 7 m; day eight climbs out. The trap answer is 10.
             prompt: "A snail is at the bottom of a 10 metre well. Each day it climbs up 3 metres and each night "
                 + "it slides back 2 metres. On which day does it first reach the top? Answer with the number.",
-            expectation: .init(mustContainAny: ["8", "eighth"], minChars: 1, wholeWordFacts: true)
+            expectation: .init(mustContainAny: ["8", "eight", "eighth"], minChars: 1, wholeWordFacts: true)
         ),
         .init(
             id: "reason-hard-average-speed", kind: .reasoning,
@@ -621,14 +624,14 @@ public enum ChatEvalFixtures {
             // 100 → 150 → 75. The trap answer is 0.
             prompt: "A price rises by 50% and then falls by 50%. By what percent is the final price lower than the "
                 + "original? Answer with the number.",
-            expectation: .init(mustContainAny: ["25"], minChars: 1, wholeWordFacts: true)
+            expectation: .init(mustContainAny: ["25", "twenty-five"], minChars: 1, wholeWordFacts: true)
         ),
         .init(
             id: "reason-hard-handshakes", kind: .reasoning,
             // 7 × 6 / 2. The trap answers are 42 and 49.
             prompt: "Seven people meet and each shakes hands once with every other person. How many handshakes happen? "
                 + "Answer with the number.",
-            expectation: .init(mustContainAny: ["21"], minChars: 1, wholeWordFacts: true)
+            expectation: .init(mustContainAny: ["21", "twenty-one"], minChars: 1, wholeWordFacts: true)
         ),
         .init(
             id: "reason-hard-overlap", kind: .reasoning,
@@ -642,7 +645,7 @@ public enum ChatEvalFixtures {
             // 1/2 + 1/3 = 5/6 an hour, so 6/5 h. The trap answer is 150 (the mean).
             prompt: "One pipe fills a tank in 2 hours and another fills it in 3 hours. Running together, how many "
                 + "minutes do they take to fill it? Answer with the number.",
-            expectation: .init(mustContainAny: ["72"], minChars: 1, wholeWordFacts: true)
+            expectation: .init(mustContainAny: ["72", "seventy-two"], minChars: 1, wholeWordFacts: true)
         ),
         .init(
             id: "reason-hard-ages", kind: .reasoning,

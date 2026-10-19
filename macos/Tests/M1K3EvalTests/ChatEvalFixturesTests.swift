@@ -14,7 +14,10 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — hard reasoning fixtures: eight, whole-word answers that
 //  never appear in their own prompt. Confidence 0.85.
 //  Review: same day — twenty of them now (twelve more traps), so the floor is 20.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — a numeric reasoning answer under 100 also takes its spelled
+//  cardinal ("Twenty-one." failed handshakes in three arms). Confidence 0.9.
 
+import Foundation
 @testable import M1K3Eval
 import M1K3Inference
 import Testing
@@ -49,6 +52,35 @@ struct ChatEvalFixturesTests {
             for answer in fixture.expectation.mustContainAny {
                 #expect(!promptWords.contains(answer.lowercased()), "\(fixture.id): \(answer) is in the prompt")
             }
+        }
+    }
+
+    /// A model that answers "Twenty-one." is right: Lil's handshakes and snail answers failed on the word in three
+    /// arms on 2026-10-18. Under 100 because that's where a model spells a number out.
+    @Test("a numeric reasoning answer under 100 also takes the number in words")
+    func numericAnswersTakeWords() {
+        let spellOut = NumberFormatter()
+        spellOut.numberStyle = .spellOut
+        spellOut.locale = Locale(identifier: "en")
+        for fixture in ChatEvalFixtures.fixtures(for: .reasoning) {
+            let answers = fixture.expectation.mustContainAny
+            for number in answers.compactMap({ Int($0) }) where number < 100 {
+                let word = spellOut.string(from: NSNumber(value: number)) ?? ""
+                #expect(answers.contains(word), "\(fixture.id): \(number) without \"\(word)\"")
+            }
+        }
+    }
+
+    @Test("Lil's spelled-out answers from 2026-10-18 pass their traps")
+    func spelledAnswersPass() throws {
+        let answers = [
+            "reason-hard-handshakes": "Twenty-one. Simple math, no secrets to hide in the handshake count itself.",
+            "reason-hard-snail": "Eight.  The snail gets to 7 meters by the end of day seven, sliding back down.",
+        ]
+        for (id, answer) in answers {
+            let fixture = try #require(ChatEvalFixtures.fixtures(for: .reasoning).first { $0.id == id })
+            let score = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: answer))
+            #expect(score.passed, "\(id): \(score.checks.filter { $0.outcome == .fail })")
         }
     }
 
