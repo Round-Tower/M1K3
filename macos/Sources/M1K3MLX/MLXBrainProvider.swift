@@ -150,6 +150,7 @@
 //  the 4,096 cap (the bare-generate arms: 9 of 24 empty, thoughts to 17.7k chars). Still no instructions, seed or
 //  tools. Verify-by-launch owed from a paired iPhone (`raw: thinking budget 1024 tokens` per generation).
 //  Confidence 0.75.
+//  Review: same day (pre-push review fold) — the raw route's coupling comment says the race needs both changes.
 
 import Foundation
 import Hub
@@ -1466,9 +1467,9 @@ extension MLXBrainProvider: RawCompletionProviding {
                                 budget: plan.thinkBudget, waitPenalty: plan.waitPenalty,
                                 tokenizer: container.tokenizer, label: "raw"
                             )
-                        // instructions: nil and no cache seed — the raw contract. If this route ever streams a
-                        // `<think>` opener, the phone's cut can see the thought and races this close: carry the
-                        // host's budget to the phone in the same change (HomeBrainProvider).
+                        // instructions: nil and no cache seed — the raw contract. If this route streamed a
+                        // `<think>` opener AND the device ran a plain route on Home, the device's cut would race
+                        // this close: the change that completes that pair carries the budget (HomeBrainProvider).
                         let session = ChatSession(container, generateParameters: plan.parameters, components: components)
                         if let context = plan.additionalContext {
                             session.additionalContext = context

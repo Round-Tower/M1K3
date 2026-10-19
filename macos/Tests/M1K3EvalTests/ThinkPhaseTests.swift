@@ -10,6 +10,7 @@
 //  it whole through repeats, notes and JSON (Kev: eval the thinking, not only the answer). Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — every block: an agent turn thinks once per send, and the first block
 //  alone hid the rest from the tool-session budget question. Confidence 0.85.
+//  Review: same day (pre-push review fold) — a second open inside an unclosed block starts the next block.
 
 import Foundation
 @testable import M1K3Eval
@@ -117,6 +118,9 @@ struct ThinkPhaseTests {
         #expect(ThinkPhase.blocks("<think>ab</think>call<think>cde</think>Answer.") == ["ab", "cde"])
         #expect(ThinkPhase.blocks("<think>x</think>a<think>still going") == ["x", "still going"])
         #expect(ThinkPhase.blocks("Just an answer.").isEmpty)
+        // A send that hit its cap never closed; the next send's open starts the next block.
+        #expect(ThinkPhase.blocks("<think>a<think>b</think>c") == ["a", "b"])
+        #expect(ThinkPhase.blocks("<think>a<think>b") == ["a", "b"])
     }
 
     @Test("a score counts every think block and their characters; the first block's measure is unchanged")

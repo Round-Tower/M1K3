@@ -12,6 +12,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — `appending(_:)` pinned beside `withRepeatIndex`.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — both copies pinned lossless over every field (a follow-up from #643's
 //  review: they copied by hand, so a field added later could drop). Confidence 0.85.
+//  Review: same day (pre-push review fold) — the copies pin counts the fields by Mirror, so a later field turns it
+//  red until `full` sets it.
 
 import Foundation
 @testable import M1K3Eval
@@ -112,7 +114,8 @@ struct ChatEvalJSONTests {
             return dictionary.filter { $0.key != "checks" } as NSDictionary
         }
         #expect(try rest(noted) == rest(full))
-        #expect(try rest(full).count == 11, "every field but the checks is set, so a drop shows")
+        // Every stored field but the checks is set in `full`: a field added later turns this red until it is.
+        #expect(try rest(full).count == Mirror(reflecting: full).children.count - 1)
     }
 
     @Test("a scorecard written before powerSource existed still decodes, with the source unknown")

@@ -195,3 +195,7 @@ single-flight remote generation, fail-closed source gate, connection
 cap + request deadline, all-connection teardown on revoke, and the N2/N3
 deferrals named instead of silent.) Prior: Kev + claude-fable-5
 (scratch/brain-at-home/SPEC.md, 2026-07-14).*
+
+*Review: Kev + claude-opus-5-5, 2026-10-19 — §2: the raw route forces the brain's
+thinking budget on the host (`rawSessionPlan`, #643's follow-up); wire format
+unchanged. Confidence 0.75: unit-pinned, verify from a paired device owed.*

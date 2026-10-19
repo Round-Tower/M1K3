@@ -9,6 +9,7 @@ Review: Kev + claude-opus-5-5, 2026-10-18 — review folds: the fakes model the 
 brings it back), so the relaunch is pinned as seen-at-the-start, opened-at-the-end, proven up; a resumed run still
 knows the live app; exit 0 without a scorecard fails and exit 8 is its own line; the driver file appends; an
 interrupted or SIGTERMed runner stops run_chateval with SIGTERM; an eval app left running stops the run.
+Review: Kev + claude-opus-5-5, 2026-10-19 — a resume re-runs an arm whose JSON doesn't parse.
 """
 
 import json
@@ -356,6 +357,20 @@ def test_a_resumed_run_still_reopens_the_live_app_an_interrupted_run_quit(tmp_pa
     assert rec.names == ["force1024", "cut4000"]
     assert rec.opened == [HOME_LIVE]
     assert not marker(tmp_path).exists()
+
+
+def test_a_resume_reruns_an_arm_whose_json_does_not_parse(tmp_path, monkeypatch, capsys):
+    # "Done" is a JSON that parses; a half-written one (the run was killed mid-write) is set aside and re-run.
+    path = write_suite(tmp_path)
+    out = tmp_path / "out"
+    out.mkdir()
+    (out / "force1024.json").write_text('{"runs": [')
+    rec = Recorder(monkeypatch, running=[])
+    assert ra.main([str(path)]) == 0
+    assert rec.names == ["force1024", "cut4000"]
+    assert json.loads((out / "force1024.json").read_text()) == {"runs": []}
+    assert (out / "force1024.json.unparsed").read_text() == '{"runs": ['
+    assert "doesn't parse" in capsys.readouterr().out
 
 
 # ── the arm runner itself (a harmless child, never M1K3) ────────────────────

@@ -34,9 +34,9 @@ M1K3_MCP_TOKEN; the home folder written as ~), the --app-arg argv, and the
 power source read just before launch, at every 10-s poll and at the end
 (`mixed` when two KNOWN sources were seen — the app stamps its own reading at
 the END, so a run that started on battery can read "ac"; an unknown read is
-"unverified", never a change). The block is also printed when the app
-launches, so a run that leaves no JSON still has it in its stdout. An existing
---save-to is refused without --overwrite.
+"unverified", never a change). Under --direct the block is also printed when
+the app launches, so a run that leaves no JSON still has it in its stdout. An
+existing --save-to is refused without --overwrite.
 
 `--direct` (macOS 27): app-data privacy closed the container to shells, so the
 trigger file can't be written and the report can't be read back. Direct mode
@@ -90,6 +90,10 @@ The glue is pinned on a stand-in app (/bin/sleep) in test_run_chateval.py; not y
 Confidence 0.8.
 Review: Kev + claude-opus-5-5, 2026-10-19 — `route_warning`: a live-path run with no `--router` never reaches the
 plain turn, so the thinking cut, its retry, the forced budget and NoWait never run; the runner says so up front.
+Review: Kev + claude-opus-5-5, 2026-10-19 (pre-push review of the follow-ups) — `quit_for_run`: from the quit to the
+run's own guard (the AFM cool-down included), any way out reopens the live app; `relaunch_live` retries a failed
+`open -a` once and says UNVERIFIED if it still fails; the scorecard is written whole (temp file, then rename); no
+abbreviated flags, so run_arms' reserved ones can't be reached by prefix. Confidence 0.8.
 """
 
 from __future__ import annotations
@@ -486,9 +490,39 @@ def _sigterm_as_exit(signum: int, _frame) -> None:
 
 
 def relaunch_live(plan: InstancePlan, no_relaunch: bool) -> None:
+    """Reopen the live app the run quit. `open -a` straight after the eval app (same bundle id) went can fail with
+    -600: once more after a beat, then say so rather than leave the live app closed in silence."""
     argv = relaunch_argv(plan.live_running, no_relaunch=no_relaunch)
-    if argv:
-        subprocess.run(argv)
+    if not argv:
+        return
+    if subprocess.run(argv).returncode != 0:
+        time.sleep(3)
+        if subprocess.run(argv).returncode != 0:
+            print(f"! the live app did not reopen ({' '.join(argv)}): UNVERIFIED, open it yourself", file=sys.stderr)
+
+
+def quit_for_run(plan: InstancePlan, app: Path, no_relaunch: bool) -> bool:
+    """Quit the live app (and a target build already up) and sit out the AFM cool-down. False when M1K3 didn't
+    quit (nothing to reopen). From the quit until the run's own guard takes over, any way out — Ctrl-C in the
+    cool-down, a SIGTERM, an exception — reopens the live app."""
+    previous = signal.signal(signal.SIGTERM, _sigterm_as_exit)
+    try:
+        if plan.to_quit and not quit_app(plan.live_running or str(app), plan.to_quit):
+            return False
+        for pid in plan.to_quit:  # a second instance (the target build) quits by its own path
+            if pid in dict(running_instances()):
+                quit_app(str(app), [pid])
+        last = float(STAMP.read_text()) if STAMP.exists() else None
+        wait = cooldown_remaining(last, time.time())
+        if wait:
+            print(f"… AFM cool-down {int(wait)} s")
+            time.sleep(wait)
+        return True
+    except BaseException:
+        relaunch_live(plan, no_relaunch)
+        raise
+    finally:
+        signal.signal(signal.SIGTERM, signal.SIG_DFL if previous is None else previous)
 
 
 def stop_child(proc: subprocess.Popen, grace_s: float = 10) -> int:
@@ -506,7 +540,11 @@ def stop_child(proc: subprocess.Popen, grace_s: float = 10) -> int:
 
 
 def write_document(path: str, doc: dict) -> None:
-    Path(path).write_text(json.dumps(doc, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
+    """Whole or not at all (a temp file, then a rename): run_arms reads a JSON that parses as a finished arm."""
+    target = Path(path)
+    tmp = target.with_name(target.name + ".tmp")
+    tmp.write_text(json.dumps(doc, indent=2, sort_keys=True, ensure_ascii=False) + "\n")
+    os.replace(tmp, target)
 
 
 def wait_until(predicate, timeout: float, every: float = 1.0) -> bool:
@@ -760,7 +798,8 @@ def run_direct(args, app: Path, trig: dict[str, str], plan: "InstancePlan") -> i
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+    # No prefix matching: run_arms reserves --save-to, --log and the rest, and `--save=` would get past it.
+    ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0], allow_abbrev=False)
     ap.add_argument("--name", required=True, help="run name → selftest-out/<name>(.json)")
     ap.add_argument("--brains", default="", help="comma list: mini,pocket,lil,big (may be empty with --pcc)")
     ap.add_argument("--pcc", action="store_true",
@@ -844,17 +883,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.dry_run:
         return 0
 
-    if plan.to_quit and not quit_app(plan.live_running or str(app), plan.to_quit):
+    if not quit_for_run(plan, app, args.no_relaunch):
         print("✗ M1K3 did not quit within 45 s — aborting (never force-killed)", file=sys.stderr)
         return 4
-    for pid in plan.to_quit:  # a second instance (the target build) quits by its own path
-        if pid in dict(running_instances()):
-            quit_app(str(app), [pid])
-    last = float(STAMP.read_text()) if STAMP.exists() else None
-    wait = cooldown_remaining(last, time.time())
-    if wait:
-        print(f"… AFM cool-down {int(wait)} s")
-        time.sleep(wait)
 
     if args.direct:
         return run_direct(args, app, trig, plan)

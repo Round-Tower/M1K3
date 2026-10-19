@@ -218,3 +218,8 @@ macos/TestFlight/WhatToTest.*.txt
 
 # Coverage artifacts a locally-run Debug app writes into its cwd.
 *.profraw
+
+# run_arms leaves these in an eval outDir: the driver transcript carries absolute home paths, and the
+# live-app note is only for a resumed run (macos/tools/eval/suites/README.md).
+*.driver.txt
+.run_arms-live-app

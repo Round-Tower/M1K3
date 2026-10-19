@@ -18,16 +18,18 @@
 //
 //  Thinking: the HOST bounds a remote thought (the raw route forces the brain's
 //  budget, `MLXBrainProvider.rawSessionPlan`), so this provider does not forward
-//  `ThinkBudgetForcing`. The device's cut can't race that close today: the raw
-//  route streams no `<think>` opener, and iOS gives a non-Mini provider no plain
-//  route (`ToolRouterWiring`, allTiers off on iOS). Flipping either one must
-//  carry the host's budget here in the same change.
+//  `ThinkBudgetForcing`. The device's cut (`runPlainTurn`, its only cut site)
+//  could race that close only if BOTH changed: the raw route streamed a `<think>`
+//  opener, and iOS gave a non-Mini provider the plain route (`ToolRouterWiring`,
+//  allTiers off on iOS). Either alone is safe; the change that completes the pair
+//  carries the host's budget here.
 //
 //  Signed: Kev + claude-fable-5, 2026-08-24, Confidence 0.85 (behaviour
 //  table-tested over an injected transport; live-LAN feel is the Phase C
 //  hardware verify). Prior: BRAIN_AT_HOME_SPEC §2/§5.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — comment only: why the thinking budget lives on the host, and the
-//  two changes that would make the device need it (#643's follow-up, which assumed the device cut raced it).
+//  two changes that together would make the device need it (#643's follow-up assumed the device cut raced it).
+//  Review: same day (pre-push review fold) — the coupling note says the race needs BOTH changes, not either.
 //
 
 import Foundation

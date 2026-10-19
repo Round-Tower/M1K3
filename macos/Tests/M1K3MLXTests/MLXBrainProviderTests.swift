@@ -22,6 +22,8 @@
 //  2507 stays only where the test is ABOUT the 2507 (the thinking-toggle exclusion, text-only routing).
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — the sampling pin: one profile with every value distinct lands whole,
 //  presence window included, and the default provider's window is the profile's 64, not mlx's 20. Confidence 0.9.
+//  Review: same day (pre-push review fold) — the sampling pin's doc says which defaults it dodges (min-p 0 is the
+//  library's; 37 is neither 20 nor 64).
 
 import Foundation
 import M1K3Chat
@@ -354,7 +356,8 @@ struct MLXBrainProviderTests {
     }
 
     /// Every value distinct and off GenerateParameters' defaults, so a dropped or hard-coded line shows: every
-    /// shipped profile has min-p 0 and a 64-token window, which is also what a dropped line would leave.
+    /// shipped profile has min-p 0, which is also the library's default, so a dropped min-p line passes the other
+    /// tests; 37 differs from both the library's window (20) and the shipped one (64).
     @Test("a sampling profile lands whole on the generation's parameters, presence window included")
     func samplingAppliesEveryField() {
         let profile = SamplingProfile(

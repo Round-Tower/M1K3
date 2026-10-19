@@ -16,6 +16,8 @@ Review: Kev + claude-opus-5-5, 2026-10-18 — review fold: no secret and no home
 record (every poll; unknown is unverified, not mixed), the transcript set aside on a re-run and never the --save-to,
 and run_direct's glue on a stand-in app that execs /bin/sleep (timeout → 6, Ctrl-C, SIGTERM to the runner, missing
 binary: the child is gone and the live app reopened every time).
+Review: Kev + claude-opus-5-5, 2026-10-19 — the relaunch retries once and says UNVERIFIED; a Ctrl-C in the cool-down
+reopens the live app (`quit_for_run`); an abbreviated flag is refused.
 """
 
 import json
@@ -233,6 +235,57 @@ def test_relaunch_reopens_the_live_app_that_was_running():
     assert rc.relaunch_argv(LIVE, no_relaunch=False) == ["open", "-a", LIVE]
     assert rc.relaunch_argv(None, no_relaunch=False) is None, "nothing was running: open nothing"
     assert rc.relaunch_argv(HOME_LIVE, no_relaunch=True) is None
+
+
+def test_relaunch_live_retries_once_and_says_when_the_live_app_did_not_reopen(monkeypatch, capsys):
+    # `open -a` right after the eval app (same bundle id) was killed can fail with -600: once more after a beat,
+    # then say so rather than leave Kev's live app closed in silence.
+    plan = rc.InstancePlan(to_quit=[], blockers=[], live_running=HOME_LIVE)
+    monkeypatch.setattr(rc.time, "sleep", lambda _s: None)
+    for codes, unverified in (([1, 1], True), ([1, 0], False), ([0], False)):
+        calls: list[list[str]] = []
+        replies = iter(codes)
+        monkeypatch.setattr(rc.subprocess, "run",
+                            lambda argv, **_kw: (calls.append(argv), SimpleNamespace(returncode=next(replies)))[1])
+        rc.relaunch_live(plan, no_relaunch=False)
+        assert calls == [["open", "-a", HOME_LIVE]] * len(codes)
+        assert ("UNVERIFIED" in capsys.readouterr().err) == unverified
+
+
+def test_quit_for_run_reopens_the_live_app_when_interrupted_in_the_cool_down(tmp_path, monkeypatch):
+    # main() quits the live app, then may sit out a 120 s AFM cool-down before run_direct's own guard starts:
+    # a Ctrl-C there used to end the run with Kev's live app closed.
+    stamp = tmp_path / "stamp"
+    stamp.write_text(str(time.time()))
+    monkeypatch.setattr(rc, "STAMP", stamp)
+    monkeypatch.setattr(rc, "quit_app", lambda _path, _pids: True)
+    monkeypatch.setattr(rc, "running_instances", lambda: [])
+    relaunched: list[str | None] = []
+    monkeypatch.setattr(rc, "relaunch_live", lambda plan, no_relaunch: relaunched.append(plan.live_running))
+
+    def interrupted(_seconds):
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(rc.time, "sleep", interrupted)
+    plan = rc.InstancePlan(to_quit=[9], blockers=[], live_running=HOME_LIVE)
+    with pytest.raises(KeyboardInterrupt):
+        rc.quit_for_run(plan, Path(TARGET), no_relaunch=False)
+    assert relaunched == [HOME_LIVE]
+
+
+def test_quit_for_run_reopens_nothing_when_m1k3_never_quit(tmp_path, monkeypatch):
+    monkeypatch.setattr(rc, "STAMP", tmp_path / "stamp")
+    monkeypatch.setattr(rc, "quit_app", lambda _path, _pids: False)
+    monkeypatch.setattr(rc, "relaunch_live", lambda plan, no_relaunch: pytest.fail("nothing was quit"))
+    plan = rc.InstancePlan(to_quit=[9], blockers=[], live_running=HOME_LIVE)
+    assert rc.quit_for_run(plan, Path(TARGET), no_relaunch=False) is False
+
+
+def test_main_refuses_an_abbreviated_flag(capsys):
+    # run_arms reserves --save-to, --log, --timeout-min…; argparse's prefix matching let `--save=` past that guard.
+    with pytest.raises(SystemExit):
+        rc.main(["--name", "x", "--brains", "lil", "--save=/tmp/elsewhere.json"])
+    assert "unrecognized arguments" in capsys.readouterr().err
 
 
 # ── the timeout reap (2026-10-18): the runner started the app, so the runner stops it ──

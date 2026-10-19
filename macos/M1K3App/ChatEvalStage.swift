@@ -96,7 +96,10 @@
 //  its file list inside every live-path, vision and grounded-Q fixture's timed window, ~8.3 s a turn), and each MLX
 //  brain is prepared before fixture 1, as the readiness gate does. Paired arms from before still compare (both
 //  arms paid it); absolute seconds don't, and the embedder now shows in the first brain's resident memory, not
-//  its peak. Confidence 0.8.
+//  its peak. Not mirrored: the app's persona-prefix warm, so the first fixture of each prefix key still builds
+//  it (~2 s on Lil). A failed embedder warm says so. Confidence 0.8.
+//  Review: same day (pre-push review fold) — the embedder warm says when it failed, `runEmbeds` reads the kinds
+//  (tool-use only with a router, the rest only under LIVE_PATH), and the router doc sits on its own member again.
 //
 
 import Foundation
@@ -440,20 +443,23 @@ enum ChatEvalStage {
         )
     }
 
-    /// The router arm asked for a route mode (`off`, `1`, `dispatch`): tool-use fixtures then take
-    /// the live path, the only one the router is wired into. Without one they keep LocalAgent's
-    /// native loop, so every other tool-use cell measures what it always did (2026-10-10: the 10-09
-    /// arm's tool-use column never reached the router, in any cell).
     /// One embedder per launch, as the app holds one (AppEnvironment): the live path, vision and grounded-Q
     /// share it. EmbeddingGemma 2, the app's retriever.
     private static let embedder = MLXEmbeddingService()
 
-    /// Whether this run's fixtures can embed: the live path, the router arm, vision and grounded-Q do.
+    /// Whether this run's fixtures can embed, read off `runFixture`'s routes: vision and grounded-Q always do,
+    /// tool-use only with a router mode, and every other kind only under LIVE_PATH.
     private static func runEmbeds(kinds: Set<TaskKind>?) -> Bool {
         guard let kinds else { return true }
-        return livePathRequested || routerArmRequested || kinds.contains(.vision) || kinds.contains(.groundedQ)
+        if kinds.contains(.vision) || kinds.contains(.groundedQ) { return true }
+        if routerArmRequested, kinds.contains(.toolUse) { return true }
+        return livePathRequested && !kinds.subtracting([.toolUse]).isEmpty
     }
 
+    /// The router arm asked for a route mode (`off`, `1`, `dispatch`): tool-use fixtures then take
+    /// the live path, the only one the router is wired into. Without one they keep LocalAgent's
+    /// native loop, so every other tool-use cell measures what it always did (2026-10-10: the 10-09
+    /// arm's tool-use column never reached the router, in any cell).
     private static var routerArmRequested: Bool {
         SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER") != nil
     }
@@ -471,9 +477,15 @@ enum ChatEvalStage {
             // Loaded once, outside every fixture's clock, like the app's launch warm.
             let clock = ContinuousClock()
             let warmStart = clock.now
-            _ = try? await embedder.embed("warm")
-            emit("• chateval embedder: \(embedder.fingerprint) warm in \(milliseconds(clock.now - warmStart)) ms "
-                + "(one per launch, outside every fixture)")
+            do {
+                _ = try await embedder.embed("warm")
+                emit("• chateval embedder: \(embedder.fingerprint) warm in \(milliseconds(clock.now - warmStart)) ms "
+                    + "(one per launch, outside every fixture)")
+            } catch {
+                // The loader keeps no failure, so the first embedding fixture retries the load inside its clock.
+                emit("• chateval embedder: warm FAILED (\(error.localizedDescription)) — the first embedding fixture "
+                    + "retries the load inside its timed window")
+            }
         }
         let brains = selectedBrains()
         let mlxTiers = brains.filter { if case .mlx = $0.backing { true } else { false } }.map(\.rawValue)

@@ -39,6 +39,8 @@ note) and is proven back, not assumed; the verdict reads the JSON, not the exit 
 file appends; Ctrl-C/SIGTERM forward SIGTERM to run_chateval; an eval app left running stops the
 run. The name rule, the live folders and the process table are run_chateval's, imported.
 Confidence 0.75: the interrupt path leans on run_chateval reaping its app on SIGTERM.
+Review: Kev + claude-opus-5-5, 2026-10-19 — a resume skips an arm only when its JSON parses, as the docs say; a
+half-written one is set aside (`.unparsed`) and the arm runs again. Confidence 0.8.
 """
 
 from __future__ import annotations
@@ -256,8 +258,12 @@ def main(argv: list[str] | None = None) -> int:
         for arm in suite.arms:
             save = suite.out_dir / f"{arm.name}.json"
             if save.exists():
-                print(f"· {arm.name}: skipped, {save} exists")
-                continue
+                if arm_outcome(0, save)[0] == "done":
+                    print(f"· {arm.name}: skipped, {save} exists")
+                    continue
+                # Not a finished arm: a half-written JSON. Kept beside it, and the arm runs again.
+                save.replace(save.with_name(save.name + ".unparsed"))
+                print(f"· {arm.name}: {save} doesn't parse — set aside as .unparsed, re-running")
             print(f"▸ {arm.name} · timeout {arm.timeout_min} min · {time.strftime('%H:%M')}", flush=True)
             started = time.monotonic()
             code = run_arm(arm_argv(suite, arm), suite.out_dir / f"{arm.name}.driver.txt")

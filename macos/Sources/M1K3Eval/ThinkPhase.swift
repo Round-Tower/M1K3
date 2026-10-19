@@ -23,6 +23,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — `blocks(_:)`: every block, in order. An agent turn thinks once per
 //  send (each opens its own block), and `measure` reads only the first, so a tool turn's later thinking was
 //  invisible to the eval. `measure` and `thought` are unchanged. Confidence 0.85.
+//  Review: same day (pre-push review fold) — `blocks` starts a new block at a second open inside an unclosed one (a
+//  send that hit its cap never closes), and `measure`'s doc points at it.
 
 import Foundation
 
@@ -48,8 +50,8 @@ public enum ThinkPhase {
 
     /// Splits a raw transcript into its think block and its answer. A transcript
     /// with no block is all answer; a block that never closes is all think from
-    /// the tag on (unclosed = true). Only the first block is measured — a second
-    /// `<think>` after the answer started is malformed output and counts as answer.
+    /// the tag on (unclosed = true). Only the first block is measured here (`blocks` reads
+    /// them all: an agent turn opens one per send); a second `<think>` counts as answer.
     public static func measure(_ raw: String) -> ThinkPhaseMetrics {
         guard let open = raw.range(of: openTag) else {
             return ThinkPhaseMetrics(thinkChars: 0, answerChars: raw.count, unclosed: false)
@@ -71,7 +73,15 @@ public enum ThinkPhase {
         var rest = raw[...]
         while let open = rest.range(of: openTag) {
             let afterOpen = rest[open.upperBound...]
-            guard let close = afterOpen.range(of: closeTag) else {
+            let close = afterOpen.range(of: closeTag)
+            // A send that hit its token cap never closes; the next send opens its own block, so a second open
+            // before any close ends the first block there.
+            if let reopen = afterOpen.range(of: openTag), reopen.lowerBound < (close?.lowerBound ?? afterOpen.endIndex) {
+                out.append(String(afterOpen[..<reopen.lowerBound]))
+                rest = afterOpen[reopen.lowerBound...]
+                continue
+            }
+            guard let close else {
                 out.append(String(afterOpen))
                 break
             }
