@@ -13,6 +13,8 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-14, Confidence 0.88. Prior: Unknown
 //  Review: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.85 — n/a scores (vision on a blind
 //  brain) leave totals, pass counts and latency; a kind that is all n/a shows "n/a", not "—".
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — doc only: the embedder warms before the first brain now, so it shows
+//  in `residentMemoryMBAtStart`, not the first brain's peak.
 
 import Foundation
 
@@ -27,10 +29,11 @@ public enum ChatEvalReport {
         public let modelID: String?
         public let scores: [ChatEvalScore]
         /// MLX's peak memory over this brain's run (MB), reset before it loads —
-        /// the bake-off's RAM gate. Includes whatever MLX holds resident beside it,
-        /// and the embedder loads lazily INSIDE the first brain's run (later brains
-        /// see it as resident) — so compare `ownPeakMemoryMB` from one-brain-per-
-        /// launch runs. nil for non-MLX columns and runs recorded before 2026-10-06.
+        /// the bake-off's RAM gate. Includes whatever MLX holds resident beside it.
+        /// Until 2026-10-19 the embedder loaded lazily INSIDE the first brain's run;
+        /// since, an embedding run warms it before any brain, so it shows in
+        /// `residentMemoryMBAtStart` instead. Compare `ownPeakMemoryMB` from one-brain-
+        /// per-launch runs. nil for non-MLX columns and runs recorded before 2026-10-06.
         public let peakMemoryMB: Int?
         /// MLX memory already resident when this brain started (MB) — an earlier
         /// brain in the same launch, the embedder. A multi-brain launch on

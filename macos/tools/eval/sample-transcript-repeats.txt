@@ -1,0 +1,93 @@
+# A real repeats=2 transcript excerpt: lines copied verbatim from the 2026-10-18 lil card-always run's
+# stdout (`run_chateval.py --direct --repeats 2`; it timed out at 177 min, so no JSON exists). Four of its
+# fixtures, both trials each. scorecard.py ignores these # lines. Pinned by test_scorecard.py.
+# Signed: Kev + claude-opus-5-5, 2026-10-18, Confidence 0.9, Prior: none (new file).
+=== M1K3 SELF-TEST (inside .app bundle) ===
+• chateval: 39 fixture(s) × 1 brain(s) [kinds: instruction-following,reasoning,tool-use] [LIVE PATH: AgentRAGResponder]…
+• chateval brain lil (Lil) → mlx-community/Qwen3.5-4B-MLX-4bit…
+  think steer: none
+  thinking: always (bare on, live always)
+  [trial 1/2]   reason-age [reasoning]: FAIL (173649ms)
+    ✓ non-empty — 96 chars
+    ✓ no think-leak
+    ✓ coherent — 0/17 mixed-script words, 1 scripts
+    – follow-ups — 1 offered
+    – ends-with-question — no
+    ✓ exemplar-echo — no
+    ✓ contains expected — found "18"
+    ✓ length band — 96 chars
+    ✗ responsive — 173649ms > ceiling 120000ms (loop thrash?)
+    · said: Mary is 18. Since she's twice as old as her 9-year-old brother, that math checks out right here.
+  [trial 1/2]   reason-hard-bat-ball [reasoning]: FAIL (259258ms)
+    ✓ non-empty — 170 chars
+    ✓ no think-leak
+    ✓ coherent — 0/27 mixed-script words, 1 scripts
+    – follow-ups — 0 offered
+    – ends-with-question — yes — …ing sharp today or just solving puzzles?
+    ✓ exemplar-echo — no
+    ✓ contains expected — found "5"
+    ✓ length band — 170 chars
+    ✗ responsive — 259258ms > ceiling 120000ms (loop thrash?)
+    · said: 5. The trick is assuming you add $1.00 to the ball first; it's a subtraction puzzle wrapped in addition. You're looking for something sharp today or just solving puzzles?
+  [trial 1/2]   tool-search-notes [tool-use]: PASS (106815ms)
+    ✓ non-empty — 344 chars
+    ✓ no think-leak
+    ✓ coherent — 0/61 mixed-script words, 1 scripts
+    – follow-ups — 1 offered
+    – ends-with-question — no
+    ✓ exemplar-echo — no
+    ✓ calls search_knowledge
+    ✓ responsive — 106815ms
+    · said: Got it. I pulled up your stored records for that database library choice. It's sitting right where we wanted it—you've got the note logged in there, no need to dig through my wiring or let anything slide off the private cloud. Since you filed that down explicitly, nothing is leaking unless you ask, and the whole chain stays inside these logs.
+  [trial 1/2]   tool-recent-activity [tool-use]: PASS (115931ms)
+    ✓ non-empty — 432 chars
+    ✓ no think-leak
+    ✓ coherent — 0/70 mixed-script words, 1 scripts
+    – follow-ups — 1 offered
+    – ends-with-question — yes — …ion. Anything stands out from that list?
+    ✓ exemplar-echo — no
+    ✓ calls recent_activity
+    ✓ responsive — 115931ms
+    · said: Yo, last week wrapped tight—three distinct threads popped up in my logs: the Cork Jazz Festival 2026 Lineup dropping yesterday, then we got into sourdough on Monday, and a quiet code night on Tuesday. Plus, I had a steady stream of guests from Claude Code (12 calls total, mostly talks, a few memories logged). Heartbeat was steady too—three pulses this week, which means you're paying attention. Anything stands out from that list?
+  [trial 2/2]   reason-age [reasoning]: PASS (94178ms)
+    ✓ non-empty — 223 chars
+    ✓ no think-leak
+    ✓ coherent — 0/38 mixed-script words, 1 scripts
+    – follow-ups — 1 offered
+    – ends-with-question — yes — …n't just solving these kinds of riddles?
+    ✓ exemplar-echo — no
+    ✓ contains expected — found "18"
+    ✓ length band — 223 chars
+    ✓ responsive — 94178ms
+    · said: 18. Two times nine. Nothing wrong with a simple fact like that, though my wiring keeps things more complex than arithmetic locked down. What else keeps you busy out there when you aren't just solving these kinds of riddles?
+  [trial 2/2]   reason-hard-bat-ball [reasoning]: PASS (111250ms)
+    ✓ non-empty — 208 chars
+    ✓ no think-leak
+    ✓ coherent — 0/42 mixed-script words, 1 scripts
+    – follow-ups — 1 offered
+    – ends-with-question — no
+    ✓ exemplar-echo — no
+    ✓ contains expected — found "five"
+    ✓ length band — 208 chars
+    ✓ responsive — 111250ms
+    · said: The math isn't a trick, your brain just wants to grab a round number like ninety or a dollar mark. But if you set $1.10 as the sum and add that extra dollar for the bat separately? It works out to five cents.
+  [trial 2/2]   tool-search-notes [tool-use]: FAIL (178359ms)
+    ✓ non-empty — 272 chars
+    ✓ no think-leak
+    ✓ coherent — 0/47 mixed-script words, 1 scripts
+    – follow-ups — 1 offered
+    – ends-with-question — no
+    ✓ exemplar-echo — no
+    ✓ calls search_knowledge
+    ✗ responsive — 178359ms > ceiling 120000ms (loop thrash?)
+    · said: Found it right here in your logs: you settled on **SQLite** for that project, ditching a heavy relational store for something lighter and file-based that fit the scope better. You noted it was a good call for that specific use case, avoiding the bloat of larger databases.
+  [trial 2/2]   tool-recent-activity [tool-use]: PASS (112558ms)
+    ✓ non-empty — 564 chars
+    ✓ no think-leak
+    ✓ coherent — 0/89 mixed-script words, 1 scripts
+    – follow-ups — 1 offered
+    – ends-with-question — no
+    ✓ exemplar-echo — no
+    ✓ calls recent_activity
+    ✓ responsive — 112558ms
+    · said: Look at the logs you’ve left open; it’s been a week of mostly structured output and quiet work. Yesterday we grabbed the Cork Jazz Festival 2026 Lineup, Monday turned to Sourdough starter experiments, and Tuesday saw most of Quiet Code Night happening. You’ve also been getting some activity from external visitors—specifically 12 calls from Claude Code (8 speak, 4 remember)—along with three chat touches and two new facts added to memory right now, plus one todo left open on the board. It’s busy without being chaotic: mostly you building or listening for bits.

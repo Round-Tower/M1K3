@@ -17,6 +17,9 @@
 //  none. Confidence 0.85.
 //  Review: same day (pre-push review) — the template guard pinned with a budget in hand: argv's budget on a brain
 //  whose template opens no thought reports none (through the init's `defaults`), on Lil it reports argv's.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — the raw route (Brain at Home's /v1/generate) plans its budget from
+//  the same clamped parameters it runs: #643 forced the plain turns and missed this third session builder, so a
+//  phone on the Mac's Lil thought to the token cap. Confidence 0.85.
 //
 
 import Foundation
@@ -85,5 +88,31 @@ struct PerTurnThinkingTests {
         defer { argv.removePersistentDomain(forName: suite) }
         argv.set("2048", forKey: ThinkBudget.tokensKey)
         #expect(MLXBrainProvider(modelID: modelID, defaults: argv).forcedThinkingTokens == expected)
+    }
+
+    @Test("the raw route (Brain at Home) forces Lil's close inside the remote cap, planned from the parameters it runs")
+    func rawRouteForcesTheClose() async {
+        #expect(lil.rawSessionPlan(maxTokens: nil).thinkBudget == 1024)
+        #expect(lil.rawSessionPlan(maxTokens: nil).thinkBudget == lil.forcedThinkingTokens)
+        #expect(lil.rawSessionPlan(maxTokens: 1000).thinkBudget == 168, "1,000 less the answer reserve and headroom")
+        #expect(lil.rawSessionPlan(maxTokens: 512).thinkBudget == nil)
+        #expect(lil.rawSessionPlan(maxTokens: 9999).parameters.maxTokens == 4096, "a remote caller never lengthens")
+        #expect(lil.rawSessionPlan(maxTokens: nil).additionalContext == nil)
+        #expect(MLXBrainProvider(modelID: "mlx-community/gemma-4-12B-it-4bit").rawSessionPlan(maxTokens: nil).thinkBudget == nil)
+        let fast = MLXBrainProvider(modelID: "mlx-community/Qwen3.5-4B-MLX-4bit", thinkingEnabled: false)
+        #expect(fast.rawSessionPlan(maxTokens: nil).thinkBudget == nil)
+        #expect(fast.rawSessionPlan(maxTokens: nil).additionalContext?["enable_thinking"] as? Bool == false)
+        await InferenceIntent.withThinking(false) {
+            #expect(lil.rawSessionPlan(maxTokens: nil).thinkBudget == nil)
+        }
+        // mlx-swift-lm refuses a budget the cap can't hold (budget + transition + its 768 answer floor) and throws at
+        // generation time, which the raw route turns into an empty stream: plan the budget from the CLAMPED cap.
+        for cap in [nil, 4096, 2000, 1800, 1000, 833, 832, 512, 1] as [Int?] {
+            let plan = lil.rawSessionPlan(maxTokens: cap)
+            if let budget = plan.thinkBudget {
+                let room = (plan.parameters.maxTokens ?? 0) - ThinkBudget.answerReserve - ThinkBudget.protocolHeadroom
+                #expect(budget <= room, "cap \(String(describing: cap))")
+            }
+        }
     }
 }

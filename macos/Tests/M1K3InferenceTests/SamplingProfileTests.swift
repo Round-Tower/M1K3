@@ -15,15 +15,17 @@
 //  under every arm until an eval reads its card — pinned, green from the start.
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — `card-mode`: each family's card per turn mode (Qwen3.5
 //  thinking vs instruct, Gemma 4, LFM2.5; cards read 2026-10-18); every other arm and no arm unchanged.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — comments and one test name only: Lil's card was read (card-mode),
+//  so "no card arm until an eval reads its card" was stale.
 //
 
 @testable import M1K3Inference
 import Testing
 
 struct SamplingProfileTests {
-    /// The one family with a card entry — Lil from 2026-07-16 to 2026-10-08, now a retired weight.
+    /// The one family with a `card` / `card-presence` entry — Lil from 2026-07-16 to 2026-10-08, now retired.
     private let qwen2507 = "mlx-community/Qwen3-4B-Instruct-2507-4bit-DWQ-2510"
-    /// The shipped Lil (#517): no card entry on purpose (its card is unread).
+    /// The shipped Lil (#517): no `card` entry on purpose; its card's values are card-mode's.
     private let lil = "mlx-community/Qwen3.5-4B-MLX-4bit"
     private let big = "mlx-community/gemma-4-12B-it-4bit"
 
@@ -46,7 +48,7 @@ struct SamplingProfileTests {
         #expect(SamplingProfile.resolve(modelID: big, environment: [:]) == .house)
     }
 
-    @Test("the shipped Lil (Qwen3.5-4B) has no card arm: house under every override until an eval reads its card")
+    @Test("the shipped Lil (Qwen3.5-4B) has no card / card-presence entry: house under both (its card is card-mode's)")
     func shippedLilStaysHouse() {
         for arm in ["card", "card-presence"] {
             #expect(SamplingProfile.resolve(modelID: lil, environment: [SamplingProfile.overrideKey: arm]) == .house)

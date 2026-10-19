@@ -143,6 +143,14 @@
 //  test can give a brain a budget, and the budget notice says whether the template lets it force or leaves it inert.
 //  The per-generation sampling Review above missed one change: `apply` sets the presence window to the profile's 64,
 //  where the library's 20 applied before, so the legacy `card-presence` arm samples a wider window. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — `apply` is internal so a test pins it whole (#643's review couldn't
+//  confirm the presence window from the diff). Comment and access only. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — the raw route (Brain at Home) forces the budget too, through
+//  `rawSessionPlan`: #643 wired the two plain sessions and missed this one, so a phone on the Mac's Lil thought to
+//  the 4,096 cap (the bare-generate arms: 9 of 24 empty, thoughts to 17.7k chars). Still no instructions, seed or
+//  tools. Verify-by-launch owed from a paired iPhone (`raw: thinking budget 1024 tokens` per generation).
+//  Confidence 0.75.
+//  Review: same day (pre-push review fold) — the raw route's coupling comment says the race needs both changes.
 
 import Foundation
 import Hub
@@ -218,7 +226,9 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         return params
     }
 
-    private static func apply(_ sampling: SamplingProfile, to params: inout GenerateParameters) {
+    /// Internal for the pin (MLXBrainProviderTests.samplingAppliesEveryField): every profile field, and the
+    /// presence window follows the repetition window (since df548535; mlx's own default, 20, before).
+    static func apply(_ sampling: SamplingProfile, to params: inout GenerateParameters) {
         params.temperature = sampling.temperature
         params.topP = sampling.topP
         params.topK = sampling.topK
@@ -1415,6 +1425,34 @@ extension MLXBrainProvider {
 /// persona (About-the-user block included) is a prefix-extraction surface,
 /// so raw-ness is structural, not filtered (2026-08-19 audit, finding 1).
 extension MLXBrainProvider: RawCompletionProviding {
+    /// The raw session's inputs, decided together so the thinking budget is planned from the cap the session
+    /// runs with: mlx-swift-lm throws at generation time when the cap can't hold the budget and its answer floor,
+    /// and the raw route turns a throw into an empty stream.
+    struct RawSessionPlan {
+        let parameters: GenerateParameters
+        let thinkBudget: Int?
+        let waitPenalty: Float?
+        let additionalContext: [String: any Sendable]?
+    }
+
+    /// The plan for one raw generation. A remote caller may SHORTEN it, never lengthen it past this provider's cap.
+    /// The forced close and NoWait are the plain turn's (#643), so the host bounds a remote thought itself: the
+    /// phone's cut never sees one (this route streams no `<think>` opener). Constant transition text only; nothing
+    /// from the persona or the user joins the context.
+    func rawSessionPlan(maxTokens: Int?) -> RawSessionPlan {
+        var parameters = generateParameters
+        if let requested = maxTokens {
+            let cap = parameters.maxTokens ?? Self.defaultMaxTokens
+            parameters.maxTokens = min(max(1, requested), cap)
+        }
+        return RawSessionPlan(
+            parameters: parameters,
+            thinkBudget: thinkBudgetTokens(parameters: parameters),
+            waitPenalty: thinkWaitPenalty(),
+            additionalContext: thinkingAdditionalContext
+        )
+    }
+
     public func generateRawStreaming(prompt: String, maxTokens: Int?) -> AsyncStream<String>? {
         AsyncStream { continuation in
             let task = Task {
@@ -1422,15 +1460,20 @@ extension MLXBrainProvider: RawCompletionProviding {
                     defer { MLXMemoryBudget.reclaim(label: "generateRawStreaming") }
                     do {
                         let container = try await ensureLoaded()
-                        var parameters = generateParameters
-                        if let requested = maxTokens {
-                            // Remote callers may SHORTEN a generation, never
-                            // lengthen it past this provider's own cap.
-                            let cap = parameters.maxTokens ?? Self.defaultMaxTokens
-                            parameters.maxTokens = min(max(1, requested), cap)
+                        let plan = rawSessionPlan(maxTokens: maxTokens)
+                        let components = plan.thinkBudget == nil && plan.waitPenalty == nil
+                            ? GenerationComponents()
+                            : await thinkingComponents(
+                                budget: plan.thinkBudget, waitPenalty: plan.waitPenalty,
+                                tokenizer: container.tokenizer, label: "raw"
+                            )
+                        // instructions: nil and no cache seed — the raw contract. If this route streamed a
+                        // `<think>` opener AND the device ran a plain route on Home, the device's cut would race
+                        // this close: the change that completes that pair carries the budget (HomeBrainProvider).
+                        let session = ChatSession(container, generateParameters: plan.parameters, components: components)
+                        if let context = plan.additionalContext {
+                            session.additionalContext = context
                         }
-                        // instructions: nil and no cache seed — the raw contract.
-                        let session = ChatSession(container, generateParameters: parameters)
                         for try await event in session.streamDetails(to: prompt, images: [], videos: []) {
                             if let chunk = event.chunk { continuation.yield(chunk) }
                             if let info = event.info {

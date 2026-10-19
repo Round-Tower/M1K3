@@ -12,10 +12,13 @@
 //  `house` is today's behaviour exactly, and stays the default for every model
 //  until an eval earns a card profile its place. The arms are chosen by
 //  `M1K3_SAMPLING` (SelfTest / run_chateval pass the environment through):
-//    card           the model card's sampling, our loop guard kept
-//    card-presence  the card's sampling with Qwen's presence penalty (0.5)
-//                   instead of the repetition penalty — which the loop-guard
-//                   note warns can distort tool-call JSON at ≥1.2, so gated.
+//    card           the model card's sampling, our loop guard kept (the retired
+//                   Qwen3-2507 only)
+//    card-presence  the same with Qwen's presence penalty (0.5) instead of the
+//                   repetition penalty — which the loop-guard note warns can
+//                   distort tool-call JSON at ≥1.2, so gated (2507 only)
+//    card-mode      each current family's card, thinking vs straight per
+//                   generation (Qwen3.5, Gemma 4, LFM2.5; `modeCard`)
 //
 //  Pure (no MLX): the provider maps a profile onto GenerateParameters.
 //
@@ -28,6 +31,9 @@
 //  The provider picks thinking vs instruct per generation from the turn's decision. `house` stays the
 //  default until the eval earns the flip. Confidence 0.7: the card values are copied; whether they beat
 //  house on a 4-bit 4B is the eval's question.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — comments only: the header names card-mode and scopes card /
+//  card-presence to the retired 2507, and the presence window is dated (64 since df548535, mlx's 20 before, so the
+//  09-23 card-presence cells sampled 20). #643's review.
 //
 
 public struct SamplingProfile: Sendable, Equatable {
@@ -63,12 +69,13 @@ public struct SamplingProfile: Sendable, Equatable {
     /// What every MLX brain sampled before profiles existed.
     public static let house = SamplingProfile(temperature: 0.6, topP: 1.0, topK: 0)
 
-    /// Model-card sampling, by model family. Only families whose card we've read.
+    /// The `card` / `card-presence` arms' sampling, by model family: only the retired Qwen3-2507 has an entry.
+    /// The current families' cards (read 2026-10-18) live in `modeCard`, the card-mode arm.
     private static func card(for modelID: String) -> SamplingProfile? {
         let id = modelID.lowercased()
         // Qwen3-*-Instruct-2507 (Lil until 2026-10-08): temperature 0.7, top-p 0.8, top-k 20, min-p 0.
-        // Qwen3.5 (Lil since) has no arm on purpose: its card is unread, so it samples `house`
-        // under every M1K3_SAMPLING value until an eval reads the card and earns one.
+        // Qwen3.5 (Lil since) has no entry here on purpose: its card's per-mode values are card-mode's
+        // (`modeCard`), so under `card` / `card-presence` it samples `house`.
         if id.contains("qwen3"), id.contains("instruct-2507") {
             return SamplingProfile(temperature: 0.7, topP: 0.8, topK: 20)
         }
@@ -81,8 +88,9 @@ public struct SamplingProfile: Sendable, Equatable {
     ///   two disagreeing "non-thinking reasoning" rows are left out.
     /// - Gemma 4 (Big): one recipe for every use, 1.0 / 0.95 / 64, no penalties named.
     /// - LFM2.5 (pocket): 0.1, top-k 50, repetition penalty 1.05; no top-p named.
-    /// Presence penalty spans `repetitionContextSize` tokens (64); the card's servers apply it to
-    /// the whole output, so this is the milder reading.
+    /// Presence penalty spans `repetitionContextSize` tokens (64, since df548535 on 2026-10-18; mlx's default
+    /// window of 20 before, so the 09-23 card-presence cells sampled 20). The card's servers apply it to the
+    /// whole output, so this is the milder reading.
     private static func modeCard(for modelID: String, thinking: Bool) -> SamplingProfile? {
         let id = modelID.lowercased()
         if id.contains("qwen3.5") {

@@ -30,6 +30,8 @@
 //  seventeen, "but" and "check" among them, from Kev's guess). Confidence 0.8: challenger's narrowed ship.
 //  Review: same day (pre-push review fold) — the transition reads case-blind; the docs say argv reaches only a
 //  brain whose template pre-opens `<think>`. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — doc only: NoWait and the budget ride the raw route too (Brain at
+//  Home, `rawSessionPlan`); the tool session is still neither.
 
 import Foundation
 
@@ -128,7 +130,8 @@ public extension ThinkBudget {
     ///
     /// argv: `M1K3 -thinkWaitPenalty 100 [-thinkWaitWords Wait,Hmm,But|paper]` (100 bans the words; 3–5 nudges
     /// them). Off when absent. It shapes the thought but doesn't bound it: the budget, where the brain forces one,
-    /// still does. Like the budget it rides the plain turn only: the tool session (MLXToolCalling) isn't penalised.
+    /// still does. Like the budget it rides the plain turn and the raw route (Brain at Home); the tool session
+    /// (MLXToolCalling) is neither budgeted nor penalised.
     enum NoWait {
         /// The argv key for the penalty, subtracted from the openers' logits.
         public static let penaltyKey = "thinkWaitPenalty"
