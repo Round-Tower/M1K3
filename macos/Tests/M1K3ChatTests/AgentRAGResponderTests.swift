@@ -24,6 +24,11 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — the end-to-end leak the review found:
 //  a scripted model calling get_document + list_documents on a Photo-bearing store through the MCP-shaped
 //  palette never sees the caption in an observation; the same script on the local palette does.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — an image turn on a brain that can't carry it (Brain at Home's ReAct
+//  floor) is declined by name with no generation or retrieval; a tooled brain still receives the image; an unavailable
+//  brain still throws first.
+//  Review: same day (pre-push review fold) — the phone's production shape (a tool-calling slot reporting false)
+//  declines too; the wording pin covers the pronoun.
 
 import Foundation
 import M1K3Agent
@@ -258,6 +263,58 @@ private final class PrefacingSession: ToolTurnSession, @unchecked Sendable {
     }
 }
 
+/// A tool-calling brain whose session counts the images that reach it and answers in one turn: the counter-case
+/// to the image decline (a brain that can carry the image must still get it).
+private final class ImageRecordingToolProvider: ToolCallingProvider, @unchecked Sendable {
+    let name = "image-recording"
+    let isAvailable = true
+    let supportsToolCalls: Bool
+    let session = ImageRecordingSession()
+
+    init(supportsToolCalls: Bool = true) {
+        self.supportsToolCalls = supportsToolCalls
+    }
+
+    func makeToolTurnSession(
+        tools _: [ToolDefinition], options _: ToolTurnOptions
+    ) async throws -> any ToolTurnSession {
+        session
+    }
+
+    func continueToolTurn(messages _: [ToolMessage], tools _: [ToolDefinition]) async throws -> ToolTurn {
+        .text("A fox.")
+    }
+
+    func generate(prompt _: String) async throws -> String {
+        "A fox."
+    }
+
+    func generateStreaming(prompt _: String) -> AsyncStream<String> {
+        AsyncStream { continuation in
+            continuation.yield("A fox.")
+            continuation.finish()
+        }
+    }
+}
+
+private final class ImageRecordingSession: ToolTurnSession, @unchecked Sendable {
+    private let seen = Mutex(0)
+
+    func send(_ messages: [ToolMessage], onToken: @escaping @Sendable (String) -> Void) async throws -> ToolTurn {
+        let images = messages.reduce(0) { count, message in
+            if case let .user(_, images) = message { return count + images.count }
+            return count
+        }
+        seen.withLock { $0 += images }
+        onToken("A fox.")
+        return .text("A fox.")
+    }
+
+    var imagesSeen: Int {
+        seen.withLock { $0 }
+    }
+}
+
 private func ingestedStore() async throws -> (KnowledgeStore, HashingEmbeddingService) {
     let store = try KnowledgeStore()
     let embedder = HashingEmbeddingService()
@@ -344,6 +401,85 @@ private final class ThinkingSpyProvider: InferenceProvider, @unchecked Sendable 
 // MARK: - Tests
 
 struct AgentRAGResponderTests {
+    // MARK: An image the path can't carry (2026-10-19)
+
+    private static let fox = ImageAttachment(url: URL(fileURLWithPath: "/tmp/fox.png"))
+
+    /// Brain at Home answers through the ReAct floor, which carries no image: the phone showed the thumbnail and the
+    /// Mac's brain answered as if it had seen it. The turn now says so, and runs and retrieves nothing.
+    @Test("an image turn on a brain that can't take it says so: the brain named, no generation, no retrieval")
+    func imageThePathCantCarryIsDeclined() async throws {
+        let (store, hashing) = try await ingestedStore()
+        let embedder = QuerySpyEmbedder(hashing)
+        let provider = AgentScriptedProvider(["CONCLUSION: A lovely fox."])
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider, toolsProvider: { [] },
+            brainNameProvider: { "Brain at Home" }
+        )
+        let (sources, stream) = try await responder.answerStreaming(
+            "what's in this?", images: [Self.fox], history: [], onActivity: { _ in }
+        )
+        let text = await collect(stream)
+        #expect(text == AgentRAGResponder.imageNotCarriedReply(imageCount: 1, brainName: "Brain at Home"))
+        #expect(text.hasPrefix("Brain at Home can't take images yet"))
+        #expect(text.contains("won't guess"))
+        #expect(sources.isEmpty)
+        #expect(provider.prompts.isEmpty)
+        #expect(embedder.allQueryCalls.isEmpty)
+    }
+
+    @Test("the decline counts the images and never names an empty brain")
+    func imageDeclineWording() {
+        let two = AgentRAGResponder.imageNotCarriedReply(imageCount: 2, brainName: " ")
+        #expect(two.hasPrefix("This brain can't take images yet"))
+        #expect(two.contains("the 2 images you attached"))
+        #expect(two.hasSuffix("what's in them."))
+        let one = AgentRAGResponder.imageNotCarriedReply(imageCount: 1, brainName: "Lil")
+        #expect(one.contains("the image you attached"))
+        #expect(one.hasSuffix("what's in it."))
+    }
+
+    /// The production shape on the phone: the swappable slot conforms to ToolCallingProvider and reports false
+    /// while Brain at Home (a plain provider) fronts it.
+    @Test("a tool-calling slot that reports no tool calls declines too, and its session never sees the image")
+    func imageOnAToolSlotThatCantCallToolsIsDeclined() async throws {
+        let (store, hashing) = try await ingestedStore()
+        let provider = ImageRecordingToolProvider(supportsToolCalls: false)
+        let responder = AgentRAGResponder(store: store, embedder: hashing, provider: provider, toolsProvider: { [] })
+        let (_, stream) = try await responder.answerStreaming(
+            "what's in this?", images: [Self.fox], history: [], onActivity: { _ in }
+        )
+        let text = await collect(stream)
+        #expect(text == AgentRAGResponder.imageNotCarriedReply(imageCount: 1, brainName: ""))
+        #expect(provider.session.imagesSeen == 0)
+    }
+
+    @Test("a brain that can carry the image still gets it")
+    func imageReachesATooledBrain() async throws {
+        let (store, hashing) = try await ingestedStore()
+        let provider = ImageRecordingToolProvider()
+        let responder = AgentRAGResponder(store: store, embedder: hashing, provider: provider, toolsProvider: { [] })
+        let (_, stream) = try await responder.answerStreaming(
+            "what's in this?", images: [Self.fox], history: [], onActivity: { _ in }
+        )
+        let text = await collect(stream)
+        #expect(provider.session.imagesSeen == 1)
+        #expect(!text.contains("can't take images"))
+    }
+
+    @Test("an unavailable brain still says it's unavailable, image or not")
+    func unavailableBeatsTheImageDecline() async throws {
+        let (store, hashing) = try await ingestedStore()
+        let responder = AgentRAGResponder(
+            store: store, embedder: hashing, provider: UnavailableProvider(), toolsProvider: { [] }
+        )
+        await #expect(throws: InferenceError.self) {
+            _ = try await responder.answerStreaming(
+                "what's in this?", images: [Self.fox], history: [], onActivity: { _ in }
+            )
+        }
+    }
+
     // MARK: Per-turn thinking reaches every generation (#555)
 
     @Test("speed tier on Auto: a casual ask tells every generation of the turn NOT to think")

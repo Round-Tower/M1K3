@@ -135,6 +135,10 @@
 //  on Big, which mobile excludes, so phone behaviour is unchanged.
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — `liveHistoryBudget()` mirrors the Mac's, feeding the replay and
 //  ChatSession's rolling distillation trigger (#629). Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — Brain at Home carries no image (its route is a text prompt), so a
+//  photo sent there was answered unseen: `imagesAccepted` offers none while Home answers, photo memory declines by
+//  name (`declineReason`), and the responder's brain name is blank on Home (the identity line said "thinking with
+//  your Mini brain — running entirely on this iPhone"). Confidence 0.7 (verify on the phone).
 
 import AVFoundation
 #if os(iOS)
@@ -185,7 +189,16 @@ final class AppCore {
     @ObservationIgnored lazy var photoMemory = PhotoMemory(
         provider: { [unowned self] in activeProvider },
         tier: { [unowned self] in selectedBrain },
-        ingester: ImageCaptionIngester(store: store, embedder: embedder)
+        ingester: ImageCaptionIngester(store: store, embedder: embedder),
+        // The Mac's brain can't caption over Brain at Home: say so instead of the slot's generic throw.
+        declineReason: { [unowned self] in
+            homeBrainActive
+                ? String(
+                    localized: "Brain at Home can't remember photos yet.",
+                    comment: "Shown when 'Remember this photo' is tapped while the paired Mac's brain answers"
+                )
+                : nil
+        }
     )
     /// The pixel-cube companion, shared verbatim with the Mac app (AvatarView).
     let avatar = AvatarController()
@@ -313,6 +326,14 @@ final class AppCore {
     /// phone's selected brain. The label an answer (and so its rating) carries.
     var answeringBrainName: String {
         homeBrainActive ? "Brain at Home" : selectedBrain.displayName
+    }
+
+    /// Whether the composer offers images: a brain that sees, answering on the phone. Brain at Home's route
+    /// is a text prompt, so a photo sent there was answered unseen (2026-10-19).
+    var imagesAccepted: Bool {
+        AttachmentRouting.imagesAccepted(
+            brainSees: selectedBrain.supportsImageInput, homeBrainActive: homeBrainActive
+        )
     }
 
     /// True while the inference slot points at the paired Mac's brain. The
@@ -1284,6 +1305,10 @@ final class AppCore {
                 )
             },
             brainNameProvider: {
+                // On Home no local tier is thinking: the identity line ("thinking with your Mini brain —
+                // running entirely on this iPhone") would be false, and the image decline would name a brain
+                // that can see. Blank drops the line and reads "This brain" (2026-10-19).
+                if Self.homeBrainLive.withLock({ $0 }) { return "" }
                 let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
                 return BrainTier(persisted: raw)?.displayName ?? ""
             },

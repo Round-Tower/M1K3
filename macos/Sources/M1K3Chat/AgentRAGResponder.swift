@@ -191,6 +191,11 @@
 //  A 4,000-character cut would race the forced close (10 of 38 forced hard thoughts ran past it). Confidence 0.8.
 //  Review: same day (pre-push review fold) — the turn's cut rides the anatomy notice (` · cut N`): the app's
 //  façade forward is compile-checked only, so a launch is how 8,192 against 4,000 is told apart. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — an image turn on a brain that can't call tools (Brain at Home; an
+//  audition model with no dialect) is declined by name before retrieval: the ReAct floor drops images, so the phone's
+//  thumbnail was answered unseen. `imageNotCarriedReply`; the availability throw still comes first. Confidence 0.85.
+//  Review: same day (pre-push review fold) — the decline's pronoun follows the count ("what's in them") and a blank
+//  name trims to "This brain".
 
 import Foundation
 import M1K3Agent
@@ -383,6 +388,17 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         try await answerStreaming(question, images: [], history: history, onActivity: onActivity)
     }
 
+    /// What a turn says when its brain can't take the images attached (2026-10-19). Brain at Home answers through
+    /// the ReAct floor, a text prompt with no image in it: the phone showed the thumbnail and the Mac's brain
+    /// answered as if it had looked. Same promise as Mini's decline (`AFMToolPrompt.cannotShowImageReply`).
+    static func imageNotCarriedReply(imageCount: Int, brainName: String) -> String {
+        let name = brainName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let brain = name.isEmpty ? "This brain" : name
+        let (images, them) = imageCount == 1 ? ("the image", "it") : ("the \(imageCount) images", "them")
+        return "\(brain) can't take images yet, so I haven't seen \(images) you attached "
+            + "and won't guess at what's in \(them)."
+    }
+
     public func answerStreaming(
         _ question: String,
         images: [ImageAttachment],
@@ -410,6 +426,19 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 "Mini is temporarily unavailable — Apple Intelligence is not ready. "
                     + "Try switching to another brain in Settings."
             )
+        }
+
+        // Images ride only the native tool session (LocalAgent.run): a brain without tool calls runs the ReAct
+        // floor, which drops them. Say so before anything is embedded or generated, never answer unseen. After
+        // the availability throw, so an unready Mini still reads as unavailable.
+        if !images.isEmpty, (provider as? ToolCallingProvider)?.supportsToolCalls != true {
+            Self.log.notice("image turn declined: \(images.count) image(s), the provider can't carry them")
+            let message = Self.imageNotCarriedReply(imageCount: images.count, brainName: brainNameProvider())
+            let stream = AsyncStream<String> { continuation in
+                continuation.yield(message)
+                continuation.finish()
+            }
+            return (sources: [], stream: stream)
         }
 
         // Pre-generation phase instrument: the 2026-08-10 eval found 177s of

@@ -28,6 +28,10 @@
 //  Review: same day — the Open measured (docs/evals/2026-10-19-lil-followups.md): 33 tool-session sends on Always
 //  decoded median 287 tokens, max 657, and none of the morning's 89 agent-route turns reached 1,024. A session
 //  budget would never have fired, so it isn't built; the Open stands until Kev retires it.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — the Open is CLOSED (Kev: "do those follow ups"): no session budget.
+//  Per send, vision maxed at 657 tokens; the picker-down tool turns were measured on first thoughts only (about 890,
+//  none at 1,024). Re-measure if the tool session starts fronting text tool turns on Always, or another brain gets a
+//  budget. Comment only. Confidence 0.75.
 
 import Foundation
 import M1K3Inference

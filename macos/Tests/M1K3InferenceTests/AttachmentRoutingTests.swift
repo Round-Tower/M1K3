@@ -1,3 +1,6 @@
+//  Signed (the 2026-10-19 `imagesAcceptedOffHome` addition only): Kev + claude-opus-5-5, 2026-10-19,
+//  Confidence 0.85. Prior: Unknown
+//
 import Foundation
 @testable import M1K3Inference
 import Testing
@@ -45,5 +48,14 @@ struct AttachmentRoutingTests {
             #expect(seeing.contains(type))
             #expect(blind.contains(type))
         }
+    }
+
+    /// 2026-10-19: Brain at Home carries no image to the Mac, so the phone stops offering one while Home answers.
+    @Test("images are offered only by a brain that sees, and only while the phone's own brain answers")
+    func imagesAcceptedOffHome() {
+        #expect(AttachmentRouting.imagesAccepted(brainSees: true, homeBrainActive: false))
+        #expect(!AttachmentRouting.imagesAccepted(brainSees: true, homeBrainActive: true))
+        #expect(!AttachmentRouting.imagesAccepted(brainSees: false, homeBrainActive: false))
+        #expect(!AttachmentRouting.imagesAccepted(brainSees: false, homeBrainActive: true))
     }
 }

@@ -12,6 +12,8 @@
 //  Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.85 (pure + tested;
 //  kind-by-extension, so a mislabelled file routes by its name). Prior: the two
 //  fileImporters in ContentView / ChatScreen.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — `imagesAccepted(brainSees:homeBrainActive:)`: no image is offered
+//  while Brain at Home answers, which can't carry one. Confidence 0.85.
 //
 
 import Foundation
@@ -29,6 +31,13 @@ public enum AttachmentRouting {
     /// What the file path accepted before the merge; FileTextExtractor has the
     /// last word on whether a given file actually reads as text.
     static let fileTypes: [UTType] = [.plainText, .text, .sourceCode, .json, .yaml, .xml, .html]
+
+    /// Whether the phone offers images at all: a brain that sees, answering here. Brain at Home carries
+    /// no image to the Mac (its route is a text prompt), so while Home answers nothing is offered rather
+    /// than a photo the Mac's brain would answer unseen (2026-10-19).
+    public static func imagesAccepted(brainSees: Bool, homeBrainActive: Bool) -> Bool {
+        brainSees && !homeBrainActive
+    }
 
     /// The one picker's types. Images are offered only to a brain that can see.
     public static func contentTypes(imagesAccepted: Bool) -> [UTType] {

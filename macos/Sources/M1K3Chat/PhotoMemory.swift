@@ -21,6 +21,8 @@
 //  used to let the ingest land afterwards: an orphan Photo nothing could cascade-delete. `forgotten` marks the
 //  in-flight keys; `remember` skips the ingest (or forgets a landed one), resets the row, logs once. A cancelled
 //  remember resets the row to nil instead of `.failed("cancelled")`.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — `declineReason`: the shell's reason, shown before any caption. The
+//  phone on Brain at Home has no captioner; the slot's throw read "couldn't be completed". Confidence 0.8.
 
 import Foundation
 import M1K3Inference
@@ -47,6 +49,9 @@ public final class PhotoMemory {
     private var forgotten: Set<String> = []
     private let providerSource: @MainActor () -> any InferenceProvider
     private let tierSource: @MainActor () -> BrainTier
+    /// The shell's reason no photo can be remembered right now, shown as-is; nil to go on. The phone on
+    /// Brain at Home has no captioner: the slot threw a generic error the row read as "couldn't be completed".
+    private let declineReason: @MainActor () -> String?
     private let ingester: ImageCaptionIngester
     /// The forget cascade's store call — `ingester.forget(attachments:)` in
     /// production; a refusing double in the failure-path test.
@@ -59,19 +64,25 @@ public final class PhotoMemory {
     public convenience init(
         provider: @escaping @MainActor () -> any InferenceProvider,
         tier: @escaping @MainActor () -> BrainTier,
-        ingester: ImageCaptionIngester
+        ingester: ImageCaptionIngester,
+        declineReason: @escaping @MainActor () -> String? = { nil }
     ) {
-        self.init(provider: provider, tier: tier, ingester: ingester, forgetter: ingester.forget(attachments:))
+        self.init(
+            provider: provider, tier: tier, ingester: ingester, declineReason: declineReason,
+            forgetter: ingester.forget(attachments:)
+        )
     }
 
     init(
         provider: @escaping @MainActor () -> any InferenceProvider,
         tier: @escaping @MainActor () -> BrainTier,
         ingester: ImageCaptionIngester,
+        declineReason: @escaping @MainActor () -> String? = { nil },
         forgetter: @escaping ([String]) throws -> Int
     ) {
         providerSource = provider
         tierSource = tier
+        self.declineReason = declineReason
         self.ingester = ingester
         self.forgetter = forgetter
     }
@@ -93,6 +104,10 @@ public final class PhotoMemory {
         switch state(for: image) {
         case .looking, .remembered: return
         case .failed, nil: break
+        }
+        if let reason = declineReason() {
+            transient[key] = .failed(reason)
+            return
         }
         transient[key] = .looking
         forgotten.remove(key)

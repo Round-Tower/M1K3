@@ -95,6 +95,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — the Send button stops an auto-spoken answer too (`stoppable`).
 //  Review: Kev + claude-opus-5.5, 2026-10-15 — doc only: `brainLoadRow`'s comment sits on it again (`stoppable` had
 //  landed between them). Confidence 0.95.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — every image gate reads `core.imagesAccepted` (no image while Brain at
+//  Home answers, which carries none) and one `onChange` discards queued images whenever that turns false; a refused
+//  image names the answering brain. Confidence 0.75 (verify on the phone).
 
 import M1K3Avatar
 import M1K3Chat
@@ -235,7 +238,7 @@ struct ChatScreen: View {
             .fileImporter(
                 isPresented: $showAttachmentImporter,
                 allowedContentTypes: AttachmentRouting.contentTypes(
-                    imagesAccepted: core.selectedBrain.supportsImageInput
+                    imagesAccepted: core.imagesAccepted
                 ),
                 allowsMultipleSelection: true
             ) { result in
@@ -248,8 +251,9 @@ struct ChatScreen: View {
                 pickedPhotos = []
                 Task { await attachPhotos(items) }
             }
-            .onChange(of: core.selectedBrain) {
-                if !core.selectedBrain.supportsImageInput {
+            // A blind brain, or Brain at Home (which carries no image), discards the queued images.
+            .onChange(of: core.imagesAccepted) {
+                if !core.imagesAccepted {
                     AttachmentStore.discard(pendingAttachments)
                     pendingAttachments = []
                 }
@@ -604,7 +608,7 @@ struct ChatScreen: View {
                     .disabled(core.chat.isResponding || !core.isReady)
                     .accessibilityLabel("Attach")
 
-                    if core.selectedBrain.supportsImageInput {
+                    if core.imagesAccepted {
                         // Out of process: no photo-library prompt, no usage string.
                         PhotosPicker(
                             selection: $pickedPhotos,
@@ -788,9 +792,9 @@ struct ChatScreen: View {
     /// The one attach button's landing: images to the vision path, the rest to
     /// file-as-context; every failed file is named (never a silent drop).
     private func attach(_ urls: [URL]) {
-        let route = AttachmentRouting.route(urls, imagesAccepted: core.selectedBrain.supportsImageInput)
+        let route = AttachmentRouting.route(urls, imagesAccepted: core.imagesAccepted)
         let refused = route.refusedImages.map {
-            "\($0.lastPathComponent): \(core.selectedBrain.displayName) can't see images"
+            "\($0.lastPathComponent): \(core.answeringBrainName) can't see images"
         }
         let failures = refused + attachImages(at: route.images) + attachFiles(at: route.files)
         if !failures.isEmpty {
@@ -815,7 +819,7 @@ struct ChatScreen: View {
     /// The Photos picker's landing: bytes in, a stored copy out, the same
     /// `ImageAttachment` the Files importer yields. Every failure is named.
     private func attachPhotos(_ items: [PhotosPickerItem]) async {
-        guard core.selectedBrain.supportsImageInput else { return }
+        guard core.imagesAccepted else { return }
         var failures: [String] = []
         var stored: [ImageAttachment] = []
         for item in items {
@@ -832,7 +836,7 @@ struct ChatScreen: View {
         }
         // The brain can change while the picks load: a brain without image input
         // discards the pending set, so these must not land after it did.
-        guard core.selectedBrain.supportsImageInput else {
+        guard core.imagesAccepted else {
             AttachmentStore.discard(stored)
             return
         }

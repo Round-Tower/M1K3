@@ -38,6 +38,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — comment only: the ReAct-floor image note said only Big
 //  sees; Lil (Qwen3.5-4B, #517) sees too and also resolves native. No logic changed.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — doc comment only: ModelEvalReport.strippingThink (retired) → ThinkStripper.strip. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — comment only: the ReAct floor's image drop was reachable
+//  (Brain at Home); AgentRAGResponder declines such a turn upstream now.
 
 import Foundation
 import M1K3Inference
@@ -210,11 +212,10 @@ public actor LocalAgent {
         }
         // The ReAct floor renders a plain text prompt — images can't ride it,
         // and this path never touches the image-drop mapping: a floor turn
-        // with images would SILENTLY drop them (no "can't view" note, unlike
-        // the AFM renderer's honesty). Unreachable for a vision turn in
-        // practice — the seeing tiers, Lil (Qwen3.5-4B, #517) and Big
-        // (gemma-4-12B), both resolve native — so the honest-note plumbing
-        // waits until a floor model can see.
+        // with images would SILENTLY drop them. It was reachable: Brain at
+        // Home's provider calls no tools, so a phone's photo landed here
+        // (2026-10-19). AgentRAGResponder now declines an image turn on a
+        // provider without tool calls before it gets this far.
 
         return try await runReAct(
             goal: goal,

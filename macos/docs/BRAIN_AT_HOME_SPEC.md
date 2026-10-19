@@ -161,6 +161,10 @@ Network.framework** (macOS 26.4, `-9838` — reproducible by
   until the heartbeat-timeline PR's identity stamping merges (they meet at
   `MCPToolRegistry`; reconcile then — the paired device NAME is the natural
   stamp for LAN sessions).
+- **No images over Home (2026-10-19).** The wire carries `{prompt, max_tokens}`, so the
+  phone offers no image while Home answers, and a turn that still carries one is declined
+  by name before anything runs (`AgentRAGResponder.imageNotCarriedReply`). Images on the
+  wire (a host that says it sees, a size cap, safe decoding) are their own PR.
 - No WAN, no relay, no port-forwarding guidance (out of scope, unchanged).
 - Rate-limiting beyond admission (per-IP handshake buckets) is deferred; the
   listener is default-OFF, paired-only, private-source-gated, and now also
@@ -199,3 +203,6 @@ deferrals named instead of silent.) Prior: Kev + claude-fable-5
 *Review: Kev + claude-opus-5-5, 2026-10-19 — §2: the raw route forces the brain's
 thinking budget on the host (`rawSessionPlan`, #643's follow-up); wire format
 unchanged. Confidence 0.75: unit-pinned, verify from a paired device owed.*
+
+*Review: Kev + claude-opus-5-5, 2026-10-19 — §6: images over Home are declined, named,
+until the wire carries them (they were dropped silently on the phone). Confidence 0.8.*
