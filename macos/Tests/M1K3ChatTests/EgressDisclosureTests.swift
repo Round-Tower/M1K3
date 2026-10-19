@@ -141,6 +141,22 @@ struct EgressDisclosureTests {
         }
     }
 
+    /// 2026-10-19 gate: pocket (LFM2.5-1.2B) copied the verdict into unrelated answers ("Yes, some of it can— A cat
+    /// naps…", 3 of 3 couplets). Its clause starts at the facts; every other variant keeps the lead.
+    @Test("pocket's clause keeps every fact but drops the quotable verdict lead")
+    func pocketDropsTheLead() {
+        for home in [true, false] {
+            let full = line(web: true, pcc: !home, home: home)
+            let pocket = EgressDisclosure.adapted(full, for: .pocket)
+            #expect(!pocket.contains("own voice:\n\"Yes"))
+            #expect(pocket.contains("own voice:\n\"Web searches: I decide when to search"))
+            #expect(pocket.hasSuffix("\""))
+            #expect(EgressDisclosure.adapted(full, for: .standard) == full)
+        }
+        let quiet = line(web: false, pcc: false, home: false)
+        #expect(EgressDisclosure.adapted(quiet, for: .pocket) == quiet)
+    }
+
     @Test("never the retired absolute, and always names the device")
     func noAbsolute() {
         for web in [true, false] {

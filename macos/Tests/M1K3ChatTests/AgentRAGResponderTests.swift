@@ -315,6 +315,46 @@ private final class ImageRecordingSession: ToolTurnSession, @unchecked Sendable 
     }
 }
 
+/// A plain-route brain that declares a persona variant (pocket declares `.pocket`) and records its prompts.
+private final class VariantScriptedProvider: ToolCallingProvider, @unchecked Sendable {
+    let name = "variant-scripted"
+    let isAvailable = true
+    let supportsToolCalls = false
+    let personaVariant: PersonaVariant
+    private let prompts = Mutex<[String]>([])
+
+    init(variant: PersonaVariant) {
+        personaVariant = variant
+    }
+
+    func makeToolTurnSession(
+        tools _: [ToolDefinition], options _: ToolTurnOptions
+    ) async throws -> any ToolTurnSession {
+        ImageRecordingSession()
+    }
+
+    func continueToolTurn(messages _: [ToolMessage], tools _: [ToolDefinition]) async throws -> ToolTurn {
+        .text("")
+    }
+
+    func generate(prompt: String) async throws -> String {
+        prompts.withLock { $0.append(prompt) }
+        return "CONCLUSION: The seal failed."
+    }
+
+    func generateStreaming(prompt: String) -> AsyncStream<String> {
+        prompts.withLock { $0.append(prompt) }
+        return AsyncStream { continuation in
+            continuation.yield("CONCLUSION: The seal failed.")
+            continuation.finish()
+        }
+    }
+
+    var allPrompts: [String] {
+        prompts.withLock { $0 }
+    }
+}
+
 private func ingestedStore() async throws -> (KnowledgeStore, HashingEmbeddingService) {
     let store = try KnowledgeStore()
     let embedder = HashingEmbeddingService()
@@ -896,6 +936,28 @@ struct AgentRAGResponderTests {
         let (_, stream) = try await responder.answerStreaming("What hydraulic seal failed on the conveyor under load?")
         _ = await collect(stream)
         #expect(try #require(provider.allPrompts.first).contains("EGRESS-FACTS"))
+    }
+
+    /// 2026-10-19 gate: the responder hands the pocket persona the egress clause without its verdict lead (the 1.2B
+    /// opened a cat couplet with it); the standard persona keeps it.
+    @Test("a pocket brain gets the egress clause without the verdict lead; the standard one keeps it")
+    func pocketEgressClauseDropsTheLead() async throws {
+        let clause = EgressDisclosure.clause(EgressFacts(webSearch: true), device: "this machine")
+        for variant in [PersonaVariant.pocket, .standard] {
+            let (store, embedder) = try await ingestedStore()
+            let provider = VariantScriptedProvider(variant: variant)
+            let responder = AgentRAGResponder(
+                store: store, embedder: embedder, provider: provider,
+                toolsProvider: { [] },
+                egressClauseProvider: { clause }
+            )
+            let question = "What hydraulic seal failed on the conveyor under load?"
+            let (_, stream) = try await responder.answerStreaming(question)
+            _ = await collect(stream)
+            let prompt = try #require(provider.allPrompts.first)
+            #expect(prompt.contains("I decide when to search"))
+            #expect(prompt.contains("Yes, some of it can") == (variant == .standard), "\(variant)")
+        }
     }
 
     /// Voice turns carry what the mic heard ("music (guitar)") as a per-turn clause, never in the question.

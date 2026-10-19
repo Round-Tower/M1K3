@@ -31,9 +31,12 @@
 //  until the full gate (security x3, Big, pocket, Mini).
 //  Review: same day (pre-push review fold) — Home leads with a plain "Yes." (every message goes to the Mac);
 //  the doc names the real device nouns. The Mac's strings, which the gate measures, are unchanged.
+//  Review: same day (gate fold) — `adapted(_:for:)`: pocket's clause drops the verdict lead, which the 1.2B copied
+//  into unrelated answers (3 of 3 couplets opened "Yes, some of it can—"). Every other variant keeps it.
 //
 
 import Foundation
+import M1K3Inference
 
 /// The settings that decide what can leave the device on a turn.
 public struct EgressFacts: Sendable, Equatable {
@@ -60,6 +63,19 @@ public struct EgressFacts: Sendable, Equatable {
 }
 
 public enum EgressDisclosure {
+    /// The answer's first sentence, its verdict (2026-10-19).
+    static let verdictLeads = (some: "Yes, some of it can.", home: "Yes.")
+
+    /// The clause a persona variant reads (2026-10-19 gate). Pocket (LFM2.5-1.2B) copied the verdict lead into
+    /// unrelated answers ("Yes, some of it can— A cat naps…", 3 of 3 couplets), so its clause starts at the facts.
+    /// Lil, Big and Mini kept the lead clean: it bled into 2 of their 258 other answers, against master's 9.
+    public static func adapted(_ clause: String, for variant: PersonaVariant) -> String {
+        guard variant == .pocket else { return clause }
+        return [verdictLeads.some, verdictLeads.home].reduce(clause) { text, lead in
+            text.replacingOccurrences(of: "\"" + lead + " ", with: "\"")
+        }
+    }
+
     /// A ready answer, first person, quoted: Mini (live, router arm, 2026-10-04) garbled a
     /// bulleted list of facts 2/3 ("anything you type stays here") but copies a sentence.
     /// `device` is `HostPlatform.thisDevice` ("this machine" on the Mac, "this device" on iOS).
@@ -69,9 +85,9 @@ public enum EgressDisclosure {
         // with this clause beside the question (0/3, 10-19). An exit exists, so the first word is yes.
         // On Home every message goes to the Mac: not "some of it" (review fold).
         if facts.brainIsHome {
-            answer.append("Yes.")
+            answer.append(verdictLeads.home)
         } else if facts.webSearch || facts.privateCloudOffered {
-            answer.append("Yes, some of it can.")
+            answer.append(verdictLeads.some)
         }
         answer.append(
             facts.webSearch

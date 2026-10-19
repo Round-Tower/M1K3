@@ -196,6 +196,8 @@
 //  thumbnail was answered unseen. `imageNotCarriedReply`; the availability throw still comes first. Confidence 0.85.
 //  Review: same day (pre-push review fold) — the decline's pronoun follows the count ("what's in them") and a blank
 //  name trims to "This brain".
+//  Review: Kev + claude-opus-5-5, 2026-10-19 (privacy gate fold) — `turnClauses` hands the egress answer to the
+//  provider's persona variant: pocket's drops the verdict lead the 1.2B copied into unrelated answers.
 
 import Foundation
 import M1K3Agent
@@ -1041,7 +1043,11 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// The per-turn policy clauses every prompt carries: the age band and what can
     /// leave the device (#482). nil entries are dropped by the callers' compactMap.
     private func turnClauses() -> [String?] {
-        [ageClauseProvider(), egressClauseProvider(), styleClauseProvider(), voiceClauseProvider()]
+        // The egress answer as this brain's persona reads it: pocket's starts at the facts
+        // (`EgressDisclosure.adapted`).
+        let variant = (provider as? ToolCallingProvider)?.personaVariant ?? .standard
+        let egress = egressClauseProvider().map { EgressDisclosure.adapted($0, for: variant) }
+        return [ageClauseProvider(), egress, styleClauseProvider(), voiceClauseProvider()]
     }
 
     /// One full agent turn into `continuation`: run the loop (conclusion tail
