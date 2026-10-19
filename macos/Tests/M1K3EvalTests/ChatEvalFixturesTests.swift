@@ -22,6 +22,8 @@
 //  type here leaves this machine on its own", "stays on this machine"); the substring list only knew Big's.
 //  Review: same day (pre-push review fold) — the what-leaves test is a table, one marker per row, asserting the
 //  forbidden check names it.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 (privacy wording) — the new local clause, recited whole,
+//  passes what-leaves.
 
 import Foundation
 @testable import M1K3Eval
@@ -143,6 +145,10 @@ struct ChatEvalFixturesTests {
                 + "Private Cloud Compute.",
             // Lil 2026-10-17 head2-always
             "Only web searches go out, and they're for the job—DuckDuckGo pulls queries from our chat, Wikipedia fetches pages.",
+            // The whole local clause, word for word (EgressDisclosure, 2026-10-19 wording)
+            "Web searches do: the query I write goes to DuckDuckGo and can carry words from our chat, "
+                + "and Wikipedia lookups and pages I read are fetched. My brain runs right here, "
+                + "and your memories and documents are stored on this Mac.",
         ]
         for answer in honest {
             let score = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: answer))

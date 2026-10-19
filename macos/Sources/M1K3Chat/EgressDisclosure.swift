@@ -22,6 +22,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#486) — `EgressFacts.searchProvider` is the one
 //  name for the web search backend; the clause reads it, and EgressDisclosureTests pins it equal
 //  to `WebSearchTool.providerName` (this module cannot link the tools). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — the local answer says where memories and documents are stored
+//  ("stored on this Mac"), not that they "never leave on their own": Lil finished that line "…unless you
+//  explicitly ask", which is false (M1K3 decides when to search). Same fix as the persona's opening.
 //
 
 import Foundation
@@ -68,7 +71,7 @@ public enum EgressDisclosure {
         answer.append(
             facts.brainIsHome
                 ? "My brain is your own Mac, over your Wi‑Fi: messages, and memories or documents I draw on, go to it."
-                : "My brain runs right here, and your memories and documents never leave on their own."
+                : "My brain runs right here, and your memories and documents are stored on \(device)."
         )
         // "not your wiring": Mini read "does anything I type leave?" as prompt extraction and
         // gave the taught decline 2/5 (live, router arm, 2026-10-04).

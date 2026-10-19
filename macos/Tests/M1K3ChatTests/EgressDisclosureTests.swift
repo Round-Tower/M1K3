@@ -11,6 +11,7 @@
 //  (`EgressFacts.searchProvider`), pinned equal to `WebSearchTool.providerName` across the module
 //  seam (M1K3Chat cannot link the tools; same pattern as SelfQueryGateTests), so a backend swap
 //  fails here instead of the clause going stale.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — the local answer pins "stored on this Mac" and no "never".
 //
 
 import M1K3AgentTools
@@ -73,8 +74,10 @@ struct EgressDisclosureTests {
         #expect(!home.contains("runs right here"))
         let local = line(home: false)
         #expect(local.contains("runs right here"))
-        // #485 review: a search query can carry words from a memory, so "on their own".
-        #expect(local.contains("memories and documents never leave on their own"))
+        // 2026-10-19: where they're kept, not an absolute. "Never leave on their own" came back from Lil as
+        // "…unless you explicitly ask", which is false: M1K3 decides when to search.
+        #expect(local.contains("your memories and documents are stored on this Mac"))
+        #expect(!local.contains("never"))
     }
 
     @Test("a quotable first-person answer: small models copy a sentence, garble a list")

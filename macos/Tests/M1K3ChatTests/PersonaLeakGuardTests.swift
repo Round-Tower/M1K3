@@ -30,6 +30,8 @@
 //  guard (#460) rests on: a leaking prefix implies a leaking whole.
 //  Review: Kev + claude-opus-5, 2026-09-12, Confidence 0.85 — `pocketOnlySentenceIsALeak`: pocket keeps
 //  the pre-2026-09-12 core, so `wiringText` carries both cores and a sentence only pocket's core holds is a leak.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — `privacyLinesAreRepeatable`: the opening's privacy lines are the right
+//  answer to "does anything leave?", so none may be a guard span (the old search line was exactly 60).
 //
 
 @testable import M1K3Chat
@@ -101,6 +103,19 @@ struct PersonaLeakGuardTests {
             + "That's all."
         #expect(!M1K3Persona.systemPrompt.contains("nothing in or out"))
         #expect(PersonaLeakGuard.leaks(recital))
+    }
+
+    /// 2026-10-19: a privacy answer that repeats the opening's own lines is the RIGHT answer to "does anything
+    /// leave?", so none of them may be a 60-character span. "A web search you run for them is part of the job, not
+    /// a leak." was exactly 60 canonical characters: a word-for-word recital would have been swapped for the refusal.
+    @Test("the opening's privacy lines are short enough to repeat without tripping the guard")
+    func privacyLinesAreRepeatable() {
+        let recital = "Their memories and documents are kept here, private. That's the whole \"scheme\". "
+            + "A search you run for them is part of the job, not a leak."
+        for sentence in recital.components(separatedBy: ". ") {
+            #expect(M1K3Persona.systemPrompt.contains(sentence), "not the persona's own words: \(sentence)")
+        }
+        #expect(!PersonaLeakGuard.leaks(recital))
     }
 
     @Test("★ the guard never eats its own replacement")
