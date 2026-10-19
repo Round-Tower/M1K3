@@ -25,6 +25,9 @@
 //  shell. NoWait pushes down the words read at init (`-thinkWaitWords`). Confidence 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — comment only: the raw route (`rawSessionPlan`) builds its components
 //  here too; the tool session is still the Open above.
+//  Review: same day — the Open measured (docs/evals/2026-10-19-lil-followups.md): 33 tool-session sends on Always
+//  decoded median 287 tokens, max 657, and none of the morning's 89 agent-route turns reached 1,024. A session
+//  budget would never have fired, so it isn't built; the Open stands until Kev retires it.
 
 import Foundation
 import M1K3Inference
