@@ -30,6 +30,11 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — C1: `isFallbackWorthy` is false
 //  for a cancelled task or cancelled error, so a Cancel never returns a partial folder as success.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — the fast path and the three post-download checks are judged by the
+//  pinned files the call's `patterns` fetch (`enforcedPin`). The embedder's pin lists README.md, which no load
+//  downloads, so its copy never read fully present: every launch asked the Hub (a revision GET, a tree GET, ~14
+//  HEADs) and hashed 1.27 GB twice, three times offline. `resolveRevision` keeps the full pin. Confidence 0.85 —
+//  the launch-log check (verified once, then skipping network) is owed.
 //
 
 import Foundation
@@ -146,6 +151,8 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
         let repo = Hub.Repo(id: id)
         let localPath = hub.localRepoLocation(repo)
         let startSizeMB = Self.directorySizeMB(localPath)
+        let pin = PinnedWeights.pin(for: id)
+        let enforcedPin = Self.enforcedPin(pin, patterns: patterns)
 
         // #72 item 1: when the caller does not want a refresh and the cache
         // already verifies fully against the pinned manifest, the network
@@ -156,7 +163,7 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
         // completeness oracle (nothing to check "fully present" against), so
         // it always falls through to the network exactly as before.
         if Self.shouldSkipNetworkFetch(
-            useLatest: useLatest, directory: localPath, pin: PinnedWeights.pin(for: id), repoID: id
+            useLatest: useLatest, directory: localPath, pin: pin, patterns: patterns, repoID: id
         ) {
             downloadLog.notice(
                 "useLatest=false and \(id, privacy: .public) already verified locally (localMB=\(startSizeMB)) — skipping network"
@@ -171,7 +178,7 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
         // real load path. See WeightIntegrity.resolveRevision.
         let resolvedRevision = WeightIntegrity.resolveRevision(
             requested: revision,
-            pin: PinnedWeights.pin(for: id)
+            pin: pin
         )
         downloadLog.notice(
             "snapshot start: \(id, privacy: .public) rev=\(resolvedRevision, privacy: .public) localMB=\(startSizeMB)"
@@ -245,7 +252,7 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
             // window where refusal actually prevents a poisoned load. Throws
             // only WeightTamperError, which is not a transient network error,
             // so `withRetry` fails the load instead of spinning on it.
-            try WeightIntegrityScan.enforce(directory: url, repoID: id)
+            try WeightIntegrityScan.enforce(directory: url, pin: enforcedPin, repoID: id)
             return url
         } catch Hub.HubClientError.authorizationRequired {
             // Typically "repo doesn't exist on the server" — fall back to any
@@ -256,7 +263,7 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
             // The fallbacks are verified too: a cache poisoned on an earlier
             // run must not become trusted just because we're offline now.
             try Gemma4TemplateFix.apply(directory: localPath, repoID: id)
-            try WeightIntegrityScan.enforce(directory: localPath, repoID: id)
+            try WeightIntegrityScan.enforce(directory: localPath, pin: enforcedPin, repoID: id)
             return localPath
         } catch let error as WeightTamperError {
             // Never swallowed by the network-error handling below.
@@ -275,7 +282,7 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
                     "network trouble (\(reason, privacy: .public)) for \(id, privacy: .public) — using local copy (localMB=\(startSizeMB))"
                 )
                 try Gemma4TemplateFix.apply(directory: localPath, repoID: id)
-                try WeightIntegrityScan.enforce(directory: localPath, repoID: id)
+                try WeightIntegrityScan.enforce(directory: localPath, pin: enforcedPin, repoID: id)
                 return localPath
             }
             let reason = error.localizedDescription
@@ -296,14 +303,31 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
     /// the same shape as `WeightIntegrityScan.enforce(directory:pin:repoID:)`.
     /// An unpinned repo (`pin == nil`) has no completeness oracle at all, so
     /// it always falls through to the network, same as today.
+    ///
+    /// Judged by the pinned files `patterns` fetches (2026-10-19): the embedder's pin lists a
+    /// README.md no load downloads, so "every pinned file" was never on disk and every launch
+    /// asked the Hub. A cut with no files has nothing to attest and never skips.
     static func shouldSkipNetworkFetch(
         useLatest: Bool,
         directory: URL,
         pin: WeightIntegrity.Pin?,
+        patterns: [String],
         repoID: String
     ) -> Bool {
         guard !useLatest, let pin else { return false }
-        return WeightIntegrityScan.isFullyPresentAndVerified(directory: directory, pin: pin, repoID: repoID)
+        let fetched = pin.restricted(toFilesMatching: patterns)
+        guard !fetched.files.isEmpty else { return false }
+        return WeightIntegrityScan.isFullyPresentAndVerified(directory: directory, pin: fetched, repoID: repoID)
+    }
+
+    /// The pin a download matching `patterns` is judged by: the pinned files it fetches, so a
+    /// fresh download reads `.verified` and writes its receipt instead of `.incomplete` forever.
+    /// An empty cut keeps the full pin: a vacuous `.verified` would write an empty receipt and
+    /// reclaim the quarantine on no evidence. Nil (unpinned) stays nil.
+    static func enforcedPin(_ pin: WeightIntegrity.Pin?, patterns: [String]) -> WeightIntegrity.Pin? {
+        guard let pin else { return nil }
+        let fetched = pin.restricted(toFilesMatching: patterns)
+        return fetched.files.isEmpty ? pin : fetched
     }
 
     /// Errors worth falling back to a verified local copy for (#72 item 2) —

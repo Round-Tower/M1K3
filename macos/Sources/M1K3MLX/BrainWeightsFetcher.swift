@@ -13,8 +13,8 @@
 //  byte-accurate progress — zero Metal, zero RAM while Mini serves. The swap
 //  later pays a short from-disk `loadContainer` through the ordinary
 //  `selectBrain` path. Patterns mirror upstream `modelDownloadPatterns`
-//  exactly ("*.safetensors" + "*.json" + "*.jinja", mlx-swift-lm 3.31.4,
-//  ModelFactory.swift:6-7) so detection, fetch, and load can never drift.
+//  exactly ("*.safetensors" + "*.json" + "*.jinja", mlx-swift-lm 3.32.3,
+//  ModelFactory.swift:7-8) so detection, fetch, and load can never drift.
 //
 //  Cancellation: hub.snapshot rides URLSession — cancelling the wrapping Task
 //  aborts cleanly and the partial snapshot resumes on the next attempt (either
@@ -28,11 +28,13 @@
 //  Signed: Kev + claude-fable-5, 2026-07-03, Confidence 0.85 (thin wrapper over
 //  the proven downloader; behaviour behind the metallib wall is verify-by-launch).
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — the pattern comments name the pinned 3.32.3; `weightPatterns` is now
+//  also what `LocalModelInventory.installState` cuts a pin to (its declaration shape is read by test_pin_weights.py).
 
 import Foundation
 
 public struct BrainWeightsFetcher: Sendable {
-    /// Upstream `modelDownloadPatterns` (mlx-swift-lm 3.31.4) — the exact set
+    /// Upstream `modelDownloadPatterns` (mlx-swift-lm 3.32.3) — the exact set
     /// `loadContainer` would fetch, so a staged snapshot is complete for it.
     static let weightPatterns = ["*.safetensors", "*.json", "*.jinja"]
 

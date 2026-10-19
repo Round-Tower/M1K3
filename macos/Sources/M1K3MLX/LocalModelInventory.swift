@@ -27,6 +27,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-15 — `requireComplete`: the after-a-fetch check the Mac does inline
 //  (AppEnvironment+Downloads), as one seam, for the iPhone's continued download, which trusted the fetcher's return.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — `installState` counts only the pinned files a download fetches
+//  (`HubApiDownloader.enforcedPin`): the embedder's pinned README.md never arrives, so Settings read it "Partly
+//  downloaded" with a Resume button. Brain pins list nothing outside the patterns, so brains are unchanged.
 
 import Foundation
 import Hub
@@ -84,7 +87,8 @@ public struct LocalModelInventory: Sendable {
         let dir = hub.localRepoLocation(Hub.Repo(id: modelID))
         let fm = FileManager.default
         guard fm.fileExists(atPath: dir.path) else { return .absent }
-        if let pin {
+        // Only the pinned files a download fetches: the embedder's README.md never arrives (2026-10-19).
+        if let pin = HubApiDownloader.enforcedPin(pin, patterns: BrainWeightsFetcher.weightPatterns) {
             let whole = pin.files.allSatisfy { name, expected in
                 let path = dir.appendingPathComponent(name).path
                 guard let size = (try? fm.attributesOfItem(atPath: path))?[.size] as? NSNumber else { return false }

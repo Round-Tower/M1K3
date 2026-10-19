@@ -10,6 +10,8 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-12, Confidence 0.85, Prior: Unknown
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — B4 installState complete/partial/absent against a pin. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — a pinned file no download fetches (the embedder's README.md) is not
+//  missing: `unfetchedPinnedFileIsNotMissing`.
 
 import Foundation
 @testable import M1K3MLX
@@ -144,5 +146,21 @@ struct LocalModelInventoryTests {
         // Unpinned: any weights are complete, as installState says.
         try seedSized("e/f", files: ["model.safetensors": 5], under: base)
         try inventory.requireComplete(modelID: "e/f", pin: nil)
+    }
+
+    /// 2026-10-19: the embedder's pin lists README.md, which no download fetches, so Settings showed it "Partly
+    /// downloaded" with a Resume button forever (hidden only while MLX embeddings are on).
+    @Test("a pinned file the downloader never fetches doesn't hold the install at partial")
+    func unfetchedPinnedFileIsNotMissing() throws {
+        let base = try makeBase()
+        let pin = WeightIntegrity.Pin(revision: String(repeating: "a", count: 40), files: [
+            "config.json": .init(size: 10, sha256: "x"),
+            "model.safetensors": .init(size: 100, sha256: "y"),
+            "README.md": .init(size: 7, sha256: "z"),
+        ])
+        try seedSized("a/b", files: ["config.json": 10, "model.safetensors": 100], under: base)
+        let inventory = LocalModelInventory(downloadBase: base)
+        #expect(inventory.installState(modelID: "a/b", pin: pin) == .complete)
+        try inventory.requireComplete(modelID: "a/b", pin: pin)
     }
 }

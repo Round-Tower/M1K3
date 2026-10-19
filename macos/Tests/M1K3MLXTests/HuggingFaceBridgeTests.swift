@@ -9,6 +9,8 @@
 //  protocol conformances are the regression surface here.
 //
 //  Signed: Kev + claude-fable-5, 2026-06-10, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — the fast path and the post-download check are judged by the pinned
+//  files the download's patterns fetch: the embedder's pinned README.md never arrives, so every launch asked the Hub.
 //
 
 import Foundation
@@ -120,6 +122,9 @@ struct HuggingFaceBridgeTests {
         deinit { try? FileManager.default.removeItem(at: url) }
     }
 
+    /// What mlx-swift-lm's `resolve` passes for a model load (`modelDownloadPatterns`).
+    private static let loaderPatterns = ["*.safetensors", "*.json", "*.jinja"]
+
     private static func fixturePin(contents: [String: String]) -> WeightIntegrity.Pin {
         var files: [String: WeightIntegrity.PinnedFile] = [:]
         for (name, body) in contents {
@@ -136,7 +141,7 @@ struct HuggingFaceBridgeTests {
         let pin = Self.fixturePin(contents: ["model.safetensors": "weights"])
 
         #expect(HubApiDownloader.shouldSkipNetworkFetch(
-            useLatest: false, directory: fixture.url, pin: pin, repoID: "org/repo"
+            useLatest: false, directory: fixture.url, pin: pin, patterns: Self.loaderPatterns, repoID: "org/repo"
         ))
     }
 
@@ -147,7 +152,7 @@ struct HuggingFaceBridgeTests {
         let pin = Self.fixturePin(contents: ["model.safetensors": "weights"])
 
         #expect(!HubApiDownloader.shouldSkipNetworkFetch(
-            useLatest: true, directory: fixture.url, pin: pin, repoID: "org/repo"
+            useLatest: true, directory: fixture.url, pin: pin, patterns: Self.loaderPatterns, repoID: "org/repo"
         ))
     }
 
@@ -157,7 +162,7 @@ struct HuggingFaceBridgeTests {
         try fixture.write("anything", to: "model.safetensors")
 
         #expect(!HubApiDownloader.shouldSkipNetworkFetch(
-            useLatest: false, directory: fixture.url, pin: nil, repoID: "org/unpinned"
+            useLatest: false, directory: fixture.url, pin: nil, patterns: Self.loaderPatterns, repoID: "org/unpinned"
         ))
     }
 
@@ -169,7 +174,66 @@ struct HuggingFaceBridgeTests {
         let pin = Self.fixturePin(contents: ["model.safetensors": "weights", "config.json": "{}"])
 
         #expect(!HubApiDownloader.shouldSkipNetworkFetch(
-            useLatest: false, directory: fixture.url, pin: pin, repoID: "org/repo"
+            useLatest: false, directory: fixture.url, pin: pin, patterns: Self.loaderPatterns, repoID: "org/repo"
         ))
+    }
+
+    // MARK: - 2026-10-19: a pinned file the loader never fetches
+
+    /// The embedder's pin lists README.md (pinned from an `hf download` snapshot, #547), and the loader fetches only
+    /// `*.safetensors` / `*.json` / `*.jinja`. The file never arrives, so the copy never read "fully present": every
+    /// launch asked the Hub, and hashed 1.27 GB twice. Judged by the files the download fetches, it skips, and the
+    /// receipt lands so the next launch costs a stat.
+    @Test("a pinned file the loader never downloads (README.md) does not block the offline fast path")
+    func unfetchedPinnedFileDoesNotBlockTheFastPath() throws {
+        let fixture = try FixtureDirectory()
+        try fixture.write("weights", to: "model.safetensors")
+        try fixture.write("{}", to: "config.json")
+        let pin = Self.fixturePin(
+            contents: ["model.safetensors": "weights", "config.json": "{}", "README.md": "readme"]
+        )
+
+        #expect(HubApiDownloader.shouldSkipNetworkFetch(
+            useLatest: false, directory: fixture.url, pin: pin, patterns: Self.loaderPatterns, repoID: "org/repo"
+        ))
+        #expect(WeightIntegrityScan.receiptExists(forModelAt: fixture.url))
+    }
+
+    @Test("beside an unfetched README, a tampered weight still refuses the fast path")
+    func tamperedWeightBesideUnfetchedFileStillRefuses() throws {
+        let fixture = try FixtureDirectory()
+        try fixture.write("poisoned", to: "model.safetensors")
+        try fixture.write("{}", to: "config.json")
+        let pin = Self.fixturePin(
+            contents: ["model.safetensors": "weights", "config.json": "{}", "README.md": "readme"]
+        )
+
+        #expect(!HubApiDownloader.shouldSkipNetworkFetch(
+            useLatest: false, directory: fixture.url, pin: pin, patterns: Self.loaderPatterns, repoID: "org/repo"
+        ))
+    }
+
+    /// An empty cut has nothing to attest: a vacuous `.verified` would write an empty receipt and reclaim the
+    /// quarantine, so it neither skips the network nor narrows what a download is judged against.
+    @Test("patterns that match no pinned file never skip the network, and judge the download by the full pin")
+    func emptyCutNeverSkips() throws {
+        let fixture = try FixtureDirectory()
+        try fixture.write("readme", to: "README.md")
+        let pin = Self.fixturePin(contents: ["README.md": "readme"])
+
+        #expect(!HubApiDownloader.shouldSkipNetworkFetch(
+            useLatest: false, directory: fixture.url, pin: pin, patterns: Self.loaderPatterns, repoID: "org/repo"
+        ))
+        #expect(!WeightIntegrityScan.receiptExists(forModelAt: fixture.url))
+        #expect(HubApiDownloader.enforcedPin(pin, patterns: Self.loaderPatterns) == pin)
+        #expect(HubApiDownloader.enforcedPin(nil, patterns: Self.loaderPatterns) == nil)
+    }
+
+    @Test("a download is judged by the pinned files its patterns fetch")
+    func enforcedPinIsTheFetchedCut() {
+        let pin = Self.fixturePin(contents: ["model.safetensors": "weights", "README.md": "readme"])
+        let enforced = HubApiDownloader.enforcedPin(pin, patterns: Self.loaderPatterns)
+        #expect(enforced?.files.keys.sorted() == ["model.safetensors"])
+        #expect(enforced?.revision == pin.revision)
     }
 }
