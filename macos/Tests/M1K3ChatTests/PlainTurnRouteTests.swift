@@ -20,6 +20,8 @@
 //  straight; closed reasoning is never cut.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — a brain that forces its own close (the fake conforms to
 //  `ThinkBudgetForcing`) moves the cut to a net at 8 characters a token; both bounds of the net are pinned.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — `imagesSkipRouter` runs on a tool-calling double: an image on a brain
+//  that can't carry it is now declined before the router, so the plain double would pass for the wrong reason.
 //
 
 import Foundation
@@ -122,8 +124,43 @@ private final class ActivityLog: Sendable {
     let items = Mutex<[ResponderActivity]>([])
 }
 
+/// A tool-calling brain that answers in one turn: an image turn reaches the agent route with it.
+private final class SeeingToolProvider: ToolCallingProvider, @unchecked Sendable {
+    let name = "seeing-tool"
+    let isAvailable = true
+    let supportsToolCalls = true
+
+    private final class Session: ToolTurnSession, @unchecked Sendable {
+        func send(_: [ToolMessage], onToken: @escaping @Sendable (String) -> Void) async throws -> ToolTurn {
+            onToken("A fox.")
+            return .text("A fox.")
+        }
+    }
+
+    func makeToolTurnSession(
+        tools _: [ToolDefinition], options _: ToolTurnOptions
+    ) async throws -> any ToolTurnSession {
+        Session()
+    }
+
+    func continueToolTurn(messages _: [ToolMessage], tools _: [ToolDefinition]) async throws -> ToolTurn {
+        .text("A fox.")
+    }
+
+    func generate(prompt _: String) async throws -> String {
+        "A fox."
+    }
+
+    func generateStreaming(prompt _: String) -> AsyncStream<String> {
+        AsyncStream { continuation in
+            continuation.yield("A fox.")
+            continuation.finish()
+        }
+    }
+}
+
 private func responder(
-    _ provider: RouteProvider,
+    _ provider: any InferenceProvider,
     route: PlainTurnRoute?,
     consulted: Consulted = Consulted(),
     egress: String? = nil,
@@ -510,10 +547,12 @@ struct PlainTurnRouteTests {
         #expect(provider.prompts.count == 3)
     }
 
+    /// A brain that can carry the image (2026-10-19): one that can't is declined before the router is reached, so
+    /// a plain double would pass this for the wrong reason.
     @Test("a turn with images never consults the router")
     func imagesSkipRouter() async throws {
         let consulted = Consulted()
-        let provider = RouteProvider(["CONCLUSION: a fox"])
+        let provider = SeeingToolProvider()
         let image = ImageAttachment(url: URL(fileURLWithPath: "/tmp/fox.png"))
         _ = try await answer(
             responder(provider, route: chat(.chat), consulted: consulted), "what's this?", images: [image]

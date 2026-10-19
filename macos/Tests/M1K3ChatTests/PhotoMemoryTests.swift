@@ -13,6 +13,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 third-pass fold) — a forget that lands while the caption is
 //  in flight leaves NO Photo behind (the orphan nothing could cascade-delete), and a cancelled remember resets
 //  the row instead of reading as a failure.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — `shellDeclineComesFirst`: a shell decline (Brain at Home) is the row's
+//  failure before any caption call.
 
 import Foundation
 @testable import M1K3Chat
@@ -79,6 +81,22 @@ struct PhotoMemoryTests {
             return
         }
         #expect(message.contains("Switch to Lil"))
+        #expect(provider.calls == 0)
+        #expect(try store.allItems(kind: .image).isEmpty)
+    }
+
+    /// 2026-10-19: on Brain at Home the slot has no captioner and threw a generic error ("couldn't be completed").
+    @Test("the shell's decline (Brain at Home) shows as-is before any caption, and stores nothing")
+    func shellDeclineComesFirst() async throws {
+        let provider = FakeCaptioner()
+        let store = try KnowledgeStore()
+        let memory = PhotoMemory(
+            provider: { provider }, tier: { .lil },
+            ingester: ImageCaptionIngester(store: store, embedder: HashingEmbeddingService()),
+            declineReason: { "Brain at Home can't remember photos yet." }
+        )
+        await memory.remember(image)
+        #expect(memory.state(for: image) == .failed("Brain at Home can't remember photos yet."))
         #expect(provider.calls == 0)
         #expect(try store.allItems(kind: .image).isEmpty)
     }
