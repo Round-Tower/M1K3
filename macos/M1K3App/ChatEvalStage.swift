@@ -91,6 +91,12 @@
 //  persona stack reached them (the 10-19 security arm thought to the token cap, 9 of 24 empty). Confidence 0.85.
 //  Review: same day (pre-push review) — each brain's run prints its forced budget (`think budget:`), and the
 //  live-path doc lists the kinds it takes. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — wired like the app's launch: ONE embedder per launch, warmed before
+//  the first brain (a new MLXEmbeddingService per fixture reloaded the 1.2 GB checkpoint and asked Hugging Face for
+//  its file list inside every live-path, vision and grounded-Q fixture's timed window, ~8.3 s a turn), and each MLX
+//  brain is prepared before fixture 1, as the readiness gate does. Paired arms from before still compare (both
+//  arms paid it); absolute seconds don't, and the embedder now shows in the first brain's resident memory, not
+//  its peak. Confidence 0.8.
 //
 
 import Foundation
@@ -332,9 +338,10 @@ enum ChatEvalStage {
     /// measures what a user actually gets. Motivated 2026-07-15: the bare
     /// code-gen arm scored green while live chat was reported deflecting
     /// code asks — the gap between the two arms IS the scaffolding's cost.
-    /// Tools are the deterministic canned stubs (same palette as tool-use), so
-    /// a run never touches the network; the store is fresh in-memory and empty
-    /// (closed book, same as the bare arm).
+    /// Tools are the deterministic canned stubs (same palette as tool-use), so no
+    /// fixture touches the network; the store is fresh in-memory and empty
+    /// (closed book, same as the bare arm). The one embedder's launch warm may ask
+    /// Hugging Face for its file list, outside every fixture.
     private static var livePathRequested: Bool {
         SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_LIVE_PATH") == "1"
     }
@@ -381,7 +388,7 @@ enum ChatEvalStage {
         // The think-steer arm (2026-10-10): one rules clause on HOW to reason, nothing else.
         let steer = ThinkSteer(envValue: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_THINK_STEER"))
         let responder = AgentRAGResponder(
-            store: store, embedder: MLXEmbeddingService(), provider: provider,
+            store: store, embedder: Self.embedder, provider: provider,
             toolsProvider: { palette }, maxIterations: 3,
             thinkingModeProvider: { Self.thinkingMode(thinking) },
             fastThinkingProvider: { thinking.liveFastByDefault },
@@ -437,6 +444,16 @@ enum ChatEvalStage {
     /// the live path, the only one the router is wired into. Without one they keep LocalAgent's
     /// native loop, so every other tool-use cell measures what it always did (2026-10-10: the 10-09
     /// arm's tool-use column never reached the router, in any cell).
+    /// One embedder per launch, as the app holds one (AppEnvironment): the live path, vision and grounded-Q
+    /// share it. EmbeddingGemma 2, the app's retriever.
+    private static let embedder = MLXEmbeddingService()
+
+    /// Whether this run's fixtures can embed: the live path, the router arm, vision and grounded-Q do.
+    private static func runEmbeds(kinds: Set<TaskKind>?) -> Bool {
+        guard let kinds else { return true }
+        return livePathRequested || routerArmRequested || kinds.contains(.vision) || kinds.contains(.groundedQ)
+    }
+
     private static var routerArmRequested: Bool {
         SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER") != nil
     }
@@ -450,6 +467,14 @@ enum ChatEvalStage {
             + (kinds.map { " [kinds: \($0.map(\.label).sorted().joined(separator: ","))]" } ?? "")
             + (livePathRequested ? " [LIVE PATH: AgentRAGResponder]" : "") + "…")
         var runs: [ChatEvalReport.BrainRun] = []
+        if runEmbeds(kinds: kinds) {
+            // Loaded once, outside every fixture's clock, like the app's launch warm.
+            let clock = ContinuousClock()
+            let warmStart = clock.now
+            _ = try? await embedder.embed("warm")
+            emit("• chateval embedder: \(embedder.fingerprint) warm in \(milliseconds(clock.now - warmStart)) ms "
+                + "(one per launch, outside every fixture)")
+        }
         let brains = selectedBrains()
         let mlxTiers = brains.filter { if case .mlx = $0.backing { true } else { false } }.map(\.rawValue)
         for tier in brains {
@@ -669,11 +694,22 @@ enum ChatEvalStage {
             // with) and its construction-time thinking — no longer a flat 2048 with
             // thinking on, which let a thinking brain spend the whole budget inside
             // <think> and score empty (the 2026-10-06 shootout).
-            provider = AppEnvironment.evalMLXBrain(
+            let mlx = AppEnvironment.evalMLXBrain(
                 modelID: modelID ?? stockID,
                 maxTokens: HistoryBudgetPolicy.generationTokenCap(for: tier, defaultCap: MLXBrainProvider.defaultMaxTokens),
                 thinkingEnabled: true // the app's build; the bare arms scope their own flag (#555)
             )
+            // The app's readiness gate loads the brain before the first turn; without this, fixture 1 paid the
+            // load. A failed load keeps today's shape: the loader clears its slot, so fixture 1 retries and fails.
+            let clock = ContinuousClock()
+            let loadStart = clock.now
+            do {
+                try await mlx.prepare(progress: { _ in })
+                emit("  brain ready in \(milliseconds(clock.now - loadStart)) ms before fixture 1")
+            } catch {
+                emit("  brain load failed before fixture 1: \(error.localizedDescription) (fixture 1 retries it)")
+            }
+            provider = mlx
         }
         // Forcing is on by default for Lil since 2026-10-19, so every run says what its brain forces.
         if let forcing = provider as? ThinkBudgetForcing {
@@ -834,12 +870,11 @@ enum ChatEvalStage {
         // path: nil → GRDB in-memory DatabaseQueue, fresh per fixture. Intentional:
         // keeps grounded-Q fixtures isolated and writes nothing to the app container.
         let store = try KnowledgeStore()
-        let embedder = MLXEmbeddingService()
-        let ingester = DocumentIngester(store: store, embedder: embedder)
+        let ingester = DocumentIngester(store: store, embedder: Self.embedder)
         if let doc = fixture.seedDoc {
             _ = try await ingester.ingest(title: "Notes", text: doc)
         }
-        let responder = RAGResponder(store: store, embedder: embedder, provider: provider)
+        let responder = RAGResponder(store: store, embedder: Self.embedder, provider: provider)
         // The bare RAGResponder has no per-turn policy: scope the arm's flag (the provider is
         // built thinking-ON like the app's, so an unscoped call would think — #555 harness fold).
         let response = try await InferenceIntent.withThinking(thinking.bareThinks) {
