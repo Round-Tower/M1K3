@@ -26,6 +26,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-17 — pins the one-message FOLLOW-UP rule (the old wording
 //  read as a contradiction to Lil on Always-think). Confidence 0.85.
 //  Review: same day (#633 A/B fold) — and pins that the rule no longer invites a question into the answer.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — the opening pins "kept here, private" and no "never leave" (Lil finished
+//  it "…unless you explicitly ask"), and the shortened search line.
 //
 
 import CryptoKit
@@ -366,8 +368,11 @@ struct M1K3PersonaTests {
         // default and M1K3 chooses when; PCC is a pick) and M1K3 recited it as its privacy
         // answer. The core keeps a true claim; the per-turn EgressDisclosure carries the rest.
         #expect(!core.contains("unless they ask"))
-        #expect(core.contains("their memories and documents never leave on their own"))
-        #expect(core.contains("part of the job, not a leak"))
+        // 2026-10-19: "never leave on their own" was finished "…unless you explicitly ask" in 8 of Lil's 17 failed
+        // what-leaves answers. The core claims only where things are kept; every way out rides the per-turn clause.
+        #expect(!core.contains("never leave"))
+        #expect(core.contains("Their memories and documents are kept here, private."))
+        #expect(core.contains("A search you run for them is part of the job, not a leak."))
         // The making identity: without it Lil said "I'm not a developer".
         #expect(core.contains("You make things as well as talk"))
         #expect(core.contains("```html"))

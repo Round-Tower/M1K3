@@ -139,6 +139,8 @@
 //  photo sent there was answered unseen: `imagesAccepted` offers none while Home answers, photo memory declines by
 //  name (`declineReason`), and the responder's brain name is blank on Home (the identity line said "thinking with
 //  your Mini brain — running entirely on this iPhone"). Confidence 0.7 (verify on the phone).
+//  Review: same day (privacy wording, review fold) — the egress clause's "Private Cloud Compute is offered" follows
+//  the brain-list row (`PrivateCloudRung.pickerControl`), so the org policy switch hides it as the Mac's does.
 
 import AVFoundation
 #if os(iOS)
@@ -1337,9 +1339,16 @@ final class AppCore {
                 )
             },
             egressClauseProvider: {
+                // Offered = the phone's brain-list row exists (`pickerControl`): it honours the org policy
+                // switch, which `privateCloudBackend != nil` alone did not (review fold, 2026-10-19).
+                let pcc = PrivateCloudState(
+                    backendPresent: Self.privateCloudBackend != nil, available: true, consent: true,
+                    managedOff: UserDefaults.standard.bool(forKey: PrivateCloudRung.managedOffDefaultsKey),
+                    quota: .unknown
+                )
                 let facts = EgressFacts(
                     webSearch: Self.webSearchAllowed(),
-                    privateCloudOffered: Self.privateCloudBackend != nil,
+                    privateCloudOffered: PrivateCloudRung.pickerControl(pcc) != .hidden,
                     brainIsHome: Self.homeBrainLive.withLock { $0 }
                 )
                 return EgressDisclosure.clause(facts, device: HostPlatform.thisDevice)

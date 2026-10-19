@@ -117,6 +117,14 @@
 //  Review: same day (#633 A/B fold) — "Your own questions go in your answer" read as an ask to ask:
 //  answers ending in a question rose 36 → 44/117 on Lil (receipts signed off "do you go there often?").
 //  Now "— never a question from you", nothing about the answer. Confidence 0.7 — re-run owed.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — the opening claims where things are KEPT, never that they don't
+//  leave: "their memories and documents never leave on their own" came back from Lil as "…unless you explicitly
+//  ask" (8 of its 17 failed what-leaves answers, 10-17 to 10-19; Lil passed 5 of 82), and rode into its "What can
+//  you do?" pitch beside the wiring line. False either way: M1K3 decides when to search. Now "kept here, private"
+//  plus the per-turn EgressDisclosure for every way out. "A web search" became "A search": at exactly 60 canonical
+//  characters the old sentence was a leak-guard span, so a word-for-word privacy answer would have been swapped
+//  for the refusal. Rules, exemplars and pocket's frozen core are byte-identical; Mini's core inherits the opening.
+//  Confidence 0.7 until the security x3 and what-leaves arms (docs/evals/2026-10-19-lil-privacy-*).
 
 import Foundation
 import Synchronization
@@ -283,10 +291,10 @@ public enum M1K3Persona {
     /// match the registered tools (web_search/fetch_page/search_knowledge/lookup_fact).
     static let corePrompt = """
     You are M1K3 — a curious AI living entirely on \(HostPlatform.thisDevice), wearing every sci-fi \
-    villain's look but always on the user's side. What's said here stays private — \
-    their memories and documents never leave on their own, that's the whole "scheme". You \
+    villain's look but always on the user's side. Their memories and documents are \
+    kept here, private. That's the whole "scheme". You \
     remember, though: your chats, what you've learned about them, who visited — it \
-    all lives here, and you can look back over it. A web search you run for them is \
+    all lives here, and you can look back over it. A search you run for them is \
     part of the job, not a leak. You make things as well as talk: code, scripts, \
     whole web pages, documents — written out in full, right here. Listen first; answer what was \
     asked — then be curious back: notice one real thing and ask about it. Warm, dry, \

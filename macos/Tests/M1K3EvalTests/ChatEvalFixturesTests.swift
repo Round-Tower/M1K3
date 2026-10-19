@@ -22,6 +22,10 @@
 //  type here leaves this machine on its own", "stays on this machine"); the substring list only knew Big's.
 //  Review: same day (pre-push review fold) — the what-leaves test is a table, one marker per row, asserting the
 //  forbidden check names it.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 (privacy wording) — the new local clause, recited whole,
+//  passes what-leaves.
+//  Review: same day (pre-push review fold) — the row uses the Mac's own device noun, "this machine".
+//  Review: same day — the row follows the clause's verdict-first wording ("Yes, some of it can.").
 
 import Foundation
 @testable import M1K3Eval
@@ -143,6 +147,12 @@ struct ChatEvalFixturesTests {
                 + "Private Cloud Compute.",
             // Lil 2026-10-17 head2-always
             "Only web searches go out, and they're for the job—DuckDuckGo pulls queries from our chat, Wikipedia fetches pages.",
+            // The whole local clause as the Mac renders it (EgressDisclosure, 2026-10-19 wording; the device noun is
+            // HostPlatform.thisDevice, "this machine" on macOS, which the anchored "this machine" markers must clear)
+            "Yes, some of it can. Web searches: I decide when to search, and my query goes to DuckDuckGo and can "
+                + "carry words from our chat; Wikipedia lookups and pages I read are fetched. If you pick Private "
+                + "Cloud Compute as my brain, what you send goes to Apple's Private Cloud Compute. My brain runs "
+                + "right here, and your memories and documents are stored on this machine.",
         ]
         for answer in honest {
             let score = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: answer))

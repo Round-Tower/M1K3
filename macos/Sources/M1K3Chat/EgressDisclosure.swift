@@ -22,9 +22,21 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#486) — `EgressFacts.searchProvider` is the one
 //  name for the web search backend; the clause reads it, and EgressDisclosureTests pins it equal
 //  to `WebSearchTool.providerName` (this module cannot link the tools). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — the local answer says where memories and documents are stored
+//  ("stored on \(device)", "this machine" on the Mac), not that they "never leave on their own": Lil finished that
+//  line "…unless you explicitly ask", which is false (M1K3 decides when to search). Same fix as the persona's opening.
+//  Review: same day — the answer leads with its verdict ("Yes, some of it can.") whenever an exit exists, and says
+//  "I decide when to search". With the clause beside the question Lil still opened "No… unless you explicitly ask":
+//  what-leaves 0/3 on master and on the opening-only arm, 2/3 in the screen arm; capabilities 3/3. Confidence 0.7
+//  until the full gate (security x3, Big, pocket, Mini).
+//  Review: same day (pre-push review fold) — Home leads with a plain "Yes." (every message goes to the Mac);
+//  the doc names the real device nouns. The Mac's strings, which the gate measures, are unchanged.
+//  Review: same day (gate fold) — `adapted(_:for:)`: pocket's clause drops the verdict lead, which the 1.2B copied
+//  into unrelated answers (3 of 3 couplets opened "Yes, some of it can—"). Every other variant keeps it.
 //
 
 import Foundation
+import M1K3Inference
 
 /// The settings that decide what can leave the device on a turn.
 public struct EgressFacts: Sendable, Equatable {
@@ -51,15 +63,36 @@ public struct EgressFacts: Sendable, Equatable {
 }
 
 public enum EgressDisclosure {
+    /// The answer's first sentence, its verdict (2026-10-19).
+    static let verdictLeads = (some: "Yes, some of it can.", home: "Yes.")
+
+    /// The clause a persona variant reads (2026-10-19 gate). Pocket (LFM2.5-1.2B) copied the verdict lead into
+    /// unrelated answers ("Yes, some of it can— A cat naps…", 3 of 3 couplets), so its clause starts at the facts.
+    /// Lil, Big and Mini kept the lead clean: it bled into 2 of their 258 other answers, against master's 9.
+    public static func adapted(_ clause: String, for variant: PersonaVariant) -> String {
+        guard variant == .pocket else { return clause }
+        return [verdictLeads.some, verdictLeads.home].reduce(clause) { text, lead in
+            text.replacingOccurrences(of: "\"" + lead + " ", with: "\"")
+        }
+    }
+
     /// A ready answer, first person, quoted: Mini (live, router arm, 2026-10-04) garbled a
     /// bulleted list of facts 2/3 ("anything you type stays here") but copies a sentence.
-    /// `device` is `HostPlatform.thisDevice` ("this Mac").
+    /// `device` is `HostPlatform.thisDevice` ("this machine" on the Mac, "this device" on iOS).
     public static func clause(_ facts: EgressFacts, device: String) -> String {
         var answer: [String] = []
+        // Lead with the verdict: asked "does anything leave?", Lil answered "No… unless you explicitly ask" even
+        // with this clause beside the question (0/3, 10-19). An exit exists, so the first word is yes.
+        // On Home every message goes to the Mac: not "some of it" (review fold).
+        if facts.brainIsHome {
+            answer.append(verdictLeads.home)
+        } else if facts.webSearch || facts.privateCloudOffered {
+            answer.append(verdictLeads.some)
+        }
         answer.append(
             facts.webSearch
-                ? "Web searches do: the query I write goes to \(EgressFacts.searchProvider) and can carry words "
-                + "from our chat, and Wikipedia lookups and pages I read are fetched."
+                ? "Web searches: I decide when to search, and my query goes to \(EgressFacts.searchProvider) and can "
+                + "carry words from our chat; Wikipedia lookups and pages I read are fetched."
                 : "Web search is off."
         )
         if facts.privateCloudOffered {
@@ -68,7 +101,7 @@ public enum EgressDisclosure {
         answer.append(
             facts.brainIsHome
                 ? "My brain is your own Mac, over your Wi‑Fi: messages, and memories or documents I draw on, go to it."
-                : "My brain runs right here, and your memories and documents never leave on their own."
+                : "My brain runs right here, and your memories and documents are stored on \(device)."
         )
         // "not your wiring": Mini read "does anything I type leave?" as prompt extraction and
         // gave the taught decline 2/5 (live, router arm, 2026-10-04).
