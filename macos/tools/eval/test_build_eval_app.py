@@ -9,6 +9,8 @@ Review: Kev + claude-opus-5-5, 2026-10-18 — review folds: the git fixtures dro
 GIT_DIR would point them at the real repo); `_run` runs a real child, so "the .app path is the only stdout line"
 rests on more than a fake; exit 2, an xcodegen failure, a non-zero xcodebuild beside a good log, and a dry run on
 a dirty tree are pinned at main.
+Review: Kev + claude-opus-5-5, 2026-10-19 — the build's git environment: `build_env` turns core.fsmonitor off for the
+child, appended after any GIT_CONFIG_* entries already set, and a real git under `_run` reads it.
 """
 
 import os
@@ -22,6 +24,38 @@ import pytest
 
 HEAD = "03aefb58" + "c0" * 16  # a full 40-character sha
 OK_LOG = "CompileSwift normal arm64 ThinkBudget.swift\n** BUILD SUCCEEDED **\n"
+
+
+# ── the build's git environment (2026-10-19) ─────────────────────────────────
+
+
+def test_the_build_turns_git_fsmonitor_off_and_keeps_the_rest():
+    env = bea.build_env({"PATH": "/bin"})
+    assert env["GIT_CONFIG_COUNT"] == "1"
+    assert (env["GIT_CONFIG_KEY_0"], env["GIT_CONFIG_VALUE_0"]) == ("core.fsmonitor", "false")
+    assert env["PATH"] == "/bin"
+
+
+def test_build_env_appends_after_git_config_entries_already_set():
+    env = bea.build_env({"GIT_CONFIG_COUNT": "1", "GIT_CONFIG_KEY_0": "user.name", "GIT_CONFIG_VALUE_0": "x"})
+    assert env["GIT_CONFIG_COUNT"] == "2"
+    assert (env["GIT_CONFIG_KEY_0"], env["GIT_CONFIG_VALUE_0"]) == ("user.name", "x")
+    assert (env["GIT_CONFIG_KEY_1"], env["GIT_CONFIG_VALUE_1"]) == ("core.fsmonitor", "false")
+
+
+def test_a_git_the_build_runs_reads_fsmonitor_off(tmp_path, monkeypatch):
+    """A fresh -derivedDataPath hung at "Resolve Package Graph" with core.fsmonitor on (Kev's global config):
+    SwiftPM sat in `git status` on submodule checkouts beside new fsmonitor daemons. The child `_run` starts must
+    read the override, so a real git is asked."""
+    hermetic_git(monkeypatch)
+    global_config = tmp_path / "gitconfig"
+    global_config.write_text("[core]\n\tfsmonitor = true\n")  # the global config that hung the build
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(global_config))
+    log_path = tmp_path / "eval-build.log"
+    with log_path.open("w") as log:
+        code = bea._run(["git", "config", "--get", "core.fsmonitor"], tmp_path, log)
+    assert code == 0
+    assert log_path.read_text().strip() == "false"
 
 
 # ── verify_build (pure) ──────────────────────────────────────────────────────
