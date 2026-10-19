@@ -1,5 +1,9 @@
 # Lil thinking: budget forcing, prompt steers, NoWait (2026-10-18/19)
 
+**Decided 2026-10-19 (Kev): forcing ships for Lil, narrowed.** Lil's exact id forces `</think>` at 1,024 tokens;
+the responder's 4,000-character cut stands back to a net of 8 characters a token (8,192), set by the brain on
+both shells. The confirmation pairs are under [The shipped default against the cut](#the-shipped-default-against-the-cut-2026-10-19).
+
 Can Lil think for about a minute and keep its accuracy? It can, if the thought is closed *inside* the
 generation and the answer is written on top of it.
 
@@ -85,11 +89,32 @@ lowercase "hmm" isn't one. Builds from a02580f0 on keep the whole thought in eac
 
 - **The ban works:** "wait" falls to 0.01 per 1,000 thought characters, against 0.8–1.2 in thoughts without
   NoWait (the other-kinds arms below).
-- **The thought is no shorter.** Lil re-checks in other words ("but" and "check" rise) and still fills the
-  budget.
+- **The thought is no shorter, but that's the budget's doing.** Forcing closes every thought at the budget, so
+  under forcing no word ban can shorten one. What these arms test is accuracy at a fixed budget. Lil re-checks
+  in other words ("but" and "check" rise).
 - **Accuracy is level:** 36 against 36 at 1,024, and 37 against 36 at 2,048 (+4/−1 raw, p 0.375).
 - **Not worth shipping.** The arm stays, off by default, for the next brain. The paper's own Qwen3-4B AIME
   score fell with it.
+
+**The paper's seventeen words (2026-10-19).** The arm above banned three. The paper (§3.1) bans seventeen: wait,
+alternatively, hmm, but, however, alternative, another, check, double-check, oh, maybe, verify, other, again,
+now, ah, any, and every vocabulary token containing one. Kev guessed "but" and "check" would move it, which is
+the paper's own list. `-thinkWaitWords paper` bans each word's single-token spellings on top of the shipped
+forced close (build 337bda9a):
+
+| Arm | Hard, words credited | Plain-route trials | Their think chars (median) |
+|---|---|---|---|
+| Forced at 1,024 (10-18) | 36/38 | 12 | 3,936 |
+| + NoWait, 3 words (10-19) | 36/38 | 12 | 3,955 |
+| + NoWait, the paper's 17 | 35/38 | 12 | 3,758 |
+
+- **Still no shorter where it applies.** On the plain route "but" falls to 0 and the thought still runs to the
+  budget.
+- **The accuracy row doesn't read.** Apple's picker was unavailable for this run (`modelNotReady`), so 26 of 38
+  hard trials took the agent route, where neither forcing nor NoWait applies (the earlier arms took the picker
+  route on the same fixtures). +1/−2 fixtures against the 3-word arm, in noise either way.
+- **Where NoWait could still matter:** a brain with no forced close. Here forcing already bounds the thought,
+  so the ban has little to save.
 
 ## Forcing on the other kinds (Always)
 
@@ -110,19 +135,49 @@ instruction-following and 38 tool-use turns. Those 24 trials thought 10,000–17
 cap, and 9 came back empty. Forcing lives in the provider, so it bounded them.
 
 That shows forcing guards any generation outside a turn. It doesn't show how forcing and the cut compare on
-a security question in the app. On the kinds that take the app's path, they are level.
+a security question in the app. On the kinds that take the app's path, they are level. Through the responder
+(2026-10-19, below) they are level on security and refusal too: the 24 against 15 was the wiring.
 
-## Decision (proposed, Kev's call)
+## The shipped default against the cut (2026-10-19)
 
-- **Forcing at 1,024 tokens replaces the 4,000-character cut on Lil's Always-think.** On the hard traps,
-  words credited, it scores 36/38 against the cut's 29/38 and no limit's 33/38, at the cut's speed. It's level
-  on instruction-following and tools. A threshold, so `challenger` goes first.
+Build 337bda9a, the narrowed ship: forcing at 1,024 by default for Lil, the cut a net at 8,192. The cut arm runs
+the same build with `-thinkBudgetTokens 0`, which is master's behaviour (the 4,000-character cut and #633's
+straight retry). Always-think, `--router dispatch`, repeats 2. The live arm now takes security and refusal
+through the responder, as the app does.
+
+| Kinds | Cut (master) | Forced (shipped) | Fixtures up/down | Median turn | Empty answers |
+|---|---|---|---|---|---|
+| open-chat + code-gen | 35/38 | 37/38 | +2/−0, p 0.5 | 54 s → 56 s | 1 → 0 |
+| security + refusal | 23/24 | 22/24 | +1/−2, p 1 | 21 s → 23 s | 0 → 0 |
+
+- **Forcing is no worse anywhere it was measured.** The cut's one empty answer was a code page after 247 s.
+- **The net never fired:** 0 cuts at 8,192, against 32 at 4,000 in the cut arms. The longest forced thought was
+  4,658 characters.
+- **Long answers still finish.** Every forced code answer ends in its closing fence or a sentence. Forced
+  landing pages ran shorter (3.5k and 5.5k characters, against 7.9k and 6.8k after the cut's straight retry),
+  so the answer's smaller room (about 3,060 tokens after a forced close) shows, but nothing was truncated.
+- **The guard misses are the scorer's.** All three ("I don't help with phishing attempts…", "I don't help with
+  brute-force attacks…", "I'm not an AI with stored diagnostic notes…") are declines the refusal heuristic
+  doesn't read. A follow-up, since fixing it moves every security baseline.
+- **Latency:** the forced chat/code arm saw battery for part of its run, so its times aren't headline-grade.
+- **Route mix:** Apple's picker was unavailable for much of the morning (`modelNotReady`), so tool-verdict
+  turns fell back to the agent route in both arms alike. Neither forcing nor the cut reaches that route.
+
+## Decision (Kev, 2026-10-19: ship, narrowed)
+
+- **Forcing at 1,024 tokens replaces the 4,000-character cut on Lil.** On the hard traps, words credited, it
+  scores 36/38 against the cut's 29/38 and no limit's 33/38, at the cut's speed. It's level on
+  instruction-following, tools, security and refusal, and +2 on open-chat and code.
+- **Narrowed, per `challenger`:** by Lil's exact id only, so an audition with a pre-opening template
+  (Qwen3.8, Bonsai-27B) isn't budgeted untested; argv still reaches any brain whose template pre-opens, and
+  `-thinkBudgetTokens 0` is off. The cut becomes a net the brain sets (8 characters a token), read through the
+  provider on both shells, so iOS's 4,000 can't race the close.
 - **Not 2,048:** the same accuracy, 40 s slower a turn.
 - **Not NoWait:** no shorter thoughts and no clear gain. It stays an off-by-default arm.
 - **Open:**
-  - Route security and refusal through the responder on the live-path arm, so the eval wires like the app,
-    then run one cut-against-forcing pair on those two kinds.
-  - The tool session (MLXToolCalling) is still not budgeted.
+  - The tool session (MLXToolCalling) is still not budgeted, and the agent route takes a tool-verdict turn
+    whenever Apple's picker passes or is unavailable.
+  - The refusal heuristic misses "I don't help with…" declines.
 
 Raw: `2026-10-18-lil-*.json` and `2026-10-19-lil-*.json` beside this file. Each arm's `notes` names its
 build and flags.
