@@ -27,6 +27,10 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-15 — `requireComplete`: the after-a-fetch check the Mac does inline
 //  (AppEnvironment+Downloads), as one seam, for the iPhone's continued download, which trusted the fetcher's return.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — `installState` counts only the pinned files a download fetches
+//  (`HubApiDownloader.enforcedPin`): the embedder's pinned README.md never arrives, so Settings read it "Partly
+//  downloaded" with a Resume button. Brain pins list nothing outside the patterns, so brains are unchanged.
+//  Review: same day (pre-push review fold) — the doc comment says so.
 
 import Foundation
 import Hub
@@ -62,9 +66,10 @@ public struct LocalModelInventory: Sendable {
 
     /// Whether the download is whole, for Settings > Brains & downloads. A pinned repo is
     /// `.complete` only when every pinned weight shard is present at its pinned size and every
-    /// other pinned file is present (sizes are not compared there: a post-download template
-    /// patch may legitimately change them). An unpinned repo is `.complete` once any weights
-    /// exist. Anything else with bytes in the folder is `.partial`. Stat calls only, no hashing.
+    /// other pinned file a download fetches (`weightPatterns`) is present (sizes are not compared
+    /// there: a post-download template patch may legitimately change them). An unpinned repo is
+    /// `.complete` once any weights exist. Anything else with bytes in the folder is `.partial`.
+    /// Stat calls only, no hashing.
     public func installState(modelID: String) -> InstallState {
         installState(modelID: modelID, pin: PinnedWeights.pin(for: modelID))
     }
@@ -84,7 +89,8 @@ public struct LocalModelInventory: Sendable {
         let dir = hub.localRepoLocation(Hub.Repo(id: modelID))
         let fm = FileManager.default
         guard fm.fileExists(atPath: dir.path) else { return .absent }
-        if let pin {
+        // Only the pinned files a download fetches: the embedder's README.md never arrives (2026-10-19).
+        if let pin = HubApiDownloader.enforcedPin(pin, patterns: BrainWeightsFetcher.weightPatterns) {
             let whole = pin.files.allSatisfy { name, expected in
                 let path = dir.appendingPathComponent(name).path
                 guard let size = (try? fm.attributesOfItem(atPath: path))?[.size] as? NSNumber else { return false }

@@ -7,6 +7,9 @@
 //  the whole design turns on: an ABSENT file is a download in progress, a
 //  PRESENT file with the wrong bytes is an attack.
 //
+//  Signed (the 2026-10-19 `restrictedToPatterns` addition only): Kev + claude-opus-5-5, 2026-10-19,
+//  Confidence 0.85. Prior: Unknown
+//
 
 import Foundation
 import M1K3Inference
@@ -404,5 +407,21 @@ struct PinnedWeightsTests {
             let hasWeights = pin.files.keys.contains { $0.hasSuffix(".safetensors") }
             #expect(hasWeights, "\(repo) pins no .safetensors — the weights are unprotected")
         }
+    }
+
+    /// Hub matches with fnmatch on the repo-relative path, case-sensitive, and `*` crosses `/`: `*.json`
+    /// fetches `1_Pooling/config.json`, never `config.JSON`. The cut must read the path the same way.
+    @Test("a pin cut to download patterns keeps nested matches and drops what the loader never fetches")
+    func restrictedToPatterns() {
+        let file = WeightIntegrity.PinnedFile(size: 1, sha256: "x")
+        let pin = WeightIntegrity.Pin(revision: String(repeating: "a", count: 40), files: [
+            "model.safetensors": file, "1_Pooling/config.json": file, "chat_template.jinja": file,
+            "README.md": file, "config.JSON": file,
+        ])
+        // "config.JSON" is kept only by a case-folding matcher; Hub's fnmatch(…, 0) never fetches it.
+        let cut = pin.restricted(toFilesMatching: ["*.safetensors", "*.json", "*.jinja"])
+        #expect(cut.files.keys.sorted() == ["1_Pooling/config.json", "chat_template.jinja", "model.safetensors"])
+        #expect(cut.revision == pin.revision)
+        #expect(pin.restricted(toFilesMatching: []).files.isEmpty)
     }
 }

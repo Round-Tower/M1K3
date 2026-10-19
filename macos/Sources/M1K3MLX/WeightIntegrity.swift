@@ -48,6 +48,9 @@
 //  `LocalizedError` (text unchanged), so a Settings row shows the sentence, not "The
 //  operation couldn't be completed". Their `DownloadFailureClassifying` conformance (short
 //  user copy, never transient) lives in DownloadErrors.swift. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — `Pin.restricted(toFilesMatching:)`: the files a download's patterns
+//  fetch. The verdict rules are unchanged; a file no pattern fetches is never loaded, so cutting it judges nothing
+//  less. Confidence 0.9.
 //
 
 import Foundation
@@ -93,6 +96,16 @@ public enum WeightIntegrity {
         public init(revision: String, files: [String: PinnedFile]) {
             self.revision = revision
             self.files = files
+        }
+
+        /// The pinned files a download matching `patterns` fetches, at the same revision. Hub
+        /// matches with `fnmatch(pattern, path, 0)` on the repo-relative path (`*` crosses `/`,
+        /// case-sensitive), and so does this. A pinned file outside every pattern never arrives:
+        /// the embedder's README.md, pinned from an `hf download` snapshot (#547).
+        public func restricted(toFilesMatching patterns: [String]) -> Pin {
+            Pin(revision: revision, files: files.filter { name, _ in
+                patterns.contains { fnmatch($0, name, 0) == 0 }
+            })
         }
     }
 

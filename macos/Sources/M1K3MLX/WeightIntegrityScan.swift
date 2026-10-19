@@ -48,6 +48,8 @@
 //  I/O error now returns nil instead of a silently-partial digest that would
 //  read as tampering forever; and a present-but-unreadable file is now
 //  `.unverifiable` rather than taking the benign in-flight path unchecked.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — doc only: the repo-id `enforce` judges the FULL pin, while a download
+//  is judged by its fetched cut (`HubApiDownloader.enforcedPin`); named so a new caller doesn't mix the two.
 //  Prior: Kev + claude-opus-4-8.
 //
 
@@ -84,7 +86,10 @@ public enum WeightIntegrityScan {
         FileManager.default.fileExists(atPath: receiptURL(forModelAt: directory).path)
     }
 
-    /// Verify the weights for `repoID` against the shipped manifest.
+    /// Verify the weights for `repoID` against the shipped manifest — the FULL pin. A download is
+    /// judged by the pinned files its patterns fetch instead (`HubApiDownloader.enforcedPin`), so
+    /// for the embedder (its pin lists a README.md no load fetches) this reads `.incomplete` on a
+    /// directory the downloader calls verified.
     public static func enforce(directory: URL, repoID: String) throws {
         try enforce(directory: directory, pin: PinnedWeights.pin(for: repoID), repoID: repoID)
     }
