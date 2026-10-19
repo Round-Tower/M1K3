@@ -38,6 +38,8 @@
 # Review: Kev + claude-opus-5-5, 2026-10-14 — M1K3iOS registers the `m1k3` URL scheme: App Store Connect won't add an
 # in-app event for review without a deep link, and Halloween's (m1k3://event/halloween) opens the app through it
 # (check_store_targets.py pins it). Confidence 0.85; the open is verify-by-launch on a device.
+# Review: Kev + claude-opus-5-5, 2026-10-19 — MARKETING_VERSION 1.1.0 → 1.1.1 (chore(release): v1.1.1): App Store Connect
+# refused build 537 at 1.1.0 (approved 2026-10-15, train closed). Fixes only since, so PATCH (VERSIONING.md).
 
 name: M1K3
 
@@ -53,7 +55,7 @@ settings:
     # Versioning scheme: see /VERSIONING.md. This is the single source of truth
     # for the user-facing version on every Apple surface (TestFlight, MAS, the
     # nightly DMG's name). Build numbers are Xcode Cloud's (auto-managed).
-    MARKETING_VERSION: "1.1.0"
+    MARKETING_VERSION: "1.1.1"
     CURRENT_PROJECT_VERSION: "1"
     # Apple Silicon only (2026-09-15). Every brain needs it — MLX (Lil, Big, pocket)
     # and Apple Intelligence (Mini) are both arm64-only — yet the Mac archive was
