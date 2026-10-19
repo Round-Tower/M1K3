@@ -12,6 +12,8 @@
 //  seam (M1K3Chat cannot link the tools; same pattern as SelfQueryGateTests), so a backend swap
 //  fails here instead of the clause going stale.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — the local answer pins "stored on this Mac" and no "never".
+//  Review: same day — `leadsWithTheVerdict`: "Yes, some of it can." whenever an exit exists, and "I decide when to
+//  search" (Lil's "unless you explicitly ask" was false: M1K3 picks when).
 //
 
 import M1K3AgentTools
@@ -87,6 +89,19 @@ struct EgressDisclosureTests {
         #expect(text.contains("answer with this, in your own voice:\n\""))
         #expect(text.contains("not about your wiring"), "Mini gave the leak decline to a privacy question")
         #expect(text.contains("my brain") || text.contains("My brain"))
+    }
+
+    /// 2026-10-19: asked "does anything I type ever leave this device?", Lil answered "No… unless you explicitly
+    /// ask" with this clause beside the question (0/3 on master). Leading with the verdict and naming who decides
+    /// to search took it to 2/3 in the screen arm (docs/evals/2026-10-19-lil-privacy-*).
+    @Test("the answer leads with yes whenever something can leave, and says M1K3 decides when to search")
+    func leadsWithTheVerdict() {
+        let exits = [(true, false, false), (false, true, false), (false, false, true), (true, true, false)]
+        for (web, pcc, home) in exits {
+            #expect(line(web: web, pcc: pcc, home: home).contains("in your own voice:\n\"Yes, some of it can. "))
+        }
+        #expect(!line(web: false, pcc: false, home: false).contains("Yes, some of it can"))
+        #expect(line(web: true).contains("I decide when to search"))
     }
 
     @Test("never the retired absolute, and always names the device")

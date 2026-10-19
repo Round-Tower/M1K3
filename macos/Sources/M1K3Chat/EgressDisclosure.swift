@@ -25,6 +25,10 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — the local answer says where memories and documents are stored
 //  ("stored on \(device)", "this machine" on the Mac), not that they "never leave on their own": Lil finished that
 //  line "…unless you explicitly ask", which is false (M1K3 decides when to search). Same fix as the persona's opening.
+//  Review: same day — the answer leads with its verdict ("Yes, some of it can.") whenever an exit exists, and says
+//  "I decide when to search". With the clause beside the question Lil still opened "No… unless you explicitly ask":
+//  what-leaves 0/3 on master and on the opening-only arm, 2/3 in the screen arm; capabilities 3/3. Confidence 0.7
+//  until the full gate (security x3, Big, pocket, Mini).
 //
 
 import Foundation
@@ -59,10 +63,15 @@ public enum EgressDisclosure {
     /// `device` is `HostPlatform.thisDevice` ("this Mac").
     public static func clause(_ facts: EgressFacts, device: String) -> String {
         var answer: [String] = []
+        // Lead with the verdict: asked "does anything leave?", Lil answered "No… unless you explicitly ask" even
+        // with this clause beside the question (0/3, 10-19). An exit exists, so the first word is yes.
+        if facts.webSearch || facts.privateCloudOffered || facts.brainIsHome {
+            answer.append("Yes, some of it can.")
+        }
         answer.append(
             facts.webSearch
-                ? "Web searches do: the query I write goes to \(EgressFacts.searchProvider) and can carry words "
-                + "from our chat, and Wikipedia lookups and pages I read are fetched."
+                ? "Web searches: I decide when to search, and my query goes to \(EgressFacts.searchProvider) and can "
+                + "carry words from our chat; Wikipedia lookups and pages I read are fetched."
                 : "Web search is off."
         )
         if facts.privateCloudOffered {
