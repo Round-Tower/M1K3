@@ -194,6 +194,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — an image turn on a brain that can't call tools (Brain at Home; an
 //  audition model with no dialect) is declined by name before retrieval: the ReAct floor drops images, so the phone's
 //  thumbnail was answered unseen. `imageNotCarriedReply`; the availability throw still comes first. Confidence 0.85.
+//  Review: same day (pre-push review fold) — the decline's pronoun follows the count ("what's in them") and a blank
+//  name trims to "This brain".
 
 import Foundation
 import M1K3Agent
@@ -390,9 +392,11 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// the ReAct floor, a text prompt with no image in it: the phone showed the thumbnail and the Mac's brain
     /// answered as if it had looked. Same promise as Mini's decline (`AFMToolPrompt.cannotShowImageReply`).
     static func imageNotCarriedReply(imageCount: Int, brainName: String) -> String {
-        let brain = brainName.isEmpty ? "This brain" : brainName
-        let images = imageCount == 1 ? "the image" : "the \(imageCount) images"
-        return "\(brain) can't take images yet, so I haven't seen \(images) you attached and won't guess at what's in it."
+        let name = brainName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let brain = name.isEmpty ? "This brain" : name
+        let (images, them) = imageCount == 1 ? ("the image", "it") : ("the \(imageCount) images", "them")
+        return "\(brain) can't take images yet, so I haven't seen \(images) you attached "
+            + "and won't guess at what's in \(them)."
     }
 
     public func answerStreaming(

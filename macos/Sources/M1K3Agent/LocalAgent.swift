@@ -38,8 +38,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — comment only: the ReAct-floor image note said only Big
 //  sees; Lil (Qwen3.5-4B, #517) sees too and also resolves native. No logic changed.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — doc comment only: ModelEvalReport.strippingThink (retired) → ThinkStripper.strip. Confidence 0.9.
-//  Review: Kev + claude-opus-5-5, 2026-10-19 — comment only: the ReAct floor's image drop was reachable (Brain at Home);
-//  AgentRAGResponder declines such a turn upstream now.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — comment only: the ReAct floor's image drop was reachable
+//  (Brain at Home); AgentRAGResponder declines such a turn upstream now.
 
 import Foundation
 import M1K3Inference

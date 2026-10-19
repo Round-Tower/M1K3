@@ -22,6 +22,7 @@
 //  `ThinkBudgetForcing`) moves the cut to a net at 8 characters a token; both bounds of the net are pinned.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — `imagesSkipRouter` runs on a tool-calling double: an image on a brain
 //  that can't carry it is now declined before the router, so the plain double would pass for the wrong reason.
+//  Review: same day (pre-push review fold) — and asserts the turn's answer, so it proves the agent route ran.
 //
 
 import Foundation
@@ -554,10 +555,11 @@ struct PlainTurnRouteTests {
         let consulted = Consulted()
         let provider = SeeingToolProvider()
         let image = ImageAttachment(url: URL(fileURLWithPath: "/tmp/fox.png"))
-        _ = try await answer(
+        let text = try await answer(
             responder(provider, route: chat(.chat), consulted: consulted), "what's this?", images: [image]
         )
         #expect(consulted.count.withLock { $0 } == 0)
+        #expect(text == "A fox.", "the image turn ran the agent route")
     }
 
     @Test("the route's instructions ride the plain generation; nil keeps the provider's own")

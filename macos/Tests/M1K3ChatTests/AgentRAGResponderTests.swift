@@ -27,6 +27,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — an image turn on a brain that can't carry it (Brain at Home's ReAct
 //  floor) is declined by name with no generation or retrieval; a tooled brain still receives the image; an unavailable
 //  brain still throws first.
+//  Review: same day (pre-push review fold) — the phone's production shape (a tool-calling slot reporting false)
+//  declines too; the wording pin covers the pronoun.
 
 import Foundation
 import M1K3Agent
@@ -266,8 +268,12 @@ private final class PrefacingSession: ToolTurnSession, @unchecked Sendable {
 private final class ImageRecordingToolProvider: ToolCallingProvider, @unchecked Sendable {
     let name = "image-recording"
     let isAvailable = true
-    let supportsToolCalls = true
+    let supportsToolCalls: Bool
     let session = ImageRecordingSession()
+
+    init(supportsToolCalls: Bool = true) {
+        self.supportsToolCalls = supportsToolCalls
+    }
 
     func makeToolTurnSession(
         tools _: [ToolDefinition], options _: ToolTurnOptions
@@ -424,10 +430,28 @@ struct AgentRAGResponderTests {
 
     @Test("the decline counts the images and never names an empty brain")
     func imageDeclineWording() {
-        let two = AgentRAGResponder.imageNotCarriedReply(imageCount: 2, brainName: "")
+        let two = AgentRAGResponder.imageNotCarriedReply(imageCount: 2, brainName: " ")
         #expect(two.hasPrefix("This brain can't take images yet"))
         #expect(two.contains("the 2 images you attached"))
-        #expect(AgentRAGResponder.imageNotCarriedReply(imageCount: 1, brainName: "Lil").contains("the image you attached"))
+        #expect(two.hasSuffix("what's in them."))
+        let one = AgentRAGResponder.imageNotCarriedReply(imageCount: 1, brainName: "Lil")
+        #expect(one.contains("the image you attached"))
+        #expect(one.hasSuffix("what's in it."))
+    }
+
+    /// The production shape on the phone: the swappable slot conforms to ToolCallingProvider and reports false
+    /// while Brain at Home (a plain provider) fronts it.
+    @Test("a tool-calling slot that reports no tool calls declines too, and its session never sees the image")
+    func imageOnAToolSlotThatCantCallToolsIsDeclined() async throws {
+        let (store, hashing) = try await ingestedStore()
+        let provider = ImageRecordingToolProvider(supportsToolCalls: false)
+        let responder = AgentRAGResponder(store: store, embedder: hashing, provider: provider, toolsProvider: { [] })
+        let (_, stream) = try await responder.answerStreaming(
+            "what's in this?", images: [Self.fox], history: [], onActivity: { _ in }
+        )
+        let text = await collect(stream)
+        #expect(text == AgentRAGResponder.imageNotCarriedReply(imageCount: 1, brainName: ""))
+        #expect(provider.session.imagesSeen == 0)
     }
 
     @Test("a brain that can carry the image still gets it")
@@ -450,7 +474,9 @@ struct AgentRAGResponderTests {
             store: store, embedder: hashing, provider: UnavailableProvider(), toolsProvider: { [] }
         )
         await #expect(throws: InferenceError.self) {
-            _ = try await responder.answerStreaming("what's in this?", images: [Self.fox], history: [], onActivity: { _ in })
+            _ = try await responder.answerStreaming(
+                "what's in this?", images: [Self.fox], history: [], onActivity: { _ in }
+            )
         }
     }
 
