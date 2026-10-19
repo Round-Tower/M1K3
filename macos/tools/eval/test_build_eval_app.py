@@ -44,9 +44,9 @@ def test_build_env_appends_after_git_config_entries_already_set():
 
 
 def test_a_git_the_build_runs_reads_fsmonitor_off(tmp_path, monkeypatch):
-    """A fresh -derivedDataPath hung at "Resolve Package Graph": with core.fsmonitor on (Kev's global config),
-    SwiftPM's `git status` in a submodule checkout spawned a detached fsmonitor daemon that held its pipe open.
-    The child `_run` starts must read the override, so a real git is asked."""
+    """A fresh -derivedDataPath hung at "Resolve Package Graph" with core.fsmonitor on (Kev's global config):
+    SwiftPM sat in `git status` on submodule checkouts beside new fsmonitor daemons. The child `_run` starts must
+    read the override, so a real git is asked."""
     hermetic_git(monkeypatch)
     global_config = tmp_path / "gitconfig"
     global_config.write_text("[core]\n\tfsmonitor = true\n")  # the global config that hung the build

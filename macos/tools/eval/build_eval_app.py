@@ -24,7 +24,8 @@ unchanged, and has not yet been run through this file.
 Review: Kev + claude-opus-5-5, 2026-10-18 — the stamp is read by run_chateval's `app_commit` (one reader, not a
 copy); `_run`'s log-only output, exit 2, the xcodegen failure and a non-zero xcodebuild are now pinned too.
 Review: Kev + claude-opus-5-5, 2026-10-19 — `_run` hands its child `build_env`: core.fsmonitor off. A fresh derived
-dir hung twice at "Resolve Package Graph" on the global fsmonitor daemon holding SwiftPM's git pipe. Confidence 0.85.
+dir hung twice at "Resolve Package Graph" beside new fsmonitor daemons on the submodule checkouts; `_git` gets the
+same env. Confidence 0.85 until a fresh derived dir builds through this file.
 """
 
 from __future__ import annotations
@@ -78,7 +79,9 @@ def app_path(derived_data: Path) -> Path:
 # ── side effects (thin; the build itself is the `_run` seam the tests replace) ──
 
 def _git(worktree: Path, *args: str) -> str:
-    return subprocess.run(["git", "-C", str(worktree), *args], capture_output=True, text=True, check=True).stdout
+    return subprocess.run(
+        ["git", "-C", str(worktree), *args], capture_output=True, text=True, check=True, env=build_env(os.environ)
+    ).stdout
 
 
 def dirty_reason(worktree: Path) -> str | None:
@@ -97,8 +100,9 @@ def dirty_reason(worktree: Path) -> str | None:
 
 def build_env(base: Mapping[str, str]) -> dict[str, str]:
     """`base` with git's core.fsmonitor off, appended after any GIT_CONFIG_* entries already set. With it on
-    (Kev's global config), SwiftPM's `git status` in a submodule checkout spawns a detached fsmonitor daemon
-    that inherits the pipe, so a fresh -derivedDataPath hung at "Resolve Package Graph" (2026-10-19, twice)."""
+    (Kev's global config), a fresh -derivedDataPath hung at "Resolve Package Graph" (2026-10-19, twice): SwiftPM
+    sat in `git status` on submodule checkouts, the git children <defunct>, each beside a new detached fsmonitor
+    daemon, and killing the daemons freed it."""
     env = dict(base)
     index = int(env.get("GIT_CONFIG_COUNT", "0") or "0")
     env[f"GIT_CONFIG_KEY_{index}"] = "core.fsmonitor"
