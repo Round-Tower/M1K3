@@ -23,8 +23,8 @@
 //  name for the web search backend; the clause reads it, and EgressDisclosureTests pins it equal
 //  to `WebSearchTool.providerName` (this module cannot link the tools). Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — the local answer says where memories and documents are stored
-//  ("stored on this Mac"), not that they "never leave on their own": Lil finished that line "…unless you
-//  explicitly ask", which is false (M1K3 decides when to search). Same fix as the persona's opening.
+//  ("stored on \(device)", "this machine" on the Mac), not that they "never leave on their own": Lil finished that
+//  line "…unless you explicitly ask", which is false (M1K3 decides when to search). Same fix as the persona's opening.
 //
 
 import Foundation
