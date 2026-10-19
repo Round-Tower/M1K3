@@ -11,12 +11,14 @@
 //  (`-thinkWaitPenalty P`) adds `ThoughtWordPenalty` to the same components; either arm runs alone.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-18, Confidence 0.7, Prior: none (new file).
-//  Open: verify-by-launch owed (a `thinking budget` notice and a closed thought on an Always turn).
-//  The tool session (MLXToolCalling) is not budgeted: Qwen3.5 may open `<tool_call>` from a thought.
+//  Open: the tool session (MLXToolCalling) is not budgeted: Qwen3.5 may open `<tool_call>` from a thought.
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — the NoWait arm (`-thinkWaitPenalty P`, ThinkBudget.NoWait) rides
 //  the same components: `ThoughtWordPenalty` pushes the openers down until the thought closes. Both arms are
 //  optional and compose; empty components still mean the default path. Confidence 0.65, verify-by-launch owed
 //  (the `nowait` notice naming the single-token spellings it found).
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — verified by launch on the eval builds: `thinking budget 1024 tokens`
+//  with every Always turn closing its thought and answering (38/38 hard trials, 0 empty), and the `nowait` notice
+//  naming 10 single-token spellings on Qwen3.5 (bare "hmm" isn't one). Comment only. Confidence 0.75.
 
 import Foundation
 import M1K3Inference
