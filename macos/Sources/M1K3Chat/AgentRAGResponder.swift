@@ -183,6 +183,14 @@
 //  `withThinking(false)`, after the shown reasoning, and an empty retry hands over to the
 //  fallbacks. Live on Always-think, Lil's reasoning-only stream left an empty bubble.
 //  Confidence 0.8 — the retry pays a second prefill; verify-by-launch owed.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — the thinking cap: open reasoning past `thinkingBudget`
+//  (default `ThinkingPolicy.thinkingBudgetCharacters`) stops the think phase and takes the straight-answer
+//  path above. Confidence 0.75 — the capped arm decides the figure.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — a brain that closes its own thought (`ThinkBudgetForcing`, Lil at
+//  1,024 tokens) moves the cut to a net above its budget, asked per turn so a hot-swap and both shells follow.
+//  A 4,000-character cut would race the forced close (10 of 38 forced hard thoughts ran past it). Confidence 0.8.
+//  Review: same day (pre-push review fold) — the turn's cut rides the anatomy notice (` · cut N`): the app's
+//  façade forward is compile-checked only, so a launch is how 8,192 against 4,000 is told apart. Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -211,6 +219,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// The user's reasoning preference, read fresh each turn (Settings picker:
     /// Auto / Always think / Fast answers) — same per-turn pattern as tools.
     private let thinkingModeProvider: @Sendable () -> ThinkingMode
+    /// Open reasoning, in characters, a plain or dispatched turn streams before it is cut
+    /// (nil at init: `ThinkingPolicy.thinkingBudgetCharacters`). A brain that forces its own close
+    /// overrides it per turn with a net above its budget (`thinkingCut`).
+    private let thinkingBudget: Int
     /// The active brain's display name (e.g. "Lil M1K3"), read fresh each turn so
     /// a runtime hot-swap is reflected — same per-turn pattern as `toolsProvider`.
     /// Empty when unknown (tests / simple callers); the context line omits it then.
@@ -284,6 +296,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         maxIterations: Int = 5,
         sourceCollector: ToolSourceCollector? = nil,
         thinkingModeProvider: @escaping @Sendable () -> ThinkingMode = { .auto },
+        thinkingBudget: Int? = nil,
         brainNameProvider: @escaping @Sendable () -> String = { "" },
         fastThinkingProvider: @escaping @Sendable () -> Bool = { false },
         historyBudgetProvider: @escaping @Sendable () -> HistoryWindow.Budget = { .default },
@@ -308,6 +321,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         self.maxIterations = maxIterations
         self.sourceCollector = sourceCollector
         self.thinkingModeProvider = thinkingModeProvider
+        self.thinkingBudget = thinkingBudget ?? ThinkingPolicy.thinkingBudgetCharacters
         self.brainNameProvider = brainNameProvider
         self.maxIterationsProvider = maxIterationsProvider
         self.fastThinkingProvider = fastThinkingProvider
@@ -634,6 +648,13 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         memories.filter { !SelfNoteClassifier.isWiringNote(title: $0.itemTitle, text: $0.content) }
     }
 
+    /// This turn's cut, in characters of open reasoning: a net above the brain's own budget when it forces its
+    /// close (asked through the façade each turn, so a hot-swap follows), else `thinkingBudget`.
+    private var thinkingCut: Int {
+        guard let tokens = (provider as? ThinkBudgetForcing)?.forcedThinkingTokens else { return thinkingBudget }
+        return ThinkBudget.characterCap(forTokens: tokens)
+    }
+
     /// One plain-chat turn into `continuation`: the turn's context, history and
     /// grounding with tool-free rules, one streamed generation. Returns false when
     /// nothing came back (AFM turns a guardrail or overflow into an empty stream),
@@ -672,9 +693,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 ambient: browserContextProvider?()?.render(), todos: todoContextProvider?()
             )
         }
-        Self.log.notice(
-            "\(Self.promptAnatomy(prompt: prompt, history: history, budget: historyBudget), privacy: .public)"
-        )
+        // The cut rides the anatomy line, so a launch shows which one this turn got (8,192 behind a forcing brain).
+        let thinkingBudget = thinkingCut
+        let anatomy = Self.promptAnatomy(prompt: prompt, history: history, budget: historyBudget)
+        Self.log.notice("\(anatomy, privacy: .public) · cut \(thinkingBudget)")
         let generate: @Sendable () async -> Bool = { [provider] in
             var answer = PlainTurnStream()
             for await chunk in provider.generateStreaming(prompt: prompt) {
@@ -682,6 +704,12 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 // Cumulative out, whatever came in: the consumer folds snapshots.
                 guard let clean = answer.ingest(chunk) else { continue }
                 continuation.yield(clean)
+                // The thinking cap: leaving the loop ends the stream, whose termination
+                // cancels the generation, and the turn answers straight below.
+                if answer.thinkingPastBudget(thinkingBudget) {
+                    Self.log.notice("plain turn thinking passed its budget (\(thinkingBudget) chars) — cutting it")
+                    break
+                }
             }
             // Reasoning alone is no answer (2026-10-17): a think phase cut at the token cap
             // left an empty bubble, and no fallback ran because it had streamed. Answer once

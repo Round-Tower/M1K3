@@ -42,6 +42,10 @@
 //  called `seedTrimmed` after 2026-09-26 made it the builder's `exact` (#509 follow-up). Rename only.
 //  Review: Kev + claude-opus-5-5, 2026-10-16 — the not-exact log no longer blames a wrapped window: windowed
 //  seeds are built exact now. Wording only.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — both generate calls take the budget-forcing components
+//  (`-thinkBudgetTokens`); empty components when it's off, so the default path is unchanged. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — and the NoWait arm's (`-thinkWaitPenalty`), through the same
+//  `thinkingComponents`. Confidence 0.8.
 
 import Foundation
 import MLX
@@ -68,6 +72,8 @@ extension MLXBrainProvider {
             persona: persona, specs: nil, format: resolvedToolCallFormat ?? .json
         )
         let parameters = generateParameters
+        let thinkBudget = thinkBudgetTokens(parameters: parameters)
+        let waitPenalty = thinkWaitPenalty()
         let thinkingContext = thinkingAdditionalContext
         let model = modelIdentifier
         let seedIDs = seed.tokenIDs
@@ -145,10 +151,15 @@ extension MLXBrainProvider {
                 cache = try context.model.newCache(parameters: parameters)
                 input = prepared
             }
+            // The thinking arms (`-thinkBudgetTokens`, `-thinkWaitPenalty`): empty components when they're off.
+            let components = thinkingComponents(
+                budget: thinkBudget, waitPenalty: waitPenalty, tokenizer: context.tokenizer, label: label
+            )
             let stream: AsyncStream<Generation>
             do {
                 stream = try MLXLMCommon.generate(
-                    input: input, cache: cache, state: state, parameters: parameters, context: context
+                    input: input, cache: cache, state: state, parameters: parameters, context: context,
+                    components: components
                 )
             } catch let error as ContinuationStateError {
                 // The model wanted state the seed lacked (its prefill handed none
@@ -160,7 +171,9 @@ extension MLXBrainProvider {
                 )
                 cache = try context.model.newCache(parameters: parameters)
                 input = prepared
-                stream = try MLXLMCommon.generate(input: input, cache: cache, parameters: parameters, context: context)
+                stream = try MLXLMCommon.generate(
+                    input: input, cache: cache, parameters: parameters, context: context, components: components
+                )
             }
             for await event in stream {
                 switch event {

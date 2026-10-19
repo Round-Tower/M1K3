@@ -118,6 +118,17 @@ def test_live_path_can_be_turned_off_for_bare_generation():
     assert "M1K3_SELFTEST_CHATEVAL_LIVE_PATH" not in trig
 
 
+@pytest.mark.parametrize(("live_path", "router", "warns"), [
+    (True, None, True),
+    (True, "dispatch", False),
+    (True, "off", False),
+    (False, None, False),
+])
+def test_a_live_run_without_a_route_is_flagged(live_path, router, warns):
+    # The plain turn (cut, retry, forced budget, NoWait) is reached only through a route, as in the app.
+    assert (rc.route_warning(base_opts(live_path=live_path, router=router)) is not None) == warns
+
+
 def test_dump_prompt_goes_inside_the_container():
     trig = rc.build_trigger(base_opts(dump_prompt=True), container=CONTAINER, power_source="ac",
                             powermode=2, commit=None, mlx_rev=None)
@@ -313,6 +324,14 @@ def test_full_answers_rides_the_trigger_only_when_asked():
     trig = rc.build_trigger(base_opts(full_answers=True), container=CONTAINER, power_source="ac",
                             powermode=None, commit=None, mlx_rev=None)
     assert trig["M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS"] == "1"
+
+
+def test_calculator_rides_the_trigger_only_when_asked():
+    assert "M1K3_SELFTEST_CHATEVAL_CALCULATOR" not in rc.build_trigger(
+        base_opts(), container=CONTAINER, power_source="ac", powermode=None, commit=None, mlx_rev=None)
+    trig = rc.build_trigger(base_opts(calculator=True), container=CONTAINER, power_source="ac",
+                            powermode=None, commit=None, mlx_rev=None)
+    assert trig["M1K3_SELFTEST_CHATEVAL_CALCULATOR"] == "1"
 
 
 def test_summary_shows_peak_memory_when_recorded(tmp_path):

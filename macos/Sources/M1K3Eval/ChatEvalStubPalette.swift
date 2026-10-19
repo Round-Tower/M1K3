@@ -18,6 +18,10 @@
 //  from day one; the AFM arm gained a matching @Generable shape (ChatEvalStage).
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — the recent_activity stub mirrors the production description's
 //  "busiest or most active days" so the eval sees what the app sees (tool-recent-busiest).
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — `calculator`: a stub that really computes (ArithmeticEvaluator),
+//  kept out of `specs` so every tool-use cell keeps its shape; the stage adds it only for the probe.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 (pre-push review) — the description says % is a remainder and a
+//  percentage goes in as a decimal ("80 * 15%" was an error the model couldn't read). Confidence 0.85.
 //
 
 import Foundation
@@ -47,21 +51,25 @@ public struct ChatEvalStubSpec: Sendable, Equatable {
     public let parameter: ChatEvalStubParameter?
     public let canned: String
     public let hardCanned: String
+    /// The stub computes its answer (`ArithmeticEvaluator`) instead of returning canned text.
+    public let evaluatesArithmetic: Bool
 
     public init(
         name: String, description: String, parameter: ChatEvalStubParameter?,
-        canned: String, hardCanned: String
+        canned: String, hardCanned: String, evaluatesArithmetic: Bool = false
     ) {
         self.name = name
         self.description = description
         self.parameter = parameter
         self.canned = canned
         self.hardCanned = hardCanned
+        self.evaluatesArithmetic = evaluatesArithmetic
     }
 
-    /// The output the stub returns for `input` — terminal or hard.
+    /// The output the stub returns for `input` — terminal or hard; computed for the calculator.
     public func output(for input: String, hard: Bool) -> String {
-        (hard ? hardCanned : canned).replacingOccurrences(of: "{input}", with: input)
+        if evaluatesArithmetic { return ArithmeticEvaluator.answer(input) }
+        return (hard ? hardCanned : canned).replacingOccurrences(of: "{input}", with: input)
     }
 }
 
@@ -130,6 +138,17 @@ public enum ChatEvalStubPalette {
                 + "Heartbeat: no pulses. Todos: none open. A quiet stretch — nothing to review."
         ),
     ]
+
+    /// The calculator probe's tool (2026-10-18): offered only under M1K3_SELFTEST_CHATEVAL_CALCULATOR=1,
+    /// never in `specs`, so no tool-use fixture or cell changes shape.
+    public static let calculator = ChatEvalStubSpec(
+        name: "calculate",
+        description: "Work out an arithmetic expression exactly. Use it for any sum you would otherwise do in "
+            + "your head. Argument: the expression, using numbers, + - * / ^, % (remainder, not percent) and "
+            + "brackets, e.g. (60 + 60) / 3. Write a percentage as a decimal: 15% is 0.15.",
+        parameter: ChatEvalStubParameter(name: "expression", description: "the arithmetic expression"),
+        canned: "", hardCanned: "", evaluatesArithmetic: true
+    )
 
     /// Every tool name a tool-use fixture may legally require.
     public static var names: [String] {

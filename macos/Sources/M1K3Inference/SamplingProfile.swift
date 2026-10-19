@@ -23,6 +23,11 @@
 //  profile is pinned to today's values; which arm wins is the eval's call).
 //  Prior: Unknown
 //  Review: Kev + claude-opus-5-5, 2026-10-09 — comment only: Qwen3.5 Lil has no card arm on purpose.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — `card-mode`: each family's card, per turn mode. The cards
+//  were read 2026-10-18 (Qwen/Qwen3.5-4B, google/gemma-4-12b-it, LiquidAI/LFM2.5-1.2B-Instruct on HF).
+//  The provider picks thinking vs instruct per generation from the turn's decision. `house` stays the
+//  default until the eval earns the flip. Confidence 0.7: the card values are copied; whether they beat
+//  house on a 4-bit 4B is the eval's question.
 //
 
 public struct SamplingProfile: Sendable, Equatable {
@@ -68,6 +73,42 @@ public struct SamplingProfile: Sendable, Equatable {
             return SamplingProfile(temperature: 0.7, topP: 0.8, topK: 20)
         }
         return nil
+    }
+
+    /// The card's sampling per turn mode (`card-mode`), by family. Cards read on 2026-10-18:
+    /// - Qwen3.5 (Lil): thinking 1.0 / 0.95 / 20 with presence 1.5; instruct 0.7 / 0.8 / 20 with
+    ///   presence 1.5; repetition penalty off (1.0) in both. The card's "precise coding" (0.6) and its
+    ///   two disagreeing "non-thinking reasoning" rows are left out.
+    /// - Gemma 4 (Big): one recipe for every use, 1.0 / 0.95 / 64, no penalties named.
+    /// - LFM2.5 (pocket): 0.1, top-k 50, repetition penalty 1.05; no top-p named.
+    /// Presence penalty spans `repetitionContextSize` tokens (64); the card's servers apply it to
+    /// the whole output, so this is the milder reading.
+    private static func modeCard(for modelID: String, thinking: Bool) -> SamplingProfile? {
+        let id = modelID.lowercased()
+        if id.contains("qwen3.5") {
+            return thinking
+                ? SamplingProfile(temperature: 1.0, topP: 0.95, topK: 20, repetitionPenalty: nil, presencePenalty: 1.5)
+                : SamplingProfile(temperature: 0.7, topP: 0.8, topK: 20, repetitionPenalty: nil, presencePenalty: 1.5)
+        }
+        if id.contains("gemma-4") {
+            return SamplingProfile(temperature: 1.0, topP: 0.95, topK: 64, repetitionPenalty: nil)
+        }
+        if id.contains("lfm2.5") {
+            return SamplingProfile(temperature: 0.1, topP: 1.0, topK: 50, repetitionPenalty: 1.05)
+        }
+        return nil
+    }
+
+    /// The `card-mode` arm's name.
+    public static let cardModeArm = "card-mode"
+
+    /// The profile for one generation, given the turn's thinking decision. Only
+    /// `card-mode` reads the mode; every other arm (and no arm) is `resolve(modelID:environment:)`.
+    public static func resolve(modelID: String, environment: [String: String], thinking: Bool) -> SamplingProfile {
+        guard environment[overrideKey] == cardModeArm else {
+            return resolve(modelID: modelID, environment: environment)
+        }
+        return modeCard(for: modelID, thinking: thinking) ?? house
     }
 
     /// The profile a model runs with: `house` unless an arm is requested AND the

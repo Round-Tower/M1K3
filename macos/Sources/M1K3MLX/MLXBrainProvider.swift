@@ -127,6 +127,22 @@
 //  EXACT (`seedBuild` takes the window), for the plain path to append to: `prefixIsReusable` became
 //  `prefixWorthBuilding(…wrappedSeeds:)` behind `-wrappedPersonaSeed NO`. Live voice turns paid ~1.9k tokens
 //  of prefill each (12–16 s on M1 Max). Confidence 0.75 until the live A/B.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — sampling per generation: `generateParameters` lays the turn's
+//  profile (`SamplingProfile.resolve(…thinking: effectiveThinking)`) over the fixed base, so `card-mode`
+//  samples a thinking turn on the card's thinking recipe and a straight turn on its instruct one. With no
+//  `card-mode` both profiles are the one the init resolved: no behaviour change. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — `thinkBudgetRequest`: the budget-forcing arm (`-thinkBudgetTokens N`,
+//  ThinkBudget) read once at init; the unseeded session forces `</think>` at the budget like the seeded turn
+//  (MLXBrainProvider+ThinkBudget). Off when absent: no behaviour change. Confidence 0.75, verify-by-launch owed.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — `thinkWaitPenaltyRequest`: the NoWait arm (`-thinkWaitPenalty P`),
+//  read once at init beside the budget and composed into the same components. Off when absent. Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — the budget is Lil's by default now (exact id, through
+//  `ThinkBudget.request(from:modelID:)`; argv overrides, 0 is off), and NoWait reads its words at init too
+//  (`-thinkWaitWords`). Confidence 0.8.
+//  Review: same day (pre-push review fold) — the init takes `defaults` (argv's domain, `.standard` in the app) so a
+//  test can give a brain a budget, and the budget notice says whether the template lets it force or leaves it inert.
+//  The per-generation sampling Review above missed one change: `apply` sets the presence window to the profile's 64,
+//  where the library's 20 applied before, so the legacy `card-presence` arm samples a wider window. Confidence 0.8.
 
 import Foundation
 import Hub
@@ -182,7 +198,37 @@ func logGenerationInfo(
 public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchecked Sendable {
     public let name: String
 
-    let generateParameters: GenerateParameters
+    /// Everything but sampling, fixed at init (token cap, KV, prefill).
+    private let baseGenerateParameters: GenerateParameters
+    /// The sampling for a thinking and a straight generation (identical unless `card-mode`).
+    private let thinkingSampling: SamplingProfile
+    private let straightSampling: SamplingProfile
+    /// Budget forcing, read once at init: Lil's shipping budget, or argv's (`-thinkBudgetTokens N`); nil is off.
+    let thinkBudgetRequest: ThinkBudget.Request?
+    /// The NoWait arm (`-thinkWaitPenalty P`), read once at init; nil (the default) is off.
+    let thinkWaitPenaltyRequest: Float?
+    /// The words NoWait pushes down (`-thinkWaitWords`), read once at init.
+    let thinkWaitWords: [String]
+
+    /// The parameters for THIS generation: the base plus the sampling of the turn's
+    /// thinking decision (`effectiveThinking`, the responder's `InferenceIntent.thinking`).
+    var generateParameters: GenerateParameters {
+        var params = baseGenerateParameters
+        Self.apply(effectiveThinking ? thinkingSampling : straightSampling, to: &params)
+        return params
+    }
+
+    private static func apply(_ sampling: SamplingProfile, to params: inout GenerateParameters) {
+        params.temperature = sampling.temperature
+        params.topP = sampling.topP
+        params.topK = sampling.topK
+        params.minP = sampling.minP
+        params.repetitionPenalty = sampling.repetitionPenalty
+        params.repetitionContextSize = sampling.repetitionContextSize
+        params.presencePenalty = sampling.presencePenalty
+        params.presenceContextSize = sampling.repetitionContextSize
+    }
+
     private let loader: SingleFlightLoader<ModelContainer>
     /// The native tool-call dialect resolved at init from the model family
     /// (Gemma → .gemma, Qwen/Llama → .json, …) — config.json's model_type when
@@ -295,7 +341,8 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         configuration: ModelConfiguration = LLMRegistry.gemma3_1B_qat_4bit,
         maxTokens: Int = MLXBrainProvider.defaultMaxTokens,
         name: String = "mlx-brain",
-        thinkingEnabled: Bool = true
+        thinkingEnabled: Bool = true,
+        defaults: UserDefaults = .standard
     ) {
         var params = GenerateParameters()
         params.maxTokens = maxTokens
@@ -311,17 +358,20 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         // `house` is exactly the old 1.1/64 plus mlx-swift-lm's defaults (0.6 /
         // top-p 1.0 / top-k off), and stays the default; M1K3_SAMPLING picks an
         // experiment arm (the model card's sampling) for the evals.
-        let sampling = SamplingProfile.resolve(
-            modelID: configuration.name,
-            environment: ProcessInfo.processInfo.environment
-        )
-        params.temperature = sampling.temperature
-        params.topP = sampling.topP
-        params.topK = sampling.topK
-        params.minP = sampling.minP
-        params.repetitionPenalty = sampling.repetitionPenalty
-        params.repetitionContextSize = sampling.repetitionContextSize
-        params.presencePenalty = sampling.presencePenalty
+        // Since 2026-10-18 the profile is chosen per generation (`generateParameters`):
+        // `card-mode` gives a thinking turn and a straight turn their own card recipe.
+        let environment = ProcessInfo.processInfo.environment
+        let thinking = SamplingProfile.resolve(modelID: configuration.name, environment: environment, thinking: true)
+        let straight = SamplingProfile.resolve(modelID: configuration.name, environment: environment, thinking: false)
+        thinkingSampling = thinking
+        straightSampling = straight
+        if thinking != .house || straight != .house {
+            let think = "t=\(thinking.temperature) k=\(thinking.topK) pres=\(thinking.presencePenalty ?? 0)"
+            let plain = "t=\(straight.temperature) k=\(straight.topK) pres=\(straight.presencePenalty ?? 0)"
+            mlxLoadLog.notice(
+                "sampling \(configuration.name, privacy: .public): thinking \(think, privacy: .public) · straight \(plain, privacy: .public)"
+            )
+        }
         if Self.supportsQuantizedKVCache(for: configuration) {
             // 8-bit quantized KV: halves per-token KV memory and, since decode is
             // memory-bandwidth-bound, speeds long transcripts. Replaces the
@@ -359,7 +409,15 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             for: configuration,
             override: UserDefaults.standard.integer(forKey: "prefillStepSize")
         )
-        generateParameters = params
+        baseGenerateParameters = params
+        // Budget forcing (2026-10-18; Lil's by default since 2026-10-19): argv overrides for any brain whose
+        // template pre-opens `<think>` (the notice below says which).
+        thinkBudgetRequest = ThinkBudget.request(from: defaults, modelID: configuration.name)
+        thinkWaitPenaltyRequest = ThinkBudget.NoWait.penalty(from: defaults)
+        thinkWaitWords = ThinkBudget.NoWait.words(from: defaults)
+        if let penalty = thinkWaitPenaltyRequest {
+            mlxLoadLog.notice("nowait \(configuration.name, privacy: .public): penalty \(penalty)")
+        }
         self.name = name
 
         // Resolve the model's native tool-call dialect and bake it into the
@@ -387,6 +445,12 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         // Both by NAME for a known family; an unknown family (no family word,
         // e.g. "Ornith") reads its template after the load (#264).
         initialThinkTraits = Self.thinkTraitsByName(for: configuration)
+        if let request = thinkBudgetRequest {
+            let applies = initialThinkTraits.map { $0.preOpensThink ? "forces" : "inert: no pre-opened <think>" }
+                ?? "decided after the load"
+            let budget = "\(request.tokens) tokens, transition \(request.transition.rawValue) (\(applies))"
+            mlxLoadLog.notice("thinking budget \(configuration.name, privacy: .public): \(budget, privacy: .public)")
+        }
         let loadConfiguration: ModelConfiguration = {
             var config = configuration
             if let resolved { config.toolCallFormat = resolved }
@@ -458,13 +522,15 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         modelID: String,
         maxTokens: Int = MLXBrainProvider.defaultMaxTokens,
         name: String = "mlx-brain",
-        thinkingEnabled: Bool = true
+        thinkingEnabled: Bool = true,
+        defaults: UserDefaults = .standard
     ) {
         self.init(
             configuration: LLMRegistry.shared.configuration(id: modelID),
             maxTokens: maxTokens,
             name: name,
-            thinkingEnabled: thinkingEnabled
+            thinkingEnabled: thinkingEnabled,
+            defaults: defaults
         )
     }
 
@@ -563,7 +629,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             }
             return Self.normaliseThinkPrefix(collected.withLock { $0 }, preOpened: thinkPrefixNeeded)
         }
-        let session = makeUpstreamSession(container)
+        let session = await makeUpstreamSession(container, label: "generate")
         var raw = ""
         for try await event in session.streamDetails(to: prompt, images: [], videos: []) {
             if let piece = event.chunk { raw += piece }
@@ -600,7 +666,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
                                 continuation.yield(piece)
                             }
                         } else {
-                            let session = makeUpstreamSession(container)
+                            let session = await makeUpstreamSession(container, label: "stream")
                             for try await event in session.streamDetails(to: prompt, images: [], videos: []) {
                                 if let chunk = event.chunk { continuation.yield(chunk) }
                                 if let info = event.info {
@@ -705,11 +771,22 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         override ?? M1K3Persona.compactPrompt(for: variant)
     }
 
-    private func makeUpstreamSession(_ container: ModelContainer) -> ChatSession {
+    private func makeUpstreamSession(_ container: ModelContainer, label: String) async -> ChatSession {
+        let parameters = generateParameters
+        // The thinking arms ride this path too, so an unseeded turn isn't the one that runs long.
+        var components = GenerationComponents()
+        let budget = thinkBudgetTokens(parameters: parameters)
+        let waitPenalty = thinkWaitPenalty()
+        if budget != nil || waitPenalty != nil {
+            components = await thinkingComponents(
+                budget: budget, waitPenalty: waitPenalty, tokenizer: container.tokenizer, label: label
+            )
+        }
         let session = ChatSession(
             container,
             instructions: Self.plainTurnInstructions(override: InferenceIntent.instructions, variant: personaVariant),
-            generateParameters: generateParameters
+            generateParameters: parameters,
+            components: components
         )
         if let context = thinkingAdditionalContext {
             session.additionalContext = context

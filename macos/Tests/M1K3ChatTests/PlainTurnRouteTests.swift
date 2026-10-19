@@ -16,6 +16,10 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — #622: pointing back at this chat skips the picker, with history only.
 //  Review: Kev + claude-opus-5.5, 2026-10-17 — a plain turn that thinks to the cap without answering
 //  answers straight after it (the live Always-think dead bubble); the fake records the turn's thinking.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — the thinking cap: reasoning past the budget is cut and answered
+//  straight; closed reasoning is never cut.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — a brain that forces its own close (the fake conforms to
+//  `ThinkBudgetForcing`) moves the cut to a net at 8 characters a token; both bounds of the net are pinned.
 //
 
 import Foundation
@@ -30,9 +34,11 @@ import Testing
 
 /// Streams scripted responses word by word (cumulative, like AFM), records each
 /// prompt, the instructions and thinking decision in force for it, and every turn re-arm.
-private final class RouteProvider: InferenceProvider, TurnWarmable, @unchecked Sendable {
+private final class RouteProvider: ThinkBudgetForcing, TurnWarmable, @unchecked Sendable {
     let name = "route-scripted"
     let isAvailable = true
+    /// A brain that closes its own thought at this many tokens (Lil's forcing); nil, as most scripts, doesn't.
+    let forcedThinkingTokens: Int?
     private let state = Mutex<(
         responses: [String], prompts: [String], instructions: [String?], thinking: [Bool?], warms: [String?]
     )>(([], [], [], [], []))
@@ -41,7 +47,8 @@ private final class RouteProvider: InferenceProvider, TurnWarmable, @unchecked S
     /// (the MLX shape), rather than one scripted answer per call.
     private let deltaPieces: [String]?
 
-    init(_ responses: [String], deltas: Bool = false) {
+    init(_ responses: [String], deltas: Bool = false, forcedThinkingTokens: Int? = nil) {
+        self.forcedThinkingTokens = forcedThinkingTokens
         deltaPieces = deltas ? responses : nil
         state.withLock { $0.responses = deltas ? [responses.joined()] : responses }
     }
@@ -120,12 +127,14 @@ private func responder(
     route: PlainTurnRoute?,
     consulted: Consulted = Consulted(),
     egress: String? = nil,
-    mode: ThinkingMode = .auto
+    mode: ThinkingMode = .auto,
+    thinkingBudget: Int = ThinkingPolicy.thinkingBudgetCharacters
 ) throws -> AgentRAGResponder {
     try AgentRAGResponder(
         store: KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
         toolsProvider: { [NoteTool()] },
         thinkingModeProvider: { mode },
+        thinkingBudget: thinkingBudget,
         egressClauseProvider: { egress },
         plainRouteProvider: route.map { route in
             { @Sendable in
@@ -405,6 +414,73 @@ struct PlainTurnRouteTests {
         #expect(provider.warms.count == 1, "answered: one re-arm")
     }
 
+    /// The thinking cap (2026-10-18): on chat and reasoning alike Lil's Always-think scored what Auto did
+    /// at ten times the time, thinking 2,500–4,500 tokens before a sum. Past the budget the think phase
+    /// stops where it is and the turn answers straight, as a turn that thought to the token cap does.
+    @Test("reasoning past the thinking budget is cut and answered straight")
+    func thinkingPastBudgetIsCut() async throws {
+        let provider = RouteProvider([
+            "<think>Let me see. Nine years, twice that, so eighteen. But wait, maybe the TAIL-OF-THE-THOUGHT",
+            "Mary is 18.",
+        ])
+        let text = try await answer(
+            responder(provider, route: chat(.chat), mode: .always, thinkingBudget: 40), "how old is Mary?"
+        )
+        let split = ReasoningSplit.split(text)
+        #expect(split.answer == "Mary is 18.")
+        #expect(split.reasoning?.contains("Nine years") == true, "the thought so far stays on show")
+        #expect(split.reasoning?.contains("TAIL-OF-THE-THOUGHT") == false, "the think phase stopped at the budget")
+        #expect(provider.thinking == [true, false])
+        #expect(text.components(separatedBy: "</think>").count == 2, "one close: \(text)")
+    }
+
+    /// Forcing ships for Lil (2026-10-19): the brain closes its own thought at 1,024 tokens, so the cut stands
+    /// back to a net at 8 characters a token. A 4,000-character cut would race the close: 10 of 38 forced
+    /// thoughts on the hard traps ran past 4,000 characters, and a cut thought is thrown away.
+    @Test("a brain that closes its own thought moves the cut to a net above its budget")
+    func forcingBrainMovesTheCut() async throws {
+        let script = ["<think>Let me see. Nine years, twice that, so eighteen. Checked once.</think> Mary is 18."]
+        // 10 tokens: an 80-character net, so the 62-character thought outlives the responder's 40.
+        let forcing = RouteProvider(script, forcedThinkingTokens: 10)
+        let kept = try await answer(
+            responder(forcing, route: chat(.chat), mode: .always, thinkingBudget: 40), "how old is Mary?"
+        )
+        #expect(ReasoningSplit.split(kept).answer == "Mary is 18.")
+        #expect(forcing.prompts.count == 1, "no cut, no retry")
+        // The same thought on a brain that doesn't force is cut at 40 and answered again.
+        let plain = RouteProvider(script + ["Mary is 18."])
+        _ = try await answer(
+            responder(plain, route: chat(.chat), mode: .always, thinkingBudget: 40), "how old is Mary?"
+        )
+        #expect(plain.prompts.count == 2)
+    }
+
+    @Test("past the net, a forcing brain's thought is still cut and answered straight")
+    func forcingBrainPastTheNetIsCut() async throws {
+        let provider = RouteProvider([
+            "<think>Nine years, twice that, so eighteen. Check it. Check it again. And again, once more. TAIL-OF-IT",
+            "Mary is 18.",
+        ], forcedThinkingTokens: 10)
+        let text = try await answer(
+            responder(provider, route: chat(.chat), mode: .always, thinkingBudget: 40), "how old is Mary?"
+        )
+        #expect(ReasoningSplit.split(text).answer == "Mary is 18.")
+        #expect(ReasoningSplit.split(text).reasoning?.contains("TAIL-OF-IT") == false, "cut at the 80-character net")
+        #expect(ReasoningSplit.split(text).reasoning?.contains("And again") == true, "not cut at the responder's 40")
+        #expect(provider.thinking == [true, false])
+    }
+
+    @Test("an answer after closed reasoning is never cut, however long the answer")
+    func closedReasoningIsNotCut() async throws {
+        let long = "Mary is 18, twice her brother's 9, and she will stay nine years older than him for good."
+        let provider = RouteProvider(["<think>Twice 9.</think> " + long])
+        let text = try await answer(
+            responder(provider, route: chat(.chat), mode: .always, thinkingBudget: 20), "how old is Mary?"
+        )
+        #expect(ReasoningSplit.split(text).answer == long)
+        #expect(provider.prompts.count == 1)
+    }
+
     /// PR review: reasoning that DID close, with nothing after it, is answered straight too, and
     /// the retry must not add a second close (a stray `</think>` would sit in the bubble).
     @Test("closed reasoning with an empty answer retries without a second close tag", arguments: [
@@ -513,6 +589,20 @@ struct PlainTurnStreamDeltaTests {
 }
 
 struct PlainTurnStreamTests {
+    @Test("only reasoning still open counts against the thinking budget")
+    func thinkingBudget() {
+        var open = PlainTurnStream()
+        _ = open.ingest("<think>one two three four")
+        #expect(open.thinkingPastBudget(10))
+        #expect(!open.thinkingPastBudget(100))
+        var closed = PlainTurnStream()
+        _ = closed.ingest("<think>one two three four</think>")
+        #expect(!closed.thinkingPastBudget(10), "closed: the answer is on its way")
+        var plain = PlainTurnStream()
+        _ = plain.ingest("A plain answer that runs well past ten characters.")
+        #expect(!plain.thinkingPastBudget(10))
+    }
+
     @Test("snapshots that could still become the label are held; the label is cut")
     func labelHandling() {
         #expect(PlainTurnStream.clean("M") == nil)

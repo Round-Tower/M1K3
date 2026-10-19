@@ -56,6 +56,10 @@ Review: Kev + claude-opus-5-5, 2026-10-10 — `--router off` (the live path, no 
 baseline); head/chain now need `dispatch` specifically.
 Review: Kev + claude-opus-5-5, 2026-10-16 — `--app-arg` (direct only): argv-domain A/B switches reach the exec
 (`direct_argv`), first for the wrapped-persona-seed arm (-wrappedPersonaSeed NO).
+Review: Kev + claude-opus-5-5, 2026-10-18 — `--calculator` (the calculator probe's stub) and the metacognition
+steer arms (reread, trap, working, budget).
+Review: Kev + claude-opus-5-5, 2026-10-19 — `route_warning`: a live-path run with no `--router` never reaches the
+plain turn, so the thinking cut, its retry, the forced budget and NoWait never run; the runner says so up front.
 """
 
 from __future__ import annotations
@@ -206,11 +210,20 @@ class RunOptions:
     dump_prompt: bool = False
     pcc: bool = False
     thinking: str | None = None  # None → the app's default (tier: production's shape)
-    think_steer: str | None = None  # none | terse | emoji | softcap — the think-steer A/B clause
+    think_steer: str | None = None  # none | terse | emoji | softcap | reread | trap | working | budget
     full_answers: bool = False  # whole answers in the document (bake-offs), not the 240-char excerpt
+    calculator: bool = False  # offer the computing `calculate` stub (the calculator probe)
     router: str | None = None  # "dispatch": the app's own tool route, every tier on (the router arm)
     router_head: bool = False  # + the group head (toolGroupRouter); needs router
     router_chain: bool = False  # + two-tool chains (toolChain); needs router
+
+
+def route_warning(opts: RunOptions) -> str | None:
+    """A live-path run with no route: the turn goes to the agent loop, never the plain turn the app takes."""
+    if opts.live_path and opts.router is None:
+        return ("! live path without --router: no plain route, so the thinking cut, the no-think retry, the forced "
+                "budget and NoWait never run (the Mac app routes every tier: --router dispatch)")
+    return None
 
 
 def build_trigger(opts: RunOptions, *, container: Path, power_source: str, powermode: int | None,
@@ -251,6 +264,8 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         trig["M1K3_SELFTEST_CHATEVAL_THINKING"] = opts.thinking
     if opts.think_steer:
         trig["M1K3_SELFTEST_CHATEVAL_THINK_STEER"] = opts.think_steer
+    if opts.calculator:
+        trig["M1K3_SELFTEST_CHATEVAL_CALCULATOR"] = "1"
     if opts.full_answers:
         trig["M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS"] = "1"
     if opts.router:
@@ -520,10 +535,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--kinds", default="", help="comma list of task kinds (default: all)")
     ap.add_argument("--repeats", type=int, default=1)
     ap.add_argument("--bare", action="store_true", help="bare provider.generate instead of the live path")
-    ap.add_argument("--think-steer", choices=["none", "terse", "emoji", "softcap"],
+    ap.add_argument("--think-steer", choices=["none", "terse", "emoji", "softcap", "reread", "trap", "working", "budget"],
                     help="the think-steer A/B clause appended to the turn's rules (M1K3_SELFTEST_CHATEVAL_THINK_STEER)")
     ap.add_argument("--thinking", choices=THINKING_MODES,
                     help="how every arm thinks: tier (production's shape, the app default), always, fast")
+    ap.add_argument("--calculator", action="store_true",
+                    help="offer the computing `calculate` stub beside the palette (the calculator probe)")
     ap.add_argument("--full-answers", action="store_true",
                     help="keep every answer whole in the document (bake-offs: fails stay re-adjudicable)")
     ap.add_argument("--router", choices=ROUTER_MODES,
@@ -556,6 +573,7 @@ def main(argv: list[str] | None = None) -> int:
         kinds=[k for k in args.kinds.split(",") if k], repeats=args.repeats,
         live_path=not args.bare, notes=args.notes, dump_prompt=args.dump_prompt, pcc=args.pcc,
         thinking=args.thinking, think_steer=args.think_steer, full_answers=args.full_answers,
+        calculator=args.calculator,
         router=args.router, router_head=args.router_head, router_chain=args.router_chain,
     )
     if args.app_arg and not args.direct:
@@ -573,6 +591,8 @@ def main(argv: list[str] | None = None) -> int:
     plan = plan_instances(running_instances(), live_app=LIVE_APP, target_app=str(app))
     report = Path(trig["M1K3_SELFTEST_OUT"])
     print(json.dumps(trig, indent=1, sort_keys=True))
+    if warning := route_warning(opts):
+        print(warning)
     print(f"power: {power} · quit: {plan.to_quit} · live running: {plan.live_was_running}")
     if "M1K3_SELFTEST_APP_COMMIT" not in trig:
         print("! app commit unknown (this build predates the GitCommitSHA stamp phase, or was built outside Xcode) — rebuild, or pass --commit")

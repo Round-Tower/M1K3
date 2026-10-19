@@ -78,6 +78,19 @@
 //  the bare arms scope `InferenceIntent.thinking` themselves (#555). `tier` now measures the shipped shape.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the grounded-Q arm (bare RAGResponder) scopes the arm's thinking flag
 //  too; unscoped it thought on 8/8 once the provider was built thinking-on (#555 after arm, 09:53).
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — the live arm takes the reasoning kind too: it ran bare generate
+//  even under LIVE_PATH, so no persona, no plain route and no thinking cap reached a reasoning turn, and the
+//  10-18 cap arm measured the bare model there. Confidence 0.9.
+//  Review: same day — the calculator probe: M1K3_SELFTEST_CHATEVAL_CALCULATOR=1 adds the computing `calculate`
+//  stub to the palette and notes each live turn's tools as a `calls calculate` check (pass if called, else skip).
+//  Review: same day — the eval responder takes the same character-cut stand-aside as the app under
+//  `--app-arg=-thinkBudgetTokens`, so the budget-forcing arm wires like the app. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — the responder asks the brain for its forced budget itself, so the eval
+//  passes none, as the app does (`--app-arg=-thinkBudgetTokens 0` is the cut's arm). The live arm takes refusal,
+//  security, document and sycophancy too: they ran bare generate under LIVE_PATH, so no cut, no retry and no
+//  persona stack reached them (the 10-19 security arm thought to the token cap, 9 of 24 empty). Confidence 0.85.
+//  Review: same day (pre-push review) — each brain's run prints its forced budget (`think budget:`), and the
+//  live-path doc lists the kinds it takes. Confidence 0.85.
 //
 
 import Foundation
@@ -300,11 +313,19 @@ enum ChatEvalStage {
     /// Internal (not private): PromptSizeStage reuses this SAME palette so its
     /// measured prompt carries the real production tool spec, not an empty one.
     static var toolPalette: [any AgentTool] {
-        ChatEvalStubPalette.specs.map { StubTool(spec: $0, hard: hardStubs) }
+        let specs = ChatEvalStubPalette.specs + (calculatorRequested ? [ChatEvalStubPalette.calculator] : [])
+        return specs.map { StubTool(spec: $0, hard: hardStubs) }
     }
 
-    /// LIVE-PATH arm (M1K3_SELFTEST_CHATEVAL_LIVE_PATH=1): open-chat and
-    /// code-gen fixtures run through AgentRAGResponder — the SAME prompt stack
+    /// The calculator probe (2026-10-18): offer a stub that really computes, and note whether a turn used it.
+    private static var calculatorRequested: Bool {
+        SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_CALCULATOR") == "1"
+    }
+
+    /// LIVE-PATH arm (M1K3_SELFTEST_CHATEVAL_LIVE_PATH=1): every closed-book kind
+    /// (open-chat, code-gen, reasoning, refusal, security, world-knowledge, humour,
+    /// interview, instruction-following, document, sycophancy; tool-use under a
+    /// router mode) runs through AgentRAGResponder — the SAME prompt stack
     /// the chat UI assembles every turn (retrieve-first grounding head + RULES
     /// incl. the generative carve-out + the agent loop with tools) — instead of
     /// bare `provider.generate`. The bare arm isolates the persona; this arm
@@ -623,6 +644,7 @@ enum ChatEvalStage {
         let plan = EvalThinkingPlan(tier: tier, mode: thinkingMode)
         let steer = ThinkSteer(envValue: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_THINK_STEER"))
         emit("  think steer: \(steer.rawValue)")
+        if calculatorRequested { emit("  calculator: offered (calculate stub)") }
         emit("  thinking: \(thinkingMode.rawValue) (bare \(plan.bareThinks ? "on" : "off"), "
             + "live \(plan.liveForced.map { $0 ? "always" : "fast" } ?? "auto, \(plan.liveFastByDefault ? "speed-tier" : "full") policy"))")
         let provider: any InferenceProvider
@@ -652,6 +674,10 @@ enum ChatEvalStage {
                 maxTokens: HistoryBudgetPolicy.generationTokenCap(for: tier, defaultCap: MLXBrainProvider.defaultMaxTokens),
                 thinkingEnabled: true // the app's build; the bare arms scope their own flag (#555)
             )
+        }
+        // Forcing is on by default for Lil since 2026-10-19, so every run says what its brain forces.
+        if let forcing = provider as? ThinkBudgetForcing {
+            emit("  think budget: " + (forcing.forcedThinkingTokens.map { "\($0) tokens (forced close)" } ?? "off"))
         }
         return await evalProvider(provider, thinking: plan, emit: emit)
     }
@@ -747,16 +773,24 @@ enum ChatEvalStage {
             // trailing `where` would leave .openChat matching unconditionally.
             case .openChat where livePathRequested, .codeGen where livePathRequested,
                  .worldKnowledge where livePathRequested, .humour where livePathRequested,
-                 .interview where livePathRequested,
-                 .instructionFollowing where livePathRequested:
+                 .interview where livePathRequested, .reasoning where livePathRequested,
+                 .instructionFollowing where livePathRequested, .refusal where livePathRequested,
+                 .security where livePathRequested, .document where livePathRequested,
+                 .sycophancy where livePathRequested:
                 // The live-path arm: the production AgentRAGResponder stack
                 // (grounding head + RULES + agent loop) instead of bare generate.
                 let observation = try await livePathObservation(
                     fixture, provider: provider, thinking: thinking, start: start, clock: clock
                 )
-                return ChatEvalScorer.score(
+                let score = ChatEvalScorer.score(
                     fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
+                guard calculatorRequested else { return score }
+                return score.appending(EvalCheck(
+                    name: "calls calculate",
+                    outcome: observation.toolCalls.contains(ChatEvalStubPalette.calculator.name) ? .pass : .skip,
+                    detail: observation.toolCalls.joined(separator: ", ")
+                ))
             case .openChat, .reasoning, .codeGen, .refusal, .security, .worldKnowledge,
                  .humour, .interview, .instructionFollowing, .document, .sycophancy:
                 // codeGen is closed-book like the others: plain generate, then the

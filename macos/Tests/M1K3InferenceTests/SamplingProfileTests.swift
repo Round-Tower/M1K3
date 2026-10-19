@@ -13,6 +13,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — the card arm belongs to the Qwen3 2507 (Lil until
 //  2026-10-08), named as such; the shipped Lil (Qwen3.5-4B, #517) has no card entry and stays `house`
 //  under every arm until an eval reads its card — pinned, green from the start.
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — `card-mode`: each family's card per turn mode (Qwen3.5
+//  thinking vs instruct, Gemma 4, LFM2.5; cards read 2026-10-18); every other arm and no arm unchanged.
 //
 
 @testable import M1K3Inference
@@ -74,5 +76,73 @@ struct SamplingProfileTests {
     func unknownModelStaysHouse() {
         #expect(SamplingProfile.resolve(modelID: big, environment: [SamplingProfile.overrideKey: "card"]) == .house)
         #expect(SamplingProfile.resolve(modelID: qwen2507, environment: [SamplingProfile.overrideKey: "nonsense"]) == .house)
+    }
+
+    // MARK: - card-mode (2026-10-18): the card's sampling per turn mode
+
+    private let pocket = "mlx-community/LFM2.5-1.2B-Instruct-4bit"
+    private func cardMode(_ id: String, thinking: Bool) -> SamplingProfile {
+        SamplingProfile.resolve(modelID: id, environment: [SamplingProfile.overrideKey: "card-mode"], thinking: thinking)
+    }
+
+    @Test("card-mode gives Lil Qwen3.5's thinking-mode card on a thinking turn, no repetition penalty")
+    func lilThinkingCard() {
+        let p = cardMode(lil, thinking: true)
+        #expect(p.temperature == 1.0)
+        #expect(p.topP == 0.95)
+        #expect(p.topK == 20)
+        #expect(p.minP == 0)
+        #expect(p.presencePenalty == 1.5)
+        #expect(p.repetitionPenalty == nil)
+    }
+
+    @Test("card-mode gives Lil Qwen3.5's instruct card on a straight turn")
+    func lilInstructCard() {
+        let p = cardMode(lil, thinking: false)
+        #expect(p.temperature == 0.7)
+        #expect(p.topP == 0.8)
+        #expect(p.topK == 20)
+        #expect(p.presencePenalty == 1.5)
+        #expect(p.repetitionPenalty == nil)
+    }
+
+    @Test("card-mode gives Big Gemma 4's one card in both modes")
+    func bigCard() {
+        for thinking in [true, false] {
+            let p = cardMode(big, thinking: thinking)
+            #expect(p.temperature == 1.0)
+            #expect(p.topP == 0.95)
+            #expect(p.topK == 64)
+            #expect(p.repetitionPenalty == nil)
+            #expect(p.presencePenalty == nil)
+        }
+    }
+
+    @Test("card-mode gives pocket LFM2.5's card: near-greedy with its own light repetition penalty")
+    func pocketCard() {
+        let p = cardMode(pocket, thinking: false)
+        #expect(p.temperature == 0.1)
+        #expect(p.topK == 50)
+        #expect(p.topP == 1.0)
+        #expect(p.repetitionPenalty == 1.05)
+        #expect(p.presencePenalty == nil)
+    }
+
+    @Test("without card-mode the mode-aware resolve is exactly today's resolve")
+    func modeAwareResolveKeepsOtherArms() {
+        for env in [[:], [SamplingProfile.overrideKey: "card"], [SamplingProfile.overrideKey: "nonsense"]] {
+            for id in [lil, big, pocket, qwen2507] {
+                for thinking in [true, false] {
+                    #expect(SamplingProfile.resolve(modelID: id, environment: env, thinking: thinking)
+                        == SamplingProfile.resolve(modelID: id, environment: env))
+                }
+            }
+        }
+    }
+
+    @Test("card-mode on a family with no mode card keeps the house profile")
+    func cardModeUnknownStaysHouse() {
+        #expect(cardMode("mlx-community/Llama-3.2-1B-Instruct-4bit", thinking: true) == .house)
+        #expect(cardMode(qwen2507, thinking: false) == .house)
     }
 }

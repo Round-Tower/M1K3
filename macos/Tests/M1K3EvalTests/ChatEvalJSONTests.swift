@@ -9,6 +9,7 @@
 //  sorted so two runs diff cleanly.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-05, Confidence 0.9. Prior: Unknown
+//  Review: Kev + claude-opus-5-5, 2026-10-18 — `appending(_:)` pinned beside `withRepeatIndex`.
 
 import Foundation
 @testable import M1K3Eval
@@ -80,6 +81,15 @@ struct ChatEvalJSONTests {
         let stamped = base.withRepeatIndex(2)
         #expect(stamped.repeatIndex == 2)
         #expect(stamped.fixtureID == base.fixtureID && stamped.checks == base.checks && stamped.latencyMS == 10)
+    }
+
+    @Test("appending adds one check and changes nothing else (the calculator probe's tool note)")
+    func appendCheck() {
+        let base = score("s1", .security, passed: true, latency: 10, repeatIndex: 1)
+        let note = EvalCheck(name: "calls calculate", outcome: .skip, detail: "datetime")
+        let added = base.appending(note)
+        #expect(added.checks == base.checks + [note])
+        #expect(added.fixtureID == base.fixtureID && added.repeatIndex == 1 && added.latencyMS == 10)
     }
 
     @Test("a scorecard written before powerSource existed still decodes, with the source unknown")
