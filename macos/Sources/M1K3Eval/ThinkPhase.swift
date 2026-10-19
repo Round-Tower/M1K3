@@ -20,6 +20,9 @@
 //  first drafts again; the run decides.
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — `thought(_:)`: the block's text, so a score can keep the thinking
 //  itself (Kev: eval the thinking process, not only the answer; NoWait's check is a count inside it). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — `blocks(_:)`: every block, in order. An agent turn thinks once per
+//  send (each opens its own block), and `measure` reads only the first, so a tool turn's later thinking was
+//  invisible to the eval. `measure` and `thought` are unchanged. Confidence 0.85.
 
 import Foundation
 
@@ -59,6 +62,23 @@ public enum ThinkPhase {
         let think = afterOpen[..<close.lowerBound].count
         let answer = before + afterOpen[close.upperBound...].count
         return ThinkPhaseMetrics(thinkChars: think, answerChars: answer, unclosed: false)
+    }
+
+    /// Every block's text, in order: each to its close, and an unclosed last one to the end. An agent turn thinks
+    /// once per send, and `measure` reads only the first block, so a tool turn's later thinking shows only here.
+    public static func blocks(_ raw: String) -> [String] {
+        var out: [String] = []
+        var rest = raw[...]
+        while let open = rest.range(of: openTag) {
+            let afterOpen = rest[open.upperBound...]
+            guard let close = afterOpen.range(of: closeTag) else {
+                out.append(String(afterOpen))
+                break
+            }
+            out.append(String(afterOpen[..<close.lowerBound]))
+            rest = afterOpen[close.upperBound...]
+        }
+        return out
     }
 
     /// The text `measure` counts: the first block, to its close or (unclosed) to the end. nil with no block.

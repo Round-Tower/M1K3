@@ -10,6 +10,8 @@
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-05, Confidence 0.9. Prior: Unknown
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — `appending(_:)` pinned beside `withRepeatIndex`.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — both copies pinned lossless over every field (a follow-up from #643's
+//  review: they copied by hand, so a field added later could drop). Confidence 0.85.
 
 import Foundation
 @testable import M1K3Eval
@@ -90,6 +92,27 @@ struct ChatEvalJSONTests {
         let added = base.appending(note)
         #expect(added.checks == base.checks + [note])
         #expect(added.fixtureID == base.fixtureID && added.repeatIndex == 1 && added.latencyMS == 10)
+    }
+
+    @Test("both copies keep every field: set each away from its default and nothing may come back changed")
+    func copiesKeepEveryField() throws {
+        let full = ChatEvalScore(
+            fixtureID: "f", kind: .reasoning, checks: [EvalCheck(name: "c", outcome: .pass, detail: "d")],
+            latencyMS: 7, answerPreview: "said", repeatIndex: 3, routeStage: "head",
+            thinkChars: 11, thinkMS: 13, thought: "t", thinkBlocks: 2, thinkCharsTotal: 17
+        )
+        #expect(full.withRepeatIndex(full.repeatIndex) == full)
+        let note = EvalCheck(name: "n", outcome: .skip)
+        let noted = full.appending(note)
+        #expect(noted.checks == full.checks + [note])
+        /// Everything but the checks, compared as JSON so a field added later is covered without naming it here.
+        func rest(_ score: ChatEvalScore) throws -> NSDictionary {
+            let object = try JSONSerialization.jsonObject(with: JSONEncoder().encode(score))
+            let dictionary = try #require(object as? [String: Any])
+            return dictionary.filter { $0.key != "checks" } as NSDictionary
+        }
+        #expect(try rest(noted) == rest(full))
+        #expect(try rest(full).count == 11, "every field but the checks is set, so a drop shows")
     }
 
     @Test("a scorecard written before powerSource existed still decodes, with the source unknown")

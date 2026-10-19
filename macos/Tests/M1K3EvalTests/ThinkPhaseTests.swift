@@ -8,6 +8,8 @@
 //  never thinks.
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — the thought itself: `ThinkPhase.thought` and a score that keeps
 //  it whole through repeats, notes and JSON (Kev: eval the thinking, not only the answer). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — every block: an agent turn thinks once per send, and the first block
+//  alone hid the rest from the tool-session budget question. Confidence 0.85.
 
 import Foundation
 @testable import M1K3Eval
@@ -108,6 +110,29 @@ struct ThinkPhaseTests {
         #expect(ThinkPhase.thought("Hi <think>still going") == "still going")
         #expect(ThinkPhase.thought("<think>x</think>a<think>b") == "x")
         #expect(ThinkPhase.thought("Just an answer.") == nil)
+    }
+
+    @Test("every block is read: an agent turn thinks once per send, and the first block alone hid the rest")
+    func everyBlock() {
+        #expect(ThinkPhase.blocks("<think>ab</think>call<think>cde</think>Answer.") == ["ab", "cde"])
+        #expect(ThinkPhase.blocks("<think>x</think>a<think>still going") == ["x", "still going"])
+        #expect(ThinkPhase.blocks("Just an answer.").isEmpty)
+    }
+
+    @Test("a score counts every think block and their characters; the first block's measure is unchanged")
+    func scoreCountsEveryBlock() throws {
+        let fixture = ChatEvalFixture(id: "t", kind: .toolUse, prompt: "p", expectation: .init())
+        let score = ChatEvalScorer.score(
+            fixture: fixture, observation: EvalObservation(rawText: "<think>ab</think>call<think>cde</think>Answer.")
+        )
+        #expect(score.thinkBlocks == 2)
+        #expect(score.thinkCharsTotal == 5)
+        #expect(score.thinkChars == 2 && score.thought == "ab")
+
+        let plain = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: "Twelve."))
+        #expect(plain.thinkBlocks == nil && plain.thinkCharsTotal == nil)
+        let json = try #require(String(data: JSONEncoder().encode(plain), encoding: .utf8))
+        #expect(!json.contains("thinkBlocks") && !json.contains("thinkCharsTotal"), "no keys: older documents read the same")
     }
 
     @Test("a score keeps the whole thought through repeats, notes and JSON; no key when nothing was thought")
