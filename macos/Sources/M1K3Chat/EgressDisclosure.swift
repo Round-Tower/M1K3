@@ -29,6 +29,8 @@
 //  "I decide when to search". With the clause beside the question Lil still opened "No… unless you explicitly ask":
 //  what-leaves 0/3 on master and on the opening-only arm, 2/3 in the screen arm; capabilities 3/3. Confidence 0.7
 //  until the full gate (security x3, Big, pocket, Mini).
+//  Review: same day (pre-push review fold) — Home leads with a plain "Yes." (every message goes to the Mac);
+//  the doc names the real device nouns. The Mac's strings, which the gate measures, are unchanged.
 //
 
 import Foundation
@@ -60,12 +62,15 @@ public struct EgressFacts: Sendable, Equatable {
 public enum EgressDisclosure {
     /// A ready answer, first person, quoted: Mini (live, router arm, 2026-10-04) garbled a
     /// bulleted list of facts 2/3 ("anything you type stays here") but copies a sentence.
-    /// `device` is `HostPlatform.thisDevice` ("this Mac").
+    /// `device` is `HostPlatform.thisDevice` ("this machine" on the Mac, "this device" on iOS).
     public static func clause(_ facts: EgressFacts, device: String) -> String {
         var answer: [String] = []
         // Lead with the verdict: asked "does anything leave?", Lil answered "No… unless you explicitly ask" even
         // with this clause beside the question (0/3, 10-19). An exit exists, so the first word is yes.
-        if facts.webSearch || facts.privateCloudOffered || facts.brainIsHome {
+        // On Home every message goes to the Mac: not "some of it" (review fold).
+        if facts.brainIsHome {
+            answer.append("Yes.")
+        } else if facts.webSearch || facts.privateCloudOffered {
             answer.append("Yes, some of it can.")
         }
         answer.append(

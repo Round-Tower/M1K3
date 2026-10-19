@@ -14,10 +14,15 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — the local answer pins "stored on this Mac" and no "never".
 //  Review: same day — `leadsWithTheVerdict`: "Yes, some of it can." whenever an exit exists, and "I decide when to
 //  search" (Lil's "unless you explicitly ask" was false: M1K3 picks when).
+//  Review: same day (pre-push review fold) — the length budget renders the real device noun over all eight
+//  combinations (it read "this Mac" and passed by 4; raised 480 → 520, measured); Home leads with a plain "Yes.";
+//  the rendered answer is scored against chat-what-leaves.
 //
 
 import M1K3AgentTools
 @testable import M1K3Chat
+import M1K3Eval
+import M1K3Inference
 import Testing
 
 struct EgressDisclosureTests {
@@ -93,15 +98,47 @@ struct EgressDisclosureTests {
 
     /// 2026-10-19: asked "does anything I type ever leave this device?", Lil answered "No… unless you explicitly
     /// ask" with this clause beside the question (0/3 on master). Leading with the verdict and naming who decides
-    /// to search took it to 2/3 in the screen arm (docs/evals/2026-10-19-lil-privacy-*).
+    /// to search scored 2/3 in one n=3 screen arm (docs/evals/2026-10-19-lil-privacy.md).
     @Test("the answer leads with yes whenever something can leave, and says M1K3 decides when to search")
     func leadsWithTheVerdict() {
-        let exits = [(true, false, false), (false, true, false), (false, false, true), (true, true, false)]
-        for (web, pcc, home) in exits {
-            #expect(line(web: web, pcc: pcc, home: home).contains("in your own voice:\n\"Yes, some of it can. "))
+        for (web, pcc) in [(true, false), (false, true), (true, true)] {
+            #expect(line(web: web, pcc: pcc, home: false).contains("in your own voice:\n\"Yes, some of it can. "))
         }
-        #expect(!line(web: false, pcc: false, home: false).contains("Yes, some of it can"))
+        #expect(!line(web: false, pcc: false, home: false).contains("Yes"))
         #expect(line(web: true).contains("I decide when to search"))
+    }
+
+    /// Review fold: on Home every message, and the memories it draws on, go to the Mac — not "some of it".
+    @Test("on Brain at Home the verdict is a plain yes")
+    func homeLeadsWithAPlainYes() {
+        for web in [true, false] {
+            let text = line(web: web, home: true)
+            #expect(text.contains("in your own voice:\n\"Yes. "))
+            #expect(!text.contains("some of it can"))
+        }
+    }
+
+    /// Review fold: the honest answer, rendered as the shell renders it, passes the eval's what-leaves fixture —
+    /// a reworded clause fails here before it fails an eval arm.
+    @Test("the rendered answer passes chat-what-leaves on every combination")
+    func renderedAnswerPassesWhatLeaves() throws {
+        let fixture = try #require(ChatEvalFixtures.all.first { $0.id == "chat-what-leaves" })
+        for web in [true, false] {
+            for pcc in [true, false] {
+                for home in [true, false] where web || pcc || home {
+                    let clause = EgressDisclosure.clause(
+                        EgressFacts(webSearch: web, privateCloudOffered: pcc, brainIsHome: home),
+                        device: HostPlatform.thisDevice
+                    )
+                    let answer = try #require(clause.components(separatedBy: "\n\"").last).dropLast()
+                    let observation = EvalObservation(rawText: String(answer))
+                    let score = ChatEvalScorer.score(fixture: fixture, observation: observation)
+                    let failed = score.checks.filter { $0.outcome == .fail }
+                    // Without web search the answer names no search: that check is the fixture's, not a leak.
+                    #expect(failed.allSatisfy { $0.name == "contains any" && !web }, "\(web)/\(pcc)/\(home): \(failed)")
+                }
+            }
+        }
     }
 
     @Test("never the retired absolute, and always names the device")
@@ -118,10 +155,21 @@ struct EgressDisclosureTests {
         }
     }
 
+    /// Rendered with the shell's own device noun ("this machine" here; the pin used "this Mac" and passed by 4).
+    /// ~4 chars a token: 520 is ~130 tokens on Mini's 4,096 floor. The verdict lead and "I decide when to search"
+    /// (2026-10-19) moved the longest from ~463 to ~500; raised from 480 for that, measured, not drifted into.
     @Test("it stays short: it rides every turn, Mini's window is 4096 tokens")
     func compact() {
-        // ~4 chars a token: the longest combination stays under ~120 tokens.
-        #expect(line(web: true, pcc: true, home: false).count < 480)
-        #expect(line(web: true, pcc: false, home: true).count < 480) // iOS: no PCC
+        for web in [true, false] {
+            for pcc in [true, false] {
+                for home in [true, false] {
+                    let text = EgressDisclosure.clause(
+                        EgressFacts(webSearch: web, privateCloudOffered: pcc, brainIsHome: home),
+                        device: HostPlatform.thisDevice
+                    )
+                    #expect(text.count < 520, "\(web)/\(pcc)/\(home): \(text.count)")
+                }
+            }
+        }
     }
 }
