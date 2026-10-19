@@ -5,7 +5,8 @@
 //  Budget forcing, the A/B arm (2026-10-18): Lil thinks 2,500–4,500 tokens before answering a sum,
 //  and the 4,000-character cut throws the thought away and asks again. `-thinkBudgetTokens N` makes
 //  the provider force `</think>` at N tokens instead, in the same generation, so the answer is built
-//  on the thought. Off unless asked for; the arm decides whether it ships.
+//  on the thought. Lil's exact id forces at 1,024 tokens by default (2026-10-19); argv overrides for
+//  any brain, and 0 is off.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-18, Confidence 0.8, Prior: none (new file).
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — the NoWait arm (`-thinkWaitPenalty P`): argv parsing, the
@@ -13,6 +14,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — forcing ships for Lil: 1,024 tokens by default for Lil's exact
 //  id only, argv overriding for any brain (0 is off), and the character cut a net at 8 per token above it. The
 //  NoWait word list takes argv too (`-thinkWaitWords`, or `paper` for the paper's seventeen). Confidence 0.8.
+//  Review: same day (pre-push review) — the shipping Lil tier must carry a budget (a Lil swap re-measures and adds
+//  its id), the keys are lowercase, the transition reads case-blind, and the audition case is a real folder form.
 
 import Foundation
 @testable import M1K3Inference
@@ -43,10 +46,24 @@ struct ThinkBudgetTests {
         #expect(request([:], lil.uppercased()) == ThinkBudget.Request(tokens: 1024, transition: .close), "case-blind")
     }
 
+    @Test("the shipping Lil has a measured budget, under a lowercase key")
+    func shippingLilIsBudgeted() throws {
+        let tierLil = try #require(BrainTier.lil.mlxModelID)
+        #expect(
+            request([:], tierLil) != nil,
+            "BrainTier.lil is now \(tierLil): measure its forced budget, then add it to ThinkBudget.shippingBudgets"
+        )
+        for key in ThinkBudget.shippingBudgets.keys {
+            #expect(key == key.lowercased(), "lookup lowercases the id, so \(key) would never match")
+        }
+    }
+
     @Test("no other brain forces by default: the exact id only, not the family", arguments: [
         "mlx-community/gemma-4-12B-it-4bit", "mlx-community/LFM2.5-1.2B-Instruct-4bit",
         "mlx-community/Qwen3.5-2B-MLX-4bit", "mlx-community/Qwen3.8-27B-4bit", "prism-ml/Ternary-Bonsai-27B",
-        "/Users/me/Auditions/Qwen3.5-4B-MLX-4bit",
+        // Another org's folder of the same repo: never a suffix match. (A folder at
+        // <root>/mlx-community/Qwen3.5-4B-MLX-4bit reports Lil's exact id, and is budgeted on purpose.)
+        "lmstudio-community/Qwen3.5-4B-MLX-4bit",
     ])
     func othersOffByDefault(modelID: String) {
         #expect(request([:], modelID) == nil)
@@ -69,6 +86,8 @@ struct ThinkBudgetTests {
             == ThinkBudget.Request(tokens: 1024, transition: .close))
         #expect(request(["thinkBudgetTransition": "qwen"], lil)
             == ThinkBudget.Request(tokens: 1024, transition: .qwen), "the transition applies to the default too")
+        #expect(request(["thinkBudgetTransition": "Qwen"], lil)
+            == ThinkBudget.Request(tokens: 1024, transition: .qwen), "case-blind")
     }
 
     @Test("a budget applies only to a generation that opens thinking")

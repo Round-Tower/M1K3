@@ -18,6 +18,8 @@
 //  answers straight after it (the live Always-think dead bubble); the fake records the turn's thinking.
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — the thinking cap: reasoning past the budget is cut and answered
 //  straight; closed reasoning is never cut.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — a brain that forces its own close (the fake conforms to
+//  `ThinkBudgetForcing`) moves the cut to a net at 8 characters a token; both bounds of the net are pinned.
 //
 
 import Foundation
@@ -438,7 +440,7 @@ struct PlainTurnRouteTests {
     @Test("a brain that closes its own thought moves the cut to a net above its budget")
     func forcingBrainMovesTheCut() async throws {
         let script = ["<think>Let me see. Nine years, twice that, so eighteen. Checked once.</think> Mary is 18."]
-        // 10 tokens: an 80-character net, so the 55-character thought outlives the responder's 40.
+        // 10 tokens: an 80-character net, so the 62-character thought outlives the responder's 40.
         let forcing = RouteProvider(script, forcedThinkingTokens: 10)
         let kept = try await answer(
             responder(forcing, route: chat(.chat), mode: .always, thinkingBudget: 40), "how old is Mary?"
@@ -464,6 +466,7 @@ struct PlainTurnRouteTests {
         )
         #expect(ReasoningSplit.split(text).answer == "Mary is 18.")
         #expect(ReasoningSplit.split(text).reasoning?.contains("TAIL-OF-IT") == false, "cut at the 80-character net")
+        #expect(ReasoningSplit.split(text).reasoning?.contains("And again") == true, "not cut at the responder's 40")
         #expect(provider.thinking == [true, false])
     }
 

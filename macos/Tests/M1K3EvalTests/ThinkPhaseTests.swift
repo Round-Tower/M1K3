@@ -4,7 +4,8 @@
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-10, Confidence 0.85, Prior: none (new file).
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — the metacognition arms (reread, trap, working, budget) parse
-//  and keep the "Then answer normally" contract; two of them must work on a turn that never thinks.
+//  and keep the "Then answer normally" contract; three of them (reread, trap, working) must work on a turn that
+//  never thinks.
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — the thought itself: `ThinkPhase.thought` and a score that keeps
 //  it whole through repeats, notes and JSON (Kev: eval the thinking, not only the answer). Confidence 0.85.
 

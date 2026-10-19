@@ -189,6 +189,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — a brain that closes its own thought (`ThinkBudgetForcing`, Lil at
 //  1,024 tokens) moves the cut to a net above its budget, asked per turn so a hot-swap and both shells follow.
 //  A 4,000-character cut would race the forced close (10 of 38 forced hard thoughts ran past it). Confidence 0.8.
+//  Review: same day (pre-push review fold) — the turn's cut rides the anatomy notice (` · cut N`): the app's
+//  façade forward is compile-checked only, so a launch is how 8,192 against 4,000 is told apart. Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -691,10 +693,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 ambient: browserContextProvider?()?.render(), todos: todoContextProvider?()
             )
         }
-        Self.log.notice(
-            "\(Self.promptAnatomy(prompt: prompt, history: history, budget: historyBudget), privacy: .public)"
-        )
+        // The cut rides the anatomy line, so a launch shows which one this turn got (8,192 behind a forcing brain).
         let thinkingBudget = thinkingCut
+        let anatomy = Self.promptAnatomy(prompt: prompt, history: history, budget: historyBudget)
+        Self.log.notice("\(anatomy, privacy: .public) · cut \(thinkingBudget)")
         let generate: @Sendable () async -> Bool = { [provider] in
             var answer = PlainTurnStream()
             for await chunk in provider.generateStreaming(prompt: prompt) {

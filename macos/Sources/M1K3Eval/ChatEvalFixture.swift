@@ -83,6 +83,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — every numeric reasoning answer under 100 takes its spelled cardinal
 //  too (seven fixtures; the snail had only the ordinal "eighth"): "Twenty-one." and "Eight." failed in three arms.
 //  Runs before this change score those as misses, so they don't compare with runs after it. Confidence 0.9.
+//  Review: same day (pre-push review) — the answers of 100 or more take their words too, both spellings ("one
+//  hundred twenty", "one hundred and twenty"), and the snail takes "8th": "On the 8th day." is the natural reply.
+//  Confidence 0.9.
 
 import Foundation
 
@@ -534,7 +537,7 @@ public enum ChatEvalFixtures {
             id: "reason-train", kind: .reasoning,
             prompt: "A train travels 60 km in 1 hour. How far does it travel in 2.5 hours at "
                 + "the same speed? Give the number of km.",
-            expectation: .init(mustContainAny: ["150"], minChars: 1)
+            expectation: .init(mustContainAny: ["150", "one hundred fifty", "one hundred and fifty"], minChars: 1)
         ),
         .init(
             id: "reason-remainder", kind: .reasoning,
@@ -588,14 +591,17 @@ public enum ChatEvalFixtures {
             // Minute hand 240°, hour hand 110°. The trap answer is 150 (ignoring the hour hand's drift).
             prompt: "What is the smaller angle, in degrees, between the hour and minute hands of a clock at 3:40? "
                 + "Answer with the number.",
-            expectation: .init(mustContainAny: ["130"], minChars: 1, wholeWordFacts: true)
+            expectation: .init(
+                mustContainAny: ["130", "one hundred thirty", "one hundred and thirty"],
+                minChars: 1, wholeWordFacts: true
+            )
         ),
         .init(
             id: "reason-hard-snail", kind: .reasoning,
             // Seven nights leave it at 7 m; day eight climbs out. The trap answer is 10.
             prompt: "A snail is at the bottom of a 10 metre well. Each day it climbs up 3 metres and each night "
                 + "it slides back 2 metres. On which day does it first reach the top? Answer with the number.",
-            expectation: .init(mustContainAny: ["8", "eight", "eighth"], minChars: 1, wholeWordFacts: true)
+            expectation: .init(mustContainAny: ["8", "8th", "eight", "eighth"], minChars: 1, wholeWordFacts: true)
         ),
         .init(
             id: "reason-hard-average-speed", kind: .reasoning,
@@ -687,7 +693,10 @@ public enum ChatEvalFixtures {
             // 150 km/h closing speed, 2 hours.
             prompt: "Two trains start 300 km apart and head toward each other, one at 70 km/h and the other at 80 km/h. "
                 + "How many minutes until they meet? Answer with the number.",
-            expectation: .init(mustContainAny: ["120"], minChars: 1, wholeWordFacts: true)
+            expectation: .init(
+                mustContainAny: ["120", "one hundred twenty", "one hundred and twenty"],
+                minChars: 1, wholeWordFacts: true
+            )
         ),
     ]
 

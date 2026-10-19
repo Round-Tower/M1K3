@@ -89,6 +89,8 @@
 //  passes none, as the app does (`--app-arg=-thinkBudgetTokens 0` is the cut's arm). The live arm takes refusal,
 //  security, document and sycophancy too: they ran bare generate under LIVE_PATH, so no cut, no retry and no
 //  persona stack reached them (the 10-19 security arm thought to the token cap, 9 of 24 empty). Confidence 0.85.
+//  Review: same day (pre-push review) — each brain's run prints its forced budget (`think budget:`), and the
+//  live-path doc lists the kinds it takes. Confidence 0.85.
 //
 
 import Foundation
@@ -320,8 +322,10 @@ enum ChatEvalStage {
         SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_CALCULATOR") == "1"
     }
 
-    /// LIVE-PATH arm (M1K3_SELFTEST_CHATEVAL_LIVE_PATH=1): open-chat and
-    /// code-gen fixtures run through AgentRAGResponder — the SAME prompt stack
+    /// LIVE-PATH arm (M1K3_SELFTEST_CHATEVAL_LIVE_PATH=1): every closed-book kind
+    /// (open-chat, code-gen, reasoning, refusal, security, world-knowledge, humour,
+    /// interview, instruction-following, document, sycophancy; tool-use under a
+    /// router mode) runs through AgentRAGResponder — the SAME prompt stack
     /// the chat UI assembles every turn (retrieve-first grounding head + RULES
     /// incl. the generative carve-out + the agent loop with tools) — instead of
     /// bare `provider.generate`. The bare arm isolates the persona; this arm
@@ -670,6 +674,10 @@ enum ChatEvalStage {
                 maxTokens: HistoryBudgetPolicy.generationTokenCap(for: tier, defaultCap: MLXBrainProvider.defaultMaxTokens),
                 thinkingEnabled: true // the app's build; the bare arms scope their own flag (#555)
             )
+        }
+        // Forcing is on by default for Lil since 2026-10-19, so every run says what its brain forces.
+        if let forcing = provider as? ThinkBudgetForcing {
+            emit("  think budget: " + (forcing.forcedThinkingTokens.map { "\($0) tokens (forced close)" } ?? "off"))
         }
         return await evalProvider(provider, thinking: plan, emit: emit)
     }

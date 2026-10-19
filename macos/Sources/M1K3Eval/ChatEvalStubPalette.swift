@@ -20,6 +20,8 @@
 //  "busiest or most active days" so the eval sees what the app sees (tool-recent-busiest).
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — `calculator`: a stub that really computes (ArithmeticEvaluator),
 //  kept out of `specs` so every tool-use cell keeps its shape; the stage adds it only for the probe.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 (pre-push review) — the description says % is a remainder and a
+//  percentage goes in as a decimal ("80 * 15%" was an error the model couldn't read). Confidence 0.85.
 //
 
 import Foundation
@@ -142,7 +144,8 @@ public enum ChatEvalStubPalette {
     public static let calculator = ChatEvalStubSpec(
         name: "calculate",
         description: "Work out an arithmetic expression exactly. Use it for any sum you would otherwise do in "
-            + "your head. Argument: the expression, using numbers, + - * / % ^ and brackets, e.g. (60 + 60) / 3.",
+            + "your head. Argument: the expression, using numbers, + - * / ^, % (remainder, not percent) and "
+            + "brackets, e.g. (60 + 60) / 3. Write a percentage as a decimal: 15% is 0.15.",
         parameter: ChatEvalStubParameter(name: "expression", description: "the arithmetic expression"),
         canned: "", hardCanned: "", evaluatesArithmetic: true
     )

@@ -139,6 +139,10 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — the budget is Lil's by default now (exact id, through
 //  `ThinkBudget.request(from:modelID:)`; argv overrides, 0 is off), and NoWait reads its words at init too
 //  (`-thinkWaitWords`). Confidence 0.8.
+//  Review: same day (pre-push review fold) — the init takes `defaults` (argv's domain, `.standard` in the app) so a
+//  test can give a brain a budget, and the budget notice says whether the template lets it force or leaves it inert.
+//  The per-generation sampling Review above missed one change: `apply` sets the presence window to the profile's 64,
+//  where the library's 20 applied before, so the legacy `card-presence` arm samples a wider window. Confidence 0.8.
 
 import Foundation
 import Hub
@@ -337,7 +341,8 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         configuration: ModelConfiguration = LLMRegistry.gemma3_1B_qat_4bit,
         maxTokens: Int = MLXBrainProvider.defaultMaxTokens,
         name: String = "mlx-brain",
-        thinkingEnabled: Bool = true
+        thinkingEnabled: Bool = true,
+        defaults: UserDefaults = .standard
     ) {
         var params = GenerateParameters()
         params.maxTokens = maxTokens
@@ -405,15 +410,11 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             override: UserDefaults.standard.integer(forKey: "prefillStepSize")
         )
         baseGenerateParameters = params
-        // Budget forcing (2026-10-18; Lil's by default since 2026-10-19): argv overrides for any brain.
-        thinkBudgetRequest = ThinkBudget.request(from: .standard, modelID: configuration.name)
-        if let request = thinkBudgetRequest {
-            mlxLoadLog.notice(
-                "thinking budget \(configuration.name, privacy: .public): \(request.tokens) tokens, transition \(request.transition.rawValue, privacy: .public)"
-            )
-        }
-        thinkWaitPenaltyRequest = ThinkBudget.NoWait.penalty(from: .standard)
-        thinkWaitWords = ThinkBudget.NoWait.words(from: .standard)
+        // Budget forcing (2026-10-18; Lil's by default since 2026-10-19): argv overrides for any brain whose
+        // template pre-opens `<think>` (the notice below says which).
+        thinkBudgetRequest = ThinkBudget.request(from: defaults, modelID: configuration.name)
+        thinkWaitPenaltyRequest = ThinkBudget.NoWait.penalty(from: defaults)
+        thinkWaitWords = ThinkBudget.NoWait.words(from: defaults)
         if let penalty = thinkWaitPenaltyRequest {
             mlxLoadLog.notice("nowait \(configuration.name, privacy: .public): penalty \(penalty)")
         }
@@ -444,6 +445,12 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         // Both by NAME for a known family; an unknown family (no family word,
         // e.g. "Ornith") reads its template after the load (#264).
         initialThinkTraits = Self.thinkTraitsByName(for: configuration)
+        if let request = thinkBudgetRequest {
+            let applies = initialThinkTraits.map { $0.preOpensThink ? "forces" : "inert: no pre-opened <think>" }
+                ?? "decided after the load"
+            let budget = "\(request.tokens) tokens, transition \(request.transition.rawValue) (\(applies))"
+            mlxLoadLog.notice("thinking budget \(configuration.name, privacy: .public): \(budget, privacy: .public)")
+        }
         let loadConfiguration: ModelConfiguration = {
             var config = configuration
             if let resolved { config.toolCallFormat = resolved }
@@ -515,13 +522,15 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         modelID: String,
         maxTokens: Int = MLXBrainProvider.defaultMaxTokens,
         name: String = "mlx-brain",
-        thinkingEnabled: Bool = true
+        thinkingEnabled: Bool = true,
+        defaults: UserDefaults = .standard
     ) {
         self.init(
             configuration: LLMRegistry.shared.configuration(id: modelID),
             maxTokens: maxTokens,
             name: name,
-            thinkingEnabled: thinkingEnabled
+            thinkingEnabled: thinkingEnabled,
+            defaults: defaults
         )
     }
 

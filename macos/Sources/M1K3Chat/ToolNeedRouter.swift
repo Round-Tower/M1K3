@@ -38,9 +38,10 @@
 //  Pinned so no tool-use fixture trips it. Confidence 0.75 (word cues; the rig replay is owed).
 //  Review: Kev + claude-opus-5.5, 2026-10-17 — `PlainTurnStream` tells an answer from reasoning
 //  alone (`hasAnswer`, `thoughtWithoutAnswering`): a think-to-the-cap stream had read as answered.
+//  Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — `thinkingPastBudget`: open reasoning over the thinking cap;
 //  closed reasoning never counts, so an answer on its way is never cut. Confidence 0.85.
-//  Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — the 10-17 entry's Confidence line back under it (comment only).
 //
 
 import Foundation

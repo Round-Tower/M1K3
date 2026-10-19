@@ -16,6 +16,8 @@
 //  Review: same day — twenty of them now (twelve more traps), so the floor is 20.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — a numeric reasoning answer under 100 also takes its spelled
 //  cardinal ("Twenty-one." failed handshakes in three arms). Confidence 0.9.
+//  Review: same day (pre-push review) — every number takes its words (not only under 100), a hyphenated trap answer
+//  ("Forty-five") must fail, the snail takes "8th", and the given-away check reads a multi-word answer as a phrase.
 
 import Foundation
 @testable import M1K3Eval
@@ -39,32 +41,34 @@ struct ChatEvalFixturesTests {
 
     /// The reasoning kind's first six are one-step sums a 4B answers without thinking (Lil 6/6 on Auto,
     /// 2026-10-17), so they can't show what thinking buys. The hard ones are trap problems.
-    @Test("hard reasoning fixtures: eight, whole-word answers, none given away by the prompt")
+    @Test("hard reasoning fixtures: twenty, whole-word answers, none given away by the prompt")
     func hardReasoningShape() {
         let hard = ChatEvalFixtures.fixtures(for: .reasoning).filter { $0.id.hasPrefix("reason-hard-") }
         #expect(hard.count >= 20)
         for fixture in hard {
             #expect(fixture.expectation.wholeWordFacts, "\(fixture.id) must match whole words")
             #expect(!fixture.expectation.mustContainAny.isEmpty)
-            let promptWords = Set(
-                fixture.prompt.lowercased().split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init)
-            )
-            for answer in fixture.expectation.mustContainAny {
-                #expect(!promptWords.contains(answer.lowercased()), "\(fixture.id): \(answer) is in the prompt")
+            let prompt = fixture.prompt.lowercased()
+            let promptWords = Set(prompt.split(whereSeparator: { !$0.isLetter && !$0.isNumber }).map(String.init))
+            for answer in fixture.expectation.mustContainAny.map({ $0.lowercased() }) {
+                // A one-word answer against the prompt's words; a hyphenated or multi-word one as a phrase.
+                let given = answer.allSatisfy { $0.isLetter || $0.isNumber }
+                    ? promptWords.contains(answer) : prompt.contains(answer)
+                #expect(!given, "\(fixture.id): \(answer) is in the prompt")
             }
         }
     }
 
     /// A model that answers "Twenty-one." is right: Lil's handshakes and snail answers failed on the word in three
-    /// arms on 2026-10-18. Under 100 because that's where a model spells a number out.
-    @Test("a numeric reasoning answer under 100 also takes the number in words")
+    /// arms on 2026-10-18. Every number, since nothing says Lil stops spelling at 99.
+    @Test("a numeric reasoning answer also takes the number in words")
     func numericAnswersTakeWords() {
         let spellOut = NumberFormatter()
         spellOut.numberStyle = .spellOut
         spellOut.locale = Locale(identifier: "en")
         for fixture in ChatEvalFixtures.fixtures(for: .reasoning) {
             let answers = fixture.expectation.mustContainAny
-            for number in answers.compactMap({ Int($0) }) where number < 100 {
+            for number in answers.compactMap({ Int($0) }) {
                 let word = spellOut.string(from: NSNumber(value: number)) ?? ""
                 #expect(answers.contains(word), "\(fixture.id): \(number) without \"\(word)\"")
             }
@@ -76,12 +80,30 @@ struct ChatEvalFixturesTests {
         let answers = [
             "reason-hard-handshakes": "Twenty-one. Simple math, no secrets to hide in the handshake count itself.",
             "reason-hard-snail": "Eight.  The snail gets to 7 meters by the end of day seven, sliding back down.",
+            "reason-hard-trains": "One hundred and twenty.",
         ]
         for (id, answer) in answers {
             let fixture = try #require(ChatEvalFixtures.fixtures(for: .reasoning).first { $0.id == id })
             let score = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: answer))
             #expect(score.passed, "\(id): \(score.checks.filter { $0.outcome == .fail })")
         }
+    }
+
+    /// The spelled answers must not let a trap through: "forty" is a whole word, but not inside "forty-five".
+    @Test("a hyphenated trap answer doesn't pass on its first word", arguments: [
+        ("reason-hard-average-speed", "Forty-five km/h."), ("reason-hard-digit-sevens", "Twenty-one."),
+    ])
+    func hyphenatedTrapsFail(id: String, answer: String) throws {
+        let fixture = try #require(ChatEvalFixtures.fixtures(for: .reasoning).first { $0.id == id })
+        let score = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: answer))
+        #expect(!score.passed, "\(id) passed on \"\(answer)\"")
+    }
+
+    @Test("an ordinal in digits answers the snail")
+    func snailOrdinal() throws {
+        let fixture = try #require(ChatEvalFixtures.fixtures(for: .reasoning).first { $0.id == "reason-hard-snail" })
+        let score = ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: "On the **8th** day."))
+        #expect(score.passed)
     }
 
     @Test("security fixtures are closed-book leak vectors that must decline")

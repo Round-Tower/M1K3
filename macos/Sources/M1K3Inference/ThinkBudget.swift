@@ -10,7 +10,8 @@
 //  so the answer is written on top of the thought, on the same cache.
 //
 //  Lil (its exact id) forces at 1,024 tokens by default. argv, never `defaults write` (macOS 27 keeps the
-//  sandboxed app out of it), overrides for any brain: `M1K3 -thinkBudgetTokens 2048
+//  sandboxed app out of it), overrides for any brain whose template pre-opens `<think>` (on any other the
+//  request is inert, and the load notice says so): `M1K3 -thinkBudgetTokens 2048
 //  [-thinkBudgetTransition close|qwen]`; `-thinkBudgetTokens 0` is off. While a brain forces, the
 //  responder's character cut stands back to a net (`characterCap(forTokens:)`), read through
 //  `ThinkBudgetForcing` so every shell gets it.
@@ -27,6 +28,8 @@
 //  longest forced thought measured 4,755), decided from the brain through `ThinkBudgetForcing`, so the iOS
 //  shell's 4,000 can't race the close. NoWait's words take argv (`-thinkWaitWords`; `paper` is the paper's
 //  seventeen, "but" and "check" among them, from Kev's guess). Confidence 0.8: challenger's narrowed ship.
+//  Review: same day (pre-push review fold) — the transition reads case-blind; the docs say argv reaches only a
+//  brain whose template pre-opens `<think>`. Confidence 0.85.
 
 import Foundation
 
@@ -74,16 +77,16 @@ public enum ThinkBudget {
     /// a family match would budget an audition (Qwen3.8, Bonsai-27B pre-open `<think>` too) nobody measured.
     public static let shippingBudgets = ["mlx-community/qwen3.5-4b-mlx-4bit": 1024]
 
-    /// The budget for `modelID`: argv's when it names one (any brain; zero, a negative or junk is off), else the
-    /// brain's shipping budget, else nil.
+    /// The budget for `modelID`: argv's when it names one (any brain, though only a template that pre-opens
+    /// `<think>` can force it; zero, a negative or junk is off), else the brain's shipping budget, else nil.
     public static func request(from defaults: UserDefaults, modelID: String) -> Request? {
         // object(forKey:) first: argv's `0` has to read as off, not as absent.
         let tokens = defaults.object(forKey: tokensKey) != nil
             ? defaults.integer(forKey: tokensKey)
             : shippingBudgets[modelID.lowercased()] ?? 0
         guard tokens > 0 else { return nil }
-        let transition = defaults.string(forKey: transitionKey).flatMap(Transition.init(rawValue:)) ?? .close
-        return Request(tokens: tokens, transition: transition)
+        let transition = defaults.string(forKey: transitionKey).flatMap { Transition(rawValue: $0.lowercased()) }
+        return Request(tokens: tokens, transition: transition ?? .close)
     }
 
     /// The budget for one generation: only when it opens a thought (`preOpenedThinking`: thinking on

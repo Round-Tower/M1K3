@@ -58,6 +58,8 @@ Review: Kev + claude-opus-5-5, 2026-10-16 — `--app-arg` (direct only): argv-do
 (`direct_argv`), first for the wrapped-persona-seed arm (-wrappedPersonaSeed NO).
 Review: Kev + claude-opus-5-5, 2026-10-18 — `--calculator` (the calculator probe's stub) and the metacognition
 steer arms (reread, trap, working, budget).
+Review: Kev + claude-opus-5-5, 2026-10-19 — `route_warning`: a live-path run with no `--router` never reaches the
+plain turn, so the thinking cut, its retry, the forced budget and NoWait never run; the runner says so up front.
 """
 
 from __future__ import annotations
@@ -214,6 +216,14 @@ class RunOptions:
     router: str | None = None  # "dispatch": the app's own tool route, every tier on (the router arm)
     router_head: bool = False  # + the group head (toolGroupRouter); needs router
     router_chain: bool = False  # + two-tool chains (toolChain); needs router
+
+
+def route_warning(opts: RunOptions) -> str | None:
+    """A live-path run with no route: the turn goes to the agent loop, never the plain turn the app takes."""
+    if opts.live_path and opts.router is None:
+        return ("! live path without --router: no plain route, so the thinking cut, the no-think retry, the forced "
+                "budget and NoWait never run (the Mac app routes every tier: --router dispatch)")
+    return None
 
 
 def build_trigger(opts: RunOptions, *, container: Path, power_source: str, powermode: int | None,
@@ -581,6 +591,8 @@ def main(argv: list[str] | None = None) -> int:
     plan = plan_instances(running_instances(), live_app=LIVE_APP, target_app=str(app))
     report = Path(trig["M1K3_SELFTEST_OUT"])
     print(json.dumps(trig, indent=1, sort_keys=True))
+    if warning := route_warning(opts):
+        print(warning)
     print(f"power: {power} · quit: {plan.to_quit} · live running: {plan.live_was_running}")
     if "M1K3_SELFTEST_APP_COMMIT" not in trig:
         print("! app commit unknown (this build predates the GitCommitSHA stamp phase, or was built outside Xcode) — rebuild, or pass --commit")

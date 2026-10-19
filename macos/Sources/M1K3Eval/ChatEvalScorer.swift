@@ -80,6 +80,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — `ChatEvalScore.thought`: the whole think block, kept (optional, nil
 //  omitted), so an arm that changes how Lil thinks (NoWait, budget forcing) is read inside the thought, not only
 //  by its length. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 (pre-push review) — whole-word facts join a hyphen between letters on
+//  both sides: the spelled answers b3834212 added let "forty" pass the trap answer "forty-five". No recorded run
+//  leaned on it (no hyphenated answer on those fixtures). Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -723,12 +726,16 @@ public enum ChatEvalScorer {
 
         let exp = fixture.expectation
 
-        // Whole-word when the fixture opts in (vision); raw substring otherwise,
-        // exactly as before.
-        let normalisedForFacts = RefusalHeuristic.normalised(answer)
+        // Whole-word when the fixture opts in (vision, reasoning); raw substring otherwise,
+        // exactly as before. A hyphen between letters joins a word, so "forty" is not
+        // found in the trap answer "forty-five" while "twenty-one" still finds itself.
+        let joinHyphens: (String) -> String = {
+            $0.replacingOccurrences(of: #"(?<=\p{L})-(?=\p{L})"#, with: "", options: .regularExpression)
+        }
+        let normalisedForFacts = joinHyphens(RefusalHeuristic.normalised(answer))
         let containsFact: (String) -> Bool = { fact in
             exp.wholeWordFacts
-                ? RefusalHeuristic.containsWholeWord(normalisedForFacts, RefusalHeuristic.normalised(fact))
+                ? RefusalHeuristic.containsWholeWord(normalisedForFacts, joinHyphens(RefusalHeuristic.normalised(fact)))
                 : lowered.contains(fact.lowercased())
         }
 

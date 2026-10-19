@@ -11,6 +11,9 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-18, Confidence 0.85, Prior: none (new file).
 //  Open: eval-only until the probe shows Lil uses it; a shipped tool would move to M1K3AgentTools.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 (pre-push review) — a comma inside a number is a thousands separator or
+//  an error ("1,5" read as 15 before), and unary minus binds looser than ^ ("-2 ^ 2" is -4, as in Python and maths).
+//  Confidence 0.9.
 
 import Foundation
 
@@ -33,7 +36,8 @@ public enum ArithmeticEvaluator {
     public static func answer(_ expression: String) -> String {
         let trimmed = expression.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let value = evaluate(trimmed) else {
-            return "Error: not an arithmetic expression. Use numbers with + - * / % ^ and brackets, e.g. 120 / 3."
+            return "Error: not an arithmetic expression. Use numbers with + - * / ^, % (remainder) and brackets, "
+                + "e.g. 120 / 3; write 15% as 0.15."
         }
         return "\(trimmed) = \(format(value))"
     }
@@ -65,7 +69,13 @@ public enum ArithmeticEvaluator {
                 var j = i
                 var digits = ""
                 while j < chars.count, chars[j].isNumber || chars[j] == "." || chars[j] == "," {
-                    if chars[j] != "," { digits.append(chars[j]) }
+                    if chars[j] == "," {
+                        // A thousands separator only: digits before it, no decimal point yet, three digits after.
+                        let group = chars[(j + 1)...].prefix(while: \.isNumber)
+                        guard !digits.isEmpty, !digits.contains("."), group.count == 3 else { return nil }
+                    } else {
+                        digits.append(chars[j])
+                    }
                     j += 1
                 }
                 guard let value = Double(digits) else { return nil }
@@ -117,12 +127,12 @@ public enum ArithmeticEvaluator {
             return value
         }
 
-        /// term := power (("*" | "/" | "%") power)*
+        /// term := unary (("*" | "/" | "%") unary)*
         mutating func parseTerm(depth: Int) -> Double? {
-            guard var value = parsePower(depth: depth) else { return nil }
+            guard var value = parseUnary(depth: depth) else { return nil }
             while case let .op(op)? = peek, op == "*" || op == "/" || op == "%" {
                 index += 1
-                guard let rhs = parsePower(depth: depth), op == "*" || rhs != 0 else { return nil }
+                guard let rhs = parseUnary(depth: depth), op == "*" || rhs != 0 else { return nil }
                 switch op {
                 case "*": value *= rhs
                 case "/": value /= rhs
@@ -132,18 +142,18 @@ public enum ArithmeticEvaluator {
             return value
         }
 
-        /// power := unary ("^" power)?   (right-associative)
+        /// power := primary ("^" unary)?   (right-associative, and tighter than a sign: -2 ^ 2 is -4)
         mutating func parsePower(depth: Int) -> Double? {
-            guard let base = parseUnary(depth: depth) else { return nil }
+            guard let base = parsePrimary(depth: depth) else { return nil }
             if case .op("^")? = peek {
                 index += 1
-                guard let exponent = parsePower(depth: depth + 1) else { return nil }
+                guard let exponent = parseUnary(depth: depth + 1) else { return nil }
                 return pow(base, exponent)
             }
             return base
         }
 
-        /// unary := ("-" | "+") unary | primary
+        /// unary := ("-" | "+") unary | power
         mutating func parseUnary(depth: Int) -> Double? {
             guard depth <= ArithmeticEvaluator.maxDepth else { return nil }
             if case let .op(op)? = peek, op == "-" || op == "+" {
@@ -151,7 +161,7 @@ public enum ArithmeticEvaluator {
                 guard let value = parseUnary(depth: depth + 1) else { return nil }
                 return op == "-" ? -value : value
             }
-            return parsePrimary(depth: depth)
+            return parsePower(depth: depth)
         }
 
         /// primary := number | "(" expression ")"

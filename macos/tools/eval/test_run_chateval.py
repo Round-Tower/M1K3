@@ -118,6 +118,17 @@ def test_live_path_can_be_turned_off_for_bare_generation():
     assert "M1K3_SELFTEST_CHATEVAL_LIVE_PATH" not in trig
 
 
+@pytest.mark.parametrize(("live_path", "router", "warns"), [
+    (True, None, True),
+    (True, "dispatch", False),
+    (True, "off", False),
+    (False, None, False),
+])
+def test_a_live_run_without_a_route_is_flagged(live_path, router, warns):
+    # The plain turn (cut, retry, forced budget, NoWait) is reached only through a route, as in the app.
+    assert (rc.route_warning(base_opts(live_path=live_path, router=router)) is not None) == warns
+
+
 def test_dump_prompt_goes_inside_the_container():
     trig = rc.build_trigger(base_opts(dump_prompt=True), container=CONTAINER, power_source="ac",
                             powermode=2, commit=None, mlx_rev=None)
