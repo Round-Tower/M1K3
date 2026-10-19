@@ -2,7 +2,7 @@
 //  MLXBrainProvider+ThinkBudget.swift
 //  M1K3MLX
 //
-//  Budget forcing on the plain turn, the A/B arm behind `-thinkBudgetTokens N` (see ThinkBudget):
+//  Budget forcing on the plain turn, Lil's by default and argv's `-thinkBudgetTokens N` (see ThinkBudget):
 //  mlx-swift-lm's `ThinkingBudgetProcessor` counts reasoning tokens and, at the budget, forces the
 //  transition and `</think>` through the normal sampling loop, so the KV cache, the stream and the
 //  answer all carry on from the cut thought. Qwen3.5's protocol ships no declared transition
@@ -19,13 +19,26 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — verified by launch on the eval builds: `thinking budget 1024 tokens`
 //  with every Always turn closing its thought and answering (38/38 hard trials, 0 empty), and the `nowait` notice
 //  naming 10 single-token spellings on Qwen3.5 (bare "hmm" isn't one). Comment only. Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — `ThinkBudgetForcing`: the provider tells the responder's cut the
+//  budget it forces (template-scoped, whatever the build's thinking flag), so the cut stands back to a net on every
+//  shell. NoWait pushes down the words read at init (`-thinkWaitWords`). Confidence 0.8.
 
 import Foundation
 import M1K3Inference
 import MLX
 import MLXLMCommon
 
-extension MLXBrainProvider {
+extension MLXBrainProvider: ThinkBudgetForcing {
+    /// The budget this brain forces when a generation thinks: read by the responder's cut, which may sit outside
+    /// the turn's thinking decision, so it follows the template, not `effectiveThinking`.
+    public var forcedThinkingTokens: Int? {
+        ThinkBudget.tokens(
+            for: thinkBudgetRequest,
+            maxTokens: generateParameters.maxTokens ?? Self.defaultMaxTokens,
+            preOpenedThinking: preOpensThinkTemplate
+        )
+    }
+
     /// This generation's thinking budget in tokens: nil when the arm is off or the turn isn't thinking.
     func thinkBudgetTokens(parameters: GenerateParameters) -> Int? {
         ThinkBudget.tokens(
@@ -92,7 +105,7 @@ extension MLXBrainProvider {
     ) -> GenerationComponents {
         var found: [String] = []
         var ids: [Int] = []
-        for spelling in ThinkBudget.NoWait.spellings {
+        for spelling in ThinkBudget.NoWait.spellings(of: thinkWaitWords) {
             let encoded = tokenizer.encode(text: spelling, addSpecialTokens: false)
             if encoded.count == 1, !ids.contains(encoded[0]) {
                 found.append(spelling)

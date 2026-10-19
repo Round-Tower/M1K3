@@ -32,9 +32,11 @@ import Testing
 
 /// Streams scripted responses word by word (cumulative, like AFM), records each
 /// prompt, the instructions and thinking decision in force for it, and every turn re-arm.
-private final class RouteProvider: InferenceProvider, TurnWarmable, @unchecked Sendable {
+private final class RouteProvider: ThinkBudgetForcing, TurnWarmable, @unchecked Sendable {
     let name = "route-scripted"
     let isAvailable = true
+    /// A brain that closes its own thought at this many tokens (Lil's forcing); nil, as most scripts, doesn't.
+    let forcedThinkingTokens: Int?
     private let state = Mutex<(
         responses: [String], prompts: [String], instructions: [String?], thinking: [Bool?], warms: [String?]
     )>(([], [], [], [], []))
@@ -43,7 +45,8 @@ private final class RouteProvider: InferenceProvider, TurnWarmable, @unchecked S
     /// (the MLX shape), rather than one scripted answer per call.
     private let deltaPieces: [String]?
 
-    init(_ responses: [String], deltas: Bool = false) {
+    init(_ responses: [String], deltas: Bool = false, forcedThinkingTokens: Int? = nil) {
+        self.forcedThinkingTokens = forcedThinkingTokens
         deltaPieces = deltas ? responses : nil
         state.withLock { $0.responses = deltas ? [responses.joined()] : responses }
     }
@@ -427,6 +430,41 @@ struct PlainTurnRouteTests {
         #expect(split.reasoning?.contains("TAIL-OF-THE-THOUGHT") == false, "the think phase stopped at the budget")
         #expect(provider.thinking == [true, false])
         #expect(text.components(separatedBy: "</think>").count == 2, "one close: \(text)")
+    }
+
+    /// Forcing ships for Lil (2026-10-19): the brain closes its own thought at 1,024 tokens, so the cut stands
+    /// back to a net at 8 characters a token. A 4,000-character cut would race the close: 10 of 38 forced
+    /// thoughts on the hard traps ran past 4,000 characters, and a cut thought is thrown away.
+    @Test("a brain that closes its own thought moves the cut to a net above its budget")
+    func forcingBrainMovesTheCut() async throws {
+        let script = ["<think>Let me see. Nine years, twice that, so eighteen. Checked once.</think> Mary is 18."]
+        // 10 tokens: an 80-character net, so the 55-character thought outlives the responder's 40.
+        let forcing = RouteProvider(script, forcedThinkingTokens: 10)
+        let kept = try await answer(
+            responder(forcing, route: chat(.chat), mode: .always, thinkingBudget: 40), "how old is Mary?"
+        )
+        #expect(ReasoningSplit.split(kept).answer == "Mary is 18.")
+        #expect(forcing.prompts.count == 1, "no cut, no retry")
+        // The same thought on a brain that doesn't force is cut at 40 and answered again.
+        let plain = RouteProvider(script + ["Mary is 18."])
+        _ = try await answer(
+            responder(plain, route: chat(.chat), mode: .always, thinkingBudget: 40), "how old is Mary?"
+        )
+        #expect(plain.prompts.count == 2)
+    }
+
+    @Test("past the net, a forcing brain's thought is still cut and answered straight")
+    func forcingBrainPastTheNetIsCut() async throws {
+        let provider = RouteProvider([
+            "<think>Nine years, twice that, so eighteen. Check it. Check it again. And again, once more. TAIL-OF-IT",
+            "Mary is 18.",
+        ], forcedThinkingTokens: 10)
+        let text = try await answer(
+            responder(provider, route: chat(.chat), mode: .always, thinkingBudget: 40), "how old is Mary?"
+        )
+        #expect(ReasoningSplit.split(text).answer == "Mary is 18.")
+        #expect(ReasoningSplit.split(text).reasoning?.contains("TAIL-OF-IT") == false, "cut at the 80-character net")
+        #expect(provider.thinking == [true, false])
     }
 
     @Test("an answer after closed reasoning is never cut, however long the answer")

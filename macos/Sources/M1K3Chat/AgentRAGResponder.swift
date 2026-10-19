@@ -186,6 +186,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — the thinking cap: open reasoning past `thinkingBudget`
 //  (default `ThinkingPolicy.thinkingBudgetCharacters`) stops the think phase and takes the straight-answer
 //  path above. Confidence 0.75 — the capped arm decides the figure.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — a brain that closes its own thought (`ThinkBudgetForcing`, Lil at
+//  1,024 tokens) moves the cut to a net above its budget, asked per turn so a hot-swap and both shells follow.
+//  A 4,000-character cut would race the forced close (10 of 38 forced hard thoughts ran past it). Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -215,7 +218,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// Auto / Always think / Fast answers) — same per-turn pattern as tools.
     private let thinkingModeProvider: @Sendable () -> ThinkingMode
     /// Open reasoning, in characters, a plain or dispatched turn streams before it is cut
-    /// (nil at init: `ThinkingPolicy.thinkingBudgetCharacters`).
+    /// (nil at init: `ThinkingPolicy.thinkingBudgetCharacters`). A brain that forces its own close
+    /// overrides it per turn with a net above its budget (`thinkingCut`).
     private let thinkingBudget: Int
     /// The active brain's display name (e.g. "Lil M1K3"), read fresh each turn so
     /// a runtime hot-swap is reflected — same per-turn pattern as `toolsProvider`.
@@ -642,6 +646,13 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         memories.filter { !SelfNoteClassifier.isWiringNote(title: $0.itemTitle, text: $0.content) }
     }
 
+    /// This turn's cut, in characters of open reasoning: a net above the brain's own budget when it forces its
+    /// close (asked through the façade each turn, so a hot-swap follows), else `thinkingBudget`.
+    private var thinkingCut: Int {
+        guard let tokens = (provider as? ThinkBudgetForcing)?.forcedThinkingTokens else { return thinkingBudget }
+        return ThinkBudget.characterCap(forTokens: tokens)
+    }
+
     /// One plain-chat turn into `continuation`: the turn's context, history and
     /// grounding with tool-free rules, one streamed generation. Returns false when
     /// nothing came back (AFM turns a guardrail or overflow into an empty stream),
@@ -683,7 +694,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         Self.log.notice(
             "\(Self.promptAnatomy(prompt: prompt, history: history, budget: historyBudget), privacy: .public)"
         )
-        let generate: @Sendable () async -> Bool = { [provider, thinkingBudget] in
+        let thinkingBudget = thinkingCut
+        let generate: @Sendable () async -> Bool = { [provider] in
             var answer = PlainTurnStream()
             for await chunk in provider.generateStreaming(prompt: prompt) {
                 if Task.isCancelled { break }

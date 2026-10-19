@@ -16,6 +16,8 @@
 //  persona variant are forwarded through the façade and follow a swap (the app façade had dropped `nativePromptShape`).
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — `routedBackendFollowsSwap`: which brain serves is answered
 //  through `BackendRouting`, and follows a swap (the Mini tool router gates on it).
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — `forcedThinkingFollowsSwap`: a brain's own thinking budget
+//  (`ThinkBudgetForcing`) reaches the responder's cut through the façade, and follows a swap. Confidence 0.85.
 //
 
 import M1K3Inference
@@ -100,6 +102,19 @@ private struct RawProvider: InferenceProvider, RawCompletionProviding {
     }
 }
 
+private struct ForcingProvider: ThinkBudgetForcing {
+    let name = "forcing"
+    let isAvailable = true
+    let forcedThinkingTokens: Int? = 1024
+    func generate(prompt _: String) async throws -> String {
+        "forcing"
+    }
+
+    func generateStreaming(prompt _: String) -> AsyncStream<String> {
+        AsyncStream { $0.finish() }
+    }
+}
+
 struct SwappableCapabilityForwardingTests {
     @Test("token counting reaches the real tokenizer through the façade")
     func tokenCountingForwards() async {
@@ -165,5 +180,13 @@ struct SwappableCapabilityForwardingTests {
         #expect(facade.routedBackend.name == "plain")
         facade.setProvider(CarryingProvider())
         #expect(facade.routedBackend.name == "carrying")
+    }
+
+    @Test("a brain's own thinking budget reaches the cut through the façade, and follows a swap (2026-10-19)")
+    func forcedThinkingFollowsSwap() {
+        let facade = SwappableInferenceProvider(ForcingProvider())
+        #expect((facade as InferenceProvider as? ThinkBudgetForcing)?.forcedThinkingTokens == 1024)
+        facade.setProvider(PlainProvider())
+        #expect((facade as InferenceProvider as? ThinkBudgetForcing)?.forcedThinkingTokens == nil)
     }
 }

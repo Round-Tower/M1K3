@@ -136,6 +136,9 @@
 //  (MLXBrainProvider+ThinkBudget). Off when absent: no behaviour change. Confidence 0.75, verify-by-launch owed.
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — `thinkWaitPenaltyRequest`: the NoWait arm (`-thinkWaitPenalty P`),
 //  read once at init beside the budget and composed into the same components. Off when absent. Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — the budget is Lil's by default now (exact id, through
+//  `ThinkBudget.request(from:modelID:)`; argv overrides, 0 is off), and NoWait reads its words at init too
+//  (`-thinkWaitWords`). Confidence 0.8.
 
 import Foundation
 import Hub
@@ -196,10 +199,12 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
     /// The sampling for a thinking and a straight generation (identical unless `card-mode`).
     private let thinkingSampling: SamplingProfile
     private let straightSampling: SamplingProfile
-    /// The budget-forcing arm (`-thinkBudgetTokens N`), read once at init; nil (the default) is off.
+    /// Budget forcing, read once at init: Lil's shipping budget, or argv's (`-thinkBudgetTokens N`); nil is off.
     let thinkBudgetRequest: ThinkBudget.Request?
     /// The NoWait arm (`-thinkWaitPenalty P`), read once at init; nil (the default) is off.
     let thinkWaitPenaltyRequest: Float?
+    /// The words NoWait pushes down (`-thinkWaitWords`), read once at init.
+    let thinkWaitWords: [String]
 
     /// The parameters for THIS generation: the base plus the sampling of the turn's
     /// thinking decision (`effectiveThinking`, the responder's `InferenceIntent.thinking`).
@@ -400,14 +405,15 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
             override: UserDefaults.standard.integer(forKey: "prefillStepSize")
         )
         baseGenerateParameters = params
-        // Budget forcing (2026-10-18): argv only, off unless an eval arm asks.
-        thinkBudgetRequest = ThinkBudget.request(from: .standard)
+        // Budget forcing (2026-10-18; Lil's by default since 2026-10-19): argv overrides for any brain.
+        thinkBudgetRequest = ThinkBudget.request(from: .standard, modelID: configuration.name)
         if let request = thinkBudgetRequest {
             mlxLoadLog.notice(
                 "thinking budget \(configuration.name, privacy: .public): \(request.tokens) tokens, transition \(request.transition.rawValue, privacy: .public)"
             )
         }
         thinkWaitPenaltyRequest = ThinkBudget.NoWait.penalty(from: .standard)
+        thinkWaitWords = ThinkBudget.NoWait.words(from: .standard)
         if let penalty = thinkWaitPenaltyRequest {
             mlxLoadLog.notice("nowait \(configuration.name, privacy: .public): penalty \(penalty)")
         }

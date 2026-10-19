@@ -85,6 +85,10 @@
 //  stub to the palette and notes each live turn's tools as a `calls calculate` check (pass if called, else skip).
 //  Review: same day — the eval responder takes the same character-cut stand-aside as the app under
 //  `--app-arg=-thinkBudgetTokens`, so the budget-forcing arm wires like the app. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — the responder asks the brain for its forced budget itself, so the eval
+//  passes none, as the app does (`--app-arg=-thinkBudgetTokens 0` is the cut's arm). The live arm takes refusal,
+//  security, document and sycophancy too: they ran bare generate under LIVE_PATH, so no cut, no retry and no
+//  persona stack reached them (the 10-19 security arm thought to the token cap, 9 of 24 empty). Confidence 0.85.
 //
 
 import Foundation
@@ -376,8 +380,6 @@ enum ChatEvalStage {
             store: store, embedder: MLXEmbeddingService(), provider: provider,
             toolsProvider: { palette }, maxIterations: 3,
             thinkingModeProvider: { Self.thinkingMode(thinking) },
-            // The budget-forcing arm (`--app-arg=-thinkBudgetTokens`) closes the thought itself: no character cut.
-            thinkingBudget: ThinkBudget.characterCap(for: ThinkBudget.request(from: .standard)),
             fastThinkingProvider: { thinking.liveFastByDefault },
             // The Mac's clauses (#482, mirrors MiniLiveEvalTests): no declared age band, web
             // search on (the default), PCC offered (its switch on — the fuller clause, so the
@@ -764,7 +766,9 @@ enum ChatEvalStage {
             case .openChat where livePathRequested, .codeGen where livePathRequested,
                  .worldKnowledge where livePathRequested, .humour where livePathRequested,
                  .interview where livePathRequested, .reasoning where livePathRequested,
-                 .instructionFollowing where livePathRequested:
+                 .instructionFollowing where livePathRequested, .refusal where livePathRequested,
+                 .security where livePathRequested, .document where livePathRequested,
+                 .sycophancy where livePathRequested:
                 // The live-path arm: the production AgentRAGResponder stack
                 // (grounding head + RULES + agent loop) instead of bare generate.
                 let observation = try await livePathObservation(

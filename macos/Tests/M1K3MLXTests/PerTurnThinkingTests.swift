@@ -12,6 +12,9 @@
 //  Signed: Kev + claude-fable-5.1, 2026-10-11
 //  Prior: none
 //  Confidence: 0.85 — pure flag plumbing on a Qwen3.5 provider that is never loaded.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — `forcedThinkingTokens`: Lil reports its 1,024-token budget to the
+//  responder's cut whatever the build's thinking flag; Big's template never pre-opens a thought, so it reports
+//  none. Confidence 0.85.
 //
 
 import M1K3Inference
@@ -55,5 +58,16 @@ struct PerTurnThinkingTests {
             #expect(gemma.thinkingAdditionalContext == nil)
             #expect(!gemma.thinkPrefixNeeded)
         }
+    }
+
+    @Test("Lil reports its forced budget to the cut on any build; Big, whose template opens no thought, reports none")
+    func forcedThinkingTokens() {
+        #expect(lil.forcedThinkingTokens == 1024)
+        let fast = MLXBrainProvider(modelID: "mlx-community/Qwen3.5-4B-MLX-4bit", thinkingEnabled: false)
+        #expect(fast.forcedThinkingTokens == 1024, "a turn may still decide to think")
+        #expect(MLXBrainProvider(modelID: "mlx-community/gemma-4-12B-it-4bit").forcedThinkingTokens == nil)
+        // The budget fits the token cap: a cap too small for the close and an answer forces nothing.
+        let tight = MLXBrainProvider(modelID: "mlx-community/Qwen3.5-4B-MLX-4bit", maxTokens: 512)
+        #expect(tight.forcedThinkingTokens == nil)
     }
 }

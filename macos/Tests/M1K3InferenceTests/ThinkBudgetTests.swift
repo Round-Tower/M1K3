@@ -10,6 +10,9 @@
 //  Signed: Kev + claude-opus-5-5, 2026-10-18, Confidence 0.8, Prior: none (new file).
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — the NoWait arm (`-thinkWaitPenalty P`): argv parsing, the
 //  spellings it pushes down, and that it only touches a thought. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — forcing ships for Lil: 1,024 tokens by default for Lil's exact
+//  id only, argv overriding for any brain (0 is off), and the character cut a net at 8 per token above it. The
+//  NoWait word list takes argv too (`-thinkWaitWords`, or `paper` for the paper's seventeen). Confidence 0.8.
 
 import Foundation
 @testable import M1K3Inference
@@ -27,22 +30,45 @@ struct ThinkBudgetTests {
         return defaults
     }
 
-    @Test("off unless argv asks: no key, zero or a negative is no budget")
-    func offByDefault() {
-        #expect(ThinkBudget.request(from: defaults([:])) == nil)
-        #expect(ThinkBudget.request(from: defaults(["thinkBudgetTokens": "0"])) == nil)
-        #expect(ThinkBudget.request(from: defaults(["thinkBudgetTokens": "-5"])) == nil)
-        #expect(ThinkBudget.request(from: defaults(["thinkBudgetTokens": "lots"])) == nil)
+    private let lil = "mlx-community/Qwen3.5-4B-MLX-4bit"
+
+    /// The request for `modelID` with `values` on argv.
+    private func request(_ values: [String: String], _ modelID: String) -> ThinkBudget.Request? {
+        ThinkBudget.request(from: defaults(values), modelID: modelID)
     }
 
-    @Test("argv's string value is read as a token count, closing plainly unless told otherwise")
+    @Test("Lil forces at 1,024 tokens by default, closing plainly")
+    func lilDefault() {
+        #expect(request([:], lil) == ThinkBudget.Request(tokens: 1024, transition: .close))
+        #expect(request([:], lil.uppercased()) == ThinkBudget.Request(tokens: 1024, transition: .close), "case-blind")
+    }
+
+    @Test("no other brain forces by default: the exact id only, not the family", arguments: [
+        "mlx-community/gemma-4-12B-it-4bit", "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+        "mlx-community/Qwen3.5-2B-MLX-4bit", "mlx-community/Qwen3.8-27B-4bit", "prism-ml/Ternary-Bonsai-27B",
+        "/Users/me/Auditions/Qwen3.5-4B-MLX-4bit",
+    ])
+    func othersOffByDefault(modelID: String) {
+        #expect(request([:], modelID) == nil)
+    }
+
+    @Test("argv turns it off: zero, a negative or junk is no budget, on Lil too")
+    func argvTurnsItOff() {
+        for value in ["0", "-5", "lots"] {
+            #expect(request(["thinkBudgetTokens": value], lil) == nil, "\(value)")
+        }
+    }
+
+    @Test("argv's budget wins for any brain, closing plainly unless told otherwise")
     func readsArgv() {
-        #expect(ThinkBudget.request(from: defaults(["thinkBudgetTokens": "1024"]))
-            == ThinkBudget.Request(tokens: 1024, transition: .close))
-        #expect(ThinkBudget.request(from: defaults(["thinkBudgetTokens": "2048", "thinkBudgetTransition": "qwen"]))
+        let gemma = "mlx-community/gemma-4-12B-it-4bit"
+        #expect(request(["thinkBudgetTokens": "2048"], gemma) == ThinkBudget.Request(tokens: 2048, transition: .close))
+        #expect(request(["thinkBudgetTokens": "2048", "thinkBudgetTransition": "qwen"], lil)
             == ThinkBudget.Request(tokens: 2048, transition: .qwen))
-        #expect(ThinkBudget.request(from: defaults(["thinkBudgetTokens": "1024", "thinkBudgetTransition": "nope"]))
+        #expect(request(["thinkBudgetTokens": "1024", "thinkBudgetTransition": "nope"], lil)
             == ThinkBudget.Request(tokens: 1024, transition: .close))
+        #expect(request(["thinkBudgetTransition": "qwen"], lil)
+            == ThinkBudget.Request(tokens: 1024, transition: .qwen), "the transition applies to the default too")
     }
 
     @Test("a budget applies only to a generation that opens thinking")
@@ -77,10 +103,12 @@ struct ThinkBudgetTests {
         }
     }
 
-    @Test("the character cut stands aside while a token budget closes the thought")
+    /// The forced close bounds the thought, so the cut is only a net: 8 characters a token. At 1,024 that's 8,192,
+    /// above the longest forced thought measured (4,755 characters, 2026-10-18/19) and so never racing the close.
+    @Test("while a brain forces its close, the character cut is a net at 8 per token above it")
     func characterCap() {
-        #expect(ThinkBudget.characterCap(for: nil) == nil, "nil: the responder's own default")
-        #expect(ThinkBudget.characterCap(for: ThinkBudget.Request(tokens: 1024, transition: .close)) == .max)
+        #expect(ThinkBudget.characterCap(forTokens: 1024) == 8192)
+        #expect(ThinkBudget.characterCap(forTokens: 1024) > 4755, "above the longest forced thought")
     }
 
     @Test("NoWait is off unless argv asks: no key, zero, a negative or junk is no penalty")
@@ -103,12 +131,24 @@ struct ThinkBudgetTests {
 
     @Test("NoWait's spellings: each opener in either case, starting a line or after a space, once")
     func noWaitSpellings() {
-        let spellings = ThinkBudget.NoWait.spellings
+        let spellings = ThinkBudget.NoWait.spellings(of: ThinkBudget.NoWait.defaultWords)
         for word in ["Wait", "wait", "Hmm", "hmm", "Alternatively", "alternatively"] {
             #expect(spellings.contains(word))
             #expect(spellings.contains(" " + word))
         }
         #expect(Set(spellings).count == spellings.count)
-        #expect(spellings.count == ThinkBudget.NoWait.words.count * 4)
+        #expect(spellings.count == ThinkBudget.NoWait.defaultWords.count * 4)
+        #expect(ThinkBudget.NoWait.spellings(of: ["but", "But"]).count == 4, "a word given twice is spelled once")
+    }
+
+    @Test("NoWait's words: the three openers unless argv names its own, or `paper` for the paper's seventeen")
+    func noWaitWords() {
+        #expect(ThinkBudget.NoWait.words(from: defaults([:])) == ["Wait", "Hmm", "Alternatively"])
+        #expect(ThinkBudget.NoWait.words(from: defaults(["thinkWaitWords": "Wait, Hmm,Alternatively,But , Check,,"]))
+            == ["Wait", "Hmm", "Alternatively", "But", "Check"])
+        let paper = ThinkBudget.NoWait.words(from: defaults(["thinkWaitWords": "paper"]))
+        #expect(paper.count == 17)
+        #expect(paper.contains("But") && paper.contains("Check") && paper.contains("Double-check"))
+        #expect(ThinkBudget.NoWait.words(from: defaults(["thinkWaitWords": " , "])) == ThinkBudget.NoWait.defaultWords)
     }
 }

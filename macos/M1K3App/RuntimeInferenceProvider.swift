@@ -26,6 +26,8 @@
 //  `tool router:` notice on a Mini turn.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — forwards `ImageCaptioning` (caption memory), the app mirror of
 //  SwappableInferenceProvider's forward.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — forwards `ThinkBudgetForcing` (the responder's cut stands back to a
+//  net while Lil forces its close), the app mirror of SwappableInferenceProvider's forward.
 
 import Foundation
 import M1K3Inference
@@ -179,6 +181,14 @@ extension RuntimeInferenceProvider: PersonaCarrying {
 extension RuntimeInferenceProvider: TokenCounting {
     func tokenCount(_ text: String) async -> Int? {
         await (active as? TokenCounting)?.tokenCount(text)
+    }
+}
+
+/// Forwards the brain's own thinking budget to the responder's cut — same every-façade-forwards rule as its
+/// siblings: dropped here, the 4,000-character cut races Lil's forced close on the Mac.
+extension RuntimeInferenceProvider: ThinkBudgetForcing {
+    var forcedThinkingTokens: Int? {
+        (active as? ThinkBudgetForcing)?.forcedThinkingTokens
     }
 }
 

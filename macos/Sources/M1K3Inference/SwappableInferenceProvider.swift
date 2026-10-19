@@ -26,6 +26,8 @@
 //  ran on the Mac (build 373). Both façades conform; pinned by `routeSeesThroughFacades`.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — forwards `ImageCaptioning` (caption memory); a backend
 //  without it throws rather than answering with the wrong model.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — forwards `ThinkBudgetForcing`, so the responder's cut stands back
+//  to a net while the active brain forces its close (Lil, 1,024 tokens). Pinned by `forcedThinkingFollowsSwap`.
 
 import Foundation
 import Synchronization
@@ -133,6 +135,14 @@ extension SwappableInferenceProvider: PersonaCarrying {
 extension SwappableInferenceProvider: TokenCounting {
     public func tokenCount(_ text: String) async -> Int? {
         await (active as? TokenCounting)?.tokenCount(text)
+    }
+}
+
+/// Forwards the brain's own thinking budget to the responder's cut — same every-façade-forwards rule as its
+/// siblings: dropped here, the 4,000-character cut races Lil's forced close in production.
+extension SwappableInferenceProvider: ThinkBudgetForcing {
+    public var forcedThinkingTokens: Int? {
+        (active as? ThinkBudgetForcing)?.forcedThinkingTokens
     }
 }
 
