@@ -20,6 +20,8 @@
 //  Review: same day (overnight) — Qwen3.5-4B's exact id joins the VLM allow-list; 2B stays text-only.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — every `lil` in here is the shipped Qwen3.5-4B id (#517); the
 //  2507 stays only where the test is ABOUT the 2507 (the thinking-toggle exclusion, text-only routing).
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — the sampling pin: one profile with every value distinct lands whole,
+//  presence window included, and the default provider's window is the profile's 64, not mlx's 20. Confidence 0.9.
 
 import Foundation
 import M1K3Chat
@@ -345,6 +347,31 @@ struct MLXBrainProviderTests {
         let provider = MLXBrainProvider()
         #expect(provider.generateParameters.repetitionPenalty == 1.1)
         #expect(provider.generateParameters.repetitionContextSize == 64)
+        // House builds no presence processor; the window follows the profile's (mlx's own default is 20), which
+        // shows the per-generation sampling ran.
+        #expect(provider.generateParameters.presencePenalty == nil)
+        #expect(provider.generateParameters.presenceContextSize == 64)
+    }
+
+    /// Every value distinct and off GenerateParameters' defaults, so a dropped or hard-coded line shows: every
+    /// shipped profile has min-p 0 and a 64-token window, which is also what a dropped line would leave.
+    @Test("a sampling profile lands whole on the generation's parameters, presence window included")
+    func samplingAppliesEveryField() {
+        let profile = SamplingProfile(
+            temperature: 0.33, topP: 0.77, topK: 7, minP: 0.05,
+            repetitionPenalty: 1.07, repetitionContextSize: 37, presencePenalty: 0.7
+        )
+        var params = GenerateParameters()
+        MLXBrainProvider.apply(profile, to: &params)
+        #expect(params.temperature == 0.33)
+        #expect(params.topP == 0.77)
+        #expect(params.topK == 7)
+        #expect(params.minP == 0.05)
+        #expect(params.repetitionPenalty == 1.07)
+        #expect(params.repetitionContextSize == 37)
+        #expect(params.presencePenalty == 0.7)
+        #expect(params.presenceContextSize == 37)
+        #expect(params.frequencyPenalty == nil)
     }
 
     @Test("quantizing families carry kvBits; default-newCache families keep the rotation cap")

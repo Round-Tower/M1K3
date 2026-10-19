@@ -143,6 +143,8 @@
 //  test can give a brain a budget, and the budget notice says whether the template lets it force or leaves it inert.
 //  The per-generation sampling Review above missed one change: `apply` sets the presence window to the profile's 64,
 //  where the library's 20 applied before, so the legacy `card-presence` arm samples a wider window. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — `apply` is internal so a test pins it whole (#643's review couldn't
+//  confirm the presence window from the diff). Comment and access only. Confidence 0.9.
 
 import Foundation
 import Hub
@@ -218,7 +220,9 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         return params
     }
 
-    private static func apply(_ sampling: SamplingProfile, to params: inout GenerateParameters) {
+    /// Internal for the pin (MLXBrainProviderTests.samplingAppliesEveryField): every profile field, and the
+    /// presence window follows the repetition window (since df548535; mlx's own default, 20, before).
+    static func apply(_ sampling: SamplingProfile, to params: inout GenerateParameters) {
         params.temperature = sampling.temperature
         params.topP = sampling.topP
         params.topK = sampling.topK
