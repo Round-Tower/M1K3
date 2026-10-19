@@ -45,7 +45,10 @@ The scratch spec ruled "inference, not MCP". **Kev's 2026-08-19 ruling: both**
   (the #134 rule) and pinned by `SwappableCapabilityForwardingTests`; a
   backend that can't do raw yields an honest **503**, never a persona-seeded
   fallback. `max_tokens` is honored, clamped to the provider's own cap
-  (shorten, never lengthen). **Zero server-side tool execution (audit B1)**:
+  (shorten, never lengthen). **The brain's thinking budget is forced here
+  too** (2026-10-19, `MLXBrainProvider.rawSessionPlan`): Lil closes its thought
+  at 1,024 tokens on the host, planned from the clamped cap, as on the Mac's
+  own turns (#643); the device's cut never sees an unopened thought. **Zero server-side tool execution (audit B1)**:
   tool-call syntax the brain emits streams back for the CLIENT's own
   registry. A not-ready brain refuses with 429 `warming` — a remote request
   can never trigger a model load or download as a side effect.

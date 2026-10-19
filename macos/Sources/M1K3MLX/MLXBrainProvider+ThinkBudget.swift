@@ -2,7 +2,8 @@
 //  MLXBrainProvider+ThinkBudget.swift
 //  M1K3MLX
 //
-//  Budget forcing on the plain turn, Lil's by default and argv's `-thinkBudgetTokens N` (see ThinkBudget):
+//  Budget forcing on the plain turn and the raw route (Brain at Home), Lil's by default and argv's
+//  `-thinkBudgetTokens N` (see ThinkBudget):
 //  mlx-swift-lm's `ThinkingBudgetProcessor` counts reasoning tokens and, at the budget, forces the
 //  transition and `</think>` through the normal sampling loop, so the KV cache, the stream and the
 //  answer all carry on from the cut thought. Qwen3.5's protocol ships no declared transition
@@ -22,6 +23,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — `ThinkBudgetForcing`: the provider tells the responder's cut the
 //  budget it forces (template-scoped, whatever the build's thinking flag), so the cut stands back to a net on every
 //  shell. NoWait pushes down the words read at init (`-thinkWaitWords`). Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — comment only: the raw route (`rawSessionPlan`) builds its components
+//  here too; the tool session is still the Open above.
 
 import Foundation
 import M1K3Inference

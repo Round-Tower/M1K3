@@ -16,9 +16,18 @@
 //  walk the dial order; a break mid-stream never retries (no duplicated
 //  half-answers).
 //
+//  Thinking: the HOST bounds a remote thought (the raw route forces the brain's
+//  budget, `MLXBrainProvider.rawSessionPlan`), so this provider does not forward
+//  `ThinkBudgetForcing`. The device's cut can't race that close today: the raw
+//  route streams no `<think>` opener, and iOS gives a non-Mini provider no plain
+//  route (`ToolRouterWiring`, allTiers off on iOS). Flipping either one must
+//  carry the host's budget here in the same change.
+//
 //  Signed: Kev + claude-fable-5, 2026-08-24, Confidence 0.85 (behaviour
 //  table-tested over an injected transport; live-LAN feel is the Phase C
 //  hardware verify). Prior: BRAIN_AT_HOME_SPEC §2/§5.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — comment only: why the thinking budget lives on the host, and the
+//  two changes that would make the device need it (#643's follow-up, which assumed the device cut raced it).
 //
 
 import Foundation

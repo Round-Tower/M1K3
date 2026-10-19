@@ -145,6 +145,11 @@
 //  where the library's 20 applied before, so the legacy `card-presence` arm samples a wider window. Confidence 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — `apply` is internal so a test pins it whole (#643's review couldn't
 //  confirm the presence window from the diff). Comment and access only. Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-19 — the raw route (Brain at Home) forces the budget too, through
+//  `rawSessionPlan`: #643 wired the two plain sessions and missed this one, so a phone on the Mac's Lil thought to
+//  the 4,096 cap (the bare-generate arms: 9 of 24 empty, thoughts to 17.7k chars). Still no instructions, seed or
+//  tools. Verify-by-launch owed from a paired iPhone (`raw: thinking budget 1024 tokens` per generation).
+//  Confidence 0.75.
 
 import Foundation
 import Hub
@@ -1419,6 +1424,34 @@ extension MLXBrainProvider {
 /// persona (About-the-user block included) is a prefix-extraction surface,
 /// so raw-ness is structural, not filtered (2026-08-19 audit, finding 1).
 extension MLXBrainProvider: RawCompletionProviding {
+    /// The raw session's inputs, decided together so the thinking budget is planned from the cap the session
+    /// runs with: mlx-swift-lm throws at generation time when the cap can't hold the budget and its answer floor,
+    /// and the raw route turns a throw into an empty stream.
+    struct RawSessionPlan {
+        let parameters: GenerateParameters
+        let thinkBudget: Int?
+        let waitPenalty: Float?
+        let additionalContext: [String: any Sendable]?
+    }
+
+    /// The plan for one raw generation. A remote caller may SHORTEN it, never lengthen it past this provider's cap.
+    /// The forced close and NoWait are the plain turn's (#643), so the host bounds a remote thought itself: the
+    /// phone's cut never sees one (this route streams no `<think>` opener). Constant transition text only; nothing
+    /// from the persona or the user joins the context.
+    func rawSessionPlan(maxTokens: Int?) -> RawSessionPlan {
+        var parameters = generateParameters
+        if let requested = maxTokens {
+            let cap = parameters.maxTokens ?? Self.defaultMaxTokens
+            parameters.maxTokens = min(max(1, requested), cap)
+        }
+        return RawSessionPlan(
+            parameters: parameters,
+            thinkBudget: thinkBudgetTokens(parameters: parameters),
+            waitPenalty: thinkWaitPenalty(),
+            additionalContext: thinkingAdditionalContext
+        )
+    }
+
     public func generateRawStreaming(prompt: String, maxTokens: Int?) -> AsyncStream<String>? {
         AsyncStream { continuation in
             let task = Task {
@@ -1426,15 +1459,20 @@ extension MLXBrainProvider: RawCompletionProviding {
                     defer { MLXMemoryBudget.reclaim(label: "generateRawStreaming") }
                     do {
                         let container = try await ensureLoaded()
-                        var parameters = generateParameters
-                        if let requested = maxTokens {
-                            // Remote callers may SHORTEN a generation, never
-                            // lengthen it past this provider's own cap.
-                            let cap = parameters.maxTokens ?? Self.defaultMaxTokens
-                            parameters.maxTokens = min(max(1, requested), cap)
+                        let plan = rawSessionPlan(maxTokens: maxTokens)
+                        let components = plan.thinkBudget == nil && plan.waitPenalty == nil
+                            ? GenerationComponents()
+                            : await thinkingComponents(
+                                budget: plan.thinkBudget, waitPenalty: plan.waitPenalty,
+                                tokenizer: container.tokenizer, label: "raw"
+                            )
+                        // instructions: nil and no cache seed — the raw contract. If this route ever streams a
+                        // `<think>` opener, the phone's cut can see the thought and races this close: carry the
+                        // host's budget to the phone in the same change (HomeBrainProvider).
+                        let session = ChatSession(container, generateParameters: plan.parameters, components: components)
+                        if let context = plan.additionalContext {
+                            session.additionalContext = context
                         }
-                        // instructions: nil and no cache seed — the raw contract.
-                        let session = ChatSession(container, generateParameters: parameters)
                         for try await event in session.streamDetails(to: prompt, images: [], videos: []) {
                             if let chunk = event.chunk { continuation.yield(chunk) }
                             if let info = event.info {
