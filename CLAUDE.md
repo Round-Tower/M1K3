@@ -18,7 +18,10 @@ Mac App Store (check the store lookup before saying it is live). The same portab
   session needs you, and the avatar band (`/face`, `/companion`).
 - M1K3's in-app MCP server (`127.0.0.1:4242/mcp`) needs its access token (#270): connect
   with `m1k3 login && m1k3 connect claude` (user scope). No repo `.mcp.json` — a project
-  entry would shadow the authed user one.
+  entry would shadow the authed user one. On Kev's Mac the bare `m1k3` is
+  `~/.agent-context/scripts/m1k3` (no `login`), so call the app's CLI by path:
+  `/Applications/M1K3.app/Contents/Helpers/m1k3`. After the app restarts, this session's
+  MCP needs `/mcp` → Reconnect; it doesn't retry by itself.
 
 ## Session memory
 `.claude/project-memory.md` is the private session chronicle: gitignored, never
