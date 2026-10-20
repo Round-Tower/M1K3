@@ -29,6 +29,12 @@
 // the file tools' pattern ends at the name, like the Bash one.
 // Review: Kev + Claude, 2026-10-05 — second auto pass: `>>` with no space
 // (`cat >>.claude/project-memory.md`) is the sanctioned append, not a replace.
+// Review: Kev + claude-opus-5-5, 2026-10-15 — the master/main push deny is this checkout's:
+// when the last `cd` before the push resolves outside it (`$HOME` for `~`), the push runs
+// (Kev's agent-context push was refused). Unresolvable targets keep the deny. Confidence 0.8.
+// Review: same day (2), pre-push review fold — a worktree's main checkout and any M1K3 folder
+// stay M1K3; a cd that doesn't persist (closed subshell, `$(…)`, `&`, `|`) doesn't count; every
+// push must leave; `..` resolved; no checkout, no exemption. Confidence 0.8.
 
 import type { On } from 'claude-code'
 
@@ -44,7 +50,7 @@ const AT_START = String.raw`(?:^|[;&|(\n]|\|\||&&)\s*(?:sudo\s+|time\s+|env\s+(?
 
 export const BASH_DENIES: readonly Rule[] = [
   {
-    test: new RegExp(`${AT_START}git\\s+push\\b(?:\\s+-\\S+)*\\s+\\S+\\s+\\+?(?:\\S+:)?(?:refs\\/heads\\/)?(?:master|main)(?=\\s|$)`),
+    test: new RegExp(`${AT_START}git\\s+push\\b(?:\\s+-\\S+)*\\s+\\S+\\s+\\+?(?:\\S+:)?(?:refs\\/heads\\/)?(?:master|main)(?=[\\s;&|)]|$)`),
     reason: 'never a direct push to master: push the branch and land it with macos/tools/ci/land.sh',
   },
   {
@@ -108,14 +114,76 @@ export function denyFor(command: string, rules: readonly Rule[] = BASH_DENIES): 
   return rules.find(rule => rule.test.test(rule.raw ? command : bare))?.reason
 }
 
+const PUSH_DENY = BASH_DENIES[0]!
+
+/** The checkout a plugin at `<checkout>/.claude/skills/<name>` was loaded from; undefined otherwise. */
+export function checkoutOf(pluginRoot: string): string | undefined {
+  return /^(.+)\/\.claude\/skills\/[^/]+\/?$/.exec(pluginRoot)?.[1]
+}
+
+/** `..` and `.` segments resolved, trailing slashes dropped. */
+function normalise(path: string): string {
+  const parts: string[] = []
+  for (const part of path.split('/')) {
+    if (part === '' || part === '.') continue
+    if (part === '..') parts.pop()
+    else parts.push(part)
+  }
+  return `/${parts.join('/')}`
+}
+
+/** Whether `path` is this repo: under the checkout, under the main checkout of a worktree, or any M1K3 folder. */
+function isOwnRepo(path: string, checkout: string): boolean {
+  const main = checkout.replace(/\/\.claude\/worktrees\/[^/]+$/, '')
+  const name = (main.split('/').at(-1) ?? '').toLowerCase()
+  const under = (root: string): boolean => path === root || path.startsWith(`${root}/`)
+  return under(checkout) || under(main) || (name !== '' && path.toLowerCase().split('/').some(part => part.includes(name)))
+}
+
+/** Where a `cd` may start: a line or a separator, or a subshell's `(` (the push must then share it). */
+const CD = /(?:^|;|&&|\|\||\n|\()\s*cd\s+([^\s;&|)]+)/g
+
+/**
+ * Whether every push to master/main in `command` runs in another repo: the last
+ * `cd` before each names an absolute or `~` path that is not M1K3. The guard
+ * keeps M1K3's master; a sibling repo pushing its own main is its business
+ * (2026-10-14: `cd ~/.agent-context; git push origin main` was refused). A `cd`
+ * that doesn't persist to the push (a closed subshell, `$(…)`, a backgrounded or
+ * piped `cd`) doesn't count, and anything unresolvable (no home or checkout,
+ * `cd -`, a `$VAR`, a relative hop) stays in the checkout, so the deny stands.
+ */
+export function leavesCheckout(command: string, home: string | undefined, checkout: string | undefined): boolean {
+  if (checkout === undefined) return false
+  const bare = bareCommand(command)
+  const pushes = [...bare.matchAll(new RegExp(PUSH_DENY.test.source, 'g'))]
+  if (pushes.length === 0) return false
+  return pushes.every((push) => {
+    const before = bare.slice(0, push.index) // the push's own boundary (`&&`, `;`) is not between
+    const cd = [...before.matchAll(CD)].at(-1)
+    if (cd === undefined) return false
+    // The push's own boundary counts: a lone `&` or `|` there backgrounds or pipes the `cd`.
+    const between = before.slice(cd.index + cd[0].length) + bare.slice(push.index, push.index + 2)
+    if (/\)|(?<![&|])[&|](?![&|])/.test(between)) return false
+    const target = cd[1] ?? ''
+    const path = target === '~' || target.startsWith('~/')
+      ? (home === undefined ? undefined : home + target.slice(1))
+      : target.startsWith('/') ? target : undefined
+    return path !== undefined && !isOwnRepo(normalise(path), checkout)
+  })
+}
+
 export const MEMORY_DENY = '.claude/project-memory.md is append-only; add a block with `cat >> .claude/project-memory.md`'
 
 /** The matched `tool.call` hooks: Bash commands, and the two file tools on the session memory. */
 export function registerGuard(on: On): void {
-  on('tool.call', { tool: 'Bash' }, ($, e, next) => {
+  on('tool.call', { tool: 'Bash' }, async ($, e, next) => {
     const command = e.command.trim()
     const reason = denyFor(command)
-    if (reason !== undefined) return { deny: `${$.plugin.name} guard: ${reason}` }
+    if (reason !== undefined) {
+      const elsewhere = reason === PUSH_DENY.reason
+        && leavesCheckout(command, await $.env.get('HOME').catch(() => undefined), checkoutOf($.plugin.root))
+      if (!elsewhere) return { deny: `${$.plugin.name} guard: ${reason}` }
+    }
     const warning = denyFor(command, BASH_WARNINGS)
     if (warning !== undefined) $.ui.toast(`${$.plugin.name} guard: ${warning}`, { timeoutMs: 8000 })
     return next(e)
