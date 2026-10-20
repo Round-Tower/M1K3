@@ -137,6 +137,10 @@ build (the DMG and the Homebrew cask) does the write.
 
 ## MCP integration
 
+<p align="center">
+  <a href="https://mcprush.com/to/m1k3-mcp?ref=badge"><img width="380" height="200" src="https://mcprush.com/badge/m1k3-mcp/card.svg" alt="M1K3 MCP on mcprush: security grade A, verified publisher, no sign-in" loading="lazy"></a>
+</p>
+
 The running Mac app serves MCP over HTTP at `http://127.0.0.1:4242/mcp` —
 knowledge search, documents, voice, and `ask_m1k3` (ask the resident AI).
 Every request carries the server's access token (Settings ▸ MCP Server);
@@ -255,7 +259,10 @@ human-and-AI collaboration on the record.
      Review: Kev + claude-opus-5.5, 2026-10-11 — repo optics: the hero's store link is Apple's own
      "Download on the Mac App Store" badge (hotlinked from Apple's marketing toolbox, as Apple
      offers it; still ct=readme-hero), the DMG link reads "Download the DMG", and Contributing
-     asks for a star once, plainly. Confidence 0.85. -->
+     asks for a star once, plainly. Confidence 0.85.
+     Review: Kev + claude-fable-5.1, 2026-10-20 — mcprush graded the MCP server A (93/100 trust, verified
+     publisher); its live card sits under MCP integration, not in the shields row, because a 380×200 card
+     would swamp the small badges. The card is hotlinked and updates itself. Confidence 0.85. -->
 <!-- Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 (the v1.1.0 pass: the two
      "1.0 build has no cloud path" sentences now describe PCC as the opt-in third crossing,
      consent per conversation per ADR 0007; the MCP count of 18 was re-read off
