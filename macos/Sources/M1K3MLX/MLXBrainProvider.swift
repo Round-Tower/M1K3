@@ -151,6 +151,10 @@
 //  tools. Verify-by-launch owed from a paired iPhone (`raw: thinking budget 1024 tokens` per generation).
 //  Confidence 0.75.
 //  Review: same day (pre-push review fold) — the raw route's coupling comment says the race needs both changes.
+//  Review: Kev + claude-opus-5-5, 2026-10-20 — swap speed (1.1.1/537: Lil took 45 s to wake, the first turn 71 s).
+//  `retire()` drops a swapped-out brain for good (the loader refuses, so a straggling warm can't reload it); and
+//  the tokenizer is captured once at load, so `tokenCount`/`templatedTokenCount` stop queueing on the container
+//  lock behind a persona prefill (the grounding cap waited 48.8 s there). Verify-by-launch owed. Confidence 0.75.
 
 import Foundation
 import Hub
@@ -240,6 +244,11 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
     }
 
     private let loader: SingleFlightLoader<ModelContainer>
+    /// The loaded model's tokenizer, captured once when the container is built (the container lock is free then).
+    /// Counting tokens through `container.perform` queued behind any prefill holding the lock — a persona warm
+    /// holds it for its whole build, so the first turn's grounding cap waited 48.8 s (2026-10-20). The tokenizer is
+    /// `Sendable` and encoding is read-only, so counts read it straight. Cleared on `releaseModel`/`retire`.
+    private let tokenizerSlot: OSAllocatedUnfairLock<(any Tokenizer)?>
     /// The native tool-call dialect resolved at init from the model family
     /// (Gemma → .gemma, Qwen/Llama → .json, …) — config.json's model_type when
     /// the repo is already on disk, else the name heuristic. nil → not yet known.
@@ -472,8 +481,10 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         // Retry on transient network failures: a HuggingFace CDN timeout would
         // otherwise kill the turn, but the download is resumable so each retry
         // continues the cached partial rather than restarting.
+        let tokenizerSlot = OSAllocatedUnfairLock<(any Tokenizer)?>(initialState: nil)
+        self.tokenizerSlot = tokenizerSlot
         loader = SingleFlightLoader { progress in
-            try await withRetry(
+            let container = try await withRetry(
                 onRetry: { attempt, error in
                     let reason = error.localizedDescription
                     mlxLoadLog.notice(
@@ -520,6 +531,10 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
                     }
                 }
             )
+            // Read while nothing else can hold the lock: the container was built a moment ago and nobody has it yet.
+            let tokenizer = await container.tokenizer
+            tokenizerSlot.withLock { $0 = tokenizer }
+            return container
         }
     }
 
@@ -594,10 +609,24 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
     /// generation would not crash (ARC keeps the container alive through the
     /// generation) but the memory would not actually return until it finishes.
     public func releaseModel() async {
+        // Slot first: a reload landing in the reset's actor hop refills it, and must not be wiped after.
+        tokenizerSlot.withLock { $0 = nil }
         await loader.reset()
         personaPrefix.invalidate()
         conversationTail.invalidate()
         MLXMemoryBudget.reclaim(label: "releaseModel")
+    }
+
+    /// Drop this provider for good — a brain swapped out. Unlike `releaseModel()` nothing ever loads again: the
+    /// loader refuses a cold load (`SingleFlightLoaderRetired`) and cancels one still running, so a straggling warm
+    /// on the outgoing brain can't pull its weights back beside the new brain. A turn still running on it keeps the
+    /// loaded container and finishes; the weights go when the provider does. The caller cancels the provider's
+    /// persona warm first. Never for a deep dive's parked brain — that one comes back, and parks with `releaseModel()`.
+    public func retire() async {
+        await loader.retire()
+        personaPrefix.invalidate()
+        conversationTail.invalidate()
+        MLXMemoryBudget.reclaim(label: "retire \(modelIdentifier)")
     }
 
     /// Eagerly release cached Metal state (persona KV prefix) and return
@@ -1121,34 +1150,36 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
     /// nil (never 0) when the model can't be loaded — a confident zero would
     /// read as "measured, and free".
     public func tokenCount(_ text: String) async -> Int? {
+        guard let tokenizer = await loadedTokenizer() else { return nil }
+        return tokenizer.encode(text: text).count
+    }
+
+    /// The tokenizer without the container lock: loads the model if needed (the slot fills at load), then reads
+    /// the slot — or, if a release emptied it under a cached container, the container's own (one locked read).
+    /// nil when the model can't be loaded.
+    private func loadedTokenizer() async -> (any Tokenizer)? {
+        let container: ModelContainer
         do {
-            let container = try await ensureLoaded()
-            return await container.perform { context in
-                context.tokenizer.encode(text: text).count
-            }
+            container = try await ensureLoaded()
         } catch {
             return nil
         }
+        if let tokenizer = tokenizerSlot.withLock({ $0 }) { return tokenizer }
+        return await container.tokenizer
     }
 
     /// Token count for `text` WITH the chat template applied — the true cost of
     /// a fully-assembled prompt, wrapper included. Pair with `tokenCount` to
     /// attribute the difference to template overhead.
     public func templatedTokenCount(_ text: String) async -> Int? {
-        do {
-            let container = try await ensureLoaded()
-            return try await container.perform { context in
-                let noTools: [[String: any Sendable]]? = nil
-                let noContext: [String: any Sendable]? = nil
-                return try context.tokenizer.applyChatTemplate(
-                    messages: [["role": "user", "content": text]],
-                    tools: noTools,
-                    additionalContext: noContext
-                ).count
-            }
-        } catch {
-            return nil
-        }
+        guard let tokenizer = await loadedTokenizer() else { return nil }
+        let noTools: [[String: any Sendable]]? = nil
+        let noContext: [String: any Sendable]? = nil
+        return try? tokenizer.applyChatTemplate(
+            messages: [["role": "user", "content": text]],
+            tools: noTools,
+            additionalContext: noContext
+        ).count
     }
 }
 

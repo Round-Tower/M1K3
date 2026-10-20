@@ -71,7 +71,7 @@ struct PersonaWarmRunTests {
     @Test("every palette warms, in order, while nothing says stop")
     func runsAllInOrder() async {
         let recorder = Recorder()
-        let ran = await PersonaWarmRun.run([0, 8, 15], shouldContinue: { true }) { recorder.record($0) }
+        let ran = await PersonaWarmRun.run([0, 8, 15], shouldContinue: { true }, warm: { recorder.record($0) })
         #expect(ran == 3)
         #expect(recorder.recorded == [0, 8, 15])
     }
@@ -79,9 +79,9 @@ struct PersonaWarmRunTests {
     @Test("a stop after the first palette skips the rest (the swap cancels the outgoing brain's warm)")
     func stopsBetweenPalettes() async {
         let recorder = Recorder()
-        let ran = await PersonaWarmRun.run([0, 8, 15], shouldContinue: { recorder.recorded.isEmpty }) {
-            recorder.record($0)
-        }
+        let ran = await PersonaWarmRun.run(
+            [0, 8, 15], shouldContinue: { recorder.recorded.isEmpty }, warm: { recorder.record($0) }
+        )
         #expect(ran == 1)
         #expect(recorder.recorded == [0])
     }
@@ -91,9 +91,9 @@ struct PersonaWarmRunTests {
         let recorder = Recorder()
         let task = Task {
             withUnsafeCurrentTask { $0?.cancel() }
-            return await PersonaWarmRun.run([0, 8, 15], shouldContinue: { !Task.isCancelled }) {
-                recorder.record($0)
-            }
+            return await PersonaWarmRun.run(
+                [0, 8, 15], shouldContinue: { !Task.isCancelled }, warm: { recorder.record($0) }
+            )
         }
         #expect(await task.value == 0)
         #expect(recorder.recorded.isEmpty)
