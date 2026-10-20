@@ -107,6 +107,18 @@ public enum BrainSwitcher {
         return modelID == loadedModelID
     }
 
+    /// Whether a preload of the CURRENT provider should do nothing: it is already ready (a chat remount re-fires
+    /// the launch warm), or a preload for it is already running (three launch paths race). A new provider, a
+    /// failed load and a cold start all run. Added 2026-10-20: a remount over a ready Lil re-zeroed the bar,
+    /// fronted Mini and started another prefix warm.
+    public static func preloadIsNoOp(
+        load: ModelLoadState,
+        readyProviderMatches: Bool,
+        inFlightForProvider: Bool
+    ) -> Bool {
+        inFlightForProvider || (load == .ready && readyProviderMatches)
+    }
+
     /// The toolbar indicator: the active brain composed WITH the load state, so it
     /// never claims a brain that's still downloading (see the file header).
     public static func indicatorLabel(active: BrainTier, load: ModelLoadState) -> String {

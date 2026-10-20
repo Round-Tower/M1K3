@@ -193,4 +193,21 @@ struct BrainSwitcherTests {
         // Two Minis in one menu — the titles must still tell them apart.
         #expect(Set(rows.map(\.menuTitle)).count == rows.count)
     }
+
+    // 2026-10-20: three launch paths (init, M1K3App, ContentView's .task — which re-fires on every chat remount)
+    // each ran a full preload; a remount over a ready Lil flipped the gate to interim and started another warm.
+    @Test("preload is a no-op when this provider is already ready or already loading")
+    func preloadNoOp() {
+        #expect(BrainSwitcher.preloadIsNoOp(load: .ready, readyProviderMatches: true, inFlightForProvider: false))
+        #expect(BrainSwitcher.preloadIsNoOp(load: .preparing, readyProviderMatches: false, inFlightForProvider: true))
+    }
+
+    @Test("preload runs for a new provider, a failed load, or a cold start")
+    func preloadRuns() {
+        #expect(!BrainSwitcher.preloadIsNoOp(load: .ready, readyProviderMatches: false, inFlightForProvider: false))
+        #expect(!BrainSwitcher.preloadIsNoOp(
+            load: .failed(message: "x"), readyProviderMatches: true, inFlightForProvider: false
+        ))
+        #expect(!BrainSwitcher.preloadIsNoOp(load: .idle, readyProviderMatches: false, inFlightForProvider: false))
+    }
 }
