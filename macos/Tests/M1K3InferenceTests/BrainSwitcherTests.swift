@@ -193,4 +193,37 @@ struct BrainSwitcherTests {
         // Two Minis in one menu — the titles must still tell them apart.
         #expect(Set(rows.map(\.menuTitle)).count == rows.count)
     }
+
+    // 2026-10-20: three launch paths (init, M1K3App, ContentView's .task — which re-fires on every chat remount)
+    // each ran a full preload; a remount over a ready Lil flipped the gate to interim and started another warm.
+    @Test("preload is a no-op when this provider is already ready or already loading")
+    func preloadNoOp() {
+        #expect(BrainSwitcher.preloadIsNoOp(load: .ready, readyProviderMatches: true, inFlightForProvider: false))
+        #expect(BrainSwitcher.preloadIsNoOp(load: .preparing, readyProviderMatches: false, inFlightForProvider: true))
+    }
+
+    @Test("preload runs for a new provider, a failed load, or a cold start")
+    func preloadRuns() {
+        #expect(!BrainSwitcher.preloadIsNoOp(load: .ready, readyProviderMatches: false, inFlightForProvider: false))
+        #expect(!BrainSwitcher.preloadIsNoOp(
+            load: .failed(message: "x"), readyProviderMatches: true, inFlightForProvider: false
+        ))
+        #expect(!BrainSwitcher.preloadIsNoOp(load: .idle, readyProviderMatches: false, inFlightForProvider: false))
+    }
+
+    // 2026-10-20: the Kokoro graph compile (31 s) ran beside Big's load and the swap to Lil. The launch voice restore
+    // waits for an MLX brain to settle; Mini has nothing to wait for.
+    @Test("the launch voice restore waits while an MLX brain is still coming up")
+    func voiceRestoreWaitsForMLXBrain() {
+        #expect(!BrainSwitcher.launchVoiceRestoreMayStart(brainIsMLX: true, load: .idle))
+        #expect(!BrainSwitcher.launchVoiceRestoreMayStart(brainIsMLX: true, load: .preparing))
+        #expect(!BrainSwitcher.launchVoiceRestoreMayStart(brainIsMLX: true, load: .progress(0.4)))
+    }
+
+    @Test("the launch voice restore starts once the brain settled, or at once on Mini")
+    func voiceRestoreStarts() {
+        #expect(BrainSwitcher.launchVoiceRestoreMayStart(brainIsMLX: true, load: .ready))
+        #expect(BrainSwitcher.launchVoiceRestoreMayStart(brainIsMLX: true, load: .failed(message: "x")))
+        #expect(BrainSwitcher.launchVoiceRestoreMayStart(brainIsMLX: false, load: .idle))
+    }
 }

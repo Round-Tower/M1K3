@@ -19,6 +19,10 @@
 //  reads "<1%". `statusLine` says Downloading while bytes come and Waking once they're in (the load has no number), and
 //  `DownloadStallWatch` tells a slow transfer from a dead one (the foreground Hub session dies when the phone locks, and
 //  an interrupted file restarts from zero). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-20 — Mac 1.1.1 (537): "Lil loading … hangs at 0% until jumping to fully
+//  loaded." A load from weights already on disk started at `.downloading(0)` and the fast path never reports
+//  progress, so "Downloading Lil… 0%" sat through the whole Metal load. `loadStart(weightsOnDisk:)` starts it at
+//  `.preparing`; `applying(progress:)` is the callback fold, pinned. Confidence 0.9.
 
 import Foundation
 
@@ -39,6 +43,28 @@ public enum ModelLoadState: Sendable, Equatable {
     /// supported way to build one, so a stray callback value can't escape range.
     public static func progress(_ fraction: Double) -> ModelLoadState {
         .downloading(fraction: min(max(fraction, 0), 1))
+    }
+
+    /// Where a load begins: a real download starts its bar at 0%, weights already on disk start indeterminate
+    /// (`.preparing`) — the local fast path reports no progress, so a 0% start would sit frozen through the load.
+    public static func loadStart(weightsOnDisk: Bool) -> ModelLoadState {
+        weightsOnDisk ? .preparing : .progress(0)
+    }
+
+    /// Fold a download-progress report into this state, or nil to leave it alone. While downloading, the fraction
+    /// moves the bar and the last byte hands over to `.preparing` (the weights still load into Metal, with no honest
+    /// number). While preparing, a report strictly between 0 and 1 means bytes really are moving (weights judged on
+    /// disk still needed a fetch), so it becomes a bar. A settled load ignores every report: a stale hop after
+    /// `.ready` must never regress the bar.
+    public func applying(progress fraction: Double) -> ModelLoadState? {
+        switch self {
+        case .downloading:
+            return fraction >= 1 ? .preparing : .progress(fraction)
+        case .preparing:
+            return fraction > 0 && fraction < 1 ? .progress(fraction) : nil
+        case .idle, .ready, .failed:
+            return nil
+        }
     }
 
     /// The 0...1 fraction for a `ProgressView`, or nil when not downloading.

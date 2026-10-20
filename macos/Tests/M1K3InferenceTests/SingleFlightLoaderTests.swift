@@ -272,3 +272,77 @@ private actor AsyncGate {
         await withCheckedContinuation { waiters.append($0) }
     }
 }
+
+/// 2026-10-20: a swapped-out brain is RETIRED, not merely evicted — a straggling caller of the outgoing provider must
+/// get an error, never a silent reload of its multi-GB weights beside the new brain.
+struct SingleFlightLoaderRetireTests {
+    @Test("a retired loader never loads: a cold call throws without running the operation")
+    func retireRefusesColdLoad() async throws {
+        let counter = InvocationCounter()
+        let loader = SingleFlightLoader<Int> { _ in
+            _ = await counter.bump()
+            return 5
+        }
+        await loader.retire()
+
+        await #expect(throws: SingleFlightLoaderRetired.self) { _ = try await loader.value() }
+        #expect(await counter.count == 0)
+    }
+
+    @Test("a value cached before retire keeps serving (a turn mid-loop on the old brain finishes)")
+    func cachedValueStillServes() async throws {
+        let counter = InvocationCounter()
+        let loader = SingleFlightLoader<Int> { _ in
+            _ = await counter.bump()
+            return 5
+        }
+        _ = try await loader.value()
+        await loader.retire()
+
+        #expect(try await loader.value() == 5)
+        #expect(await counter.count == 1)
+    }
+
+    @Test("retire cancels a flight that is still loading")
+    func retireCancelsFlight() async {
+        let gate = Gate()
+        let counter = InvocationCounter()
+        let sawCancel = Flag()
+        let loader = SingleFlightLoader<Int> { _ in
+            _ = await counter.bump()
+            await gate.wait()
+            if Task.isCancelled { sawCancel.set() }
+            return 1
+        }
+        let waiter = Task { try await loader.value() }
+        while await counter.count == 0 {
+            await Task.yield()
+        }
+        await loader.retire()
+        await gate.open()
+        _ = try? await waiter.value
+
+        #expect(sawCancel.isSet)
+    }
+
+    @Test("a flight in progress at retire still answers its waiters but does not re-cache")
+    func inFlightFinishesButDoesNotCache() async throws {
+        let gate = Gate()
+        let counter = InvocationCounter()
+        let loader = SingleFlightLoader<Int> { _ in
+            _ = await counter.bump()
+            await gate.wait()
+            return 9
+        }
+        let waiter = Task { try await loader.value() }
+        while await counter.count == 0 {
+            await Task.yield()
+        }
+        await loader.retire()
+        await gate.open()
+
+        #expect(try await waiter.value == 9)
+        await #expect(throws: SingleFlightLoaderRetired.self) { _ = try await loader.value() }
+        #expect(await counter.count == 1)
+    }
+}

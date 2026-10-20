@@ -83,6 +83,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-16 — Big's tool turns take checkpoints off its wrapped persona seed
 //  (copy and extend, never trim). The pristine-seed path is proved by the probe's tool arm on Big; the rolling
 //  checkpoint's nesting on gemma is unmeasured (it never nested in the probe). Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-10-20 — `warmPersonaPrefix` checks cancellation after the load, so a warm the
+//  app cancelled (a brain swap) skips its build instead of prefilling a brain nobody is using; and the doc no longer
+//  claims a racing turn "pays the build it would have paid anyway" (on 10-20 it waited behind palettes it never used).
 
 import Foundation
 import M1K3Inference
@@ -594,11 +597,15 @@ extension MLXBrainProvider: ToolCallingProvider {
     /// failure just logs — the turn falls back to building inline, exactly the
     /// pre-warm behavior. Key parity with the live turn is structural: both
     /// route through `MLXToolMapping.prefixInputs` (pinned in tests). A turn
-    /// racing the warm queues behind it on the ModelContainer — worst case it
-    /// pays the build it would have paid anyway.
+    /// racing the warm queues behind it on the ModelContainer, and that can cost
+    /// it builds it never uses (2026-10-20: a plain first turn waited behind the
+    /// headless and interactive palettes). Cancelled warms skip the build.
     public func warmPersonaPrefix(tools: [ToolDefinition]) async {
         do {
             let container = try await ensureLoaded()
+            // A swap cancels the outgoing brain's warm: don't start a prefill for it
+            // (a build already running finishes).
+            try Task.checkCancellation()
             let inputs = MLXToolMapping.prefixInputs(for: tools)
             let seed = try await buildPersonaPrefixSnapshot(
                 container: container,

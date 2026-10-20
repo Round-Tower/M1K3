@@ -107,6 +107,30 @@ public enum BrainSwitcher {
         return modelID == loadedModelID
     }
 
+    /// Whether a preload of the CURRENT provider should do nothing: it is already ready (a chat remount re-fires
+    /// the launch warm), or a preload for it is already running (three launch paths race). A new provider, a
+    /// failed load and a cold start all run. Added 2026-10-20: a remount over a ready Lil re-zeroed the bar,
+    /// fronted Mini and started another prefix warm.
+    public static func preloadIsNoOp(
+        load: ModelLoadState,
+        readyProviderMatches: Bool,
+        inFlightForProvider: Bool
+    ) -> Bool {
+        inFlightForProvider || (load == .ready && readyProviderMatches)
+    }
+
+    /// Whether the launch-time M1K3 Voice restore may start yet. Its Kokoro graph compile is a burst of MLX work
+    /// (31 s on 2026-10-20, contended) that ran beside the brain's load and a swap; voice is rarely the first thing
+    /// asked of a fresh launch, so it waits for an MLX brain to settle (ready or failed). Mini loads no MLX weights,
+    /// so on Mini it starts at once. The caller caps the wait so a load that never settles can't strand the voice.
+    public static func launchVoiceRestoreMayStart(brainIsMLX: Bool, load: ModelLoadState) -> Bool {
+        guard brainIsMLX else { return true }
+        switch load {
+        case .ready, .failed: return true
+        case .idle, .downloading, .preparing: return false
+        }
+    }
+
     /// The toolbar indicator: the active brain composed WITH the load state, so it
     /// never claims a brain that's still downloading (see the file header).
     public static func indicatorLabel(active: BrainTier, load: ModelLoadState) -> String {

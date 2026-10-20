@@ -33,8 +33,21 @@
 //  Review: Kev + claude-fable-5, 2026-08-15 — reset() added (cache eviction
 //  only; an in-flight load completes and re-caches). Pinned both ways.
 //  Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-20 — retire(): a swapped-out brain's loader refuses for good, so a
+//  straggling warm of the outgoing provider throws instead of silently reloading its weights beside the new brain
+//  (Big lingered two minutes after a swap to Lil). A cached value still serves (a turn mid-tool-loop on the old
+//  brain finishes; the weights go when the provider does); a running flight is cancelled and never re-caches.
+//  Pinned in SingleFlightLoaderRetireTests. Confidence 0.85.
 
 import Foundation
+
+/// Thrown by a retired `SingleFlightLoader`: its owner is gone, and nothing should load for it again.
+public struct SingleFlightLoaderRetired: LocalizedError, Equatable {
+    public init() {}
+    public var errorDescription: String? {
+        "That brain was switched out. Send it again to use the new one."
+    }
+}
 
 /// Coalesces concurrent loads of a single expensive, cacheable value into one
 /// in-flight operation. Generic over the loaded `Value` (e.g. an MLX
@@ -52,6 +65,7 @@ public actor SingleFlightLoader<Value: Sendable> {
     /// slot instead, so the next caller retries.
     private var cachedValue: Value?
     private var waiters: [UUID: CheckedContinuation<Value, Error>] = [:]
+    private var retired = false
 
     public init(operation: @escaping Operation) {
         self.operation = operation
@@ -74,7 +88,10 @@ public actor SingleFlightLoader<Value: Sendable> {
         progress: @escaping @Sendable (Double) -> Void = { _ in }
     ) async throws -> Value {
         if let cachedValue { return cachedValue }
-        if flight == nil { startFlight(progress: progress) }
+        if flight == nil {
+            if retired { throw SingleFlightLoaderRetired() }
+            startFlight(progress: progress)
+        }
         let id = UUID()
         return try await withTaskCancellationHandler {
             try await withCheckedThrowingContinuation { continuation in
@@ -107,7 +124,7 @@ public actor SingleFlightLoader<Value: Sendable> {
 
     private func complete(_ outcome: Result<Value, Error>) {
         flight = nil
-        if case let .success(value) = outcome {
+        if !retired, case let .success(value) = outcome {
             cachedValue = value
         }
         let parked = waiters
@@ -135,5 +152,14 @@ public actor SingleFlightLoader<Value: Sendable> {
     /// Callers reset an IDLE loader.
     public func reset() {
         cachedValue = nil
+    }
+
+    /// Refuse every future LOAD with `SingleFlightLoaderRetired` — for an owner being dropped for good (a brain
+    /// swapped out), so no straggler can pull it back in. A value already cached keeps serving: a turn still running
+    /// on the outgoing brain finishes, and the value goes when the owner does. A flight still running is cancelled
+    /// (its operation stops if it honours cancellation) and its result is never cached; its waiters get its outcome.
+    public func retire() {
+        retired = true
+        flight?.cancel()
     }
 }
