@@ -121,6 +121,13 @@
 //  nil leaves the system default. Logged (.notice, identifier only). Confidence 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — ChatSession gets `replayTurns` (#629): rolling distillation follows
 //  the replay window in effect. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-20 — swap speed. Kev on 1.1.1 (537): "Lil loading is sluggish — and hangs
+//  at 0% until jumping to fully loaded." The persona warm is now owned (`PersonaWarmLedger` + one task, cancelled
+//  by `selectBrain` and a dive's park) and `selectBrain` retires the outgoing MLX brain, so Big no longer prefills
+//  two more palettes for two minutes beside Lil's load. `preloadGemma` starts at `.preparing` when the weights are
+//  on disk (no frozen 0%) and is a no-op for a provider already ready or loading (three launch paths raced, and a
+//  chat remount re-fronted Mini over a ready Lil). Pure halves pinned in M1K3InferenceTests; verify-by-launch owed.
+//  Confidence 0.75.
 
 import AppKit
 import Foundation
@@ -704,6 +711,7 @@ final class AppEnvironment {
             // cancels the warm-up — the SingleFlightLoader lets any in-flight
             // download finish + cache; we just stop tracking it and clear the bar.
             preloadTask?.cancel()
+            preloadOwner = nil // the cancelled run no longer owns a load; the next one may start
             if selectedRuntime == .mlx {
                 preloadTask = Task { await preloadGemma() }
             } else {
@@ -716,6 +724,13 @@ final class AppEnvironment {
 
     /// The in-flight MLX warm-up, so switching away can cancel it (idempotent).
     private var preloadTask: Task<Void, Never>?
+    /// Which provider a running `preloadGemma` is loading (with a token, so a cancelled run's exit can't clear its
+    /// successor's mark), and which provider the current `.ready` belongs to — `BrainSwitcher.preloadIsNoOp`'s inputs.
+    @ObservationIgnored private var preloadOwner: (provider: ObjectIdentifier, token: UUID)?
+    @ObservationIgnored private var readyProvider: ObjectIdentifier?
+    /// The one persona-prefix warm (see `warmPersonaPrefixAfterLoad`). Internal: the dive's park cancels it.
+    @ObservationIgnored var personaWarmLedger = PersonaWarmLedger<ObjectIdentifier>()
+    @ObservationIgnored var personaWarmTask: Task<Void, Never>?
 
     /// The background brain-upgrade journey (pure machine in M1K3Inference;
     /// coordinator in AppEnvironment+BrainUpgrade — internal setter because the
@@ -1584,6 +1599,9 @@ final class AppEnvironment {
         // Settings re-run for the false direction). Note the old write was also
         // unreachable on the no-op path above — the guard returns first.
         let oldMLX = currentMLXProvider
+        // The outgoing brain's persona warm stops here: before 10-20 it ran on, prefilling Big's remaining palettes
+        // for two minutes beside Lil's load (and pinning Big's weights while it did).
+        cancelPersonaWarm()
         if let modelID = tier.mlxModelID {
             // Rotating-KV tiers get a capped decode so prefill + generation fit
             // the window together (see HistoryBudgetPolicy.rotatingGenerationTokenCap).
@@ -1597,10 +1615,14 @@ final class AppEnvironment {
             currentMLXProvider = mlx
             swappableMLX.setProvider(mlx)
             selectedRuntime = .mlx // didSet warms it + streams progress
+            // Retire the outgoing brain for good — off the main actor (the reclaim can wait on MLX's eval lock):
+            // its loader refuses from here, so nothing can reload its weights, and they go once in-flight work ends.
+            Task.detached(priority: .utility) { await oldMLX.retire() }
         } else {
             selectedRuntime = .appleFoundationModels // didSet clears the bar
+            // Mini fronts, but the MLX slot keeps this provider (a dive or a switch back may still reach it).
+            oldMLX.releaseMemory()
         }
-        oldMLX.releaseMemory()
         recomputeBrainUpgradeState()
         return false
     }
@@ -1623,17 +1645,32 @@ final class AppEnvironment {
     /// `modelLoad` so the UI shows a real bar. Idempotent: returns fast once the
     /// model is cached. Runs off the main actor; progress hops back to update state.
     private func preloadGemma() async {
-        // No re-entrancy guard needed: switching brains cancels any prior warm-up
-        // first, and the SingleFlightLoader dedupes the underlying download even
-        // if two briefly overlap. On cancellation we write nothing — whoever is
-        // the current selection (the didSet, or a newer warm-up) owns modelLoad,
-        // so a late-completing cancelled task can't clobber it.
-        modelLoad = .progress(0)
+        // Re-entrancy: three launch paths call this (init's didSet, M1K3App, ContentView's .task — which re-fires on
+        // every chat remount). Each used to run a full preload: re-zero the bar, front Mini, start another prefix
+        // warm (2026-10-20). A provider already ready, or already loading, is left alone. Switching brains cancels
+        // the prior warm-up first; on cancellation we write nothing — whoever is the current selection owns modelLoad.
+        // A run cancelled before it began (a fast .mlx → Mini flip) must not write a load state under Mini.
+        guard !Task.isCancelled else { return }
+        let mlx = currentMLXProvider
+        let provider = ObjectIdentifier(mlx)
+        if BrainSwitcher.preloadIsNoOp(
+            load: modelLoad,
+            readyProviderMatches: readyProvider == provider,
+            inFlightForProvider: preloadOwner?.provider == provider
+        ) {
+            return
+        }
+        let token = UUID()
+        preloadOwner = (provider, token)
+        defer { if preloadOwner?.token == token { preloadOwner = nil } }
         // Dial-up "connecting…" hum only when weights aren't already cached —
         // i.e. a real download the user waits through, not the silent launch
         // re-warm of a brain already on disk (no modem screech on every launch).
         // The defer guarantees it stops on every exit: ready, cancel, or error.
         let willDownload = !isBrainDownloaded(selectedBrain)
+        // On disk → "Preparing Lil…" with a spinner from the first frame: the local fast path reports no progress,
+        // so a 0% start sat frozen through the whole load (Kev, 2026-10-20).
+        modelLoad = ModelLoadState.loadStart(weightsOnDisk: !willDownload)
         // Courtesy window (Kev, 2026-08-30): the dial-up is a 15-second gag
         // over a minutes-long download — it plays its opening, then fades
         // itself out. The mute button's explicit unmute restarts it with NO
@@ -1642,7 +1679,6 @@ final class AppEnvironment {
             soundEffects.startLoop(.dialup, courtesyWindow: .seconds(15))
         }
         defer { soundEffects.stopLoop(.dialup) }
-        let mlx = currentMLXProvider
         do {
             try await mlx.prepare { fraction in
                 // Only apply while still downloading. A progress callback fired
@@ -1656,12 +1692,16 @@ final class AppEnvironment {
                     // fraction — so switch to the indeterminate `.preparing`
                     // spinner instead of leaving a frozen "…100%" bar that reads
                     // as a blocked app.
-                    if case .downloading = self.modelLoad {
-                        self.modelLoad = fraction >= 1 ? .preparing : .progress(fraction)
+                    if let next = self.modelLoad.applying(progress: fraction) {
+                        self.modelLoad = next
                     }
                 }
             }
-            if Task.isCancelled { return }
+            if Task.isCancelled {
+                abandonPreload(token: token, provider: mlx)
+                return
+            }
+            readyProvider = provider
             modelLoad = .ready
             // Ping "ready" only after a real download/load (not a cached warm),
             // and only if you've tabbed away — the same background-only gate as
@@ -1676,6 +1716,7 @@ final class AppEnvironment {
         } catch is CancellationError {
             // Deliberately switched away mid-load — leave modelLoad to the current
             // selection (the didSet already cleared the bar).
+            abandonPreload(token: token, provider: mlx)
         } catch {
             if !Task.isCancelled {
                 // A 404/gated-repo/disk-full/checksum failure is non-transient, so
@@ -1695,13 +1736,19 @@ final class AppEnvironment {
     /// Pre-builds the (persona × tools) KV the interactive
     /// chat's FIRST turn will ask for, in the background, behind the same
     /// thermal gate. Best-effort by design:
-    /// - A turn racing the warm queues behind it on the ModelContainer —
-    ///   worst case it pays roughly the build it would have paid anyway.
+    /// - A turn racing the warm queues behind it on the ModelContainer, and can
+    ///   wait out palettes it never uses (10-20: a plain turn sat behind the
+    ///   headless and interactive builds). Token counts no longer queue there.
     /// - A web-toggle/persona change after the warm is a cache miss (the turn
     ///   builds inline, pre-warm behavior), never a wrong prefix — the cache
     ///   is keyed by (model × tools × persona).
-    /// - A brain swap mid-warm wastes the old provider's build; its cache dies
-    ///   with the provider's `releaseMemory()`.
+    /// - ONE warm at a time, owned (`personaWarmLedger` + `personaWarmTask`): a
+    ///   second request for the same provider is a no-op, a new provider
+    ///   replaces it, and `selectBrain` / a dive's park cancel it. Before
+    ///   2026-10-20 each call spawned its own fire-and-forget task (three per
+    ///   load), and a swap left the outgoing brain's running — Big prefilled
+    ///   two more palettes for two minutes beside Lil's load. A build already
+    ///   in flight at the cancel finishes; the palettes after it don't start.
     /// Key parity with the live turn is structural, not aspirational: the tool
     /// list comes from the SAME `interactiveAgentTools` builder the responder
     /// consults each turn (callbacks are no-ops — only definitions render into
@@ -1735,10 +1782,21 @@ final class AppEnvironment {
         // interactive. Order still matters when something else takes a slot:
         // the last warm is MRU, and a person waiting on their first chat turn
         // beats an agent's first ask.
+        let provider = ObjectIdentifier(mlx)
+        switch personaWarmLedger.request(for: provider) {
+        case .alreadyWarming:
+            return
+        case .replace:
+            personaWarmTask?.cancel()
+        case .start:
+            break
+        }
         // weak: a brain swap mid-warm must not have this task pin the OUTGOING
-        // provider's multi-GB weights alive while the new brain's are loading
-        // (releaseMemory's reclaim would silently wait on the warm otherwise).
-        Task.detached(priority: .utility) { [weak mlx, store, embedder, deepDelegationHook] in
+        // provider's multi-GB weights alive while the new brain's are loading.
+        // (Weak alone never held: each `await mlx?.…` keeps a strong reference
+        // for the whole call, and three overlapping warm tasks handed it on —
+        // hence the ledger and the cancel.)
+        personaWarmTask = Task.detached(priority: .utility) { [weak self, weak mlx, store, embedder, deepDelegationHook] in
             // The palette's availability facts are real I/O (a SQLite count, a
             // directory listing, IOKit once) — computed ONCE, here, off the
             // main actor, and shared by both palettes (review fold, #201).
@@ -1757,10 +1815,33 @@ final class AppEnvironment {
             // Sequentially: one ModelContainer, and the coalescer only dedupes
             // IDENTICAL keys — two concurrent builds of different keys would just
             // queue on the actor anyway, with the loser's ordering unpredictable.
-            await mlx?.warmPersonaPrefix(tools: [])
-            await mlx?.warmPersonaPrefix(tools: headlessTools)
-            await mlx?.warmPersonaPrefix(tools: interactiveTools)
+            // Checked between palettes, so a cancel stops at the next boundary.
+            await PersonaWarmRun.run(
+                [[], headlessTools, interactiveTools],
+                shouldContinue: { !Task.isCancelled },
+                warm: { tools in await mlx?.warmPersonaPrefix(tools: tools) }
+            )
+            // A cancelled warm was already cleared (cancel) or handed on (replace); only a finished one frees the
+            // slot — a late cancelled exit must not clear a successor warming the same provider (the dive restore).
+            guard !Task.isCancelled else { return }
+            await MainActor.run { self?.personaWarmLedger.finished(provider) }
         }
+    }
+
+    /// A preload's caller was cancelled (a window closed mid-load) while it still owned the current brain's load:
+    /// nobody else is driving `modelLoad`, so hand it back to `.idle` and the next caller (a remount, the gate's
+    /// Retry) runs it again. A swap's cancel cleared the owner first, so it lands here as a no-op.
+    private func abandonPreload(token: UUID, provider mlx: MLXBrainProvider) {
+        guard preloadOwner?.token == token, mlx === currentMLXProvider, modelLoad.isActive else { return }
+        modelLoad = .idle
+    }
+
+    /// Stop the running persona warm (a brain swap, a dive parking the front brain). A build already in flight
+    /// finishes; the palettes after it never start.
+    func cancelPersonaWarm() {
+        personaWarmTask?.cancel()
+        personaWarmTask = nil
+        personaWarmLedger.cancel()
     }
 
     /// Switch the active embedder and re-embed the whole store so retrieval moves
@@ -2361,7 +2442,9 @@ extension AppEnvironment {
                 // The prefix warm's cooldown retry (its hot-skip arms this
                 // observer, same as the reindexes) — only once a brain is
                 // actually warm to seed from. Idempotent: a cache hit no-ops.
-                if case .ready = modelLoad {
+                // Never during a dive: the front brain is parked (weights released), and a warm would reload it
+                // beside Big — the very thing the park prevents.
+                if case .ready = modelLoad, deepDelegationTaskLabel == nil {
                     warmPersonaPrefixAfterLoad(currentMLXProvider)
                 }
                 // Cooled back down and the work ran → tear the observers down.

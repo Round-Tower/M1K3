@@ -35,6 +35,9 @@
 //  verify-by-launch (a real cross-brain dive has still never run).
 //  Review: Kev + claude-fable-5.1, 2026-09-29, Confidence 0.85 — the dive's Big builds through
 //  `makeMLXBrain(for: .big)`, so a Big audition is what the dive escalates to.
+//  Review: Kev + claude-opus-5-5, 2026-10-20 — the park cancels the front brain's persona warm before
+//  `releaseModel()`: a warm still running would `ensureLoaded` the parked brain straight back beside Big.
+//  Verify-by-launch owed (an escalated dive right after a load). Confidence 0.8.
 //
 
 import AppKit
@@ -145,6 +148,8 @@ extension AppEnvironment {
                 ),
                 live: false
             )
+            // The front brain's warm stops before the park: its next palette would reload the parked weights.
+            cancelPersonaWarm()
             deepDiveRestoreProvider = currentMLXProvider
             deepDiveEscalatedProvider = big
             swappableMLX.setProvider(big)
