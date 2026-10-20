@@ -11,7 +11,11 @@
 #     --apple-id "you@round-tower.ie" --team-id 76DJH43A4P \
 #     --password "<app-specific-password from appleid.apple.com>"
 #
-# Then: macos/tools/release/release-macos.sh [--skip-notarize]
+# Then: macos/tools/release/release-macos.sh [--skip-notarize | --local]
+#
+# --local: the lean build for testing on this Mac. No notarize, no DMG (the
+# exported .app is the product), and the Release compilation cache on, so a
+# rebuild replays what any earlier local Release build compiled.
 #
 # bash 3.2-safe (stock macOS). Fails fast; prints what it would sign with.
 set -euo pipefail
@@ -31,7 +35,18 @@ EXPORT_DIR="$BUILD/export"
 APP="$EXPORT_DIR/$APP_NAME.app"
 
 SKIP_NOTARIZE=0
-[ "${1:-}" = "--skip-notarize" ] && SKIP_NOTARIZE=1
+LOCAL=0
+SKIP_WHY=""
+for arg in "$@"; do
+  case "$arg" in
+    --skip-notarize) SKIP_NOTARIZE=1; SKIP_WHY="--skip-notarize" ;;
+    --local) LOCAL=1; SKIP_NOTARIZE=1; SKIP_WHY="--local" ;;
+    *) echo "✗ Unknown option: $arg (expected --skip-notarize or --local)"; exit 64 ;;
+  esac
+done
+# Local only: CI and the nightly start empty, so a cache there is all cost.
+CACHE_ARGS=()
+[ "$LOCAL" -eq 1 ] && CACHE_ARGS=(COMPILATION_CACHE_ENABLE_CACHING=YES)
 
 # Version from project.yml (single source of truth).
 VERSION="$(grep -m1 'MARKETING_VERSION:' "$MACOS_DIR/project.yml" | sed -E 's/.*"([^"]+)".*/\1/')"
@@ -169,6 +184,10 @@ fi
 
 echo "▸ [1/6] Archiving…"
 rm -rf "$ARCHIVE"
+# ARCHS=arm64 on the command line, not only project.yml's: a project setting
+# never reaches the Swift package targets, and the generic destination built
+# an x86_64 slice of 13 package modules the arm64-only app never links
+# (2026-10-20, read off a local archive log).
 # ${arr[@]+...} guard: bash 3.2 + set -u treats an EMPTY array expansion as
 # unbound — the guard expands to nothing instead of erroring.
 xcodebuild archive \
@@ -176,6 +195,8 @@ xcodebuild archive \
   -archivePath "$ARCHIVE" -destination 'generic/platform=macOS' \
   -skipPackagePluginValidation \
   ${PROVISIONING_ARGS[@]+"${PROVISIONING_ARGS[@]}"} \
+  ARCHS=arm64 \
+  ${CACHE_ARGS[@]+"${CACHE_ARGS[@]}"} \
   M1K3_APP_ENTITLEMENTS="$DIRECT_ENTITLEMENTS" \
   M1K3_CLI_ENTITLEMENTS="$CLI_ENTITLEMENTS" \
   DEVELOPMENT_TEAM="$TEAM" \
@@ -277,7 +298,16 @@ if [ "$SKIP_NOTARIZE" -eq 0 ]; then
   xcrun stapler staple "$APP"
   rm -f "$APP_ZIP"
 else
-  echo "▸ [3/6] Skipping notarize (--skip-notarize)"
+  echo "▸ [3/6] Skipping notarize ($SKIP_WHY)"
+fi
+
+if [ "$LOCAL" -eq 1 ]; then
+  echo "▸ Verifying (--local: no DMG)…"
+  codesign --verify --deep --strict --verbose=1 "$APP" 2>&1 | tail -1
+  echo
+  echo "✓ Done → $APP"
+  echo "  ⚠ Unnotarized — for this Mac only."
+  exit 0
 fi
 
 # ── 4. Build the DMG (drag-to-Applications layout) ───────────────────────────
