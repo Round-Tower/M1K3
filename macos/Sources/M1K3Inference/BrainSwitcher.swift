@@ -119,6 +119,18 @@ public enum BrainSwitcher {
         inFlightForProvider || (load == .ready && readyProviderMatches)
     }
 
+    /// Whether the launch-time M1K3 Voice restore may start yet. Its Kokoro graph compile is a burst of MLX work
+    /// (31 s on 2026-10-20, contended) that ran beside the brain's load and a swap; voice is rarely the first thing
+    /// asked of a fresh launch, so it waits for an MLX brain to settle (ready or failed). Mini loads no MLX weights,
+    /// so on Mini it starts at once. The caller caps the wait so a load that never settles can't strand the voice.
+    public static func launchVoiceRestoreMayStart(brainIsMLX: Bool, load: ModelLoadState) -> Bool {
+        guard brainIsMLX else { return true }
+        switch load {
+        case .ready, .failed: return true
+        case .idle, .downloading, .preparing: return false
+        }
+    }
+
     /// The toolbar indicator: the active brain composed WITH the load state, so it
     /// never claims a brain that's still downloading (see the file header).
     public static func indicatorLabel(active: BrainTier, load: ModelLoadState) -> String {

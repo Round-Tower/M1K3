@@ -210,4 +210,20 @@ struct BrainSwitcherTests {
         ))
         #expect(!BrainSwitcher.preloadIsNoOp(load: .idle, readyProviderMatches: false, inFlightForProvider: false))
     }
+
+    // 2026-10-20: the Kokoro graph compile (31 s) ran beside Big's load and the swap to Lil. The launch voice restore
+    // waits for an MLX brain to settle; Mini has nothing to wait for.
+    @Test("the launch voice restore waits while an MLX brain is still coming up")
+    func voiceRestoreWaitsForMLXBrain() {
+        #expect(!BrainSwitcher.launchVoiceRestoreMayStart(brainIsMLX: true, load: .idle))
+        #expect(!BrainSwitcher.launchVoiceRestoreMayStart(brainIsMLX: true, load: .preparing))
+        #expect(!BrainSwitcher.launchVoiceRestoreMayStart(brainIsMLX: true, load: .progress(0.4)))
+    }
+
+    @Test("the launch voice restore starts once the brain settled, or at once on Mini")
+    func voiceRestoreStarts() {
+        #expect(BrainSwitcher.launchVoiceRestoreMayStart(brainIsMLX: true, load: .ready))
+        #expect(BrainSwitcher.launchVoiceRestoreMayStart(brainIsMLX: true, load: .failed(message: "x")))
+        #expect(BrainSwitcher.launchVoiceRestoreMayStart(brainIsMLX: false, load: .idle))
+    }
 }

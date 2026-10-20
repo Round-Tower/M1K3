@@ -128,6 +128,9 @@
 //  on disk (no frozen 0%) and is a no-op for a provider already ready or loading (three launch paths raced, and a
 //  chat remount re-fronted Mini over a ready Lil). Pure halves pinned in M1K3InferenceTests; verify-by-launch owed.
 //  Confidence 0.75.
+//  Review: same day (Kev's steer) — the launch M1K3 Voice restore waits for an MLX brain to settle (capped 90 s), so
+//  Kokoro's graph compile no longer lands on the brain load. Voice asked for in that window gets the system voice.
+//  Confidence 0.75.
 
 import AppKit
 import Foundation
@@ -1218,8 +1221,18 @@ final class AppEnvironment {
 
         // Restore M1K3 Voice only if it was chosen AND already staged — never kick
         // a silent ~192 MB re-download on launch.
+        // …and after the brain: the Kokoro graph compile (31 s on 2026-10-20) ran beside Big's load and the swap to
+        // Lil. It waits for an MLX brain to settle (`BrainSwitcher.launchVoiceRestoreMayStart`), capped at 90 s.
         if VoiceTierRestore.shouldRestore(selected: selectedVoiceTier, modelStaged: kokoro.isModelStaged) {
-            prepareM1K3Voice()
+            Task { [weak self] in
+                let deadline = ContinuousClock.now + .seconds(90)
+                while let self, !BrainSwitcher.launchVoiceRestoreMayStart(
+                    brainIsMLX: selectedRuntime == .mlx || selectedBrain.mlxModelID != nil, load: modelLoad
+                ), ContinuousClock.now < deadline {
+                    try? await Task.sleep(for: .milliseconds(500))
+                }
+                _ = self?.prepareM1K3Voice()
+            }
         }
 
         // Restore WhisperKit voice input the same way — only if the user upgraded to
