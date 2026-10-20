@@ -66,6 +66,7 @@ bytes disagree: stop). Lil's 2026-10-08 pin (#517) took this route and passed on
 | `events.py list` / `create` / `update` | In-app events (iPhone/iPad only): a DRAFT from a spec file (copy + art), or an in-place rewrite of an existing DRAFT's attributes and per-locale copy keeping its art. Never submits. | create / update (`--dry-run` to see payloads) |
 | `creative.py status` / `targets` / `upload` / `place` | Product page header + search results assets (iOS 27, App Asset Library): upload once (reserve → PUT → `{uploaded:true}` → poll), place per localization on a version, custom product page or PPO treatment. Checks ASC's chosen spec against the live catalogue and refuses a parent that isn't editable. Renders come from `tools/site/store_creative.py`. | upload / place + `--confirm` |
 | `testflight.py show` / `set` | The beta app description — one text every platform's testers read (betaAppLocalizations), from `TestFlight/beta_description.en-US.txt`; refuses text that doesn't name iPhone, iPad and Mac. Per-build "What to Test" is Xcode Cloud's (`TestFlight/notes/`). | set + `--confirm` |
+| `metrics.py store` / `analytics request` / `analytics list` / `analytics fetch` / `repo` | Reach without telemetry. `store`: App Store units per day from the daily sales reports, filtered to this app (the report is vendor-wide), split downloads / updates by platform and country; needs `ASC_VENDOR_NUMBER`. `analytics`: the standing ONGOING report request Apple needs, then list and fetch its daily CSVs (impressions, product page views, conversion, sources). `repo`: GitHub stars, forks, DMG downloads per release, 14-day traffic and referrers, appended to `marketing/metrics/repo.jsonl` because GitHub forgets traffic after 14 days. | `analytics request` (one standing request) |
 
 ```
 python3 tools/asc/precheck.py
@@ -85,6 +86,10 @@ Format: MurphySig v0.4 (https://murphysig.dev/spec)
 Prior: none (new directory). The Lexy tools this ports are credited per file.
 Review: Kev + claude-opus-5-5, 2026-10-17 — `release_tag.py` and the runbook's first step: Xcode Cloud builds only
 `release*` tags now, and `builds.py wait` defaults to the newest one. Confidence 0.85.
+Review: Kev + claude-fable-5.1, 2026-10-20 — `metrics.py`: reach read from the counters that already exist (sales
+reports, the Analytics Reports API, GitHub) instead of telemetry the app will never send. The first live run
+counted every Round Tower app: the sales report is vendor-wide, so rows are filtered to the Apple Identifier.
+Confidence 0.8.
 -->
 
 Tests: one `test_<tool>.py` per tool with pure logic to pin (`promo.py` has none — every function is a request; the global pre-commit hook's rule for new source files; the shared `test_asc_tools.py` was split on 2026-09-16). CI runs `pytest tools/asc`.
