@@ -2,13 +2,13 @@
   <img src="assets/brand/readme-hero.svg" alt="M1K3 — local, offline AI. Punk intelligence. No data centers required. The Phosphor Fox, a wireframe fox, surveys a field of Conway's Game of Life." width="100%">
 </p>
 
-<h1 align="center">M1K3 — Own your AI</h1>
+<h1 align="center">Your AI. Your Mac. Private by design.</h1>
 
 <p align="center">
 Local AI that runs <strong>entirely on your Apple-Silicon Mac</strong> —
 on-device LLM inference, live voice, a personal knowledge graph with RAG,
 encrypted call transcription, a local agent, and an MCP server.<br>
-Private by design: on your Mac by default, no telemetry, and every network call shows itself and can be switched off.
+No telemetry. Every network call shows itself and can be switched off.
 </p>
 
 <p align="center">
@@ -16,26 +16,21 @@ Private by design: on your Mac by default, no telemetry, and every network call 
 </p>
 
 <p align="center">
-  <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg"><strong>⬇ Download the DMG</strong></a>
+  <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg"><strong>Download the DMG</strong></a>
   · <a href="https://m1k3.app">m1k3.app</a>
   · <a href="https://testflight.apple.com/join/Fxp2F5Je">iPhone &amp; iPad beta (TestFlight)</a>
+  · <a href="https://m1k3.app/agents">Connect a coding agent</a>
 </p>
 
-<p align="center">Connecting a coding agent → <a href="https://m1k3.app/agents">m1k3.app/agents</a></p>
-
-<p align="center"><em>Requires macOS 26 Tahoe or later · Apple Silicon · signed & notarized (Developer ID).</em></p>
+<p align="center"><em>macOS 26 Tahoe or later · Apple Silicon · signed &amp; notarized (Developer ID)</em></p>
 
 <p align="center">
-  <a href="https://github.com/Round-Tower/M1K3/actions/workflows/ci.yml"><img src="https://github.com/Round-Tower/M1K3/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <a href="https://github.com/Round-Tower/M1K3/actions/workflows/security.yml"><img src="https://github.com/Round-Tower/M1K3/actions/workflows/security.yml/badge.svg" alt="Security"></a>
-  <a href="https://github.com/Round-Tower/M1K3/actions/workflows/claude-code-review-mac.yml"><img src="https://github.com/Round-Tower/M1K3/actions/workflows/claude-code-review-mac.yml/badge.svg" alt="Mac review"></a>
-</p>
-
-<p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-FSL--1.1--ALv2-0a0a0a?labelColor=0a0a0a" alt="FSL-1.1-ALv2"></a>
-  <a href="https://github.com/Round-Tower/M1K3/releases/latest"><img src="https://img.shields.io/github/v/release/Round-Tower/M1K3?color=0a0a0a&labelColor=0a0a0a&label=release" alt="Latest release"></a>
-  <img src="https://img.shields.io/badge/platform-macOS%2026%20·%20Apple%20Silicon-0a0a0a?labelColor=0a0a0a" alt="macOS 26 · Apple Silicon">
-  <img src="https://img.shields.io/badge/swift-6.2%20strict-0a0a0a?labelColor=0a0a0a" alt="Swift 6.2">
+  <a href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=readme-badge&amp;mt=12"><img src="https://img.shields.io/itunes/v/6780230835?style=flat-square&label=App%20Store&labelColor=0a0a0a&color=e8e8e8" alt="Mac App Store version"></a>
+  <a href="https://github.com/Round-Tower/M1K3/releases/latest"><img src="https://img.shields.io/github/v/release/Round-Tower/M1K3?style=flat-square&label=nightly%20DMG&labelColor=0a0a0a&color=e8e8e8" alt="Nightly DMG"></a>
+  <a href="https://github.com/Round-Tower/M1K3/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Round-Tower/M1K3/ci.yml?branch=master&style=flat-square&label=CI&labelColor=0a0a0a&color=e8e8e8" alt="CI"></a>
+  <a href="https://github.com/Round-Tower/M1K3/actions/workflows/security.yml"><img src="https://img.shields.io/github/actions/workflow/status/Round-Tower/M1K3/security.yml?branch=master&style=flat-square&label=security&labelColor=0a0a0a&color=e8e8e8" alt="Security scan"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-FSL--1.1--ALv2-e8e8e8?style=flat-square&labelColor=0a0a0a" alt="FSL-1.1-ALv2"></a>
+  <img src="https://img.shields.io/badge/swift-6.2%20strict-e8e8e8?style=flat-square&labelColor=0a0a0a" alt="Swift 6.2 strict">
   <a href="https://murphysig.dev/signed/Round-Tower/M1K3/"><img src="https://murphysig.dev/badge/Round-Tower/M1K3.svg" alt="MurphySig: signed"></a>
 </p>
 
@@ -136,6 +131,10 @@ connect` prints the config to paste instead — and says so. The Developer ID
 build (the DMG and the Homebrew cask) does the write.
 
 ## MCP integration
+
+<p align="center">
+  <a href="https://mcprush.com/to/m1k3-mcp?ref=badge"><img width="380" height="200" src="https://mcprush.com/badge/m1k3-mcp/card.svg" alt="M1K3 MCP on mcprush: security grade A, verified publisher, no sign-in" loading="lazy"></a>
+</p>
 
 The running Mac app serves MCP over HTTP at `http://127.0.0.1:4242/mcp` —
 knowledge search, documents, voice, and `ask_m1k3` (ask the resident AI).
@@ -255,7 +254,17 @@ human-and-AI collaboration on the record.
      Review: Kev + claude-opus-5.5, 2026-10-11 — repo optics: the hero's store link is Apple's own
      "Download on the Mac App Store" badge (hotlinked from Apple's marketing toolbox, as Apple
      offers it; still ct=readme-hero), the DMG link reads "Download the DMG", and Contributing
-     asks for a star once, plainly. Confidence 0.85. -->
+     asks for a star once, plainly. Confidence 0.85.
+     Review: Kev + claude-fable-5.1, 2026-10-20 — mcprush graded the MCP server A (93/100 trust, verified
+     publisher); its live card sits under MCP integration, not in the shields row, because a 380×200 card
+     would swamp the small badges. The card is hotlinked and updates itself. Confidence 0.85.
+     Review: Kev + claude-fable-5.1, 2026-10-20 — header on brand: the H1 is the site's line ("Your AI. Your
+     Mac. Private by design."), not "Own your AI", which appears nowhere else; the shields are flat-square
+     in the hero's palette (black label, #e8e8e8 value), MurphySig the one accent; the GitHub workflow
+     badges became shields so the row is one style; the Claude review badge is gone (it tells a user
+     nothing); the release shield reads "nightly DMG" because the nightly tag always wins "latest", and
+     the App Store version comes from shields' itunes source; the emoji and arrow are gone. Status badges
+     are monochrome on purpose, so a failing CI still says "failing" but not in red. Confidence 0.8. -->
 <!-- Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 (the v1.1.0 pass: the two
      "1.0 build has no cloud path" sentences now describe PCC as the opt-in third crossing,
      consent per conversation per ADR 0007; the MCP count of 18 was re-read off
