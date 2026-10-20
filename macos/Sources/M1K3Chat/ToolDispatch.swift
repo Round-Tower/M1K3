@@ -35,6 +35,9 @@
 //  "what can you do?" and returned gov.ie transport advice. Confidence 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — `openCorrected` (#622): a web read on a request to open a page
 //  becomes the action pick; Apple picked fetch_page for "Open the M1K3 website" and M1K3 read it aloud. Confidence 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-20 — `personalCorrected`: a web read on what the user decided or said
+//  goes to search_knowledge (word order, not a bag of words, per the challenger), and the menu names decisions under
+//  search_knowledge. Third person is left to the menu line. Confidence 0.75 (pinned; the router chain cells owed).
 
 import Foundation
 import M1K3Agent
@@ -96,7 +99,7 @@ public enum ToolDispatch {
         "calendar_peek": "the user's calendar events",
         "current_location": "where the user is now",
         "recent_activity": "the user's recent chats, todos, activity or usage patterns with the assistant (busiest days, what we talked about)",
-        "search_knowledge": "the user's own documents, notes, files or recorded calls",
+        "search_knowledge": "the user's own documents, notes, files or recorded calls, and what the user told you or decided",
         "list_documents": "a list of the user's stored documents",
         "web_search": "anything current, recent or upcoming, or the newest or latest of anything: news, prices, weather, results, releases",
         "lookup_fact": "an obscure or changeable fact from a reference source",
@@ -240,6 +243,69 @@ public enum ToolDispatch {
             then: pick.then.map { corrected($0, aboutNow: aboutNow($0.query)) }
         )
     }
+
+    /// Apple's pick through every corrector, in the one order that works: recency, then open
+    /// (an open is an action even when it names something the user told us: "open the site I
+    /// told you about"), then personal.
+    public static func corrected(_ pick: ToolPick, palette: [any AgentTool], question: String) -> ToolPick {
+        personalCorrected(
+            openCorrected(recencyCorrected(pick, palette: palette, question: question), question: question),
+            palette: palette, question: question
+        )
+    }
+
+    /// A web read on a question about what the user decided or said goes to their knowledge
+    /// instead. Apple's pick sent "What did Kev decide about which brain fronts by default?" to
+    /// lookup_fact (2026-10-20); it came back "2003 in music", and with only that in the dispatch
+    /// prompt Lil invented "you picked Private Cloud Compute" from the egress clause, while
+    /// search_knowledge ranked the stored ruling first. Only when search_knowledge is on offer;
+    /// a chain reads each pick's own query, as `recencyCorrected` does.
+    ///
+    /// The cue is word order, not a bag of words (challenger, 2026-10-20): "did I/we" then a
+    /// decision verb within two words ("what did I decide", "which embedder did I pick"), or
+    /// "I/we" then a past one ("I said", "have I told you", "we've agreed"). "Should I pick" is
+    /// advice, "what did the court decide" is the world, "who did we play" plays nothing, and
+    /// "remember" stays out ("remember when we landed on the moon"). Accepted: "what did I say
+    /// the capital of Australia was" moves, and an empty store result is dropped (`isEmptyResult`).
+    /// Third person ("what did Kev decide", an MCP agent's phrasing) is left to the menu line.
+    public static func personalCorrected(_ pick: ToolPick, palette: [any AgentTool], question: String) -> ToolPick {
+        guard palette.contains(where: { $0.name == "search_knowledge" }) else { return pick }
+        func corrected(_ one: ToolPick, personal: Bool) -> ToolPick {
+            webReads.contains(one.tool) && personal ? ToolPick(tool: "search_knowledge", query: one.query) : one
+        }
+        let head = corrected(pick, personal: aboutTheUser(pick.then.isEmpty ? question : pick.query))
+        return ToolPick(
+            tool: head.tool, query: head.query,
+            then: pick.then.map { corrected($0, personal: aboutTheUser($0.query)) }
+        )
+    }
+
+    /// Whether the text asks what the user decided or said (`personalCorrected`'s cue).
+    static func aboutTheUser(_ text: String) -> Bool {
+        let words = ToolGroupRouter.words(text)
+        for (index, word) in words.enumerated() where userSubjects.contains(word) {
+            let before = words[..<index].suffix(2)
+            // "did I" or "didn't I" (didn · t · i).
+            let didAsk = before.last == "did" || Array(before) == ["didn", "t"]
+            let after = words.dropFirst(index + 1)
+            let asked = didAsk && after.prefix(2).contains { decisionVerbs.contains($0) }
+            // "I said", "I've told you", "we've already agreed": fillers, then a past verb.
+            let stated = after.prefix(3).first { !fillers.contains($0) }.map { pastDecisionVerbs.contains($0) } == true
+            if asked || stated { return true }
+        }
+        return false
+    }
+
+    private static let webReads: Set<String> = ["lookup_fact", "web_search"]
+    private static let userSubjects: Set<Substring> = ["i", "we"]
+    private static let decisionVerbs: Set<Substring> = [
+        "decide", "pick", "choose", "agree", "settle", "say", "tell", "mention", "rule",
+    ]
+    private static let pastDecisionVerbs: Set<Substring> = [
+        "decided", "picked", "chose", "agreed", "settled", "said", "told", "mentioned", "ruled",
+    ]
+    /// "I've told you" splits as i · ve · told; "I'd already decided" as i · d · already · decided.
+    private static let fillers: Set<Substring> = ["ve", "have", "had", "d", "already", "just", "actually"]
 
     public struct Plan: Sendable {
         public let tool: any AgentTool

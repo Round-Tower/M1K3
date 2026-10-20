@@ -253,6 +253,103 @@ struct ToolDispatchRecencyTests {
     }
 }
 
+/// 2026-10-20: "What did Kev decide about which brain fronts by default?" was picked to
+/// lookup_fact, came back "2003 in music", and Lil invented "you picked Private Cloud
+/// Compute" — the dispatch prompt carries the tool's output, not the stored ruling.
+struct ToolDispatchPersonalTests {
+    @Test("a question about what the user decided or said goes to their knowledge, query kept", arguments: [
+        ("What did I decide about the default brain, and why?", "lookup_fact"),
+        ("What did we agree on for the launch date?", "web_search"),
+        ("Which embedder did I pick for the iPad?", "lookup_fact"),
+        ("What have I told you about my sister's wedding?", "web_search"),
+        ("Do you remember what I said about the trip to Kerry?", "lookup_fact"),
+        ("I've told you my sister's name, what is it?", "web_search"),
+        ("Didn't I say we'd go with the blue logo?", "lookup_fact"),
+        ("We've already agreed on a name for the boat, what was it?", "web_search"),
+        // Accepted (challenger): a world fact asked as "what did I say" moves; an empty result is dropped.
+        ("What did I say the capital of Australia was?", "lookup_fact"),
+    ])
+    func personalGoesToKnowledge(question: String, tool: String) {
+        let pick = ToolPick(tool: tool, query: "default brain decision")
+        #expect(ToolDispatch.personalCorrected(pick, palette: palette, question: question)
+            == ToolPick(tool: "search_knowledge", query: "default brain decision"))
+    }
+
+    @Test("advice, world facts and other tools stay put", arguments: [
+        ("Should I pick an iPhone or a Pixel?", "web_search"),
+        ("What did the Supreme Court decide in Roe v Wade?", "lookup_fact"),
+        ("When did we land on the moon?", "lookup_fact"),
+        ("What's the weather in my town today?", "web_search"),
+        ("Who chose the name for the Eiffel Tower?", "lookup_fact"),
+        ("What did Biden say about my taxes?", "web_search"),
+        ("Who did we play in the 2019 final?", "web_search"),
+        ("Remember when we landed on the moon?", "lookup_fact"),
+        ("Can you tell me what the Dáil decided?", "web_search"),
+        // Third person is the menu line's job, not this cue's (an MCP agent's phrasing).
+        ("What did Kev decide about the default brain?", "lookup_fact"),
+    ])
+    func othersStay(question: String, tool: String) {
+        let pick = ToolPick(tool: tool, query: "q")
+        #expect(ToolDispatch.personalCorrected(pick, palette: palette, question: question) == pick)
+    }
+
+    @Test("known limits, pinned so a change to them is deliberate", arguments: [
+        // A subject that isn't directly after "did" (code review, 2026-10-20).
+        ("Did you and I agree on the colour?", "lookup_fact", "lookup_fact"),
+        // Not decided is nothing to look up.
+        ("I haven't decided on a name yet, any ideas?", "web_search", "web_search"),
+        // An unchained pick reads the whole question: the web half of a mixed ask goes too.
+        ("What did I decide about the logo, and who won the final?", "web_search", "search_knowledge"),
+    ])
+    func knownLimits(question: String, tool: String, expected: String) {
+        let pick = ToolPick(tool: tool, query: "q")
+        #expect(ToolDispatch.personalCorrected(pick, palette: palette, question: question).tool == expected)
+    }
+
+    @Test("the correctors compose: an open stays an action even when it names what the user told us")
+    func openBeatsPersonal() {
+        let question = "Open the site I told you about"
+        let pick = ToolPick(tool: "web_search", query: "the site")
+        #expect(ToolDispatch.corrected(pick, palette: palette, question: question).tool == ToolPick.action)
+        let mine = ToolPick(tool: "lookup_fact", query: "default brain")
+        #expect(ToolDispatch.corrected(mine, palette: palette, question: "What did I decide about the default brain?").tool
+            == "search_knowledge")
+        let now = ToolPick(tool: "lookup_fact", query: "hurling final")
+        #expect(ToolDispatch.corrected(now, palette: palette, question: "Who won the hurling final this year?").tool
+            == "web_search")
+    }
+
+    @Test("only web reads move, and only when search_knowledge is on offer")
+    func onlyWebReadsWithKnowledge() {
+        let question = "What did I decide about the default brain?"
+        let time = ToolPick(tool: "datetime", query: "")
+        #expect(ToolDispatch.personalCorrected(time, palette: palette, question: question) == time)
+        let fact = ToolPick(tool: "lookup_fact", query: "default brain")
+        let noKnowledge = palette.filter { $0.name != "search_knowledge" }
+        #expect(ToolDispatch.personalCorrected(fact, palette: noKnowledge, question: question) == fact)
+    }
+
+    @Test("in a chain each pick reads its own query")
+    func chainReadsItsOwnQuery() {
+        let mine = ToolPick(tool: "lookup_fact", query: "what I decided about the brain")
+        let pick = ToolPick(tool: "datetime", query: "", then: [mine])
+        let fixed = ToolDispatch.personalCorrected(pick, palette: palette, question: "Time, and what did I decide?")
+        #expect(fixed == ToolPick(tool: "datetime", query: "", then: [
+            ToolPick(tool: "search_knowledge", query: "what I decided about the brain"),
+        ]))
+        let world = ToolPick(tool: "lookup_fact", query: "Cork founding year")
+        let other = ToolPick(tool: "datetime", query: "", then: [world])
+        #expect(ToolDispatch.personalCorrected(other, palette: palette, question: "What did I say, and when was Cork founded?")
+            == other)
+    }
+
+    @Test("the picker's menu names what the user decided under search_knowledge")
+    func menuLineNamesDecisions() {
+        let line = ToolDispatch.menuLines["search_knowledge"] ?? ""
+        #expect(line.contains("decided"))
+    }
+}
+
 /// #622: "Open the M1K3 website in my browser" picked fetch_page, and M1K3 read the site aloud
 /// instead of opening it. A web read on a request to open a page becomes the action pick.
 struct ToolDispatchOpenTests {

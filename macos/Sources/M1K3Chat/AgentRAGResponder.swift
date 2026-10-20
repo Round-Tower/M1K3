@@ -198,6 +198,10 @@
 //  name trims to "This brain".
 //  Review: Kev + claude-opus-5-5, 2026-10-19 (privacy gate fold) — `turnClauses` hands the egress answer to the
 //  provider's persona variant: pocket's drops the verdict lead the 1.2B copied into unrelated answers.
+//  Review: Kev + claude-opus-5-5, 2026-10-20 — the dispatched pick goes through `ToolDispatch.corrected` (recency → open → personal):
+//  "what did I decide …" picked lookup_fact, the dispatch prompt carried Wikipedia's "2003 in music" and no memory,
+//  and Lil read the egress clause as the user's pick of Private Cloud Compute. Confidence 0.75 (pinned; the router
+//  chateval arm with `--router dispatch` is owed).
 
 import Foundation
 import M1K3Agent
@@ -915,9 +919,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         }
         // A reference lookup about now goes to the web (2026-10-10: "this year" picked lookup_fact).
         // An "open the website" ask read the page aloud (#622): opening is an action.
-        let pick = ToolDispatch.openCorrected(
-            ToolDispatch.recencyCorrected(picked, palette: tools, question: question), question: question
-        )
+        // A question about what the user decided went to Wikipedia (2026-10-20): it goes to their knowledge.
+        let pick = ToolDispatch.corrected(picked, palette: tools, question: question)
         if pick.tool == ToolPick.noTool {
             Self.log.notice("tool dispatch: none — a plain turn answers")
             return await plain()
