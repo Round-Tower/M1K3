@@ -603,7 +603,8 @@ extension MLXBrainProvider: ToolCallingProvider {
     public func warmPersonaPrefix(tools: [ToolDefinition]) async {
         do {
             let container = try await ensureLoaded()
-            // A swap cancels the outgoing brain's warm: don't start a prefill for it (a build already running finishes).
+            // A swap cancels the outgoing brain's warm: don't start a prefill for it
+            // (a build already running finishes).
             try Task.checkCancellation()
             let inputs = MLXToolMapping.prefixInputs(for: tools)
             let seed = try await buildPersonaPrefixSnapshot(

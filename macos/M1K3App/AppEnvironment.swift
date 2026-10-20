@@ -1796,7 +1796,7 @@ final class AppEnvironment {
         // (Weak alone never held: each `await mlx?.…` keeps a strong reference
         // for the whole call, and three overlapping warm tasks handed it on —
         // hence the ledger and the cancel.)
-        personaWarmTask = Task.detached(priority: .utility) { [weak self, weak mlx, store, embedder, deepDelegationHook] in
+        let warm = Task.detached(priority: .utility) { [weak self, weak mlx, store, embedder, deepDelegationHook] in
             // The palette's availability facts are real I/O (a SQLite count, a
             // directory listing, IOKit once) — computed ONCE, here, off the
             // main actor, and shared by both palettes (review fold, #201).
@@ -1826,6 +1826,7 @@ final class AppEnvironment {
             guard !Task.isCancelled else { return }
             await MainActor.run { self?.personaWarmLedger.finished(provider) }
         }
+        personaWarmTask = warm
     }
 
     /// A preload's caller was cancelled (a window closed mid-load) while it still owned the current brain's load:
