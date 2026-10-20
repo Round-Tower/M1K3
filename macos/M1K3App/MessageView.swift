@@ -21,6 +21,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — "Remember this photo" under a sent image (RememberPhotoButton).
 //  TDD_SKIP: view body.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — avatarDisplay reads through AvatarDisplay(persisted:) (panel retired; the legibility card keys on the backdrop). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-20 — the live reasoning panel shows the thought's tail
+//  (ReasoningTail) with no cross-fade; Kev saw jank on a 1,024-token thought. Confidence 0.75: verify-by-eye.
 
 import AppKit
 import M1K3Avatar
@@ -407,12 +409,12 @@ struct MessageView: View {
             get: { showReasoning || isThinkingLive },
             set: { showReasoning = $0 }
         )) {
-            ReadingText(reasoning)
+            // While it streams, only the thought's tail, and no cross-fade: the fade
+            // re-drew the WHOLE thought for 0.18 s on every 50 ms flush (three or four
+            // overlapping), over a re-parse that grew with every token. The rule the
+            // answer body states below; the settled panel shows the full thought.
+            ReadingText(isThinkingLive ? ReasoningTail.live(reasoning) : reasoning)
                 .foregroundStyle(.secondary)
-                // Same gentle fade as the answer, so the chain-of-thought streams
-                // in softly while the disclosure is open.
-                .contentTransition(.opacity)
-                .animation(.easeOut(duration: 0.18), value: reasoning)
                 .padding(.top, 4)
                 .frame(maxWidth: .infinity, alignment: .leading)
         } label: {
