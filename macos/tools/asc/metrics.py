@@ -10,7 +10,7 @@
                                             platform and country. Needs ASC_VENDOR_NUMBER.
   metrics.py analytics request              ask ASC for ONGOING analytics reports (once per app)
   metrics.py analytics list                 the reports the request produced (names + categories)
-  metrics.py analytics fetch --name "App Downloads" [--days 14] [--out DIR]
+  metrics.py analytics fetch [--name "App Downloads Standard"] [--days 14] [--out DIR]
                                             download the daily instances of one report as CSV
   metrics.py repo                           GitHub stars, forks, DMG downloads per release, traffic
                                             and referrers; writes one dated line per day to
@@ -39,6 +39,15 @@ has not: its first live run is the review owed.
 Review: Kev + claude-fable-5.1, 2026-10-20 (pre-push fold) — `gh --paginate` output is decoded
 document by document, not by newline guesswork; product types are an explicit table; a 404 day is
 None/"n/a", not zero; the snapshot keeps one line per date; segment files carry an index.
+Review: Kev + claude-fable-5.1, 2026-10-21 — first live `analytics` run, the owed review: the
+request → reports → instances → segments flow works as documented. Apple's catalogue names end
+"Standard" / "Detailed" (there is no plain "App Downloads"), so the default is now
+`App Downloads Standard`; on day one that report and Discovery had no instances yet while
+"App Store Installation and Deletion Standard" and "App Sessions Standard" each had one, two days
+deep. Review nits from #653 folded: Pacific date for the repo snapshot, instance id in segment
+filenames, a tolerant date parse, a corrupt snapshot line is kept not fatal, segment transport
+errors say FAILED. Confidence 0.85: everything has now run live; the ad-geo pattern (UZ/KZ/MA/DZ
+installs with ~30 s sessions and next-day deletes) is a reading, not a measurement of intent.
 """
 from __future__ import annotations
 
@@ -61,6 +70,7 @@ REPO = "Round-Tower/M1K3"
 SNAPSHOT = Path(__file__).resolve().parents[3] / "marketing" / "metrics" / "repo.jsonl"
 PACIFIC = ZoneInfo("America/Los_Angeles")
 GZIP_MAGIC = b"\x1f\x8b"
+DEFAULT_REPORT = "App Downloads Standard"  # the catalogue names end Standard / Detailed
 
 # Apple's Product Type Identifiers (Sales and Trends guide). Explicit, so a new code is "other"
 # until someone reads what it means, never a download by accident.
@@ -132,9 +142,19 @@ def pick_report(reports: list[dict[str, Any]], name: str) -> dict[str, Any] | No
     return None
 
 
-def segment_filename(report_name: str, date: str, index: int) -> str:
+def segment_filename(report_name: str, date: str, index: int, instance: str = "") -> str:
+    """Report, processing date, instance id (two instances can share a date) and segment index."""
     safe = re.sub(r"[^A-Za-z0-9.-]+", "-", report_name).strip("-")
-    return f"{safe}-{date or 'undated'}-{index:02d}.csv"
+    inst = re.sub(r"[^A-Za-z0-9.-]+", "-", instance).strip("-")
+    return f"{safe}-{date or 'undated'}-{inst + '-' if inst else ''}{index:02d}.csv"
+
+
+def instance_date(processing_date: str) -> dt.date | None:
+    """`processingDate` is a plain date today; a time component, if Apple ever adds one, is dropped."""
+    try:
+        return dt.date.fromisoformat((processing_date or "")[:10])
+    except ValueError:
+        return None
 
 
 # ── repo (pure) ──────────────────────────────────────────────────────────────
@@ -183,7 +203,16 @@ def snapshot_line(date: dt.date, fields: dict[str, Any]) -> str:
 def merge_snapshot(existing: str, line: str) -> str:
     """One line per date: a rerun on the same day replaces that day's line."""
     date = json.loads(line)["date"]
-    kept = [ln for ln in existing.splitlines() if ln.strip() and json.loads(ln).get("date") != date]
+    kept = []
+    for ln in existing.splitlines():
+        if not ln.strip():
+            continue
+        try:
+            if json.loads(ln).get("date") == date:
+                continue
+        except (ValueError, AttributeError):
+            pass  # a hand-edited line is kept as found, never a reason to drop today's snapshot
+        kept.append(ln)
     return "".join(ln + "\n" for ln in kept) + line
 
 
@@ -294,15 +323,18 @@ def _analytics(args: argparse.Namespace) -> int:
 
     n = 0
     for inst in asc.paginate(f"/v1/analyticsReports/{report['id']}/instances?filter[granularity]=DAILY"):
-        date = inst["attributes"].get("processingDate") or ""
-        if not date or dt.date.fromisoformat(date) < since:
+        day = instance_date(inst["attributes"].get("processingDate") or "")
+        if day is None or day < since:
             continue
         for i, seg in enumerate(asc.paginate(f"/v1/analyticsReportInstances/{inst['id']}/segments")):
-            r = requests.get(seg["attributes"]["url"], timeout=120)  # pre-signed: no bearer token
-            r.raise_for_status()
+            try:
+                r = requests.get(seg["attributes"]["url"], timeout=120)  # pre-signed: no bearer token
+                r.raise_for_status()
+            except requests.RequestException as exc:
+                raise SystemExit(f"FAILED: segment {i} of {report['attributes']['name']} {day}: {exc}") from None
             raw = r.content
             data = gzip.decompress(raw) if raw[:2] == GZIP_MAGIC else raw
-            (out / segment_filename(report["attributes"]["name"], date, i)).write_bytes(data)
+            (out / segment_filename(report["attributes"]["name"], day.isoformat(), i, inst["id"])).write_bytes(data)
             n += 1
     print(f"{n} segment(s) written under {out}")
     return 0
@@ -343,7 +375,7 @@ def cmd_repo(args: argparse.Namespace) -> int:
     if not args.no_snapshot:
         SNAPSHOT.parent.mkdir(parents=True, exist_ok=True)
         existing = SNAPSHOT.read_text() if SNAPSHOT.exists() else ""
-        SNAPSHOT.write_text(merge_snapshot(existing, snapshot_line(dt.date.today(), fields)))
+        SNAPSHOT.write_text(merge_snapshot(existing, snapshot_line(pacific_today(), fields)))
         print(f"snapshot for today written to {SNAPSHOT}")
     return 0
 
@@ -357,7 +389,7 @@ def main() -> int:
     s.set_defaults(fn=cmd_store)
     a = sub.add_parser("analytics")
     a.add_argument("action", choices=["request", "list", "fetch"])
-    a.add_argument("--name", default="App Downloads")
+    a.add_argument("--name", default=DEFAULT_REPORT)
     a.add_argument("--days", type=int, default=14)
     a.add_argument("--out", default=str(SNAPSHOT.parent / "analytics"))
     a.set_defaults(fn=cmd_analytics)

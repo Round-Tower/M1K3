@@ -175,3 +175,31 @@ def test_segment_files_are_safe_names_with_an_index_so_they_never_overwrite():
     assert metrics.segment_filename("App Store Discovery and Engagement", "2026-10-19", 0) == \
         "App-Store-Discovery-and-Engagement-2026-10-19-00.csv"
     assert metrics.segment_filename("a/b", "", 3) == "a-b-undated-03.csv"
+
+
+# ── first live analytics run (2026-10-21) + the #653 review nits ────────────
+
+def test_the_default_report_is_one_apple_actually_lists():
+    # The catalogue names are "App Downloads Standard" / "... Detailed"; plain "App Downloads" does not exist.
+    reports = [{"id": "r1", "attributes": {"name": "App Downloads Standard", "category": "COMMERCE"}}]
+    assert metrics.pick_report(reports, metrics.DEFAULT_REPORT)["id"] == "r1"
+
+
+def test_an_instance_date_tolerates_a_time_component():
+    assert metrics.instance_date("2026-10-21") == dt.date(2026, 10, 21)
+    assert metrics.instance_date("2026-10-21T05:00:00Z") == dt.date(2026, 10, 21)
+    assert metrics.instance_date("") is None
+    assert metrics.instance_date("soon") is None
+
+
+def test_segment_files_carry_the_instance_id_so_two_instances_on_a_day_never_collide():
+    a = metrics.segment_filename("App Downloads Standard", "2026-10-21", 0, instance="abc123")
+    b = metrics.segment_filename("App Downloads Standard", "2026-10-21", 0, instance="def456")
+    assert a == "App-Downloads-Standard-2026-10-21-abc123-00.csv" and a != b
+    assert metrics.segment_filename("a/b", "", 3) == "a-b-undated-03.csv"
+
+
+def test_a_corrupt_snapshot_line_is_kept_verbatim_not_fatal():
+    old = 'not json at all\n{"date": "2026-10-20", "stars": 5}\n'
+    new = metrics.snapshot_line(dt.date(2026, 10, 21), {"stars": 6})
+    assert metrics.merge_snapshot(old, new) == 'not json at all\n{"date": "2026-10-20", "stars": 5}\n' + new
