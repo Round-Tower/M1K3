@@ -37,3 +37,36 @@ def test_read_description_drops_one_trailing_newline(tmp_path: Path) -> None:
 def test_patch_payload_shape() -> None:
     assert testflight.patch_payload("loc-1", "hello") == {
         "data": {"type": "betaAppLocalizations", "id": "loc-1", "attributes": {"description": "hello"}}}
+
+
+# Per-build "What to Test" (`notes`): Xcode Cloud reads TestFlight/notes/ itself, a local upload
+# arrives with the field empty (builds 537-539 were each set by a scratchpad script).
+
+def test_build_notes_reads_each_locale_of_the_platform(tmp_path: Path) -> None:
+    (tmp_path / "macos.en-US.txt").write_text("Mac notes\n", encoding="utf-8")
+    (tmp_path / "macos.de-DE.txt").write_text("Mac Notizen\n", encoding="utf-8")
+    (tmp_path / "ios.en-US.txt").write_text("iPhone notes\n", encoding="utf-8")
+    assert testflight.build_notes("MAC_OS", tmp_path) == {"de-DE": "Mac Notizen", "en-US": "Mac notes"}
+    assert testflight.build_notes("IOS", tmp_path) == {"en-US": "iPhone notes"}
+
+
+def test_the_tracked_notes_pass_their_own_rules() -> None:
+    for platform in testflight.NOTES_PLATFORMS:
+        notes = testflight.build_notes(platform)
+        assert "en-US" in notes, platform
+        assert all(testflight.notes_problems(t) == [] for t in notes.values()), platform
+
+
+def test_notes_problems_empty_and_over_cap() -> None:
+    assert testflight.notes_problems("  ") == ["What to Test is empty"]
+    over = "x" * (testflight.NOTES_CAP + 1)
+    assert testflight.notes_problems(over) == [
+        f"What to Test over the {testflight.NOTES_CAP}-char cap ({len(over)})"]
+
+
+def test_notes_payloads() -> None:
+    assert testflight.notes_patch_payload("loc-1", "hi") == {
+        "data": {"type": "betaBuildLocalizations", "id": "loc-1", "attributes": {"whatsNew": "hi"}}}
+    assert testflight.notes_post_payload("b-1", "en-US", "hi") == {
+        "data": {"type": "betaBuildLocalizations", "attributes": {"locale": "en-US", "whatsNew": "hi"},
+                 "relationships": {"build": {"data": {"type": "builds", "id": "b-1"}}}}}

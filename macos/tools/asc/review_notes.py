@@ -1,4 +1,8 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script --managed-python
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["pyjwt[crypto]", "requests"]
+# ///
 """App Review Information notes — show / set on every platform's newest version.
 
 Why: on 2026-09-16 App Review's automated analysis stopped the Mac 1.0.0 submission —
@@ -22,6 +26,7 @@ pytest-pinned; the PATCH shape mirrors keywords.py/promo.py; `set --confirm` is
 verify-by-run against the live record — ASC writes are Kev's to run). Prior: Unknown.
 Review: Kev + claude-fable-5.1, 2026-09-16 (later) — a per-platform PATCH failure prints and
 continues instead of bail() (which exits, so the "continue" never ran — #361's local pass).
+Review: Kev + claude-opus-5.5, 2026-10-21 — a PEP 723 header (runs through uv; test_asc pins it).
 """
 
 from __future__ import annotations
