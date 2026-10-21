@@ -101,6 +101,11 @@ protocols in their own targets. `M1K3App/` is a thin shell; `AppEnvironment` (+ 
   uncommitted files).
 - SwiftLint pre-commit is advisory; pre-existing length/cyclomatic violations on large
   files are a standing "don't chase" set.
+- **Provider façades forward every capability.** An `as?` capability protocol on an `InferenceProvider`
+  is forwarded by BOTH `SwappableInferenceProvider` and `RuntimeInferenceProvider` in the same commit,
+  with a test through the façade; never cast a provider to a concrete type (ask `BackendRouting`).
+- **A new persisted `Codable` field is Optional.** The synthesized decoder ignores defaults, so an old
+  record throws `keyNotFound` and the whole file is lost; pin it with a strip-the-key decode test.
 - **Docs move in the same commit as the code.** A new `.library` product, app surface, or
   type moved between the app and `Sources/` updates `docs/MODULE_MAP.md` (CI-pinned), the
   surface tables in `../README.md` / `../CONTRIBUTING.md`, and `docs/IOS_VISIONOS_PORT.md`.
@@ -124,3 +129,6 @@ imports XCTest) and tools/dev/tdd.sh, the one-target inner loop; `swift test --f
 dependent test bundle and ran an empty XCTest pass. -->
 <!-- Review: Kev + claude-opus-5-5, 2026-10-17, Confidence 0.85 — CI: a `release*` tag starts Xcode Cloud, not a
 master push (the compute hours ran out on per-merge archives); `tools/asc/release_tag.py cut` cuts one. -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-21, Confidence 0.8 — two conventions promoted from auto-memory
+(the façade forwarding rule and the Codable keyNotFound trap) when MEMORY.md went 135 → 36 lines; both bit
+in-session before they were written down. -->
