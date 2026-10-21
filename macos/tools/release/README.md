@@ -61,6 +61,17 @@ Remaining to ship on MAS (all phase-2, in order):
 Everything else (network client+server for the loopback MCP, mic, screen-recording
 via TCC for calls) is MAS-compatible.
 
+### Local store release (Xcode Cloud out of compute)
+
+```bash
+macos/tools/release/release-local.sh 540        # Mac .pkg + MLX smoke + iOS .ipa → /tmp/m1k3-local-540
+macos/tools/release/upload-local.zsh /tmp/m1k3-local-540   # Kev, via ! (validate + upload both)
+macos/tools/asc/testflight.py notes --build 540 --confirm  # What to Test, once both are VALID
+```
+
+The build number is the cancelled Xcode Cloud run's; the rest of the release is the
+`../asc/README.md` runbook from `verify_build.py` on.
+
 ## 3. iOS + visionOS — **native, in-repo**
 
 The Apple mobile/spatial surface is the native SwiftUI shell under

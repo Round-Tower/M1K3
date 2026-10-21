@@ -185,11 +185,11 @@ echo "▸ [4/4] Confirming MAS entitlements (no audioanalyticsd)…"
 APP_IN_ARCHIVE="$ARCHIVE/Products/Applications/$APP_NAME.app"
 if codesign -d --entitlements - "$APP_IN_ARCHIVE" 2>/dev/null | grep -q audioanalyticsd; then
   echo "  ✗ audioanalyticsd entitlement present — MAS will REJECT this"
+  exit 1
 else
   echo "  ✓ no audioanalyticsd entitlement"
 fi
 
 echo
 echo "✓ MAS package → $PKG  ($(du -h "$PKG" | cut -f1))"
-echo "  Upload with: xcrun altool --upload-app -f \"$PKG\" -t macos \\"
-echo "    --apple-id <id> --password <app-specific-pw>   (after the App Store Connect app record exists)"
+echo "  Upload: release-local.sh builds this with the iOS .ipa; upload-local.zsh sends both."
