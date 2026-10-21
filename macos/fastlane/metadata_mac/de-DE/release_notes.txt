@@ -3,7 +3,7 @@ NEU IN 1.2
 • Flüssigeres Denken. Lil hält sein Denken in einem festen Budget und antwortet gleich danach, damit eine schwere Frage nie ausufert. Der Gedanke, der live mitläuft, erscheint jetzt flüssig statt zu stottern, während er wächst.
 • Eine leichtere Constellation. Das Gedächtnisfeld hinter deinem Chat besteht jetzt aus ein paar Formen statt aus tausend und braucht etwa ein Drittel der CPU von vorher.
 • Lil ist schnell wach. Wenn du das Hirn wechselst, wärmt sich das alte nicht mehr im Hintergrund auf, und der Fortschritt bleibt nie auf 0 % stehen.
-• Schnellere Stimme mit Big. Big hält deine letzten Wortwechsel griffbereit, fast vier Sekunden schneller pro gesprochenem Beitrag, und erinnert sich trotzdem an alles, was du früher gesagt hast.
+• Schnellere Stimme mit Big. Big hält deine letzten Wortwechsel griffbereit, etwa vier Sekunden schneller pro gesprochenem Beitrag, und erinnert sich trotzdem an alles, was du früher gesagt hast.
 • Ich verstehe Namen besser. Im Sprachmodus korrigiere ich einen falsch verstandenen Namen in Richtung der Menschen und Orte, die schon in meinem Gedächtnis sind.
 • Bessere Antworten aus dem Gedächtnis. Frag, was du entschieden oder mir erzählt hast, und ich schaue zuerst in dein Wissen, nicht im Web. Frag nach etwas weiter oben im Chat, und ich antworte aus dem Chat.
 • Gedächtnis-Aufnahme aus heißt jetzt: nie. Was du mit ausgeschalteter Aufnahme schickst, wird nie behalten, auch nicht nach einem Neustart.

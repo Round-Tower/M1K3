@@ -1,9 +1,9 @@
 NOVEDADES DE LA 1.2
 
 • Un pensamiento más fluido. Lil mantiene su razonamiento dentro de un presupuesto fijo y responde justo después, así que una pregunta difícil nunca se desborda. El pensamiento en vivo ahora fluye con suavidad en lugar de entrecortarse a medida que crece.
-• Una Constellation más ligera. El campo de memoria detrás de tu chat se dibuja con unas pocas formas en lugar de mil, con un tercio del CPU que usaba antes.
+• Una Constellation más ligera. El campo de memoria detrás de tu chat se dibuja con unas pocas formas en lugar de mil, con cerca de un tercio del CPU que usaba antes.
 • Lil despierta rápido. Cambiar de cerebro ya no deja al anterior calentándose en segundo plano, y el progreso nunca se queda congelado en 0 %.
-• Voz más rápida con Big. Big tiene a la mano tus últimos intercambios, casi cuatro segundos menos por turno hablado, y sigue recordando lo que dijiste antes.
+• Voz más rápida con Big. Big tiene a la mano tus últimos intercambios, unos cuatro segundos menos por turno hablado, y sigue recordando lo que dijiste antes.
 • Oigo mejor los nombres. En el modo de voz corrijo un nombre mal entendido hacia las personas y los lugares que ya están en mi memoria.
 • Mejores respuestas de memoria. Pregúntame qué decidiste o qué me contaste y busco primero en tu conocimiento, no en la web. Pregúntame por algo anterior del chat y respondo desde el chat.
 • Con la captura de memoria desactivada, ahora es nunca. Los mensajes que envías con ella apagada no se guardan jamás, ni siquiera después de reiniciar.

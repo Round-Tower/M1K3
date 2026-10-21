@@ -3,7 +3,7 @@ NOVIDADES DA 1.2
 • Um pensamento mais fluido. O Lil mantém o raciocínio dentro de um orçamento fixo e responde logo depois, então uma pergunta difícil nunca foge do controle. O pensamento ao vivo agora corre suave em vez de engasgar conforme cresce.
 • Uma Constellation mais leve. O campo de memória atrás da sua conversa é desenhado com algumas formas em vez de mil, usando cerca de um terço da CPU de antes.
 • O Lil acorda rápido. Trocar de cérebro não deixa mais o antigo esquentando em segundo plano, e o progresso nunca trava em 0 %.
-• Voz mais rápida com o Big. O Big mantém suas últimas trocas por perto, quase quatro segundos mais rápido por fala, e ainda lembra o que você disse antes.
+• Voz mais rápida com o Big. O Big mantém suas últimas trocas por perto, cerca de quatro segundos mais rápido por fala, e ainda lembra o que você disse antes.
 • Ouço melhor os nomes. No modo de voz, corrijo um nome que ouvi errado em direção às pessoas e aos lugares que já estão na minha memória.
 • Respostas melhores da memória. Pergunte o que você decidiu ou me contou e eu procuro primeiro no seu conhecimento, não na web. Pergunte sobre algo anterior na conversa e eu respondo a partir da conversa.
 • Captura de memória desligada agora significa nunca. As mensagens que você envia com ela desligada jamais são guardadas, nem depois de reabrir o app.

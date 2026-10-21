@@ -3,7 +3,7 @@ NOUVEAU DANS LA 1.2
 • Une réflexion plus fluide. Lil garde sa réflexion dans un budget fixe et répond juste après, si bien qu'une question difficile ne part jamais à la dérive. La pensée en direct défile maintenant avec fluidité au lieu de saccader à mesure qu'elle grandit.
 • Une Constellation plus légère. Le champ de mémoire derrière ta conversation se dessine avec quelques formes au lieu de mille, pour environ un tiers du CPU d'avant.
 • Lil se réveille vite. Changer de cerveau ne laisse plus l'ancien chauffer en arrière-plan, et la progression ne reste jamais figée à 0 %.
-• Une voix plus rapide avec Big. Big garde tes derniers échanges à portée de main, presque quatre secondes de moins par tour parlé, et se souvient toujours de ce que tu as dit plus tôt.
+• Une voix plus rapide avec Big. Big garde tes derniers échanges à portée de main, environ quatre secondes de moins par tour parlé, et se souvient toujours de ce que tu as dit plus tôt.
 • J'entends mieux les noms. En mode vocal, je corrige un nom mal entendu vers les personnes et les lieux déjà dans ma mémoire.
 • De meilleures réponses de mémoire. Demande-moi ce que tu as décidé ou ce que tu m'as dit, et je cherche d'abord dans tes connaissances, pas sur le web. Demande-moi quelque chose de plus tôt dans la conversation, et je réponds depuis la conversation.
 • Capture de mémoire désactivée veut maintenant dire jamais. Les tours que tu envoies avec elle coupée ne sont jamais gardés, même après un redémarrage.

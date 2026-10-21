@@ -3,7 +3,7 @@ NEW IN 1.2
 • Smoother thinking. Lil keeps its thinking to a set budget and answers straight after, so a hard question never runs away. The live thought now streams smoothly instead of stuttering as it grows.
 • A lighter Constellation. The memory field behind your chat draws as a few shapes instead of a thousand, at about a third of the CPU it took before.
 • Lil wakes fast. Switching brains no longer leaves the old one warming up in the background, and the progress never freezes at 0%.
-• Quicker voice with Big. Big keeps your last few exchanges close, nearly four seconds faster per spoken turn, and still remembers what you said earlier.
+• Quicker voice with Big. Big keeps your last few exchanges close, about four seconds faster per spoken turn, and still remembers what you said earlier.
 • I hear names better. In voice mode I fix a misheard name toward the people and places already in my memory.
 • Better memory answers. Ask what you decided or told me and I look in your knowledge first, not the web. Ask about something earlier in the chat and I answer from the chat.
 • Memory capture off now means never. Turns you send with it off are never kept, even after a relaunch.
