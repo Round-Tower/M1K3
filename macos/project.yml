@@ -40,6 +40,9 @@
 # (check_store_targets.py pins it). Confidence 0.85; the open is verify-by-launch on a device.
 # Review: Kev + claude-opus-5-5, 2026-10-19 — MARKETING_VERSION 1.1.0 → 1.1.1 (chore(release): v1.1.1): App Store Connect
 # refused build 537 at 1.1.0 (approved 2026-10-15, train closed). Fixes only since, so PATCH (VERSIONING.md).
+# Review: Kev + claude-opus-5-5, 2026-10-21 — MARKETING_VERSION 1.1.1 → 1.2.0 (chore(release): v1.2.0), Kev's call: Mac
+# + iOS together, new user-facing behaviour since 1.1.0 (iOS background downloads + Speak answers, voice name repair), so
+# MINOR (VERSIONING.md). App Store Connect already holds a 1.2.0 version on both platforms. Confidence 0.9.
 
 name: M1K3
 
@@ -55,7 +58,7 @@ settings:
     # Versioning scheme: see /VERSIONING.md. This is the single source of truth
     # for the user-facing version on every Apple surface (TestFlight, MAS, the
     # nightly DMG's name). Build numbers are Xcode Cloud's (auto-managed).
-    MARKETING_VERSION: "1.1.1"
+    MARKETING_VERSION: "1.2.0"
     CURRENT_PROJECT_VERSION: "1"
     # Apple Silicon only (2026-09-15). Every brain needs it — MLX (Lil, Big, pocket)
     # and Apple Intelligence (Mini) are both arm64-only — yet the Mac archive was

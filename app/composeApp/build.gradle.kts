@@ -181,8 +181,9 @@ android {
         // Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.9 (v1.1.0 rides the same
         // commit as the Mac bump, per VERSIONING.md; 10100 is the derived code). Prior: Unknown.
         // Review: Kev + claude-opus-5-5, 2026-10-19 — v1.1.1 (10101), same commit as the Mac bump.
-        versionCode = 10101
-        versionName = "1.1.1"
+        // Review: Kev + claude-opus-5-5, 2026-10-21 — v1.2.0 (10200), same commit as the Mac bump.
+        versionCode = 10200
+        versionName = "1.2.0"
 
         // Instrumented test runner
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -287,7 +288,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "app.m1k3.ai.assistant"
-            packageVersion = "1.1.1"
+            packageVersion = "1.2.0"
         }
     }
 }
