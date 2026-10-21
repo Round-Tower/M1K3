@@ -35,6 +35,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-21 (pre-push review fold) — the input monitor lives in a `.task` (cancelled
 //  when the view leaves; onDisappear isn't promised for a closing window), its callback asserts the main actor, a busy
 //  M1K3 is re-checked a whole window later (no 1 Hz loop), and `canSleep: false` keeps first run's face awake.
+//  Review: Kev + claude-opus-5.5, 2026-10-21 (bot review fold) — a plain hover wakes it: `PointerWake`, an AppKit tracking
+//  area on the backdrop, gets mouse-moved events whatever the window's acceptsMouseMovedEvents says (both passes flagged
+//  the local monitor alone as unproven for hover). Clicks pass through (hitTest nil). Confidence 0.75.
 
 import AppKit
 import Foundation
@@ -82,6 +85,9 @@ struct AvatarChatBackground: View {
             ReadingScrim()
                 .ignoresSafeArea()
         }
+        // A local monitor only sees mouse-moved events in a window that asks for them;
+        // a tracking area gets them for its own rect whatever the window says.
+        .background(PointerWake { wake("pointer") })
         // A background must never swallow chat/scroll interaction.
         .allowsHitTesting(false)
         .animation(transition(for: resolved), value: resolved)
@@ -184,6 +190,56 @@ private struct ReadingScrim: View {
     }
 }
 
+/// Pointer movement over the backdrop, from an AppKit tracking area: clicks pass straight
+/// through (`hitTest` is nil), and the area follows the visible rect.
+private struct PointerWake: NSViewRepresentable {
+    let onMove: @MainActor () -> Void
+
+    func makeNSView(context _: Context) -> TrackingView {
+        TrackingView(onMove: onMove)
+    }
+
+    func updateNSView(_ view: TrackingView, context _: Context) {
+        view.onMove = onMove
+    }
+
+    final class TrackingView: NSView {
+        var onMove: @MainActor () -> Void
+
+        init(onMove: @escaping @MainActor () -> Void) {
+            self.onMove = onMove
+            super.init(frame: .zero)
+        }
+
+        @available(*, unavailable)
+        required init?(coder _: NSCoder) {
+            nil
+        }
+
+        override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            trackingAreas.forEach(removeTrackingArea)
+            addTrackingArea(NSTrackingArea(
+                rect: .zero,
+                options: [.mouseMoved, .mouseEnteredAndExited, .activeInActiveApp, .inVisibleRect],
+                owner: self
+            ))
+        }
+
+        override func mouseMoved(with _: NSEvent) {
+            onMove()
+        }
+
+        override func mouseEntered(with _: NSEvent) {
+            onMove()
+        }
+
+        override func hitTest(_: NSPoint) -> NSView? {
+            nil
+        }
+    }
+}
+
 /// The last user input in this app, from a local event monitor. A reference, so the
 /// monitor writes a timestamp without touching SwiftUI state; `onInput` runs only to
 /// wake a sleeping backdrop.
@@ -203,10 +259,7 @@ private final class BackdropInputClock {
                                             .scrollWheel, .keyDown, .leftMouseDragged]
         // Local monitors are called on the main thread; say so to the compiler.
         monitor = NSEvent.addLocalMonitorForEvents(matching: kinds) { [weak self] event in
-            MainActor.assumeIsolated {
-                self?.last = Date()
-                onInput()
-            }
+            MainActor.assumeIsolated { onInput() }
             return event
         }
     }
