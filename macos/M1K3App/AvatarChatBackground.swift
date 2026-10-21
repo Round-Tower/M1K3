@@ -27,17 +27,37 @@
 //  lines stood still then jumped. `showsInferenceRain` and its branch are gone; the pure InferencePhosphor
 //  model and BackdropInk.rain stay as the seam to bring it back. This is now THE chat avatar (the panel is
 //  retired). Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-21 — the backdrop SLEEPS: idle M1K3, an empty composer and no
+//  input for `BackdropSleep.idleAfter` (90 s; `-backdropSleepAfter N` overrides) fade the surface out of the
+//  tree, and any pointer, key or scroll in the app, or M1K3 doing anything, fades it back. Measured with
+//  the chat window in front: animating 46.5% CPU, paused 42.0%, absent 0.0% (a frame cap did nothing),
+//  so only absence is cheap. Confidence 0.75 (the rule is pinned; the felt fade is verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-21 (pre-push review fold) — the input monitor lives in a `.task` (cancelled
+//  when the view leaves; onDisappear isn't promised for a closing window), its callback asserts the main actor, a busy
+//  M1K3 is re-checked a whole window later (no 1 Hz loop), and `canSleep: false` keeps first run's face awake.
+//  Review: Kev + claude-opus-5.5, 2026-10-21 (bot review fold) — a plain hover wakes it: `PointerWake`, an AppKit tracking
+//  area on the backdrop, gets mouse-moved events whatever the window's acceptsMouseMovedEvents says (both passes flagged
+//  the local monitor alone as unproven for hover). Clicks pass through (hitTest nil). Confidence 0.75.
 
+import AppKit
 import Foundation
 import M1K3Avatar
+import OSLog
 import SwiftUI
 
 struct AvatarChatBackground: View {
     let env: AppEnvironment
     /// The user is composing — recede so the draft + transcript stay crisp.
     let isTyping: Bool
+    /// False where the face IS the show (first run's wake bar): it never sleeps there.
+    var canSleep = true
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Input bookkeeping lives in a box, not in state: a mouse move must not re-render.
+    @State private var input = BackdropInputClock()
+    @State private var asleep = false
+
+    private static let log = Logger(subsystem: "app.m1k3", category: "companion")
 
     private var treatment: ChatBackdropTreatment {
         ChatBackdropTreatment.resolve(
@@ -53,21 +73,86 @@ struct AvatarChatBackground: View {
     var body: some View {
         let resolved = treatment
         ZStack {
-            AvatarSurface(env: env, paused: !resolved.animatesMotion)
-                .scaleEffect(resolved.scale)
-                .blur(radius: resolved.blur)
-                .opacity(resolved.opacity)
-                .ignoresSafeArea()
+            // Asleep = not in the tree at all: only absence stops the surface's render loop.
+            if !asleep {
+                AvatarSurface(env: env, paused: !resolved.animatesMotion)
+                    .scaleEffect(resolved.scale)
+                    .blur(radius: resolved.blur)
+                    .opacity(resolved.opacity)
+                    .ignoresSafeArea()
+                    .transition(.opacity)
+            }
             ReadingScrim()
                 .ignoresSafeArea()
         }
+        // A local monitor only sees mouse-moved events in a window that asks for them;
+        // a tracking area gets them for its own rect whatever the window says.
+        .background(PointerWake { wake("pointer") })
         // A background must never swallow chat/scroll interaction.
         .allowsHitTesting(false)
         .animation(transition(for: resolved), value: resolved)
+        .animation(reduceMotion ? nil : .easeInOut(duration: asleep ? 1.6 : 0.6), value: asleep)
+        // The monitor lives exactly as long as this task: SwiftUI cancels it when the view
+        // leaves, which onDisappear doesn't promise for a closing window or a torn-down popover.
+        .task {
+            input.typing = isTyping
+            input.start { wake("input") }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(3600))
+            }
+            input.stop()
+        }
+        .onChange(of: env.avatar.state.activity) { _, activity in
+            // The window restarts when M1K3 stops, not when the user last moved.
+            input.touch()
+            if activity.isActive { wake("activity") }
+        }
+        .onChange(of: isTyping) { _, typing in
+            input.typing = typing
+            input.touch()
+            if typing { wake("typing") }
+        }
+        .task(id: asleep) { await sleepWhenIdle() }
         // Decorative here (unlike the voice hero, which IS the
         // content) — VoiceOver has nothing useful to say about a bloom/recede
         // backdrop sitting behind the transcript it must never compete with.
         .accessibilityHidden(true)
+    }
+
+    private func wake(_ reason: StaticString) {
+        input.touch()
+        guard asleep else { return }
+        asleep = false
+        Self.log.notice("backdrop awake (\(reason, privacy: .public))")
+    }
+
+    /// One sleeping Task, re-armed per `asleep` flip: never a clock, never a per-frame read.
+    private func sleepWhenIdle() async {
+        guard canSleep, !asleep else { return }
+        let window = Self.idleAfter
+        while !Task.isCancelled {
+            let now = Date()
+            if BackdropSleep.isAsleep(
+                activity: env.avatar.state.activity, isTyping: input.typing,
+                lastInput: input.last, now: now, idleAfter: window
+            ) {
+                asleep = true
+                Self.log.notice("backdrop asleep after \(Int(window)) s idle")
+                return
+            }
+            // Busy or typing: the onChange handlers restart the window when that ends, so look
+            // again a whole window later; otherwise exactly when the window closes.
+            let busy = env.avatar.state.activity.isActive || input.typing
+            let due = BackdropSleep.nextCheck(lastInput: input.last, now: now, idleAfter: window)
+            let wait = busy ? window : max(due.timeIntervalSince(now), 1)
+            try? await Task.sleep(for: .seconds(wait))
+        }
+    }
+
+    /// `-backdropSleepAfter N` (seconds) for a launch A/B; the shipped window otherwise.
+    private static var idleAfter: TimeInterval {
+        let override = UserDefaults.standard.double(forKey: "backdropSleepAfter")
+        return override > 0 ? override : BackdropSleep.idleAfter
     }
 
     /// Lively spring when blooming, calm ease when receding, and NO transition
@@ -102,5 +187,85 @@ private struct ReadingScrim: View {
             endPoint: .bottom
         )
         .allowsHitTesting(false)
+    }
+}
+
+/// Pointer movement over the backdrop, from an AppKit tracking area: clicks pass straight
+/// through (`hitTest` is nil), and the area follows the visible rect.
+private struct PointerWake: NSViewRepresentable {
+    let onMove: @MainActor () -> Void
+
+    func makeNSView(context _: Context) -> TrackingView {
+        TrackingView(onMove: onMove)
+    }
+
+    func updateNSView(_ view: TrackingView, context _: Context) {
+        view.onMove = onMove
+    }
+
+    final class TrackingView: NSView {
+        var onMove: @MainActor () -> Void
+
+        init(onMove: @escaping @MainActor () -> Void) {
+            self.onMove = onMove
+            super.init(frame: .zero)
+        }
+
+        @available(*, unavailable)
+        required init?(coder _: NSCoder) {
+            nil
+        }
+
+        override func updateTrackingAreas() {
+            super.updateTrackingAreas()
+            trackingAreas.forEach(removeTrackingArea)
+            addTrackingArea(NSTrackingArea(
+                rect: .zero,
+                options: [.mouseMoved, .mouseEnteredAndExited, .activeInActiveApp, .inVisibleRect],
+                owner: self
+            ))
+        }
+
+        override func mouseMoved(with _: NSEvent) {
+            onMove()
+        }
+
+        override func mouseEntered(with _: NSEvent) {
+            onMove()
+        }
+
+        override func hitTest(_: NSPoint) -> NSView? {
+            nil
+        }
+    }
+}
+
+/// The last user input in this app, from a local event monitor. A reference, so the
+/// monitor writes a timestamp without touching SwiftUI state; `onInput` runs only to
+/// wake a sleeping backdrop.
+@MainActor
+private final class BackdropInputClock {
+    var last = Date()
+    var typing = false
+    private var monitor: Any?
+
+    func touch() {
+        last = Date()
+    }
+
+    func start(onInput: @escaping @MainActor () -> Void) {
+        guard monitor == nil else { return }
+        let kinds: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDown, .rightMouseDown, .otherMouseDown,
+                                            .scrollWheel, .keyDown, .leftMouseDragged]
+        // Local monitors are called on the main thread; say so to the compiler.
+        monitor = NSEvent.addLocalMonitorForEvents(matching: kinds) { [weak self] event in
+            MainActor.assumeIsolated { onInput() }
+            return event
+        }
+    }
+
+    func stop() {
+        if let monitor { NSEvent.removeMonitor(monitor) }
+        monitor = nil
     }
 }
