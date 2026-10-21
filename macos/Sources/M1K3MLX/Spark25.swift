@@ -10,8 +10,9 @@
 //
 //  Why our own file: mlx-swift-lm at our pin (3.32.3) and upstream main have no
 //  Spark model; mlx-lm (Python) merged `models/spark2_5.py` and that is what this
-//  ports, line for line, with Gemma3Text.swift as the Swift idiom for the hybrid
-//  sliding/full cache. Registered into `LLMTypeRegistry.shared` by
+//  ports (sanitize is a superset: it maps the quantised `.scales`/`.biases` too),
+//  with Gemma3Text.swift as the Swift idiom for the hybrid sliding/full cache and
+//  the inner-model prefill. Registered into `LLMTypeRegistry.shared` by
 //  `Spark25Model.registerIfNeeded()`, which the brain provider calls before every
 //  factory load, so a checkpoint with `model_type: spark2_5` loads through the
 //  ordinary `LLMModelFactory` path.
@@ -31,6 +32,13 @@
 //  Open: numeric parity against the Python rig is the in-app chateval's to prove
 //  (the metallib wall keeps model code out of `swift test`); the pure parts
 //  (config, layer pattern, sanitize keys, dialect) are pinned in Spark25Tests.
+//  Open: `registerModelType` replaces the registry entry wholesale, so if a
+//  mlx-swift-lm bump ships its own `spark2_5`, ours silently wins — drop this
+//  file on that bump. Open: the audition is parked on the vision rule
+//  (docs/evals/2026-10-21-spark-x26-audition.md).
+//  Review: Kev + claude-fable-5.1, 2026-10-21 (pre-push review fold) — the once-flag
+//  raced the actor (set before the await); it is one shared Task now. `prepare`
+//  prefills through the inner model, capped at the window. Rotary width in Double.
 //
 
 import Foundation
@@ -39,7 +47,6 @@ import MLXFast
 import MLXLLM
 import MLXLMCommon
 import MLXNN
-import os
 
 // MARK: - Configuration
 
@@ -151,7 +158,9 @@ public struct Spark25Configuration: Codable, Sendable {
 
     /// The rotary width for a layer type: `head_dim × partial_rotary_factor`.
     public func ropeDimensions(for layerType: String) -> Int {
-        Int(Float(headDim) * (ropeParameters[layerType]?.partialRotaryFactor ?? 1.0))
+        // Double, as Python's `int(head_dim * factor)`: a Float product can truncate
+        // differently for a factor that is not exactly representable.
+        Int(Double(headDim) * Double(ropeParameters[layerType]?.partialRotaryFactor ?? 1.0))
     }
 
     public func ropeTheta(for layerType: String) -> Float {
@@ -249,11 +258,11 @@ final class Spark25Attention: Module {
     func callAsFunction(
         _ x: MLXArray, mask: MLXFast.ScaledDotProductAttentionMaskMode, cache: KVCache?
     ) -> MLXArray {
-        let (B, L) = (x.dim(0), x.dim(1))
+        let (batch, length) = (x.dim(0), x.dim(1))
         let parts = split(qkvProj(x), indices: [qSize, qSize + kvSize], axis: -1)
-        var queries = parts[0].reshaped(B, L, nHeads, headDim).transposed(0, 2, 1, 3)
-        var keys = parts[1].reshaped(B, L, nKVHeads, headDim).transposed(0, 2, 1, 3)
-        let values = parts[2].reshaped(B, L, nKVHeads, headDim).transposed(0, 2, 1, 3)
+        var queries = parts[0].reshaped(batch, length, nHeads, headDim).transposed(0, 2, 1, 3)
+        var keys = parts[1].reshaped(batch, length, nKVHeads, headDim).transposed(0, 2, 1, 3)
+        let values = parts[2].reshaped(batch, length, nKVHeads, headDim).transposed(0, 2, 1, 3)
 
         // Absolute position: the cache's offset, so a wrapped rotating cache is still right.
         let offset = cache?.ropeOffset
@@ -266,8 +275,8 @@ final class Spark25Attention: Module {
 
         // Head-wise sigmoid gate, computed in float32 as the reference does.
         let gate = sigmoid(gateProj(x).asType(.float32)).asType(output.dtype) // [B, L, heads]
-        output = output * gate.expandedDimensions(axis: -1)
-        return outProj(output.reshaped(B, L, -1))
+        output *= gate.expandedDimensions(axis: -1)
+        return outProj(output.reshaped(batch, length, -1))
     }
 }
 
@@ -387,6 +396,32 @@ public final class Spark25Model: Module, LLMModel {
         }
     }
 
+    /// Prefill through the inner model only, as Gemma3Text does: the 131,072-row tied
+    /// head over every prompt position is thrown away, so skipping it is the speedup.
+    /// Chunks are capped at the sliding window (an A/B `-prefillStepSize` above it would
+    /// otherwise push a rotating cache past its size in one step).
+    public func prepare(
+        _ input: LMInput, cache: [KVCache], state _: LMOutput.State? = nil,
+        prefill: PrefillParameters = .init()
+    ) throws -> PrepareResult {
+        let tokens = input.text
+        guard tokens.tokens.dim(0) > 0 else {
+            return .tokens(.init(tokens: MLXArray(Int32(0))[0 ..< 0]))
+        }
+        let processed = try prefill.forEachChunk(
+            total: tokens.tokens.size,
+            defaultStepSize: Self.defaultPrefillChunkSize,
+            maximumStepSize: config.slidingWindow
+        ) { range in
+            _ = model(tokens[.newAxis, range].tokens, cache: cache)
+            asyncEval(cache)
+        }
+        return .tokens(tokens[processed...])
+    }
+
+    /// Gemma3Text's tuned default; the window (512) caps it either way.
+    private static let defaultPrefillChunkSize = 128
+
     public func sanitize(weights: [String: MLXArray]) -> [String: MLXArray] {
         var out: [String: MLXArray] = [:]
         out.reserveCapacity(weights.count)
@@ -415,19 +450,16 @@ public final class Spark25Model: Module, LLMModel {
     /// Adds `spark2_5` to the shared LLM type registry, once. Cheap to call on
     /// every load; the provider does so before `LLMModelFactory.loadContainer`.
     public static func registerIfNeeded() async {
-        let first = registered.withLock { done -> Bool in
-            if done { return false }
-            done = true
-            return true
-        }
-        guard first else { return }
-        // The registry is an actor, so the first caller awaits it; a second caller
-        // may load before that registration lands only if it raced the very first
-        // load of the process, and the provider's load is single-flight.
-        await LLMTypeRegistry.shared.registerModelType(Spark25Configuration.modelType, creator: create)
+        // One Task for the process: a static `let` initialises once, and every caller
+        // awaits the SAME completion, so a second load that races the first cannot
+        // reach the factory before the registration has landed on the actor (the
+        // once-flag it replaces set `done` before awaiting — pre-push review, 2026-10-21).
+        await registration.value
     }
 
-    private static let registered = OSAllocatedUnfairLock(initialState: false)
+    private static let registration = Task {
+        await LLMTypeRegistry.shared.registerModelType(Spark25Configuration.modelType, creator: create)
+    }
 
     /// The registry's creator: config.json bytes → a model.
     private static func create(_ data: Data) throws -> any LanguageModel {

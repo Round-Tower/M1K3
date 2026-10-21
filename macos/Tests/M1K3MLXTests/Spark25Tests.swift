@@ -62,6 +62,61 @@ struct Spark25ConfigurationTests {
         ])
     }
 
+    @Test("a layer count that is not a multiple of four still follows the pattern from the top")
+    func patternTail() {
+        #expect(Spark25Configuration.defaultLayerTypes(count: 6) == [
+            "sliding_attention", "sliding_attention", "sliding_attention", "full_attention",
+            "sliding_attention", "sliding_attention",
+        ])
+    }
+
+    @Test("a missing partial_rotary_factor means the whole head rotates; untied embeddings decode")
+    func optionalFields() throws {
+        var json = try #require(JSONSerialization.jsonObject(with: fixture()) as? [String: Any])
+        json["rope_parameters"] = [
+            "sliding_attention": ["rope_theta": 10000],
+            "full_attention": ["rope_theta": 5_000_000, "partial_rotary_factor": 0.25],
+        ]
+        json["tie_word_embeddings"] = false
+        let config = try JSONDecoder().decode(
+            Spark25Configuration.self, from: JSONSerialization.data(withJSONObject: json)
+        )
+        #expect(config.ropeDimensions(for: Spark25Configuration.slidingLayer) == 256)
+        #expect(config.ropeDimensions(for: Spark25Configuration.fullLayer) == 64)
+        #expect(!config.tieWordEmbeddings)
+    }
+
+    @Test("an odd or oversized rotary width is refused")
+    func refusesBadRotaryWidth() throws {
+        let base = try #require(JSONSerialization.jsonObject(with: fixture()) as? [String: Any])
+        for factor in [65.0 / 256.0, 1.5] { // 65 (odd) and 384 (over head_dim)
+            var json = base
+            json["rope_parameters"] = [
+                "sliding_attention": ["rope_theta": 10000, "partial_rotary_factor": factor],
+                "full_attention": ["rope_theta": 5_000_000, "partial_rotary_factor": 0.25],
+            ]
+            #expect(throws: Spark25Error.self, "factor \(factor)") {
+                try JSONDecoder().decode(Spark25Configuration.self, from: JSONSerialization.data(withJSONObject: json))
+            }
+        }
+    }
+
+    @Test("newCache gives the sliding layers a rotating cache of the window and the full layers a plain one")
+    func cacheShape() throws {
+        let config = try JSONDecoder().decode(Spark25Configuration.self, from: fixture())
+        let caches = try Spark25Model(config).newCache(parameters: nil)
+        #expect(caches.count == 36)
+        for (i, cache) in caches.enumerated() {
+            if config.isSliding(layer: i) {
+                #expect(cache is RotatingKVCache, "layer \(i)")
+                #expect(cache.maxSize == 512, "layer \(i)")
+            } else {
+                #expect(cache is KVCacheSimple, "layer \(i)")
+                #expect(cache.maxSize == nil, "layer \(i)")
+            }
+        }
+    }
+
     @Test("a config without layer_types gets the 3:1 pattern")
     func defaultsLayerTypes() throws {
         var json = try #require(JSONSerialization.jsonObject(with: fixture()) as? [String: Any])
@@ -121,6 +176,32 @@ struct Spark25DialectTests {
         #expect(MLXBrainProvider.resolveToolCallFormat(
             for: ModelConfiguration(id: "XHToken/Spark-X2.5-4B")
         ) == .glm4)
+    }
+
+    @Test("the type match is exact, and the existing families resolve as before")
+    func existingFamiliesUnchanged() {
+        #expect(MLXBrainProvider.toolCallFormat(forModelType: "spark2_5x") == nil)
+        #expect(MLXBrainProvider.toolCallFormat(forModelType: "glm4") == .glm4)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: ModelConfiguration(id: "zai/GLM-4.7-Flash")) == .glm4)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: ModelConfiguration(id: "mlx-community/Phi-4-mini")) == .json)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: ModelConfiguration(id: "mlx-community/gemma-4-12B-it-4bit")) == .gemma4)
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: ModelConfiguration(id: "LiquidAI/LFM2.5-1.2B")) == .lfm2)
+    }
+
+    @Test("eight concurrent first callers all wait for the one registration before loading")
+    func concurrentRegistration() async throws {
+        // The once-flag this replaced set its flag BEFORE awaiting the actor, so a racing
+        // second caller could reach the factory first and get `unsupportedModelType`.
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0 ..< 8 {
+                group.addTask { await Spark25Model.registerIfNeeded() }
+            }
+        }
+        await #expect(throws: DecodingError.self) {
+            try await LLMTypeRegistry.shared.createModel(
+                configuration: Data("{}".utf8), modelType: Spark25Configuration.modelType
+            )
+        }
     }
 
     @Test("registration is idempotent and leaves the type creatable")
