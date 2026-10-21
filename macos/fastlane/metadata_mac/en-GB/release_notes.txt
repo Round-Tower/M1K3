@@ -1,18 +1,15 @@
-NEW IN 1.1
+NEW IN 1.2
 
-• A new welcome. Setup is a short deck on glass, with pixel titles, a few small sounds and a word from me when you're done. Its last card, My full kit, gets Lil, semantic memory, sharper ears and my voice in one tap while you carry on. Re-run it any time from Settings > General.
-• Brains & downloads. One Settings page lists everything I can download, with its size, live progress, Cancel and Resume, and Remove to give you the space back. A download that times out now retries on its own.
-• Lil can see. Lil is now Qwen3.5 (4B) and it reads images: attach a photo, a screenshot or a whiteboard and ask about it. It downloads once more (about 3 GB); remove the old Lil in Settings > Brains & downloads. The Reasoning setting works for Lil again.
-• Semantic memory rides with Lil. Pick it with Lil and I switch your search over to it as soon as Lil is ready.
-• Remember this photo. Under any image you send, one tap keeps a private caption of it in my memory, so you can ask about it later. It never leaves your Mac, agents connected over MCP can't read it, and deleting the chat forgets it.
-• Meet the Phosphor Fox, the new default companion: a white lattice. If you already picked one, it stays yours.
-• A tidier Settings. MCP Server and Brain at Home have their own pages. Model auditions and weight import are gone: if you imported audition weights, they're deleted once to give you the space back.
-• Your companion, behind the chat. The avatar now sits in the window's background, or switch it off, with no side panel. The thinking rain is gone for now. VoiceOver announces when I start thinking, listening or speaking.
-• Halloween in the Lair. From October 24 to November 1, I dress up. Turn it off in Settings > M1K3 > Companion > Seasonal looks.
-• Faster Big. Big (Gemma 4) no longer spends about a second per step re-reading its own prompt.
-• Quicker tools on every brain, a fix for a tool call Lil sometimes wrote with a stray tag, and a rejected tool call now tells the brain why so it can try again. Chat titles no longer show my thinking.
-• No more stalls when the display sleeps. One call that could not be read no longer hides the rest of your call list.
-• If you turned on MLX semantic embeddings before, I rebuild your search index once, the next time your Mac is idle and cool.
+• Smoother thinking. Lil keeps its thinking to a set budget and answers straight after, so a hard question never runs away. The live thought now streams smoothly instead of stuttering as it grows.
+• A lighter Constellation. The memory field behind your chat draws as a few shapes instead of a thousand, at about a third of the CPU it took before.
+• Lil wakes fast. Switching brains no longer leaves the old one warming up in the background, and the progress never freezes at 0%.
+• Quicker voice with Big. Big keeps your last few exchanges close, about four seconds faster per spoken turn, and still remembers what you said earlier.
+• I hear names better. In voice mode I fix a misheard name toward the people and places already in my memory.
+• Better memory answers. Ask what you decided or told me and I look in your knowledge first, not the web. Ask about something earlier in the chat and I answer from the chat.
+• Memory capture off now means never. Turns you send with it off are never kept, even after a relaunch.
+• A straight answer about privacy. Ask what leaves your Mac and I lead with the truth: some of it can, when web search or the private cloud is on, and I decide when to search.
+• No network check at launch. Semantic search starts from the copy on your Mac, and Settings no longer calls it "Partly downloaded".
+• Brain at Home: an image sent from your iPhone or iPad is declined by name, never answered unseen.
 
 NEW TO M1K3? HERE'S WHAT I DO
 

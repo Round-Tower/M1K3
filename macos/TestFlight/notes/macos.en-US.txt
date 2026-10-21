@@ -1,11 +1,15 @@
-Thanks for testing M1K3 on the Mac.
+Thanks for testing M1K3 1.2 on the Mac.
 
-Please try:
-• Chat on Mini (instant, no download), then let it offer Lil or Big and pick one
-• Lil is now Qwen3.5 and it can see: attach an image and ask about it (Lil downloads again, about 3 GB)
-• Voice mode — talk, interrupt, and hear the neural voice answer
-• Drop a note or PDF onto the chat and ask about it
-• Memories — tell it something worth keeping, then find it and forget it
-• The m1k3 command-line tool and the local tool server with your coding agent (Claude, Cursor, Zed…)
+New in this build, please try:
+• Ask Lil something that takes thought (Reasoning on): the live thought should stream smoothly and the answer follow straight after
+• Leave the Constellation behind your chat and watch your Mac's fans and battery: it should sit far lighter than in 1.1
+• Switch brains (Mini → Lil → Big and back): Lil should wake fast, with no progress stuck at 0%
+• Voice mode with Big, a few turns in a row: replies should start sooner, and it should still remember what you said earlier
+• Say a name you've told it before: it should hear the name right
+• Ask what you decided or told it earlier: it should answer from your memory, not the web
+• Turn memory capture off, chat, relaunch: nothing from that chat should appear in Memories
+• Ask "what leaves my Mac?": the answer should lead with the truth
+
+And the basics: chat on Mini, attach an image for Lil, voice mode, drop a PDF onto the chat, and the m1k3 command-line tool with your coding agent.
 
 The network is used for brain downloads and web search, which is on by default — one switch in Settings turns it off. Flag anything that looks like it left your Mac when it shouldn't have: Settings → "Report an issue…" attaches a privacy-scrubbed diagnostic.

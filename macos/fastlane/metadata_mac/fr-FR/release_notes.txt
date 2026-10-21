@@ -1,17 +1,14 @@
-NOUVEAU DANS LA 1.1
+NOUVEAU DANS LA 1.2
 
-• Un nouvel accueil. La configuration est un court jeu de cartes sur verre, avec des titres en pixels, quelques petits sons et un mot de ma part à la fin. Sa dernière carte, My full kit, t'apporte Lil, la mémoire sémantique, des oreilles plus fines et ma voix en un seul geste, pendant que tu continues ce que tu faisais. Relance-la quand tu veux depuis Settings > General.
-• Brains & downloads. Une page des Réglages liste tout ce que je peux télécharger, avec sa taille, la progression en direct, « Cancel » et « Resume », et « Remove » pour te rendre la place. Un téléchargement qui expire réessaie maintenant tout seul.
-• Lil voit. Lil est maintenant Qwen3.5 (4B) et il lit les images : joins une photo, une capture d'écran ou un tableau blanc et pose-moi des questions dessus. Il se télécharge une fois de plus (environ 3 Go) ; supprime l'ancien Lil dans Settings > Brains & downloads. Le réglage « Reasoning » refonctionne pour Lil.
-• La mémoire sémantique voyage avec Lil. Choisis-la avec Lil et je bascule ta recherche dessus dès que Lil est prêt.
-• Retenir cette photo. Sous toute image que tu envoies, un geste garde dans ma mémoire une légende privée, pour que tu puisses m'en reparler plus tard. Elle ne quitte jamais ton Mac, les agents connectés via MCP ne peuvent pas la lire, et supprimer la conversation l'efface de ma mémoire.
-• Voici le Phosphor Fox, le nouveau compagnon par défaut : un treillis blanc. Si tu en avais déjà choisi un, il reste le tien.
-• Des Réglages plus ordonnés. MCP Server et Brain at Home ont leurs propres pages. Les auditions de modèles et l'import de poids disparaissent : si tu avais importé des poids d'audition, ils sont supprimés une fois pour te rendre la place.
-• Ton compagnon, derrière le chat. L'avatar se place maintenant à l'arrière-plan de la fenêtre, ou tu le désactives, sans panneau latéral. La pluie de réflexion s'en va pour le moment. VoiceOver annonce quand je commence à réfléchir, à écouter ou à parler.
-• Halloween dans le repaire. Du 24 octobre au 1er novembre, je me déguise. Désactive-le dans Settings > M1K3 > Companion > Seasonal looks.
-• Big plus rapide. Big (Gemma 4) ne perd plus environ une seconde par étape à relire son propre prompt.
-• Des outils plus rapides sur chaque cerveau, un correctif pour un appel d'outil que Lil écrivait parfois avec une balise en trop, et un appel d'outil rejeté dit maintenant pourquoi au cerveau pour qu'il puisse réessayer. Les titres de conversation n'affichent plus ma réflexion.
-• Plus de blocages quand l'écran se met en veille. Un appel illisible ne cache plus le reste de ta liste d'appels.
-• Si tu avais activé les embeddings sémantiques MLX, je reconstruis ton index de recherche une fois, la prochaine fois que ton Mac sera inactif et au frais.
+• Une réflexion plus fluide. Lil garde sa réflexion dans un budget fixe et répond juste après, si bien qu'une question difficile ne part jamais à la dérive. La pensée en direct défile maintenant avec fluidité au lieu de saccader à mesure qu'elle grandit.
+• Une Constellation plus légère. Le champ de mémoire derrière ta conversation se dessine avec quelques formes au lieu de mille, pour environ un tiers du CPU d'avant.
+• Lil se réveille vite. Changer de cerveau ne laisse plus l'ancien chauffer en arrière-plan, et la progression ne reste jamais figée à 0 %.
+• Une voix plus rapide avec Big. Big garde tes derniers échanges à portée de main, environ quatre secondes de moins par tour parlé, et se souvient toujours de ce que tu as dit plus tôt.
+• J'entends mieux les noms. En mode vocal, je corrige un nom mal entendu vers les personnes et les lieux déjà dans ma mémoire.
+• De meilleures réponses de mémoire. Demande-moi ce que tu as décidé ou ce que tu m'as dit, et je cherche d'abord dans tes connaissances, pas sur le web. Demande-moi quelque chose de plus tôt dans la conversation, et je réponds depuis la conversation.
+• Capture de mémoire désactivée veut maintenant dire jamais. Les tours que tu envoies avec elle coupée ne sont jamais gardés, même après un redémarrage.
+• Une réponse franche sur la confidentialité. Demande-moi ce qui quitte ton Mac et je commence par la vérité : une partie peut partir, quand la recherche web ou le cloud privé est activé, et c'est moi qui décide quand chercher.
+• Plus de vérification réseau au lancement. La recherche sémantique démarre depuis la copie sur ton Mac, et Settings ne l'appelle plus « Partly downloaded ».
+• Brain at Home : une image envoyée depuis ton iPhone ou ton iPad est refusée par son nom, jamais traitée sans être vue.
 
 Tout le reste tourne sur ton Mac. Pas de compte, pas de télémétrie. Le réseau sert aux téléchargements de modèles, à la recherche web et au cloud privé optionnel. Settings > Brains & downloads nomme chaque téléchargement ; la recherche web et le cloud privé sont des interrupteurs dans Settings > Privacy.
