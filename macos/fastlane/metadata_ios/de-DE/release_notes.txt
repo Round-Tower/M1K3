@@ -1,0 +1,22 @@
+NEU IN 1.2
+
+• Downloads, die weiterlaufen. Ein Hirn-Download läuft weiter, wenn du die App verlässt, mit dem Fortschritt auf dem Sperrbildschirm und in der Dynamic Island. Der Balken bleibt nie auf 0 % hängen, und ein Stocken wird beim Namen genannt.
+• Hör dir meine Antworten an. Schalte „Speak answers“ ein, und ich lese jede Antwort laut vor, während sie ankommt, mit der Stimme, die du gewählt hast. Kleine Klänge markieren Antworten und den Sprachmodus; „Sound effects“ schaltet sie aus.
+• Eine neue Überraschung bei der Einrichtung: Die Gesichtskarte zeigt deinen Begleiter.
+• Flüssigeres Denken. Lil hält sein Denken in einem festen Budget und antwortet gleich danach, damit eine schwere Frage nie ausufert.
+• Ich verstehe Namen besser. Im Sprachmodus korrigiere ich einen falsch verstandenen Namen in Richtung der Menschen und Orte, die schon in meinem Gedächtnis sind.
+• Bessere Antworten aus dem Gedächtnis. Frag, was du entschieden oder mir erzählt hast, und ich schaue zuerst in dein Wissen, nicht im Web.
+• Gedächtnis-Aufnahme aus heißt jetzt: nie. Was du mit ausgeschalteter Aufnahme schickst, wird nie behalten, auch nicht nach einem Neustart.
+• Eine ehrliche Antwort zur Privatsphäre. Frag, was dein Gerät verlässt, und ich beginne mit der Wahrheit, und ich entscheide, wann ich suche.
+• Brain at Home: Ein Bild, das an das Hirn deines Macs geschickt wird, wird mit Namen abgelehnt, nie ungesehen beantwortet.
+
+NEU BEI M1K3? DAS MACHE ICH
+
+• Chatte mit einem Hirn auf dem Gerät: Mini startet sofort auf Geräten mit Apple Intelligence, und Lil läuft komplett offline auf iPhones und iPads mit 8 GB Arbeitsspeicher.
+• Sprich mit mir: Spracherkennung auf dem Gerät und eine natürliche neuronale Stimme.
+• Bring dein eigenes Wissen mit: Füge PDFs und Textdateien hinzu, und ich antworte auf ihrer Grundlage, auf dem Gerät.
+• Ich merke mir, was dir wichtig ist, und du kannst alles sehen und durchsuchen, was ich behalten habe.
+• Ein freundlicher 3D-Begleiter oder ein Pixelgesicht.
+• Brain at Home: Kopple dich über dein eigenes WLAN mit deinem Mac und nutze sein großes Hirn vom Sofa aus.
+
+Alles läuft auf deinem Gerät. Kein Konto, keine Telemetrie. Das Netzwerk nutze ich für Hirn-Downloads und die Websuche; ein Schalter in den Einstellungen schaltet die Websuche aus.

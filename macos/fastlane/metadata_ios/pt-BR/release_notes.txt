@@ -1,0 +1,22 @@
+NOVIDADES DA 1.2
+
+• Downloads que continuam. O download de um cérebro segue quando você sai do app, com o progresso na Tela de Bloqueio e na Ilha Dinâmica. A barra nunca trava em 0 %, e uma parada é avisada pelo nome.
+• Ouça minhas respostas. Ligue "Speak answers" e eu leio cada resposta em voz alta conforme ela chega, com a voz que você escolheu. Pequenos sons marcam as respostas e o modo de voz; "Sound effects" os desliga.
+• Uma revelação nova na configuração inicial: o cartão do rosto mostra o seu companheiro.
+• Um pensamento mais fluido. O Lil mantém o raciocínio dentro de um orçamento fixo e responde logo depois, então uma pergunta difícil nunca foge do controle.
+• Ouço melhor os nomes. No modo de voz, corrijo um nome que ouvi errado em direção às pessoas e aos lugares que já estão na minha memória.
+• Respostas melhores da memória. Pergunte o que você decidiu ou me contou e eu procuro primeiro no seu conhecimento, não na web.
+• Captura de memória desligada agora significa nunca. As mensagens que você envia com ela desligada jamais são guardadas, nem depois de reabrir o app.
+• Uma resposta direta sobre privacidade. Pergunte o que sai do seu aparelho e eu começo pela verdade, e sou eu quem decide quando buscar.
+• Brain at Home: uma imagem enviada ao cérebro do seu Mac é recusada pelo nome, nunca respondida sem ser vista.
+
+NOVO NO M1K3? O QUE EU FAÇO
+
+• Converse com um cérebro no aparelho: o Mini começa na hora em aparelhos com Apple Intelligence, e o Lil roda totalmente offline em iPhones e iPads com 8 GB de memória.
+• Fale comigo: reconhecimento de voz no aparelho e uma voz neural natural.
+• Traga seu próprio conhecimento: adicione PDFs e arquivos de texto e eu respondo a partir deles, no aparelho.
+• Eu lembro o que importa para você, e você pode ver e buscar tudo o que guardei.
+• Um companheiro 3D simpático ou um rosto de pixels.
+• Brain at Home: pareie com seu Mac pela sua própria rede Wi-Fi e use o cérebro grande dele do sofá.
+
+Tudo roda no seu aparelho. Sem conta, sem telemetria. A rede é usada para downloads de cérebros e busca na web; um interruptor nos Ajustes desliga a busca na web.

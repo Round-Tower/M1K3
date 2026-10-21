@@ -1,0 +1,22 @@
+NOVEDADES DE LA 1.2
+
+• Descargas que no se detienen. La descarga de un cerebro continúa cuando sales de la app, con su progreso en la pantalla bloqueada y en la Isla Dinámica. La barra nunca se queda congelada en 0 %, y un atasco se nombra.
+• Escucha mis respuestas. Activa "Speak answers" y leo cada respuesta en voz alta según llega, con la voz que elegiste. Unos sonidos pequeños marcan las respuestas y el modo de voz; "Sound effects" los apaga.
+• Una revelación nueva en la configuración inicial: la tarjeta de la cara muestra a tu compañero.
+• Un pensamiento más fluido. Lil mantiene su razonamiento dentro de un presupuesto fijo y responde justo después, así que una pregunta difícil nunca se desborda.
+• Oigo mejor los nombres. En el modo de voz corrijo un nombre mal entendido hacia las personas y los lugares que ya están en mi memoria.
+• Mejores respuestas de memoria. Pregúntame qué decidiste o qué me contaste y busco primero en tu conocimiento, no en la web.
+• Con la captura de memoria desactivada, ahora es nunca. Los mensajes que envías con ella apagada no se guardan jamás, ni siquiera después de reiniciar.
+• Una respuesta clara sobre privacidad. Pregúntame qué sale de tu dispositivo y empiezo por la verdad, y yo decido cuándo buscar.
+• Brain at Home: una imagen enviada al cerebro de tu Mac se rechaza por su nombre, nunca se responde sin verla.
+
+¿NUEVO EN M1K3? ESTO ES LO QUE HAGO
+
+• Chatea con un cerebro en el dispositivo: Mini arranca al instante en dispositivos con Apple Intelligence, y Lil funciona totalmente sin conexión en iPhone y iPad con 8 GB de memoria.
+• Háblame: reconocimiento de voz en el dispositivo y una voz neuronal natural.
+• Trae tu propio conocimiento: agrega PDF y archivos de texto y responderé a partir de ellos, en el dispositivo.
+• Recuerdo lo que te importa, y puedes ver y buscar todo lo que he guardado.
+• Un compañero 3D amigable o una cara de píxeles.
+• Brain at Home: empareja con tu Mac por tu propia red Wi-Fi y usa su gran cerebro desde el sofá.
+
+Todo se ejecuta en tu dispositivo. Sin cuenta, sin telemetría. La red se usa para descargar cerebros y para la búsqueda web; un interruptor en Configuración apaga la búsqueda web.
