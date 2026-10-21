@@ -7,7 +7,8 @@
 //  — all the layout/colour/geometry decisions are made (and tested) upstream;
 //  this file just places entities and animates the growth. VERIFY-BY-RUN: there
 //  are no unit tests for RealityView (the tested surface is ConstellationLayout +
-//  ConstellationGeometry + ConstellationPalette); the visual feel is Kev's eye.
+//  ConstellationGeometry + ConstellationPalette + ConstellationBake's merged
+//  geometry); the visual feel is Kev's eye.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-16, Confidence 0.7 (compiles against
 //  the RealityKit SPM target like M1K3Avatar; on-device look + the growth timing
@@ -16,6 +17,14 @@
 //  grey non-AppKit fallbacks retired) — the iPad field is the Mac field. Confidence now 0.8 (device-owed).
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — `paused:` stops the 30 fps clock + the idle drift (the thermal
 //  audit's AvatarPresence contract); a hidden field is unmounted by the host, not paused. Confidence now 0.8.
+//  Review: Kev + claude-opus-5-5, 2026-10-20 — once the motes have grown in, the field bakes into one mesh per
+//  colour plus one for the threads (ConstellationBake): ~1,000 entities drew every frame, holding an idle M1K3
+//  at ~132% CPU against the Fox's ~65%. Growth still animates per mote; a later bake folds the newcomers in.
+//  Placement is tracked in SyncTracker, not read off the children the bake replaces. Confidence 0.75.
+//  Review: Kev + claude-opus-5-5, 2026-10-21 — review folds: a bake swaps only when EVERY mesh built (a lone
+//  failure used to drop that colour's motes); an emptied model empties the field; placement prunes to the
+//  model; the bake waits for the latest growth to END, so a memory arriving mid-accretion no longer pops the
+//  rest in at once. The growth comment no longer claims a cancellation it never had. Confidence 0.75.
 
 import M1K3Memory
 import RealityKit
@@ -37,6 +46,8 @@ public struct ConstellationView: View {
     /// Star size is decoupled from `spread` so tightening the cluster doesn't
     /// shrink the motes — the field gets more compact, the stars stay visible.
     private let moteScale: Float = 2.0
+    /// A thread's thickness, as the per-edge box drew it.
+    private let threadThickness: Float = 0.01
 
     /// `root` spins (drag); `field` holds the motes/threads and is what we frame;
     /// the camera dollies to fit the field so all stars stay in view.
@@ -78,9 +89,10 @@ public struct ConstellationView: View {
                 root.addChild(field)
                 content.add(root)
                 content.add(camera)
-                sync(into: field, firstBuild: true)
+                let growth = sync(into: field, firstBuild: true)
                 frameToFit()
                 syncTracker.note(model)
+                scheduleBake(after: growth)
             } update: { _ in
                 // The model only GROWS (sync is additive, entities named by id), so a
                 // node/edge count change is a reliable "something new" signal. Reconcile
@@ -89,9 +101,10 @@ public struct ConstellationView: View {
                 // nothing was new. The idle breath/float/rotation still ticks per frame
                 // (three trig ops — cheap), so the field stays alive at rest.
                 if syncTracker.changed(model) {
-                    sync(into: field, firstBuild: false)
+                    let growth = sync(into: field, firstBuild: false)
                     frameToFit()
                     syncTracker.note(model)
+                    scheduleBake(after: growth)
                 }
                 if !reduceMotion, !paused {
                     idle(at: timeline.date.timeIntervalSince(start))
@@ -138,36 +151,107 @@ public struct ConstellationView: View {
         camera.look(at: .zero, from: SIMD3<Float>(0, 0, distance), relativeTo: nil)
     }
 
-    /// Idempotent reconcile: place any node/edge not already in the scene. Entities
-    /// are named by id so re-running is cheap and additive — the heart of the
+    /// Idempotent reconcile: place any node/edge not placed yet. Placement is
+    /// tracked by id so re-running is cheap and additive — the heart of the
     /// "grows over time" effect. On the first build motes stagger in along the
-    /// accretion timeline; motes added later just pop in.
-    private func sync(into container: Entity, firstBuild: Bool) {
-        let present = Set(container.children.compactMap { UUID(uuidString: $0.name) })
+    /// accretion timeline; motes added later just pop in. Returns how long the
+    /// growth it started runs, so the bake waits for it.
+    private func sync(into container: Entity, firstBuild: Bool) -> TimeInterval {
         let growthIndex = Dictionary(
             uniqueKeysWithValues: model.growthOrder.enumerated().map { ($1, $0) }
         )
-        for node in model.nodes where !present.contains(node.id) {
+        // Forget what the model no longer holds, so a returning id is placed afresh.
+        syncTracker.placedNodes.formIntersection(model.nodes.map(\.id))
+        syncTracker.placedEdges.formIntersection(model.edges.map(Self.key))
+        var longest: TimeInterval = 0
+        for node in model.nodes where syncTracker.placedNodes.insert(node.id).inserted {
             let mote = makeMote(node)
-            mote.name = node.id.uuidString
             container.addChild(mote)
             let delay = firstBuild ? Double(growthIndex[node.id] ?? 0) * growthStep : 0
             scheduleGrowth(of: mote, fullScale: 1, delay: delay)
+            longest = max(longest, delay + Self.growthDuration)
         }
 
-        // Threads — named by endpoints so each is placed once. Pre-compute the
-        // present edge names into a Set (mirrors the node dedup above) so reconcile
-        // is O(edges), not O(edges × children); inserting as we go also dedupes any
-        // repeat within this pass.
-        var presentEdges = Set(container.children.compactMap(\.name).filter { $0.hasPrefix("edge:") })
+        // Threads — keyed by endpoints + relation so each is placed once, which also
+        // dedupes any repeat within this pass.
         for edge in model.edges {
-            let name = "edge:\(edge.from.uuidString):\(edge.to.uuidString):\(edge.relation)"
-            guard presentEdges.insert(name).inserted else { continue }
             guard let a = model.node(edge.from), let b = model.node(edge.to) else { continue }
-            let thread = makeThread(from: a.position * spread, to: b.position * spread)
-            thread.name = name
-            container.addChild(thread)
+            guard syncTracker.placedEdges.insert(Self.key(edge)).inserted else { continue }
+            container.addChild(makeThread(from: a.position * spread, to: b.position * spread))
         }
+        return longest
+    }
+
+    // MARK: - Bake
+
+    /// Bake once every growth started so far has finished (plus a beat): a memory
+    /// arriving mid-accretion must not cut the first build's stagger short. A newer
+    /// schedule supersedes an older one, so a burst of new memories bakes once.
+    private func scheduleBake(after growth: TimeInterval) {
+        syncTracker.bakeGeneration += 1
+        let generation = syncTracker.bakeGeneration
+        syncTracker.growthEnd = max(syncTracker.growthEnd, .now + .seconds(growth))
+        let deadline = syncTracker.growthEnd + .milliseconds(250)
+        Task { @MainActor in
+            try? await Task.sleep(until: deadline, clock: .continuous)
+            guard syncTracker.bakeGeneration == generation else { return }
+            bake()
+        }
+    }
+
+    /// Swap every placed mote and thread for merged meshes: one per mote colour,
+    /// one for the threads. Same positions, sizes and materials, a few draws.
+    private func bake() {
+        let placed = model.nodes.filter { syncTracker.placedNodes.contains($0.id) }
+        let motes = placed.map { node in
+            ConstellationBake.Mote(
+                center: node.position * spread,
+                radius: node.radius * moteScale,
+                colour: .init(hue: node.hue, saturation: node.saturation)
+            )
+        }
+        let ends: [(SIMD3<Float>, SIMD3<Float>)] = model.edges.compactMap { edge in
+            guard syncTracker.placedEdges.contains(Self.key(edge)),
+                  let a = model.node(edge.from), let b = model.node(edge.to) else { return nil }
+            return (a.position * spread, b.position * spread)
+        }
+        // Build every mesh first and swap only if all of them built: a failed mesh
+        // leaves the live entities drawing rather than dropping its motes. An empty
+        // model builds nothing and empties the field.
+        var baked: [ModelEntity] = []
+        for (colour, parts) in ConstellationBake.motes(motes) {
+            let material = UnlitMaterial(
+                color: ConstellationPalette.materialColor(forHue: colour.hue, saturation: colour.saturation)
+            )
+            guard let entity = Self.entity(parts, material: material) else { return }
+            baked.append(entity)
+        }
+        let threads = ConstellationBake.threads(ends, thickness: threadThickness)
+        if !threads.positions.isEmpty {
+            guard let entity = Self.entity(threads, material: threadMaterial) else { return }
+            baked.append(entity)
+        }
+        for child in Array(field.children) {
+            child.removeFromParent()
+        }
+        for entity in baked {
+            field.addChild(entity)
+        }
+    }
+
+    /// A thread's placement key: its endpoints and relation, so each is placed once.
+    private static func key(_ edge: ConstellationEdge) -> String {
+        "\(edge.from.uuidString):\(edge.to.uuidString):\(edge.relation)"
+    }
+
+    private static func entity(_ parts: ConstellationBake.Parts, material: any RealityKit.Material) -> ModelEntity? {
+        guard !parts.positions.isEmpty else { return nil }
+        var descriptor = MeshDescriptor(name: "constellation")
+        descriptor.positions = MeshBuffers.Positions(parts.positions)
+        descriptor.normals = MeshBuffers.Normals(parts.normals)
+        descriptor.primitives = .triangles(parts.indices)
+        guard let mesh = try? MeshResource.generate(from: [descriptor]) else { return nil }
+        return ModelEntity(mesh: mesh, materials: [material])
     }
 
     private func makeMote(_ node: ConstellationNode) -> ModelEntity {
@@ -186,14 +270,20 @@ public struct ConstellationView: View {
     private func makeThread(from: SIMD3<Float>, to: SIMD3<Float>) -> ModelEntity {
         let length = ConstellationGeometry.distance(from, to)
         // A thin box used as a line; +Y is its long axis (matches the geometry helper).
-        let mesh = MeshResource.generateBox(size: SIMD3<Float>(0.01, max(length, 0.0001), 0.01))
-        var material = SimpleMaterial(color: .init(white: 0.6, alpha: 1.0), isMetallic: false)
-        material.roughness = 1.0
-        let thread = ModelEntity(mesh: mesh, materials: [material])
+        let mesh = MeshResource.generateBox(size: SIMD3<Float>(threadThickness, max(length, 0.0001), threadThickness))
+        let thread = ModelEntity(mesh: mesh, materials: [threadMaterial])
         thread.position = ConstellationGeometry.midpoint(from, to)
         thread.orientation = ConstellationGeometry.orientation(from: from, to: to)
         return thread
     }
+
+    private var threadMaterial: SimpleMaterial {
+        var material = SimpleMaterial(color: .init(white: 0.6, alpha: 1.0), isMetallic: false)
+        material.roughness = 1.0
+        return material
+    }
+
+    private static let growthDuration: TimeInterval = 0.6
 
     /// Animate a mote from collapsed to full scale, staggered by `delay`.
     private func scheduleGrowth(of entity: Entity, fullScale: Float, delay: TimeInterval) {
@@ -202,13 +292,13 @@ public struct ConstellationView: View {
             rotation: entity.orientation,
             translation: entity.position
         )
-        // Structured concurrency over DispatchQueue.main.asyncAfter: keeps the
-        // non-Sendable Entity capture inside a proven @MainActor context (no Swift 6
-        // strict-concurrency warning), and the growth cancels automatically when the
-        // view's task tree tears down.
+        // A @MainActor Task over DispatchQueue.main.asyncAfter: keeps the non-Sendable
+        // Entity capture inside a proven main-actor context (no Swift 6 strict-concurrency
+        // warning). It is unstructured, so it outlives the view; on a torn-down view it
+        // only moves a detached entity.
         Task { @MainActor [entity] in
             if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
-            entity.move(to: target, relativeTo: entity.parent, duration: 0.6, timingFunction: .easeOut)
+            entity.move(to: target, relativeTo: entity.parent, duration: Self.growthDuration, timingFunction: .easeOut)
         }
     }
 
@@ -225,10 +315,17 @@ public struct ConstellationView: View {
     }
 
     /// Tracks the last-reconciled node/edge counts so the per-frame update can skip
-    /// the (allocating, tree-walking) `sync` + `frameToFit` unless the field grew.
+    /// the (allocating, tree-walking) `sync` + `frameToFit` unless the field grew,
+    /// what is placed (the bake replaces the per-mote entities, so the children
+    /// can't say), and which scheduled bake is current.
     private final class SyncTracker {
         private var nodes = -1
         private var edges = -1
+        var placedNodes: Set<UUID> = []
+        var placedEdges: Set<String> = []
+        var bakeGeneration = 0
+        /// When the latest-ending growth started so far finishes.
+        var growthEnd = ContinuousClock.now
 
         func changed(_ model: ConstellationModel) -> Bool {
             model.nodes.count != nodes || model.edges.count != edges
