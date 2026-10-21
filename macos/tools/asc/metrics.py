@@ -46,8 +46,10 @@ request → reports → instances → segments flow works as documented. Apple's
 "App Store Installation and Deletion Standard" and "App Sessions Standard" each had one, two days
 deep. Review nits from #653 folded: Pacific date for the repo snapshot, instance id in segment
 filenames, a tolerant date parse, a corrupt snapshot line is kept not fatal, segment transport
-errors say FAILED. Confidence 0.85: everything has now run live; the ad-geo pattern (UZ/KZ/MA/DZ
+errors, a segment with no url yet and a truncated gzip all say FAILED. Confidence 0.85: everything has now run live; the ad-geo pattern (UZ/KZ/MA/DZ
 installs with ~30 s sessions and next-day deletes) is a reading, not a measurement of intent.
+Review: Kev + claude-fable-5.1, 2026-10-21 (pre-push fold) — the FAILED wrap also covers a segment
+with no url yet and a truncated gzip body, so no segment path ends in a raw traceback.
 """
 from __future__ import annotations
 
@@ -330,10 +332,10 @@ def _analytics(args: argparse.Namespace) -> int:
             try:
                 r = requests.get(seg["attributes"]["url"], timeout=120)  # pre-signed: no bearer token
                 r.raise_for_status()
-            except requests.RequestException as exc:
-                raise SystemExit(f"FAILED: segment {i} of {report['attributes']['name']} {day}: {exc}") from None
-            raw = r.content
-            data = gzip.decompress(raw) if raw[:2] == GZIP_MAGIC else raw
+                raw = r.content
+                data = gzip.decompress(raw) if raw[:2] == GZIP_MAGIC else raw
+            except (requests.RequestException, KeyError, OSError, EOFError) as exc:  # no url yet, truncated gzip
+                raise SystemExit(f"FAILED: segment {i} of {report['attributes']['name']} {day}: {exc!r}") from None
             (out / segment_filename(report["attributes"]["name"], day.isoformat(), i, inst["id"])).write_bytes(data)
             n += 1
     print(f"{n} segment(s) written under {out}")
