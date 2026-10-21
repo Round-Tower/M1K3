@@ -94,6 +94,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — K6 minHeight 700 -> 760 (the arithmetic is in the frame's comment; fits a
 //  13" Air); K7 the no-wait deck names its cards (`WakeSetupCard.allCases`) now that the bare `WakeSetupFlow()` is the wait deck.
 //  Confidence 0.65 (the heights are estimates; verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-21 — the backdrop passes `canSleep: false`: the chat backdrop now sleeps
+//  after 90 s idle, and here the face waking as the bar fills is the show, however long the download takes.
 
 import M1K3AgentTools
 import M1K3Avatar
@@ -183,7 +185,7 @@ struct HelloView: View {
             // metaphor is the face waking up as the bar fills (WakeAlertness),
             // so receding him would hide the show.
             if backdropReady {
-                AvatarChatBackground(env: env, isTyping: false)
+                AvatarChatBackground(env: env, isTyping: false, canSleep: false)
                     .transition(.opacity)
             }
         }

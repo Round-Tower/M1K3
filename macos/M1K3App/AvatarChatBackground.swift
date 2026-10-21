@@ -32,6 +32,9 @@
 //  tree, and any pointer, key or scroll in the app, or M1K3 doing anything, fades it back. Measured with
 //  the chat window in front: animating 46.5% CPU, paused 42.0%, absent 0.0% (a frame cap did nothing),
 //  so only absence is cheap. Confidence 0.75 (the rule is pinned; the felt fade is verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-21 (pre-push review fold) — the input monitor lives in a `.task` (cancelled
+//  when the view leaves; onDisappear isn't promised for a closing window), its callback asserts the main actor, a busy
+//  M1K3 is re-checked a whole window later (no 1 Hz loop), and `canSleep: false` keeps first run's face awake.
 
 import AppKit
 import Foundation
@@ -43,6 +46,8 @@ struct AvatarChatBackground: View {
     let env: AppEnvironment
     /// The user is composing — recede so the draft + transcript stay crisp.
     let isTyping: Bool
+    /// False where the face IS the show (first run's wake bar): it never sleeps there.
+    var canSleep = true
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// Input bookkeeping lives in a box, not in state: a mouse move must not re-render.
@@ -81,11 +86,16 @@ struct AvatarChatBackground: View {
         .allowsHitTesting(false)
         .animation(transition(for: resolved), value: resolved)
         .animation(reduceMotion ? nil : .easeInOut(duration: asleep ? 1.6 : 0.6), value: asleep)
-        .onAppear {
+        // The monitor lives exactly as long as this task: SwiftUI cancels it when the view
+        // leaves, which onDisappear doesn't promise for a closing window or a torn-down popover.
+        .task {
             input.typing = isTyping
             input.start { wake("input") }
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(3600))
+            }
+            input.stop()
         }
-        .onDisappear { input.stop() }
         .onChange(of: env.avatar.state.activity) { _, activity in
             // The window restarts when M1K3 stops, not when the user last moved.
             input.touch()
@@ -112,7 +122,7 @@ struct AvatarChatBackground: View {
 
     /// One sleeping Task, re-armed per `asleep` flip: never a clock, never a per-frame read.
     private func sleepWhenIdle() async {
-        guard !asleep else { return }
+        guard canSleep, !asleep else { return }
         let window = Self.idleAfter
         while !Task.isCancelled {
             let now = Date()
@@ -124,9 +134,11 @@ struct AvatarChatBackground: View {
                 Self.log.notice("backdrop asleep after \(Int(window)) s idle")
                 return
             }
-            // Busy or typing: look again in a while; otherwise exactly when the window closes.
+            // Busy or typing: the onChange handlers restart the window when that ends, so look
+            // again a whole window later; otherwise exactly when the window closes.
+            let busy = env.avatar.state.activity.isActive || input.typing
             let due = BackdropSleep.nextCheck(lastInput: input.last, now: now, idleAfter: window)
-            let wait = max(due.timeIntervalSince(now), 1)
+            let wait = busy ? window : max(due.timeIntervalSince(now), 1)
             try? await Task.sleep(for: .seconds(wait))
         }
     }
@@ -189,9 +201,12 @@ private final class BackdropInputClock {
         guard monitor == nil else { return }
         let kinds: NSEvent.EventTypeMask = [.mouseMoved, .leftMouseDown, .rightMouseDown, .otherMouseDown,
                                             .scrollWheel, .keyDown, .leftMouseDragged]
+        // Local monitors are called on the main thread; say so to the compiler.
         monitor = NSEvent.addLocalMonitorForEvents(matching: kinds) { [weak self] event in
-            self?.last = Date()
-            onInput()
+            MainActor.assumeIsolated {
+                self?.last = Date()
+                onInput()
+            }
             return event
         }
     }
