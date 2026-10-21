@@ -46,4 +46,10 @@ struct ReasoningTailTests {
         let tail = ReasoningTail.live(thought, limit: 100)
         #expect(tail == "… " + String(repeating: "z", count: 100))
     }
+
+    @Test("a zero or negative limit shows only the cut mark, never traps")
+    func nonPositiveLimitClamps() {
+        #expect(ReasoningTail.live("some thought", limit: 0) == "… ")
+        #expect(ReasoningTail.live("some thought", limit: -5) == "… ")
+    }
 }

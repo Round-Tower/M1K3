@@ -10,6 +10,8 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-20, Confidence 0.75 (the cut is TDD'd; the
 //  jank fix is verify-by-eye on a local build). Prior: none.
+//  Review: Kev + claude-opus-5-5, 2026-10-21 — a negative limit clamps to zero instead of
+//  trapping in `suffix` (review fold). Confidence 0.75.
 //
 
 /// The streaming thought's visible tail.
@@ -19,8 +21,9 @@ public enum ReasoningTail {
 
     /// `reasoning` whole when it fits in `limit` characters; otherwise its last `limit`
     /// characters behind "… ", starting at a line break in the window's first half, else
-    /// the first word.
+    /// the first word. A limit below zero counts as zero.
     public static func live(_ reasoning: String, limit: Int = liveLimit) -> String {
+        let limit = max(limit, 0)
         guard reasoning.count > limit else { return reasoning }
         let window = reasoning.suffix(limit)
         let half = window.index(window.startIndex, offsetBy: limit / 2)
