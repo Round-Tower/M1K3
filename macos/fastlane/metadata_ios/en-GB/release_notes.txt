@@ -1,0 +1,22 @@
+NEW IN 1.2
+
+• Downloads that keep going. A brain download carries on when you leave the app, with its progress on the Lock Screen and in the Dynamic Island. The bar never freezes at 0%, and a stall is named.
+• Hear my answers. Turn on Speak answers and I read each reply aloud as it arrives, in the voice you chose. Small sounds mark answers and voice mode; Sound effects turns them off.
+• A new reveal in setup: the face card shows your companion.
+• Smoother thinking. Lil keeps its thinking to a set budget and answers straight after, so a hard question never runs away.
+• I hear names better. In voice mode I fix a misheard name toward the people and places already in my memory.
+• Better memory answers. Ask what you decided or told me and I look in your knowledge first, not the web.
+• Memory capture off now means never. Turns you send with it off are never kept, even after a relaunch.
+• A straight answer about privacy. Ask what leaves your device and I lead with the truth, and I decide when to search.
+• Brain at Home: an image sent to your Mac's brain is declined by name, never answered unseen.
+
+NEW TO M1K3? HERE'S WHAT I DO
+
+• Chat with an on-device brain: Mini starts instantly on Apple Intelligence devices, and Lil runs fully offline on iPhones and iPads with 8 GB of memory.
+• Talk to me: on-device speech recognition and a natural neural voice.
+• Bring your own knowledge: add PDFs and text files and I answer from them, on your device.
+• I remember what matters to you, and you can see and search everything I've kept.
+• A friendly 3D companion or a pixel face.
+• Brain at Home: pair with your Mac over your own Wi-Fi and borrow its big brain from the couch.
+
+Everything runs on your device. No account, no telemetry. The network is used for brain downloads and web search — one switch in Settings turns web search off.

@@ -1,0 +1,22 @@
+NOUVEAU DANS LA 1.2
+
+• Des téléchargements qui continuent. Le téléchargement d’un cerveau se poursuit quand tu quittes l’app, avec sa progression sur l’écran verrouillé et dans la Dynamic Island. La barre ne reste jamais figée à 0 %, et un blocage est nommé.
+• Écoute mes réponses. Active « Speak answers » et je lis chaque réponse à voix haute au fil de son arrivée, avec la voix que tu as choisie. De petits sons marquent les réponses et le mode vocal ; « Sound effects » les coupe.
+• Une nouvelle révélation pendant la configuration : la carte du visage montre ton compagnon.
+• Une réflexion plus fluide. Lil garde sa réflexion dans un budget fixe et répond juste après, si bien qu’une question difficile ne part jamais à la dérive.
+• J’entends mieux les noms. En mode vocal, je corrige un nom mal entendu vers les personnes et les lieux déjà dans ma mémoire.
+• De meilleures réponses de mémoire. Demande-moi ce que tu as décidé ou ce que tu m’as dit, et je cherche d’abord dans tes connaissances, pas sur le web.
+• Capture de mémoire désactivée veut maintenant dire jamais. Les tours que tu envoies avec elle coupée ne sont jamais gardés, même après un redémarrage.
+• Une réponse franche sur la confidentialité. Demande-moi ce qui quitte ton appareil et je commence par la vérité, et c’est moi qui décide quand chercher.
+• Brain at Home : une image envoyée au cerveau de ton Mac est refusée par son nom, jamais traitée sans être vue.
+
+NOUVEAU SUR M1K3 ? VOICI CE QUE JE FAIS
+
+• Discute avec un cerveau sur l’appareil : Mini démarre instantanément sur les appareils compatibles Apple Intelligence, et Lil tourne entièrement hors ligne sur les iPhone et iPad dotés de 8 Go de mémoire.
+• Parle-moi : reconnaissance vocale sur l’appareil et une voix neuronale naturelle.
+• Apporte tes connaissances : ajoute des PDF et des fichiers texte, et je réponds à partir d’eux, sur l’appareil.
+• Je retiens ce qui compte pour toi, et tu peux voir et rechercher tout ce que j’ai gardé.
+• Un compagnon 3D sympa ou un visage en pixels.
+• Brain at Home : associe-moi à ton Mac via ton propre Wi-Fi et emprunte son grand cerveau depuis le canapé.
+
+Tout tourne sur ton appareil. Pas de compte, pas de télémétrie. Le réseau sert aux téléchargements de cerveaux et à la recherche web ; un interrupteur dans les Réglages coupe la recherche web.
