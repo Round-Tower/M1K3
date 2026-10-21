@@ -86,6 +86,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-20 — `warmPersonaPrefix` checks cancellation after the load, so a warm the
 //  app cancelled (a brain swap) skips its build instead of prefilling a brain nobody is using; and the doc no longer
 //  claims a racing turn "pays the build it would have paid anyway" (on 10-20 it waited behind palettes it never used).
+//  Review: Kev + claude-fable-5.1, 2026-10-21 — `spark2_5` (Spark25.swift) resolves to `.glm4` by model_type and
+//  "spark-x2" by name; the Spark-X2.6 audition, in isolation. Pinned in Spark25Tests.
 
 import Foundation
 import M1K3Inference
@@ -420,6 +422,9 @@ extension MLXBrainProvider: ToolCallingProvider {
         if name.contains("qwen") || name.contains("llama") || name.contains("ternary-bonsai-8b")
             || name.contains("mistral") || name.contains("phi") { return .json }
         if name.contains("glm") { return .glm4 }
+        // Spark-X2.x by name for the pre-download case; once config.json is on
+        // disk the `spark2_5` model_type arm above owns it.
+        if name.contains("spark-x2") { return .glm4 }
         if name.contains("lfm2") { return .lfm2 }
         return nil
     }
@@ -442,6 +447,10 @@ extension MLXBrainProvider: ToolCallingProvider {
         if type == "qwen3" || type == "qwen3_moe" || type == "qwen2" || type == "llama" || type == "phi3"
             || type == "mistral" || type == "mistral3" { return .json }
         if type.hasPrefix("glm4") { return .glm4 }
+        // Spark-X2.5/2.6 (`spark2_5`, ported in Spark25.swift) teaches the GLM4
+        // `<tool_call>name<arg_key>k</arg_key><arg_value>v</arg_value></tool_call>`
+        // dialect — chat template read 2026-10-21, 15/18 and 19/19 in the Python rig.
+        if type == Spark25Configuration.modelType { return .glm4 }
         if type.hasPrefix("lfm2") { return .lfm2 }
         return nil
     }

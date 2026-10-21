@@ -155,6 +155,8 @@
 //  `retire()` drops a swapped-out brain for good (the loader refuses, so a straggling warm can't reload it); and
 //  the tokenizer is captured once at load, so `tokenCount`/`templatedTokenCount` stop queueing on the container
 //  lock behind a persona prefill (the grounding cap waited 48.8 s there). Verify-by-launch owed. Confidence 0.75.
+//  Review: Kev + claude-fable-5.1, 2026-10-21 — the LLM load path registers our own ports (`Spark25Model
+//  .registerIfNeeded()`, idempotent) before the factory looks the model_type up; the Spark-X2.6 audition.
 
 import Foundation
 import Hub
@@ -522,6 +524,9 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
                             progress(prog.fractionCompleted)
                         }
                     }
+                    // Our own ports join the shared registry before the factory looks the
+                    // model_type up (Spark-X2.5/2.6, Spark25.swift; idempotent).
+                    await Spark25Model.registerIfNeeded()
                     return try await LLMModelFactory.shared.loadContainer(
                         from: HubApiDownloader.llmDefault,
                         using: TransformersTokenizerLoader(),
