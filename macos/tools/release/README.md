@@ -16,6 +16,7 @@ xcrun notarytool store-credentials "M1K3-notary" \
 # then, to cut a release:
 macos/tools/release/release-macos.sh              # signed + notarized + stapled DMG
 macos/tools/release/release-macos.sh --skip-notarize   # local test build (no Gatekeeper pass elsewhere)
+macos/tools/release/release-macos.sh --local           # leanest local test: no notarize, no DMG, Release compilation cache
 ```
 
 Output: `/tmp/m1k3-release/M1K3-<version>.dmg` (drag-to-Applications layout).
