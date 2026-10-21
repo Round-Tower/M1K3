@@ -8,9 +8,9 @@ the failure this directory exists to end (`.claude/project-memory.md`,
 Auth: `asc.py` signs an ES256 JWT from `~/.appstoreconnect/private_keys/asc_api_key.json`
 (the fastlane JSON the Fastfile reads), or from `ASC_KEY_ID` +
 `ASC_KEY_ISSUER_ID` with `AuthKey_<id>.p8` beside it. Needs `PyJWT` and
-`requests` at run time; pytest needs neither. The release scripts (`submit.py`,
-`precheck.py`, `builds.py`, `events.py`) carry a PEP 723 header, so `./submit.py status`
-runs through `uv` with its own deps. No `--with` incantation, no Intel-Python trap.
+`requests` at run time; pytest needs neither. Every script that calls the API carries a PEP 723
+header (`test_asc.py` fails on one without), so `./submit.py status` runs through `uv` with its
+own deps. No `--with` incantation, no Intel-Python trap.
 
 ## Release runbook (Mac + iOS on one build)
 
@@ -25,6 +25,10 @@ month's compute hours by the 15th). Merging to master builds nothing; cutting a 
                                                       # (the tag's day is UTC; an older, superseded master commit
                                                       #  reads CI `cancelled` and needs --why)
 ./builds.py wait                                      # the newest release tag's build is VALID on Mac + iOS → N
+# Xcode Cloud out of compute (the run CANCELED seconds after creation, no reason)? Build it here
+# with N = the cancelled run's number: ../release/release-local.sh N, Kev runs the
+# upload-local.zsh line it prints, then ./testflight.py notes --build N --confirm (a local
+# upload has no What to Test). Then carry on below.
 # install build N from TestFlight on this Mac, launch M1K3
 ./verify_build.py --build N                           # running app is N and answers MCP → stamps N
 ./submit.py cancel --platform ALL --confirm --wait    # only if a submission is live
@@ -65,7 +69,7 @@ bytes disagree: stop). Lil's 2026-10-08 pin (#517) took this route and passed on
 | `promo.py show` / `set` | Promotional text (170 chars) — the one field that goes live without a build. | set + `--confirm` |
 | `events.py list` / `create` / `update` | In-app events (iPhone/iPad only): a DRAFT from a spec file (copy + art), or an in-place rewrite of an existing DRAFT's attributes and per-locale copy keeping its art. Never submits. | create / update (`--dry-run` to see payloads) |
 | `creative.py status` / `targets` / `upload` / `place` | Product page header + search results assets (iOS 27, App Asset Library): upload once (reserve → PUT → `{uploaded:true}` → poll), place per localization on a version, custom product page or PPO treatment. Checks ASC's chosen spec against the live catalogue and refuses a parent that isn't editable. Renders come from `tools/site/store_creative.py`. | upload / place + `--confirm` |
-| `testflight.py show` / `set` | The beta app description — one text every platform's testers read (betaAppLocalizations), from `TestFlight/beta_description.en-US.txt`; refuses text that doesn't name iPhone, iPad and Mac. Per-build "What to Test" is Xcode Cloud's (`TestFlight/notes/`). | set + `--confirm` |
+| `testflight.py show` / `set` / `notes` | The beta app description — one text every platform's testers read (betaAppLocalizations), from `TestFlight/beta_description.en-US.txt`; refuses text that doesn't name iPhone, iPad and Mac. `notes --build N` writes build N's "What to Test" on Mac + iOS from `TestFlight/notes/` and reads it back: Xcode Cloud copies those itself, a local upload arrives without them. | set / notes + `--confirm` |
 | `metrics.py store` / `analytics request` / `analytics list` / `analytics fetch` / `repo` | Reach without telemetry. `store`: App Store units per day from the daily sales reports, filtered to this app (the report is vendor-wide), split downloads / updates by platform and country; needs `ASC_VENDOR_NUMBER`. `analytics`: the standing ONGOING report request Apple needs, then list and fetch its daily CSVs (impressions, product page views, conversion, sources). `repo`: GitHub stars, forks, DMG downloads per release, 14-day traffic and referrers, appended to `marketing/metrics/repo.jsonl` because GitHub forgets traffic after 14 days. | `analytics request` (one standing request) |
 
 ```

@@ -1,3 +1,8 @@
+#!/usr/bin/env -S uv run --script --managed-python
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["pyjwt[crypto]", "requests"]
+# ///
 """Promotional text — the one listing field that goes live WITHOUT a new build.
 
 170 characters above the description on the product page, editable on a
@@ -6,13 +11,15 @@ event: change the words, no submission. The alternative — `fastlane mac
 metadata` — pushes every field of every locale at once, which is the wrong
 tool for one sentence.
 
-  python3 promo.py show --platform MAC_OS
-  python3 promo.py set --platform MAC_OS --locale en-US --text '...' --confirm
+  ./promo.py show --platform MAC_OS
+  ./promo.py set --platform MAC_OS --locale en-US --text '...' --confirm
 
 Signed: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.85.
 Format: MurphySig v0.4 (https://murphysig.dev/spec)
 Prior: dyslexia-ai/ios/marketing/tools/push_promo.py (the single-field idea),
   rewritten for one platform + locale at a time.
+Review: Kev + claude-opus-5.5, 2026-10-21 — a PEP 723 header: runs as ./promo.py through uv (promo.py
+  needed a hand-made `uv --with pyjwt` line on 2026-10-21); test_asc pins the header.
 """
 from __future__ import annotations
 

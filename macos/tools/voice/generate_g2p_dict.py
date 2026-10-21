@@ -6,7 +6,7 @@ pronunciation to Kokoro's canonical token IDs, and writes the compressed
 dictionary that KokoroG2P+Bundled.swift loads at runtime.
 
 Usage:
-    python3 macos/tools/generate_g2p_dict.py
+    python3 macos/tools/voice/generate_g2p_dict.py
 
 Requirements:
     pip install misaki kokoro-onnx
@@ -20,7 +20,7 @@ import struct
 import zlib
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-REPO_ROOT = os.path.dirname(os.path.dirname(SCRIPT_DIR))
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(SCRIPT_DIR)))
 OUTPUT = os.path.join(
     REPO_ROOT, "macos", "Sources", "M1K3Kokoro", "Resources", "g2p-en-gb.deflate"
 )

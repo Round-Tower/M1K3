@@ -169,7 +169,9 @@ Anything a cold session needs on turn one belongs below, not there.
   TestFlight build: the month's compute hours ran out by the 15th when every master push archived
   Mac + iOS. A build starts when `macos/tools/asc/release_tag.py cut --confirm` tags a green
   master commit; cutting one is Kev's call. A run CANCELED seconds after creation with no reason
-  means the hours are spent, not a broken workflow. The nightly DMG still ships master's Mac app.
+  means the hours are spent, not a broken workflow (still the case 10-21, runs 537–539). Then ship from
+  here: `macos/tools/release/release-local.sh <that run's number>` (Mac + iOS + smoke), Kev's
+  `upload-local.zsh`, `asc/testflight.py notes --build N --confirm`. The nightly DMG still ships master's Mac app.
 - **Router retrains move both heads (2026-10-17, #631).** `tools/router/train_tool_router.py` rewrites the gate
   (`ToolNeedRouterWeights`) AND the group head (`ToolGroupRouterWeights`). A gate fix ships the gate alone: restore
   the group head from master unless the router chateval arm has run on the new one. Its floor drop dispatched in-chat
@@ -274,4 +276,6 @@ Review: Kev + claude-opus-5-5, 2026-10-14 — #605 lands: `submit` adopts the ev
 the carry-forward keeps the UI fallback until an API run proves it. Confidence 0.7.
 Review: Kev + claude-opus-5-5, 2026-10-17 — Xcode Cloud builds only `release*` tags (`release_tag.py cut`):
 the compute hours ran out on per-merge archives. Confidence 0.85.
+Review: Kev + claude-opus-5.5, 2026-10-21 — the same line names the local route (`release-local.sh`,
+`upload-local.zsh`, `testflight.py notes`): 537–539 each shipped from hand-typed scratch scripts. Confidence 0.8.
 -->

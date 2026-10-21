@@ -1,3 +1,8 @@
+#!/usr/bin/env -S uv run --script --managed-python
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["pyjwt[crypto]", "requests"]
+# ///
 """Scan (and fix) the listing's keyword, name and subtitle fields across ALL platforms.
 
 Why: launch day rewrote `GPT`/`AGI` out of fourteen localizations on Apple's
@@ -7,14 +12,16 @@ record still carried them, and the tracked `metadata_mac/` had them too until
 metadata.py` guards the tracked Mac files; this scans the LIVE fields the
 guard cannot see (iOS and visionOS have no tracked metadata).
 
-  python3 keywords.py scan                        # every platform × locale, read-only
-  python3 keywords.py apply --platform VISION_OS --locale en-US --keywords 'a,b,c'
+  ./keywords.py scan                        # every platform × locale, read-only
+  ./keywords.py apply --platform VISION_OS --locale en-US --keywords 'a,b,c'
                                                   # PATCH one localization (editable versions only;
                                                   #  keywords LOCK while a submission is in review)
 
 Signed: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.85 (scan proven live
   against the three records; apply is the same PATCH launch day used).
 Format: MurphySig v0.4 (https://murphysig.dev/spec). Prior: none (new file).
+Review: Kev + claude-opus-5.5, 2026-10-21 — a PEP 723 header: runs as ./keywords.py through uv (promo.py
+  needed a hand-made `uv --with pyjwt` line on 2026-10-21); test_asc pins the header.
 """
 from __future__ import annotations
 
