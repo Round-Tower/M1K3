@@ -22,6 +22,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the house shading is `.off` again
 //  (`CompanionDefaults.houseShading`, the Phosphor Fox's white lattice); the `wearing(_:)` note above is
 //  true as written. The `.phosphor` doc no longer calls itself "the default". Confidence 0.85.
+//  Review: Kev + claude-sonnet-5.5, 2026-10-22 — `wearing(_:)` also covers Flight Club (any non-nil season), so the
+//  shading pick is overridden while the device is offline in season, and returns when it is back online. Confidence 0.85.
 //
 
 public enum CompanionShadingStyle: String, CaseIterable, Identifiable, Sendable {

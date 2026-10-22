@@ -98,6 +98,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — every image gate reads `core.imagesAccepted` (no image while Brain at
 //  Home answers, which carries none) and one `onChange` discards queued images whenever that turns false; a refused
 //  image names the answering brain. Confidence 0.75 (verify on the phone).
+//  Review: Kev + claude-sonnet-5.5, 2026-10-22 — Offline AI Flight Club: the costume line also appears in Flight
+//  Club's window while offline (`NetworkPathWatch.shared.isOffline`). Confidence 0.8 (verify on a device in Airplane Mode).
 
 import M1K3Avatar
 import M1K3Chat
@@ -377,7 +379,7 @@ struct ChatScreen: View {
                     .kerning(2)
                     .foregroundStyle(.white)
                 // In season, M1K3 greets in costume (opt-out in Settings ▸ Face).
-                if let line = SeasonalLook.greeting(for: SeasonalLook.now(enabled: seasonalLooks)) {
+                if let line = SeasonalLook.greeting(for: SeasonalLook.now(enabled: seasonalLooks, offline: NetworkPathWatch.shared.isOffline)) {
                     Text(line)
                         .font(.callout)
                         .foregroundStyle(.secondary)

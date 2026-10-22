@@ -15,6 +15,10 @@
 //  + packing pinned by tests; the on-screen glow is verify-at-⌘R). Prior: Unknown.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — adds the seasonal wardrobe (`phosphorTreatment(season:)`,
 //  Halloween pumpkin/ember/violet); a nil season is byte-identical. Confidence 0.85 (glow is verify-by-launch).
+//  Review: Kev + claude-sonnet-5.5, 2026-10-22 — Flight Club palette (ice / beacon amber / instrument cyan / pale
+//  gold). Resting is ICE, not cyan: a cyan rest reads as the default thinking blue. Confidence 0.8 (colours are
+//  verify-by-launch; hue and rim power separate the four states, but ice white and pale gold are close in luminance,
+//  so for colour-blind viewers the rim power and the clips carry part of the difference).
 //
 
 import simd
@@ -70,6 +74,10 @@ public extension AvatarActivity {
         case (.halloween, .listening): .halloweenListening
         case (.halloween, .thinking), (.halloween, .generating): .halloweenThinking
         case (.halloween, .speaking): .halloweenSpeaking
+        case (.flightClub, .idle), (.flightClub, .error): .flightCalm
+        case (.flightClub, .listening): .flightListening
+        case (.flightClub, .thinking), (.flightClub, .generating): .flightThinking
+        case (.flightClub, .speaking): .flightSpeaking
         }
     }
 }
@@ -83,4 +91,18 @@ public extension PhosphorTreatment {
     static let halloweenThinking = PhosphorTreatment(red: 0.608, green: 0.361, blue: 1.0, fresnelPower: 3.4)
     /// A warm amber between pumpkin and ember — listening.
     static let halloweenListening = PhosphorTreatment(red: 1.0, green: 0.62, blue: 0.20, fresnelPower: 2.6)
+}
+
+public extension PhosphorTreatment {
+    // Offline AI Flight Club: runway / cockpit colours. Resting is a cool white (never the default
+    // mint, never a blue that could pass for "thinking"); the other three step away from it in hue.
+
+    /// ICE WHITE #E8F4FF — the resting phosphor, like cockpit-panel backlight.
+    static let flightCalm = PhosphorTreatment(red: 0.910, green: 0.957, blue: 1.0, fresnelPower: 3.0)
+    /// BEACON AMBER #FFB000 — bright, tighter rim while speaking, like a runway beacon.
+    static let flightSpeaking = PhosphorTreatment(red: 1.0, green: 0.690, blue: 0.0, fresnelPower: 2.2)
+    /// INSTRUMENT CYAN #3FD0FF — thinking (blue still means thinking, as in the default look).
+    static let flightThinking = PhosphorTreatment(red: 0.247, green: 0.816, blue: 1.0, fresnelPower: 3.4)
+    /// PALE GOLD #FFE2A8 — listening, between the white rest and the amber beacon.
+    static let flightListening = PhosphorTreatment(red: 1.0, green: 0.886, blue: 0.659, fresnelPower: 2.6)
 }

@@ -20,6 +20,8 @@
 //  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the Display picker has two choices (Background, Off) and reads the stored value through AvatarDisplay(persisted:) so a legacy panel shows as Background. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — adds the "Seasonal looks" opt-out toggle. Confidence 0.85.
+//  Review: Kev + claude-sonnet-5.5, 2026-10-22 — the toggle's help names Flight Club (copy only; the string is
+//  English-only like the rest of this help). Confidence 0.85.
 //
 
 import M1K3Avatar
@@ -86,7 +88,7 @@ struct CompanionSettingsSection: View {
                     + "Cel toon-bands the creature's own texture.")
             }
             Toggle("Seasonal looks", isOn: $seasonalLooks)
-                .help("Dress M1K3 up for the occasional holiday — Halloween first.")
+                .help("Dress M1K3 up for the occasional holiday — Halloween, and flight colours while you are offline.")
         } header: {
             SettingsHeader("Companion", systemImage: "pawprint")
         } footer: {
