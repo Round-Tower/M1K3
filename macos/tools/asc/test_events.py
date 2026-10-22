@@ -85,8 +85,8 @@ def test_every_event_spec_is_within_apples_rules(path: Path) -> None:
     assert events.copy_problems(spec["copy"]) == []
     assert events.localization_problems(spec) == []
     # Waking Up never shipped (its draft, never submitted, runs out on 16 Oct) and predates the
-    # store's en-GB, es-MX and ru (2026-10-22); an event that ships covers every store locale.
-    expected = LOCALES - {"en-GB", "es-MX", "ru"} if path.parent.name == "waking-up" else LOCALES
+    # store's en-GB, es-MX, ru and ar-SA (2026-10-22); an event that ships covers every store locale.
+    expected = LOCALES - {"en-GB", "es-MX", "ru", "ar-SA"} if path.parent.name == "waking-up" else LOCALES
     assert set(spec["localizations"]) == expected
     assert spec["localizations"][spec.get("locale", "en-US")] == spec["copy"]   # one primary copy, not two
     events.event_payload(spec, ["USA"])                                            # badge + purpose in the enums
