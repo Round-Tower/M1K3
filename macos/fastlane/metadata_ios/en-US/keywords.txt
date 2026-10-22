@@ -1,1 +1,1 @@
-assistant,LLM,chatbot,on-device,no internet,PDF,transcribe,dictation,summarize,companion,secure
+assistant,LLM,chatbot,on-device,no internet,airplane,PDF,notes,transcribe,summarize,neural network

@@ -43,7 +43,7 @@
 # Review: Kev + claude-opus-5-5, 2026-10-21 — MARKETING_VERSION 1.1.1 → 1.2.0 (chore(release): v1.2.0), Kev's call: Mac
 # + iOS together, new user-facing behaviour since 1.1.0 (iOS background downloads + Speak answers, voice name repair), so
 # MINOR (VERSIONING.md). App Store Connect already holds a 1.2.0 version on both platforms. Confidence 0.9.
-# Review: Kev + claude-opus-5.5, 2026-10-22 — MARKETING_VERSION 1.2.0 → 1.2.1 (chore(release): v1.2.1), Kev's call: the
+# Review: Kev + claude-opus-5-5, 2026-10-22 — MARKETING_VERSION 1.2.0 → 1.2.1 (chore(release): v1.2.1), Kev's call: the
 # Mac backdrop sleeps when idle (#661), the gentler rating ask (#665), and the new ru / ar-SA / en-GB listings ride it.
 # No new feature surface, so PATCH (VERSIONING.md). iOS 1.2.0 is live; Mac 1.2.0 is still in review. Confidence 0.85.
 

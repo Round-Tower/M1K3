@@ -182,7 +182,7 @@ android {
         // commit as the Mac bump, per VERSIONING.md; 10100 is the derived code). Prior: Unknown.
         // Review: Kev + claude-opus-5-5, 2026-10-19 — v1.1.1 (10101), same commit as the Mac bump.
         // Review: Kev + claude-opus-5-5, 2026-10-21 — v1.2.0 (10200), same commit as the Mac bump.
-        // Review: Kev + claude-opus-5.5, 2026-10-22 — v1.2.1 (10201), same commit as the Mac bump.
+        // Review: Kev + claude-opus-5-5, 2026-10-22 — v1.2.1 (10201), same commit as the Mac bump.
         versionCode = 10201
         versionName = "1.2.1"
 
