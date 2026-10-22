@@ -1,15 +1,16 @@
-Thanks for testing M1K3 1.2 on the Mac.
+Thanks for testing M1K3 1.2.1 on the Mac.
 
 New in this build, please try:
-• Ask Lil something that takes thought (Reasoning on): the live thought should stream smoothly and the answer follow straight after
-• Leave the Constellation behind your chat and watch your Mac's fans and battery: it should sit far lighter than in 1.1
-• Switch brains (Mini → Lil → Big and back): Lil should wake fast, with no progress stuck at 0%
-• Voice mode with Big, a few turns in a row: replies should start sooner, and it should still remember what you said earlier
-• Say a name you've told it before: it should hear the name right
-• Ask what you decided or told it earlier: it should answer from your memory, not the web
-• Turn memory capture off, chat, relaunch: nothing from that chat should appear in Memories
-• Ask "what leaves my Mac?": the answer should lead with the truth
+• Leave the chat window in front, composer empty, and touch nothing for about 90 seconds: the companion (or pixel face) behind the chat should fade out
+• Then hover over the window, click, type or scroll: it should fade straight back in
+• Type a draft and walk away: it should stay awake while there's text in the box
+• Ask something long, by voice or text, and don't touch anything: it should stay awake while I listen, think, answer and speak. The 90 s counts from your last input, so it may rest soon after I finish; tell us if that feels abrupt
+• While it's asleep, start voice mode: it should come back as I start listening
+• Same in the menu-bar popover and the brain picker
+• Turn on Reduce Motion (System Settings → Accessibility → Display): it should vanish and return instantly, no fade
+• With it asleep, open Activity Monitor: M1K3's CPU should drop to near zero. Tell us your Mac model and both numbers, awake and asleep
+• On a fresh install, the face should stay awake through first-run setup while the brain downloads
 
-And the basics: chat on Mini, attach an image for Lil, voice mode, drop a PDF onto the chat, and the m1k3 command-line tool with your coding agent.
+And the basics: chat on Mini, attach an image for Lil, voice mode, drop a PDF onto the chat, and the m1k3 command-line tool with your coding agent. From Oct 24 to Nov 1 the Fox should be in its Halloween look.
 
 The network is used for brain downloads and web search, which is on by default — one switch in Settings turns it off. Flag anything that looks like it left your Mac when it shouldn't have: Settings → "Report an issue…" attaches a privacy-scrubbed diagnostic.

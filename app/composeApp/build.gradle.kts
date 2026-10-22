@@ -182,8 +182,9 @@ android {
         // commit as the Mac bump, per VERSIONING.md; 10100 is the derived code). Prior: Unknown.
         // Review: Kev + claude-opus-5-5, 2026-10-19 — v1.1.1 (10101), same commit as the Mac bump.
         // Review: Kev + claude-opus-5-5, 2026-10-21 — v1.2.0 (10200), same commit as the Mac bump.
-        versionCode = 10200
-        versionName = "1.2.0"
+        // Review: Kev + claude-opus-5.5, 2026-10-22 — v1.2.1 (10201), same commit as the Mac bump.
+        versionCode = 10201
+        versionName = "1.2.1"
 
         // Instrumented test runner
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
@@ -288,7 +289,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "app.m1k3.ai.assistant"
-            packageVersion = "1.2.0"
+            packageVersion = "1.2.1"
         }
     }
 }

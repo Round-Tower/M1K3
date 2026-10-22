@@ -1,15 +1,17 @@
-NEW IN 1.2
+NEW IN 1.2.1
 
-• Smoother thinking. Lil keeps its thinking to a set budget and answers straight after, so a hard question never runs away. The live thought now streams smoothly instead of stuttering as it grows.
+• I rest when you do. Leave me alone for about 90 seconds, with nothing in the box and nothing on the go, and the companion behind your chat fades out and stops drawing. Hover, click, type or scroll, or let me start listening, thinking or speaking, and I'm back. Measured on an M1 Max with the chat window in front: idle CPU fell from about 46% to near zero. Your battery and fans should notice. Same in the menu bar and the brain picker; Reduce Motion skips the fade.
+
+IN CASE YOU MISSED 1.2
+
+• Smoother thinking. Lil keeps its thinking to a set budget and answers straight after, so a hard question never runs away. The live thought streams smoothly as it grows.
 • A lighter Constellation. The memory field behind your chat draws as a few shapes instead of a thousand, at about a third of the CPU it took before.
 • Lil wakes fast. Switching brains no longer leaves the old one warming up in the background, and the progress never freezes at 0%.
 • Quicker voice with Big. Big keeps your last few exchanges close, about four seconds faster per spoken turn, and still remembers what you said earlier.
 • I hear names better. In voice mode I fix a misheard name toward the people and places already in my memory.
-• Better memory answers. Ask what you decided or told me and I look in your knowledge first, not the web. Ask about something earlier in the chat and I answer from the chat.
+• Better memory answers. Ask what you decided or told me and I look in your knowledge first, not the web.
 • Memory capture off now means never. Turns you send with it off are never kept, even after a relaunch.
-• A straight answer about privacy. Ask what leaves your Mac and I lead with the truth: some of it can, when web search or the private cloud is on, and I decide when to search.
-• No network check at launch. Semantic search starts from the copy on your Mac, and Settings no longer calls it "Partly downloaded".
-• Brain at Home: an image sent from your iPhone or iPad is declined by name, never answered unseen.
+• A straight answer about privacy. Ask what leaves your Mac and I lead with the truth: some of it can, when web search or the private cloud is on.
 
 NEW TO M1K3? HERE'S WHAT I DO
 
@@ -19,7 +21,7 @@ NEW TO M1K3? HERE'S WHAT I DO
 • I remember what matters to you, in a memory you can see, search and delete.
 • Call memory: with your consent, I transcribe and summarise calls, encrypted on your Mac.
 • Brain at Home: pair your iPhone or iPad over your own Wi-Fi and use your Mac's brain from the couch.
-• Your coding agents (Claude, Cursor, VS Code, Codex, Zed) can use my knowledge and voice through a local MCP server and the m1k3 command-line tool.
+• Your coding agents can use my knowledge and voice through a local MCP server and the m1k3 command-line tool.
 • Siri and Shortcuts can ask me things and add to what I know.
 • Private Cloud Compute, if you want it: off by default, one message at a time, with your consent.
 

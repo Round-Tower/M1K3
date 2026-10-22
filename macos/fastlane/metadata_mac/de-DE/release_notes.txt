@@ -1,14 +1,28 @@
-NEU IN 1.2
+NEU IN 1.2.1
 
-• Flüssigeres Denken. Lil hält sein Denken in einem festen Budget und antwortet gleich danach, damit eine schwere Frage nie ausufert. Der Gedanke, der live mitläuft, erscheint jetzt flüssig statt zu stottern, während er wächst.
-• Eine leichtere Constellation. Das Gedächtnisfeld hinter deinem Chat besteht jetzt aus ein paar Formen statt aus tausend und braucht etwa ein Drittel der CPU von vorher.
+• Machst du Pause, mache ich auch eine. Lass mich etwa 90 Sekunden in Ruhe, mit leerem Eingabefeld und ohne dass gerade etwas läuft, und der Begleiter hinter deinem Chat blendet sich aus und wird nicht mehr gerendert. Fahr mit dem Zeiger darüber, klick, tipp oder scroll, oder lass mich zuhören, nachdenken oder sprechen, und ich bin wieder da. Gemessen auf einem M1 Max mit dem Chatfenster im Vordergrund: Die CPU-Last im Leerlauf fiel von etwa 46 % auf nahezu null. Akku und Lüfter dürften es merken. Genauso in der Menüleiste und in der Hirn-Auswahl; mit „Bewegung reduzieren“ entfällt das Ausblenden.
+
+FALLS DU 1.2 VERPASST HAST
+
+• Flüssigeres Denken. Lil hält sein Denken in einem festen Budget und antwortet gleich danach, damit eine schwere Frage nie ausufert. Der Gedanke, der live mitläuft, erscheint flüssig, während er wächst.
+• Eine leichtere Constellation. Das Gedächtnisfeld hinter deinem Chat besteht aus ein paar Formen statt aus tausend und braucht etwa ein Drittel der CPU von vorher.
 • Lil ist schnell wach. Wenn du das Hirn wechselst, wärmt sich das alte nicht mehr im Hintergrund auf, und der Fortschritt bleibt nie auf 0 % stehen.
-• Schnellere Stimme mit Big. Big hält deine letzten Wortwechsel griffbereit, etwa vier Sekunden schneller pro gesprochenem Beitrag, und erinnert sich trotzdem an alles, was du früher gesagt hast.
-• Ich verstehe Namen besser. Im Sprachmodus korrigiere ich einen falsch verstandenen Namen in Richtung der Menschen und Orte, die schon in meinem Gedächtnis sind.
-• Bessere Antworten aus dem Gedächtnis. Frag, was du entschieden oder mir erzählt hast, und ich schaue zuerst in dein Wissen, nicht im Web. Frag nach etwas weiter oben im Chat, und ich antworte aus dem Chat.
-• Gedächtnis-Aufnahme aus heißt jetzt: nie. Was du mit ausgeschalteter Aufnahme schickst, wird nie behalten, auch nicht nach einem Neustart.
-• Eine ehrliche Antwort zur Privatsphäre. Frag, was deinen Mac verlässt, und ich beginne mit der Wahrheit: Einiges kann, wenn Websuche oder die Private Cloud an ist, und ich entscheide, wann ich suche.
-• Keine Netzwerkprüfung beim Start. Die semantische Suche startet von der Kopie auf deinem Mac, und Settings nennt sie nicht mehr „Partly downloaded“.
-• Brain at Home: Ein Bild von deinem iPhone oder iPad wird jetzt mit Namen abgelehnt, nie ungesehen beantwortet.
+• Schnellere Stimme mit Big. Big hält deine letzten Wortwechsel griffbereit, ist so pro gesprochenem Beitrag etwa vier Sekunden schneller und erinnert sich trotzdem an das, was du früher gesagt hast.
+• Ich verstehe Namen besser. Im Sprachmodus gleiche ich einen falsch verstandenen Namen mit den Menschen und Orten ab, die schon in meinem Gedächtnis sind.
+• Bessere Antworten aus dem Gedächtnis. Frag, was du entschieden oder mir erzählt hast, und ich schaue zuerst in dein Wissen, nicht ins Web.
+• Gedächtnis-Aufnahme aus heißt jetzt: nie. Was du mit ausgeschalteter Aufnahme schickst, wird nie behalten, auch nicht nach einem Neustart der App.
+• Eine ehrliche Antwort zur Privatsphäre. Frag, was deinen Mac verlässt, und du hörst zuerst die Wahrheit: Manches kann ihn verlassen, wenn die Websuche oder die Private Cloud an ist.
+
+NEU BEI M1K3? DAS MACHE ICH
+
+• Drei Hirne: Mini (sofort, über Apple Intelligence), Lil (4B, liest Bilder) und Big (12B). Wähl das Passende für deinen Mac.
+• Sprich mit mir: Spracherkennung auf dem Gerät und eine natürliche neuronale Stimme.
+• Bring dein eigenes Wissen mit: Zieh Notizen und PDFs hinein, und ich antworte auf ihrer Grundlage, auf deinem Mac.
+• Ich merke mir, was dir wichtig ist, in einem Gedächtnis, das du sehen, durchsuchen und löschen kannst.
+• Anruf-Gedächtnis: Mit deiner Zustimmung transkribiere ich Anrufe und fasse sie zusammen, verschlüsselt auf deinem Mac.
+• Brain at Home: Kopple dein iPhone oder iPad über dein eigenes WLAN und nutze das Hirn deines Macs vom Sofa aus.
+• Deine Coding-Agenten können mein Wissen und meine Stimme nutzen, über einen lokalen MCP-Server und das Kommandozeilen-Tool m1k3.
+• Siri und Kurzbefehle können mir Fragen stellen und mein Wissen ergänzen.
+• Private Cloud Compute, wenn du willst: standardmäßig aus, jede Nachricht einzeln, mit deiner Zustimmung.
 
 Alles andere läuft auf deinem Mac. Kein Konto, keine Telemetrie. Das Netzwerk nutze ich für Modell-Downloads, die Websuche und die optionale Private Cloud. Settings > Brains & downloads nennt jeden Download; Websuche und Private Cloud sind Schalter unter Settings > Privacy.

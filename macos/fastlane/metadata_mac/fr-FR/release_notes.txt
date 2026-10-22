@@ -1,14 +1,28 @@
-NOUVEAU DANS LA 1.2
+NOUVEAU DANS LA 1.2.1
 
-• Une réflexion plus fluide. Lil garde sa réflexion dans un budget fixe et répond juste après, si bien qu'une question difficile ne part jamais à la dérive. La pensée en direct défile maintenant avec fluidité au lieu de saccader à mesure qu'elle grandit.
+• Je me repose quand tu te reposes. Laisse-moi tranquille environ 90 secondes, rien dans la zone de saisie et rien en cours, et le compagnon derrière ta conversation s'efface et n'est plus dessiné. Survole, clique, tape ou fais défiler, ou laisse-moi commencer à écouter, réfléchir ou parler, et je reviens. Mesuré sur un M1 Max, fenêtre de conversation au premier plan : la charge CPU au repos est passée d'environ 46 % à presque zéro. Ta batterie et tes ventilateurs devraient le sentir. Pareil dans la barre des menus et le sélecteur de cerveau ; avec Réduire les animations, pas de fondu.
+
+SI TU AS RATÉ LA 1.2
+
+• Une réflexion plus fluide. Lil garde sa réflexion dans un budget fixe et répond juste après, si bien qu'une question difficile ne part jamais à la dérive. La pensée en direct défile avec fluidité à mesure qu'elle grandit.
 • Une Constellation plus légère. Le champ de mémoire derrière ta conversation se dessine avec quelques formes au lieu de mille, pour environ un tiers du CPU d'avant.
 • Lil se réveille vite. Changer de cerveau ne laisse plus l'ancien chauffer en arrière-plan, et la progression ne reste jamais figée à 0 %.
 • Une voix plus rapide avec Big. Big garde tes derniers échanges à portée de main, environ quatre secondes de moins par tour parlé, et se souvient toujours de ce que tu as dit plus tôt.
 • J'entends mieux les noms. En mode vocal, je corrige un nom mal entendu vers les personnes et les lieux déjà dans ma mémoire.
-• De meilleures réponses de mémoire. Demande-moi ce que tu as décidé ou ce que tu m'as dit, et je cherche d'abord dans tes connaissances, pas sur le web. Demande-moi quelque chose de plus tôt dans la conversation, et je réponds depuis la conversation.
+• De meilleures réponses de mémoire. Demande-moi ce que tu as décidé ou ce que tu m'as dit, et je cherche d'abord dans tes connaissances, pas sur le web.
 • Capture de mémoire désactivée veut maintenant dire jamais. Les tours que tu envoies avec elle coupée ne sont jamais gardés, même après un redémarrage.
-• Une réponse franche sur la confidentialité. Demande-moi ce qui quitte ton Mac et je commence par la vérité : une partie peut partir, quand la recherche web ou le cloud privé est activé, et c'est moi qui décide quand chercher.
-• Plus de vérification réseau au lancement. La recherche sémantique démarre depuis la copie sur ton Mac, et Settings ne l'appelle plus « Partly downloaded ».
-• Brain at Home : une image envoyée depuis ton iPhone ou ton iPad est refusée par son nom, jamais traitée sans être vue.
+• Une réponse franche sur la confidentialité. Demande-moi ce qui quitte ton Mac et je commence par la vérité : une partie peut partir, quand la recherche web ou le cloud privé est activé.
+
+NOUVEAU SUR M1K3 ? VOICI CE QUE JE FAIS
+
+• Trois cerveaux : Mini (instantané, avec Apple Intelligence), Lil (4B, voit les images) et Big (12B). Choisis celui qui convient à ton Mac.
+• Parle-moi : reconnaissance vocale sur l'appareil et une voix neuronale naturelle.
+• Apporte tes connaissances : dépose des notes et des PDF, et je réponds à partir d'eux, sur ton Mac.
+• Je retiens ce qui compte pour toi, dans une mémoire que tu peux voir, chercher et supprimer.
+• Mémoire des appels : avec ton accord, je transcris et résume tes appels, chiffrés sur ton Mac.
+• Brain at Home : associe ton iPhone ou ton iPad via ton propre Wi-Fi et utilise le cerveau de ton Mac depuis le canapé.
+• Tes agents de code peuvent utiliser mes connaissances et ma voix via un serveur MCP local et l'outil en ligne de commande m1k3.
+• Siri et Raccourcis peuvent me poser des questions et enrichir ce que je sais.
+• Private Cloud Compute, si tu le veux : désactivé par défaut, un message à la fois, avec ton accord.
 
 Tout le reste tourne sur ton Mac. Pas de compte, pas de télémétrie. Le réseau sert aux téléchargements de modèles, à la recherche web et au cloud privé optionnel. Settings > Brains & downloads nomme chaque téléchargement ; la recherche web et le cloud privé sont des interrupteurs dans Settings > Privacy.

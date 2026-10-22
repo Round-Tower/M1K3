@@ -1,14 +1,28 @@
-NOVEDADES DE LA 1.2
+NOVEDADES DE LA 1.2.1
 
-• Un pensamiento más fluido. Lil mantiene su razonamiento dentro de un presupuesto fijo y responde justo después, así que una pregunta difícil nunca se desboca. El pensamiento en vivo ahora fluye con suavidad en lugar de entrecortarse a medida que crece.
+• Descanso cuando tú descansas. Si me dejas unos 90 segundos sin nada en el cuadro de texto y sin nada en marcha, el compañero que hay detrás de tu chat se desvanece y deja de dibujarse. Pasa el puntero, haz clic, escribe o desplázate, o deja que empiece a escuchar, pensar o hablar, y vuelvo. Medido en un M1 Max con la ventana del chat en primer plano: la CPU en reposo bajó de cerca del 46 % a casi cero. Tu batería y tus ventiladores deberían notarlo. Lo mismo en la barra de menús y en el selector de cerebros; con Reducir movimiento no hay fundido.
+
+POR SI TE PERDISTE LA 1.2
+
+• Un pensamiento más fluido. Lil mantiene su razonamiento dentro de un presupuesto fijo y responde justo después, así que una pregunta difícil nunca se desboca. El pensamiento en vivo fluye con suavidad a medida que crece.
 • Una Constellation más ligera. El campo de memoria detrás de tu chat se dibuja con unas pocas formas en lugar de mil, con cerca de un tercio de la CPU que gastaba antes.
 • Lil despierta rápido. Cambiar de cerebro ya no deja al anterior calentándose en segundo plano, y el progreso nunca se queda congelado en el 0 %.
-• Voz más rápida con Big. Big tiene a mano tus últimos intercambios, unos cuatro segundos menos por turno hablado, y sigue recordando lo que dijiste antes.
-• Oigo mejor los nombres. En el modo de voz corrijo un nombre mal entendido hacia las personas y los lugares que ya están en mi memoria.
-• Mejores respuestas de memoria. Pregúntame qué decidiste o qué me contaste y miro primero en tu conocimiento, no en la web. Pregúntame por algo anterior del chat y respondo desde el chat.
-• Con la captura de memoria desactivada, ahora es nunca. Los mensajes que envías con ella apagada no se guardan jamás, ni siquiera tras reiniciar.
-• Una respuesta clara sobre privacidad. Pregúntame qué sale de tu Mac y empiezo por la verdad: algo puede salir, cuando la búsqueda web o la nube privada están activadas, y yo decido cuándo buscar.
-• Sin comprobación de red al arrancar. La búsqueda semántica arranca desde la copia que hay en tu Mac, y Settings ya no la llama "Partly downloaded".
-• Brain at Home: una imagen enviada desde tu iPhone o iPad se rechaza por su nombre, nunca se responde sin verla.
+• Voz más rápida con Big. Big tiene a mano tus últimos intercambios: cada turno hablado llega unos cuatro segundos antes, y sigue recordando lo que dijiste al principio.
+• Oigo mejor los nombres. En el modo de voz corrijo un nombre que he oído mal fijándome en las personas y los lugares que ya están en mi memoria.
+• Mejores respuestas de memoria. Pregúntame qué decidiste o qué me contaste y miro primero en tu conocimiento, no en la web.
+• Captura de memoria desactivada ahora significa nunca. Los mensajes que envías con ella apagada no se guardan jamás, ni siquiera al volver a abrir la app.
+• Una respuesta clara sobre privacidad. Pregúntame qué sale de tu Mac y empiezo por la verdad: algo puede salir, si la búsqueda web o la nube privada están activadas.
 
-Todo lo demás se ejecuta en tu Mac. Sin cuenta, sin telemetría. La red se usa para descargar modelos, la búsqueda web y la nube privada opcional. Settings > Brains & downloads nombra cada descarga; la búsqueda web y la nube privada son interruptores en Settings > Privacy.
+¿NUEVO EN M1K3? ESTO ES LO QUE HAGO
+
+• Tres cerebros: Mini (al instante, con Apple Intelligence), Lil (4B, ve imágenes) y Big (12B). Elige el que mejor le va a tu Mac.
+• Háblame: reconocimiento de voz en el dispositivo y una voz neuronal natural (en inglés).
+• Trae tu propio conocimiento: arrastra notas y PDF y respondo a partir de ellos, en tu Mac.
+• Recuerdo lo que te importa, en una memoria que puedes ver, buscar y borrar.
+• Memoria de llamadas: con tu consentimiento, transcribo y resumo llamadas, y lo guardo cifrado en tu Mac.
+• Brain at Home: empareja tu iPhone o iPad por tu propia wifi y usa el cerebro de tu Mac desde el sofá.
+• Tus agentes de código pueden usar mi conocimiento y mi voz a través de un servidor MCP local y la herramienta de línea de comandos m1k3.
+• Siri y Atajos pueden preguntarme cosas y ampliar lo que sé.
+• Private Cloud Compute, si lo quieres: desactivado por defecto, un mensaje cada vez y con tu consentimiento.
+
+Todo lo demás se ejecuta en tu Mac. Sin cuenta, sin telemetría. La red se usa para descargar modelos, la búsqueda web y la nube privada opcional. Settings > Brains & downloads muestra cada descarga por su nombre; la búsqueda web y la nube privada son interruptores en Settings > Privacy.
