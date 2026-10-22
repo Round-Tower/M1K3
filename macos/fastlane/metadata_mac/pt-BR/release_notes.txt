@@ -1,14 +1,28 @@
-NOVIDADES DA 1.2
+NOVIDADES DA 1.2.1
 
-• Um pensamento mais fluido. O Lil mantém o raciocínio dentro de um orçamento fixo e responde logo depois, então uma pergunta difícil nunca foge do controle. O pensamento ao vivo agora corre suave em vez de engasgar conforme cresce.
+• Eu descanso quando você descansa. Fique uns 90 segundos sem mexer em nada, sem nada na caixa de texto e nada em andamento, e o companheiro atrás da sua conversa vai sumindo e para de ser desenhado. Passe o mouse, clique, digite ou role, ou me deixe começar a ouvir, pensar ou falar, e eu volto. Medido em um M1 Max com a janela do chat em primeiro plano: o uso de CPU em repouso caiu de cerca de 46 % para quase zero. Sua bateria e suas ventoinhas vão notar. O mesmo vale na barra de menus e no seletor de cérebros; com Reduzir Movimento ativado, ele some sem transição.
+
+SE VOCÊ PERDEU A 1.2
+
+• Um pensamento mais fluido. O Lil mantém o raciocínio dentro de um orçamento fixo e responde logo depois, então uma pergunta difícil nunca foge do controle. O pensamento ao vivo flui suave conforme cresce.
 • Uma Constellation mais leve. O campo de memória atrás da sua conversa é desenhado com algumas formas em vez de mil, usando cerca de um terço da CPU de antes.
 • O Lil acorda rápido. Trocar de cérebro não deixa mais o antigo esquentando em segundo plano, e o progresso nunca trava em 0 %.
 • Voz mais rápida com o Big. O Big mantém suas últimas trocas por perto, cerca de quatro segundos mais rápido por fala, e ainda lembra o que você disse antes.
-• Ouço melhor os nomes. No modo de voz, corrijo um nome que ouvi errado em direção às pessoas e aos lugares que já estão na minha memória.
-• Respostas melhores da memória. Pergunte o que você decidiu ou me contou e eu procuro primeiro no seu conhecimento, não na web. Pergunte sobre algo anterior na conversa e eu respondo a partir da conversa.
+• Ouço melhor os nomes. No modo de voz, corrijo um nome que ouvi errado com base nas pessoas e nos lugares que já estão na minha memória.
+• Respostas melhores da memória. Pergunte o que você decidiu ou me contou e eu procuro primeiro no seu conhecimento, não na web.
 • Captura de memória desligada agora significa nunca. As mensagens que você envia com ela desligada jamais são guardadas, nem depois de reabrir o app.
-• Uma resposta direta sobre privacidade. Pergunte o que sai do seu Mac e eu começo pela verdade: parte pode sair, quando a busca na web ou a nuvem privada está ligada, e sou eu quem decide quando buscar.
-• Sem verificação de rede ao abrir. A busca semântica começa a partir da cópia no seu Mac, e os Settings não a chamam mais de "Partly downloaded".
-• Brain at Home: uma imagem enviada do seu iPhone ou iPad é recusada pelo nome, nunca respondida sem ser vista.
+• Uma resposta direta sobre privacidade. Pergunte o que sai do seu Mac e eu começo pela verdade: parte pode sair, quando a busca na web ou a nuvem privada está ligada.
+
+NOVO NO M1K3? O QUE EU FAÇO
+
+• Três cérebros: Mini (instantâneo, com Apple Intelligence), Lil (4B, enxerga imagens) e Big (12B). Escolha o que combina com o seu Mac.
+• Fale comigo: reconhecimento de voz no dispositivo e uma voz neural natural.
+• Traga seu próprio conhecimento: arraste notas e PDFs para cá e eu respondo a partir deles, no seu Mac.
+• Eu lembro o que importa para você, numa memória que você pode ver, buscar e apagar.
+• Memória de chamadas: com o seu consentimento, transcrevo e resumo chamadas, com criptografia, no seu Mac.
+• Brain at Home: pareie seu iPhone ou iPad pela sua própria rede Wi-Fi e use o cérebro do seu Mac do sofá.
+• Seus agentes de código podem usar meu conhecimento e minha voz por um servidor MCP local e pela ferramenta de linha de comando m1k3.
+• A Siri e os Atalhos podem me fazer perguntas e acrescentar coisas ao que eu sei.
+• Private Cloud Compute, se você quiser: desligado por padrão, uma mensagem por vez, com o seu consentimento.
 
 Todo o resto roda no seu Mac. Sem conta, sem telemetria. A rede é usada para downloads de modelos, busca na web e a nuvem privada opcional. Settings > Brains & downloads nomeia cada download; a busca na web e a nuvem privada são interruptores em Settings > Privacy.
