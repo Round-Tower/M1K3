@@ -57,6 +57,8 @@ regenerate keeps it. Confidence 0.9.
 Review: Kev + claude-opus-5-5, 2026-10-13 — the footer's copyright line names Round Tower Software
 Ltd, the registered name (#574). Confidence 0.95.
 Review: Kev + claude-opus-5-5, 2026-10-13 — the footer's GUIDES row (#572), as on every page. Confidence 0.9.
+Review: Kev + claude-opus-5.5, 2026-10-22 — the og:image alt follows the new tagline ("Your AI. Your
+devices. Private by design."). Confidence 0.9.
 """
 
 from __future__ import annotations
@@ -796,7 +798,7 @@ def render_html(doc: dict) -> str:
 <meta property="og:image" content="https://m1k3.app/og.png" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
-<meta property="og:image:alt" content="M1K3 for Mac — 'Your AI. Your Mac. Private by design.' A wireframe fox on a dark CRT grid; private, on-device AI for macOS." />
+<meta property="og:image:alt" content="M1K3 — 'Your AI. Your devices. Private by design.' A wireframe fox on a dark CRT grid; private, on-device AI for Mac, iPhone and iPad." />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="M1K3 Brains — Models and Evals" />
 <meta name="twitter:description" content="{_e(head_desc)}" />
