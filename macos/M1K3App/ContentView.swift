@@ -87,7 +87,7 @@
 //  fixed spacer; ⌃⌘S / ⌥⌘R live in View-menu commands). Confidence 0.7 (verify by launch owed: overflow,
 //  system toggle after collapse, light + dark).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (review fold) — VoiceOver hears M1K3's state as announcements
-//  (the panel was its only readable avatar); the greeting's season is `SeasonalLook.now(enabled:)`.
+//  (the panel was its only readable avatar); the greeting's season is `SeasonalLook.now(enabled:offline:)`.
 //  Confidence 0.75 (announcements by ear).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (PR 2b) — the brain-upgrade card carries a pre-ticked "Also get
 //  semantic memory" (`SemanticMemoryOffer`) beside a Lil/Big fetch; "Fetch" starts `.semanticMemory` through
@@ -95,6 +95,8 @@
 //  Confidence 0.75 (verify-by-launch).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — O1 "Fetch" QUEUES semantic memory behind the fetch and the
 //  swap (`requestSemanticMemory(after:)`); O2/O4 the toggle's reserved slot and "Starts after X is ready". Confidence 0.7.
+//  Review: Kev + claude-sonnet-5.5, 2026-10-22 — Offline AI Flight Club: the greeting's season is
+//  `SeasonalLook.now(enabled:offline:)` with `NetworkPathWatch.shared.isOffline`. Confidence 0.8 (verify-by-launch).
 
 import M1K3Avatar
 import M1K3Chat
@@ -679,7 +681,7 @@ struct ContentView: View {
                     isIngesting: env.isIngesting,
                     lastIngestedTitle: env.lastIngestedTitle,
                     starters: starters,
-                    season: SeasonalLook.now(enabled: seasonalLooks),
+                    season: SeasonalLook.now(enabled: seasonalLooks, offline: NetworkPathWatch.shared.isOffline),
                     onImport: { showImporter = true },
                     onSend: { text in Task { await env.send(text) } }
                 )

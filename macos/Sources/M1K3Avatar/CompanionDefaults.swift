@@ -19,6 +19,7 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — `skinToPreserve` / `skinPreservedKey`: the
 //  Mac used to register skin "phosphor", so a user who picked a face but never touched Skin saw the glow;
 //  under the `.off` house default they'd silently lose it. One-time, Mac-only. Confidence 0.8.
+//  Review: Kev + claude-sonnet-5.5, 2026-10-22 — the seasonalLooksKey doc names Flight Club (comment only). Confidence 0.9.
 //
 
 public enum CompanionDefaults {
@@ -69,7 +70,7 @@ public enum CompanionDefaults {
         return CompanionShadingStyle.phosphor.rawValue
     }
 
-    /// Opt-out for seasonal looks (Halloween first). Bool, default true.
+    /// Opt-out for seasonal looks (Halloween, and Offline AI Flight Club while offline). Bool, default true.
     public static let seasonalLooksKey = "avatar.seasonalLooks"
 
     /// Sentinel `companionKey` value meaning NO avatar at all — the shell shows

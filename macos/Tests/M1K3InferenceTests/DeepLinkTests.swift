@@ -8,6 +8,8 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-14, Confidence 0.85 (pure; the
 //  onOpenURL wiring in the iOS shell is verify-by-launch).
+//  Review: Kev + claude-sonnet-5.5, 2026-10-22 — pins `m1k3://event/offline-ai-flight-club` (the November event's
+//  deep link): hyphens survive and it opens chat. Confidence 0.9.
 //
 
 import Foundation
@@ -19,6 +21,12 @@ struct DeepLinkTests {
     func eventLink() throws {
         let url = try #require(URL(string: "m1k3://event/halloween"))
         #expect(DeepLink(url: url) == .event("halloween"))
+    }
+
+    @Test("the Flight Club event link keeps its hyphens and opens chat like any event")
+    func flightClubEventLink() throws {
+        let url = try #require(URL(string: "m1k3://event/offline-ai-flight-club"))
+        #expect(DeepLink(url: url) == .event("offline-ai-flight-club"))
     }
 
     @Test("the event name is lowercased and a trailing slash is tolerated")

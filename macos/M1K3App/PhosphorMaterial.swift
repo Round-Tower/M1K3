@@ -34,6 +34,10 @@
 //  (0xe8e8e8, `tools/companion-pipeline/build_phosphor_fox.py`). The RealityKit fact stays worth
 //  knowing: a SkelRoot's skinned meshes merge into ONE ModelEntity whose PARTS keep the prim names.
 //  Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-22 — the site Fox (Kev: "go with the site fox, it's iconic"): a model
+//  with a baked lattice part paints its body unlit black and its lattice unlit (white, or the season's colour under
+//  phosphor), by mesh-part name via SiteFoxPaint. Seen on the iPhone Simulator; the Mac is verify-by-launch.
+//  Confidence 0.8.
 //
 
 import M1K3Avatar
@@ -105,6 +109,12 @@ enum PhosphorMaterial {
         originals: [ObjectIdentifier: [any RealityKit.Material]],
         to root: Entity
     ) -> Bool {
+        // The site Fox (SiteFoxPaint): a model with a baked lattice part gets black unlit triangles
+        // and an unlit lattice, white by default and the season's colour under phosphor.
+        if SiteFoxPaint.applies(toParts: meshPartNames(of: root), style: style) {
+            paintSiteFox(root, lattice: SiteFoxPaint.latticeColour(style: style, treatment: treatment))
+            return true
+        }
         guard let function = style.shaderFunctionName else {
             restore(originals, onto: root) // .off — put the baked textures back
             return true
@@ -118,6 +128,53 @@ enum PhosphorMaterial {
             paint(material, onto: root)
         }
         return true
+    }
+
+    /// Every mesh-part name under `root`. The skinned Fox merges into ONE ModelEntity whose
+    /// parts keep the prim names (fox1, fox_wire_mesh), so parts, not entities, carry the roles.
+    private static func meshPartNames(of root: Entity) -> [String] {
+        var names: [String] = []
+        func walk(_ entity: Entity) {
+            if let model = entity.components[ModelComponent.self] {
+                for mesh in model.mesh.contents.models {
+                    names += mesh.parts.map(\.id)
+                }
+            }
+            for child in entity.children {
+                walk(child)
+            }
+        }
+        walk(root)
+        return names
+    }
+
+    /// Paint each part by its SiteFoxPaint role: unlit black body, unlit lattice in `lattice`.
+    private static func paintSiteFox(_ root: Entity, lattice: SIMD3<Float>) {
+        func colour(_ rgb: SIMD3<Float>) -> RealityKit.Material.Color {
+            RealityKit.Material.Color(red: CGFloat(rgb.x), green: CGFloat(rgb.y), blue: CGFloat(rgb.z), alpha: 1)
+        }
+        let body = UnlitMaterial(color: colour(SiteFoxPaint.bodyColour))
+        let wire = UnlitMaterial(color: colour(lattice))
+        func walk(_ entity: Entity) {
+            if var model = entity.components[ModelComponent.self] {
+                var materials: [any RealityKit.Material] = model.materials
+                for mesh in model.mesh.contents.models {
+                    for part in mesh.parts {
+                        let slot = part.materialIndex
+                        while materials.count <= slot {
+                            materials.append(body)
+                        }
+                        materials[slot] = SiteFoxPaint.role(ofPart: part.id) == .lattice ? wire : body
+                    }
+                }
+                model.materials = materials
+                entity.components.set(model)
+            }
+            for child in entity.children {
+                walk(child)
+            }
+        }
+        walk(root)
     }
 
     private static func blank(function: String) -> CustomMaterial? {

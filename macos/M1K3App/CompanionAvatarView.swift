@@ -72,6 +72,11 @@
 //  ready, once per Re-run tap, silent otherwise) so the "re-run was slow" log shows what the backdrop costs.
 //  Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the Phosphor Fox (white lattice) is the house default via CompanionDefaults.registeredDefaults / houseCompanion (Kev, TestFlight 499). Confidence 0.85.
+//  Review: Kev + claude-sonnet-5.5, 2026-10-22 — Offline AI Flight Club: `season` also reads
+//  `NetworkPathWatch.shared.isOffline` (Observation drives the repaint through the same `lastSeason` diff, no
+//  polling). Confidence 0.8 (verify-by-launch with `-seasonalLook flightclub`; real Airplane Mode on device).
+//  Review: Kev + claude-opus-5-5, 2026-10-22 — the site Fox: docs name SiteFoxPaint (black triangles, white lattice;
+//  seasons colour the lattice). No behaviour change in this file. Confidence 0.9.
 
 // AppKit on macOS, UIKit on iOS/visionOS — the companion render path is now
 // cross-platform (shared into the M1K3iOSApp mobile shell). Only the emotion-fill
@@ -178,7 +183,7 @@ final class CompanionScene {
     /// Last shading style painted — so switching the style picker repaints live.
     var lastShadingStyle: CompanionShadingStyle = .off
     /// Last seasonal look painted (rawValue; nil = none) — the toggle, or midnight on Oct 24 /
-    /// Nov 2, repaints a live skin.
+    /// Nov 2, or the network dropping in Flight Club's window, repaints a live skin.
     var lastSeason: String?
     /// The clip currently playing on `host` — kept so a pause can park it in
     /// place and a resume can pick it back up mid-cycle.
@@ -256,7 +261,7 @@ struct CompanionAvatarView: View {
 
     /// The look in force right now: the launch-argument override, the opt-out, then the date.
     private var season: SeasonalLook? {
-        SeasonalLook.now(enabled: seasonalLooks)
+        SeasonalLook.now(enabled: seasonalLooks, offline: NetworkPathWatch.shared.isOffline)
     }
 
     /// Optional mirror of the mesh load for a host that wants a spinner (the
@@ -550,9 +555,9 @@ struct CompanionAvatarView: View {
         // materials. CustomMaterial surface shaders are macOS/iOS only — on visionOS
         // the creature simply shows its baked textures (see PhosphorMaterial note).
         #if !os(visionOS)
-            // The Phosphor Fox's baked lattice ships neutral (0xe8e8e8) and stays
-            // that way: the phosphor-green tint was built, seen on screen and
-            // rejected (Kev, 2026-09-15: "too distracting — the white was better").
+            // The Phosphor Fox is the site Fox (SiteFoxPaint, Kev 2026-10-22): black
+            // triangles, white lattice. Only a season colours the lattice; the permanent
+            // phosphor-green tint stays rejected (Kev, 2026-09-15: "too distracting").
             // Snapshot the baked materials BEFORE any shader, so cel can adapt the
             // fur texture and Off can restore it on a live switch.
             scene.bakedMaterials = PhosphorMaterial.snapshotMaterials(of: host)

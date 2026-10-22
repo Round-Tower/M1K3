@@ -1,0 +1,79 @@
+{
+  "referenceName": "offline-ai-flight-club-2026",
+  "badge": "SPECIAL_EVENT",
+  "purpose": "APPROPRIATE_FOR_ALL_USERS",
+  "priority": "NORMAL",
+  "purchaseRequirement": "NO_COST_ASSOCIATED",
+  "locale": "en-US",
+  "publishStart": "2026-11-01T12:00:00Z",
+  "eventStart": "2026-11-03T10:00:00Z",
+  "eventEnd": "2026-12-01T11:00:00Z",
+  "deepLink": "m1k3://event/offline-ai-flight-club",
+  "copy": {
+    "name": "Offline AI Flight Club",
+    "shortDescription": "Airplane Mode on. Your AI keeps answering.",
+    "longDescription": "From Nov 3 to Dec 1, turn on Airplane Mode: the Phosphor Fox wears its flight colors, says hello and keeps answering."
+  },
+  "localizations": {
+    "en-US": {
+      "name": "Offline AI Flight Club",
+      "shortDescription": "Airplane Mode on. Your AI keeps answering.",
+      "longDescription": "From Nov 3 to Dec 1, turn on Airplane Mode: the Phosphor Fox wears its flight colors, says hello and keeps answering."
+    },
+    "en-GB": {
+      "name": "Offline AI Flight Club",
+      "shortDescription": "Aeroplane Mode on. Your AI keeps answering.",
+      "longDescription": "From 3 Nov to 1 Dec, turn on Aeroplane Mode: the Phosphor Fox wears its flight colours, says hello and keeps answering."
+    },
+    "de-DE": {
+      "name": "Offline-KI-Flugclub",
+      "shortDescription": "Flugmodus an. Deine KI antwortet weiter.",
+      "longDescription": "Vom 3.11. bis 1.12. Flugmodus an, und der Phosphorfuchs trägt seine Flugfarben, sagt Hallo und antwortet weiter."
+    },
+    "es-ES": {
+      "name": "Club de vuelo IA sin conexión",
+      "shortDescription": "Modo Avión activado. Tu IA sigue respondiendo.",
+      "longDescription": "Del 3 nov. al 1 dic., activa el modo Avión: el zorro fosforescente luce colores de vuelo, te saluda y responde igual."
+    },
+    "es-MX": {
+      "name": "Club de vuelo IA sin conexión",
+      "shortDescription": "Modo Avión activado. Tu IA sigue respondiendo.",
+      "longDescription": "Del 3 nov. al 1 dic., activa el modo Avión: el zorro fosforescente luce colores de vuelo, te saluda y responde igual."
+    },
+    "fr-FR": {
+      "name": "Club de vol IA hors ligne",
+      "shortDescription": "Mode Avion activé. Votre IA répond toujours.",
+      "longDescription": "Du 3 nov. au 1er déc., activez le mode Avion : le renard phosphorescent prend ses couleurs de vol, vous salue et répond."
+    },
+    "ja": {
+      "name": "オフラインAIフライトクラブ",
+      "shortDescription": "機内モードでも、あなたのAIは答え続けます。",
+      "longDescription": "11月3日〜12月1日、機内モードをオンにすると、燐光のキツネがフライトカラーに変わってあいさつし、そのまま答え続けます。"
+    },
+    "ko": {
+      "name": "오프라인 AI 플라이트 클럽",
+      "shortDescription": "에어플레인 모드에서도 AI가 계속 답해요.",
+      "longDescription": "11월 3일부터 12월 1일까지 에어플레인 모드를 켜면 인광 여우가 비행 컬러로 바뀌어 인사하고, 계속 답해요."
+    },
+    "pt-BR": {
+      "name": "Clube de Voo da IA Offline",
+      "shortDescription": "Modo Avião ligado. Sua IA continua respondendo.",
+      "longDescription": "De 3/11 a 1º/12, ative o modo Avião: a raposa fosforescente veste as cores de voo, te dá oi e continua respondendo."
+    },
+    "zh-Hans": {
+      "name": "离线 AI 飞行俱乐部",
+      "shortDescription": "打开飞行模式，你的 AI 照样回答。",
+      "longDescription": "11月3日至12月1日，打开飞行模式，磷光狐狸会换上飞行配色、向你问好，并继续回答你。"
+    },
+    "ru": {
+      "name": "Лётный клуб офлайн-ИИ",
+      "shortDescription": "Авиарежим включён. Твой ИИ всё ещё отвечает.",
+      "longDescription": "С 3 ноября по 1 декабря включи авиарежим: Фосфорный лис окрасится в лётные цвета, поздоровается и продолжит отвечать."
+    },
+    "ar-SA": {
+      "name": "نادي الطيران: ذكاء بلا إنترنت",
+      "shortDescription": "وضع الطيران مفعّل، والذكاء الاصطناعي يواصل الرد.",
+      "longDescription": "من 3 نوفمبر إلى 1 ديسمبر، عند تفعيل وضع الطيران يرتدي Phosphor Fox ألوان الطيران ويلقي التحية ويواصل الرد."
+    }
+  }
+}

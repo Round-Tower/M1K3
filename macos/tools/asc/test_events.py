@@ -8,10 +8,9 @@ import types
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-import pytest
-
 import asc
 import events
+import pytest
 
 
 def _spec() -> dict:
@@ -113,6 +112,32 @@ def test_the_halloween_event_runs_the_apps_window() -> None:
     # (tools/ci/check_store_targets.py pins the registration).
     assert spec["deepLink"] == "m1k3://event/halloween"
     assert set(spec["localizations"]) == LOCALES
+
+
+# Signed: Kev + claude-opus-5-5, 2026-10-22, Confidence 0.85 — this test only (the file is
+#   unsigned). Prior: Unknown. Pins the Flight Club card inside the app's offline window.
+def test_the_flight_club_event_runs_the_apps_window() -> None:
+    """The app wears the flight look Nov 3 00:00 – Dec 1 23:59:59 on each device's local
+    calendar, and only while offline (SeasonalLook.active). Same rule as Halloween: the card
+    goes live at local Nov 3 00:00 in UTC−10 and ends at local Dec 2 00:00 in UTC+13, so from
+    UTC−10 to UTC+13 it is never live on a date the look can't show. It publishes after
+    Halloween's card has ended, and the link is the one DeepLinkTests pins."""
+    path = Path(__file__).resolve().parents[2] / "fastlane/events/flight-club/event.json"
+    spec = json.loads(path.read_text())
+    halloween = json.loads((path.parents[1] / "halloween/event.json").read_text())
+    assert (spec["referenceName"], spec["badge"], spec["purpose"], spec["priority"]) == (
+        "offline-ai-flight-club-2026", "SPECIAL_EVENT", "APPROPRIATE_FOR_ALL_USERS", "NORMAL")
+    hawaii, new_zealand = timezone(timedelta(hours=-10)), timezone(timedelta(hours=13))
+    assert _when(spec["eventStart"]) == datetime(2026, 11, 3, tzinfo=hawaii)
+    assert _when(spec["eventEnd"]) == datetime(2026, 12, 2, tzinfo=new_zealand)
+    assert _when(spec["publishStart"]) == datetime(2026, 11, 1, 12, tzinfo=timezone.utc)
+    assert _when(spec["publishStart"]) > _when(halloween["eventEnd"])
+    assert spec["copy"]["name"] == "Offline AI Flight Club"
+    assert spec["deepLink"] == "m1k3://event/offline-ai-flight-club"
+    assert set(spec["localizations"]) == LOCALES
+    # The copy promises a look and a hello, not a costume (the app adds no gear).
+    for copy in spec["localizations"].values():
+        assert not any(w in " ".join(copy.values()).lower() for w in ("goggles", "costume", "gear"))
 
 
 def test_localization_table_puts_the_primary_first_and_falls_back_to_copy() -> None:
