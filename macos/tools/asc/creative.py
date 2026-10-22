@@ -29,6 +29,12 @@ API facts (Apple's docs + the live catalogue, 2026-10-07):
 - A placement needs an editable parent: an approved version or CPP version 409s.
 
 Signed: Kev + claude-opus-5-5, 2026-10-07, Confidence 0.65
+Review: Kev + claude-fable-5-1, 2026-10-22 — `state` alone lied: Lexy's header loop
+read APPROVED for two weeks with stateDetails POST_PROCESSING_FAILED and no videoAsset, and
+blocked the 4.1 iOS submission twice. `state_problem` now flags any stateDetails, `upload`
+waits for the rendition (videoAsset) before saying done, `status` marks the dead ones.
+Confidence 0.8 — the failure shape is from the live record; the rendition wait is bounded by
+POLLS and reports UNVERIFIED rather than guessing when it runs out.
 Format: MurphySig v0.4 (https://murphysig.dev/spec)
 Prior: Unknown (new file; payload shapes from Apple's App Asset Library docs, upload
   loop after events.py). The read paths are verified against live ASC; the writes are
@@ -148,11 +154,33 @@ def plan(localizations: list[tuple[str, str]], existing: dict[str, list[str]], a
 
 def state_problem(attrs: dict[str, Any]) -> str | None:
     state = attrs.get("state")
+    details = attrs.get("stateDetails")
+    if details:
+        # `state` alone lies: a header loop sat APPROVED for two weeks with
+        # POST_PROCESSING_FAILED here and no rendition (Lexy 4.1, 2026-10-21).
+        # UNVERIFIED assumption: every non-empty stateDetails seen live has been
+        # a failure (a list of {code, description}); a warnings-only shape would
+        # be refused too, and should be loosened here if one ever appears.
+        return f"{state} with stateDetails {json.dumps(details)[:300]}"
     if state in PLACEABLE:
         return None
     if state in PROCESSING:
         return f"still {state} — wait for processing to finish"
-    return f"{state}: {json.dumps(attrs.get('stateDetails'))[:300]}"
+    return f"{state}: {json.dumps(details)[:300]}"
+
+
+def rendition_problem(kind: str, attrs: dict[str, Any]) -> str | None:
+    """A video is proven only when ASC has transcoded it: `videoAsset` is set.
+
+    PREPARE_FOR_SUBMISSION arrives before that work finishes, and a failure
+    surfaces later as stateDetails on an otherwise healthy-looking record, so
+    the upload must wait for one or the other rather than stop at the state.
+    """
+    if problem := state_problem(attrs):
+        return problem
+    if kind == "video" and not attrs.get("videoAsset"):
+        return "no rendition yet (videoAsset is empty) — ASC is still transcoding, or will fail"
+    return None
 
 
 def spec_problem(spec_id: str | None, as_: str, specs: dict[str, dict[str, Any]]) -> str | None:
@@ -181,6 +209,14 @@ def parent_problem(surface: str, attrs: dict[str, Any]) -> str | None:
 # --------------------------------------------------------------------------- #
 # Network
 # --------------------------------------------------------------------------- #
+def status_flag(kind: str, attrs: dict[str, Any]) -> str | None:
+    """What `status` appends to a row: a failure in any state, or a placeable
+    video with no rendition. ARCHIVED and other retired states are history."""
+    if attrs.get("stateDetails") or attrs.get("state") in PLACEABLE:
+        return rendition_problem(kind, attrs)
+    return None
+
+
 def catalogue(strict: bool = True) -> dict[str, dict[str, Any]]:
     resp = call("GET", "/v1/appAssetLibraryRefData?fields[appAssetLibraryRefData]=imageSpecs,videoSpecs")
     if "_error" in resp or not resp.get("data"):
@@ -260,7 +296,8 @@ def run_status(app: str) -> int:
         spec = specs.get(a.get("specId") or "", {}).get("shortName", "—")
         placed = list(paginate(f"/v1/{RESOURCE[kind]}/{item['id']}/placements?limit=200"))
         where = ", ".join(sorted({p["attributes"]["placementType"] for p in placed})) or "not placed"
-        print(f"{kind:5} {item['id']}  {a.get('state') or '—':24} {spec:18} {a.get('referenceName') or a.get('fileName')}  [{where}]")
+        flag = f"  !! {p}" if (p := status_flag(kind, a)) else ""
+        print(f"{kind:5} {item['id']}  {a.get('state') or '—':24} {spec:18} {a.get('referenceName') or a.get('fileName')}  [{where}]{flag}")
     return 0
 
 
@@ -315,6 +352,25 @@ def run_upload(app: str, path: Path, name: str | None, poster: str | None, confi
     if attrs.get("state") != "PREPARE_FOR_SUBMISSION":
         print(f"{kind} {asset_id}: {state_problem(attrs) or attrs.get('state')}")
         return 1
+    # The state arrives before the transcode finishes; wait for the rendition
+    # (or the failure that replaces it) so a dead asset never reads as done.
+    misses = 0
+    for _ in range(POLLS):
+        if rendition_problem(kind, attrs) is None or attrs.get("stateDetails"):
+            break
+        time.sleep(POLL_SECONDS)
+        resp = call("GET", f"/v1/{RESOURCE[kind]}/{asset_id}")
+        if "_error" in resp:
+            misses += 1
+            if misses >= 5:
+                raise SystemExit(f"{kind} {asset_id}: committed, but ASC stopped answering ({resp['_error']}) "
+                                 "while waiting for the rendition — check `status`")
+        else:
+            misses, attrs = 0, resp["data"]["attributes"]
+    if problem := rendition_problem(kind, attrs):
+        print(f"{kind} {asset_id}: UNVERIFIED after {POLLS * POLL_SECONDS} s — {problem}; "
+              "check `status` before placing it")
+        return 1
     spec = catalogue(strict=False).get(attrs.get("specId") or "", {})
     print(f"{kind} {asset_id}: PREPARE_FOR_SUBMISSION  spec {spec.get('shortName', attrs.get('specId'))}"
           f"  fits {', '.join(spec.get('compatiblePlacementTypes', [])) or '—'}")
@@ -324,7 +380,7 @@ def run_upload(app: str, path: Path, name: str | None, poster: str | None, confi
 def run_place(asset_id: str, as_: str, target: str, locales: list[str] | None, confirm: bool) -> int:
     surface, parent_id = parse_target(target)
     kind, attrs = find_asset(asset_id)
-    for problem in filter(None, (state_problem(attrs), spec_problem(attrs.get("specId"), as_, catalogue()))):
+    for problem in filter(None, (rendition_problem(kind, attrs), spec_problem(attrs.get("specId"), as_, catalogue()))):
         raise SystemExit(f"{asset_id}: {problem}")
     parent_attrs = parent_state(surface, parent_id)
     if parent_attrs is not None and (problem := parent_problem(surface, parent_attrs)):

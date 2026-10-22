@@ -3,8 +3,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import creative
 import pytest
+
+import creative
 
 
 def test_kind_follows_the_extension() -> None:
@@ -147,15 +148,22 @@ def quiet(monkeypatch):
                                                                "compatiblePlacementTypes": ["PRODUCT_PAGE_HEADER_ASSET"]}})
 
 
-def _upload(tmp_path, monkeypatch, polls):
-    f = tmp_path / "h.png"
-    f.write_bytes(b"\x89PNG" + b"\0" * 20)
+def _upload(tmp_path, monkeypatch, polls, video=False):
+    f = tmp_path / ("h.mp4" if video else "h.png")
+    f.write_bytes((b"ftyp" if video else b"\x89PNG") + b"\0" * 20)
+    res = "/v1/appAssetLibraryVideos" if video else "/v1/appAssetLibraryImages"
     reserve = {"data": {"id": "img1", "attributes": {"uploadOperations": [{"method": "PUT", "url": "u", "offset": 0, "length": 24}]}}}
-    fake = FakeASC([("POST", "/v1/appAssetLibraryImages", reserve),
-                    ("PATCH", "/v1/appAssetLibraryImages/img1", _asset("UPLOAD_COMPLETE"))]
-                   + [("GET", "/v1/appAssetLibraryImages/img1", p) for p in polls])
+    fake = FakeASC([("POST", res, reserve), ("PATCH", f"{res}/img1", _asset("UPLOAD_COMPLETE"))]
+                   + [("GET", f"{res}/img1", p) for p in polls])
     monkeypatch.setattr(creative, "call", fake)
+    monkeypatch.setattr(creative, "_fake_asc", fake, raising=False)
     return creative.run_upload("6780230835", f, None, None, confirm=True)
+
+
+def _video(state, details=None, rendition=False):
+    a = _asset(state, details)
+    a["data"]["attributes"]["videoAsset"] = {"templateUrl": "https://…"} if rendition else None
+    return a
 
 
 def test_upload_rides_out_a_transient_error_while_polling(tmp_path, monkeypatch, quiet, capsys) -> None:
@@ -290,3 +298,77 @@ def test_upload_waits_through_the_videos_transient_complete_state(tmp_path, monk
     """Live 2026-10-07: a video sits in an undocumented COMPLETE for ~20 s before PREPARE_FOR_SUBMISSION."""
     code = _upload(tmp_path, monkeypatch, [_asset("COMPLETE"), _asset("PREPARE_FOR_SUBMISSION")])
     assert code == 0 and "PREPARE_FOR_SUBMISSION" in capsys.readouterr().out
+
+
+# Lexy 4.1, 2026-10-21: a header loop read APPROVED for two weeks while carrying
+# stateDetails POST_PROCESSING_FAILED and no videoAsset. Every placement of it
+# went ACTIVE and every submission of the version was refused. The upload had
+# reported PREPARE_FOR_SUBMISSION and stopped looking.
+
+
+def test_state_details_are_a_problem_in_any_state() -> None:
+    attrs = {"state": "APPROVED", "stateDetails": [{"code": "POST_PROCESSING_FAILED"}]}
+    assert "POST_PROCESSING_FAILED" in creative.state_problem(attrs)
+    assert creative.state_problem({"state": "APPROVED", "stateDetails": None}) is None
+    assert creative.state_problem({"state": "APPROVED", "stateDetails": []}) is None
+
+
+def test_a_video_is_proven_only_by_its_rendition() -> None:
+    pending = {"state": "PREPARE_FOR_SUBMISSION", "stateDetails": None, "videoAsset": None}
+    assert "rendition" in creative.rendition_problem("video", pending)
+    done = {"state": "PREPARE_FOR_SUBMISSION", "videoAsset": {"templateUrl": "https://…"}}
+    assert creative.rendition_problem("video", done) is None
+    failed = {"state": "APPROVED", "stateDetails": [{"code": "POST_PROCESSING_FAILED"}], "videoAsset": None}
+    assert "POST_PROCESSING_FAILED" in creative.rendition_problem("video", failed)
+
+
+def test_an_image_needs_no_rendition_wait() -> None:
+    assert creative.rendition_problem("image", {"state": "PREPARE_FOR_SUBMISSION"}) is None
+
+
+def test_status_flags_failures_and_missing_renditions_only() -> None:
+    """ARCHIVED event art is history, not a problem; a dead header loop is."""
+    assert creative.status_flag("image", {"state": "ARCHIVED", "stateDetails": None}) is None
+    assert creative.status_flag("video", {"state": "PREPARE_FOR_SUBMISSION", "videoAsset": None}) is not None
+    dead = {"state": "APPROVED", "stateDetails": [{"code": "POST_PROCESSING_FAILED"}], "videoAsset": None}
+    assert "POST_PROCESSING_FAILED" in creative.status_flag("video", dead)
+    assert creative.status_flag("video", {"state": "APPROVED", "videoAsset": {"templateUrl": "x"}}) is None
+
+
+# ── the rendition wait after PREPARE_FOR_SUBMISSION (videos only) ──
+
+def test_video_upload_waits_for_the_rendition(tmp_path, monkeypatch, quiet, capsys) -> None:
+    code = _upload(tmp_path, monkeypatch, [_video("PREPARE_FOR_SUBMISSION"), _video("PREPARE_FOR_SUBMISSION"),
+                                           _video("PREPARE_FOR_SUBMISSION", rendition=True)], video=True)
+    assert code == 0 and not creative._fake_asc.script
+
+
+def test_video_upload_fails_fast_on_post_processing_failure(tmp_path, monkeypatch, quiet, capsys) -> None:
+    code = _upload(tmp_path, monkeypatch, [_video("PREPARE_FOR_SUBMISSION"),
+                                           _video("APPROVED", [{"code": "POST_PROCESSING_FAILED"}])], video=True)
+    out = capsys.readouterr().out
+    assert code == 1 and "POST_PROCESSING_FAILED" in out and "UNVERIFIED" in out and not creative._fake_asc.script
+
+
+def test_video_upload_reports_unverified_when_the_rendition_never_comes(tmp_path, monkeypatch, quiet, capsys) -> None:
+    monkeypatch.setattr(creative, "POLLS", 2)
+    code = _upload(tmp_path, monkeypatch, [_video("PREPARE_FOR_SUBMISSION")] * 3, video=True)
+    out = capsys.readouterr().out
+    assert code == 1 and "UNVERIFIED" in out and "rendition" in out
+
+
+def test_video_upload_gives_up_when_asc_stops_answering_during_the_wait(tmp_path, monkeypatch, quiet) -> None:
+    polls = [_video("PREPARE_FOR_SUBMISSION")] + [{"_error": 503, "_body": "busy"}] * 5
+    with pytest.raises(SystemExit, match="stopped answering"):
+        _upload(tmp_path, monkeypatch, polls, video=True)
+
+
+def test_place_refuses_a_video_with_no_rendition(monkeypatch, quiet) -> None:
+    dead = _video("APPROVED", [{"code": "POST_PROCESSING_FAILED"}])["data"]["attributes"]
+    monkeypatch.setattr(creative, "find_asset", lambda aid: ("video", dead))
+    with pytest.raises(SystemExit, match="POST_PROCESSING_FAILED"):
+        creative.run_place("v1", "header", "version:x", None, confirm=False)
+    pending = _video("PREPARE_FOR_SUBMISSION")["data"]["attributes"]
+    monkeypatch.setattr(creative, "find_asset", lambda aid: ("video", pending))
+    with pytest.raises(SystemExit, match="rendition"):
+        creative.run_place("v1", "header", "version:x", None, confirm=False)
