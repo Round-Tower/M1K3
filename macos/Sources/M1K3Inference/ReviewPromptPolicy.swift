@@ -13,19 +13,26 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.9. Prior: none
 //  (new file; the shape is Cartogram's ReviewPromptPolicy, ported — its
 //  thresholds shipped in Cartogram Mac 1.1 and its tests came with it).
+//  Review: Kev + claude-opus-5.5, 2026-10-22 — 1 like / 10 turns / 1 day (were 2 / 20 / 3).
+//  Measured: ~150 downloads in 28 days, 0 ratings in every storefront, search impression →
+//  page tap ~2% against rated competitors. Challenger-reviewed: the ask is still once per
+//  version, only wins count. Watch: ratings ÷ installs on 1.2.1 weekly per storefront (<2%
+//  after 3 weeks → the gate wasn't the bottleneck); early 1–2★ → days back to 2.
+//  Confidence 0.7.
 
 import Foundation
 
 public enum ReviewPromptPolicy {
-    /// Liked answers (the Mac's thumbs-up) before the user is presumed to
-    /// have an opinion worth interrupting for.
-    public static let minDelightCount = 2
-    /// Completed turns that earn the ask on their own — the phone has no
-    /// thumbs-up today, so sustained use carries the signal there.
-    public static let minCompletedTurns = 20
+    /// Liked answers (the thumbs-up, Mac and phone) before the user is presumed
+    /// to have an opinion worth interrupting for. One is enough: it is the user
+    /// volunteering "this was good", the most earned moment there is.
+    public static let minDelightCount = 1
+    /// Completed turns that earn the ask on their own, for users who never tap
+    /// a thumb. Phone sessions are short; twenty was rarely reached.
+    public static let minCompletedTurns = 10
     /// Whole days the app must have lived with the user first. Never ask in
-    /// the install-session honeymoon; the opinion isn't formed yet.
-    public static let minDaysSinceFirstUse = 3
+    /// the install session; day three filtered for retention, not opinion.
+    public static let minDaysSinceFirstUse = 1
 
     /// The one universal App Store record (Mac + iOS + visionOS).
     public static let appStoreID = "6780230835"

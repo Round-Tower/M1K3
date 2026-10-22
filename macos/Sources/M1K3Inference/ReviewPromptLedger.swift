@@ -20,6 +20,9 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.9. Prior: none
 //  (new file; Cartogram's ReviewPrompter, with the storage seam and the
 //  suppression added).
+//  Review: Kev + claude-opus-5.5, 2026-10-22 — comments only: the honeymoon is one day now
+//  (ReviewPromptPolicy), and daysSinceFirstUse counts whole elapsed days, not calendar dates —
+//  the old comment said the opposite of what the code does. Confidence 0.85.
 
 import Foundation
 import Observation
@@ -56,7 +59,7 @@ public final class ReviewPromptLedger {
     /// a returning user's stamp is never overwritten. The stamp is the
     /// LEDGER's first run, not the app's install date (there is none to
     /// read): a 1.0 user upgrading to the first build with the ledger starts
-    /// the three-day honeymoon over. Accepted — one late ask beats a wrong
+    /// the one-day honeymoon over. Accepted — one late ask beats a wrong
     /// early one, and it happens once.
     public init(
         storage: ReviewPromptStorage,
@@ -91,11 +94,11 @@ public final class ReviewPromptLedger {
         storage.set(completedTurns, forKey: Self.turnsKey)
     }
 
-    /// Whole calendar days since the first recorded use; 0 when there is no
+    /// Whole days elapsed since the first recorded use; 0 when there is no
     /// stamp; negative when the stamp is in the future (broken state).
-    /// Calendar days, not 72 hours, on purpose: "three days" means three
-    /// dates on the user's calendar, DST and all — the honeymoon is a
-    /// feeling, not a stopwatch.
+    /// `dateComponents([.day])` counts complete days, so "day 1" is at least a
+    /// day after the stamp: an install at 23:59 is still day 0 at 00:01. A DST
+    /// or time-zone change can shift the boundary by about an hour — harmless.
     public var daysSinceFirstUse: Int {
         guard let stamp = storage.object(forKey: Self.firstUseKey) as? Double else { return 0 }
         let firstUse = Date(timeIntervalSince1970: stamp)
