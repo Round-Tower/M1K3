@@ -1,6 +1,6 @@
 # Security Policy
 
-M1K3's whole promise is **"Your AI. Your Mac. Private by design."** — on-device
+M1K3's whole promise is **"Your AI. Your devices. Private by design."** — on-device
 by default, and when you choose more power, it goes only to Apple's Private
 Cloud Compute — so privacy and security reports are the most valuable
 contributions this project can receive.
@@ -81,4 +81,6 @@ search (and the lookups it makes), which the user can switch off in Settings.
      2026-09-15). Rewritten to what ships: opt-in, off by default, MAS lane only, none on the DMG.
      Review: Kev + claude-fable-5.1, 2026-10-09 (PR #527 fold) — Teams no longer claims an administrator
      can switch web search off: the only managed-off key is PCC's (PrivateCloudRung.managedOffDefaultsKey);
-     webSearchAllowed() reads a plain UserDefaults key. Web search names the lookups it makes. -->
+     webSearchAllowed() reads a plain UserDefaults key. Web search names the lookups it makes.
+     Review: Kev + claude-opus-5.5, 2026-10-22 — the promise reads "Your AI. Your devices. Private by design."
+     (Kev's 2026-10-20 ruling, live with iOS 1.2.0); the rest of this file is unchanged. Confidence 0.9. -->

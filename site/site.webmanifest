@@ -1,7 +1,7 @@
 {
   "name": "M1K3 for Mac",
   "short_name": "M1K3",
-  "description": "Local AI that runs on your Mac. Private by design.",
+  "description": "Local AI that runs on your devices. Private by design.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
