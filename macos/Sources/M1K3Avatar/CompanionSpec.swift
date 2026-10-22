@@ -29,6 +29,8 @@
 //  it leads `all`, and the header/doc stop calling creatures opt-in. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — `named` calls the empty id "the explicit
 //  pixel-face pick", not "the default" (doc only). Confidence 0.9.
+//  Review: Kev + claude-opus-5-5, 2026-10-22 — the site Fox: docs name SiteFoxPaint (black triangles, white lattice;
+//  seasons colour the lattice). No behaviour change in this file. Confidence 0.9.
 
 /// The two animation vocabularies in M1K3's companion lineup. The Quaternius
 /// "Quirky Series" pack shares a rich clip set (Idle_A/Idle_B/Walk/Run/Jump/Fear/…);
@@ -186,10 +188,10 @@ public struct CompanionSpec: Equatable, Sendable, Identifiable {
     /// `macos/tools/companion-pipeline/build_phosphor_fox.py`.
     ///
     /// Ships as its OWN creature rather than a re-skin: the LATTICE is in the asset.
-    /// The glow is not — under `.off` it renders as a white/grey wireframe lattice (the
-    /// look on every store plate, and the house default since 2026-10-11); `.phosphor`
-    /// adds the site's rim-glow on top. Same Khronos rig → same `.fox` dialect, same
-    /// three clips.
+    /// The app paints it as the site does (`SiteFoxPaint`, 2026-10-22): solid black
+    /// triangles under the white lattice, the house default; a season (which wears
+    /// `.phosphor`) colours the lattice instead. Same Khronos rig → same `.fox` dialect,
+    /// same three clips.
     public static let phosphorFox = CompanionSpec(
         id: "PhosphorFox",
         displayName: "Phosphor Fox",

@@ -278,10 +278,10 @@ struct SeasonalLookTests {
         }
     }
 
-    @Test("flight palette: taxiway blue resting, beacon amber speaking, strobe white thinking, nav green listening")
+    @Test("flight palette: runway blue resting, beacon amber speaking, strobe white thinking, nav green listening")
     func flightPalette() {
         let calm = AvatarActivity.idle.phosphorTreatment(season: .flightClub)
-        #expect(calm.red == 0.165 && calm.green == 0.361 && calm.blue == 1.0)
+        #expect(calm.red == 0.290 && calm.green == 0.525 && calm.blue == 1.0)
         let speaking = AvatarActivity.speaking.phosphorTreatment(season: .flightClub)
         #expect(speaking.red == 1.0 && speaking.green == 0.690 && speaking.blue == 0.0)
         #expect(speaking.fresnelPower < calm.fresnelPower)
@@ -299,8 +299,9 @@ struct SeasonalLookTests {
     func flightPaletteIsDistinct() {
         let calm = AvatarActivity.idle.phosphorTreatment(season: .flightClub)
         #expect(calm != .calm && calm != .thinking)
-        // The taxiway rest must not pass for today's thinking blue: much deeper, much less green.
-        #expect(PhosphorTreatment.thinking.green - calm.green > 0.3)
+        // The runway rest must not pass for today's thinking blue: deeper and clearly less green (it is a
+        // lattice line on black now, so it can't go much darker without failing SiteFoxPaint's luminance floor).
+        #expect(PhosphorTreatment.thinking.green - calm.green > 0.15)
         for activity in AvatarActivity.allCases {
             let flight = activity.phosphorTreatment(season: .flightClub)
             #expect(flight != activity.phosphorTreatment, "\(activity) matches today's default")

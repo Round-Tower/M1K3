@@ -99,11 +99,12 @@ public extension PhosphorTreatment {
 
 public extension PhosphorTreatment {
     // Offline AI Flight Club: night-flight lighting, so every state reads as "flight". Like Halloween's
-    // violet, the season re-teaches the states: here BLUE is rest (deep taxiway blue, far more saturated
+    // violet, the season re-teaches the states: here BLUE is rest (runway blue, deeper and less green
     // than the default thinking #66B3FF) and thinking is the white strobe, so blue never means two things.
 
-    /// TAXIWAY BLUE #2A5CFF — the resting phosphor, the edge lights seen from the window at night.
-    static let flightCalm = PhosphorTreatment(red: 0.165, green: 0.361, blue: 1.0, fresnelPower: 3.0)
+    /// RUNWAY BLUE #4A86FF — the resting phosphor: edge lights seen from the window at night, bright
+    /// enough to read as a lattice line on the site Fox's black body (SiteFoxPaint's luminance floor).
+    static let flightCalm = PhosphorTreatment(red: 0.290, green: 0.525, blue: 1.0, fresnelPower: 3.0)
     /// BEACON AMBER #FFB000 — bright, tighter rim while speaking, like a runway beacon.
     static let flightSpeaking = PhosphorTreatment(red: 1.0, green: 0.690, blue: 0.0, fresnelPower: 2.2)
     /// STROBE WHITE #F4F8FF — thinking: the tightest, brightest rim, like the wingtip strobe.
