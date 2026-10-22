@@ -10,6 +10,9 @@ Review: Kev + claude-opus-5.5, 2026-10-11 — every App Store link outside JSON-
 pt (Round Tower's provider token, read off App Store Connect in Kev's browser) and a
 unique ct per placement, so App Store Connect can say which door converts; the JSON-LD
 keeps the canonical URL. Confidence 0.85.
+Review: Kev + claude-opus-5.5, 2026-10-22 — iOS 1.2.0 is live: campaign links may be mt=8 (the
+iPhone & iPad page), the iPhone door leads with the store instead of TestFlight, and every door
+names the iOS store page. Confidence 0.85.
 """
 from __future__ import annotations
 
@@ -28,7 +31,9 @@ STORE = f"https://apps.apple.com/app/id{APP_ID}"
 # The provider token: one per Apple developer account, public in every campaign link
 # (App Store Connect → Analytics → Campaigns). Campaign tokens are capped at 30 characters.
 PROVIDER_TOKEN = "120784482"
-CAMPAIGN = re.compile(re.escape(STORE) + rf"\?pt={PROVIDER_TOKEN}(?:&amp;|&)ct=([a-z0-9-]{{1,30}})(?:&amp;|&)mt=12\b")
+CAMPAIGN = re.compile(re.escape(STORE) + rf"\?pt={PROVIDER_TOKEN}(?:&amp;|&)ct=([a-z0-9-]{{1,30}})(?:&amp;|&)mt=(?:12|8)\b")
+# mt=8 is the iPhone & iPad page of the same record (1.2.0 went live there 2026-10-21).
+IOS_STORE = re.compile(re.escape(STORE) + rf"\?pt={PROVIDER_TOKEN}(?:&amp;|&)ct=[a-z0-9-]{{1,30}}(?:&amp;|&)mt=8\b")
 CAMPAIGN_SURFACES = [*PAGES, SITE / "send-to-mac.js", SITE / "llms.txt", SITE / "install.txt", REPO / "README.md"]
 JSON_LD = re.compile(r'<script type="application/ld\+json">(.*?)</script>', re.DOTALL)
 HEAD_SCRIPT = re.compile(r"<script>\s*/\*.*?\*/\s*(\(function \(n\) \{.*?\}\)\(navigator\);)\s*</script>", re.DOTALL)
@@ -119,3 +124,17 @@ def test_structured_data_keeps_the_canonical_store_url(page: Path):
     # sameAs and offers.url name the app itself; a campaign token there would be noise.
     for block in JSON_LD.findall(page.read_text()):
         assert "pt=" not in block
+
+
+def test_iphone_and_ipad_visitors_get_the_app_store_not_testflight():
+    # Since iOS cleared review, the iPhone door is the store; TestFlight stays a beta link elsewhere.
+    html = (SITE / "index.html").read_text()
+    only_ios = re.findall(r'<a class="[^"]*only-ios[^"]*" href="([^"]+)"', html)
+    assert len(only_ios) == 2
+    for href in only_ios:
+        assert IOS_STORE.fullmatch(href), href
+
+
+@pytest.mark.parametrize("name", ["index.html", "install.html", "llms.txt", "install.txt", "../README.md"])
+def test_every_door_names_the_iphone_and_ipad_store_page(name: str):
+    assert IOS_STORE.search((SITE / name).read_text()), name
