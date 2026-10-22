@@ -60,9 +60,9 @@ hour, ship the nomination without it and attach later.
 
 ## 4. Ratings — the review prompt (ships in 1.0.1, this PR)
 
-- `ReviewPromptPolicy` (M1K3Inference, pure, pinned): ask when **two liked
-  answers** *or* **twenty completed turns**, **and** the app has lived with
-  the user **three whole days**, **once per marketing version, ever**. The
+- `ReviewPromptPolicy` (M1K3Inference, pure, pinned): ask when **one liked
+  answer** *or* **ten completed turns**, **and** the app has lived with
+  the user **one whole day** (2 / 20 / 3 until 2026-10-22), **once per marketing version, ever**. The
   system's three-per-year throttle is the backstop, not the policy.
 - `ReviewPromptLedger` owns the facts (UserDefaults; a dictionary in tests);
   under the screengrab harness it stamps, counts and prompts nothing.
@@ -261,4 +261,6 @@ Review: Kev + claude-opus-5.5, 2026-10-01 — §10 added (the rename, the
   TestFlight notes); §8 item 3 closed. Confidence 0.75 for §10: the Apple
   facts are read off developer.apple.com, the ranking claims are ASO-blog
   observations and say so.
+Review: Kev + claude-opus-5.5, 2026-10-22 — §4's thresholds follow the code: 1 like / 10 turns /
+  1 day (were 2 / 20 / 3), after 0 ratings from ~150 downloads. Confidence 0.7.
 -->

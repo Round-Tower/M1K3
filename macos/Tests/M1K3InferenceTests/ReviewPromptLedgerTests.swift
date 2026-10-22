@@ -11,6 +11,9 @@
 //  are both disasters — the guard sits on EVERY write, not just the prompt.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.9. Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-22 — the honeymoon is the first whole day now (the
+//  policy asks from day 1, was day 3): engagement in hand 20 h after first use still stays quiet;
+//  one liked answer is enough on day 1. Confidence 0.8.
 
 import Foundation
 @testable import M1K3Inference
@@ -87,12 +90,11 @@ struct ReviewPromptLedgerTests {
     func consumeMarksTheVersion() {
         let storage = MemoryStorage()
         _ = ledger(storage: storage)
-        let dayThree = ledger(storage: storage, now: epoch.addingTimeInterval(86400 * 3))
-        dayThree.recordDelight()
-        dayThree.recordDelight()
-        #expect(dayThree.consumePromptIfDue())
+        let dayOne = ledger(storage: storage, now: epoch.addingTimeInterval(86400))
+        dayOne.recordDelight()
+        #expect(dayOne.consumePromptIfDue())
         #expect(storage.object(forKey: ReviewPromptLedger.promptedVersionKey) as? String == "1.0.1")
-        #expect(!dayThree.consumePromptIfDue())
+        #expect(!dayOne.consumePromptIfDue())
         let nextRelease = ledger(storage: storage, version: "1.1", now: epoch.addingTimeInterval(86400 * 40))
         #expect(nextRelease.consumePromptIfDue())
         #expect(storage.object(forKey: ReviewPromptLedger.promptedVersionKey) as? String == "1.1")
@@ -101,11 +103,11 @@ struct ReviewPromptLedgerTests {
     @Test("the honeymoon holds even with the engagement in hand")
     func honeymoonHolds() {
         let storage = MemoryStorage()
-        let dayTwo = ledger(storage: storage, now: epoch)
-        dayTwo.recordDelight()
-        dayTwo.recordDelight()
-        let later = ledger(storage: storage, now: epoch.addingTimeInterval(86400 * 2 + 3600))
-        #expect(later.daysSinceFirstUse == 2)
+        let installSession = ledger(storage: storage, now: epoch)
+        installSession.recordDelight()
+        installSession.recordDelight()
+        let later = ledger(storage: storage, now: epoch.addingTimeInterval(20 * 3600))
+        #expect(later.daysSinceFirstUse == 0)
         #expect(!later.consumePromptIfDue())
         #expect(storage.object(forKey: ReviewPromptLedger.promptedVersionKey) == nil)
     }
