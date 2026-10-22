@@ -13,19 +13,20 @@ No telemetry. Every network call shows itself and can be switched off.
 
 <p align="center">
   <a href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=readme-hero&amp;mt=12"><img src="https://toolbox.marketingtools.apple.com/api/v2/badges/download-on-the-mac-app-store/black/en-us" alt="Download on the Mac App Store" height="54"></a>
+  <a href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=readme-hero-ios&amp;mt=8"><img src="https://toolbox.marketingtools.apple.com/api/v2/badges/download-on-the-app-store/black/en-us" alt="Download on the App Store for iPhone and iPad" height="54"></a>
 </p>
 
 <p align="center">
   <a href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg"><strong>Download the DMG</strong></a>
   · <a href="https://m1k3.app">m1k3.app</a>
-  · <a href="https://testflight.apple.com/join/Fxp2F5Je">iPhone &amp; iPad beta (TestFlight)</a>
+  · <a href="https://testflight.apple.com/join/Fxp2F5Je">TestFlight beta</a>
   · <a href="https://m1k3.app/agents">Connect a coding agent</a>
 </p>
 
 <p align="center"><em>macOS 26 Tahoe or later · Apple Silicon · signed &amp; notarized (Developer ID)</em></p>
 
 <p align="center">
-  <a href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=readme-badge&amp;mt=12"><img src="https://img.shields.io/itunes/v/6780230835?style=flat-square&label=App%20Store&labelColor=0a0a0a&color=e8e8e8" alt="Mac App Store version"></a>
+  <a href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=readme-badge&amp;mt=12"><img src="https://img.shields.io/itunes/v/6780230835?style=flat-square&label=App%20Store&labelColor=0a0a0a&color=e8e8e8" alt="App Store version"></a>
   <a href="https://github.com/Round-Tower/M1K3/releases/latest"><img src="https://img.shields.io/github/v/release/Round-Tower/M1K3?style=flat-square&label=nightly%20DMG&labelColor=0a0a0a&color=e8e8e8" alt="Nightly DMG"></a>
   <a href="https://github.com/Round-Tower/M1K3/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/Round-Tower/M1K3/ci.yml?branch=master&style=flat-square&label=CI&labelColor=0a0a0a&color=e8e8e8" alt="CI"></a>
   <a href="https://github.com/Round-Tower/M1K3/actions/workflows/security.yml"><img src="https://img.shields.io/github/actions/workflow/status/Round-Tower/M1K3/security.yml?branch=master&style=flat-square&label=security&labelColor=0a0a0a&color=e8e8e8" alt="Security scan"></a>
@@ -77,7 +78,7 @@ labelled. The Developer ID DMG has no cloud path at all — see
 - **Homebrew** — `brew trust round-tower/tap && brew install --cask round-tower/tap/m1k3` (also puts `m1k3` on your PATH).
 - **[Download the DMG](https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg)** — signed & notarized.
 - **Build from source** — [`macos/README.md`](./macos/README.md): clone → `xcodegen generate` → ⌘R.
-- **iPhone & iPad** — the [TestFlight beta](https://testflight.apple.com/join/Fxp2F5Je), for now.
+- **[iPhone & iPad on the App Store](https://apps.apple.com/app/id6780230835?pt=120784482&ct=readme-install-ios&mt=8)** — the same purchase as the Mac app; the ladder tops out at Lil on-device. The [TestFlight beta](https://testflight.apple.com/join/Fxp2F5Je) gets builds first.
 
 ## Agents
 
@@ -226,7 +227,7 @@ rights reserved and outside the licence grant. See
 Fox is the Khronos glTF sample by PixelMannen (CC0) and tomkranis (CC-BY 4.0);
 Colobus, Gecko, Inkfish and Sparrow are by [Quaternius](https://quaternius.com)
 (CC0) — credited in `NOTICE` and in the app's Third-party licenses screen. The only official builds are Round Tower's
-(`app.m1k3` on the Mac App Store and TestFlight, and the DMGs on [m1k3.app](https://m1k3.app)).
+(`app.m1k3` on the App Store and TestFlight, and the DMGs on [m1k3.app](https://m1k3.app)).
 
 **Organisations:** M1K3 for Teams — the same on-device brains, institutional
 memory, and a tuned persona served on your own Apple Silicon hardware, under
@@ -264,7 +265,12 @@ human-and-AI collaboration on the record.
      badges became shields so the row is one style; the Claude review badge is gone (it tells a user
      nothing); the release shield reads "nightly DMG" because the nightly tag always wins "latest", and
      the App Store version comes from shields' itunes source; the emoji and arrow are gone. Status badges
-     are monochrome on purpose, so a failing CI still says "failing" but not in red. Confidence 0.8. -->
+     are monochrome on purpose, so a failing CI still says "failing" but not in red. Confidence 0.8.
+     Review: Kev + claude-opus-5.5, 2026-10-22 — iPhone & iPad are live (1.2.0, released 2026-10-21 on
+     the same record as the Mac app): the hero carries Apple's "Download on the App Store" badge beside
+     the Mac one (mt=8, ct=readme-hero-ios), Get M1K3 links the iOS store page (ct=readme-install-ios)
+     with TestFlight as the early channel, and the header's TestFlight link reads "TestFlight beta".
+     Confidence 0.85. -->
 <!-- Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 (the v1.1.0 pass: the two
      "1.0 build has no cloud path" sentences now describe PCC as the opt-in third crossing,
      consent per conversation per ADR 0007; the MCP count of 18 was re-read off
