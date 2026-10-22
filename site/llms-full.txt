@@ -30,7 +30,7 @@ Mac App Store · the easy way
 
 Free, and it updates through the App Store. One honest note: the App Store copy of m1k3 is sandboxed, so its connect prints the config rather than writing it; Homebrew and the DMG write it for you.
 
-Get it on the Mac App Store (https://apps.apple.com/app/id6780230835?pt=120784482&ct=site-install&mt=12) iPhone & iPad beta (TestFlight) (https://testflight.apple.com/join/Fxp2F5Je)
+Get it on the Mac App Store (https://apps.apple.com/app/id6780230835?pt=120784482&ct=site-install&mt=12) iPhone & iPad on the App Store (https://apps.apple.com/app/id6780230835?pt=120784482&ct=site-install-ios&mt=8)
 
 Homebrew · agents' favourite
 
@@ -5994,7 +5994,9 @@ STEP 1 — GET THE APP
     https://apps.apple.com/app/id6780230835?pt=120784482&ct=install-txt&mt=12
   Note: the App Store copy of `m1k3` is sandboxed, so its `connect` prints
   the config instead of writing it. Prefer Homebrew or the DMG for agents.
-  iPhone and iPad: the TestFlight beta —
+  iPhone and iPad: the App Store (same app, the same purchase) —
+    https://apps.apple.com/app/id6780230835?pt=120784482&ct=install-txt-ios&mt=8
+  or the TestFlight beta, which gets builds first —
     https://testflight.apple.com/join/Fxp2F5Je
 
 STEP 2 — OPEN IT ONCE
@@ -6074,4 +6076,6 @@ PRIVACY
 # ASC record, nothing live). Prior: Unknown.
 # Review: Kev + claude-opus-5.5, 2026-10-11 — merged with the store-live pass: 1.0 is live on
 # the Mac App Store, so the store line replaces the in-review one. Confidence 0.9.
+# Review: Kev + claude-opus-5.5, 2026-10-22 — iPhone and iPad are on the App Store (1.2.0, live
+# 2026-10-21); TestFlight stays as the early channel. Confidence 0.9.
 ```

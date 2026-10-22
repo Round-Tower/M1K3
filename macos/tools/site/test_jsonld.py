@@ -6,6 +6,8 @@ does not parse is silently dropped; one that says the wrong category, a stale
 version or "open source" is repeated as fact.
 
 Signed: Kev + claude-opus-5-5, 2026-10-13, Confidence 0.9. Prior: none (new file).
+Review: Kev + claude-opus-5.5, 2026-10-22 — operatingSystem names iOS and iPadOS 26 now the
+iPhone & iPad app is live on the same record. Confidence 0.9.
 """
 import json
 import pathlib
@@ -60,7 +62,7 @@ def test_the_homepage_app_says_what_the_store_and_repo_say():
     assert app["license"] == "https://github.com/Round-Tower/M1K3/blob/master/LICENSE"
     assert app["publisher"]["legalName"] == "Round Tower Software Ltd"
     assert app["author"]["name"] == app["publisher"]["name"] == "Round Tower"
-    assert app["operatingSystem"] == "macOS 26 or later" and "or later" in app["softwareRequirements"]
+    assert app["operatingSystem"] == "macOS 26 or later, iOS 26 or later, iPadOS 26 or later" and "or later" in app["softwareRequirements"]
     store = f"https://apps.apple.com/app/id{APP_ID}"
     assert app["downloadUrl"] == app["offers"]["url"] == store
     assert app["offers"]["price"] == "0" and app["offers"]["priceCurrency"] == "EUR"
