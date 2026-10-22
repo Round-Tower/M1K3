@@ -20,6 +20,10 @@
 //  verify-by-launch; hue and rim power separate the four states, but ice white and pale gold are close in luminance,
 //  so for colour-blind viewers the rim power and the clips carry part of the difference).
 //
+//  Review: Kev + claude-opus-5-5, 2026-10-22 — Kev gave creative control: the ice-white rest read as "a teal Fox",
+//  not flight, on the Simulator. Night-flight lighting instead: taxiway blue rest, strobe white thinking (tightest rim),
+//  beacon amber speaking, nav green listening. Tests pin the values and keep the rest well apart from the default
+//  thinking blue. Confidence 0.75 (looked at on the Simulator; device Airplane Mode still owed).
 
 import simd
 
@@ -94,15 +98,16 @@ public extension PhosphorTreatment {
 }
 
 public extension PhosphorTreatment {
-    // Offline AI Flight Club: runway / cockpit colours. Resting is a cool white (never the default
-    // mint, never a blue that could pass for "thinking"); the other three step away from it in hue.
+    // Offline AI Flight Club: night-flight lighting, so every state reads as "flight". Like Halloween's
+    // violet, the season re-teaches the states: here BLUE is rest (deep taxiway blue, far more saturated
+    // than the default thinking #66B3FF) and thinking is the white strobe, so blue never means two things.
 
-    /// ICE WHITE #E8F4FF — the resting phosphor, like cockpit-panel backlight.
-    static let flightCalm = PhosphorTreatment(red: 0.910, green: 0.957, blue: 1.0, fresnelPower: 3.0)
+    /// TAXIWAY BLUE #2A5CFF — the resting phosphor, the edge lights seen from the window at night.
+    static let flightCalm = PhosphorTreatment(red: 0.165, green: 0.361, blue: 1.0, fresnelPower: 3.0)
     /// BEACON AMBER #FFB000 — bright, tighter rim while speaking, like a runway beacon.
     static let flightSpeaking = PhosphorTreatment(red: 1.0, green: 0.690, blue: 0.0, fresnelPower: 2.2)
-    /// INSTRUMENT CYAN #3FD0FF — thinking (blue still means thinking, as in the default look).
-    static let flightThinking = PhosphorTreatment(red: 0.247, green: 0.816, blue: 1.0, fresnelPower: 3.4)
-    /// PALE GOLD #FFE2A8 — listening, between the white rest and the amber beacon.
-    static let flightListening = PhosphorTreatment(red: 1.0, green: 0.886, blue: 0.659, fresnelPower: 2.6)
+    /// STROBE WHITE #F4F8FF — thinking: the tightest, brightest rim, like the wingtip strobe.
+    static let flightThinking = PhosphorTreatment(red: 0.957, green: 0.973, blue: 1.0, fresnelPower: 4.0)
+    /// NAV GREEN #39FF7A — listening, the starboard navigation light.
+    static let flightListening = PhosphorTreatment(red: 0.224, green: 1.0, blue: 0.478, fresnelPower: 2.6)
 }

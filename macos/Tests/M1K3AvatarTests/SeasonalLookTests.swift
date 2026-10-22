@@ -278,19 +278,20 @@ struct SeasonalLookTests {
         }
     }
 
-    @Test("flight palette: ice resting, amber speaking, cyan thinking, pale gold listening")
+    @Test("flight palette: taxiway blue resting, beacon amber speaking, strobe white thinking, nav green listening")
     func flightPalette() {
         let calm = AvatarActivity.idle.phosphorTreatment(season: .flightClub)
-        #expect(calm.red == 0.910 && calm.green == 0.957 && calm.blue == 1.0)
+        #expect(calm.red == 0.165 && calm.green == 0.361 && calm.blue == 1.0)
         let speaking = AvatarActivity.speaking.phosphorTreatment(season: .flightClub)
         #expect(speaking.red == 1.0 && speaking.green == 0.690 && speaking.blue == 0.0)
         #expect(speaking.fresnelPower < calm.fresnelPower)
         for activity in [AvatarActivity.thinking, .generating] {
             let thinking = activity.phosphorTreatment(season: .flightClub)
-            #expect(thinking.red == 0.247 && thinking.green == 0.816 && thinking.blue == 1.0)
+            #expect(thinking.red == 0.957 && thinking.green == 0.973 && thinking.blue == 1.0)
+            #expect(thinking.fresnelPower > calm.fresnelPower) // a strobe: tight and bright
         }
         let listening = AvatarActivity.listening.phosphorTreatment(season: .flightClub)
-        #expect(listening.red == 1.0 && listening.green == 0.886 && listening.blue == 0.659)
+        #expect(listening.red == 0.224 && listening.green == 1.0 && listening.blue == 0.478)
         #expect(AvatarActivity.error.phosphorTreatment(season: .flightClub) == calm)
     }
 
@@ -298,6 +299,8 @@ struct SeasonalLookTests {
     func flightPaletteIsDistinct() {
         let calm = AvatarActivity.idle.phosphorTreatment(season: .flightClub)
         #expect(calm != .calm && calm != .thinking)
+        // The taxiway rest must not pass for today's thinking blue: much deeper, much less green.
+        #expect(PhosphorTreatment.thinking.green - calm.green > 0.3)
         for activity in AvatarActivity.allCases {
             let flight = activity.phosphorTreatment(season: .flightClub)
             #expect(flight != activity.phosphorTreatment, "\(activity) matches today's default")

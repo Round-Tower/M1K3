@@ -1,9 +1,9 @@
 # "Offline AI Flight Club": the November 2026 event (in-app event, iPhone + iPad)
 
 From **Nov 3 to Dec 1 (the device's local calendar)**, **while the device is offline**,
-M1K3 wears a flight look: the companion switches to the flight phosphor palette (ice-white
-at rest, beacon amber while speaking, instrument cyan while thinking, pale gold while
-listening) and the greeting card says "Offline? I'm still right here, on your device."
+M1K3 wears a flight look: the companion switches to the night-flight phosphor palette
+(taxiway blue at rest, beacon amber while speaking, strobe white while thinking, nav green
+while listening) and the greeting card says "Offline? I'm still right here, on your device."
 (It promises presence, not answers: offline with no brain downloaded, M1K3 can't answer.) Back online, the look and the line go away. That is everything the event is: a
 look and a greeting, gated on dates and on having no network. There's an opt-out in
 Settings ("Seasonal looks", the same one Halloween uses), and nothing leaves the device.
@@ -102,8 +102,9 @@ CLAUDE.md), cropped to each slot, textless. The art lives beside Halloween's, in
 text or logos in the art, no borders or gradients, keep the fox in the upper-centre 60%
 with the bottom third quiet, and check the media in App Store Connect's event preview
 before submitting. The palette, colour for colour, is the app's flight palette in
-`PhosphorTreatment.swift`: ICE WHITE `#E8F4FF`, BEACON AMBER `#FFB000`, INSTRUMENT CYAN
-`#3FD0FF`, PALE GOLD `#FFE2A8`. `event_art.py` has no `flightclub` palette; adding one is
+`PhosphorTreatment.swift`: TAXIWAY BLUE `#2A5CFF`, BEACON AMBER `#FFB000`, STROBE WHITE
+`#F4F8FF`, NAV GREEN `#39FF7A` (v2, 2026-10-22: the first ice-white rest read as "a teal Fox" on the
+Simulator, not flight). `event_art.py` has no `flightclub` palette; adding one is
 a follow-up if a 2D fallback is wanted.
 
 The flight look itself hasn't been seen on screen yet (the Flight Club implementation
