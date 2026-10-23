@@ -12,6 +12,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-09 — `hidesViewfinder` pinned for the pairing plate. Confidence now 0.9.
 //  Review: Kev + claude-opus-5-5, 2026-10-03 — `phoneRoute` pinned per plate. Confidence 0.9.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — pins -chat.avatarDisplay background on every plate. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-23 — the ask-documents plate's typed question, and the pairing route.
+//  Confidence 0.9.
 //
 
 import Foundation
@@ -76,7 +78,9 @@ struct ScreengrabHarnessTests {
         #expect(h(.privacyLabel).phoneRoute == [.settings])
         #expect(h(.chat).phoneRoute.isEmpty)
         #expect(h(.voiceSpeaking).phoneRoute.isEmpty, "voice plates live in the full-screen cover")
-        #expect(h(.brainAtHome).phoneRoute.isEmpty, "pairing is the onboarding sheet on iOS")
+        // Pairing is pushed like the other rooms: the capture script never taps, and the
+        // September plate (tapped through by the UI test) went stale (2026-10-23).
+        #expect(h(.brainAtHome).phoneRoute == [.settings, .pairing])
         // The phone's Memories room is a search; the plate runs a broad recall so it shows the persona.
         #expect(h(.memories).memoryQuery == "what do you know about me")
         #expect(h(.documents).memoryQuery == nil)
@@ -85,6 +89,31 @@ struct ScreengrabHarnessTests {
         #expect(!DemoPersona.listeningDictation.lowercased().contains("please"), "a polite endpoint submits the turn")
         #expect(h(.voiceSpeaking).livePartial == DemoPersona.heroConversation[0].text)
         #expect(h(.companionFox).livePartial == nil)
+    }
+
+    /// Frame 05 ("Ask your PDFs and notes") showed a bare Documents list: no question,
+    /// no answer (store QA, 2026-10-22). This plate types a real question in chat, so
+    /// the frame shows the answer and the source it came from.
+    @Test func askDocumentsPlateTypesAQuestionTheSeededNotesAnswer() {
+        let h = ScreengrabHarness(environment: ["M1K3_SCREENGRAB": "1", "M1K3_SCREENGRAB_PLATE": "ask-documents"])
+        #expect(h.plate == .askDocuments)
+        #expect(h.chatQuestion == DemoPersona.documentQuestion)
+        #expect(!h.entersVoiceMode)
+        #expect(h.phoneRoute.isEmpty, "the answer is in chat")
+        #expect(h.livePartial == nil)
+        // Only this plate types a question.
+        for plate in ScreengrabPlate.allCases where plate != .askDocuments {
+            let env = ["M1K3_SCREENGRAB": "1", "M1K3_SCREENGRAB_PLATE": plate.rawValue]
+            let other = ScreengrabHarness(environment: env)
+            #expect(other.chatQuestion == nil, "\(plate.rawValue)")
+        }
+        #expect(ScreengrabHarness(environment: [:]).chatQuestion == nil)
+        // The question is answerable from ONE seeded document, so the source chip names it.
+        let question = DemoPersona.documentQuestion.lowercased()
+        #expect(question.contains("roofline"))
+        let answering = DemoPersona.documents.filter { $0.text.contains("Keep the original roofline") }
+        #expect(answering.map(\.title) == ["Lair — planning notes"])
+        #expect(!DemoPersona.documentQuestion.lowercased().contains("please"))
     }
 
     @Test func launchRecipeOverridesDefaultsThroughTheArgumentDomain() {
@@ -145,7 +174,7 @@ struct ScreengrabHarnessTests {
         let plan = [
             "onboarding", "chat", "voice-listening", "voice-speaking", "documents", "memories",
             "brain-at-home", "companion-fox", "companion-gecko", "companion-inkfish",
-            "companion-colobus", "privacy-label", "constellation",
+            "companion-colobus", "privacy-label", "constellation", "ask-documents",
         ]
         #expect(ScreengrabPlate.allCases.map(\.rawValue) == plan)
     }

@@ -2,8 +2,8 @@
 //  ScreengrabPlate.swift
 //  M1K3Screengrab
 //
-//  The twelve App Store plates (marketing/app-store/CAPTURE-PLAN.md §1/§2), one
-//  case per plate FILE. Each knows its launch recipe: the harness env plus the
+//  The App Store plates (marketing/app-store/CAPTURE-PLAN.md §1/§2), one case
+//  per plate FILE. Each knows its launch recipe: the harness env plus the
 //  `-key value` launch arguments that shadow persisted defaults through
 //  NSArgumentDomain — read-only, so a capture run never rewrites the face,
 //  brain or first-run state of the person whose Mac/phone it runs on.
@@ -24,6 +24,8 @@
 //  Proven: 12/12 plates on the iPad Pro 13" simulator, the real iPad set on the 1.0.0 listing. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — -chat.avatarDisplay background on every recipe, so plates stop showing the owner's stored choice (UserDefaults is not rerouted). Confidence 0.9.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the Phosphor Fox (white lattice) is the house default via CompanionDefaults.registeredDefaults / houseCompanion (Kev, TestFlight 499). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-23 — a fourteenth plate, `ask-documents`, for frame 05 (the
+//  Documents list backed none of its caption). Confidence 0.85 (pinned; the answer is verify-by-capture).
 //
 
 import Foundation
@@ -45,6 +47,11 @@ public enum ScreengrabPlate: String, CaseIterable, Sendable {
     /// "the constellation, which is gorgeous"). Same recipe as the memories
     /// plate — the seeded persona's memories are the motes.
     case constellation
+    /// Frame 05 ("Ask your PDFs and notes"): a typed question the seeded lair notes
+    /// answer, so the frame shows the answer and its source chip, not a bare
+    /// Documents list (store QA, 2026-10-22). iOS only: the Mac has no beat and
+    /// shows the seeded hero exchange.
+    case askDocuments = "ask-documents"
 
     /// The face every non-tile plate wears, so chat/voice/memories match each
     /// other across a run. The Phosphor Fox (white lattice) is the house default

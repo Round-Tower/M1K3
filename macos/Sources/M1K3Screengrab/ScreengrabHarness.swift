@@ -21,6 +21,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-03 — `phoneRoute`: the iOS shell pushes the plate's screen itself
 //  (XCTest's AX handshake timed out on the simulator, and App Preview footage wants no taps); `memoryQuery`
 //  fills the phone's Memories search the way the UI test used to type it. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-23 — `chatQuestion`: the ask-documents plate's typed turn; the iOS pairing
+//  plate is pushed (`.pairing`) instead of tapped to. Confidence 0.9.
 //
 
 import Foundation
@@ -113,6 +115,12 @@ public struct ScreengrabHarness: Sendable, Equatable {
         }
     }
 
+    /// iOS: a question the shell types into a NEW chat once the seeded documents
+    /// are indexed — the ask-documents plate's real turn. Nil for every other plate.
+    public var chatQuestion: String? {
+        plate == .askDocuments ? DemoPersona.documentQuestion : nil
+    }
+
     public var showsPairing: Bool {
         plate == .brainAtHome
     }
@@ -150,13 +158,14 @@ public struct ScreengrabHarness: Sendable, Equatable {
     }
 
     /// iOS: the NavigationStack path the shell pushes once the brain is ready —
-    /// Memories and Documents are rooms behind Settings there. Empty for the
-    /// voice plates (the full-screen cover) and pairing (the onboarding sheet).
+    /// Memories, Documents and pairing are rooms behind Settings there. Empty for
+    /// the voice plates (the full-screen cover).
     public var phoneRoute: [ScreengrabRoute] {
         switch plate {
         case .documents: [.settings, .documents]
         case .memories: [.settings, .memories]
         case .privacyLabel: [.settings]
+        case .brainAtHome: [.settings, .pairing]
         default: []
         }
     }
@@ -173,4 +182,5 @@ public enum ScreengrabRoute: Hashable, Sendable {
     case settings
     case documents
     case memories
+    case pairing
 }

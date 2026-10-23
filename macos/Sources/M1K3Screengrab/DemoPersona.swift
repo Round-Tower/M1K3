@@ -24,6 +24,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-18 (2) — #383 review fold: every edge was stamped with one date. Each is now dated at
 //  the LATER of its two endpoints (a thread cannot predate either mote), so the threads accrete over the weeks. Nothing reads
 //  edge recency today; this keeps the seed honest for the day something does. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-23 — `documentQuestion` for the ask-documents plate (frame 05).
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -41,6 +43,11 @@ public enum DemoPersona {
             + "whether any of it has ever left this machine, and how the recursive self-improvement is coming along, "
             + "and then remind me what we decided about the lair's roofline before the council meeting"
     public static let heroTitle = "First contact"
+
+    /// The ask-documents plate's typed question. One seeded document answers it
+    /// (the lair notes: keep the original roofline, dormers rejected), so the
+    /// reply's source chip names that file.
+    public static let documentQuestion = "what do my lair notes say about the roofline?"
 
     public static let heroConversation: [ChatMessage] = [
         ChatMessage(role: .user, text: "who are you, and who else is listening?", status: .complete),
