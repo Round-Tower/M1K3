@@ -89,6 +89,14 @@ final class ScreengrabiOSUITests: XCTestCase {
         }
     }
 
+    func testAskDocuments() throws {
+        try capture(.askDocuments, settle: 3) { app in
+            // The app waits for the seed, opens a new chat and types the question itself
+            // (`chatQuestion`); the source chip names the notes the answer came from.
+            waitForText("planning notes", in: app, timeout: 240)
+        }
+    }
+
     func testBrainAtHome() throws {
         try capture(.brainAtHome, settle: 4) { app in
             // The app pushes Settings ▸ pairing itself (`phoneRoute`), like Memories.

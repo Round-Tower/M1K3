@@ -110,13 +110,17 @@ extension AppCore {
     /// then type the question into a NEW chat, so the frame is the question, the answer
     /// and its source chip rather than the hero exchange.
     private func askScreengrabQuestion(_ question: String) async {
+        // 180 s, the bound every other iOS plate waits: the seed embeds the memories first.
         let seeded = DemoPersona.documents.count
+        func indexed() -> Bool {
+            ((try? store.itemCount()) ?? 0) >= seeded
+        }
         var waited = 0
-        while ((try? store.itemCount()) ?? 0) < seeded, waited < 60 {
+        while !indexed(), waited < 180 {
             try? await Task.sleep(for: .seconds(1))
             waited += 1
         }
-        if waited == 60 { Self.screengrabLog.error("ask-documents: the seed never landed; asking anyway") }
+        if !indexed() { Self.screengrabLog.error("ask-documents: the seed never landed; asking anyway") }
         chat.startNewConversation()
         await send(question)
     }

@@ -2,8 +2,8 @@
 //  ScreengrabPlate.swift
 //  M1K3Screengrab
 //
-//  The twelve App Store plates (marketing/app-store/CAPTURE-PLAN.md §1/§2), one
-//  case per plate FILE. Each knows its launch recipe: the harness env plus the
+//  The App Store plates (marketing/app-store/CAPTURE-PLAN.md §1/§2), one case
+//  per plate FILE. Each knows its launch recipe: the harness env plus the
 //  `-key value` launch arguments that shadow persisted defaults through
 //  NSArgumentDomain — read-only, so a capture run never rewrites the face,
 //  brain or first-run state of the person whose Mac/phone it runs on.
@@ -49,7 +49,8 @@ public enum ScreengrabPlate: String, CaseIterable, Sendable {
     case constellation
     /// Frame 05 ("Ask your PDFs and notes"): a typed question the seeded lair notes
     /// answer, so the frame shows the answer and its source chip, not a bare
-    /// Documents list (store QA, 2026-10-22). iOS beat; the Mac shows chat.
+    /// Documents list (store QA, 2026-10-22). iOS only: the Mac has no beat and
+    /// shows the seeded hero exchange.
     case askDocuments = "ask-documents"
 
     /// The face every non-tile plate wears, so chat/voice/memories match each

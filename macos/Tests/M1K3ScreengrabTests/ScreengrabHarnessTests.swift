@@ -12,7 +12,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-09 — `hidesViewfinder` pinned for the pairing plate. Confidence now 0.9.
 //  Review: Kev + claude-opus-5-5, 2026-10-03 — `phoneRoute` pinned per plate. Confidence 0.9.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — pins -chat.avatarDisplay background on every plate. Confidence 0.9.
-//  Review: Kev + claude-opus-5.5, 2026-10-23 — the ask-documents plate's typed question, and the pairing route. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-23 — the ask-documents plate's typed question, and the pairing route.
+//  Confidence 0.9.
 //
 
 import Foundation
@@ -102,7 +103,8 @@ struct ScreengrabHarnessTests {
         #expect(h.livePartial == nil)
         // Only this plate types a question.
         for plate in ScreengrabPlate.allCases where plate != .askDocuments {
-            let other = ScreengrabHarness(environment: ["M1K3_SCREENGRAB": "1", "M1K3_SCREENGRAB_PLATE": plate.rawValue])
+            let env = ["M1K3_SCREENGRAB": "1", "M1K3_SCREENGRAB_PLATE": plate.rawValue]
+            let other = ScreengrabHarness(environment: env)
             #expect(other.chatQuestion == nil, "\(plate.rawValue)")
         }
         #expect(ScreengrabHarness(environment: [:]).chatQuestion == nil)
