@@ -1,1 +1,1 @@
-LLM,chatbot,assistant,neural network,no internet,on-device,PDF,notes,summarise,transcribe,model
+LLM,on-device,chatbot,assistant,PDF,notes,transcribe,summarise,secure,model,privacy,speech
