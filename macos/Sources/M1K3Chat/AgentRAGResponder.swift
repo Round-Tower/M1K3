@@ -202,6 +202,8 @@
 //  "what did I decide …" picked lookup_fact, the dispatch prompt carried Wikipedia's "2003 in music" and no memory,
 //  and Lil read the egress clause as the user's pick of Private Cloud Compute. Confidence 0.75 (pinned; the router
 //  chateval arm with `--router dispatch` is owed).
+//  Review: Kev + claude-opus-5.5, 2026-10-23 — #670: implicit grounding runs HashingKeywordLane when no document
+//  cleared the floor (the phone's hashing arm only). Confidence 0.8 (pinned; the Mini turn is verify-by-capture).
 
 import Foundation
 import M1K3Agent
@@ -494,6 +496,14 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // verdict is the relevance floor's alone, so a floor tuned from the
             // log never absorbs a #286 drop (review 12 on #288).
             Self.logGateDecision(retrieved: retrieved, kept: chunks + memories)
+            // #670: the hashing cone never reaches a whole-document chunk on a keyword
+            // question; one strict-AND BM25 chunk stands in when no document cleared.
+            if chunks.isEmpty, let keyword = try HashingKeywordLane.admit(
+                store: store, query: question, fingerprint: embedder.fingerprint, excludedKinds: excludedKinds
+            ) {
+                Self.log.notice("hashing keyword lane: 1 document chunk admitted")
+                chunks = [keyword]
+            }
             // #286's wiring-shaped self notes never reach the prompt, so they
             // must not spend the grounding budget either (review 4 on #288: a
             // wiring hit outranking a real memory ate the last unit of a tight

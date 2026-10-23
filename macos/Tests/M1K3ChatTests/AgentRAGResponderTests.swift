@@ -1218,6 +1218,31 @@ struct AgentRAGResponderTests {
         #expect(prompt.contains("NOT in this context"))
     }
 
+    @Test("#670: on the hashing arm a keyword question grounds on the one document that holds it")
+    func hashingKeywordLaneGrounds() async throws {
+        // A whole-document chunk sits far under the hashing chunk floor for a one-word
+        // question (0.084 measured), so before #670 the phone injected nothing here.
+        let store = try KnowledgeStore()
+        let embedder = HashingEmbeddingService()
+        try await DocumentIngester(store: store, embedder: embedder).ingest(
+            title: "Lair — planning notes",
+            text: "Property: a late-Victorian terrace, south-facing, slate roof. Call, Tuesday. Keep the "
+                + "original roofline. Dormers were discussed and rejected. Breathable lime plaster throughout. "
+                + "Heat pump sited in the rear yard, acoustic screen required. Planning drawings by Friday.",
+            sourceRef: "test://lair"
+        )
+        let provider = AgentScriptedProvider(["CONCLUSION: Keep the original roofline."])
+        let responder = AgentRAGResponder(store: store, embedder: embedder, provider: provider, tools: [])
+
+        let (sources, stream) = try await responder.answerStreaming("roofline?")
+        _ = await collect(stream)
+
+        #expect(sources.map(\.itemTitle) == ["Lair — planning notes"])
+        let prompt = try #require(provider.allPrompts.first)
+        #expect(prompt.contains("KNOWLEDGE"))
+        #expect(prompt.contains("Keep the original roofline"))
+    }
+
     @Test("agent coming back empty with NO gathered info falls back to the plain RAG prompt")
     func emptyFallsBack() async throws {
         let (store, embedder) = try await ingestedStore()

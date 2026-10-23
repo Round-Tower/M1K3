@@ -26,6 +26,8 @@
 //  per-call withhold the MCP surface uses (query-side, never a post-filter).
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — `searchFTS(excluding:)`: the FTS
 //  withhold is query-side too (Photos crowding bm25 top-K starved the MCP page).
+//  Review: Kev + claude-opus-5.5, 2026-10-23 — `searchFTS(relaxedFallback:)`: the strict pass alone, for the
+//  hashing keyword lane (#670). Default unchanged. Confidence 0.9.
 
 import Foundation
 import GRDB
@@ -432,14 +434,17 @@ public extension KnowledgeStore {
     /// `KnowledgeKind.withheldFromMCP`), so a page is never starved by rows a
     /// post-filter would have dropped after `limit`. Composes with `kinds`:
     /// a named kind that is also excluded is simply not searched.
+    ///
+    /// `relaxedFallback: false` keeps the strict pass alone — the hashing keyword lane
+    /// admits only a chunk that holds EVERY content word (#670).
     func searchFTS(
         query: String, limit: Int = 10, kinds: Set<KnowledgeKind>? = nil,
-        excluding: Set<KnowledgeKind> = []
+        excluding: Set<KnowledgeKind> = [], relaxedFallback: Bool = true
     ) throws -> [ChunkHit] {
         let limit = Self.clampedSearchLimit(limit)
         guard let sanitized = FTSQuery.sanitized(query) else { return [] }
         let strict = try ftsMatch(sanitized, limit: limit, kinds: kinds, excluding: excluding)
-        if !strict.isEmpty { return strict }
+        if !strict.isEmpty || !relaxedFallback { return strict }
         guard let relaxed = FTSQuery.relaxed(query) else { return [] }
         return try ftsMatch(relaxed, limit: limit, kinds: kinds, excluding: excluding)
     }
