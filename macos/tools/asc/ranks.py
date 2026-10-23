@@ -11,27 +11,33 @@
 
 Movement is against the newest run of an EARLIER day (a same-day rerun compares with yesterday),
 or with --vs, the newest run up to and including that day. A cell reads `36 ▲4` (up four), `new`
-(entered the top 200), `lost` (left it), `·` (no earlier run) or `?` (Apple answered nothing: a
+(entered the depth read), `lost` (left it), `·` (no earlier run) or `?` (Apple answered nothing: a
 throttle, not a rank, so it is neither logged nor used as a baseline). Throttles (403/429) and
 server errors (5xx), timeouts and non-JSON pages are retried with backoff; a search that still
 fails is reported and skipped, and every result is appended as it arrives.
 
 Why: the organic iOS downloads come from KZ/UZ/IN search, not the ad countries, and the
-day-14 keyword swap (2026-10-30) needs a before/after. The sweep reads Apple's public iTunes
-Search API (no key, stdlib only), which approximates the store's ranking rather than reproducing it —
-trust the trend, not the exact slot. Apple throttles it near 20 requests a minute, so a full
-sweep (terms × 8 storefronts × 2 platforms) takes about ten minutes. Each result is appended
-to marketing/metrics/ranks.jsonl (gitignored), the same home as metrics.py's repo.jsonl.
+day-14 keyword swap (2026-10-30) needs a before/after. Two public sources, no key, stdlib only:
+  iOS  the iTunes Search API, top 200. It approximates the store's order rather than reproducing
+       it: trust the trend, not the exact slot.
+  Mac  the web App Store's search page (apps.apple.com/<cc>/mac/search), top 12 — the store's own
+       order (the IE page matched the Mac App Store app result for result, 2026-10-23). The API
+       can't stand in: its macSoftware entity lists M1K3 for no term, not even "m1k3". A Mac `—`
+       means "not on the first page", nothing deeper.
+Apple throttles near 20 requests a minute, so a full sweep (14 terms × 8 storefronts × 2 platforms
+= 224 searches at 3.2 s) takes 12 minutes, more when Apple makes it back off. Each result is appended to marketing/metrics/ranks.jsonl (gitignored),
+the same home as metrics.py's repo.jsonl.
 
 Signed: Kev + claude-opus-5.5, 2026-10-23, Confidence 0.75 (the API's order is a proxy for the
-  store's; the Mac search entity did not list M1K3 at all on the day this was written, even for
-  "m1k3", so a Mac "—" may be the API's blind spot rather than the store's — UNVERIFIED).
+  store's; the web page's markup can change under us, which reads as `?`, never as a rank).
 Format: MurphySig v0.4 (https://murphysig.dev/spec). Prior: marketing/rank_check.py (US, iOS, top
   50, unlogged), which this replaces.
 Review: Kev + claude-opus-5.5, 2026-10-23 — pre-push review fold: append per result (a crash lost
   the sweep), retry timeouts and non-JSON pages, an empty answer is `?` and never a baseline, the
   depth read is logged and matched, same-day ties take the last line, --vs is validated, terms are
   lowercased and deduped, corrupt log lines are skipped, --log for worktrees.
+Review: Kev + claude-opus-5.5, 2026-10-23 — Mac ranks move to the web App Store: Kev's Mac App Store
+  screenshot had M1K3 first for "M1K3" where the API's Mac entity had it nowhere. Confidence 0.8.
 """
 from __future__ import annotations
 
@@ -39,6 +45,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -52,8 +59,13 @@ TERMS = Path(__file__).resolve().parent / "rank_terms.txt"
 LOG = Path(os.environ.get("RANKS_LOG") or Path(__file__).resolve().parents[3] / "marketing" / "metrics" / "ranks.jsonl")
 # Ad countries first, then where the organic iOS search traffic comes from (2026-10-22 read).
 DEFAULT_COUNTRIES = "us,gb,ie,ca,au,kz,uz,in"
-ENTITY = {"ios": "software", "mac": "macSoftware"}
+PLATFORMS = ("ios", "mac")
 MAX_LIMIT = 200  # the Search API's own ceiling
+WEB_DEPTH = 12   # the web store's search page carries one page of results, no next-page token
+# Each result's card slot in the page's serialized data. Counting every id would count the in-app
+# events and editorial articles the page interleaves between results.
+WEB_CARD = re.compile(r'\{"locationPosition":(\d+),"locationType":"card","name":"((?:[^"\\]|\\.)*)",'
+                      r'"idType":"its_id","id":"(\d+)"')
 DELAY_S = 3.2    # under Apple's ~20 requests/minute
 RETRY_CODES = frozenset({403, 429, 500, 502, 503, 504})  # Apple throttles with 403 as often as 429
 ATTEMPTS = 4
@@ -62,8 +74,25 @@ ATTEMPTS = 4
 # ── pure ─────────────────────────────────────────────────────────────────────
 
 def search_url(term: str, country: str, platform: str, limit: int) -> str:
-    query = {"term": term, "country": country, "entity": ENTITY[platform], "limit": min(limit, MAX_LIMIT)}
+    if platform == "mac":
+        return f"https://apps.apple.com/{country}/mac/search?" + urllib.parse.urlencode(
+            {"term": term}, quote_via=urllib.parse.quote)
+    query = {"term": term, "country": country, "entity": "software", "limit": depth(platform, limit)}
     return "https://itunes.apple.com/search?" + urllib.parse.urlencode(query)
+
+
+def depth(platform: str, limit: int) -> int:
+    """How many results a search reads: the web store's one page on Mac, else the asked limit (≤ 200)."""
+    return WEB_DEPTH if platform == "mac" else min(limit, MAX_LIMIT)
+
+
+def web_results(html: str) -> list[dict[str, Any]]:
+    """The web store page's results by card slot, once each, shaped like the Search API's."""
+    slots: dict[int, dict[str, Any]] = {}
+    for pos, name, track_id in WEB_CARD.findall(html):
+        slot = slots.setdefault(int(pos), {"trackId": int(track_id), "trackName": ""})
+        slot["trackName"] = slot["trackName"] or json.loads(f'"{name}"')  # a video card can carry no name
+    return [slots[pos] for pos in sorted(slots)]
 
 
 def rank_of(results: list[dict[str, Any]], track_id: int) -> int | None:
@@ -74,8 +103,8 @@ def entry(date: str, term: str, country: str, platform: str,
           results: list[dict[str, Any]], track_id: int, *, limit: int = MAX_LIMIT) -> dict[str, Any]:
     lead = results[0] if results else None
     return {"date": date, "term": term, "country": country, "platform": platform,
-            "rank": rank_of(results, track_id), "n": len(results), "limit": min(limit, MAX_LIMIT),
-            "leader": lead and lead.get("trackName"), "leader_ratings": lead and lead.get("userRatingCount", 0)}
+            "rank": rank_of(results, track_id), "n": len(results), "limit": limit,
+            "leader": lead and lead.get("trackName"), "leader_ratings": lead and lead.get("userRatingCount")}
 
 
 def baseline(log: list[dict[str, Any]], term: str, country: str, platform: str, *,
@@ -86,7 +115,7 @@ def baseline(log: list[dict[str, Any]], term: str, country: str, platform: str, 
     def counts(line: dict[str, Any]) -> bool:
         if (line.get("term"), line.get("country"), line.get("platform")) != (term, country, platform):
             return False
-        if line.get("n") == 0 or line.get("limit", MAX_LIMIT) < min(limit, MAX_LIMIT):
+        if line.get("n") == 0 or line.get("limit", MAX_LIMIT) != limit:
             return False
         return line["date"] <= on_or_before if on_or_before is not None else line["date"] < before
 
@@ -149,6 +178,8 @@ def search(term: str, country: str, platform: str, limit: int) -> list[dict[str,
     for attempt in range(ATTEMPTS):
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
+                if platform == "mac":
+                    return web_results(resp.read().decode("utf-8", "replace"))
                 return json.load(resp).get("results", [])
         except urllib.error.HTTPError as err:
             if err.code not in RETRY_CODES or attempt == ATTEMPTS - 1:
@@ -182,7 +213,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("terms", nargs="*", help="terms to check (default: rank_terms.txt)")
     ap.add_argument("--country", default=DEFAULT_COUNTRIES, help=f"comma list (default {DEFAULT_COUNTRIES})")
     ap.add_argument("--platform", default="ios,mac", help="ios, mac or both (default ios,mac)")
-    ap.add_argument("--limit", type=int, default=MAX_LIMIT, help="results read per search (max 200)")
+    ap.add_argument("--limit", type=int, default=MAX_LIMIT, help="results read per iOS search (max 200; Mac reads the web store's first page)")
     ap.add_argument("--vs", metavar="YYYY-MM-DD", type=iso_day,
                     help="compare with the newest run on or before this day (default: the previous day's run)")
     ap.add_argument("--log", type=Path, default=LOG, help="the JSONL log (default marketing/metrics/ranks.jsonl"
@@ -195,13 +226,13 @@ def main(argv: list[str] | None = None) -> int:
     platforms = split_list(args.platform)
     if not terms or not countries or not platforms:
         ap.error("need at least one term, storefront and platform")
-    if bad := [p for p in platforms if p not in ENTITY]:
+    if bad := [p for p in platforms if p not in PLATFORMS]:
         ap.error(f"unknown platform {bad}; use ios and/or mac")
     limit = min(args.limit, MAX_LIMIT)
     # The UTC day: the log is keyed by day, and one zone keeps a late-evening run from straddling two.
     today = dt.datetime.now(dt.timezone.utc).date().isoformat()
     log = read_log(args.log)
-    print(f"{len(terms)} terms × {len(countries)} storefronts × {len(platforms)} platforms, top {limit}"
+    print(f"{len(terms)} terms × {len(countries)} storefronts × {len(platforms)} platforms, top {limit} iOS / {WEB_DEPTH} Mac"
           f" — vs {args.vs or 'the previous day'}", file=sys.stderr)
 
     out = None if args.no_log else _open_log(args.log)
@@ -223,11 +254,12 @@ def main(argv: list[str] | None = None) -> int:
                         print(f"{term} {country} {platform}: {err}", file=sys.stderr)
                         cells.append("err")
                         continue
-                    line = entry(today, term, country, platform, results, APP_ID, limit=limit)
+                    read = depth(platform, limit)
+                    line = entry(today, term, country, platform, results, APP_ID, limit=read)
                     if out and line["n"]:
                         out.write(json.dumps(line, ensure_ascii=False) + "\n")
                         out.flush()
-                    base = baseline(log, term, country, platform, before=today, on_or_before=args.vs, limit=limit)
+                    base = baseline(log, term, country, platform, before=today, on_or_before=args.vs, limit=read)
                     cells.append(cell(line, base))
                 print(f"{term + ' ' + platform:{width}} " + " ".join(f"{c:>10}" for c in cells), flush=True)
     finally:
@@ -241,8 +273,11 @@ def _open_log(path: Path):
     path.parent.mkdir(parents=True, exist_ok=True)
     out = path.open("a", encoding="utf-8")
     # A torn last line (a Ctrl-C mid-write) would glue onto the next record: start on a fresh line.
-    if path.stat().st_size and not path.read_bytes().endswith(b"\n"):
-        out.write("\n")
+    if path.stat().st_size:
+        with path.open("rb") as tail:
+            tail.seek(-1, os.SEEK_END)
+            if tail.read(1) != b"\n":
+                out.write("\n")
     return out
 
 

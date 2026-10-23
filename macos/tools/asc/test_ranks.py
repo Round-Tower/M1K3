@@ -16,11 +16,19 @@ def _hit(track_id, name="App", ratings=0):
     return {"trackId": track_id, "trackName": name, "userRatingCount": ratings}
 
 
-def test_ios_searches_software_and_mac_searches_mac_software():
+def test_ios_reads_the_search_api_and_mac_reads_the_web_store():
+    # The API's macSoftware entity lists M1K3 for no term, not even "m1k3", while the Mac App Store
+    # and apps.apple.com put it first (2026-10-23, the IE store's order matched result for result).
     ios = ranks.search_url("local ai", "kz", "ios", 200)
-    mac = ranks.search_url("local ai", "us", "mac", 200)
+    mac = ranks.search_url("local ai", "ie", "mac", 200)
+    assert ios.startswith("https://itunes.apple.com/search?")
     assert "entity=software" in ios and "country=kz" in ios and "term=local+ai" in ios and "limit=200" in ios
-    assert "entity=macSoftware" in mac
+    assert mac == "https://apps.apple.com/ie/mac/search?term=local%20ai"
+
+
+def test_each_source_reads_its_own_depth():
+    assert ranks.depth("ios", 500) == 200 and ranks.depth("ios", 50) == 50
+    assert ranks.depth("mac", 200) == ranks.WEB_DEPTH == 12
 
 
 def test_the_search_api_caps_the_limit_at_200():
@@ -110,9 +118,12 @@ def test_an_empty_answer_is_never_a_baseline():
     assert ranks.baseline(log, "local ai", "us", "ios", before="2026-10-23")["rank"] == 36
 
 
-def test_a_baseline_must_have_read_as_deep_as_this_run():
+def test_a_baseline_must_have_read_to_the_same_depth():
+    # Also keeps the Search API's blind Mac lines (depth 200) out of the web store's (depth 12).
     log = [{**_line("2026-10-21", 36), "limit": 200}, {**_line("2026-10-22", None), "limit": 50}]
     assert ranks.baseline(log, "local ai", "us", "ios", before="2026-10-23", limit=200)["rank"] == 36
+    mac = [{**_line("2026-10-21", None, platform="mac"), "limit": 200}]
+    assert ranks.baseline(mac, "local ai", "us", "mac", before="2026-10-23", limit=12) is None
     # Lines from before the limit was logged were all top-200 sweeps.
     assert ranks.baseline([_line("2026-10-21", 36)], "local ai", "us", "ios", before="2026-10-23", limit=200)
 
@@ -193,3 +204,34 @@ def test_search_does_not_retry_a_bad_request(monkeypatch):
     with pytest.raises(urllib.error.HTTPError):
         ranks.search("ai", "zz", "ios", 200)
     assert len(calls) == 1
+
+
+def _card(pos, name, track_id):
+    return (f'{{"locationPosition":0,"locationType":"button","name":"Get","idType":"its_id","id":"{track_id}"}},'
+            f'{{"locationPosition":{pos},"locationType":"card","name":"{name}","idType":"its_id","id":"{track_id}"}}')
+
+
+# The real page's shape (2026-10-23): each result's card slot, repeated per shelf, with an in-app
+# event and an editorial article interleaved, and a video card with no name first — ids that are not results and must not take a slot.
+WEB_PAGE = ('<html><script type="application/json" id="serialized-server-data">[' + ",".join([
+    _card(0, "", 6780230835), _card(0, "Local Offline AI Agent \\u2013 M1K3", 6780230835), _card(0, "dup", 6780230835),
+    _card(1, "Canva", 897446215),
+    '{"locationPosition":1,"locationType":"eventModule","name":"Hello!","idType":"its_id","id":"6815946720"}',
+    _card(2, "Shapr 3D", 1091675654),
+    '{"destination":{"storefront":"ie","id":"1620909697","platform":"mac","$kind":"RoutableArticlePage"}}',
+]) + ']</script></html>').encode()
+
+
+def test_the_web_store_page_parses_to_its_card_slots_not_every_id():
+    assert ranks.web_results(WEB_PAGE.decode()) == [
+        {"trackId": 6780230835, "trackName": "Local Offline AI Agent – M1K3"},
+        {"trackId": 897446215, "trackName": "Canva"},
+        {"trackId": 1091675654, "trackName": "Shapr 3D"}]
+    assert ranks.web_results("<html>no shelf</html>") == []
+
+
+def test_mac_search_reads_the_web_page(monkeypatch):
+    fake, calls = _urlopen([WEB_PAGE])
+    monkeypatch.setattr(ranks.urllib.request, "urlopen", fake)
+    assert ranks.rank_of(ranks.search("m1k3", "ie", "mac", 200), ranks.APP_ID) == 1
+    assert calls == ["https://apps.apple.com/ie/mac/search?term=m1k3"]
