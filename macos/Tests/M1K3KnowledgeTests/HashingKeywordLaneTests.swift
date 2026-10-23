@@ -102,6 +102,45 @@ struct HashingKeywordLaneTests {
         #expect(try Self.admit(query, in: store) == nil)
     }
 
+    @Test(
+        "live-data questions are the web's, even beside a note that names the city and the weather",
+        arguments: ["what's the weather in Cork", "cork weather today", "latest news from Cork", "cork rain tomorrow"]
+    )
+    func liveDataAdmitsNothing(query: String) async throws {
+        let store = try await Self.store([("Cork", "The weather in Cork is wet; the rain is the news in Cork every winter.")])
+        #expect(try Self.admit(query, in: store) == nil)
+        // The city alone is a keyword question and still grounds.
+        #expect(try Self.admit("cork", in: store)?.itemTitle == "Cork")
+    }
+
+    @Test("a question about the notes themselves, with no subject, admits nothing")
+    func containerWordsAdmitNothing() async throws {
+        let store = try await Self.store([(Self.lairTitle, Self.lairText)])
+        for query in ["what did my notes say?", "what's in my documents", "show me my files", "read the pdf"] {
+            #expect(try Self.admit(query, in: store) == nil, "\(query)")
+        }
+    }
+
+    @Test("the Mac's swappable embedder reaches the lane only while its hashing fallback is active")
+    func swappableForwardsTheActiveArm() async throws {
+        let store = try await Self.store([(Self.lairTitle, Self.lairText)])
+        let swappable = SwappableEmbeddingService(HashingEmbeddingService())
+        let hits = try await GroundedSearch.run(store: store, embedder: swappable, query: "roofline", limit: 5)
+        #expect(hits.map(\.itemTitle) == [Self.lairTitle])
+    }
+
+    @Test("the lane stands down when the cosine lane already kept a document")
+    func standsDownBehindTheCosineLane() async throws {
+        let embedder = HashingEmbeddingService()
+        let store = try await Self.store([(Self.lairTitle, Self.lairText), (Self.loafTitle, Self.loafText)])
+        // This phrasing clears the hashing chunk floor on its own (0.504 measured on #670).
+        let hits = try await GroundedSearch.run(
+            store: store, embedder: embedder, query: "what did the architect say about the roofline?", limit: 5
+        )
+        #expect(hits.filter { $0.kind != .memory }.allSatisfy { $0.similarity ?? 0 >= EmbedderFloors.hashing.chunk })
+        #expect(hits.map(\.itemTitle) == [Self.lairTitle])
+    }
+
     @Test("the ABSEP off-domain pairs admit nothing")
     func offDomainAdmitsNothing() async throws {
         for pair in SeparationEvalFixtures.offDomain {
@@ -149,14 +188,18 @@ struct HashingKeywordLaneTests {
         let hits = try await GroundedSearch.run(store: store, embedder: embedder, query: "roofline", limit: 5)
         #expect(hits.map(\.itemTitle) == [Self.lairTitle])
         // Chit-chat still grounds on nothing.
-        #expect(try await GroundedSearch.run(store: store, embedder: embedder, query: "tell me a joke", limit: 5).isEmpty)
+        let joke = try await GroundedSearch.run(store: store, embedder: embedder, query: "tell me a joke", limit: 5)
+        #expect(joke.isEmpty)
     }
 
     @Test("content terms drop stopwords, punctuation and case; nil when nothing is left")
     func contentTerms() {
-        #expect(HashingKeywordLane.contentTerms("What did the architect say about the Roofline?") == ["architect", "roofline"])
+        let terms = HashingKeywordLane.contentTerms("What did the architect say about the Roofline?")
+        #expect(terms == ["architect", "roofline"])
         #expect(HashingKeywordLane.contentTerms("what’s up?") == nil)
         #expect(HashingKeywordLane.contentTerms("") == nil)
         #expect(HashingKeywordLane.contentTerms("heat-pump") == ["heat", "pump"])
+        #expect(HashingKeywordLane.contentTerms("the roofline’s pitch") == ["roofline", "pitch"])
+        #expect(HashingKeywordLane.contentTerms("who won the match") == ["won", "match"])
     }
 }

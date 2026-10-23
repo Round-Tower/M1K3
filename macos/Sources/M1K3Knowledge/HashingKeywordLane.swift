@@ -14,8 +14,15 @@
 //  AND, never the relaxed OR retry). Lexical is all hashing measures anyway, and BM25
 //  measures it better. It never touches memories (their lane has its own floor) and a
 //  real embedder never reaches it. The ⌘R weather bug (7 KB of OR-matched noise
-//  drowning web_search routing) is held off by the strict AND, the stopword strip and
-//  the one-chunk cap — pinned in HashingKeywordLaneTests.
+//  drowning web_search routing) is held off by the strict AND, the stopword strip, the
+//  one-chunk cap, and a live-data refusal: a question about the weather, the news or a
+//  price is the web's, so the lane never answers it from a note that names the city —
+//  pinned in HashingKeywordLaneTests.
+//
+//  "Hashing arm" is not iOS-only: the Mac's SwappableEmbeddingService forwards the
+//  ACTIVE fingerprint, so while MLX warms (hashing fallback active) the lane runs there
+//  too. That's wanted — the Mac's stored vectors are Gemma then, so the cosine lane is
+//  meaningless and lexical grounding beats none.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-23
 //  Context: the narrowed option (a) from a challenger pass on #670; options (b) stopword-stripped
@@ -31,14 +38,17 @@ import Foundation
 
 public enum HashingKeywordLane {
     /// One document chunk BM25 matched on every content word, or nil. Callers run it
-    /// only when the cosine lane kept no document.
+    /// only when the cosine lane kept no document, and treat a throw (a store read
+    /// error) as nil: the lane is an extra, never a reason to fail a turn.
     public static func admit(
         store: KnowledgeStore,
         query: String,
         fingerprint: String,
         excludedKinds: Set<KnowledgeKind> = []
     ) throws -> ChunkHit? {
-        guard fingerprint.hasPrefix("hashing/"), let terms = contentTerms(query) else { return nil }
+        guard fingerprint.hasPrefix("hashing/"), !asksForLiveData(query), let terms = contentTerms(query) else {
+            return nil
+        }
         let kinds = KnowledgeStore.groundingDocumentKinds.subtracting(excludedKinds)
         guard !kinds.isEmpty else { return nil }
         return try store.searchFTS(
@@ -57,6 +67,18 @@ public enum HashingKeywordLane {
         return terms.isEmpty ? nil : terms
     }
 
+    /// A question the web answers (weather, news, prices, scores, "today"): never a
+    /// note's to answer, whatever words they share (the ⌘R weather-bug class).
+    static func asksForLiveData(_ query: String) -> Bool {
+        let words = Set(query.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted))
+        return !words.isDisjoint(with: liveDataWords)
+    }
+
+    static let liveDataWords: Set<String> = [
+        "weather", "forecast", "rain", "temperature", "news", "headlines", "latest", "today", "tonight",
+        "tomorrow", "yesterday", "price", "prices", "stock", "stocks", "score", "scores", "current", "currently",
+    ]
+
     /// English function words plus the verbs a question wraps around its subject
     /// ("what did the notes SAY about…", "TELL me…"). Kept short on purpose: a word
     /// missing here only makes the lane stricter.
@@ -71,8 +93,11 @@ public enum HashingKeywordLane {
         "then", "there", "these", "they", "this", "those", "through", "to", "too", "under", "until",
         "up", "very", "was", "we", "were", "what", "when", "where", "which", "while", "who", "whom",
         "why", "will", "with", "would", "you", "your", "yours",
-        "ll", "re", "ve", "don", "doesn", "didn", "isn", "wasn", "won", "can't",
+        "ll", "re", "ve", "don", "doesn", "didn", "isn", "wasn", "aren", "haven",
         "please", "tell", "say", "said", "says", "show", "give", "remind", "know", "think",
         "find", "look", "get", "got", "let", "us", "anything", "something", "thing", "things",
+        // Words that name the container, not the subject: "what did my notes say" has no
+        // content word, so it must not match every chunk that says "notes".
+        "note", "notes", "document", "documents", "doc", "docs", "file", "files", "pdf", "pdfs",
     ]
 }

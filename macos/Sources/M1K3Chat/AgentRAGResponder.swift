@@ -498,11 +498,19 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             Self.logGateDecision(retrieved: retrieved, kept: chunks + memories)
             // #670: the hashing cone never reaches a whole-document chunk on a keyword
             // question; one strict-AND BM25 chunk stands in when no document cleared.
-            if chunks.isEmpty, let keyword = try HashingKeywordLane.admit(
-                store: store, query: question, fingerprint: embedder.fingerprint, excludedKinds: excludedKinds
-            ) {
-                Self.log.notice("hashing keyword lane: 1 document chunk admitted")
-                chunks = [keyword]
+            // An extra, never a reason to fail the turn: a store error answers ungrounded.
+            if chunks.isEmpty {
+                do {
+                    if let keyword = try HashingKeywordLane.admit(
+                        store: store, query: question, fingerprint: embedder.fingerprint,
+                        excludedKinds: excludedKinds
+                    ) {
+                        Self.log.notice("hashing keyword lane: 1 document chunk admitted")
+                        chunks = [keyword]
+                    }
+                } catch {
+                    Self.log.notice("hashing keyword lane failed: \(error.localizedDescription, privacy: .public)")
+                }
             }
             // #286's wiring-shaped self notes never reach the prompt, so they
             // must not spend the grounding budget either (review 4 on #288: a

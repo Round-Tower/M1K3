@@ -55,7 +55,7 @@ public enum GroundedSearch {
         )
         // #670: the hashing cone never reaches a whole-document chunk on a keyword
         // question; one strict-AND BM25 chunk stands in when the cosine lane kept none.
-        if knowledge.isEmpty, let keyword = try HashingKeywordLane.admit(
+        if knowledge.isEmpty, let keyword = try? HashingKeywordLane.admit(
             store: store, query: query, fingerprint: embedder.fingerprint, excludedKinds: excludedKinds
         ) {
             return [keyword] + memories
