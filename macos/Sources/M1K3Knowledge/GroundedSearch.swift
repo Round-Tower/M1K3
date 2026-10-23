@@ -18,6 +18,8 @@
 //  verify-by-launch). Prior: Kev + claude-opus-4-8 (SearchKnowledgeTool).
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (fold) — `excludedKinds`, the per-call withhold (MCP keeps
 //  Photo captions out).
+//  Review: Kev + claude-opus-5.5, 2026-10-23 — #670: on the hashing arm, when no document clears the floor,
+//  HashingKeywordLane admits one strict-AND BM25 chunk. Confidence 0.8 (pinned in HashingKeywordLaneTests).
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — both lanes exclude in the query
 //  (the FTS fallback post-filtered after `limit`, so crowding Photos could starve an MCP page).
 //
@@ -51,6 +53,13 @@ public enum GroundedSearch {
             ),
             floors: .forFingerprint(embedder.fingerprint)
         )
+        // #670: the hashing cone never reaches a whole-document chunk on a keyword
+        // question; one strict-AND BM25 chunk stands in when the cosine lane kept none.
+        if knowledge.isEmpty, let keyword = try? HashingKeywordLane.admit(
+            store: store, query: query, fingerprint: embedder.fingerprint, excludedKinds: excludedKinds
+        ) {
+            return [keyword] + memories
+        }
         return knowledge + memories
     }
 }
