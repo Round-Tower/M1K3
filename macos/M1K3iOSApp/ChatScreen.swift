@@ -282,6 +282,7 @@ struct ChatScreen: View {
                 case .settings: SettingsScreen()
                 case .documents: DocumentsScreen()
                 case .memories: MemoriesScreen()
+                case .pairing: BrainPairingScreen()
                 }
             }
             .sheet(item: $privateCloudPending) { pending in

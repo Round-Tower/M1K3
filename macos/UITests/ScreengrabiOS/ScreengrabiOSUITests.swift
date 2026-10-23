@@ -91,10 +91,8 @@ final class ScreengrabiOSUITests: XCTestCase {
 
     func testBrainAtHome() throws {
         try capture(.brainAtHome, settle: 4) { app in
-            waitForBrain(app)
-            openSettings(app)
-            app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'Home'")).firstMatch.tap()
-            waitForText("Mac", in: app, timeout: 30)
+            // The app pushes Settings ▸ pairing itself (`phoneRoute`), like Memories.
+            waitForText("Mac", in: app, timeout: 180)
         }
     }
 
@@ -165,28 +163,6 @@ final class ScreengrabiOSUITests: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
         app.terminate()
-    }
-
-    private func openSettings(_ app: XCUIApplication) {
-        let gear = app.buttons["Settings"].firstMatch
-        XCTAssert(gear.waitForExistence(timeout: 30), "Settings toolbar button")
-        gear.tap()
-    }
-
-    /// Brain-ready: the composer exists and accepts input.
-    private func waitForBrain(_ app: XCUIApplication, timeout: TimeInterval = 180) {
-        let composer = app.textFields.firstMatch.exists ? app.textFields.firstMatch : app.textViews.firstMatch
-        XCTAssert(composer.waitForExistence(timeout: timeout), "composer never appeared")
-        let ready = NSPredicate(format: "isEnabled == true")
-        let expectation = XCTNSPredicateExpectation(predicate: ready, object: composer)
-        // Deliberately non-fatal: a near-miss plate beats no plate. The miss is
-        // still on the record so a placeholder-looking capture has a cause.
-        if XCTWaiter().wait(for: [expectation], timeout: timeout) != .completed {
-            let note = XCTAttachment(string: "composer never became enabled within \(Int(timeout))s — captured anyway")
-            note.name = "brain-not-ready"
-            note.lifetime = .keepAlways
-            add(note)
-        }
     }
 
     private func waitForText(_ fragment: String, in app: XCUIApplication, timeout: TimeInterval = 30) {

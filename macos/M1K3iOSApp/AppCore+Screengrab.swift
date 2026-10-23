@@ -14,6 +14,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-09 — the open mic comes to the phone (`screengrabTranscriber`, the Mac's seam): the
 //  speaking plate is a REAL turn through the loop — a direct `speak` never reached `.speaking`, so the phone's
 //  first run shot "Listening…" for it. Confidence now 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-23 — the ask-documents beat: once the seed is indexed, a new chat and a
+//  typed question (frame 05). Verify-by-capture on the Simulator. Confidence 0.8.
 //
 
 import Foundation
@@ -95,7 +97,27 @@ extension AppCore {
     /// hero question and the loop answers and speaks it (karaoke and all).
     func performScreengrabBeat() {
         let harness = ScreengrabHarness.current
-        guard harness.isActive, harness.entersVoiceMode else { return }
-        enterVoiceMode()
+        guard harness.isActive else { return }
+        if harness.entersVoiceMode {
+            enterVoiceMode()
+        } else if let question = harness.chatQuestion {
+            Task { await askScreengrabQuestion(question) }
+        }
+    }
+
+    /// The ask-documents plate: wait for the seeded documents to reach the corpus (the
+    /// seed is a detached launch task, so a turn sent at brain-ready retrieves nothing),
+    /// then type the question into a NEW chat, so the frame is the question, the answer
+    /// and its source chip rather than the hero exchange.
+    private func askScreengrabQuestion(_ question: String) async {
+        let seeded = DemoPersona.documents.count
+        var waited = 0
+        while ((try? store.itemCount()) ?? 0) < seeded, waited < 60 {
+            try? await Task.sleep(for: .seconds(1))
+            waited += 1
+        }
+        if waited == 60 { Self.screengrabLog.error("ask-documents: the seed never landed; asking anyway") }
+        chat.startNewConversation()
+        await send(question)
     }
 }
