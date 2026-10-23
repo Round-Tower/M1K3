@@ -71,6 +71,7 @@ bytes disagree: stop). Lil's 2026-10-08 pin (#517) took this route and passed on
 | `creative.py status` / `targets` / `upload` / `place` | Product page header + search results assets (iOS 27, App Asset Library): upload once (reserve → PUT → `{uploaded:true}` → poll), place per localization on a version, custom product page or PPO treatment. Checks ASC's chosen spec against the live catalogue and refuses a parent that isn't editable. Renders come from `tools/site/store_creative.py`. | upload / place + `--confirm` |
 | `testflight.py show` / `set` / `notes` | The beta app description — one text every platform's testers read (betaAppLocalizations), from `TestFlight/beta_description.en-US.txt`; refuses text that doesn't name iPhone, iPad and Mac. `notes --build N` writes build N's "What to Test" on Mac + iOS from `TestFlight/notes/` and reads it back: Xcode Cloud copies those itself, a local upload arrives without them. | set / notes + `--confirm` |
 | `metrics.py store` / `analytics request` / `analytics list` / `analytics fetch` / `repo` | Reach without telemetry. `store`: App Store units per day from the daily sales reports, filtered to this app (the report is vendor-wide), split downloads / updates by platform and country; needs `ASC_VENDOR_NUMBER`. `analytics`: the standing ONGOING report request Apple needs, then list and fetch its daily CSVs (impressions, product page views, conversion, sources). `repo`: GitHub stars, forks, DMG downloads per release, 14-day traffic and referrers, appended to `marketing/metrics/repo.jsonl` because GitHub forgets traffic after 14 days. | `analytics request` (one standing request) |
+| `ranks.py [terms…] [--country …] [--platform ios,mac] [--vs DATE]` | Search rank per term × storefront × platform from the public iTunes Search API (no key, top 200), with movement against the previous run, or the newest run on or before `--vs` for a keyword change's before/after. Terms live in `rank_terms.txt`; the default storefronts are the ad countries plus KZ/UZ/IN, where organic iOS search comes from. The API's order is a proxy for the store's: trust the trend, not the slot. | appends to `marketing/metrics/ranks.jsonl` (`--no-log` to just look) |
 
 ```
 python3 tools/asc/precheck.py
@@ -94,6 +95,8 @@ Review: Kev + claude-fable-5.1, 2026-10-20 — `metrics.py`: reach read from the
 reports, the Analytics Reports API, GitHub) instead of telemetry the app will never send. The first live run
 counted every Round Tower app: the sales report is vendor-wide, so rows are filtered to the Apple Identifier.
 Confidence 0.8.
+Review: Kev + claude-opus-5.5, 2026-10-23 — `ranks.py`: rank tracking across storefronts in our own tooling instead of
+a paid ASO app (Sextant was weighed and covers iOS only). Confidence 0.75: the Search API's order approximates the store's.
 -->
 
 Tests: one `test_<tool>.py` per tool with pure logic to pin (`promo.py` has none — every function is a request; the global pre-commit hook's rule for new source files; the shared `test_asc_tools.py` was split on 2026-09-16). CI runs `pytest tools/asc`.

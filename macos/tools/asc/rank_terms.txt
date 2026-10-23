@@ -1,0 +1,19 @@
+# Searches ranks.py checks, one per line. Tracked, not keyword-field copy: competitor names here are
+# for watching only — never put them in the keyword field (guideline 2.3.7).
+# category (Apple Ads converters first, 2026-10-22 read)
+local ai
+local llm
+offline ai
+private ai
+on-device ai
+ai offline
+ai assistant
+ai chatbot
+ai pdf
+chatbot offline
+# competitors (where their users search)
+ollama
+lm studio
+locally ai
+# brand
+m1k3
