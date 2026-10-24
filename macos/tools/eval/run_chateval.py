@@ -94,6 +94,10 @@ Review: Kev + claude-opus-5-5, 2026-10-19 (pre-push review of the follow-ups) �
 run's own guard (the AFM cool-down included), any way out reopens the live app; `relaunch_live` retries a failed
 `open -a` once and says UNVERIFIED if it still fails; the scorecard is written whole (temp file, then rename); no
 abbreviated flags, so run_arms' reserved ones can't be reached by prefix. Confidence 0.8.
+Review: Kev + claude-opus-5.5, 2026-10-24 — `--router dispatch` wires like the Mac app: the head and chains default ON
+(AppEnvironment+ChatHistory.swift, `whenUnset: true`), `--no-router-head` / `--no-router-chain` turn one off for an arm.
+The MoE Big audition ran a bare dispatch, failed every tool-chain fixture (gemma-12B 0/9 vs 9/9 wired like the app) and
+read `tool-web-newest` as a picker regression; wired like the app it passed 3/3. Confidence 0.85.
 """
 
 from __future__ import annotations
@@ -253,8 +257,8 @@ class RunOptions:
     full_answers: bool = False  # whole answers in the document (bake-offs), not the 240-char excerpt
     calculator: bool = False  # offer the computing `calculate` stub (the calculator probe)
     router: str | None = None  # "dispatch": the app's own tool route, every tier on (the router arm)
-    router_head: bool = False  # + the group head (toolGroupRouter); needs router
-    router_chain: bool = False  # + two-tool chains (toolChain); needs router
+    router_head: bool | None = None  # the group head (toolGroupRouter); None → on under dispatch, like the Mac app
+    router_chain: bool | None = None  # two-tool chains (toolChain); None → on under dispatch, like the Mac app
 
 
 def route_warning(opts: RunOptions) -> str | None:
@@ -361,7 +365,7 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         raise ValueError(f"thinking {opts.thinking!r}: choose from {', '.join(THINKING_MODES)}")
     if opts.router is not None and opts.router not in ROUTER_MODES:
         raise ValueError(f"router {opts.router!r}: choose from {', '.join(ROUTER_MODES)}")
-    if (opts.router_head or opts.router_chain) and opts.router != "dispatch":
+    if (opts.router_head or opts.router_chain) and opts.router != "dispatch":  # an explicit off is fine anywhere
         raise ValueError("router head/chain need --router dispatch (the app reads them only there)")
     report = out_path(container, opts.name)
     trig = {
@@ -390,9 +394,10 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         trig["M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS"] = "1"
     if opts.router:
         trig["M1K3_SELFTEST_CHATEVAL_ROUTER"] = opts.router
-        if opts.router_head:
+        # Unset means the Mac app's own default: both on (AppEnvironment+ChatHistory.swift, `whenUnset: true`).
+        if opts.router == "dispatch" and opts.router_head is not False:
             trig["M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD"] = "1"
-        if opts.router_chain:
+        if opts.router == "dispatch" and opts.router_chain is not False:
             trig["M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN"] = "1"
     if powermode is not None:
         trig["M1K3_SELFTEST_POWERMODE"] = str(powermode)
@@ -818,8 +823,10 @@ def main(argv: list[str] | None = None) -> int:
                     help="keep every answer whole in the document (bake-offs: fails stay re-adjudicable)")
     ap.add_argument("--router", choices=ROUTER_MODES,
                     help="the app's own tool route with every tier on (ChatEvalStage _ROUTER=dispatch)")
-    ap.add_argument("--router-head", action="store_true", help="with --router: the group head in front of the pick")
-    ap.add_argument("--router-chain", action="store_true", help="with --router: let a pick run two read-only tools")
+    ap.add_argument("--router-head", action=argparse.BooleanOptionalAction, default=None,
+                    help="with --router dispatch: the group head in front of the pick (default on, as the Mac app)")
+    ap.add_argument("--router-chain", action=argparse.BooleanOptionalAction, default=None,
+                    help="with --router dispatch: let a pick run two read-only tools (default on, as the Mac app)")
     ap.add_argument("--notes", help="free-text provenance note")
     ap.add_argument("--dump-prompt", action="store_true", help="dump no-call turns' exact prompts")
     ap.add_argument("--app", default=LIVE_APP, help="the M1K3.app bundle to run (default: installed)")

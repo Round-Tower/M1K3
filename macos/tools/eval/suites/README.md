@@ -18,7 +18,7 @@ What a run leaves in `outDir`:
 - `.run_arms-live-app` names the live copy that was running before arm 1. A resumed run reads it, so the live app still comes back after a stopped run. The file is deleted once the app is seen running again, so if it is still there, the reopen was UNVERIFIED.
 - Exit 0 means every arm is done and the live app is back. Exit 1 means something needs a look: an arm with no scorecard, an exit 8, an eval app left running (named by pid, and nothing more is started), or a reopen that was not seen.
 
-**Example only, not a record of what ran.** This is the 2026-10-18 budget-forcing A/B (`evals11.zsh`) written as a suite. Lil runs on Always with the reasoning kind at x2, in three arms: forced close at 1024 tokens, the 4,000-char cut, and forced close at 2048 tokens.
+**Example only, not a record of what ran.** Since 2026-10-24 a bare `--router dispatch` means the Mac app's wiring (group head and chains on); a run before that date had both off, so pass `--no-router-head --no-router-chain` to repeat one. This is the 2026-10-18 budget-forcing A/B (`evals11.zsh`) written as a suite. Lil runs on Always with the reasoning kind at x2, in three arms: forced close at 1024 tokens, the 4,000-char cut, and forced close at 2048 tokens.
 
 ```json
 {

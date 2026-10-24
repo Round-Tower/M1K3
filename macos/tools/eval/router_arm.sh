@@ -8,10 +8,11 @@
 # Configurations (ChatEvalStage keys, see tools/eval/run_chateval.py --router*):
 #   off      --router off: the same live path, no route — Lil/Big as they ship (every flag off). Before
 #            2026-10-10 it set no key, and tool-use took LocalAgent, a different path from the other cells.
-#   routing  --router dispatch                              (toolRouterAllTiers)
-#   head     --router dispatch --router-head                (+ toolGroupRouter)
-#   chain    --router dispatch --router-chain               (+ toolChain)
-#   all      --router dispatch --router-head --router-chain (all three: what the Mac ships, 2026-10-10)
+#   routing  --router dispatch --no-router-head --no-router-chain (toolRouterAllTiers)
+#   head     --router dispatch --router-head --no-router-chain    (+ toolGroupRouter)
+#   chain    --router dispatch --no-router-head --router-chain    (+ toolChain)
+#   all      --router dispatch --router-head --router-chain       (all three: what the Mac ships, 2026-10-10)
+# Since 2026-10-24 a bare `--router dispatch` means `all` (the Mac app's wiring), so each partial cell names its offs.
 # Each cell is saved to docs/evals/<date>-router-arm-<brain>-<config>-x3-ac.json (full answers).
 # A cell whose file already exists is skipped, so an interrupted evening resumes where it stopped.
 # Afterwards:  python3 macos/tools/eval/router_arm_summary.py --date <date>
@@ -32,6 +33,8 @@
 # Review: Kev + claude-opus-5-5, 2026-10-10 — Mini joins (`--brains lil,big,mini`): the head sits in front of
 # Mini's picker too, and the summary measures Mini against its shipping `routing` cell.
 # Review: Kev + claude-opus-5-5, 2026-10-10 — `all`: the three flags together, the combination a flip ships.
+# Review: Kev + claude-opus-5.5, 2026-10-24 — run_chateval's dispatch now defaults head + chain on (the app's wiring), so
+# `routing`, `head` and `chain` pass --no-router-head / --no-router-chain to keep measuring what they always did.
 
 setopt PIPE_FAIL NO_UNSET
 
@@ -61,9 +64,9 @@ done
 configs=(off routing head chain all)
 typeset -A flags
 flags[off]="--router off"
-flags[routing]="--router dispatch"
-flags[head]="--router dispatch --router-head"
-flags[chain]="--router dispatch --router-chain"
+flags[routing]="--router dispatch --no-router-head --no-router-chain"
+flags[head]="--router dispatch --router-head --no-router-chain"
+flags[chain]="--router dispatch --no-router-head --router-chain"
 flags[all]="--router dispatch --router-head --router-chain"
 
 for b in $brains; do
