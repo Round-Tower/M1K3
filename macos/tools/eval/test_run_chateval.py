@@ -259,7 +259,7 @@ def test_quit_for_run_reopens_the_live_app_when_interrupted_in_the_cool_down(tmp
     stamp.write_text(str(time.time()))
     monkeypatch.setattr(rc, "STAMP", stamp)
     monkeypatch.setattr(rc, "quit_app", lambda _path, _pids: True)
-    monkeypatch.setattr(rc, "running_instances", lambda: [])
+    monkeypatch.setattr(rc, "running_instances", list)
     relaunched: list[str | None] = []
     monkeypatch.setattr(rc, "relaunch_live", lambda plan, no_relaunch: relaunched.append(plan.live_running))
 
@@ -497,13 +497,23 @@ def test_router_keys_are_absent_unless_asked():
     assert not [k for k in trig if "ROUTER" in k]
 
 
-def test_router_dispatch_rides_the_trigger_with_head_and_chain_only_when_set():
-    assert _trig(router="dispatch")["M1K3_SELFTEST_CHATEVAL_ROUTER"] == "dispatch"
+def test_router_dispatch_wires_like_the_mac_app_by_default():
+    # 2026-10-24: the Mac app turns the head and chains on when unset (AppEnvironment+ChatHistory.swift,
+    # `whenUnset: true`); a bare `--router dispatch` ran without them and failed every tool-chain fixture
+    # (gemma-12B 0/9 vs 9/9 wired like the app), which read as a router regression.
     plain = _trig(router="dispatch")
-    assert "M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD" not in plain and "M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN" not in plain
-    both = _trig(router="dispatch", router_head=True, router_chain=True)
-    assert both["M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD"] == "1"
-    assert both["M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN"] == "1"
+    assert plain["M1K3_SELFTEST_CHATEVAL_ROUTER"] == "dispatch"
+    assert plain["M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD"] == "1"
+    assert plain["M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN"] == "1"
+
+
+def test_router_head_and_chain_can_each_be_turned_off_for_an_arm():
+    no_head = _trig(router="dispatch", router_head=False)
+    assert "M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD" not in no_head
+    assert no_head["M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN"] == "1"
+    no_chain = _trig(router="dispatch", router_chain=False)
+    assert no_chain["M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD"] == "1"
+    assert "M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN" not in no_chain
 
 
 def test_router_head_or_chain_without_dispatch_is_refused():
@@ -511,6 +521,36 @@ def test_router_head_or_chain_without_dispatch_is_refused():
     for over in ({"router_head": True}, {"router_chain": True}):
         with pytest.raises(ValueError):
             _trig(**over)
+    # Off without dispatch says nothing the app could misread, so it passes; unset stays unset off dispatch.
+    assert not [k for k in _trig(router="off", router_head=False, router_chain=False) if "HEAD" in k or "CHAIN" in k]
+    assert not [k for k in _trig(router="off") if "HEAD" in k or "CHAIN" in k]
+
+
+def test_main_threads_no_router_head_and_chain_to_the_trigger(tmp_path, monkeypatch, capsys):
+    app = tmp_path / "M1K3.app"
+    (app / "Contents").mkdir(parents=True)
+    with open(app / "Contents/Info.plist", "wb") as handle:
+        plistlib.dump({"CFBundleIdentifier": rc.BUNDLE_ID}, handle)
+    monkeypatch.setattr(rc, "sh", lambda *cmd: BATT_AC if cmd[-1] == "batt" else PMSET_G)
+    monkeypatch.setattr(rc, "running_instances", list)
+    base = ["--name", "x", "--brains", "big", "--app", str(app), "--dry-run", "--router", "dispatch"]
+
+    assert rc.main(base) == 0
+    wired = capsys.readouterr().out
+    assert '"M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD": "1"' in wired and '"M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN": "1"' in wired
+
+    head_key, chain_key = '"M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD"', '"M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN"'
+    assert rc.main([*base, "--no-router-head", "--no-router-chain"]) == 0
+    routing_only = capsys.readouterr().out
+    assert head_key not in routing_only and chain_key not in routing_only
+
+    # router_arm.sh's mixed cells.
+    assert rc.main([*base, "--router-head", "--no-router-chain"]) == 0
+    head_cell = capsys.readouterr().out
+    assert head_key in head_cell and chain_key not in head_cell
+    assert rc.main([*base, "--no-router-head", "--router-chain"]) == 0
+    chain_cell = capsys.readouterr().out
+    assert head_key not in chain_cell and chain_key in chain_cell
 
 
 def test_unknown_router_mode_is_refused():
