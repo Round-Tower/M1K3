@@ -120,7 +120,10 @@ Anything a cold session needs on turn one belongs below, not there.
   drift). Review notes live only in `macos/fastlane/review_notes.txt`. Run
   `macos/tools/asc/precheck.py` after every deliver push (a stale
   `review_information/notes.txt` clobbered the live notes on 2026-10-01).
-  `submit.py --confirm` is Kev's, via `!`.
+  `submit.py --confirm` is Kev's, via `!`. So are edits to `metadata_*` files and every
+  `fastlane … metadata` deliver: the classifier blocks both even after Kev's yes (2026-10-23).
+  Hand him a script or `!` lines, then read the live fields back over the ASC API.
+  Rank tracking is `macos/tools/asc/ranks.py`; its Mac ranks come from the web store, because the Search API can't see M1K3 on Mac.
 - Store creative (iOS 27 header + search, iPhone/iPad only): render with
   `macos/tools/site/store_creative.py` (`--check` is the gate), then
   `macos/tools/asc/creative.py upload|place` (dry-run until `--confirm`, Kev's
