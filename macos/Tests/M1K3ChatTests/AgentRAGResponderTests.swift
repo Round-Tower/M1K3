@@ -29,6 +29,8 @@
 //  brain still throws first.
 //  Review: same day (pre-push review fold) — the phone's production shape (a tool-calling slot reporting false)
 //  declines too; the wording pin covers the pronoun.
+//  Review: Kev + claude-fable-5.1, 2026-10-25 — the `use` arm of PostToolAnswer, both ways: an answer-shaped
+//  post-tool conclusion stands with no synthesis generation; the filler shape still synthesises after it.
 
 import Foundation
 import M1K3Agent
@@ -1385,6 +1387,112 @@ struct AgentRAGResponderTests {
         let fallbackPrompt = try #require(provider.allPrompts.last)
         #expect(fallbackPrompt.contains("INFORMATION GATHERED"))
         #expect(fallbackPrompt.contains("NASA named four Artemis III crew members."))
+    }
+
+    @Test("`use` arm: an answer-shaped post-tool conclusion stands, and no synthesis generation runs")
+    func useArmKeepsTheLoopsAnswer() async throws {
+        // Plan item 2 (2026-10-25): by default every native tool turn decodes an answer it throws away
+        // and decodes again (fallBack). Under `-postToolAnswer use` the loop's own answer — the one
+        // with the full history in its prompt — is the answer; the synthesis prompt never renders.
+        let (store, embedder) = try await ingestedStore()
+        let webObservation = "1. Artemis III — https://nasa.example/artemis\n"
+            + "   NASA named four Artemis III crew members."
+        let loopsAnswer = "NASA has named the four crew members who will fly Artemis III around the Moon."
+        let provider = PrefacingToolProvider(
+            preface: "", toolName: "web_search", toolQuery: "artemis news",
+            fallbackAnswer: "SYNTHESIS MUST NOT RUN", synthesisText: loopsAnswer
+        )
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider,
+            toolsProvider: { [FixedTool(name: "web_search", response: webObservation)] },
+            postToolAnswerPolicy: .use
+        )
+
+        let (_, stream) = try await responder.answerStreaming("what's the latest on artemis?")
+        let answer = await collect(stream)
+
+        #expect(answer.contains(loopsAnswer))
+        #expect(!answer.contains("SYNTHESIS MUST NOT RUN"))
+        #expect(answer.contains("https://nasa.example/artemis"), "the sources block still follows")
+        #expect(!provider.allPrompts.contains { $0.contains("INFORMATION GATHERED") }, "no second generation")
+    }
+
+    @Test("`use` arm: the content-free preamble shape still synthesises, after the preamble")
+    func useArmStillSynthesisesAPreamble() async throws {
+        let (store, embedder) = try await ingestedStore()
+        let webObservation = "1. Artemis III — https://nasa.example/artemis\n"
+            + "   NASA named four Artemis III crew members."
+        let provider = PrefacingToolProvider(
+            preface: "", toolName: "web_search", toolQuery: "artemis news",
+            fallbackAnswer: "NASA has named four crew members for Artemis III.",
+            synthesisText: "Let me see what I found." // under 40 chars: the 2026-09-04 filler shape
+        )
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider,
+            toolsProvider: { [FixedTool(name: "web_search", response: webObservation)] },
+            postToolAnswerPolicy: .use
+        )
+
+        let (_, stream) = try await responder.answerStreaming("what's the latest on artemis?")
+        let answer = await collect(stream)
+
+        // The preamble streamed live (the arm does not suppress), then the synthesis answered over the
+        // evidence as a new paragraph, the dangling-preamble treatment.
+        #expect(answer.contains("Let me see what I found.\n\nNASA has named four crew members for Artemis III."))
+        let fallbackPrompt = try #require(provider.allPrompts.last)
+        #expect(fallbackPrompt.contains("INFORMATION GATHERED"))
+    }
+
+    @Test("`use` arm: a pre-tool preface and the kept conclusion are separate paragraphs")
+    func useArmBreaksAfterThePreface() async throws {
+        // The default never shows post-tool text, so a preface ("Searching the web…") followed by the
+        // loop's answer is new to the arm; without a break the two glue ("Stand by.NASA has…").
+        let (store, embedder) = try await ingestedStore()
+        let webObservation = "1. Artemis III — https://nasa.example/artemis\n"
+            + "   NASA named four Artemis III crew members."
+        let loopsAnswer = "NASA has named the four crew members who will fly Artemis III around the Moon."
+        let provider = PrefacingToolProvider(
+            preface: "Searching the web for that. Stand by.", toolName: "web_search", toolQuery: "artemis news",
+            fallbackAnswer: "SYNTHESIS MUST NOT RUN", synthesisText: loopsAnswer
+        )
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider,
+            toolsProvider: { [FixedTool(name: "web_search", response: webObservation)] },
+            postToolAnswerPolicy: .use
+        )
+
+        let (_, stream) = try await responder.answerStreaming("what's the latest on artemis?")
+        let answer = await collect(stream)
+
+        #expect(answer.contains("Stand by.\n\n" + loopsAnswer))
+        #expect(!answer.contains("SYNTHESIS MUST NOT RUN"))
+    }
+
+    @Test("`use` arm: a tool that only ERRORED still degrades to plain RAG, whatever the loop said")
+    func useArmDegradesWithoutEvidence() async throws {
+        // A 40+ char apology over a rate-limited search is not an answer to keep: the default filters the
+        // error observation and degrades to plain RAG, and so must the arm (review fold, 2026-10-25).
+        let (store, embedder) = try await ingestedStore()
+        let apology = "I tried the web but the search service was unavailable just now, sorry about that."
+        let provider = PrefacingToolProvider(
+            preface: "", toolName: "web_search", toolQuery: "news today",
+            fallbackAnswer: "I couldn't reach the web just now — nothing stored covers that either.",
+            synthesisText: apology
+        )
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider,
+            toolsProvider: { [FixedTool(name: "web_search", response: "Error: web search is temporarily unavailable.")] },
+            postToolAnswerPolicy: .use
+        )
+
+        let (_, stream) = try await responder.answerStreaming("what's in the news today?")
+        let answer = await collect(stream)
+
+        // The loop's apology streamed (the arm does not suppress), then the plain-RAG degradation followed it.
+        #expect(answer.contains(apology + "\n\nI couldn't reach the web just now"))
+        let fallbackPrompt = try #require(provider.allPrompts.last)
+        #expect(!fallbackPrompt.contains("INFORMATION GATHERED"))
+        #expect(!fallbackPrompt.contains("temporarily unavailable"))
     }
 
     @Test("native tool turn whose tool only ERRORED degrades to plain RAG, never the loose conclusion")
