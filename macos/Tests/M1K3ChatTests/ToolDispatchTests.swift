@@ -14,6 +14,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — the open guard (#622): a web read on an open ask is an action.
 //  Review: Kev + claude-opus-5-5, 2026-10-10 — the recency guard (lookup about now → web; unchanged
 //  otherwise or with web search off; the chained pick too).
+//  Review: Kev + claude-fable-5.1, 2026-10-25 — `ToolPickTimingTests`: the picker's timing line (the Lil baseline's
+//  3.8 s picker-route first token had no line to attribute it to).
 
 import Foundation
 import M1K3Agent
@@ -387,5 +389,17 @@ struct ToolDispatchOpenTests {
     func onlyWebReads() {
         let pick = ToolPick(tool: "search_knowledge", query: "boiler")
         #expect(ToolDispatch.openCorrected(pick, question: "Open my notes on the boiler website") == pick)
+    }
+}
+
+/// The picker's timing line (2026-10-25): what the baseline read off `routeStage` but could not attribute.
+struct ToolPickTimingTests {
+    @Test("the pick line names the tool, or the agent, and whole clamped milliseconds")
+    func pickSummary() {
+        #expect(ToolRouterWiring.pickSummary(tool: "web_search", elapsed: .milliseconds(3120))
+            == "tool pick: picker → web_search in 3120ms")
+        #expect(ToolRouterWiring.pickSummary(tool: nil, elapsed: .milliseconds(1200) + .microseconds(700))
+            == "tool pick: picker → agent in 1200ms")
+        #expect(ToolRouterWiring.pickSummary(tool: "datetime", elapsed: .zero) == "tool pick: picker → datetime in 0ms")
     }
 }

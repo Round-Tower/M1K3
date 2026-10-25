@@ -43,6 +43,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-10 — each flag reader takes `whenUnset:` (an explicit setting still
 //  wins), so a shell picks the default: the Mac turns them on after the 10-10 arm, iOS keeps them off.
 //  Review: Kev + claude-opus-5-5, 2026-10-10 — `route`'s doc no longer calls `allTiers` unmeasured.
+//  Review: Kev + claude-fable-5.1, 2026-10-25 — the picker's pick is timed and logged (`pickSummary`): on the
+//  Lil Release baseline the picker route's first token was 3.8 s against 0.65 s on the chat and head routes,
+//  half the trials took it, and the pick was the unlogged suspect. Confidence 0.85.
 //
 
 import Foundation
@@ -169,9 +172,22 @@ public enum ToolRouterWiring {
             pickRecorder?.record(.agent)
             return nil
         }
+        // Timed (2026-10-25): the Lil Release baseline put the picker route's first token at 3.8 s against
+        // 0.65 s on the chat route — the pick itself was the gap's prime suspect and nothing logged it.
+        let started = ContinuousClock.now
         let picked = await pick(with: fallback, question: question, menu: menu, chain: chain)
+        let elapsed = started.duration(to: .now)
+        log.notice("\(pickSummary(tool: picked?.tool, elapsed: elapsed), privacy: .public)")
         pickRecorder?.record(picked == nil ? .agent : .picker)
         return picked
+    }
+
+    /// `tool pick: picker → web_search in 3120ms` — or `→ agent` when the picker named nothing
+    /// (a guardrail, the daemon). Whole ms, clamped at 0.
+    static func pickSummary(tool: String?, elapsed: Duration) -> String {
+        let parts = elapsed.components
+        let ms = max(0, Int(parts.seconds * 1000 + parts.attoseconds / 1_000_000_000_000_000))
+        return "tool pick: picker → \(tool ?? "agent") in \(ms)ms"
     }
 
     /// Apple's model names one tool from the menu (two with `chain`: the second rides
