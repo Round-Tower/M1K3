@@ -371,6 +371,24 @@ jobs:
         working-directory: macos
         run: python3 tools/ci/check_doc_drift.py
 
+  claims:
+    # A line the change ADDS that names a path, a log marker or an argv flag must name
+    # one the tree has (tools/ci/check_claims.py; its tests run in the guards job). The
+    # bots' most common nit was a comment claiming what a reader couldn't find, and half
+    # of those claims were true but outside the diff (#684). Pure Python, seconds.
+    # Review: Kev + claude-opus-5-5, 2026-10-25 — new job, Confidence 0.7, Prior: none.
+    name: Docs match the code (claims)
+    runs-on: ubuntu-24.04 # not -latest: that label becomes Ubuntu 26 on 2026-10-19 (#582); move deliberately
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          # A PR checks out its merge commit; depth 2 brings the base parent, so
+          # HEAD^1..HEAD is exactly the PR's change (and a master push's squash commit).
+          fetch-depth: 2
+      - name: Claims on added lines resolve against the tree
+        run: python3 macos/tools/ci/check_claims.py --range HEAD^1..HEAD
+
   # Posts a per-job build-status list to Slack (same shape as the dyslexia-ai-server
   # `verify` workflow: act10ns/slack, if-always, ✅/❌ per job). No-op until the
   # SLACK_WEBHOOK_URL secret is set, so it never reddens CI before Slack is wired.
@@ -383,7 +401,15 @@ jobs:
     # The gate job itself must succeed — a broken gate silently skipping every
     # build would otherwise read as green.
     needs:
-      [changes, swift-mac, app-build, mobile-build, scheme-drift, doc-drift]
+      [
+        changes,
+        swift-mac,
+        app-build,
+        mobile-build,
+        scheme-drift,
+        doc-drift,
+        claims,
+      ]
     runs-on: ubuntu-24.04 # not -latest: that label becomes Ubuntu 26 on 2026-10-19 (#582); move deliberately
     if: always()
     env:
@@ -393,7 +419,7 @@ jobs:
         if: env.SLACK_WEBHOOK_URL != ''
         uses: act10ns/slack@v2.2.0
         with:
-          status: ${{ (needs.changes.result == 'success' && contains(fromJSON('["success","skipped"]'), needs.swift-mac.result) && contains(fromJSON('["success","skipped"]'), needs.app-build.result) && contains(fromJSON('["success","skipped"]'), needs.mobile-build.result) && needs.scheme-drift.result == 'success' && needs.doc-drift.result == 'success') && 'success' || 'failure' }}
+          status: ${{ (needs.changes.result == 'success' && contains(fromJSON('["success","skipped"]'), needs.swift-mac.result) && contains(fromJSON('["success","skipped"]'), needs.app-build.result) && contains(fromJSON('["success","skipped"]'), needs.mobile-build.result) && needs.scheme-drift.result == 'success' && needs.doc-drift.result == 'success' && needs.claims.result == 'success') && 'success' || 'failure' }}
           message: |
             M1K3 CI · ${{ github.ref_name }} (${{ github.event_name }})
 
@@ -402,6 +428,7 @@ jobs:
             ${{ needs.mobile-build.result == 'success' && '✅' || (needs.mobile-build.result == 'skipped' && '⏭️' || '❌') }} : Swift · iOS + visionOS shells (xcodebuild)
             ${{ needs.scheme-drift.result == 'success' && '✅' || '❌' }} : Project guards (test scheme · store targets)
             ${{ needs.doc-drift.result == 'success' && '✅' || '❌' }} : Docs match the code (module map)
+            ${{ needs.claims.result == 'success' && '✅' || '❌' }} : Docs match the code (claims)
 
             <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|View run> · by ${{ github.actor }}
 
