@@ -29,7 +29,11 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-25 — the pick's generation is one helper (`pick`/`pickChain`) over any
 //  session, and `PrewarmedToolPicker` serves it a session prewarmed for the menu (the arm behind
 //  `-pickerPrewarm YES`): the Release baseline's picker route paid ~3 s a turn for a cold session. Confidence 0.7
-//  (the slot and the flag are pinned; what a warm picker session buys is the arm eval's to show).
+//  (the generic slot and the flag defaults are pinned; the wrapper itself needs Apple Intelligence, so what a
+//  warm picker session buys is the arm eval's to show).
+//  Review: Kev + claude-fable-5.1, 2026-10-25 (later) — the first measurement (−18 % / −12 %) ran each pick
+//  against its own re-arm (`store` before `respond`) and warmed the cold path twice; now the cold pick runs on
+//  an unwarmed session and the re-arm follows the pick (`defer`). Confidence 0.7, re-measured in the PR.
 
 import Foundation
 @_weakLinked import FoundationModels
@@ -157,11 +161,15 @@ public final class PrewarmedToolPicker: ToolPicking, @unchecked Sendable {
     }
 
     public func pickTool(message: String, instructions: String) async throws -> (tool: String, query: String) {
-        try await AFMToolPicker.pick(session: session(for: instructions), message: prompt(message, instructions))
+        let session = try session(for: instructions)
+        defer { arm(instructions) }
+        return try await AFMToolPicker.pick(session: session, message: prompt(message, instructions))
     }
 
     public func pickTools(message: String, instructions: String) async throws -> [(tool: String, query: String)] {
-        try await AFMToolPicker.pickChain(session: session(for: instructions), message: prompt(message, instructions))
+        let session = try session(for: instructions)
+        defer { arm(instructions) }
+        return try await AFMToolPicker.pickChain(session: session, message: prompt(message, instructions))
     }
 
     /// The prefix arm's prompt opens with the warmed prefix byte for byte, so the framework skips its prefill.
@@ -169,29 +177,37 @@ public final class PrewarmedToolPicker: ToolPicking, @unchecked Sendable {
         prefixMode ? instructions + "\n\n" + message : message
     }
 
-    private func makeSession(_ instructions: String) -> LanguageModelSession {
-        guard prefixMode else {
-            let session = LanguageModelSession(instructions: instructions)
+    /// A session shaped for the arm, not yet warmed: the cold pick runs on it as the baseline does.
+    private func coldSession(_ instructions: String) -> LanguageModelSession {
+        LanguageModelSession(instructions: prefixMode ? Self.prefixInstructions : instructions)
+    }
+
+    /// The same shape, warming for the next pick on this menu.
+    private func warmSession(_ instructions: String) -> LanguageModelSession {
+        let session = coldSession(instructions)
+        if prefixMode {
+            session.prewarm(promptPrefix: Prompt(instructions + "\n\n"))
+        } else {
             session.prewarm()
-            return session
         }
-        let session = LanguageModelSession(instructions: Self.prefixInstructions)
-        session.prewarm(promptPrefix: Prompt(instructions + "\n\n"))
         return session
     }
 
-    /// The warm session for this menu when one waits (the slot drops a mismatch), else a cold one — and
-    /// either way a fresh session starts warming for the NEXT pick on this menu before this one runs.
+    /// The warm session for this menu when one waits (the slot drops a mismatch), else a cold one.
     private func session(for instructions: String) throws -> LanguageModelSession {
         guard base.isAvailable else { throw InferenceError.providerUnavailable("Apple Intelligence is not ready") }
         let taken = slot.take(matching: instructions)
-        slot.store(makeSession(instructions), key: instructions)
         // Params only inside the Logger autoclosure (the swiftformat landmine: never a member).
         let warmth = taken == nil ? "cold" : "warm"
         let shape = prefixMode ? "prefix" : "instructions"
-        AFMToolPicker.log.notice(
-            "tool picker session: \(warmth, privacy: .public) (\(shape, privacy: .public)), next armed"
-        )
-        return taken ?? makeSession(instructions)
+        AFMToolPicker.log.notice("tool picker session: \(warmth, privacy: .public) (\(shape, privacy: .public))")
+        return taken ?? coldSession(instructions)
+    }
+
+    /// Re-arms the slot for the NEXT pick on this menu — after the pick returns, so the warm-up never shares
+    /// the model with the pick being timed (the first measurement did, and the cold path warmed twice).
+    private func arm(_ instructions: String) {
+        slot.store(warmSession(instructions), key: instructions)
+        AFMToolPicker.log.notice("tool picker session: next armed")
     }
 }
