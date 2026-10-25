@@ -44,13 +44,29 @@ jobs:
       # .review-delta.diff and the review reads only that. #684 got 7 full re-reviews of 13 commits;
       # its last push was 4 lines of delta (two eval files) under a 60k-line PR diff. Any doubt —
       # no approval, a newer blocker, a force-push, an API error — prints mode=full: as before.
+      # The BASE branch's copy decides the scope, never the PR's own: a PR that edits
+      # review_delta.py or pr_watch.py must not narrow its own review. Until this lands the
+      # base has no review_delta.py, so every run is mode=full. Never fails the job.
       - name: What changed since the last approved head
         id: delta
+        continue-on-error: true
+        timeout-minutes: 3
         env:
           GH_TOKEN: ${{ github.token }}
           PR: ${{ github.event.pull_request.number }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: python3 macos/tools/ci/review_delta.py "$PR" --head "$HEAD_SHA" --out .review-delta.diff >> "$GITHUB_OUTPUT"
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          tools="$RUNNER_TEMP/review-delta"
+          mkdir -p "$tools"
+          if git fetch -q --depth=1 origin "$BASE_SHA" &&
+            git show "$BASE_SHA:macos/tools/ci/review_delta.py" > "$tools/review_delta.py" &&
+            git show "$BASE_SHA:macos/tools/ci/pr_watch.py" > "$tools/pr_watch.py"; then
+            python3 "$tools/review_delta.py" "$PR" --head "$HEAD_SHA" --out .review-delta.diff >> "$GITHUB_OUTPUT" ||
+              echo mode=full >> "$GITHUB_OUTPUT"
+          else
+            echo mode=full >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Run Claude Code Review
         id: claude-review-mac

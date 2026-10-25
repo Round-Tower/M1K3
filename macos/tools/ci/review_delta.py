@@ -7,14 +7,25 @@ full re-review: #684 took 13 commits over 7 pushes and got 7 reviews of 1.2–2.
 all APPROVE, each re-checking the same untouched default path. The verdicts are the
 gate's; the repetition is noise that buries the one finding that matters.
 
-This finds the newest finished claude[bot] verdict on the PR. When it APPROVEs an
-earlier head (full 40-char sha) that the current head builds on (GitHub's compare says
-`ahead`), it writes that delta's diff to a file (eval artifacts named, not inlined) and prints
-`mode=delta`; the review
-then reads only the delta and still closes with a verdict naming this head. Anything
-else — no earlier pass, a newer CHANGES_REQUESTED, a short sha, a force-push, an empty
-delta, any API error — prints `mode=full` and the review runs as before. It never fails
-the job: a missing delta costs a long review, not a missing one.
+A delta review is only safe when the base was really approved and the delta really is
+everything since, so every doubt means `mode=full` (the review runs as before):
+
+* the NEWEST finished claude[bot] comment (by when it finished, a tie counting as doubt)
+  must itself be a well-formed APPROVE naming a full 40-char sha other than this head —
+  a later blocker, an unparseable verdict, prose with no verdict line or a short sha
+  all mean full;
+* no pass may have blocked that base (an auto CHANGES_REQUESTED beside a summon APPROVE);
+* GitHub's compare must say `ahead`, with the base as the merge base, no merge commit
+  in between, and fewer than 300 files (a full page may be truncated);
+* every changed text file outside eval data must carry a patch (GitHub drops it for a
+  huge file); eval data — `.json`/`.jsonl`/`.txt`/`.csv` under macos/docs/evals/ — is
+  named with its counts, never inlined (#684's deltas were 0–158 lines of code beside
+  9–16k of eval JSON);
+* any API error or timeout.
+
+Otherwise it writes the delta to a file and prints `mode=delta`; the review reads only
+that and still closes with a verdict naming this head. It always exits 0. The workflow
+runs master's copy of this file, never the PR's, so a PR can't narrow its own review.
 
     python3 review_delta.py <PR> --head <sha> [--repo owner/name] [--out PATH] >> "$GITHUB_OUTPUT"
 
@@ -23,9 +34,9 @@ what counts as an approval here is what the gate counts. Pinned in test_review_d
 
 Signed: Kev + claude-opus-5-5, 2026-10-25, Confidence 0.7, Prior: none (new file).
 Context: Gemini's "signal vs noise" steer; a summary bot would add a comment, this
-removes the repetition instead.
+removes the repetition instead. The fail-closed rules are from the pre-push review.
 Open: the delta prompt is unmeasured — the first few PRs say whether a delta review
-misses what a full one would have caught (it still reads `gh pr diff` for context).
+misses what a full one would have caught (it may still read `gh pr diff` for context).
 """
 from __future__ import annotations
 
@@ -37,6 +48,14 @@ import sys
 
 from pr_watch import BOT_LOGIN, Kind, classify, review_verdict
 
+# GitHub's compare lists at most 300 files; a full page may be truncated, so it is no delta.
+COMPARE_FILE_CAP = 300
+EVAL_DIR = "macos/docs/evals/"
+EVAL_EXT = {"json", "jsonl", "txt", "csv"}
+BINARY_EXT = {"png", "jpg", "jpeg", "gif", "heic", "ico", "icns", "pdf", "mp4", "mov", "m4a",
+              "mp3", "wav", "caf", "zip", "onnx", "safetensors", "bin", "ttf", "otf", "car"}
+GH_TIMEOUT_S = 60
+
 # --------------------------------------------------------------------------- #
 # Pure helpers (unit-tested)
 # --------------------------------------------------------------------------- #
@@ -46,9 +65,14 @@ def _finished_at(c: dict) -> str:
     return c.get("updated_at") or c.get("created_at") or ""
 
 
+def _ext(name: str) -> str:
+    base = name.rsplit("/", 1)[-1]
+    return base.rsplit(".", 1)[-1].lower() if "." in base else ""
+
+
 def delta_base(head: str, comments: list[dict]) -> str | None:
-    """The earlier head the bot's newest verdict approved, or None for a full review."""
-    verdicts = []
+    """The earlier head the bot's newest word approved, or None for a full review."""
+    words = []  # (finished at, outcome, sha) for every finished bot comment
     for c in comments:
         if (c.get("user") or {}).get("login") != BOT_LOGIN:
             continue
@@ -56,45 +80,58 @@ def delta_base(head: str, comments: list[dict]) -> str | None:
         if classify(body) is Kind.PLACEHOLDER:
             continue
         outcome, sha = review_verdict(body)
-        if outcome in ("APPROVE", "CHANGES_REQUESTED"):
-            verdicts.append((_finished_at(c), outcome, sha))
-    if not verdicts:
+        words.append((_finished_at(c), outcome, sha))
+    if not words:
         return None
-    _, outcome, sha = max(verdicts, key=lambda v: v[0])
+    last = max(w[0] for w in words)
+    newest = [w for w in words if w[0] == last]
+    if len(newest) != 1:
+        return None  # a tie at the newest moment is doubt
+    _, outcome, sha = newest[0]
     if outcome != "APPROVE" or len(sha) != 40 or sha == head.lower():
         return None
+    if any(o != "APPROVE" and s and sha.startswith(s) for _, o, s in words):
+        return None  # some pass blocked this base
     return sha
 
 
-# GitHub's compare lists at most 300 files; a full page may be truncated, so it is no delta.
-COMPARE_FILE_CAP = 300
-EVALS = "/docs/evals/"
+def is_linear(compare: dict | None, base: str) -> bool:
+    """The head builds straight on the base: ahead, no merge in between, the list whole."""
+    if not compare or compare.get("status") != "ahead":
+        return False
+    if (compare.get("merge_base_commit") or {}).get("sha") != base:
+        return False
+    if any(len(c.get("parents") or []) > 1 for c in compare.get("commits") or []):
+        return False  # a master merge would pull master's changes into "what changed"
+    return 0 < len(compare.get("files") or []) < COMPARE_FILE_CAP
 
 
-def is_linear(compare: dict | None) -> bool:
-    """The head builds on the base (no force-push), something changed, and the list is whole."""
-    files = (compare or {}).get("files") or []
-    return bool(compare) and compare.get("status") == "ahead" and 0 < len(files) < COMPARE_FILE_CAP
+def is_eval_data(name: str) -> bool:
+    return name.startswith(EVAL_DIR) and _ext(name) in EVAL_EXT
 
 
-def delta_text(files: list[dict]) -> tuple[str, int, list[str]]:
-    """(the delta as a diff, code/doc files in it, eval artifacts by name). Eval
-    artifacts are data: #684's deltas were 0-158 lines of code beside 9-16k of eval
-    JSON, so they are named with their counts, never inlined."""
+def delta_text(files: list[dict]) -> tuple[str, int, list[str]] | None:
+    """(the delta as a diff, code/doc files in it, eval data by name), or None when a
+    text file's patch is missing (GitHub drops it for a huge file) — then a delta review
+    would approve what it never saw."""
     parts: list[str] = []
     evals: list[str] = []
     code = 0
     for f in files:
         name = f.get("filename", "")
-        if EVALS in f"/{name}":
-            evals.append(f"{name} (+{f.get('additions', 0)} \u2212{f.get('deletions', 0)})")
+        if is_eval_data(name):
+            evals.append(f"{name} (+{f.get('additions', 0)} −{f.get('deletions', 0)})")
             continue
         code += 1
         patch = f.get("patch")
-        if patch is None:
-            parts.append(f"# {name}: no patch (binary or too large) \u2014 read it from the tree\n")
-        else:
+        if patch is not None:
             parts.append(f"diff --git a/{name} b/{name}\n--- a/{name}\n+++ b/{name}\n{patch}\n")
+        elif _ext(name) in BINARY_EXT:
+            parts.append(f"# {name}: binary, {f.get('status', 'changed')}\n")
+        elif f.get("status") == "renamed" and not f.get("changes"):
+            parts.append(f"# {name}: renamed from {f.get('previous_filename', '?')}, no content change\n")
+        else:
+            return None
     if evals:
         parts.append("\n# Eval artifacts (data, not reviewed line by line):\n"
                      + "".join(f"#   {e}\n" for e in evals))
@@ -113,19 +150,22 @@ def outputs(base: str | None, diff_path: str, files: int) -> str:
 
 
 def _gh(*args: str) -> str:
-    return subprocess.run(["gh", *args], check=True, capture_output=True, text=True).stdout
+    return subprocess.run(["gh", *args], check=True, capture_output=True, text=True,
+                          timeout=GH_TIMEOUT_S).stdout
 
 
 def _delta(pr: int, head: str, repo: str, out: str) -> str:
-    comments = json.loads(_gh("api", "--paginate", "--slurp", f"repos/{repo}/issues/{pr}/comments"))
-    comments = [c for page in comments for c in page]
-    base = delta_base(head, comments)
+    pages = json.loads(_gh("api", "--paginate", "--slurp", f"repos/{repo}/issues/{pr}/comments"))
+    base = delta_base(head, [c for page in pages for c in page])
     if base is None:
         return outputs(None, "", 0)
     compare = json.loads(_gh("api", f"repos/{repo}/compare/{base}...{head}"))
-    if not is_linear(compare):
+    if not is_linear(compare, base):
         return outputs(None, "", 0)
-    text, code, _ = delta_text(compare["files"])
+    delta = delta_text(compare["files"])
+    if delta is None:
+        return outputs(None, "", 0)
+    text, code, _ = delta
     with open(out, "w") as f:
         f.write(text)
     return outputs(base, out, code)
