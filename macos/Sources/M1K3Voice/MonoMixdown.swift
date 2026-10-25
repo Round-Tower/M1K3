@@ -29,6 +29,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — `voiceProcessed`: Mac VPIO (opt-in, see VoiceProcessingPolicy)
 //  hands back ONE processed signal copied to all nine channels (measured: identical RMS and peak on each),
 //  so summing would clip it ninefold. Voice-processed audio takes channel 0. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-25 — #640 nit: `mix(_:voiceProcessed:)` moved below `mix(_:)`,
+//  which gets its doc comment back. No behaviour change. Confidence 0.85.
 
 import AVFoundation
 
@@ -37,13 +39,6 @@ public enum MonoMixdown {
     /// Pure core: sum per-frame across channels, clamped to [-1, 1].
     /// Expects equal-length channels; frames beyond a short channel read as
     /// absent. Empty input → empty output.
-    /// Voice-processed audio: VPIO copies its one processed signal to every
-    /// channel, so channel 0 IS the mix (a sum would clip it). Otherwise `mix`.
-    public static func mix(_ channels: [[Float]], voiceProcessed: Bool) -> [Float] {
-        guard voiceProcessed else { return mix(channels) }
-        return channels.first ?? []
-    }
-
     public static func mix(_ channels: [[Float]]) -> [Float] {
         guard let frames = channels.map(\.count).max(), frames > 0 else { return [] }
         var out = [Float](repeating: 0, count: frames)
@@ -53,6 +48,13 @@ public enum MonoMixdown {
             }
         }
         return out.map { min(1.0, max(-1.0, $0)) }
+    }
+
+    /// Voice-processed audio: VPIO copies its one processed signal to every
+    /// channel, so channel 0 IS the mix (a sum would clip it). Otherwise `mix`.
+    public static func mix(_ channels: [[Float]], voiceProcessed: Bool) -> [Float] {
+        guard voiceProcessed else { return mix(channels) }
+        return channels.first ?? []
     }
 
     /// Buffer adapter: returns the buffer itself for 1–2 channels (or any
