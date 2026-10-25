@@ -1,0 +1,327 @@
+# chat-curve big (agent route, cross-turn tail checkpoint ON — default) — 3cc3528c, Release build 2026-10-25 17:33, AC Power, powermode 2, M1K3_SELFTEST_CHATCURVE=big, headless direct exec, live app quit.
+# extend= is the checkpoint-mode transcript prefill (prefillExactly, both halves of a split); prefill= is the generate's own (one token in checkpoint mode); mlx= is MLX's peak during the message. Compare 2026-10-25-chatcurve-big-agent.txt (same day, tail off).
+=== M1K3 SELF-TEST (inside .app bundle) ===
+✓ store+ingest: 1 chunk, 1 embedding(s)
+• AFM available: true
+✓ AFM RAG answer: The hydraulic seal on the conveyor failed under load [Plant Notes §3.2 Seals].
+  grounded in 1 source(s)
+• loading the MLX embedder (EmbeddingGemma 2; downloads on first use)…
+✓ MLX embed (mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v1): dim=512 ‖v‖=1.000
+embedwarm: cold=1872ms warm=12ms delta=1860ms (delta = first-turn TTFT tax without the launch warm)
+• loading MLX generation model mlx-community/Llama-3.2-1B-Instruct-4bit…
+✓ MLX generate: A hydraulic seal is a device that prevents the leakage of fluids in engines and other machinery by creating an extremely tight seal between two parts, usually involving high-pressu
+• chatcurve: mlx-community/gemma-4-12B-it-4bit, 20 scripted messages, router off…
+chatcurve #1 done (244 chars)
+chatcurve #2 done (1557 chars)
+chatcurve #3 done (1615 chars)
+chatcurve #4 done (1412 chars)
+chatcurve #5 done (614 chars)
+chatcurve #6 done (692 chars)
+chatcurve #7 done (238 chars)
+chatcurve #8 done (223 chars)
+chatcurve #9 done (677 chars)
+chatcurve #10 done (1105 chars)
+chatcurve #11 done (1366 chars)
+chatcurve #12 done (31 chars)
+chatcurve #13 done (566 chars)
+chatcurve #14 done (1042 chars)
+chatcurve #15 done (1066 chars)
+chatcurve #16 done (304 chars)
+chatcurve #17 done (925 chars)
+chatcurve #18 done (1006 chars)
+chatcurve #19 done (572 chars)
+chatcurve #20 done (593 chars)
+chatcurve #1 rendered=3027tok reuse=2184 prefilled=1tok prefill=68ms extend=3928ms gens=1 rss=7311MB mlx=8437MB
+chatcurve #2 rendered=3157tok reuse=2184 prefilled=1tok prefill=64ms extend=4600ms gens=1 rss=7312MB mlx=8706MB
+chatcurve #3 rendered=3537tok reuse=2262 prefilled=1tok prefill=63ms extend=6110ms gens=1 rss=7312MB mlx=8778MB
+chatcurve #4 rendered=3902tok reuse=2361 prefilled=1tok prefill=63ms extend=7238ms gens=1 rss=7312MB mlx=8783MB
+chatcurve #5 rendered=4234tok reuse=2741 prefilled=1tok prefill=62ms extend=7061ms gens=1 rss=7312MB mlx=8773MB
+chatcurve #6 rendered=4405tok reuse=3108 prefilled=1tok prefill=64ms extend=6229ms gens=1 rss=7313MB mlx=8787MB
+chatcurve #7 rendered=4568tok reuse=3442 prefilled=1tok prefill=66ms extend=5368ms gens=1 rss=7313MB mlx=8788MB
+chatcurve #8 rendered=4648tok reuse=3610 prefilled=1tok prefill=65ms extend=5088ms gens=1 rss=7313MB mlx=8901MB
+chatcurve #9 rendered=4710tok reuse=3774 prefilled=1tok prefill=65ms extend=4549ms gens=1 rss=7313MB mlx=8884MB
+chatcurve #10 rendered=4785tok reuse=2184 prefilled=1tok prefill=62ms extend=12144ms gens=1 rss=7313MB mlx=9328MB
+chatcurve #11 rendered=4685tok reuse=2277 prefilled=1tok prefill=63ms extend=11191ms gens=1 rss=7313MB mlx=8896MB
+chatcurve #12 rendered=4651tok reuse=2277 prefilled=1tok prefill=63ms extend=10764ms gens=1 rss=7313MB mlx=8878MB
+chatcurve #13 rendered=4341tok reuse=2277 prefilled=1tok prefill=62ms extend=9447ms gens=1 rss=7313MB mlx=8743MB
+chatcurve #14 rendered=4328tok reuse=2277 prefilled=1tok prefill=62ms extend=9454ms gens=1 rss=7313MB mlx=8711MB
+chatcurve #15 rendered=4422tok reuse=2277 prefilled=1tok prefill=64ms extend=9906ms gens=1 rss=7313MB mlx=8769MB
+chatcurve #16 rendered=4606tok reuse=2277 prefilled=1tok prefill=63ms extend=10754ms gens=1 rss=7313MB mlx=8856MB
+chatcurve #17 rendered=4636tok reuse=2277 prefilled=1tok prefill=62ms extend=10783ms gens=1 rss=7313MB mlx=8872MB
+chatcurve #18 rendered=4749tok reuse=2277 prefilled=1tok prefill=63ms extend=11161ms gens=1 rss=7313MB mlx=8927MB
+chatcurve #19 rendered=4710tok reuse=2277 prefilled=1tok prefill=62ms extend=11087ms gens=1 rss=7313MB mlx=8906MB
+chatcurve #20 rendered=4532tok reuse=2277 prefilled=1tok prefill=63ms extend=10245ms gens=1 rss=7313MB mlx=8815MB
+chatcurve slope [mlx-community/gemma-4-12B-it-4bit]: 62.8 rendered tok/msg, -0.1 prefill ms/msg, 371.3 total prefill ms/msg
+-----BEGIN CHATCURVE JSON-----
+{
+  "modelID" : "mlx-community\/gemma-4-12B-it-4bit",
+  "samples" : [
+    {
+      "answerChars" : 244,
+      "extendMS" : 3928,
+      "generations" : 1,
+      "index" : 0,
+      "mlxPeakMB" : 8437,
+      "peakRSSMB" : 7311,
+      "prefillMS" : 68,
+      "promptTokens" : 1,
+      "question" : "Hi! How's your day going?",
+      "renderedTokens" : 3027,
+      "reusedTokens" : 2184
+    },
+    {
+      "answerChars" : 1557,
+      "extendMS" : 4600,
+      "generations" : 1,
+      "index" : 1,
+      "mlxPeakMB" : 8706,
+      "peakRSSMB" : 7312,
+      "prefillMS" : 64,
+      "promptTokens" : 1,
+      "question" : "What's a good way to start learning the guitar?",
+      "renderedTokens" : 3157,
+      "reusedTokens" : 2184
+    },
+    {
+      "answerChars" : 1615,
+      "extendMS" : 6110,
+      "generations" : 1,
+      "index" : 2,
+      "mlxPeakMB" : 8778,
+      "peakRSSMB" : 7312,
+      "prefillMS" : 63,
+      "promptTokens" : 1,
+      "question" : "I only have twenty minutes a day. Is that enough?",
+      "renderedTokens" : 3537,
+      "reusedTokens" : 2262
+    },
+    {
+      "answerChars" : 1412,
+      "extendMS" : 7238,
+      "generations" : 1,
+      "index" : 3,
+      "mlxPeakMB" : 8783,
+      "peakRSSMB" : 7312,
+      "prefillMS" : 63,
+      "promptTokens" : 1,
+      "question" : "Which should I practise first, chords or scales?",
+      "renderedTokens" : 3902,
+      "reusedTokens" : 2361
+    },
+    {
+      "answerChars" : 614,
+      "extendMS" : 7061,
+      "generations" : 1,
+      "index" : 4,
+      "mlxPeakMB" : 8773,
+      "peakRSSMB" : 7312,
+      "prefillMS" : 62,
+      "promptTokens" : 1,
+      "question" : "Funny, my neighbour plays the fiddle.",
+      "renderedTokens" : 4234,
+      "reusedTokens" : 2741
+    },
+    {
+      "answerChars" : 692,
+      "extendMS" : 6229,
+      "generations" : 1,
+      "index" : 5,
+      "mlxPeakMB" : 8787,
+      "peakRSSMB" : 7313,
+      "prefillMS" : 64,
+      "promptTokens" : 1,
+      "question" : "Can you remind me what we said about practice time?",
+      "renderedTokens" : 4405,
+      "reusedTokens" : 3108
+    },
+    {
+      "answerChars" : 238,
+      "extendMS" : 5368,
+      "generations" : 1,
+      "index" : 6,
+      "mlxPeakMB" : 8788,
+      "peakRSSMB" : 7313,
+      "prefillMS" : 66,
+      "promptTokens" : 1,
+      "question" : "Give me a tiny weekly plan in two lines.",
+      "renderedTokens" : 4568,
+      "reusedTokens" : 3442
+    },
+    {
+      "answerChars" : 223,
+      "extendMS" : 5088,
+      "generations" : 1,
+      "index" : 7,
+      "mlxPeakMB" : 8901,
+      "peakRSSMB" : 7313,
+      "prefillMS" : 65,
+      "promptTokens" : 1,
+      "question" : "Thanks. Sum up our whole chat in one sentence.",
+      "renderedTokens" : 4648,
+      "reusedTokens" : 3610
+    },
+    {
+      "answerChars" : 677,
+      "extendMS" : 4549,
+      "generations" : 1,
+      "index" : 8,
+      "mlxPeakMB" : 8884,
+      "peakRSSMB" : 7313,
+      "prefillMS" : 65,
+      "promptTokens" : 1,
+      "question" : "What's the easiest first song to learn?",
+      "renderedTokens" : 4710,
+      "reusedTokens" : 3774
+    },
+    {
+      "answerChars" : 1105,
+      "extendMS" : 12144,
+      "generations" : 1,
+      "index" : 9,
+      "mlxPeakMB" : 9328,
+      "peakRSSMB" : 7313,
+      "prefillMS" : 62,
+      "promptTokens" : 1,
+      "question" : "My fingertips hurt after ten minutes. Normal?",
+      "renderedTokens" : 4785,
+      "reusedTokens" : 2184
+    },
+    {
+      "answerChars" : 1366,
+      "extendMS" : 11191,
+      "generations" : 1,
+      "index" : 10,
+      "mlxPeakMB" : 8896,
+      "peakRSSMB" : 7313,
+      "prefillMS" : 63,
+      "promptTokens" : 1,
+      "question" : "Should I buy a tuner or use an app?",
+      "renderedTokens" : 4685,
+      "reusedTokens" : 2277
+    },
+    {
+      "answerChars" : 31,
+      "extendMS" : 10764,
+      "generations" : 1,
+      "index" : 11,
+      "mlxPeakMB" : 8878,
+      "peakRSSMB" : 7313,
+      "prefillMS" : 63,
+      "promptTokens" : 1,
+      "question" : "What did I say my neighbour plays?",
+      "renderedTokens" : 4651,
+      "reusedTokens" : 2277
+    },
+    {
+      "answerChars" : 566,
+      "extendMS" : 9447,
+      "generations" : 1,
+      "index" : 12,
+      "mlxPeakMB" : 8743,
+      "peakRSSMB" : 7313,
+      "prefillMS" : 62,
+      "promptTokens" : 1,
+      "question" : "Pick one chord for me to learn tonight.",
+      "renderedTokens" : 4341,
+      "reusedTokens" : 2277
+    },
+    {
+      "answerChars" : 1042,
+      "extendMS" : 9454,
+      "generations" : 1,
+      "index" : 13,
+      "mlxPeakMB" : 8711,
+      "peakRSSMB" : 7313,
+      "prefillMS" : 62,
+      "promptTokens" : 1,
+      "question" : "How do I know when I'm ready for a second chord?",
+      "renderedTokens" : 4328,
+      "reusedTokens" : 2277
+    },
+    {
+      "answerChars" : 1066,
+      "extendMS" : 9906,
+      "generations" : 1,
+      "index" : 14,
+      "mlxPeakMB" : 8769,
+      "peakRSSMB" : 7313,
+      "prefillMS" : 64,
+      "promptTokens" : 1,
+      "question" : "Is it bad to practise sitting on the bed?",
+      "renderedTokens" : 4422,
+      "reusedTokens" : 2277
+    },
+    {
+      "answerChars" : 304,
+      "extendMS" : 10754,
+      "generations" : 1,
+      "index" : 15,
+      "mlxPeakMB" : 8856,
+      "peakRSSMB" : 7313,
+      "prefillMS" : 63,
+      "promptTokens" : 1,
+      "question" : "Earlier you gave me a weekly plan — repeat just the first line.",
+      "renderedTokens" : 4606,
+      "reusedTokens" : 2277
+    },
+    {
+      "answerChars" : 925,
+      "extendMS" : 10783,
+      "generations" : 1,
+      "index" : 16,
+      "mlxPeakMB" : 8872,
+      "peakRSSMB" : 7313,
+      "prefillMS" : 62,
+      "promptTokens" : 1,
+      "question" : "What's a strum pattern a beginner can manage?",
+      "renderedTokens" : 4636,
+      "reusedTokens" : 2277
+    },
+    {
+      "answerChars" : 1006,
+      "extendMS" : 11161,
+      "generations" : 1,
+      "index" : 17,
+      "mlxPeakMB" : 8927,
+      "peakRSSMB" : 7313,
+      "prefillMS" : 63,
+      "promptTokens" : 1,
+      "question" : "Any tip for switching chords faster?",
+      "renderedTokens" : 4749,
+      "reusedTokens" : 2277
+    },
+    {
+      "answerChars" : 572,
+      "extendMS" : 11087,
+      "generations" : 1,
+      "index" : 18,
+      "mlxPeakMB" : 8906,
+      "peakRSSMB" : 7313,
+      "prefillMS" : 62,
+      "promptTokens" : 1,
+      "question" : "How many minutes a day did I say I had?",
+      "renderedTokens" : 4710,
+      "reusedTokens" : 2277
+    },
+    {
+      "answerChars" : 593,
+      "extendMS" : 10245,
+      "generations" : 1,
+      "index" : 19,
+      "mlxPeakMB" : 8815,
+      "peakRSSMB" : 7313,
+      "prefillMS" : 63,
+      "promptTokens" : 1,
+      "question" : "Last one: three words of encouragement.",
+      "renderedTokens" : 4532,
+      "reusedTokens" : 2277
+    }
+  ],
+  "summary" : {
+    "prefillMSPerMessage" : -0.13458646616541353,
+    "renderedTokensPerMessage" : 62.76015037593985,
+    "totalPrefillMSPerMessage" : 371.26165413533835
+  }
+}
+-----END CHATCURVE JSON-----
+=== END SELF-TEST ===
