@@ -684,7 +684,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             let forward = Task {
                 var first = true
                 for await piece in inner {
-                    if first, !piece.isEmpty {
+                    if first, TurnPhaseTimeline.isFirstRealToken(piece) {
                         first = false
                         if let line = handedOff.firstTokenSummary(at: phaseClock.now) {
                             Self.log.notice("\(line, privacy: .public)")

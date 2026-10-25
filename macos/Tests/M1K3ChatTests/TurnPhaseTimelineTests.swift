@@ -69,6 +69,18 @@ struct TurnPhaseTimelineTests {
         #expect(line == "turn first token: 2800ms · gen 2300ms")
     }
 
+    @Test("the synthetic think opener is not the first token; the first real piece is")
+    func firstRealToken() {
+        // The MLX paths yield "<think>" before any prefill so the splitter engages; a mark on it would
+        // read "gen 0ms" on every thinking turn and hide exactly the span the line exists to show.
+        #expect(!TurnPhaseTimeline.isFirstRealToken("<think>"))
+        #expect(!TurnPhaseTimeline.isFirstRealToken("<think>\n"))
+        #expect(!TurnPhaseTimeline.isFirstRealToken(""))
+        #expect(!TurnPhaseTimeline.isFirstRealToken("  \n"))
+        #expect(TurnPhaseTimeline.isFirstRealToken("Okay"))
+        #expect(TurnPhaseTimeline.isFirstRealToken("<think>Okay"), "an opener fused with real text is real")
+    }
+
     @Test("a first token before any hand-off, or on a never-started turn, reports what it can")
     func firstTokenPartial() throws {
         var started = TurnPhaseTimeline()

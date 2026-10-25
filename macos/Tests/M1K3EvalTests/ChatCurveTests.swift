@@ -81,7 +81,26 @@ struct ChatCurveTests {
         #expect(folded.decodeTokens == 30)
         // Throughput is total tokens over total decode time, not a mean of the per-line figures (a
         // 2-token send at 60 tok/s must not pull a 200-token send at 30 tok/s up to 45).
-        #expect(folded.tokensPerSecond == 30)
+        #expect(abs((folded.tokensPerSecond ?? 0) - 30) < 0.01)
+    }
+
+    @Test("a line whose rate rounded to zero lends neither its seconds nor its tokens to the rate")
+    func zeroRateLineStaysOutOfTheRate() {
+        let lines = [
+            "x [m]: prompt=1tok prefill=40ms decode=100tok @30tok/s",
+            "x [m]: prompt=1tok prefill=40ms decode=3tok @0tok/s", // a slow decode, integer-truncated
+        ]
+        let folded = ChatCurveLogParser.fold(lines)
+        #expect(folded.decodeTokens == 103, "the tokens were still decoded")
+        #expect(abs((folded.tokensPerSecond ?? 0) - 30) < 0.01, "the rate reads over the timed lines only")
+        #expect(ChatCurveLogParser.fold(["x [m]: prompt=1tok prefill=40ms decode=3tok @0tok/s"]).tokensPerSecond == nil)
+    }
+
+    @Test("the send-phase line is neither a reuse nor a generation line")
+    func sendPhaseLineIsIgnored() {
+        let line = "toolTurnSession send 2: wait=12ms render=340ms (3289 tok)"
+        #expect(ChatCurveLogParser.reuse(in: line) == nil)
+        #expect(ChatCurveLogParser.generation(in: line) == nil)
     }
 
     @Test("folding sums the extend figure over the turn's sends")
@@ -96,7 +115,7 @@ struct ChatCurveTests {
         #expect(folded.extendMS == 2400)
         #expect(folded.decodeTokens == 150)
         // 100 tok in 3.33 s + 50 tok in 0.83 s = 150 tok in 4.17 s = 36 tok/s (a per-line mean would say 45).
-        #expect(folded.tokensPerSecond == 36)
+        #expect(abs((folded.tokensPerSecond ?? 0) - 36) < 0.01)
         let figures = try #require(folded.figures(firstChunkMS: 2300))
         #expect(figures.extendMS == 2400 && figures.generations == 2 && figures.firstChunkMS == 2300)
         #expect(figures.totalPrefillMS == 2478)
@@ -230,6 +249,16 @@ struct ChatCurveTests {
         #expect(row.contains("extend=500ms"))
         #expect(row.contains("mlx=3000MB"))
         #expect(row.contains("total prefill ms/msg"))
+    }
+
+    @Test("a report written before the total-prefill slope still decodes")
+    func decodesOlderReport() throws {
+        let older = """
+        {"modelID":"m","samples":[],"summary":{"renderedTokensPerMessage":208.3,"prefillMSPerMessage":27.3}}
+        """
+        let report = try JSONDecoder().decode(ChatCurveReport.self, from: Data(older.utf8))
+        #expect(report.summary.totalPrefillMSPerMessage == nil)
+        #expect(report.summary.prefillMSPerMessage == 27.3)
     }
 
     @Test("a curve written before the extend and MLX-peak columns still decodes")

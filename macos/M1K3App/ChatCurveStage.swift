@@ -4,7 +4,7 @@
 //
 //  THE CHAT-CURVE MEASUREMENT (M1K3_SELFTEST_CHATCURVE=1, "lil", "big" or a model id).
 //
-//  Drives AgentRAGResponder.answerStreaming(question, history:) with the fixed eight-message
+//  Drives AgentRAGResponder.answerStreaming(question, history:) with the fixed twenty-message
 //  script (ChatCurveScript), accumulating [ChatTurn] as the app does, on one MLX brain (Lil by
 //  default) with the production stub tool palette. Per message it reports the rendered prompt
 //  length, the tool session's `reuse: X/Y`, the generation's `prompt=…tok prefill=…ms`, and the
@@ -105,6 +105,8 @@ enum ChatCurveStage {
             var history: [ChatTurn] = []
             for (index, question) in ChatCurveScript.messages.enumerated() {
                 let started = Date()
+                // `mlx=` is THIS message's MLX peak, not a running high-water mark (review fold, 2026-10-25).
+                MLXMemoryBudget.resetPeak()
                 let (_, stream) = try await responder.answerStreaming(
                     question, history: history, onActivity: { _ in }
                 )

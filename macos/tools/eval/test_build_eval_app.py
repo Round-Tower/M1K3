@@ -214,7 +214,10 @@ def fake_build(stamp: str | None, log_text: str = OK_LOG, dirty_after_xcodegen: 
         if cmd[0] == "xcodegen" and dirty_after_xcodegen:
             (cwd / "Generated.swift").write_text("// tracked by nobody\n")
         if cmd[0] == "xcodebuild":
-            plist = bea.app_path(Path(cmd[cmd.index("-derivedDataPath") + 1])) / "Contents/Info.plist"
+            # The products land under the configuration xcodebuild was GIVEN, as the real one's do.
+            configuration = cmd[cmd.index("-configuration") + 1]
+            plist = (bea.app_path(Path(cmd[cmd.index("-derivedDataPath") + 1]), configuration)
+                     / "Contents/Info.plist")
             plist.parent.mkdir(parents=True)
             plist.write_bytes(plistlib.dumps({} if stamp is None else {"GitCommitSHA": stamp}))
             log.write(log_text)
@@ -222,14 +225,18 @@ def fake_build(stamp: str | None, log_text: str = OK_LOG, dirty_after_xcodegen: 
     return run, calls
 
 
-def test_main_prints_the_app_path_after_a_verified_build(repo, tmp_path, monkeypatch, capsys):
+@pytest.mark.parametrize("configuration", ["Debug", "Release"])
+def test_main_prints_the_app_path_after_a_verified_build(repo, tmp_path, monkeypatch, capsys, configuration):
     short = git(repo, "rev-parse", "--short", "HEAD").strip()
     run, calls = fake_build(short)
     monkeypatch.setattr(bea, "_run", run)
     dd = tmp_path / "dd"
-    assert bea.main([str(repo), str(dd)]) == 0
-    assert capsys.readouterr().out.strip() == str(bea.app_path(dd)), "stdout is the app path alone: APP=$(…)"
+    argv = [str(repo), str(dd)] + ([] if configuration == "Debug" else ["--configuration", configuration])
+    assert bea.main(argv) == 0
+    # The path printed, the stamp read and the product built all follow the configuration asked for.
+    assert capsys.readouterr().out.strip() == str(bea.app_path(dd, configuration)), "stdout is the app path alone"
     assert [c[0] for c in calls] == ["xcodegen", "xcodebuild"]
+    assert calls[1][calls[1].index("-configuration") + 1] == configuration
     assert "BUILD SUCCEEDED" in (dd / "eval-build.log").read_text()
 
 

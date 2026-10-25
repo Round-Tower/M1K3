@@ -424,7 +424,10 @@ enum ChatEvalStage {
             var thinkClock = ThinkPhaseClock()
             var firstChunkMS: Int?
             for await piece in stream {
-                if firstChunkMS == nil, !piece.isEmpty { firstChunkMS = milliseconds(clock.now - start) }
+                // Not the synthetic `<think>` opener: that lands before any prefill (review fold, 2026-10-25).
+                if firstChunkMS == nil, TurnPhaseTimeline.isFirstRealToken(piece) {
+                    firstChunkMS = milliseconds(clock.now - start)
+                }
                 // The responder's fallback passes provider chunks through raw, and a
                 // cumulative provider (AFM, PCC) yields snapshots — `+=` would score
                 // "HHeHel…". Same fold the app's consumer applies (ChatSession).

@@ -1249,7 +1249,9 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         do {
             // Timed (2026-10-25): this prefill is the turn's real prompt cost in checkpoint mode — the
             // generate below sees ONE token, so the ttft line's `prefill=` never saw it (the 10-10
-            // chat-curve read "prefilled=21tok" against ~800–2,400 extended here per message).
+            // chat-curve read "prefilled=21tok" against ~800–2,400 extended here per message). The
+            // two cache copies (the seed's above, the rolling one below) sit OUTSIDE the clock: the
+            // figure is the prefill alone, so it compares across seeds of different sizes.
             let extendStarted = ContinuousClock.now
             let state = to > from
                 ? try MLXBrainProvider.prefillExactly(

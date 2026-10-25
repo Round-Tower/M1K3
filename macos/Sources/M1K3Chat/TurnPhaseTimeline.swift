@@ -95,6 +95,14 @@ public struct TurnPhaseTimeline: Sendable, Equatable {
         return "turn phases: " + parts.joined(separator: " · ")
     }
 
+    /// Whether a stream chunk counts as the model's first token. The synthetic `<think>` opener the MLX
+    /// paths surface before any prefill (`MLXBrainProvider.generateStreaming`, `MLXToolTurnSession.sendHeld`)
+    /// is not one: marking on it read `gen 0ms` on every thinking turn (review fold, 2026-10-25).
+    public static func isFirstRealToken(_ piece: String) -> Bool {
+        let trimmed = piece.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty && trimmed != "<think>"
+    }
+
     /// The first token's line, or nil when the turn never started: how long the person waited from the
     /// turn's start, and — once the stream was handed off — how much of that was generation (render,
     /// prefill, the think opener) rather than the pre-gen phases the `summary` line already names.

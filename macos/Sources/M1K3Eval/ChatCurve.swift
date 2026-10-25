@@ -3,7 +3,7 @@
 //  M1K3Eval
 //
 //  The chat-curve instrument's pure half (GEMMA_1_1_PLAN.md, "Qwen3.5 cross-turn
-//  checkpoint: measure a scripted chat's prefill curve FIRST"). A fixed script of eight
+//  checkpoint: measure a scripted chat's prefill curve FIRST"). A fixed script of twenty
 //  short messages is driven through the live responder with the history accumulating;
 //  each message yields the rendered prompt length, how much of it the tool session
 //  reused from its cache, the prefill the generation paid, and the process's peak RSS.
@@ -156,7 +156,11 @@ public enum ChatCurveLogParser {
     static let toolSessionLabel = "toolTurnSession"
 
     /// Every ttft label a chat turn's generations can carry (MLXBrainProvider's plain paths, the seeded
-    /// plain turn, the two tool paths). Not `caption`: an image caption is a utility, not the turn.
+    /// plain turn, the two tool paths). Not `caption`: an image caption is a utility, not the turn. Not
+    /// `raw` either (`generateRawStreaming`: ChatSession and Brain at Home, never an eval or curve path).
+    /// `generate` and `stream` are ALSO what a title or distiller generation on the same provider would
+    /// log, so this set is for a headless stage that owns the only brain and runs no utilities — the
+    /// per-provider-name filter it replaced never matched a generation line at all.
     public static let turnLabels: Set<String> = ["stream", "generate", "toolTurn", toolSessionLabel]
 
     /// `toolTurnSession reuse: 2301/2650 tok from cache, … seed=persona[ extend=812ms]`
@@ -194,21 +198,25 @@ public enum ChatCurveLogParser {
             if let found = generation(in: line) { generations.append(found) }
         }
         let decoded = generations.compactMap(\.decodeTokens)
-        // Seconds each generation spent decoding, from its own tokens and rate; a 0 tok/s line adds none.
-        let decodeSeconds = generations.compactMap { generation -> Double? in
+        // The rate is total tokens over total seconds, both summed over the SAME lines: a line whose
+        // logged rate is 0 (the line's tok/s is integer-truncated, so a slow decode rounds to 0) has no
+        // seconds to give and must not lend its tokens to the numerator either (review fold, 2026-10-25).
+        // The truncation itself leaves up to ~1/rate of error in every aggregate (3% at 30 tok/s).
+        let timed = generations.compactMap { generation -> (tokens: Int, seconds: Double)? in
             guard let tokens = generation.decodeTokens, let rate = generation.tokensPerSecond, rate > 0 else {
                 return nil
             }
-            return Double(tokens) / Double(rate)
-        }.reduce(0, +)
-        let decodeTokens = decoded.isEmpty ? nil : decoded.reduce(0, +)
+            return (tokens, Double(tokens) / Double(rate))
+        }
+        let timedTokens = timed.reduce(0) { $0 + $1.tokens }
+        let timedSeconds = timed.reduce(0.0) { $0 + $1.seconds }
         return ChatCurveFolded(
             reuse: reuse,
             promptTokens: generations.isEmpty ? nil : generations.map(\.promptTokens).reduce(0, +),
             prefillMS: generations.isEmpty ? nil : generations.map(\.prefillMS).reduce(0, +),
             extendMS: extends.isEmpty ? nil : extends.reduce(0, +),
-            decodeTokens: decodeTokens,
-            tokensPerSecond: decodeTokens.flatMap { decodeSeconds > 0 ? Double($0) / decodeSeconds : nil },
+            decodeTokens: decoded.isEmpty ? nil : decoded.reduce(0, +),
+            tokensPerSecond: timedSeconds > 0 ? Double(timedTokens) / timedSeconds : nil,
             generations: generations.count
         )
     }
