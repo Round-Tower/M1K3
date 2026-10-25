@@ -60,6 +60,9 @@
 //  opt-in: the loop stays half-duplex. A voice turn asked over a still-generating answer now stops that
 //  generation first (it was dropped as "No answer arrived", click barge-in included). Confidence 0.6:
 //  verify-by-launch owed (speak over M1K3, with and without music, and mid-generation).
+//  Review: same day (2), Kev's first live run — the watch now listens with `.watches` (as `.keepsListening` the
+//  8 s silent-listen limit closed it every 8.2 s, three closes and it gave up, so "hang on" fell on a closed mic),
+//  and speech stops at SpokenAnswerEnd (the "Web sources:" block was read aloud line by line). Confidence 0.65.
 
 import AppKit
 import AVFoundation
@@ -457,7 +460,8 @@ extension AppEnvironment {
                   let provider = transcription.activeProvider(preferringEchoCancellation: true),
                   provider.attemptsEchoCancellation
             else { return nil }
-            let stream = try provider.startListening(finality: .keepsListening)
+            // `.watches`: silence never ends it (as `.keepsListening` it closed every 8.2 s).
+            let stream = try provider.startListening(finality: .watches)
             activeProvider = provider
             Self.voiceLog.notice("voice barge-in watch on \(provider.name, privacy: .public)")
             return stream
@@ -592,7 +596,7 @@ extension AppEnvironment {
                 // never re-speak the answer, the 2026-07-25 finding) as a
                 // tested M1K3Voice seam shared with chat auto-speak.
                 var folder = StreamedAnswerFolder(
-                    stopMatcher: { FollowUpSplit.trailerStart(in: $0) }, leakGuard: Self.spokenLeakGuard
+                    stopMatcher: { SpokenAnswerEnd.start(in: $0, followUps: FollowUpSplit.trailerStart(in:)) }, leakGuard: Self.spokenLeakGuard
                 )
                 // Spoken tool transparency (2026-08-16): tool dispatches used to
                 // be dead air in voice mode — the visual activity label lives on

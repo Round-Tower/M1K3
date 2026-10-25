@@ -30,6 +30,12 @@ struct RecognizerFinalityTests {
         #expect(!FinalityPolicy.keepsListening.shouldRestart(hasCapturedText: false))
     }
 
+    @Test("the barge-in watch restarts whatever it has heard: a silent watch is a healthy one (#640)")
+    func watchAlwaysRestarts() {
+        #expect(FinalityPolicy.watches.shouldRestart(hasCapturedText: false))
+        #expect(FinalityPolicy.watches.shouldRestart(hasCapturedText: true))
+    }
+
     @Test("endsListen never restarts")
     func endsListenNeverRestarts() {
         #expect(!FinalityPolicy.endsListen.shouldRestart(hasCapturedText: true))

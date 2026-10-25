@@ -29,6 +29,8 @@
 //  8 s silent-listen limit cut every voice-first turn (builds 373–375; Kev: "cut me off
 //  mid-sentence", three listens at 8.2–8.4 s). Each half was tested alone; now the pair is too.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-25 — `.watches` (the barge-in watch) folds like voice-first and
+//  never ends on silence. Confidence 0.85.
 //
 
 import Foundation
@@ -55,7 +57,7 @@ public struct AnalyzerTranscriptFold: Sendable {
         guard !text.isEmpty else { return nil }
         heard = true
         switch finality {
-        case .keepsListening:
+        case .keepsListening, .watches:
             return TranscriptSegment(text: text, isFinal: isFinal)
         case .endsListen:
             if isFinal {
@@ -111,9 +113,9 @@ public struct AnalyzerEndpoint: Sendable {
     }
 
     public var shouldEnd: Bool {
-        guard hasText else { return elapsed >= Self.silentListenLimit }
+        guard hasText else { return finality != .watches && elapsed >= Self.silentListenLimit }
         switch finality {
-        case .keepsListening:
+        case .keepsListening, .watches:
             return false
         case .endsListen:
             return (lastWasFinal && quietRun >= Self.quietAfterFinal) || quietRun >= Self.quietWithoutFinal

@@ -25,6 +25,10 @@
 //  Signed: Kev + claude-fable-5, 2026-08-15, Confidence 0.85 (the policy is
 //  pure and test-pinned; the transcriber's restart glue is verify-by-launch per
 //  the file's own convention). Prior: recognizer-owned finality everywhere.
+//  Review: Kev + claude-opus-5-5, 2026-10-25 — `.watches`, the spoken barge-in watch (#640): it keeps
+//  listening like voice-first and also outlives silence, since hearing nothing while M1K3 speaks is the
+//  normal case. As `.keepsListening` it hit the 8 s silent-listen limit and closed every 8.2 s live.
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -37,11 +41,17 @@ public enum FinalityPolicy: Sendable, Equatable {
     /// Recognizer finality is just a segment boundary: keep the mic and stream
     /// open, restart recognition, and let the consumer's endpointer end the turn.
     case keepsListening
+    /// The barge-in watch: `keepsListening`, and silence never ends it.
+    case watches
 
     /// Whether a recognizer-initiated finality (or a no-speech error) should
     /// restart recognition instead of ending the listen.
     public func shouldRestart(hasCapturedText: Bool) -> Bool {
-        self == .keepsListening && hasCapturedText
+        switch self {
+        case .endsListen: false
+        case .keepsListening: hasCapturedText
+        case .watches: true
+        }
     }
 }
 
