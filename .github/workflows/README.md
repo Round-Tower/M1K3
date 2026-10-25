@@ -9,7 +9,7 @@ and never covered the Swift Mac MVP — the active surface. It was removed.
 
 | File | Purpose | Triggers |
 |------|---------|----------|
-| **`ci.yml`** | Tests. `swift-mac` runs `swift test` on the macOS MVP; `app-build` compiles the app shell; `scheme-drift` guards the test scheme. | push to `master`/`develop`, all PRs |
+| **`ci.yml`** | Tests. `swift-mac` runs `swift test` on the macOS MVP; `app-build` compiles the app shell; `scheme-drift` guards the test scheme; `doc-drift` pins the module map to `Package.swift`; `claims` fails a PR whose added lines name a path, log marker or argv flag the tree doesn't have (`macos/tools/ci/check_claims.py`). | push to `master`/`develop`, all PRs |
 | **`security.yml`** | TruffleHog (verified secrets, repo-wide). | push to `master`/`develop`, all PRs |
 | **`nightly-dmg.yml`** | Signed/notarized DMG → GitHub Release (skips until signing secrets are set). | nightly cron, manual |
 | **`dep-freshness.yml`** | `macos/tools/ci/dep_freshness.py`: Swift deps behind, who caps each, missed perf/security notes → the rolling "📦 Dependency freshness" issue. | Mondays 06:00 UTC, manual |
