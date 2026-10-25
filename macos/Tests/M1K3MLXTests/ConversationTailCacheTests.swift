@@ -8,8 +8,12 @@
 //  verified at ⌘R like all MLX generation (same tested-surface convention as
 //  PersonaPrefixCacheTests).
 //
+//  Signed (this contribution only): Kev + claude-fable-5.1, 2026-10-25, Confidence 0.8 — the exact-checkpoint
+//  cases (`adoptCheckpoint`, byte cap, token belt, `recordRender`/`previousRender`, invalidate). Prior: Unknown.
+//
 
 @testable import M1K3MLX
+import MLXLMCommon
 import Testing
 
 struct ConversationTailCacheTests {
@@ -86,5 +90,70 @@ struct ConversationTailCacheTests {
         // → 4000 tokens ≈ 300 MiB retained ceiling. Raise only with a measured
         // RAM snapshot in hand — the PersonaPrefixCache rule.
         #expect(ConversationTailCache.maxSeedTokens == 4000)
+    }
+
+    // MARK: - Exact checkpoints (2026-10-25): the cross-turn tail in checkpoint mode
+
+    @Test("an adopted checkpoint comes back as an exact-tail handle with its state and ids — never as a live snapshot")
+    func checkpointRoundTripIsExact() throws {
+        let cache = ConversationTailCache()
+        let outcome = cache.adoptCheckpoint([], tokenIDs: [1, 2, 3], state: LMOutput.State(), bytes: 10, for: key)
+        #expect(outcome == .stored)
+        let tail = try #require(cache.exactTail(for: key))
+        #expect(tail.state != nil)
+        #expect(tail.tokenIDs == [1, 2, 3])
+        #expect(tail.copyCache().isEmpty)
+        // The live-path accessor never hands an exact checkpoint to the trim-based path.
+        #expect(cache.snapshot(for: key) == nil)
+    }
+
+    @Test("a live-path tail is not an exact tail — the two kinds never get confused")
+    func liveTailStaysInexact() throws {
+        let cache = ConversationTailCache()
+        cache.adopt([], tokenIDs: [1, 2, 3], for: key)
+        let seed = try #require(cache.snapshot(for: key))
+        #expect(!seed.exact)
+        #expect(seed.state == nil)
+        #expect(cache.exactTail(for: key) == nil)
+    }
+
+    @Test("a checkpoint over the BYTE cap is refused — and the previous checkpoint survives")
+    func overBytesRefusedKeepsPrevious() throws {
+        let cache = ConversationTailCache(byteCap: 100)
+        #expect(cache.adoptCheckpoint([], tokenIDs: [1, 2], state: nil, bytes: 90, for: key) == .stored)
+        #expect(cache.adoptCheckpoint([], tokenIDs: [1, 2, 3, 4], state: nil, bytes: 101, for: key) == .overBytes)
+        let tail = try #require(cache.exactTail(for: key))
+        #expect(tail.tokenIDs == [1, 2])
+    }
+
+    @Test("the checkpoint token belt is a belt, not the cap: bytes bind first, tokens still bound")
+    func checkpointTokenBelt() {
+        let cache = ConversationTailCache(checkpointCap: 3, byteCap: 1000)
+        #expect(cache.adoptCheckpoint([], tokenIDs: [1, 2, 3, 4], state: nil, bytes: 1, for: key) == .overCap)
+        #expect(cache.adoptCheckpoint([], tokenIDs: [1, 2, 3], state: nil, bytes: 1, for: key) == .stored)
+    }
+
+    @Test("the previous render is kept per key, so the next turn can find where the renders diverge")
+    func previousRenderPerKey() {
+        let cache = ConversationTailCache()
+        #expect(cache.previousRender(for: key) == nil)
+        cache.recordRender([1, 2, 3, 4], for: key)
+        #expect(cache.previousRender(for: key) == [1, 2, 3, 4])
+        let other = PersonaCacheKey(modelID: "test/model", toolNames: ["a"], personaText: "persona")
+        #expect(cache.previousRender(for: other) == nil)
+        // A newer render replaces it; a checkpoint adopt leaves it alone.
+        cache.recordRender([1, 2, 3, 4, 5, 6], for: key)
+        cache.adoptCheckpoint([], tokenIDs: [1, 2], state: nil, bytes: 1, for: key)
+        #expect(cache.previousRender(for: key) == [1, 2, 3, 4, 5, 6])
+    }
+
+    @Test("invalidate drops the checkpoint AND the recorded render — a brain swap leaves nothing to diverge from")
+    func invalidateDropsBoth() {
+        let cache = ConversationTailCache()
+        cache.recordRender([1, 2, 3], for: key)
+        cache.adoptCheckpoint([], tokenIDs: [1, 2], state: nil, bytes: 1, for: key)
+        cache.invalidate()
+        #expect(cache.exactTail(for: key) == nil)
+        #expect(cache.previousRender(for: key) == nil)
     }
 }

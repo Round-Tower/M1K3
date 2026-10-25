@@ -53,6 +53,22 @@ scripted chat, median TTFT per turn and peak RSS, before/after, AC + powermode l
 **Kill:** peak RSS above the tier budget, or a recall miss on a turn referenced just
 past a block boundary (N−1 is always kept, so testing it proves nothing).
 
+**Status 2026-10-25 — the cross-turn seed is in, as an exact checkpoint, not a trimmed tail.** The
+September shape (adopt the live cache in `finish()`, trim to the common prefix) could never fire on a
+shipping tier: Lil's recurrent layers and Big's wrapped window put the tool turn in checkpoint mode, where
+no live cache survives a turn. What ships instead (`ExactPrefixReuse.tailCut`, `ConversationTailCache
+.adoptCheckpoint`): the first send of a turn splits its exact prefill at the common prefix with the previous
+turn's first render — turn N's render and turn N+1's share exactly through N's replay — copies the cache
+there (with its model state) into the slot, and the next turn plans over [persona, tail, rolling], longest
+strict prefix wins. The tail lags one exchange and needs no layout knowledge; a tail the conversation left
+loses the plan to the persona. Capped by MEASURED bytes (512 MiB; Lil's tail reads ~135–170 MiB at
+2,700–3,600 tokens, Big's ~370–382 MiB — its ~335 MiB sliding state before a token, so the September "scale
+the token cap" is moot: tokens mislead across tiers). Desktop only; `-conversationTailCheckpoint NO`.
+Measured (§3, second table): reuse grows every message from the third, per-message prefill falls ~1 s on
+Lil and up to 6.7 s on Big — **until the HistoryWindow slides at message 10**, when the common prefix
+collapses to the persona and both brains pay the September cost again. So the sliding history IS the
+dominant miss now, exactly as this section guessed, and block eviction is the next lever; its gate stands.
+
 ### 2b. Persona prefixes survive a relaunch
 `savePromptCache`/`loadPromptCache` round-trip in-app via the SelfTest probe
 (`MLXBrainProvider+PromptCachePersistence.swift`) — weakly: `toolNames: []` only, judged
@@ -164,6 +180,28 @@ scorecards above are single-turn plain generations; the curves are what a conver
 seed is worth 2–3 s a message on Lil and 6–12 s on Big, from the second exchange — far more than the September
 arithmetic said. The render plateaus at the HistoryWindow's 16 turns, so the per-message cost caps there too.
 
+**With the cross-turn tail checkpoint (same day, same build line, agent route; `docs/evals/2026-10-25-chatcurve-
+{lil,big}-agent-tail.txt`):** reuse grows every message from the third — Lil 2,520 → 3,338 tokens by message 9,
+Big 2,262 → 3,774 — and the per-message transcript prefill (`extend`) falls with it. From message 10 the
+HistoryWindow's `suffix(16)` drops the oldest exchange each turn, the common prefix of consecutive renders
+collapses to the persona + preamble (Lil 2,535, Big 2,277), and the cost returns to the table above:
+
+| per message | Lil, tail off | Lil, tail on | Big, tail off | Big, tail on |
+|---|---|---|---|---|
+| messages 3–9: reuse (tokens) | 2,444 flat | 2,520 → 3,338 | 2,184 flat | 2,262 → 3,774 |
+| messages 3–9: `extend` | 2.1 → 3.5 s | **1.5–1.9 s** | 6.1 → 11.2 s | **5.7 → 4.5 s** |
+| messages 10–20: reuse | 2,444 | 2,535 | 2,184 | 2,277 |
+| messages 10–20: `extend` | 2.6–3.3 s | 3.0–3.8 s | 10.5–12.1 s | 9.8–11.6 s |
+| tail checkpoint stored | — | 135–169 MiB | — | 370–382 MiB |
+| MLX own peak (max over the curve) | 4.44 GB | **4.84 GB** | 8.64 GB | 9.36 GB |
+
+(Shipped head 1f557f97; the script's answers differ run to run, so the message-10+ Lil figures ride a render that
+grew to ~5,000 tokens.) Lil's peak sits 160 MB under its 5 GB own-peak cap (`BrainTier.lilOwnPeakCapMB`): the first
+send of a turn holds the pristine copy, the work cache, the tail copy and the rolling copy at once. A lower
+`maxCheckpointBytes` for Lil, or consuming the tail without the rolling copy on the first send, is the headroom lever
+if a longer render crosses it. The win is real and bounded by the window: block eviction (§2a) is what extends it
+past message 9.
+
 ## 4. Not doing
 
 - Neural Engine / Core AI prefill: the GPU wins at every input length on published
@@ -183,3 +221,11 @@ picks); the four mains chat-curves are the other: every message re-prefills the 
 on Lil and 6–12 s on Big. Confidence 0.9 (all measured on one build, one power state).
 Review: Kev + claude-fable-5.1, 2026-10-25 (later) — §3 gains the four mains chat-curves as a table (agent and plain
 routes, both brains); the battery smoke's figures are superseded by them.
+Review: Kev + claude-fable-5.1, 2026-10-25 (evening) — §2a status: the cross-turn seed shipped as an exact checkpoint
+cut at the common prefix of consecutive renders (not the September trim), capped by measured bytes; §3's second
+table measures it on both brains: reuse grows from message 3, Big's per-message prefill 11.2 → 4.5 s by message 9,
+and the HistoryWindow slide at message 10 takes it all back — block eviction is the next lever. Confidence 0.85
+(one build line, one power state, agent route only; the plain route is phase 2).
+Review: Kev + claude-fable-5.1, 2026-10-25 (night) — §3's second table re-read on the shipped head (the lazy tail copy):
+Lil's own peak 4.84 GB against its 5 GB cap, the headroom levers named; a single-turn kill-switch A/B (Lil ×3 ON vs OFF,
+paired, identical content, medians inside the pick's variance) clears the first-send path. Confidence 0.85.

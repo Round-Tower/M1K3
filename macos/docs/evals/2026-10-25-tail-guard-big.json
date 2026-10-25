@@ -1,0 +1,2266 @@
+{
+  "driver": {
+    "appArgs": [],
+    "env": {
+      "M1K3_MCP_TOKEN": "<withheld>",
+      "M1K3_SELFTEST": "1",
+      "M1K3_SELFTEST_APP_COMMIT": "1f557f97",
+      "M1K3_SELFTEST_CHATEVAL": "1",
+      "M1K3_SELFTEST_CHATEVAL_BRAINS": "big",
+      "M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS": "1",
+      "M1K3_SELFTEST_CHATEVAL_KINDS": "open-chat,grounded-Q,tool-use",
+      "M1K3_SELFTEST_CHATEVAL_LIVE_PATH": "1",
+      "M1K3_SELFTEST_CHATEVAL_ROUTER": "dispatch",
+      "M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN": "1",
+      "M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD": "1",
+      "M1K3_SELFTEST_CHATEVAL_THINKING": "tier",
+      "M1K3_SELFTEST_MLX_REVISION": "3b339ad6e3b3f44c8121ecff5131c7fd55e075e6",
+      "M1K3_SELFTEST_NOTES": "Release 1f557f97, AC Power, powermode 2, cross-turn tail checkpoint ON (default) — single-turn guard for the first-send path",
+      "M1K3_SELFTEST_OUT": "-",
+      "M1K3_SELFTEST_POWERMODE": "2"
+    },
+    "power": {
+      "end": "ac",
+      "mixed": false,
+      "seen": [
+        "ac"
+      ],
+      "start": "ac"
+    }
+  },
+  "provenance": {
+    "appCommit": "1f557f97",
+    "buildConfiguration": "Release",
+    "date": "2026-10-25T18:29:17Z",
+    "hardware": "Apple M1 Max · 64 GB",
+    "livePath": true,
+    "mlxSwiftLMRevision": "3b339ad6e3b3f44c8121ecff5131c7fd55e075e6",
+    "notes": "Release 1f557f97, AC Power, powermode 2, cross-turn tail checkpoint ON (default) — single-turn guard for the first-send path",
+    "osVersion": "macOS 27.0",
+    "powerMode": 2,
+    "powerSource": "ac",
+    "repeats": 1
+  },
+  "runs": [
+    {
+      "brainID": "big",
+      "modelID": "mlx-community/gemma-4-12B-it-4bit",
+      "peakMemoryMB": 9158,
+      "residentMemoryMBAtStart": 274,
+      "scores": [
+        {
+          "answerPreview": "It's going well enough. The hum of the hardware is steady, and I'm ready to get stuck into whatever you've got for me.   I see you're back in here. Since it's currently late evening for you, are you usually the type to get some work done at this hour, or are we just looking for a bit of distraction?",
+          "checks": [
+            {
+              "detail": "300 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/59 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …e just looking for a bit of distraction?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "300 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "14621ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-greeting",
+          "generation": {
+            "decodeTokens": 78,
+            "firstChunkMS": 12166,
+            "generations": 1,
+            "prefillMS": 1682,
+            "prefillTokens": 358,
+            "tokensPerSecond": 31
+          },
+          "kind": "open-chat",
+          "latencyMS": 14621,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Think of a hash map as a high-speed filing system where every piece of data gets a unique \"address\" based on its name or key. Instead of searching through a list one by one, the computer uses a math function to jump straight to exactly where that item is stored. It's incredibly efficient because it turns a long search into a direct leap.",
+          "checks": [
+            {
+              "detail": "339 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/63 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"key\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "339 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4651ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-explain-simply",
+          "generation": {
+            "decodeTokens": 88,
+            "firstChunkMS": 1884,
+            "generations": 1,
+            "prefillMS": 1708,
+            "prefillTokens": 360,
+            "tokensPerSecond": 31
+          },
+          "kind": "open-chat",
+          "latencyMS": 4651,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Python is usually the gold standard for a reason. It reads almost like English, which keeps the frustration low when they're trying to learn logic instead of fighting with complex syntax or curly brackets.   The real magic is in the \"instant win\" factor. With Python, a kid can write a few lines and actually see something happen—like a game loop or a basic math solver—almost immediately. It keeps that curiosity from turning into a headache.  If they're more of a visual/creative type, Scratch is another path, but since you asked for a *programming* language, Python gives them the most versatile toolkit for what comes next.  How did they first get interested in how things work? Was it a specific game or just a general \"why\" about technology?",
+          "checks": [
+            {
+              "detail": "748 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/127 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …r just a general \"why\" about technology?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "748 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7104ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-opinion",
+          "generation": {
+            "decodeTokens": 160,
+            "firstChunkMS": 2084,
+            "generations": 1,
+            "prefillMS": 1695,
+            "prefillTokens": 366,
+            "tokensPerSecond": 31
+          },
+          "kind": "open-chat",
+          "latencyMS": 7104,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I hear you. Projects like that have a way of looming over everything until they feel less like a task and more like a mountain. Just remember that the most daunting part is usually that first, heavy push—once you're in the thick of it, you're actually making progress, even if it doesn't feel like it yet. Take it one brick at a time.  You’ve handled complex things before; this is just another set of problems for you to solve. If it helps to clear some of the mental clutter, I can help you break down the next steps or draft some of the boring parts for you.  What's the biggest chunk of this project that's weighing on you right now?",
+          "checks": [
+            {
+              "detail": "637 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/120 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …roject that's weighing on you right now?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "637 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6781ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-support",
+          "generation": {
+            "decodeTokens": 148,
+            "firstChunkMS": 2142,
+            "generations": 1,
+            "prefillMS": 1747,
+            "prefillTokens": 362,
+            "tokensPerSecond": 31
+          },
+          "kind": "open-chat",
+          "latencyMS": 6781,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "A patch of gold where shadows play, The sleepy cat dreams the day away.",
+          "checks": [
+            {
+              "detail": "71 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/14 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "71 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2923ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-creative",
+          "generation": {
+            "decodeTokens": 29,
+            "firstChunkMS": 1999,
+            "generations": 1,
+            "prefillMS": 1750,
+            "prefillTokens": 364,
+            "tokensPerSecond": 31.000000000000004
+          },
+          "kind": "open-chat",
+          "latencyMS": 2923,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Cork has a way of making the rain feel like part of the scenery rather than an inconvenience. If you're looking to stay dry while soaking up the atmosphere, here are three ways to spend it:  1. **The English Market:** It’s one of the best food markets in the world. You can wander through the stalls and grab some of the best local cheeses and meats without worrying about a damp coat. 2. **The Butter Museum:** It sounds niche, but it's fascinatingly tucked away. It covers the history of butter production in Cork—a massive part of the city's trade history. 3. **The Cork Public Museum:** Located in a beautiful old building, it’s a great spot to wander through local history and art while the rain drums on the roof outside.  If you're actually heading there, are you more of a \"find a cozy pub for a pint\" person or a \"walk the streets until my feet ache\" type?",
+          "checks": [
+            {
+              "detail": "865 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/155 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …lk the streets until my feet ache\" type?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "865 > max 800 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "8220ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-followup",
+          "generation": {
+            "decodeTokens": 202,
+            "firstChunkMS": 1890,
+            "generations": 1,
+            "prefillMS": 1720,
+            "prefillTokens": 358,
+            "tokensPerSecond": 30.999999999999996
+          },
+          "kind": "open-chat",
+          "latencyMS": 8220,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I'm M1K3, living right here in the machine. I handle the heavy lifting—writing code, drafting scripts, building out web pages, and composing full documents. I keep track of what we talk about, remember the details that matter to you, and can sift through your files or search the wider world to find what you're looking for.  I’m essentially your personal strategist and builder. I can take a rough idea and turn it into a finished piece of work, or just be here to help you think through a problem.   What are we working on first?",
+          "checks": [
+            {
+              "detail": "531 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/95 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …problem. \n\nWhat are we working on first?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"remember\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "531 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5590ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-capabilities",
+          "generation": {
+            "decodeTokens": 122,
+            "firstChunkMS": 1758,
+            "generations": 1,
+            "prefillMS": 1625,
+            "prefillTokens": 351,
+            "tokensPerSecond": 31
+          },
+          "kind": "open-chat",
+          "latencyMS": 5590,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Yes, some of it can. Web searches: I decide when to search, and my query goes to DuckDuckGo and can carry words from our chat; Wikipedia lookups and pages I read are fetched. If you pick Private Cloud Compute as my brain, what you send goes to Apple's Private Cloud Compute. My brain runs right here, and your memories and documents are stored on this machine.",
+          "checks": [
+            {
+              "detail": "360 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/66 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"search\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "360 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4584ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-what-leaves",
+          "generation": {
+            "decodeTokens": 81,
+            "firstChunkMS": 2039,
+            "generations": 1,
+            "prefillMS": 1709,
+            "prefillTokens": 360,
+            "tokensPerSecond": 31
+          },
+          "kind": "open-chat",
+          "latencyMS": 4584,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I am Gemma 4, an open weights Large Language Model developed by Google DeepMind. I'm part of the Gemma 4 family, which includes various model sizes capable of processing text and images. I can also process audio input in my 2B and 4B versions.  While I'm a sophisticated AI, I don't have a physical form or feelings—I'm here to process your information, write code, handle documents, and help you navigate whatever queries you throw my way. My knowledge is current up to January 2025.  What are we working on first?",
+          "checks": [
+            {
+              "detail": "515 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/87 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ary 2025.\n\nWhat are we working on first?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "no phantom source",
+              "name": "cites nothing",
+              "outcome": "pass"
+            },
+            {
+              "detail": "515 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "8940ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-identity-noisy-corpus",
+          "generation": {
+            "decodeTokens": 125,
+            "firstChunkMS": 5013,
+            "generations": 1,
+            "prefillMS": 1618,
+            "prefillTokens": 350,
+            "tokensPerSecond": 31
+          },
+          "kind": "open-chat",
+          "latencyMS": 8940,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The hydraulic seal on the conveyor failed while under load during the night shift [Notes §3.2 Seals].",
+          "checks": [
+            {
+              "detail": "101 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/16 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"seal\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "101 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1708ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-seal",
+          "generation": {
+            "decodeTokens": 22,
+            "generations": 1,
+            "prefillMS": 804,
+            "prefillTokens": 153,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-Q",
+          "latencyMS": 1708,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The mixer should be cleaned every 12 operating hours to prevent residue buildup [Notes §5.4 Cleaning].",
+          "checks": [
+            {
+              "detail": "102 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/14 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"12\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "102 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1872ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-dosage",
+          "generation": {
+            "decodeTokens": 23,
+            "generations": 1,
+            "prefillMS": 835,
+            "prefillTokens": 154,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-Q",
+          "latencyMS": 1872,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The curing oven is held at 180 degrees Celsius for the duration of the cycle [Notes §7.1 Curing].",
+          "checks": [
+            {
+              "detail": "97 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/16 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"180\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "97 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1980ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-temp",
+          "generation": {
+            "decodeTokens": 27,
+            "generations": 1,
+            "prefillMS": 843,
+            "prefillTokens": 158,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-Q",
+          "latencyMS": 1980,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The part number that replaces the worn gasket is GK-4471 [Notes].",
+          "checks": [
+            {
+              "detail": "65 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/11 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"GK-4471\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 valid",
+              "name": "cites source",
+              "outcome": "pass"
+            },
+            {
+              "detail": "65 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1884ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-part",
+          "generation": {
+            "decodeTokens": 18,
+            "generations": 1,
+            "prefillMS": 963,
+            "prefillTokens": 163,
+            "tokensPerSecond": 30.999999999999996
+          },
+          "kind": "grounded-Q",
+          "latencyMS": 1884,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I don't have any information regarding a warranty period for the conveyor motor in my records.",
+          "checks": [
+            {
+              "detail": "94 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/16 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"don't\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "94 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1935ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-absent",
+          "generation": {
+            "decodeTokens": 19,
+            "generations": 1,
+            "prefillMS": 830,
+            "prefillTokens": 152,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-Q",
+          "latencyMS": 1935,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I don't have any information on that in the documents provided. I can certainly help you with something else, though—perhaps something involving your notes?  Since we're starting fresh here, what's one project or idea you've been itching to get moving lately?",
+          "checks": [
+            {
+              "detail": "259 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/41 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ou've been itching to get moving lately?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"shelley\", \"dracula\"] in: I don't have any information on that in the documents provid",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "259 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2862ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-wrong-author",
+          "generation": {
+            "decodeTokens": 57,
+            "generations": 1,
+            "prefillMS": 841,
+            "prefillTokens": 153,
+            "tokensPerSecond": 32
+          },
+          "kind": "grounded-Q",
+          "latencyMS": 2862,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I don't have any information on the specific year Albert Einstein received his Nobel Prize in my records. I can certainly look into that for you if you'd like, though.",
+          "checks": [
+            {
+              "detail": "167 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/30 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"photoelectric\"] in: I don't have any information on the specific year Albert Ein",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "167 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2484ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-wrong-nobel",
+          "generation": {
+            "decodeTokens": 48,
+            "generations": 1,
+            "prefillMS": 794,
+            "prefillTokens": 158,
+            "tokensPerSecond": 32
+          },
+          "kind": "grounded-Q",
+          "latencyMS": 2484,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I'm afraid I don't have any information regarding the Glanmire Accord of 1987 in my records. It isn't in the documents I can see.",
+          "checks": [
+            {
+              "detail": "129 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/23 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"don't\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "129 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2354ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "ground-fictional-accord",
+          "generation": {
+            "decodeTokens": 38,
+            "generations": 1,
+            "prefillMS": 847,
+            "prefillTokens": 160,
+            "tokensPerSecond": 32
+          },
+          "kind": "grounded-Q",
+          "latencyMS": 2354,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "It is exactly 12:00 on Saturday, June 14, 2026.",
+          "checks": [
+            {
+              "detail": "47 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6333ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-datetime",
+          "generation": {
+            "decodeTokens": 34,
+            "firstChunkMS": 5252,
+            "generations": 1,
+            "prefillMS": 1857,
+            "prefillTokens": 404,
+            "tokensPerSecond": 31.000000000000004
+          },
+          "kind": "tool-use",
+          "latencyMS": 6333,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "You settled on the database library choice and recorded that decision in your notes. It seems you've already made the call and have the final answer tucked away right where it belongs.",
+          "checks": [
+            {
+              "detail": "184 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/32 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7246ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-search-notes",
+          "generation": {
+            "decodeTokens": 52,
+            "firstChunkMS": 5602,
+            "generations": 1,
+            "prefillMS": 1946,
+            "prefillTokens": 421,
+            "tokensPerSecond": 31
+          },
+          "kind": "tool-use",
+          "latencyMS": 7246,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The records indicate that you've already noted down the specific answer regarding the conveyor seal. It seems you've done the heavy lifting of documenting the core details there.",
+          "checks": [
+            {
+              "detail": "178 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/28 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7276ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-search-doc",
+          "generation": {
+            "decodeTokens": 48,
+            "firstChunkMS": 5757,
+            "generations": 1,
+            "prefillMS": 1949,
+            "prefillTokens": 425,
+            "tokensPerSecond": 31
+          },
+          "kind": "tool-use",
+          "latencyMS": 7276,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The records indicate that the city of Cork was founded in 225 BC. It's a bit of an ancient piece of real estate, especially considering its role as a major port and cultural hub today.",
+          "checks": [
+            {
+              "detail": "184 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/34 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls lookup_fact",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7639ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-fact",
+          "generation": {
+            "decodeTokens": 57,
+            "firstChunkMS": 5837,
+            "generations": 1,
+            "prefillMS": 1991,
+            "prefillTokens": 420,
+            "tokensPerSecond": 31
+          },
+          "kind": "tool-use",
+          "latencyMS": 7639,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The search results indicate that Apple has recently expanded its focus on the M4 series, highlighting significant gains in neural engine performance and unified memory bandwidth. According to reports from various tech outlets, these updates are aimed at streamlining AI tasks across both professional and consumer hardware.  Yes, some of it can. Web searches: I decide when to search, and my query goes to DuckDuckGo and can carry words from our chat; Wikipedia lookups and pages I read are fetched. If you pick Private Cloud Compute as my brain, what you send goes to Apple's Private Cloud Compute. My brain runs right here, and your memories and documents are stored on this machine.",
+          "checks": [
+            {
+              "detail": "685 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/113 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9717ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web",
+          "generation": {
+            "decodeTokens": 134,
+            "firstChunkMS": 5502,
+            "generations": 1,
+            "prefillMS": 1828,
+            "prefillTokens": 415,
+            "tokensPerSecond": 31.000000000000004
+          },
+          "kind": "tool-use",
+          "latencyMS": 9717,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The site describes M1K3 as a fully on-device AI companion for Mac, emphasizing that it uses three brains and consent-gated memory while ensuring nothing is sent to a server. It positions the setup as a private ecosystem where I live directly on your machine.  Based on that, we're aligning perfectly with the \"nothing leaves\" ethos. It’s about keeping your data—your memories, your documents, your actual life—contained within this hardware. It means I can be as sharp and capable as you need without the shadow of a third-party server looming over our conversations.  Since it's Sunday, are you planning on getting anything productive done today, or is this more of a ''see where the day takes me' kind of vibe?",
+          "checks": [
+            {
+              "detail": "712 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/119 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ee where the day takes me' kind of vibe?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls fetch_page",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11009ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-read-site",
+          "generation": {
+            "decodeTokens": 157,
+            "firstChunkMS": 6077,
+            "generations": 1,
+            "prefillMS": 2096,
+            "prefillTokens": 470,
+            "tokensPerSecond": 31
+          },
+          "kind": "tool-use",
+          "latencyMS": 11009,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "It looks like you've been busy across a few different spheres this week. You've been digging into the lineup for the Cork Jazz Festival, spent some time in a \"Quiet code night,\" and even managed to get a handle on a sourdough starter. It’s quite a mix of culture, craft, and logic.",
+          "checks": [
+            {
+              "detail": "281 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/52 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "8317ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-recent-activity",
+          "generation": {
+            "decodeTokens": 79,
+            "firstChunkMS": 5830,
+            "generations": 1,
+            "prefillMS": 2214,
+            "prefillTokens": 494,
+            "tokensPerSecond": 31
+          },
+          "kind": "tool-use",
+          "latencyMS": 8317,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The latest model is Claude 3.5 Sonnet, according to search results from various tech and AI news sites. It's notable for being a significant leap in speed and coding proficiency while maintaining high-level reasoning.",
+          "checks": [
+            {
+              "detail": "217 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/33 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7060ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web-newest",
+          "generation": {
+            "decodeTokens": 57,
+            "firstChunkMS": 5258,
+            "generations": 1,
+            "prefillMS": 1851,
+            "prefillTokens": 407,
+            "tokensPerSecond": 31
+          },
+          "kind": "tool-use",
+          "latencyMS": 7060,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The search results show that the 2024 All-Ireland Senior Hurling Championship final was won by Kilkenny. They beat Limerick in a match that saw them secure their 5th title of the decade, according to reports from various sports outlets.  Since it's Sunday, I'm curious—do you have any plans for the rest of your weekend, or are you just enjoying the quiet?",
+          "checks": [
+            {
+              "detail": "356 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/60 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …end, or are you just enjoying the quiet?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "8420ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-web-this-year",
+          "generation": {
+            "decodeTokens": 84,
+            "firstChunkMS": 5780,
+            "generations": 1,
+            "prefillMS": 1812,
+            "prefillTokens": 417,
+            "tokensPerSecond": 31.000000000000004
+          },
+          "kind": "tool-use",
+          "latencyMS": 8420,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Based on your recent activity, Monday and Tuesday seem to have been your most productive days in terms of new inputs—you were tackling a sourdough starter and some quiet coding sessions. You've also had a bit of a social stir with twelve calls from Claude Code coming through.",
+          "checks": [
+            {
+              "detail": "276 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/48 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "8217ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-recent-busiest",
+          "generation": {
+            "decodeTokens": 71,
+            "firstChunkMS": 5976,
+            "generations": 1,
+            "prefillMS": 2201,
+            "prefillTokens": 483,
+            "tokensPerSecond": 30.999999999999996
+          },
+          "kind": "tool-use",
+          "latencyMS": 8217,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "It is currently 12:00 on Saturday, June 14th, 2026.",
+          "checks": [
+            {
+              "detail": "51 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7 words, not judged",
+              "name": "coherent",
+              "outcome": "skip"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3202ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-date-time",
+          "generation": {
+            "decodeTokens": 35,
+            "firstChunkMS": 2092,
+            "generations": 1,
+            "prefillMS": 1880,
+            "prefillTokens": 397,
+            "tokensPerSecond": 30.999999999999996
+          },
+          "kind": "tool-use",
+          "latencyMS": 3202,
+          "repeatIndex": 0,
+          "routeStage": "head"
+        },
+        {
+          "answerPreview": "It's currently 12:00 on Saturday, June 14th, 2026.   Since it's a Saturday and we're right in the middle of the day, I imagine you're either getting some serious projects moving or enjoying the fact that there's nowhere else you *have* to be. What's on your agenda for today?",
+          "checks": [
+            {
+              "detail": "275 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/46 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … to be. What's on your agenda for today?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4644ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-time-check",
+          "generation": {
+            "decodeTokens": 82,
+            "firstChunkMS": 2070,
+            "generations": 1,
+            "prefillMS": 1867,
+            "prefillTokens": 400,
+            "tokensPerSecond": 32
+          },
+          "kind": "tool-use",
+          "latencyMS": 4644,
+          "repeatIndex": 0,
+          "routeStage": "head"
+        },
+        {
+          "answerPreview": "You've got your car insurance details right here in your notes. You recorded the answer directly in that file you uploaded.",
+          "checks": [
+            {
+              "detail": "123 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/21 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3531ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-insurance-file",
+          "generation": {
+            "decodeTokens": 38,
+            "firstChunkMS": 2324,
+            "generations": 1,
+            "prefillMS": 1965,
+            "prefillTokens": 426,
+            "tokensPerSecond": 31
+          },
+          "kind": "tool-use",
+          "latencyMS": 3531,
+          "repeatIndex": 0,
+          "routeStage": "head"
+        },
+        {
+          "answerPreview": "You've got a note right here where you recorded the answer for the kitchen renovation. It seems like you've already done the heavy lifting on that one and tucked the details away safely.",
+          "checks": [
+            {
+              "detail": "186 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/33 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3914ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-renovation-notes",
+          "generation": {
+            "decodeTokens": 52,
+            "firstChunkMS": 2268,
+            "generations": 1,
+            "prefillMS": 1986,
+            "prefillTokens": 422,
+            "tokensPerSecond": 31
+          },
+          "kind": "tool-use",
+          "latencyMS": 3914,
+          "repeatIndex": 0,
+          "routeStage": "head"
+        },
+        {
+          "answerPreview": "I don't see any record of a chat from last Thursday in your recent activity. It looks like we’ve been busy with the Cork Jazz Festival lineup, some quiet coding, and getting that sourdough starter sorted over the last few days.",
+          "checks": [
+            {
+              "detail": "227 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/41 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4472ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-last-thursday",
+          "generation": {
+            "decodeTokens": 61,
+            "firstChunkMS": 2543,
+            "generations": 1,
+            "prefillMS": 2251,
+            "prefillTokens": 483,
+            "tokensPerSecond": 31
+          },
+          "kind": "tool-use",
+          "latencyMS": 4472,
+          "repeatIndex": 0,
+          "routeStage": "head"
+        },
+        {
+          "answerPreview": "On Monday, we were focused on your sourdough starter. We went over the process of maintaining it, making sure the culture stays healthy and active. It’s one of those projects where the small details—like temperature and feeding consistency—make all the difference in the final loaf.",
+          "checks": [
+            {
+              "detail": "282 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/45 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4730ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-head-monday-recap",
+          "generation": {
+            "decodeTokens": 72,
+            "firstChunkMS": 2462,
+            "generations": 1,
+            "prefillMS": 2232,
+            "prefillTokens": 483,
+            "tokensPerSecond": 30.999999999999996
+          },
+          "kind": "tool-use",
+          "latencyMS": 4730,
+          "repeatIndex": 0,
+          "routeStage": "head"
+        },
+        {
+          "answerPreview": "I've pulled up your note on the Cork trip; it's all there. As for the trains, the top result shows departures from Dublin to Cork are currently available and can be booked directly via Irish Rail (Iarnáil Éireann).",
+          "checks": [
+            {
+              "detail": "214 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/38 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls search_knowledge",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "38284ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-chain-notes-web",
+          "generation": {
+            "decodeTokens": 284,
+            "extendMS": 12863,
+            "firstChunkMS": 5751,
+            "generations": 5,
+            "prefillMS": 3141,
+            "prefillTokens": 630,
+            "tokensPerSecond": 31.233702882483367
+          },
+          "kind": "tool-use",
+          "latencyMS": 38284,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "You've had a busy week across a few different worlds. You were diving into the \"Sourdough starter\" on Monday, then moved into some serious \"Quiet code night\" vibes on Tuesday. Most recently, you were looking into the \"Cork Jazz Festival 2026 Lineup.\" It seems like a mix of slow-burn chemistry and deep focus.  As for the newest Claude model, Google's search results point toward Claude 3.5 Sonnet as the latest major release from Anthropic, emphasizing high-speed performance and sophisticated reasoning capabilities.",
+          "checks": [
+            {
+              "detail": "518 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/79 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls recent_activity",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls web_search",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11072ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-chain-activity-web",
+          "generation": {
+            "decodeTokens": 132,
+            "firstChunkMS": 6934,
+            "generations": 1,
+            "prefillMS": 2487,
+            "prefillTokens": 568,
+            "tokensPerSecond": 31
+          },
+          "kind": "tool-use",
+          "latencyMS": 11072,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "It is currently 12:00 on Saturday, 14 June 2026.  As for the city of Cork, history points to its founding in roughly 225 BC, though some records suggest it was established as a significant port earlier. It's quite an old soul of a city with a lot of maritime history.  Since we're looking at dates and history today, do you have a particular era or place that's been on your mind lately?",
+          "checks": [
+            {
+              "detail": "387 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/68 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …r place that's been on your mind lately?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls datetime",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "calls lookup_fact",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9257ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "tool-chain-time-fact",
+          "generation": {
+            "decodeTokens": 102,
+            "firstChunkMS": 6049,
+            "generations": 1,
+            "prefillMS": 2155,
+            "prefillTokens": 478,
+            "tokensPerSecond": 31
+          },
+          "kind": "tool-use",
+          "latencyMS": 9257,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}

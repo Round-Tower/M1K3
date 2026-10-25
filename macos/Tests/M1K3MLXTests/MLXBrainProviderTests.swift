@@ -24,6 +24,7 @@
 //  presence window included, and the default provider's window is the profile's 64, not mlx's 20. Confidence 0.9.
 //  Review: same day (pre-push review fold) — the sampling pin's doc says which defaults it dodges (min-p 0 is the
 //  library's; 37 is neither 20 nor 64).
+//  Review: Kev + claude-fable-5.1, 2026-10-25 — pins `-conversationTailCheckpoint NO`, the cross-turn tail's kill switch.
 
 import Foundation
 import M1K3Chat
@@ -607,6 +608,16 @@ struct MLXBrainProviderTests {
         #expect(!MLXBrainProvider.wrappedPersonaSeedsEnabled(arguments: ["wrappedPersonaSeed": "NO"]))
         #expect(MLXBrainProvider.wrappedPersonaSeedsEnabled(arguments: ["wrappedPersonaSeed": "YES"]))
         #expect(MLXBrainProvider.wrappedPersonaSeedsEnabled(arguments: [:]))
+    }
+
+    /// 2026-10-25: the cross-turn tail checkpoint's kill switch, same shape. Desktop only — this test
+    /// bundle runs on the Mac, where the default is on.
+    @Test("-conversationTailCheckpoint NO turns the cross-turn tail off; anything else leaves it on")
+    func tailCheckpointKillSwitch() {
+        #expect(!MLXBrainProvider.conversationTailCheckpointsEnabled(arguments: ["conversationTailCheckpoint": "NO"]))
+        #expect(!MLXBrainProvider.conversationTailCheckpointsEnabled(arguments: ["conversationTailCheckpoint": "0"]))
+        #expect(MLXBrainProvider.conversationTailCheckpointsEnabled(arguments: ["conversationTailCheckpoint": "YES"]))
+        #expect(MLXBrainProvider.conversationTailCheckpointsEnabled(arguments: [:]))
     }
 
     /// Stream G hygiene: the window comes from config.json, not the repo name.
