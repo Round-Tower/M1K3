@@ -26,6 +26,11 @@
 //  Review: Kev + claude-fable-5, 2026-09-03 — the empty-listen budget is an init
 //  parameter (was a private static 2) so the conversational cadence can keep the
 //  mic awake through a quiet spell. Default unchanged; the 2-listen pin still holds.
+//  Review: Kev + claude-opus-5-5, 2026-10-25 — spoken barge-in (#640) behind `bargeIn: true`: entering
+//  speech opens a watch listen (`.watchForBargeIn`), `.bargeIn(text)` stops the speech and ADOPTS the
+//  watch as the next listen with the words already heard, and every other way out of speech closes it
+//  first. The half-duplex rule above holds whenever the flag is off (the default, every older pin).
+//  Confidence 0.8: the reducer is pinned; whether the watch can hear the user over M1K3 is verify-by-launch.
 //
 
 import Foundation
@@ -60,6 +65,9 @@ public enum VoiceLoopEvent: Equatable, Sendable {
     case speechFinished
     /// User barge-in (click/Space while speaking).
     case interrupt
+    /// The barge-in watch heard the user over M1K3 (`BargeInPolicy` said yes).
+    /// Only with `bargeIn: true`, only while speaking.
+    case bargeIn(String)
     /// Park the mic without leaving the mode.
     case mute
     /// The audio session was taken away (interruption / route loss): stop
@@ -76,6 +84,12 @@ public enum VoiceLoopCommand: Equatable, Sendable {
     case runTurn(String)
     case speak(String)
     case stopSpeaking
+    /// Keep the mic open on a listen while M1K3 speaks, for spoken barge-in.
+    case watchForBargeIn
+    /// Close that watch: speech ended some other way.
+    case stopBargeInWatch
+    /// The watch becomes the next question's listen, keeping what it heard.
+    case adoptBargeInWatch
 }
 
 public struct VoiceLoopMachine: Sendable {
@@ -94,9 +108,24 @@ public struct VoiceLoopMachine: Sendable {
     /// True once the streaming turn stopped producing (completed OR failed).
     private var generationDone = false
 
-    public init(maxEmptyListens: Int = 2) {
+    /// Spoken barge-in on (#640): only where the mic can hear the user over M1K3
+    /// (Mac voice processing), so the controller passes it.
+    private let bargeIn: Bool
+
+    public init(maxEmptyListens: Int = 2, bargeIn: Bool = false) {
         precondition(maxEmptyListens >= 1, "the loop must be allowed at least one empty listen")
         self.maxEmptyListens = maxEmptyListens
+        self.bargeIn = bargeIn
+    }
+
+    /// Appended where speech starts, only with barge-in on.
+    private var watch: [VoiceLoopCommand] {
+        bargeIn ? [.watchForBargeIn] : []
+    }
+
+    /// Prepended where speech ends some other way, only with barge-in on.
+    private var closeWatch: [VoiceLoopCommand] {
+        bargeIn ? [.stopBargeInWatch] : []
     }
 
     public mutating func handle(_ event: VoiceLoopEvent) -> [VoiceLoopCommand] {
@@ -128,7 +157,7 @@ public struct VoiceLoopMachine: Sendable {
             unspokenChunks = 1
             generationDone = true
             state = .speaking(answer: answer)
-            return [.speak(answer)]
+            return [.speak(answer)] + watch
 
         case let .answerChunk(chunk):
             switch state {
@@ -136,7 +165,7 @@ public struct VoiceLoopMachine: Sendable {
                 unspokenChunks = 1
                 generationDone = false
                 state = .speaking(answer: chunk)
-                return [.speak(chunk)]
+                return [.speak(chunk)] + watch
             case let .speaking(answer):
                 unspokenChunks += 1
                 state = .speaking(answer: answer.isEmpty ? chunk : answer + " " + chunk)
@@ -181,7 +210,12 @@ public struct VoiceLoopMachine: Sendable {
         case .interrupt:
             guard case .speaking = state else { return [] }
             state = .listening(partial: "")
-            return [.stopSpeaking, .startListening(afterEchoGrace: true)]
+            return [.stopSpeaking] + closeWatch + [.startListening(afterEchoGrace: true)]
+
+        case let .bargeIn(heard):
+            guard bargeIn, case .speaking = state else { return [] }
+            state = .listening(partial: heard)
+            return [.stopSpeaking, .adoptBargeInWatch]
 
         case .mute:
             switch state {
@@ -201,7 +235,7 @@ public struct VoiceLoopMachine: Sendable {
                 // Later chunks / completion of the still-running generator
                 // land in idle and are dropped as stale — same shape as exit.
                 state = .idle
-                return [.stopSpeaking]
+                return [.stopSpeaking] + closeWatch
             case .awaitingAnswer:
                 state = .idle
                 return []
@@ -210,8 +244,9 @@ public struct VoiceLoopMachine: Sendable {
             }
 
         case .exit:
+            let wasSpeaking = if case .speaking = state { true } else { false }
             state = .ended
-            return [.stopSpeaking, .stopListening]
+            return [.stopSpeaking, .stopListening] + (wasSpeaking ? closeWatch : [])
         }
     }
 
@@ -220,7 +255,7 @@ public struct VoiceLoopMachine: Sendable {
     private mutating func relistenIfDrained() -> [VoiceLoopCommand] {
         guard unspokenChunks == 0, generationDone else { return [] }
         state = .listening(partial: "")
-        return [.startListening(afterEchoGrace: true)]
+        return closeWatch + [.startListening(afterEchoGrace: true)]
     }
 
     private mutating func emptyListenEnded() -> [VoiceLoopCommand] {

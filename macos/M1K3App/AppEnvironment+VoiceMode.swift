@@ -54,6 +54,15 @@
 //  verify-by-launch owed.
 //  Review: Kev + claude-opus-5-5, 2026-10-16 (follow-up) — `lastHeard` clears when a listen starts, so a turn can
 //  never carry the previous listen's room (#618 review).
+//  Review: Kev + claude-opus-5-5, 2026-10-25 — spoken barge-in (#640) wired behind `-macVoiceProcessing YES`:
+//  `startBargeInWatch` opens the echo-cancelling recogniser while M1K3 speaks, only where VoiceProcessingPolicy
+//  would run VPIO (never Bluetooth), and `echoCancellationLive` reads the transcriber's watchdog. Off without the
+//  opt-in: the loop stays half-duplex. A voice turn asked over a still-generating answer now stops that
+//  generation first (it was dropped as "No answer arrived", click barge-in included). Confidence 0.6:
+//  verify-by-launch owed (speak over M1K3, with and without music, and mid-generation).
+//  Review: same day (2), Kev's first live run — the watch now listens with `.watches` (as `.keepsListening` the
+//  8 s silent-listen limit closed it every 8.2 s, three closes and it gave up, so "hang on" fell on a closed mic),
+//  and speech stops at SpokenAnswerEnd (the "Web sources:" block was read aloud line by line). Confidence 0.65.
 
 import AppKit
 import AVFoundation
@@ -418,16 +427,47 @@ extension AppEnvironment {
             userName: UserDefaults.standard.string(forKey: Self.userDisplayNameKey)
         ))
         var lastHeard: SoundContext?
-        // One voice turn into the chat. A turn superseded by barge-in finds the chat still
-        // answering and its send returns at once: it must not touch the room line, and the
-        // line only counts as said once a turn really carried it.
+        // One voice turn into the chat. The room line only counts as said once a turn really
+        // carried it (a send that still finds the chat answering returns at once).
         let sendVoiceTurn: @MainActor (String) async -> Void = { [weak self] question in
             guard let self else { return }
+            // A question asked over the answer (barge-in, spoken or clicked) replaces it: stop
+            // the generation still running, or `send` would return at once and the question be
+            // lost as "No answer arrived" (#640 review). Bounded: a wedged stop must not hang voice.
+            if chat.isResponding {
+                chat.stopResponding()
+                for _ in 0 ..< 40 where chat.isResponding {
+                    try? await Task.sleep(for: .milliseconds(50))
+                }
+            }
             let prepared = turns.prepare(question, heard: lastHeard)
             let token = chat.isResponding ? nil : Self.voiceTurnClause.set(prepared.soundClause)
             if token != nil { turns.delivered(prepared) }
             await chat.send(prepared.question)
             if let token { Self.voiceTurnClause.clear(token) }
+        }
+        // Spoken barge-in (#640), only behind the Mac voice-processing opt-in: the watch
+        // opens the mic while M1K3 speaks, and only where VPIO will run (never a Bluetooth
+        // input, which would drop the headset into its 16 kHz call profile mid-answer) on
+        // the echo-cancelling recogniser. No earcon: nothing should tick over M1K3's voice.
+        let startBargeInWatch: @MainActor () throws -> AsyncStream<TranscriptSegment>? = { [weak self] in
+            guard let self,
+                  VoiceProcessingPolicy.shouldEnable(
+                      platform: VoiceProcessingPolicy.current,
+                      inputIsBluetooth: InputDeviceTransport.defaultInputIsBluetooth(),
+                      macOptIn: true
+                  ),
+                  let provider = transcription.activeProvider(preferringEchoCancellation: true),
+                  provider.attemptsEchoCancellation
+            else { return nil }
+            // `.watches`: silence never ends it (as `.keepsListening` it closed every 8.2 s).
+            let stream = try provider.startListening(finality: .watches)
+            activeProvider = provider
+            Self.voiceLog.notice("voice barge-in watch on \(provider.name, privacy: .public)")
+            return stream
+        }
+        let echoCancellationLive: @MainActor () -> Bool = {
+            (activeProvider as? AppleSpeechTranscriber)?.echoCancellationLive ?? false
         }
         return VoiceLoopController.Dependencies(
             startListening: { [weak self] in
@@ -556,7 +596,8 @@ extension AppEnvironment {
                 // never re-speak the answer, the 2026-07-25 finding) as a
                 // tested M1K3Voice seam shared with chat auto-speak.
                 var folder = StreamedAnswerFolder(
-                    stopMatcher: { FollowUpSplit.trailerStart(in: $0) }, leakGuard: Self.spokenLeakGuard
+                    stopMatcher: { SpokenAnswerEnd.start(in: $0, followUps: FollowUpSplit.trailerStart(in:)) },
+                    leakGuard: Self.spokenLeakGuard
                 )
                 // Spoken tool transparency (2026-08-16): tool dispatches used to
                 // be dead air in voice mode — the visual activity label lives on
@@ -653,7 +694,9 @@ extension AppEnvironment {
                     reviewLedger.recordCompletedTurn()
                 }
                 return .success(())
-            }
+            },
+            startBargeInWatch: VoiceProcessingPolicy.macOptIn() ? startBargeInWatch : nil,
+            echoCancellationLive: echoCancellationLive
         )
     }
 }

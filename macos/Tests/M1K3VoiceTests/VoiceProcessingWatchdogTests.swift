@@ -43,4 +43,14 @@ struct VoiceProcessingWatchdogTests {
         #expect(VoiceProcessingWatchdog.applies(platform: .mac))
         #expect(!VoiceProcessingWatchdog.applies(platform: .mobile))
     }
+
+    @Test("a reinstall after the watchdog has finished re-arms it, so echoCancellationLive comes back (#640)")
+    func reinstallAfterTheWatchdogRearmsIt() {
+        // A mid-listen route change clears the live flag; with no look pending nothing would set it again.
+        #expect(VoiceProcessingWatchdog.rearmsAfterReinstall(voiceProcessing: true, lookPending: false))
+        // A look already pending sees the reinstall itself (reinstalledSinceLastCheck): a second chain would double-look.
+        #expect(!VoiceProcessingWatchdog.rearmsAfterReinstall(voiceProcessing: true, lookPending: true))
+        // A plain tap has no starve to watch for.
+        #expect(!VoiceProcessingWatchdog.rearmsAfterReinstall(voiceProcessing: false, lookPending: false))
+    }
 }

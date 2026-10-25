@@ -153,4 +153,12 @@ public enum VoiceProcessingWatchdog {
         if check < 2 || (reinstalledSinceLastCheck && check < maxChecks) { return .recheck }
         return .starved
     }
+
+    /// Start a fresh run of looks after a route-change reinstall? The reinstall clears
+    /// `echoCancellationLive`, and once the looks have ended (live or starved) nothing
+    /// sets it again, so a mid-listen route change would leave barge-in off for the rest
+    /// of the listen (#640). A look already pending sees the reinstall itself.
+    public static func rearmsAfterReinstall(voiceProcessing: Bool, lookPending: Bool) -> Bool {
+        voiceProcessing && !lookPending
+    }
 }

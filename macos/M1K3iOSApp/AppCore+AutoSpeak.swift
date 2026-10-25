@@ -26,6 +26,8 @@
 //  session lets a predecessor's duck go first, in order. (4) The session helpers are the readout's and voice mode's
 //  (`activateSampleAudioSession` / `deactivateVoiceAudioSession`), not a third copy. Confidence 0.7 (rules pinned in
 //  AnswerAudioSessionPolicyTests; the sound is verify-by-ear on the phone, music playing).
+//  Review: Kev + claude-opus-5-5, 2026-10-25 — speech stops at SpokenAnswerEnd: the follow-ups trailer OR a sources
+//  header, whichever is first (voice read "Web sources:" URLs aloud line by line, Kev). Confidence 0.8.
 //
 
 import Foundation
@@ -60,7 +62,8 @@ extension AppCore {
             // answer takes the session at its first sentence (not for the whole generation).
             await self?.releaseAnswerAudio()
             var folder = StreamedAnswerFolder(
-                stopMatcher: { FollowUpSplit.trailerStart(in: $0) }, leakGuard: Self.spokenLeakGuard
+                stopMatcher: { SpokenAnswerEnd.start(in: $0, followUps: FollowUpSplit.trailerStart(in:)) },
+                leakGuard: Self.spokenLeakGuard
             )
             var pinnedID: UUID?
             let firstMessageTickBudget = 66 // ~10 s at 150 ms; a message normally appears within one tick

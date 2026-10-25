@@ -60,6 +60,25 @@ struct StreamedAnswerFolderTests {
         #expect(folder.flush() == nil)
     }
 
+    // MARK: - Where speech ends (Kev 2026-10-25: voice mode read its web sources aloud)
+
+    private static func spokenFolder() -> StreamedAnswerFolder {
+        StreamedAnswerFolder(stopMatcher: { text in
+            SpokenAnswerEnd.start(in: text, followUps: { $0.range(of: "FOLLOWUPS:")?.lowerBound })
+        })
+    }
+
+    @Test("the appended Web sources block is never spoken, streamed line by line")
+    func webSourcesBlockIsNotSpoken() {
+        var folder = Self.spokenFolder()
+        var spoken = folder.ingest("Dublin was founded by Vikings. It grew under the Normans.")
+        let withSources = "Dublin was founded by Vikings. It grew under the Normans."
+            + "\n\nWeb sources:\n• Dublin - Wikipedia (en.wikipedia.org)\n"
+        spoken += folder.ingest(withSources)
+        spoken += folder.flush().map { [$0] } ?? []
+        #expect(spoken == ["Dublin was founded by Vikings.", "It grew under the Normans."])
+    }
+
     // MARK: - The leak guard, live (2026-09-30)
 
     // Speech folds sentences out of the stream BEFORE ChatSession's end-of-turn

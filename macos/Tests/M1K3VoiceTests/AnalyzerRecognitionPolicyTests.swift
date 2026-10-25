@@ -80,6 +80,23 @@ struct AnalyzerEndpointTests {
         }
     }
 
+    @Test("the barge-in watch never ends on silence: hearing nothing while M1K3 speaks is normal (#640)")
+    func watchOutlivesSilence() {
+        var endpoint = AnalyzerEndpoint(finality: .watches)
+        feed(&endpoint, rms: quiet, seconds: AnalyzerEndpoint.silentListenLimit + 30)
+        #expect(!endpoint.shouldEnd)
+        endpoint.result(isFinal: true, hasText: true)
+        feed(&endpoint, rms: quiet, seconds: 10)
+        #expect(!endpoint.shouldEnd)
+    }
+
+    @Test("a voice-first listen still ends at the silent-listen limit (the watch's rule is its own)")
+    func voiceFirstStillParks() {
+        var endpoint = AnalyzerEndpoint(finality: .keepsListening)
+        feed(&endpoint, rms: quiet, seconds: AnalyzerEndpoint.silentListenLimit + 0.2)
+        #expect(endpoint.shouldEnd)
+    }
+
     @Test("dictation: a final after a real pause ends the listen")
     func finalAfterPauseEnds() {
         var endpoint = AnalyzerEndpoint(finality: .endsListen)

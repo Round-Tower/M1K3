@@ -132,6 +132,10 @@
 //  rest of the engagement (`releaseAudioHardware` re-arms). The channel-count back-out is gone: 9 channels
 //  is VPIO's healthy shape. `echoCancellationLive` is `lock`-guarded so a reader never waits on an engine
 //  start. Confidence 0.7: probes, verify-by-launch owed.
+//  Review: Kev + claude-opus-5-5, 2026-10-25 — #640 nit: a route-change reinstall after the watchdog's
+//  looks had ended cleared `echoCancellationLive` for the rest of the listen. The reinstall now starts a
+//  fresh run of looks unless one is pending (`watchdogLookPendingFor`, under `engineLock`; scheduling
+//  moved inside the lock). Confidence 0.75: the rule is pinned, the route change is verify-by-launch.
 
 import AVFoundation
 import Foundation
@@ -245,6 +249,9 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// Bumped by every tap install (guarded by `engineLock`), so the watchdog can
     /// tell a route-change reinstall restarted the buffer count since its last look.
     private var tapInstalls: UInt64 = 0
+    /// The listen (generation) whose next watchdog look is scheduled, if any. Guarded
+    /// by `engineLock`: a route-change reinstall re-arms only when no look is pending.
+    private var watchdogLookPendingFor: UInt64?
     /// Buffers the tap has delivered since it was installed: the watchdog's one
     /// signal. Guarded by `lock` (the tap already takes it per buffer).
     private var tapBuffersSinceInstall = 0
@@ -1167,15 +1174,15 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// A no-op without it (the plain mic has no starve) and on iOS (`applies`).
     private func armVoiceProcessingWatchdog(_ generation: UInt64) {
         guard VoiceProcessingWatchdog.applies(platform: VoiceProcessingPolicy.current) else { return }
-        let installs = engineLock.withLock { () -> UInt64? in
-            guard engineOwner == generation, audioEngine.inputNode.isVoiceProcessingEnabled else { return nil }
-            return tapInstalls
+        engineLock.withLock {
+            guard engineOwner == generation, audioEngine.inputNode.isVoiceProcessingEnabled else { return }
+            scheduleVoiceProcessingCheck(generation, check: 1, installsAtLastLook: tapInstalls)
         }
-        guard let installs else { return }
-        scheduleVoiceProcessingCheck(generation, check: 1, installsAtLastLook: installs)
     }
 
+    /// Caller holds `engineLock`.
     private func scheduleVoiceProcessingCheck(_ generation: UInt64, check: Int, installsAtLastLook: UInt64) {
+        watchdogLookPendingFor = generation
         let (seconds, attoseconds) = VoiceProcessingWatchdog.deadline.components
         let delay = Double(seconds) + Double(attoseconds) / 1e18
         DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + delay) { [weak self] in
@@ -1190,6 +1197,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// keeps its recogniser; the tap reads it fresh per buffer.
     private func checkVoiceProcessing(_ generation: UInt64, check: Int, installsAtLastLook: UInt64) {
         engineLock.withLock {
+            if watchdogLookPendingFor == generation { watchdogLookPendingFor = nil }
             guard engineOwner == generation,
                   lock.withLock({ generation == self.generation }),
                   audioEngine.inputNode.isVoiceProcessingEnabled else { return }
@@ -1324,6 +1332,15 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
                     return
                 }
                 restartEngineAfterConfigurationChange()
+                // The reinstall cleared echoCancellationLive; look again so barge-in can trust it (#640).
+                if VoiceProcessingWatchdog.applies(platform: VoiceProcessingPolicy.current),
+                   VoiceProcessingWatchdog.rearmsAfterReinstall(
+                       voiceProcessing: audioEngine.inputNode.isVoiceProcessingEnabled,
+                       lookPending: watchdogLookPendingFor == generation
+                   )
+                {
+                    scheduleVoiceProcessingCheck(generation, check: 1, installsAtLastLook: tapInstalls)
+                }
             }
         }
     }
