@@ -630,57 +630,78 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             mode: thinkingModeProvider(),
             fastByDefault: fastThinkingProvider()
         )
-        let stream = AsyncStream<String> { continuation in
-            let turnTask = Task {
-                await InferenceIntent.withThinking(turnThinking) {
-                    if routesPlain {
-                        let answered = await runPlainTurn(
-                            question: question, chunks: turnChunks, memories: cappedMemories,
-                            history: history, instructions: routeInstructions,
-                            onActivity: onActivity, continuation: continuation
-                        )
-                        // Answered, or the consumer went away: either way, no agent turn.
-                        if answered || Task.isCancelled {
-                            continuation.finish()
-                            return
-                        }
-                        Self.log.notice("plain turn came back empty — the agent turn answers instead")
-                    }
-                    var agentTools = tools
-                    if let picker { // a tools verdict: never after a plain turn
-                        let outcome = await runDispatchedTurn(
-                            question: question, picker: picker, tools: tools, chunks: turnChunks,
-                            memories: cappedMemories, history: history, instructions: routeInstructions,
-                            onActivity: onActivity, continuation: continuation
-                        )
-                        guard case let .agent(palette) = outcome, !Task.isCancelled else {
-                            continuation.finish()
-                            return
-                        }
-                        agentTools = palette
-                    }
-                    await runAgentTurn(
-                        question: question,
-                        images: images,
-                        chunks: turnChunks,
-                        memories: cappedMemories,
-                        history: history,
-                        tools: agentTools,
-                        thinkingEnabled: turnThinking,
-                        onActivity: onActivity,
-                        continuation: continuation
+        // The turn writes to `inner`; the consumer reads `stream`, a forwarder that marks the first chunk
+        // (`turn first token:` — the one number a waiting person feels, unlogged until 2026-10-25). The
+        // hand-off is marked here, before the forwarder exists, so the snapshot it logs against is final.
+        let (inner, continuation) = AsyncStream<String>.makeStream()
+        let turnTask = Task {
+            await InferenceIntent.withThinking(turnThinking) {
+                if routesPlain {
+                    let answered = await runPlainTurn(
+                        question: question, chunks: turnChunks, memories: cappedMemories,
+                        history: history, instructions: routeInstructions,
+                        onActivity: onActivity, continuation: continuation
                     )
+                    // Answered, or the consumer went away: either way, no agent turn.
+                    if answered || Task.isCancelled {
+                        continuation.finish()
+                        return
+                    }
+                    Self.log.notice("plain turn came back empty — the agent turn answers instead")
                 }
+                var agentTools = tools
+                if let picker { // a tools verdict: never after a plain turn
+                    let outcome = await runDispatchedTurn(
+                        question: question, picker: picker, tools: tools, chunks: turnChunks,
+                        memories: cappedMemories, history: history, instructions: routeInstructions,
+                        onActivity: onActivity, continuation: continuation
+                    )
+                    guard case let .agent(palette) = outcome, !Task.isCancelled else {
+                        continuation.finish()
+                        return
+                    }
+                    agentTools = palette
+                }
+                await runAgentTurn(
+                    question: question,
+                    images: images,
+                    chunks: turnChunks,
+                    memories: cappedMemories,
+                    history: history,
+                    tools: agentTools,
+                    thinkingEnabled: turnThinking,
+                    onActivity: onActivity,
+                    continuation: continuation
+                )
             }
-            // The Task above is NOT a child of the stream's consumer, so the
-            // consumer cancelling (user sends a new message mid-loop, voice
-            // mode bails) would otherwise leave the agent loop running to the
-            // iteration cap. Terminating the stream cancels the turn.
-            continuation.onTermination = { _ in turnTask.cancel() }
         }
         phases.handedOff(at: phaseClock.now)
         if let phaseLine = phases.summary(gate: isSelfQuery ? .selfQuery : .normal) {
             Self.log.notice("\(phaseLine, privacy: .public)")
+        }
+        let handedOff = phases
+        let stream = AsyncStream<String> { outer in
+            let forward = Task {
+                var first = true
+                for await piece in inner {
+                    if first, !piece.isEmpty {
+                        first = false
+                        if let line = handedOff.firstTokenSummary(at: phaseClock.now) {
+                            Self.log.notice("\(line, privacy: .public)")
+                        }
+                    }
+                    outer.yield(piece)
+                }
+                outer.finish()
+            }
+            // The turn's Task is NOT a child of the stream's consumer, so the
+            // consumer cancelling (user sends a new message mid-loop, voice
+            // mode bails) would otherwise leave the agent loop running to the
+            // iteration cap. Terminating the stream cancels the turn.
+            outer.onTermination = { _ in
+                turnTask.cancel()
+                forward.cancel()
+            }
         }
         // Memory hits ride along as sources so the UI shows their provenance.
         return (turnChunks + cappedMemories, stream)

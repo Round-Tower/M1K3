@@ -373,6 +373,17 @@ def test_direct_env_routes_the_report_to_stdout_and_keeps_the_caller_env():
 
 
 
+def test_summary_names_the_build_configuration(tmp_path):
+    # 2026-10-25: a Debug arm and a Release arm look alike in the summary unless the line says which.
+    ok = {"fixtureID": "chat-x", "kind": "open-chat", "latencyMS": 9, "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    doc = tmp_path / "run.json"
+    doc.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok]}],
+                               "provenance": {"buildConfiguration": "Release"}}))
+    assert "config=Release" in rc.summarise(doc)
+    doc.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok]}], "provenance": {}}))
+    assert "config=None" in rc.summarise(doc), "an older document says so rather than guessing Debug"
+
+
 def test_summary_leaves_out_not_applicable_trials(tmp_path):
     na = {"fixtureID": "vis-x", "kind": "vision", "latencyMS": 0,
           "checks": [{"name": "applicable", "outcome": "skip", "detail": "n/a — text-only"}]}

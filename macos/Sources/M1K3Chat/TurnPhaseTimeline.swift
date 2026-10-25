@@ -19,6 +19,9 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-08-16, Confidence 0.9 (pure arithmetic,
 //  red-first; the answerStreaming wiring runs on every live turn). Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-10-25 — `firstTokenSummary`: the pre-gen line stopped at
+//  hand-off, so a live turn never said when its first token landed. The responder logs it off the
+//  stream's first chunk (both spans: from start, from hand-off). Confidence 0.85.
 //
 
 import Foundation
@@ -90,6 +93,18 @@ public struct TurnPhaseTimeline: Sendable, Equatable {
         }
         parts.append("gate=\(gate.rawValue)")
         return "turn phases: " + parts.joined(separator: " · ")
+    }
+
+    /// The first token's line, or nil when the turn never started: how long the person waited from the
+    /// turn's start, and — once the stream was handed off — how much of that was generation (render,
+    /// prefill, the think opener) rather than the pre-gen phases the `summary` line already names.
+    public func firstTokenSummary(at instant: ContinuousClock.Instant) -> String? {
+        guard let startedAt else { return nil }
+        var line = "turn first token: \(Self.ms(startedAt.duration(to: instant)))ms"
+        if let handedOffAt {
+            line += " · gen \(Self.ms(handedOffAt.duration(to: instant)))ms"
+        }
+        return line
     }
 
     /// Whole ms, clamped at 0 — a credited duplicate of M1K3Voice's

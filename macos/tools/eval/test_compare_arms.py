@@ -284,12 +284,14 @@ def test_a_document_with_several_brains_needs_brain():
 def test_wiring_reads_provenance_and_the_driver_power():
     w = ca.wiring(doc(*runs(True), driver={"power": {"start": "battery", "end": "ac", "mixed": True}}), None)
     assert w == {"brain": "lil", "model": "mlx-community/Qwen3.5-4B-MLX-4bit", "commit": "abc12345",
-                 "power": "ac", "powermode": 0, "power_mixed": True}
+                 "power": "ac", "powermode": 0, "power_mixed": True, "config": None}
     assert ca.wiring(doc(*runs(True)), None)["power_mixed"] is False  # older reports carry no driver block
+    assert ca.wiring(doc(*runs(True), buildConfiguration="Release"), None)["config"] == "Release"
 
 
 def test_wiring_flags_name_what_differs():
-    base = {"brain": "lil", "model": "m", "commit": "c1", "power": "ac", "powermode": 0, "power_mixed": False}
+    base = {"brain": "lil", "model": "m", "commit": "c1", "power": "ac", "powermode": 0, "power_mixed": False,
+            "config": "Debug"}
     assert ca.wiring_flags(base, {**base, "commit": "c2"}, None, None) == []  # the commit is usually the change
     assert ca.wiring_flags(base, {**base, "power": None, "powermode": None}, None, None) == []  # unknown ≠ differs
     flags = ca.wiring_flags(base, {**base, "model": "m2", "power": "battery", "powermode": 2, "power_mixed": True},
@@ -298,6 +300,18 @@ def test_wiring_flags_name_what_differs():
     joined = "\n".join(flags)
     for needle in ("modelID", "power source", "powermode", "mid-run", "not wired alike"):
         assert needle in joined
+
+
+def test_a_debug_and_a_release_arm_do_not_compare_on_latency():
+    # 2026-10-25: every October arm was Debug; in-app Lil decoded ~28 tok/s against 65–67 in Release on the
+    # older Lil, so a Release arm "passes more" latency ceilings with no model change. Unknown on one side
+    # (an older document) is not a difference, as with power.
+    base = {"brain": "lil", "model": "m", "commit": "c1", "power": "ac", "powermode": 0, "power_mixed": False,
+            "config": "Debug"}
+    flags = ca.wiring_flags(base, {**base, "config": "Release"}, None, None)
+    assert len(flags) == 1 and "build configuration differs (A Debug · B Release)" in flags[0]
+    assert ca.wiring_flags(base, {**base, "config": None}, None, None) == []
+    assert "config Debug" in ca.describe(base)
 
 
 # ── the command ─────────────────────────────────────────────────────────────

@@ -23,12 +23,22 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#530) — `turnLines` windows a turn by date and
 //  provider label; the first Big run's columns were cumulative because the stage trusted
 //  OSLogStore's position(date:) alone.
+//  Review: Kev + claude-fable-5.1, 2026-10-25 — the curve could not see the prefill it was built to
+//  measure: in checkpoint mode the generate's `prompt=` is ONE token (the 10-10 run read
+//  "prefilled=21tok" against ~800–2,400 really prefilled a message) and `prefillExactly` was untimed.
+//  The reuse line now carries `extend=…ms`, the sample sums it, the slope the decision reads is over
+//  the TOTAL prefill, decode tokens + throughput fold per turn (for the scorecard's GenerationFigures),
+//  MLX's own peak rides beside `ru_maxrss`, and the script runs to twenty messages so the
+//  HistoryWindow cliff (16 turns) is on the curve. Confidence 0.85.
 //
 
 import Foundation
 
-/// The fixed eight-message script. Short and varied so the history grows by a few dozen
+/// The fixed twenty-message script. Short and varied so the history grows by a few dozen
 /// tokens a turn: the curve then isolates what the CACHE does, not what the user typed.
+/// Twenty, not eight (2026-10-25): `HistoryWindow` keeps 16 turns (8 exchanges), so from about
+/// message 10 the oldest line drops every turn and any shared prefix collapses to the persona.
+/// The first eight are the 2026-10-10 script byte for byte, so the two curves still line up.
 public enum ChatCurveScript {
     public static let messages: [String] = [
         "Hi! How's your day going?",
@@ -39,26 +49,47 @@ public enum ChatCurveScript {
         "Can you remind me what we said about practice time?",
         "Give me a tiny weekly plan in two lines.",
         "Thanks. Sum up our whole chat in one sentence.",
+        "What's the easiest first song to learn?",
+        "My fingertips hurt after ten minutes. Normal?",
+        "Should I buy a tuner or use an app?",
+        "What did I say my neighbour plays?",
+        "Pick one chord for me to learn tonight.",
+        "How do I know when I'm ready for a second chord?",
+        "Is it bad to practise sitting on the bed?",
+        "Earlier you gave me a weekly plan — repeat just the first line.",
+        "What's a strum pattern a beginner can manage?",
+        "Any tip for switching chords faster?",
+        "How many minutes a day did I say I had?",
+        "Last one: three words of encouragement.",
     ]
 }
 
 public struct ChatCurveReuse: Sendable, Equatable, Codable {
     public let reused: Int
     public let total: Int
+    /// The checkpoint extend's prefill time (`extend=…ms`, 2026-10-25): in checkpoint mode the generate
+    /// sees one token, so the ttft line's `prefill=` misses the transcript prefill `prefillExactly` paid.
+    /// nil on a line written before the figure existed, or on a non-checkpoint send.
+    public let extendMS: Int?
 
-    public init(reused: Int, total: Int) {
+    public init(reused: Int, total: Int, extendMS: Int? = nil) {
         self.reused = reused
         self.total = total
+        self.extendMS = extendMS
     }
 }
 
 public struct ChatCurveGeneration: Sendable, Equatable, Codable {
     public let promptTokens: Int
     public let prefillMS: Int
+    public let decodeTokens: Int?
+    public let tokensPerSecond: Int?
 
-    public init(promptTokens: Int, prefillMS: Int) {
+    public init(promptTokens: Int, prefillMS: Int, decodeTokens: Int? = nil, tokensPerSecond: Int? = nil) {
         self.promptTokens = promptTokens
         self.prefillMS = prefillMS
+        self.decodeTokens = decodeTokens
+        self.tokensPerSecond = tokensPerSecond
     }
 }
 
@@ -67,7 +98,22 @@ public struct ChatCurveFolded: Sendable, Equatable {
     public let reuse: ChatCurveReuse?
     public let promptTokens: Int?
     public let prefillMS: Int?
+    /// Checkpoint extend time summed over the turn's sends; nil when no send carried one.
+    public let extendMS: Int?
+    public let decodeTokens: Int?
+    /// Total decode tokens over total decode time (a 2-token send at 60 tok/s must not pull a
+    /// 200-token send at 30 up to 45); nil when no generation reported throughput.
+    public let tokensPerSecond: Double?
     public let generations: Int
+
+    /// The same figures in the scorecard's shape; nil when the turn logged nothing at all.
+    public func figures(firstChunkMS: Int?) -> GenerationFigures? {
+        guard generations > 0 || extendMS != nil else { return nil }
+        return GenerationFigures(
+            prefillTokens: promptTokens, prefillMS: prefillMS, extendMS: extendMS, decodeTokens: decodeTokens,
+            tokensPerSecond: tokensPerSecond, generations: generations, firstChunkMS: firstChunkMS
+        )
+    }
 }
 
 /// One `.notice` entry as the stage reads it off OSLogStore: when it landed, and what it said.
@@ -89,42 +135,80 @@ public enum ChatCurveLogParser {
     /// in the same window would otherwise count as this turn's prefill). Reuse lines carry no
     /// label and are kept as they come.
     public static func turnLines(_ entries: [ChatCurveLogEntry], since: Date, label: String) -> [String] {
+        turnLines(entries, since: since, labels: [label, toolSessionLabel])
+    }
+
+    /// The same window over a SET of generation labels: the ttft line names the PATH, not the provider
+    /// (`stream` / `generate` for a plain turn, `toolTurnSession` for an agent step, `caption` for an
+    /// image), so a headless stage that owns the only brain passes `turnLabels` and keeps every path a
+    /// chat turn can take while a caption or any other labelled utility still falls outside.
+    public static func turnLines(_ entries: [ChatCurveLogEntry], since: Date, labels: Set<String>) -> [String] {
         entries.compactMap { entry in
             guard entry.date >= since else { return nil }
-            if generation(in: entry.message) != nil, !entry.message.hasPrefix("\(label) [") { return nil }
+            let labelled = labels.contains { entry.message.hasPrefix("\($0) [") }
+            if generation(in: entry.message) != nil, !labelled { return nil }
             return entry.message
         }
     }
 
-    /// `toolTurnSession reuse: 2301/2650 tok from cache, …`
+    /// The tool session's generation lines carry this label, not the provider's (MLXToolCalling's
+    /// `logGenerationInfo(label: "toolTurnSession")`); they are the turn's too (2026-10-25).
+    static let toolSessionLabel = "toolTurnSession"
+
+    /// Every ttft label a chat turn's generations can carry (MLXBrainProvider's plain paths, the seeded
+    /// plain turn, the two tool paths). Not `caption`: an image caption is a utility, not the turn.
+    public static let turnLabels: Set<String> = ["stream", "generate", "toolTurn", toolSessionLabel]
+
+    /// `toolTurnSession reuse: 2301/2650 tok from cache, … seed=persona[ extend=812ms]`
     public static func reuse(in line: String) -> ChatCurveReuse? {
         guard let match = line.firstMatch(of: /toolTurnSession reuse: (\d+)\/(\d+) tok/),
               let reused = Int(match.1), let total = Int(match.2)
         else { return nil }
-        return ChatCurveReuse(reused: reused, total: total)
+        let extend = line.firstMatch(of: /\ extend=(\d+)ms/).flatMap { Int($0.1) }
+        return ChatCurveReuse(reused: reused, total: total, extendMS: extend)
     }
 
-    /// `label [model]: prompt=349tok prefill=812ms decode=…`
+    /// `label [model]: prompt=349tok prefill=812ms decode=64tok @31tok/s`
     public static func generation(in line: String) -> ChatCurveGeneration? {
         guard let match = line.firstMatch(of: /prompt=(\d+)tok prefill=(\d+)ms/),
               let tokens = Int(match.1), let ms = Int(match.2)
         else { return nil }
-        return ChatCurveGeneration(promptTokens: tokens, prefillMS: ms)
+        let decode = line.firstMatch(of: /\ decode=(\d+)tok @(\d+)tok\/s/)
+        return ChatCurveGeneration(
+            promptTokens: tokens, prefillMS: ms,
+            decodeTokens: decode.flatMap { Int($0.1) }, tokensPerSecond: decode.flatMap { Int($0.2) }
+        )
     }
 
     /// A message can run several generations (tool iterations): the LAST reuse line is the
-    /// turn's final render; prompt tokens and prefill time are paid by every generation.
+    /// turn's final render; prompt tokens, prefill and extend time are paid by every send.
     public static func fold(_ lines: [String]) -> ChatCurveFolded {
         var reuse: ChatCurveReuse?
+        var extends: [Int] = []
         var generations: [ChatCurveGeneration] = []
         for line in lines {
-            if let found = Self.reuse(in: line) { reuse = found }
+            if let found = Self.reuse(in: line) {
+                reuse = found
+                if let extend = found.extendMS { extends.append(extend) }
+            }
             if let found = generation(in: line) { generations.append(found) }
         }
+        let decoded = generations.compactMap(\.decodeTokens)
+        // Seconds each generation spent decoding, from its own tokens and rate; a 0 tok/s line adds none.
+        let decodeSeconds = generations.compactMap { generation -> Double? in
+            guard let tokens = generation.decodeTokens, let rate = generation.tokensPerSecond, rate > 0 else {
+                return nil
+            }
+            return Double(tokens) / Double(rate)
+        }.reduce(0, +)
+        let decodeTokens = decoded.isEmpty ? nil : decoded.reduce(0, +)
         return ChatCurveFolded(
             reuse: reuse,
             promptTokens: generations.isEmpty ? nil : generations.map(\.promptTokens).reduce(0, +),
             prefillMS: generations.isEmpty ? nil : generations.map(\.prefillMS).reduce(0, +),
+            extendMS: extends.isEmpty ? nil : extends.reduce(0, +),
+            decodeTokens: decodeTokens,
+            tokensPerSecond: decodeTokens.flatMap { decodeSeconds > 0 ? Double($0) / decodeSeconds : nil },
             generations: generations.count
         )
     }
@@ -142,10 +226,16 @@ public struct ChatCurveSample: Sendable, Equatable, Codable {
     public let generations: Int
     public let peakRSSMB: Int
     public let answerChars: Int
+    /// Checkpoint extend time summed over the message's sends (2026-10-25); nil before the figure existed.
+    public let extendMS: Int?
+    /// MLX's peak memory so far in MB (`MLXMemoryBudget.peakMB`, the counter Lil's 5 GB own-peak cap is
+    /// read against — `ru_maxrss` is the process, weights and all); nil on older curves.
+    public let mlxPeakMB: Int?
 
     public init(
         index: Int, question: String, renderedTokens: Int?, reusedTokens: Int?, promptTokens: Int?,
-        prefillMS: Int?, generations: Int, peakRSSMB: Int, answerChars: Int
+        prefillMS: Int?, generations: Int, peakRSSMB: Int, answerChars: Int,
+        extendMS: Int? = nil, mlxPeakMB: Int? = nil
     ) {
         self.index = index
         self.question = question
@@ -156,19 +246,33 @@ public struct ChatCurveSample: Sendable, Equatable, Codable {
         self.generations = generations
         self.peakRSSMB = peakRSSMB
         self.answerChars = answerChars
+        self.extendMS = extendMS
+        self.mlxPeakMB = mlxPeakMB
     }
 
     public var reuseFraction: Double? {
         guard let renderedTokens, let reusedTokens, renderedTokens > 0 else { return nil }
         return Double(reusedTokens) / Double(renderedTokens)
     }
+
+    /// The prefill this message really paid: the generates' own plus the checkpoint extend. Before
+    /// 2026-10-25 the curve read `prefillMS` alone, which in checkpoint mode is the one-token generate.
+    public var totalPrefillMS: Int? {
+        switch (prefillMS, extendMS) {
+        case (nil, nil): nil
+        case let (prefill, extend): (prefill ?? 0) + (extend ?? 0)
+        }
+    }
 }
 
 public struct ChatCurveSummary: Sendable, Equatable, Codable {
     /// Least-squares slope of rendered prompt tokens per message (how fast the prompt grows).
     public let renderedTokensPerMessage: Double?
-    /// Least-squares slope of prefill ms per message (what the growth costs; ~0 = cache holds).
+    /// Least-squares slope of the generates' own prefill ms per message (the one-token generate in checkpoint mode).
     public let prefillMSPerMessage: Double?
+    /// Least-squares slope of the TOTAL prefill ms per message (generate + extend): what the growth
+    /// costs; ~0 = the cache holds. The figure the cross-turn reuse decision reads.
+    public let totalPrefillMSPerMessage: Double?
 
     public init(samples: [ChatCurveSample]) {
         renderedTokensPerMessage = Self.slope(
@@ -176,6 +280,9 @@ public struct ChatCurveSummary: Sendable, Equatable, Codable {
         )
         prefillMSPerMessage = Self.slope(
             samples.compactMap { s in s.prefillMS.map { (s.index, Double($0)) } }
+        )
+        totalPrefillMSPerMessage = Self.slope(
+            samples.compactMap { s in s.totalPrefillMS.map { (s.index, Double($0)) } }
         )
     }
 
@@ -228,11 +335,13 @@ public struct ChatCurveReport: Sendable, Equatable, Codable {
         var lines = samples.map { s in
             "chatcurve #\(s.index + 1) rendered=\(figure(s.renderedTokens))tok reuse=\(figure(s.reusedTokens))"
                 + " prefilled=\(figure(s.promptTokens))tok prefill=\(figure(s.prefillMS))ms"
-                + " gens=\(s.generations) rss=\(s.peakRSSMB)MB"
+                + " extend=\(figure(s.extendMS))ms gens=\(s.generations) rss=\(s.peakRSSMB)MB"
+                + " mlx=\(figure(s.mlxPeakMB))MB"
         }
         lines.append(
             "chatcurve slope [\(modelID)]: \(slope(summary.renderedTokensPerMessage)) rendered tok/msg,"
-                + " \(slope(summary.prefillMSPerMessage)) prefill ms/msg"
+                + " \(slope(summary.prefillMSPerMessage)) prefill ms/msg,"
+                + " \(slope(summary.totalPrefillMSPerMessage)) total prefill ms/msg"
         )
         return lines.joined(separator: "\n")
     }

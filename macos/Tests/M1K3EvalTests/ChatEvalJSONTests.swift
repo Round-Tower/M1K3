@@ -32,7 +32,7 @@ struct ChatEvalJSONTests {
         EvalProvenance(
             date: "2026-09-05T12:00:00Z", hardware: "Apple M1 Max · 64 GB", osVersion: "macOS 26.4",
             appCommit: "6d41624c", mlxSwiftLMRevision: "c97539da", powerMode: 2, powerSource: "ac", livePath: true,
-            repeats: 2, notes: "machine quiet"
+            repeats: 2, notes: "machine quiet", buildConfiguration: "Release"
         )
     }
 
@@ -101,7 +101,11 @@ struct ChatEvalJSONTests {
         let full = ChatEvalScore(
             fixtureID: "f", kind: .reasoning, checks: [EvalCheck(name: "c", outcome: .pass, detail: "d")],
             latencyMS: 7, answerPreview: "said", repeatIndex: 3, routeStage: "head",
-            thinkChars: 11, thinkMS: 13, thought: "t", thinkBlocks: 2, thinkCharsTotal: 17
+            thinkChars: 11, thinkMS: 13, thought: "t", thinkBlocks: 2, thinkCharsTotal: 17,
+            generation: GenerationFigures(
+                prefillTokens: 800, prefillMS: 2100, extendMS: 1900, decodeTokens: 300, tokensPerSecond: 31,
+                generations: 2, firstChunkMS: 2300
+            )
         )
         #expect(full.withRepeatIndex(full.repeatIndex) == full)
         let note = EvalCheck(name: "n", outcome: .skip)
@@ -126,6 +130,44 @@ struct ChatEvalJSONTests {
         let p = try JSONDecoder().decode(EvalProvenance.self, from: Data(legacy.utf8))
         #expect(p.powerSource == nil)
         #expect(p.rendered.contains("power unknown · powermode 0"))
+    }
+
+    @Test("a scorecard written before the build configuration was stamped decodes with it unknown")
+    func decodesWithoutBuildConfiguration() throws {
+        // 2026-10-25: every October arm was a Debug build and nothing in the document said so; a Release
+        // run "passes more" latency checks with no model change. The field is optional so older
+        // documents decode, and the header says "unknown" rather than guessing Debug.
+        let legacy = """
+        {"date":"2026-09-05T12:00:00Z","hardware":"h","osVersion":"o","powerMode":0,"livePath":true,"repeats":1}
+        """
+        let p = try JSONDecoder().decode(EvalProvenance.self, from: Data(legacy.utf8))
+        #expect(p.buildConfiguration == nil)
+        #expect(p.rendered.contains("build unknown"))
+        #expect(provenance.rendered.contains("build Release"))
+    }
+
+    @Test("a score's generation figures round-trip and are left out when the path has none")
+    func generationFiguresAreOptional() throws {
+        let figures = GenerationFigures(
+            prefillTokens: 800, prefillMS: 2100, extendMS: nil, decodeTokens: 300, tokensPerSecond: 31.5,
+            generations: 2, firstChunkMS: 2300
+        )
+        let with = ChatEvalScore(fixtureID: "f", kind: .openChat, checks: [], latencyMS: 5, generation: figures)
+        let back = try JSONDecoder().decode(ChatEvalScore.self, from: JSONEncoder().encode(with))
+        #expect(back.generation == figures)
+        // The real prefill a trial paid: the generates' own prefill plus any checkpoint extend.
+        #expect(figures.totalPrefillMS == 2100)
+        #expect(GenerationFigures(
+            prefillTokens: nil, prefillMS: 40, extendMS: 2100, decodeTokens: nil, tokensPerSecond: nil,
+            generations: 1, firstChunkMS: nil
+        ).totalPrefillMS == 2140)
+        let without = ChatEvalScore(fixtureID: "f", kind: .openChat, checks: [], latencyMS: 5)
+        let json = try #require(String(bytes: ChatEvalReport.json(
+            ChatEvalDocument(provenance: provenance, runs: [.init(brainID: "mini", scores: [without])])
+        ), encoding: .utf8))
+        #expect(!json.contains("\"generation\""), "nil is omitted, as routeStage is")
+        let legacy = #"{"fixtureID":"f","kind":"open-chat","checks":[],"latencyMS":5,"repeatIndex":0}"#
+        #expect(try JSONDecoder().decode(ChatEvalScore.self, from: Data(legacy.utf8)).generation == nil)
     }
 
     @Test("provenance renders as a header block the text transcript carries too")

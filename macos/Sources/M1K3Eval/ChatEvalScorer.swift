@@ -138,6 +138,8 @@ public struct EvalObservation: Sendable, Equatable {
     /// First token → first answer token on the live stream (`ThinkPhaseClock`);
     /// nil when nothing was thought or the path has no stream timing.
     public let thinkMS: Int?
+    /// What the turn's generations cost, read off the app's log lines (2026-10-25); nil on paths that log none.
+    public let generation: GenerationFigures?
 
     public init(
         rawText: String,
@@ -145,7 +147,8 @@ public struct EvalObservation: Sendable, Equatable {
         validCitationCount: Int = 0,
         latencyMS: Int = 0,
         routeStages: [String] = [],
-        thinkMS: Int? = nil
+        thinkMS: Int? = nil,
+        generation: GenerationFigures? = nil
     ) {
         self.rawText = rawText
         self.toolCalls = toolCalls
@@ -153,6 +156,7 @@ public struct EvalObservation: Sendable, Equatable {
         self.latencyMS = latencyMS
         self.routeStages = routeStages
         self.thinkMS = thinkMS
+        self.generation = generation
     }
 }
 
@@ -212,12 +216,16 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
     /// optional, so older documents decode.
     public let thinkBlocks: Int?
     public let thinkCharsTotal: Int?
+    /// What the turn's generations cost (prefill, extend, decode, throughput, first chunk) — read off the
+    /// app's own log lines, so Mini and PCC trials carry none. Optional: nil is left out of the JSON and
+    /// older documents decode (2026-10-25).
+    public let generation: GenerationFigures?
 
     public init(
         fixtureID: String, kind: TaskKind, checks: [EvalCheck], latencyMS: Int,
         answerPreview: String? = nil, repeatIndex: Int = 0, routeStage: String? = nil,
         thinkChars: Int? = nil, thinkMS: Int? = nil, thought: String? = nil,
-        thinkBlocks: Int? = nil, thinkCharsTotal: Int? = nil
+        thinkBlocks: Int? = nil, thinkCharsTotal: Int? = nil, generation: GenerationFigures? = nil
     ) {
         self.fixtureID = fixtureID
         self.kind = kind
@@ -231,6 +239,7 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
         self.thought = thought
         self.thinkBlocks = thinkBlocks
         self.thinkCharsTotal = thinkCharsTotal
+        self.generation = generation
     }
 
     /// The same score with one more check — the calculator probe notes the turn's tools this way.
@@ -931,7 +940,8 @@ public enum ChatEvalScorer {
             thinkMS: observation.thinkMS,
             thought: ThinkPhase.thought(observation.rawText),
             thinkBlocks: thoughts.isEmpty ? nil : thoughts.count,
-            thinkCharsTotal: thoughts.isEmpty ? nil : thoughts.reduce(0) { $0 + $1.count }
+            thinkCharsTotal: thoughts.isEmpty ? nil : thoughts.reduce(0) { $0 + $1.count },
+            generation: observation.generation
         )
     }
 

@@ -104,6 +104,22 @@ def test_the_build_line_is_the_one_the_arms_were_built_with():
     assert bea.app_path(Path("/dd")) == Path("/dd/Build/Products/Debug/M1K3.app")
 
 
+def test_a_release_build_is_the_same_line_with_the_configuration_swapped():
+    # 2026-10-25: every October arm was a Debug build (in-app Lil decoded ~28 tok/s against 65–67 in
+    # Release on the older Lil). Release is opt-in — Debug stays the default so old arms still compare —
+    # and the products land under their own configuration folder.
+    gen, build = bea.commands(Path("/dd"), configuration="Release")
+    assert gen == ["xcodegen", "generate"]
+    assert build[:4] == ["xcodebuild", "-scheme", "M1K3", "-configuration"] and build[4] == "Release"
+    assert build[5:] == bea.commands(Path("/dd"))[1][5:], "only the configuration differs"
+    assert bea.app_path(Path("/dd"), configuration="Release") == Path("/dd/Build/Products/Release/M1K3.app")
+
+
+def test_an_unknown_configuration_is_refused_before_anything_runs(capsys):
+    assert bea.main(["/nowhere", "/dd", "--configuration", "Profile", "--dry-run"]) == 2
+    assert "Debug or Release" in capsys.readouterr().err
+
+
 # ── the dirty refusal (a real, hermetic git repo) ───────────────────────────
 
 def git(repo: Path, *args: str) -> str:

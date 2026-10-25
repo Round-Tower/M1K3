@@ -411,7 +411,10 @@ enum ChatEvalStage {
         // see neither. The recorder is a task-local, so the turn runs inside its scope.
         let tools = EvalToolLog()
         let stages = PickStageRecorder()
-        let (raw, thinkMS) = try await ToolRouterWiring.$pickRecorder.withValue(stages) {
+        // The log window for this trial's generation figures (MetricLogReader): wall-clock, because
+        // OSLogStore entries are dated; the latency itself stays on the monotonic clock.
+        let startedAt = Date()
+        let (raw, thinkMS, firstChunkMS) = try await ToolRouterWiring.$pickRecorder.withValue(stages) {
             let (_, stream) = try await responder.answerStreaming(
                 fixture.prompt, images: images, history: [], onActivity: { activity in
                     if case let .usingTool(name, _) = activity { tools.append(name) }
@@ -419,7 +422,9 @@ enum ChatEvalStage {
             )
             var raw = ""
             var thinkClock = ThinkPhaseClock()
+            var firstChunkMS: Int?
             for await piece in stream {
+                if firstChunkMS == nil, !piece.isEmpty { firstChunkMS = milliseconds(clock.now - start) }
                 // The responder's fallback passes provider chunks through raw, and a
                 // cumulative provider (AFM, PCC) yields snapshots — `+=` would score
                 // "HHeHel…". Same fold the app's consumer applies (ChatSession).
@@ -427,8 +432,9 @@ enum ChatEvalStage {
                 // The think phase on the clock (fed the FOLDED text: first token → first answer token).
                 thinkClock.feed(transcript: raw, at: clock.now - start)
             }
-            return (raw, thinkClock.thinkMS)
+            return (raw, thinkClock.thinkMS, firstChunkMS)
         }
+        let latencyMS = milliseconds(clock.now - start)
         // An empty stream from a provider that can name its failure is a failed
         // call, scored as "ran — <reason>", never as "0 chars".
         if raw.isEmpty, let reason = (provider as? StreamFailureReporting)?.takeStreamFailure() {
@@ -437,10 +443,21 @@ enum ChatEvalStage {
         return EvalObservation(
             rawText: raw,
             toolCalls: tools.names,
-            latencyMS: milliseconds(clock.now - start),
+            latencyMS: latencyMS,
             routeStages: stages.stages.map(\.rawValue),
-            thinkMS: thinkMS
+            thinkMS: thinkMS,
+            generation: await generationFigures(since: startedAt, provider: provider, firstChunkMS: firstChunkMS)
         )
+    }
+
+    /// The trial's generation figures off the app's own log lines (2026-10-25) — MLX brains only: Mini and
+    /// PCC log no ttft line, and a poll that can only come back empty would add seconds per trial for nothing.
+    /// Read AFTER `latencyMS` is taken, so the poll never lands in the turn's time.
+    private static func generationFigures(
+        since startedAt: Date, provider: any InferenceProvider, firstChunkMS: Int?
+    ) async -> GenerationFigures? {
+        guard provider is MLXBrainProvider else { return nil }
+        return await MetricLogReader.foldTurn(since: startedAt).figures(firstChunkMS: firstChunkMS)
     }
 
     /// One embedder per launch, as the app holds one (AppEnvironment): the live path, vision and grounded-Q
@@ -630,8 +647,20 @@ enum ChatEvalStage {
             powerSource: Self.currentPowerSource(),
             livePath: livePathRequested,
             repeats: repeats,
-            notes: SelfTestEnv.value("M1K3_SELFTEST_NOTES")
+            notes: SelfTestEnv.value("M1K3_SELFTEST_NOTES"),
+            buildConfiguration: buildConfiguration
         )
+    }
+
+    /// How this binary was compiled — the one provenance fact the bundle CAN know about itself. Every
+    /// October 2026 arm was Debug (in-app Lil decoded ~28 tok/s against 65–67 in Release on the older Lil)
+    /// and no document said so; compare_arms flags a Debug/Release pair on this field.
+    static var buildConfiguration: String {
+        #if DEBUG
+            "Debug"
+        #else
+            "Release"
+        #endif
     }
 
     /// "ac" / "battery" / "ups" off the tested `SystemStatusProviding` seam (#217); nil when it
@@ -887,15 +916,19 @@ enum ChatEvalStage {
             _ = try await ingester.ingest(title: "Notes", text: doc)
         }
         let responder = RAGResponder(store: store, embedder: Self.embedder, provider: provider)
+        let startedAt = Date()
         // The bare RAGResponder has no per-turn policy: scope the arm's flag (the provider is
         // built thinking-ON like the app's, so an unscoped call would think — #555 harness fold).
         let response = try await InferenceIntent.withThinking(thinking.bareThinks) {
             try await responder.answer(fixture.prompt)
         }
+        let latencyMS = milliseconds(clock.now - start)
         return EvalObservation(
             rawText: response.answer,
             validCitationCount: response.citations.count,
-            latencyMS: milliseconds(clock.now - start)
+            latencyMS: latencyMS,
+            // No stream here, so no first chunk; the prefill and decode figures still come off the log.
+            generation: await generationFigures(since: startedAt, provider: provider, firstChunkMS: nil)
         )
     }
 
