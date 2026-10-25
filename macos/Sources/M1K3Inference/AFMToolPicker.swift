@@ -26,9 +26,14 @@
 //  pick only changes when the flag is on, and the arm measures that first. Confidence 0.7.
 //
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — chainPicks promotes `also` when the head is none (#512).
+//  Review: Kev + claude-fable-5.1, 2026-10-25 — the pick's generation is one helper (`pick`/`pickChain`) over any
+//  session, and `PrewarmedToolPicker` serves it a session prewarmed for the menu (the arm behind
+//  `-pickerPrewarm YES`): the Release baseline's picker route paid ~3 s a turn for a cold session. Confidence 0.7
+//  (the slot and the flag are pinned; what a warm picker session buys is the arm eval's to show).
 
 import Foundation
 @_weakLinked import FoundationModels
+import OSLog
 
 /// A brain that can name one tool for a message with a short constrained generation.
 public protocol ToolPicking: Sendable {
@@ -47,6 +52,9 @@ public extension ToolPicking {
 }
 
 public enum AFMToolPicker {
+    /// The route's category, so a pick's session warmth reads beside its `tool pick:` line.
+    static let log = Logger(subsystem: "app.m1k3", category: "route")
+
     public static let choices: [String] = [
         "battery_status", "calendar_peek", "current_location", "datetime", "fetch_page", "list_documents",
         "lookup_fact", "recent_activity", "search_knowledge", "system_status", "web_search", "none", "action",
@@ -90,19 +98,69 @@ extension AppleFoundationModelsProvider: ToolPicking {
         guard isAvailable else { throw InferenceError.providerUnavailable("Apple Intelligence is not ready") }
         // A fresh session with the picker's own instructions: it never takes or
         // spoils the chat prewarm slot, and it carries no persona.
-        let session = LanguageModelSession(instructions: instructions)
+        return try await AFMToolPicker.pick(session: LanguageModelSession(instructions: instructions), message: message)
+    }
+
+    public func pickTools(message: String, instructions: String) async throws -> [(tool: String, query: String)] {
+        guard isAvailable else { throw InferenceError.providerUnavailable("Apple Intelligence is not ready") }
+        return try await AFMToolPicker.pickChain(session: LanguageModelSession(instructions: instructions), message: message)
+    }
+}
+
+extension AFMToolPicker {
+    /// One guided generation naming a tool, on whatever session the caller brings (fresh or prewarmed).
+    static func pick(session: LanguageModelSession, message: String) async throws -> (tool: String, query: String) {
         let pick = try await session.respond(
             to: message, generating: AFMToolPick.self, options: GenerationOptions(temperature: 0)
         ).content
         return (pick.tool, pick.query)
     }
 
-    public func pickTools(message: String, instructions: String) async throws -> [(tool: String, query: String)] {
-        guard isAvailable else { throw InferenceError.providerUnavailable("Apple Intelligence is not ready") }
-        let session = LanguageModelSession(instructions: instructions)
+    static func pickChain(session: LanguageModelSession, message: String) async throws -> [(tool: String, query: String)] {
         let pick = try await session.respond(
             to: message, generating: AFMToolChainPick.self, options: GenerationOptions(temperature: 0)
         ).content
-        return AFMToolPicker.chainPicks(tool: pick.tool, query: pick.query, also: pick.also, alsoQuery: pick.alsoQuery)
+        return chainPicks(tool: pick.tool, query: pick.query, also: pick.also, alsoQuery: pick.alsoQuery)
+    }
+}
+
+/// The same pick on a session prewarmed for the menu (the A/B arm, 2026-10-25). The Release baseline put the
+/// picker route's first token at 3.8 s (Lil) / 5.1 s (Big) against 0.65 / 1.8 s on the chat route, on half the
+/// trials, and the timed pick read 3.0 s: a fresh `LanguageModelSession(instructions:)` per turn, processed cold.
+/// Here the first pick on a menu is cold too, and every pick re-arms a session for its menu
+/// (`prewarm()` — the framework loads and processes the instructions ahead), so the next pick on the same
+/// menu starts warm. One slot (`PrewarmSlot`, keyed by the exact instructions): a palette change is a miss,
+/// never a stale menu. The picker's session never touches the chat prewarm slot.
+public final class PrewarmedToolPicker: ToolPicking, @unchecked Sendable {
+    private let base: AppleFoundationModelsProvider
+    private let slot = PrewarmSlot<LanguageModelSession>()
+
+    public init(base: AppleFoundationModelsProvider) {
+        self.base = base
+    }
+
+    /// Whether a warm session is waiting (diagnostics).
+    public var isArmed: Bool {
+        slot.isArmed
+    }
+
+    public func pickTool(message: String, instructions: String) async throws -> (tool: String, query: String) {
+        try await AFMToolPicker.pick(session: session(for: instructions), message: message)
+    }
+
+    public func pickTools(message: String, instructions: String) async throws -> [(tool: String, query: String)] {
+        try await AFMToolPicker.pickChain(session: session(for: instructions), message: message)
+    }
+
+    /// The warm session for this menu when one waits (the slot drops a mismatch), else a cold one — and
+    /// either way a fresh session starts warming for the NEXT pick on this menu before this one runs.
+    private func session(for instructions: String) throws -> LanguageModelSession {
+        guard base.isAvailable else { throw InferenceError.providerUnavailable("Apple Intelligence is not ready") }
+        let taken = slot.take(matching: instructions)
+        let next = LanguageModelSession(instructions: instructions)
+        next.prewarm()
+        slot.store(next, key: instructions)
+        AFMToolPicker.log.notice("tool picker session: \(taken == nil ? "cold" : "warm", privacy: .public), next armed")
+        return taken ?? LanguageModelSession(instructions: instructions)
     }
 }
