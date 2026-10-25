@@ -13,7 +13,7 @@ geometry, the proposals, and the gates.
 | Brain | Layers | Grows per token | Bounded part | Native context |
 |---|---|---|---|---|
 | Big — gemma-4-12B | 48: 8 full-attention (1 KV head × 512, `attention_k_eq_v`), 40 sliding (8 × 256, window 1024) | ~16 KB (8 × 1 × 512 × K+V × bf16) | 40 sliding layers × 1024 tokens ≈ 335 MB, constant | 262,144 |
-| Lil — Qwen3-4B-2507 DWQ | 36 dense (8 KV heads × 128), 8-bit KV | ~78 KB (incl. group scales) | none | 262,144 |
+| Lil — Qwen3.5-4B (since 2026-10-08) | 32 layers: 8 full-attention (4 KV heads × 256, `full_attention_interval` 4) + 24 GatedDeltaNet (MambaCache, never trims) | ~32 KB fp16 / ~16 KB at kvBits 8 | the 24 recurrent states, ~25–50 MiB per cache copy | 262,144 |
 | Pocket — LFM2.5-1.2B | hybrid: conv (MambaCache) + attention | small | conv state, constant | 32,768 |
 
 Source: each model's `config.json` (gemma: `mlx-community/gemma-4-12B-it-4bit`, read
@@ -112,7 +112,48 @@ Grounding is retrieved FROM the question and sits before it in the render
 the question's own ~30 — under 100 ms. Revisit only if the render ever puts the question
 before its grounding.
 
-## 3. Not doing
+## 3. Measured 2026-10-25 — where a Release turn goes
+
+The first baseline on what users run (Release, AC, High Power, `--router dispatch --thinking tier`, ×3, M1 Max 64 GB;
+`docs/evals/2026-10-25-speed-baseline-{lil,big}.json`, every score carrying `GenerationFigures`, #683). Medians.
+
+| | Lil (Qwen3.5-4B) | Big (gemma-4-12B) |
+|---|---|---|
+| decode | **83 tok/s** | **31 tok/s** |
+| prefill past the persona seed | ~600 tok/s (357 tok in 587 ms) | ~210 tok/s (360 tok in 1,708 ms) |
+| open-chat turn · first token | 2.7 s · 0.66 s | 5.8 s · 1.8 s |
+| grounded-Q turn | 1.4 s | 1.7 s |
+| tool-use turn · first token | 4.9 s · 3.8 s | 7.0 s · 5.2 s |
+| security turn · first token | 4.0 s · 3.6 s | 5.5 s · 4.8 s |
+| share of the turn before the first token | 59 % | 56 % |
+| share of the turn decoding | 40 % | 40 % |
+| MLX peak | 4.3 GB | 8.8 GB |
+
+**The route decides the turn, not the model.** Same brain, same build, by the router's stage (`routeStage`):
+
+| route | trials | Lil turn · first token | Big turn · first token |
+|---|---|---|---|
+| chat (plain generation) | 48 | 1.45 s · 0.65 s | 2.7 s · 1.8 s |
+| head (group head picked) | 18 | 1.65 s · 0.70 s | 3.9 s · 2.1 s |
+| **picker (Apple's model picked)** | **63** | **4.9 s · 3.8 s** | **7.1 s · 5.1 s** |
+
+The picker route costs **~3.1 s (Lil) / ~3.4 s (Big) before the first token** over the chat route, and half the
+trials take it — every security fixture, every tool ask the group head does not resolve. The pick is one guided
+generation on a FRESH `LanguageModelSession(instructions:)` per turn (`AFMToolPicker`), measured at ~1.2 s in the
+2026-09-26 spike; the rest is the session's own start. Nothing logged the pick until `tool pick: picker → … in Nms`
+(this branch); the first arm evals carry it. Levers, cheapest first, each wanting its own paired eval: a prewarmed
+picker session kept ready per menu (`prewarm()` after each use); the group head covering more of what the picker
+decides (it already answers in 0.05 s); overlapping the pick with the plain generation on the GPU (AFM runs beside
+it) and cancelling the loser. **Debug is not the product:** the October arms ran Debug, where Lil decoded 28 tok/s;
+decode is 40 % of a Release turn, and the wait before the first token is the larger half.
+
+Agent-route turns are a different animal (none of the 129 trials took one; the eval's tool asks dispatch outside the
+loop). The chat-curve on Lil's agent route (battery, 2026-10-25, #683) re-prefills ~2,300 tokens a message from
+message 4 — 5–8 s of `extend` the ttft line could not see — and the render plateaus at the HistoryWindow's 16 turns.
+§2a's cross-turn seed is worth more than the September arithmetic said; the AC curves (`chatcurve-{lil,big}-{agent,
+dispatch}`) carry the mains figures.
+
+## 4. Not doing
 
 - Neural Engine / Core AI prefill: the GPU wins at every input length on published
   benchmarks (cadamcat/llms-on-apple-neural-engine), and Core AI ships no LLM path.
@@ -124,3 +165,7 @@ Signed: Kev + claude-opus-5-5, 2026-09-26, Confidence 0.75 (geometry read from c
 and source and checked by a challenger pass; the M1 speculative verdict is measured
 here; every other gain is a published or projected number — hence the gates). Prior:
 Unknown
+Review: Kev + claude-fable-5.1, 2026-10-25 — §4: the first Release baseline (both brains, per route) and the
+Lil row of §1 corrected to Qwen3.5-4B's geometry (the dense Qwen3-4B left Lil on 2026-10-08). The picker route's
+3 s before the first token, on half the trials, is the finding; §2a's value rose with the chat-curve's `extend`
+column. Confidence 0.85 (measured; the picker's share is attributed by route, named by the next run's pick line).
