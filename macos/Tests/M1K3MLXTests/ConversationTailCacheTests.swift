@@ -94,24 +94,27 @@ struct ConversationTailCacheTests {
 
     // MARK: - Exact checkpoints (2026-10-25): the cross-turn tail in checkpoint mode
 
-    @Test("an adopted checkpoint comes back vouched exact, with its state and ids")
+    @Test("an adopted checkpoint comes back as an exact-tail handle with its state and ids — never as a live snapshot")
     func checkpointRoundTripIsExact() throws {
         let cache = ConversationTailCache()
         let outcome = cache.adoptCheckpoint([], tokenIDs: [1, 2, 3], state: LMOutput.State(), bytes: 10, for: key)
         #expect(outcome == .stored)
-        let seed = try #require(cache.snapshot(for: key))
-        #expect(seed.exact)
-        #expect(seed.state != nil)
-        #expect(seed.tokenIDs == [1, 2, 3])
+        let tail = try #require(cache.exactTail(for: key))
+        #expect(tail.state != nil)
+        #expect(tail.tokenIDs == [1, 2, 3])
+        #expect(tail.copyCache().isEmpty)
+        // The live-path accessor never hands an exact checkpoint to the trim-based path.
+        #expect(cache.snapshot(for: key) == nil)
     }
 
-    @Test("a live-path tail is still not vouched exact — the two kinds never get confused")
+    @Test("a live-path tail is not an exact tail — the two kinds never get confused")
     func liveTailStaysInexact() throws {
         let cache = ConversationTailCache()
         cache.adopt([], tokenIDs: [1, 2, 3], for: key)
         let seed = try #require(cache.snapshot(for: key))
         #expect(!seed.exact)
         #expect(seed.state == nil)
+        #expect(cache.exactTail(for: key) == nil)
     }
 
     @Test("a checkpoint over the BYTE cap is refused — and the previous checkpoint survives")
@@ -119,8 +122,8 @@ struct ConversationTailCacheTests {
         let cache = ConversationTailCache(byteCap: 100)
         #expect(cache.adoptCheckpoint([], tokenIDs: [1, 2], state: nil, bytes: 90, for: key) == .stored)
         #expect(cache.adoptCheckpoint([], tokenIDs: [1, 2, 3, 4], state: nil, bytes: 101, for: key) == .overBytes)
-        let seed = try #require(cache.snapshot(for: key))
-        #expect(seed.tokenIDs == [1, 2])
+        let tail = try #require(cache.exactTail(for: key))
+        #expect(tail.tokenIDs == [1, 2])
     }
 
     @Test("the checkpoint token belt is a belt, not the cap: bytes bind first, tokens still bound")
@@ -150,7 +153,7 @@ struct ConversationTailCacheTests {
         cache.recordRender([1, 2, 3], for: key)
         cache.adoptCheckpoint([], tokenIDs: [1, 2], state: nil, bytes: 1, for: key)
         cache.invalidate()
-        #expect(cache.snapshot(for: key) == nil)
+        #expect(cache.exactTail(for: key) == nil)
         #expect(cache.previousRender(for: key) == nil)
     }
 }

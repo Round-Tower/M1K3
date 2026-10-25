@@ -691,11 +691,11 @@ extension MLXBrainProvider: ToolCallingProvider {
         // An EXACT tail (checkpoint mode's, 2026-10-25) is not the seed but a second candidate beside the
         // persona: the session's ledger picks the longest strict prefix of the render, so a tail the
         // conversation moved away from loses to the persona instead of forcing a fresh prefill.
-        var tailCandidate: PersonaPrefixSnapshot?
+        var tailCandidate: ConversationTailCache.ExactTail?
         var previousRender: [Int]?
         let checkpointTails = !background && Self.conversationTailCheckpointsEnabled()
-        let storedTail = background ? nil : conversationTail.snapshot(for: key)
-        if let tail = storedTail, !tail.exact {
+        if !background, let tail = conversationTail.snapshot(for: key) {
+            // The live-path tail (trimmable tiers): the seed itself, as before.
             seed = tail
             seedSource = .conversation
         } else {
@@ -706,8 +706,9 @@ extension MLXBrainProvider: ToolCallingProvider {
                 key: key
             )
             seedSource = seed == nil ? .none : .persona
-            if checkpointTails {
-                tailCandidate = storedTail
+            // A handle, not a copy: the session copies the tail only if its plan picks it.
+            if checkpointTails, seed != nil {
+                tailCandidate = conversationTail.exactTail(for: key)
                 previousRender = conversationTail.previousRender(for: key)
             }
         }
@@ -948,8 +949,9 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
     private var checkpoints: [ExactCheckpoint] = []
     /// The previous turn's tail checkpoint (2026-10-25), one more candidate for the FIRST send's plan
     /// beside the pristine persona: consumed by that plan whether or not it wins (not a prefix of this
-    /// render means the conversation moved away from it). Nil on the live-cache path.
-    private var tailCheckpoint: ExactCheckpoint?
+    /// render means the conversation moved away from it). A handle — its cache is copied only if the
+    /// plan picks it. Nil on the live-cache path.
+    private var tailCheckpoint: ConversationTailCache.ExactTail?
     /// The previous turn's first render, for the tail cut; nil = nothing to cut against.
     private let previousRender: [Int]?
     /// Hand-off for the tail checkpoint this turn cuts (nil = checkpoint tails off). The cache is an
@@ -992,7 +994,7 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         seedSource: PrefixSeedSource = .none,
         seedMayFallShort: Bool = false,
         adoptTail: (([KVCache], [Int]) -> ConversationTailCache.AdoptOutcome)? = nil,
-        tail: PersonaPrefixSnapshot? = nil,
+        tail: ConversationTailCache.ExactTail? = nil,
         previousRender: [Int]? = nil,
         adoptCheckpoint: AdoptCheckpoint? = nil,
         recordRender: (([Int]) -> Void)? = nil
@@ -1017,10 +1019,8 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         self.usesCheckpoints = usesCheckpoints
         if usesCheckpoints, let seed {
             checkpoints = [ExactCheckpoint(cache: seed.cache, ids: seed.tokenIDs, state: seed.state)]
-            // Only an EXACT tail may be appended to (the store vouches); the planner decides if it fits.
-            if let tail, tail.exact {
-                tailCheckpoint = ExactCheckpoint(cache: tail.cache, ids: tail.tokenIDs, state: tail.state)
-            }
+            // The store vouches an exact tail; the planner decides if it fits this render.
+            tailCheckpoint = tail
             kvCache = nil
             cachedIDs = []
         } else {
@@ -1302,19 +1302,39 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         case pristine, tail, rolling
     }
 
+    /// One ledger entry: the ids and state the plan reads, and the cache to extend — produced only for
+    /// the winner (the persona's and the tail's are copies; the rolling checkpoint is consumed as is).
+    private struct Candidate {
+        let ids: [Int]
+        let state: LMOutput.State?
+        let role: CheckpointRole
+        let work: () -> [KVCache]
+    }
+
     private func fromCheckpoint(
         fullIDs: [Int], prepared: LMInput, turnCarriesImages: Bool, context: ModelContext
     ) throws -> CheckpointTurn {
         // The first send records its render for the NEXT turn's cut, whatever happens below.
         let firstSend = sendCount == 1
         if firstSend { recordRender?(fullIDs) }
-        // The ledger: [persona (copied on use), tail (consumed), rolling (consumed)].
-        var ledger: [(checkpoint: ExactCheckpoint, role: CheckpointRole)] = []
-        if let pristine = checkpoints.first { ledger.append((pristine, .pristine)) }
-        if let tailCheckpoint { ledger.append((tailCheckpoint, .tail)) }
-        if checkpoints.count > 1 { ledger.append((checkpoints[1], .rolling)) }
+        // The ledger: [persona (copied on use), tail (copied on use, consumed), rolling (consumed)].
+        var ledger: [Candidate] = []
+        if let pristine = checkpoints.first {
+            ledger.append(Candidate(ids: pristine.ids, state: pristine.state, role: .pristine) {
+                pristine.cache.map { $0.copy() }
+            })
+        }
+        if let tailCheckpoint {
+            ledger.append(Candidate(
+                ids: tailCheckpoint.tokenIDs, state: tailCheckpoint.state, role: .tail, work: tailCheckpoint.copyCache
+            ))
+        }
+        if checkpoints.count > 1 {
+            let rolling = checkpoints[1]
+            ledger.append(Candidate(ids: rolling.ids, state: rolling.state, role: .rolling) { rolling.cache })
+        }
         let plan = ExactPrefixReuse.plan(
-            candidates: ledger.map(\.checkpoint.ids), full: fullIDs, turnCarriesImages: turnCarriesImages
+            candidates: ledger.map(\.ids), full: fullIDs, turnCarriesImages: turnCarriesImages
         )
         // Consumed either way: a tail that is not a prefix of this render is the conversation moving on.
         tailCheckpoint = nil
@@ -1325,20 +1345,21 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                 cache: context.model.newCache(parameters: parameters), input: prepared, state: nil, reused: 0
             )
         }
-        let (base, role) = ledger[index]
+        let chosen = ledger[index]
+        let role = chosen.role
         // Back on the pristine seed while a rolling checkpoint existed: the render
         // stopped extending it (an assistant turn re-rendered differently). Say so,
         // or a whole-transcript re-prefill reads as a healthy persona hit.
         let rollingDiverged = role == .pristine && checkpoints.count > 1
         checkpoints = [pristine]
-        let work = role == .pristine ? base.cache.map { $0.copy() } : base.cache
+        let work = chosen.work()
         do {
             // Timed (2026-10-25): this prefill is the turn's real prompt cost in checkpoint mode — the
             // generate below sees ONE token, so the ttft line's `prefill=` never saw it (the 10-10
             // chat-curve read "prefilled=21tok" against ~800–2,400 extended here per message). The
             // cache copies (the seed's above, the tail's and the rolling one below) sit OUTSIDE the
             // clock: the figure is the prefill alone, so it compares across seeds of different sizes.
-            var state = base.state
+            var state = chosen.state
             var extendMS = 0
             var resume = from
             // The cross-turn tail (2026-10-25): on the first send, prefill up to where this render and

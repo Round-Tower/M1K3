@@ -84,7 +84,7 @@ final class ConversationTailCache: @unchecked Sendable {
         case overBytes
     }
 
-    private struct Entry {
+    fileprivate struct Entry {
         let key: PersonaCacheKey
         let cache: [KVCache]
         let tokenIDs: [Int]
@@ -157,27 +157,55 @@ final class ConversationTailCache: @unchecked Sendable {
         return render.ids
     }
 
-    /// A deep, independently-mutable copy of the retained tail — nil on any
+    /// A deep, independently-mutable copy of the retained LIVE-PATH tail — nil on any
     /// key mismatch (persona edit, palette change, model swap: all fail soft
-    /// to the persona-prefix fallback). Copy happens OUTSIDE the lock for the
+    /// to the persona-prefix fallback), and nil for an exact checkpoint (those go
+    /// out through `exactTail`, which copies only on use). Copy happens OUTSIDE the lock for the
     /// same two reasons as PersonaPrefixCache.snapshot: ARC keeps the source
     /// arrays alive through a concurrent adopt/invalidate, and retained
     /// arrays are never mutated after adopt (the session that owned them has
     /// finished).
     func snapshot(for requested: PersonaCacheKey) -> PersonaPrefixSnapshot? {
+        guard let held = entry(for: requested), !held.exact else { return nil }
+        // Not vouched exact: a finished session's cache is only ever consumed by
+        // the tool path, which gates reuse on its own trim check (it trims back
+        // to the common prefix), never by the append-only seeded plain turn.
+        return PersonaPrefixSnapshot(cache: held.cache.map { $0.copy() }, tokenIDs: held.tokenIDs, exact: false)
+    }
+
+    /// A handle on the retained exact checkpoint, NOT a copy: the ids and state are what the next
+    /// turn's ledger plans with; `copyCache()` is paid only if the plan picks it (a tail of up to
+    /// `maxCheckpointBytes`, copied every turn whether used or not, was the review's catch on 10-25).
+    /// ARC keeps the source arrays alive past a concurrent adopt or invalidate, and they are never
+    /// mutated after adopt, so the copy is sound whenever it is taken.
+    struct ExactTail {
+        let tokenIDs: [Int]
+        let state: LMOutput.State?
+        private let source: [KVCache]
+
+        fileprivate init(_ entry: Entry) {
+            tokenIDs = entry.tokenIDs
+            state = entry.state
+            source = entry.cache
+        }
+
+        /// A deep, independently-mutable copy of the checkpoint's cache.
+        func copyCache() -> [KVCache] {
+            source.map { $0.copy() }
+        }
+    }
+
+    /// The exact checkpoint retained for `key`, nil for a live-path tail or any other key.
+    func exactTail(for requested: PersonaCacheKey) -> ExactTail? {
+        guard let held = entry(for: requested), held.exact else { return nil }
+        return ExactTail(held)
+    }
+
+    private func entry(for requested: PersonaCacheKey) -> Entry? {
         lock.lock()
-        let held: Entry? = {
-            guard let entry, entry.key == requested else { return nil }
-            return entry
-        }()
-        lock.unlock()
-        guard let held else { return nil }
-        // A live-path tail is not vouched exact: a finished session's cache is only ever consumed by
-        // the tool path, which gates reuse on its own trim check (it trims back to the common prefix),
-        // never by the append-only seeded plain turn. A checkpoint IS exact, and carries its state.
-        return PersonaPrefixSnapshot(
-            cache: held.cache.map { $0.copy() }, tokenIDs: held.tokenIDs, exact: held.exact, state: held.state
-        )
+        defer { lock.unlock() }
+        guard let entry, entry.key == requested else { return nil }
+        return entry
     }
 
     /// Drop the slot and the recorded render (brain swap / eager memory release).
