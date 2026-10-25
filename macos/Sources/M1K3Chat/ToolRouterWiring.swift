@@ -114,7 +114,9 @@ public enum ToolRouterWiring {
     /// warmed prompt prefix under a one-line instruction. The instructions-warmed shape read −18 % on the pick.
     public static let pickerPrewarmPrefixKey = "pickerPrewarmPrefix"
 
-    public static func pickerPrewarmPrefixEnabled(_ defaults: UserDefaults = .standard, whenUnset: Bool = false) -> Bool {
+    public static func pickerPrewarmPrefixEnabled(
+        _ defaults: UserDefaults = .standard, whenUnset: Bool = false
+    ) -> Bool {
         flag(pickerPrewarmPrefixKey, defaults, whenUnset: whenUnset)
     }
 

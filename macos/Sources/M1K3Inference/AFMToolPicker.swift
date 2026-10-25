@@ -143,7 +143,8 @@ public final class PrewarmedToolPicker: ToolPicking, @unchecked Sendable {
     private let prefixMode: Bool
 
     /// What the prefix arm's session is instructed with; the rules and menu arrive in the prompt instead.
-    static let prefixInstructions = "You name one tool for a message, following the rules and menu the message opens with."
+    static let prefixInstructions =
+        "You name one tool for a message, following the rules and menu the message opens with."
 
     public init(base: AppleFoundationModelsProvider, prefixMode: Bool = false) {
         self.base = base
