@@ -56,6 +56,39 @@ struct TurnPhaseTimelineTests {
         #expect(summary.contains("gate=self-query"))
     }
 
+    @Test("the first token is reported against the start and against the hand-off")
+    func firstToken() throws {
+        // The pre-gen line stops at hand-off, so until 2026-10-25 nothing on a live turn said when the
+        // first token landed: the one number a waiting person feels. Two spans: from the turn's start
+        // (what they waited) and from the hand-off (what generation itself cost before its first token).
+        var timeline = TurnPhaseTimeline()
+        timeline.started(at: at(0))
+        timeline.embedded(at: at(400))
+        timeline.handedOff(at: at(500))
+        let line = try #require(timeline.firstTokenSummary(at: at(2800)))
+        #expect(line == "turn first token: 2800ms · gen 2300ms")
+    }
+
+    @Test("the synthetic think opener is not the first token; the first real piece is")
+    func firstRealToken() {
+        // The MLX paths yield "<think>" before any prefill so the splitter engages; a mark on it would
+        // read "gen 0ms" on every thinking turn and hide exactly the span the line exists to show.
+        #expect(!TurnPhaseTimeline.isFirstRealToken("<think>"))
+        #expect(!TurnPhaseTimeline.isFirstRealToken("<think>\n"))
+        #expect(!TurnPhaseTimeline.isFirstRealToken(""))
+        #expect(!TurnPhaseTimeline.isFirstRealToken("  \n"))
+        #expect(TurnPhaseTimeline.isFirstRealToken("Okay"))
+        #expect(TurnPhaseTimeline.isFirstRealToken("<think>Okay"), "an opener fused with real text is real")
+    }
+
+    @Test("a first token before any hand-off, or on a never-started turn, reports what it can")
+    func firstTokenPartial() throws {
+        var started = TurnPhaseTimeline()
+        started.started(at: at(0))
+        #expect(try #require(started.firstTokenSummary(at: at(900))) == "turn first token: 900ms")
+        #expect(TurnPhaseTimeline().firstTokenSummary(at: at(5)) == nil)
+    }
+
     @Test("no start, no summary — a never-started timeline stays silent")
     func neverStarted() {
         let timeline = TurnPhaseTimeline()

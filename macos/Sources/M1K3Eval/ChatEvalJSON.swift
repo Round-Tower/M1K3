@@ -17,6 +17,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-15, Confidence 0.9 — `fenced`/`unfenced`: the document
 //  can ride a text stream (stdout mode) between two whole-line markers; the LAST complete block is
 //  the scorecard.
+//  Review: Kev + claude-fable-5.1, 2026-10-25 — `buildConfiguration` joins the provenance (optional): every
+//  October arm was Debug and the document could not say so. Confidence 0.9.
 
 import Foundation
 
@@ -47,10 +49,16 @@ public struct EvalProvenance: Sendable, Equatable, Codable {
     public let repeats: Int
     /// Anything else that affects the reading (what else was running, thermal state).
     public let notes: String?
+    /// "Debug" / "Release", as the app was compiled (`#if DEBUG`). Added 2026-10-25: every October arm was a
+    /// Debug build and nothing in the document said so, while in-app Lil decoded ~28 tok/s in Debug against
+    /// 65–67 in Release on the older Lil — a Release arm "passes more" latency ceilings with no model change.
+    /// Optional so older scorecards decode as `nil` ("unknown"), never as a guess.
+    public let buildConfiguration: String?
 
     public init(
         date: String, hardware: String, osVersion: String, appCommit: String?, mlxSwiftLMRevision: String?,
-        powerMode: Int?, powerSource: String? = nil, livePath: Bool, repeats: Int, notes: String? = nil
+        powerMode: Int?, powerSource: String? = nil, livePath: Bool, repeats: Int, notes: String? = nil,
+        buildConfiguration: String? = nil
     ) {
         self.date = date
         self.hardware = hardware
@@ -62,6 +70,7 @@ public struct EvalProvenance: Sendable, Equatable, Codable {
         self.livePath = livePath
         self.repeats = repeats
         self.notes = notes
+        self.buildConfiguration = buildConfiguration
     }
 
     /// The header block the text transcript carries, so the two artifacts agree.
@@ -73,6 +82,7 @@ public struct EvalProvenance: Sendable, Equatable, Codable {
             "os \(osVersion)",
             "app \(appCommit ?? "unstamped")",
             "mlx-swift-lm \(mlxSwiftLMRevision ?? "unknown")",
+            "build \(buildConfiguration ?? "unknown")",
             "power \(powerSource ?? "unknown") · powermode \(powerMode.map(String.init) ?? "unknown")",
             "live-path \(livePath ? "yes" : "no")",
             "repeats \(repeats)",

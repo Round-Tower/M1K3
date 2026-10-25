@@ -373,6 +373,17 @@ def test_direct_env_routes_the_report_to_stdout_and_keeps_the_caller_env():
 
 
 
+def test_summary_names_the_build_configuration(tmp_path):
+    # 2026-10-25: a Debug arm and a Release arm look alike in the summary unless the line says which.
+    ok = {"fixtureID": "chat-x", "kind": "open-chat", "latencyMS": 9, "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    doc = tmp_path / "run.json"
+    doc.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok]}],
+                               "provenance": {"buildConfiguration": "Release"}}))
+    assert "config=Release" in rc.summarise(doc)
+    doc.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok]}], "provenance": {}}))
+    assert "config=unknown" in rc.summarise(doc), "an older document says so rather than guessing Debug"
+
+
 def test_summary_leaves_out_not_applicable_trials(tmp_path):
     na = {"fixtureID": "vis-x", "kind": "vision", "latencyMS": 0,
           "checks": [{"name": "applicable", "outcome": "skip", "detail": "n/a — text-only"}]}
@@ -482,7 +493,8 @@ def test_summary_omits_own_peak_when_peak_is_below_resident(tmp_path):
     doc.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok], "peakMemoryMB": 0,
                                          "residentMemoryMBAtStart": 900}], "provenance": {}}))
     summary = rc.summarise(doc)
-    assert "own" not in summary and "peak 0 MB" in summary
+    # "(own N MB)" is the figure that must be absent; "unknown" (the config field) also spells o-w-n.
+    assert "(own" not in summary and "peak 0 MB" in summary
 
 
 # ── the router arm (2026-10-09): the app's own route, with the head and chains as flags ──

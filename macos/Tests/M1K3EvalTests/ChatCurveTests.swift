@@ -15,11 +15,14 @@ import Foundation
 import Testing
 
 struct ChatCurveTests {
-    @Test("the script is eight short, distinct, non-empty messages")
+    @Test("the script is twenty short, distinct, non-empty messages")
     func scriptShape() {
+        // Twenty, not eight (2026-10-25): HistoryWindow keeps 16 turns (8 exchanges), so from about
+        // message 10 the oldest line drops every turn and the shared prefix collapses. An 8-message
+        // curve cannot see that cliff; the cross-turn reuse decision needs the far side of it.
         let script = ChatCurveScript.messages
-        #expect(script.count == 8)
-        #expect(Set(script).count == 8)
+        #expect(script.count == 20)
+        #expect(Set(script).count == 20)
         #expect(script.allSatisfy { !$0.isEmpty && $0.count <= 120 })
     }
 
@@ -27,6 +30,17 @@ struct ChatCurveTests {
     func parsesReuse() {
         let line = "toolTurnSession reuse: 2301/2650 tok from cache, prefilling 349, seed=persona"
         #expect(ChatCurveLogParser.reuse(in: line) == ChatCurveReuse(reused: 2301, total: 2650))
+    }
+
+    @Test("the reuse line's extend figure parses when present and is nil on an older line")
+    func parsesExtend() {
+        // The checkpoint extend (prefillExactly) was untimed until 2026-10-25: the ttft line reported the
+        // one-token generate, so the 10-10 curve read "prefilled=21tok" while ~800–2,400 tokens were
+        // prefilled per message. The reuse line now carries it; a line without it still parses.
+        let timed = "toolTurnSession reuse: 2467/3289 tok from cache, prefilling 822, seed=persona extend=2140ms"
+        #expect(ChatCurveLogParser.reuse(in: timed) == ChatCurveReuse(reused: 2467, total: 3289, extendMS: 2140))
+        let older = "toolTurnSession reuse: 2301/2650 tok from cache, prefilling 349, seed=persona"
+        #expect(ChatCurveLogParser.reuse(in: older)?.extendMS == nil)
     }
 
     @Test("a vetoed reuse line still parses")
@@ -45,7 +59,9 @@ struct ChatCurveTests {
     @Test("the ttft line parses prompt tokens and prefill ms")
     func parsesGeneration() {
         let line = "toolTurn [mlx-community/Qwen3.5-4B]: prompt=349tok prefill=812ms decode=64tok @31tok/s"
-        #expect(ChatCurveLogParser.generation(in: line) == ChatCurveGeneration(promptTokens: 349, prefillMS: 812))
+        // Decode tokens and throughput ride the same line; the eval score folds them per trial.
+        #expect(ChatCurveLogParser.generation(in: line)
+            == ChatCurveGeneration(promptTokens: 349, prefillMS: 812, decodeTokens: 64, tokensPerSecond: 31))
     }
 
     @Test("folding a turn's lines: last reuse wins, generations sum")
@@ -61,6 +77,49 @@ struct ChatCurveTests {
         #expect(folded.generations == 2)
         #expect(folded.promptTokens == 370)
         #expect(folded.prefillMS == 620)
+        #expect(folded.extendMS == nil, "no send carried an extend figure")
+        #expect(folded.decodeTokens == 30)
+        // Throughput is total tokens over total decode time, not a mean of the per-line figures (a
+        // 2-token send at 60 tok/s must not pull a 200-token send at 30 tok/s up to 45).
+        #expect(abs((folded.tokensPerSecond ?? 0) - 30) < 0.01)
+    }
+
+    @Test("a line whose rate rounded to zero lends neither its seconds nor its tokens to the rate")
+    func zeroRateLineStaysOutOfTheRate() {
+        let lines = [
+            "x [m]: prompt=1tok prefill=40ms decode=100tok @30tok/s",
+            "x [m]: prompt=1tok prefill=40ms decode=3tok @0tok/s", // a slow decode, integer-truncated
+        ]
+        let folded = ChatCurveLogParser.fold(lines)
+        #expect(folded.decodeTokens == 103, "the tokens were still decoded")
+        #expect(abs((folded.tokensPerSecond ?? 0) - 30) < 0.01, "the rate reads over the timed lines only")
+        #expect(ChatCurveLogParser.fold(["x [m]: prompt=1tok prefill=40ms decode=3tok @0tok/s"]).tokensPerSecond == nil)
+    }
+
+    @Test("the send-phase line is neither a reuse nor a generation line")
+    func sendPhaseLineIsIgnored() {
+        let line = "toolTurnSession send 2: wait=12ms render=340ms (3289 tok)"
+        #expect(ChatCurveLogParser.reuse(in: line) == nil)
+        #expect(ChatCurveLogParser.generation(in: line) == nil)
+    }
+
+    @Test("folding sums the extend figure over the turn's sends")
+    func foldsExtend() throws {
+        let lines = [
+            "toolTurnSession reuse: 2467/3289 tok from cache, prefilling 822, seed=persona extend=2140ms",
+            "x [m]: prompt=1tok prefill=40ms decode=100tok @30tok/s",
+            "toolTurnSession reuse: 3300/3400 tok from cache, prefilling 100, seed=checkpoint extend=260ms",
+            "x [m]: prompt=1tok prefill=38ms decode=50tok @60tok/s",
+        ]
+        let folded = ChatCurveLogParser.fold(lines)
+        #expect(folded.extendMS == 2400)
+        #expect(folded.decodeTokens == 150)
+        // 100 tok in 3.33 s + 50 tok in 0.83 s = 150 tok in 4.17 s = 36 tok/s (a per-line mean would say 45).
+        #expect(abs((folded.tokensPerSecond ?? 0) - 36) < 0.01)
+        let figures = try #require(folded.figures(firstChunkMS: 2300))
+        #expect(figures.extendMS == 2400 && figures.generations == 2 && figures.firstChunkMS == 2300)
+        #expect(figures.totalPrefillMS == 2478)
+        #expect(ChatCurveLogParser.fold(["noise"]).figures(firstChunkMS: 5) == nil, "nothing logged, no figures")
     }
 
     @Test("a turn's window keeps only entries dated at or after the turn started")
@@ -111,20 +170,107 @@ struct ChatCurveTests {
         #expect(folded.prefillMS == 70)
     }
 
+    @Test("the tool session's own generation lines belong to the turn too")
+    func windowKeepsTheToolSessionsGenerations() {
+        // The tool session logs as `toolTurnSession [model]`, not under the provider's name, so until
+        // 2026-10-25 the curve counted only the synthesis generation: its decode tokens and tok/s were
+        // missing from every tool turn. A background title or caption still carries its own label.
+        let t0 = Date(timeIntervalSinceReferenceDate: 3000)
+        let entries = [
+            ChatCurveLogEntry(
+                date: t0.addingTimeInterval(1),
+                message: "toolTurnSession [m]: prompt=1tok prefill=40ms decode=120tok @30tok/s"
+            ),
+            ChatCurveLogEntry(
+                date: t0.addingTimeInterval(2),
+                message: "chatcurve [m]: prompt=200tok prefill=70ms decode=80tok @30tok/s"
+            ),
+            ChatCurveLogEntry(
+                date: t0.addingTimeInterval(3),
+                message: "caption [m]: prompt=900tok prefill=400ms decode=5tok @30tok/s"
+            ),
+        ]
+        let folded = ChatCurveLogParser.fold(ChatCurveLogParser.turnLines(entries, since: t0, label: "chatcurve"))
+        #expect(folded.generations == 2)
+        #expect(folded.decodeTokens == 200)
+    }
+
+    @Test("the turn-label set keeps every chat path and leaves a caption outside")
+    func turnLabelsKeepEveryChatPath() {
+        // The ttft line names the PATH (`stream`, `generate`, `toolTurn`, `toolTurnSession`), never the
+        // provider — so a stage filtering on its provider's name read no generation at all (2026-10-25).
+        let t0 = Date(timeIntervalSinceReferenceDate: 4000)
+        let entries = ["stream", "generate", "toolTurn", "toolTurnSession", "caption"].enumerated().map { i, label in
+            ChatCurveLogEntry(
+                date: t0.addingTimeInterval(Double(i)),
+                message: "\(label) [m]: prompt=10tok prefill=5ms decode=\(10 * (i + 1))tok @30tok/s"
+            )
+        }
+        let folded = ChatCurveLogParser.fold(
+            ChatCurveLogParser.turnLines(entries, since: t0, labels: ChatCurveLogParser.turnLabels)
+        )
+        #expect(folded.generations == 4)
+        #expect(folded.decodeTokens == 100, "10 + 20 + 30 + 40; the 50-token caption is not the turn's")
+    }
+
     @Test("a turn with no metric lines folds to nils, not zeros")
     func foldsEmpty() {
         let folded = ChatCurveLogParser.fold(["noise"])
         #expect(folded.reuse == nil)
         #expect(folded.promptTokens == nil)
         #expect(folded.prefillMS == nil)
+        #expect(folded.extendMS == nil)
         #expect(folded.generations == 0)
     }
 
-    private func sample(_ i: Int, total: Int?, prefill: Int?) -> ChatCurveSample {
+    private func sample(_ i: Int, total: Int?, prefill: Int?, extend: Int? = nil) -> ChatCurveSample {
         ChatCurveSample(
             index: i, question: "q\(i)", renderedTokens: total, reusedTokens: nil,
-            promptTokens: nil, prefillMS: prefill, generations: 1, peakRSSMB: 1000 + i, answerChars: 10
+            promptTokens: nil, prefillMS: prefill, generations: 1, peakRSSMB: 1000 + i, answerChars: 10,
+            extendMS: extend, mlxPeakMB: 3000 + i
         )
+    }
+
+    @Test("a message's real prefill is the generate's prefill plus the checkpoint extend")
+    func totalPrefill() {
+        #expect(sample(0, total: 1, prefill: 40, extend: 2100).totalPrefillMS == 2140)
+        #expect(sample(0, total: 1, prefill: 40).totalPrefillMS == 40)
+        #expect(sample(0, total: 1, prefill: nil, extend: 2100).totalPrefillMS == 2100)
+        #expect(sample(0, total: 1, prefill: nil).totalPrefillMS == nil)
+    }
+
+    @Test("the slope the decision reads is over the TOTAL prefill, and the row shows both figures")
+    func totalPrefillSlope() {
+        let samples = (0 ..< 4).map { sample($0, total: 1000, prefill: 40, extend: 500 + 250 * $0) }
+        let summary = ChatCurveSummary(samples: samples)
+        #expect(summary.prefillMSPerMessage == 0)
+        #expect(summary.totalPrefillMSPerMessage == 250)
+        let row = ChatCurveReport(modelID: "m", samples: samples).rendered
+        #expect(row.contains("extend=500ms"))
+        #expect(row.contains("mlx=3000MB"))
+        #expect(row.contains("total prefill ms/msg"))
+    }
+
+    @Test("a report written before the total-prefill slope still decodes")
+    func decodesOlderReport() throws {
+        let older = """
+        {"modelID":"m","samples":[],"summary":{"renderedTokensPerMessage":208.3,"prefillMSPerMessage":27.3}}
+        """
+        let report = try JSONDecoder().decode(ChatCurveReport.self, from: Data(older.utf8))
+        #expect(report.summary.totalPrefillMSPerMessage == nil)
+        #expect(report.summary.prefillMSPerMessage == 27.3)
+    }
+
+    @Test("a curve written before the extend and MLX-peak columns still decodes")
+    func decodesOlderSample() throws {
+        let older = """
+        {"answerChars":1,"generations":1,"index":0,"peakRSSMB":1,"prefillMS":48,"promptTokens":21,
+         "question":"q","renderedTokens":3289,"reusedTokens":2467}
+        """
+        let sample = try JSONDecoder().decode(ChatCurveSample.self, from: Data(older.utf8))
+        #expect(sample.extendMS == nil)
+        #expect(sample.mlxPeakMB == nil)
+        #expect(sample.totalPrefillMS == 48)
     }
 
     @Test("slope is least-squares per message")

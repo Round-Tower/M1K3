@@ -4,7 +4,7 @@
 //
 //  THE CHAT-CURVE MEASUREMENT (M1K3_SELFTEST_CHATCURVE=1, "lil", "big" or a model id).
 //
-//  Drives AgentRAGResponder.answerStreaming(question, history:) with the fixed eight-message
+//  Drives AgentRAGResponder.answerStreaming(question, history:) with the fixed twenty-message
 //  script (ChatCurveScript), accumulating [ChatTurn] as the app does, on one MLX brain (Lil by
 //  default) with the production stub tool palette. Per message it reports the rendered prompt
 //  length, the tool session's `reuse: X/Y`, the generation's `prompt=…tok prefill=…ms`, and the
@@ -25,6 +25,12 @@
 //  running sum since launch (3071, 6294, 9891…): OSLogStore's position(date:) was trusted alone. Each
 //  turn is now windowed by date and by the `chatcurve` provider label, and the store is polled (≤ 5 s)
 //  for the turn's generation line instead of the fixed 1 s sleep. Re-run owed before the slope is read.
+//  Review: Kev + claude-fable-5.1, 2026-10-25 — the curve could not see its own subject: the generate's
+//  `prompt=` is one token in checkpoint mode and the extend was untimed (the 10-10 Lil run read
+//  "prefilled=21tok"), and the ttft label is the PATH, not the provider name. Now: the reuse line's
+//  `extend=`, MLX's own peak per message, the turn-label set, a `_ROUTER=dispatch` arm so the curve
+//  can run the Mac's plain route, twenty messages, and the log read shared with ChatEvalStage
+//  (MetricLogReader). Re-run owed on Lil and Big, Release. Confidence 0.75.
 //
 
 import Darwin
@@ -34,7 +40,6 @@ import M1K3Eval
 import M1K3Inference
 import M1K3Knowledge
 import M1K3MLX
-import OSLog
 
 enum ChatCurveStage {
     /// "1" is Lil; "lil"/"big" name a tier; anything else is a model id.
@@ -58,38 +63,20 @@ enum ChatCurveStage {
         return Int(usage.ru_maxrss) / 1_048_576
     }
 
-    /// The provider label on the generation line (`chatcurve [model]: prompt=…`).
+    /// The provider's name. NOT the generation line's label: the ttft line names the path (`stream`,
+    /// `toolTurnSession`, …), so the turn's lines are read through `ChatCurveLogParser.turnLabels`
+    /// (2026-10-25 — filtering on this name read no generation at all).
     static let providerLabel = "chatcurve"
 
-    /// The app's metric entries since `date`: the tool session's reuse line (category mlx-load)
-    /// and the generation line (ttft), oldest first, each with the date it landed. The store's
-    /// position is a hint only; `ChatCurveLogParser.turnLines` re-checks the date (the first
-    /// Big run read cumulative sums because the position was not honoured, #530).
-    private static func metricEntries(since date: Date) -> [ChatCurveLogEntry] {
-        guard let store = try? OSLogStore(scope: .currentProcessIdentifier),
-              let entries = try? store.getEntries(at: store.position(date: date))
-        else { return [] }
-        return entries.compactMap { $0 as? OSLogEntryLog }
-            .filter { $0.subsystem == "app.m1k3" && ($0.category == "ttft" || $0.category == "mlx-load") }
-            .map { ChatCurveLogEntry(date: $0.date, message: $0.composedMessage) }
-    }
-
-    /// This turn's figures: poll the store until its generation lines have landed (entries
-    /// arrive a beat after the call, and a tool turn logs one per iteration), so stop only
-    /// once the count has held across two polls; capped so a turn that logged nothing still
-    /// reports nil.
-    private static func foldTurn(since started: Date) async -> ChatCurveFolded {
-        var folded = ChatCurveLogParser.fold([])
-        for _ in 0 ..< 10 {
-            try? await Task.sleep(for: .milliseconds(500))
-            let next = ChatCurveLogParser.fold(
-                ChatCurveLogParser.turnLines(metricEntries(since: started), since: started, label: providerLabel)
-            )
-            let stable = next.generations > 0 && next.generations == folded.generations
-            folded = next
-            if stable { break }
+    /// `M1K3_SELFTEST_CHATCURVE_ROUTER=dispatch` puts the Mac's own router in front (every tier, group head
+    /// and chains on, as `ToolRouterWiring.allTiersEnabled(whenUnset: true)` ships it), so a "chat" verdict
+    /// takes the seeded PLAIN route — the path the Mac runs most, and one with no conversation tail at all.
+    /// Unset or `off`: no router, every message takes the agent route (the 10-10 curve's shape).
+    static var routerArm: String {
+        switch SelfTestEnv.value("M1K3_SELFTEST_CHATCURVE_ROUTER") {
+        case "dispatch": "dispatch"
+        default: "off"
         }
-        return folded
     }
 
     static func run(emit: @escaping (String) -> Void) async {
@@ -97,19 +84,29 @@ enum ChatCurveStage {
             emit("✗ chatcurve: no model id for that value")
             return
         }
-        emit("• chatcurve: \(modelID), \(ChatCurveScript.messages.count) scripted messages…")
+        emit("• chatcurve: \(modelID), \(ChatCurveScript.messages.count) scripted messages, router \(routerArm)…")
         // Outside the `do` so a throw mid-script keeps the samples already measured:
         // a partial curve is still a curve, and the run cost minutes of GPU.
         var samples: [ChatCurveSample] = []
         do {
             let provider = MLXBrainProvider(modelID: modelID, name: providerLabel)
+            var plainRoute: (@Sendable () -> PlainTurnRoute?)?
+            if routerArm == "dispatch" {
+                let route = ToolRouterWiring.route(
+                    provider: provider, enabled: true, dispatch: true, groupRouter: true, allTiers: true, chain: true
+                )
+                plainRoute = { route }
+            }
             let responder = try AgentRAGResponder(
                 store: KnowledgeStore(), embedder: MLXEmbeddingService(), provider: provider,
-                toolsProvider: { ChatEvalStage.toolPalette }, maxIterations: 3
+                toolsProvider: { ChatEvalStage.toolPalette }, maxIterations: 3,
+                plainRouteProvider: plainRoute
             )
             var history: [ChatTurn] = []
             for (index, question) in ChatCurveScript.messages.enumerated() {
                 let started = Date()
+                // `mlx=` is THIS message's MLX peak, not a running high-water mark (review fold, 2026-10-25).
+                MLXMemoryBudget.resetPeak()
                 let (_, stream) = try await responder.answerStreaming(
                     question, history: history, onActivity: { _ in }
                 )
@@ -120,12 +117,13 @@ enum ChatCurveStage {
                 let cleaned = answer.trimmingCharacters(in: .whitespacesAndNewlines)
                 history.append(ChatTurn(role: .user, text: question))
                 history.append(ChatTurn(role: .assistant, text: cleaned))
-                let folded = await foldTurn(since: started)
+                let folded = await MetricLogReader.foldTurn(since: started)
                 let sample = ChatCurveSample(
                     index: index, question: question, renderedTokens: folded.reuse?.total,
                     reusedTokens: folded.reuse?.reused, promptTokens: folded.promptTokens,
                     prefillMS: folded.prefillMS, generations: folded.generations,
-                    peakRSSMB: peakRSSMB(), answerChars: cleaned.count
+                    peakRSSMB: peakRSSMB(), answerChars: cleaned.count,
+                    extendMS: folded.extendMS, mlxPeakMB: MLXMemoryBudget.peakMB()
                 )
                 samples.append(sample)
                 emit("chatcurve #\(index + 1) done (\(cleaned.count) chars)")

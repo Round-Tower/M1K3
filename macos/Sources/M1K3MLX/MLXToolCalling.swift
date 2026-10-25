@@ -982,7 +982,9 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         // splitting engages from the generation's first real token.
         if prefixNeeded { onToken("<think>") }
 
+        let queued = ContinuousClock.now
         return try await container.perform { context in
+            let entered = ContinuousClock.now
             self.transcript.recordSent(messages)
 
             // Render the WHOLE conversation (system + goal + every assistant
@@ -1000,6 +1002,12 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                 input: UserInput(chat: rendered.chat, tools: rendered.specs, additionalContext: thinkingContext)
             )
             let fullIDs = prepared.text.tokens.asArray(Int.self)
+            self.logSendPhases(
+                send: self.sendCount + 1,
+                waitMS: Self.wholeMilliseconds(queued.duration(to: entered)),
+                renderMS: Self.wholeMilliseconds(entered.duration(to: .now)),
+                tokens: fullIDs.count
+            )
 
             // An image anywhere in the render vetoes the suffix fast path:
             // slicing to raw token ids would drop the pixels (LMInput.image
@@ -1239,19 +1247,26 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         checkpoints = [pristine]
         let work = index == 0 ? base.cache.map { $0.copy() } : base.cache
         do {
+            // Timed (2026-10-25): this prefill is the turn's real prompt cost in checkpoint mode — the
+            // generate below sees ONE token, so the ttft line's `prefill=` never saw it (the 10-10
+            // chat-curve read "prefilled=21tok" against ~800–2,400 extended here per message). The
+            // two cache copies (the seed's above, the rolling one below) sit OUTSIDE the clock: the
+            // figure is the prefill alone, so it compares across seeds of different sizes.
+            let extendStarted = ContinuousClock.now
             let state = to > from
                 ? try MLXBrainProvider.prefillExactly(
                     Array(fullIDs[from ..< to]), into: work, state: base.state,
                     parameters: parameters, model: context.model
                 )
                 : base.state
+            let extendMS = Self.wholeMilliseconds(extendStarted.duration(to: .now))
             let rolling = ExactCheckpoint(
                 cache: work.map { $0.copy() }, ids: Array(fullIDs[..<to]), state: state
             )
             checkpoints = [pristine, rolling]
             let source = index == 1 ? "checkpoint"
                 : rollingDiverged ? "\(seedSource.rawValue) (checkpoint diverged)" : seedSource.rawValue
-            logPrefillReuse(reused: from, total: fullIDs.count, vetoed: false, source: source)
+            logPrefillReuse(reused: from, total: fullIDs.count, vetoed: false, source: source, extendMS: extendMS)
             return CheckpointTurn(
                 cache: work, input: LMInput(tokens: MLXArray(Array(fullIDs[to...]))), state: state, reused: from
             )
@@ -1273,7 +1288,7 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
 
     /// Param-only (the Logger interpolation is an autoclosure; swiftformat
     /// strips the `self.` the compiler would need on a member).
-    private func logPrefillReuse(reused: Int, total: Int, vetoed: Bool, source: String) {
+    private func logPrefillReuse(reused: Int, total: Int, vetoed: Bool, source: String, extendMS: Int? = nil) {
         // `vetoed` is the interesting case and deserves its own word: the cache
         // HELD a usable prefix and an untrimmable layer made it unusable — a
         // wrapped sliding window (gemma-4), or a recurrent layer whose seed no
@@ -1281,14 +1296,36 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         // `seed=` is the acceptance instrument for the conversation tail: a
         // reuse figure above the persona length with seed=persona would mean
         // the tail never engaged — the two must be distinguishable in the log.
+        // `extend=` (checkpoint mode only) is the prefill the generate's own ttft line
+        // cannot see; ChatCurveLogParser reads it, so the shape is pinned in ChatCurveTests.
         let note = vetoed ? " (VETOED — cache not trimmable: wrapped window or recurrent layer)" : ""
+        let extend = extendMS.map { " extend=\($0)ms" } ?? ""
         mlxToolLog.notice(
             """
             toolTurnSession reuse: \(reused, privacy: .public)/\(total, privacy: .public) \
             tok from cache, prefilling \(total - reused, privacy: .public), \
-            seed=\(source, privacy: .public)\(note, privacy: .public)
+            seed=\(source, privacy: .public)\(note, privacy: .public)\(extend, privacy: .public)
             """
         )
+    }
+
+    /// The send's two costs before any prefill: the wait for the one `ModelContainer` (a launch warm, a
+    /// title or a distiller ahead in the FIFO) and the whole-transcript render + tokenise under the
+    /// lock. Both were invisible until 2026-10-25; the per-turn breakdown needs them named.
+    private func logSendPhases(send: Int, waitMS: Int, renderMS: Int, tokens: Int) {
+        mlxToolLog.notice(
+            """
+            toolTurnSession send \(send, privacy: .public): wait=\(waitMS, privacy: .public)ms \
+            render=\(renderMS, privacy: .public)ms (\(tokens, privacy: .public) tok)
+            """
+        )
+    }
+
+    /// Whole ms, clamped at 0 (the TurnPhaseTimeline arithmetic; a 3-line helper is cheaper than an import).
+    static func wholeMilliseconds(_ duration: Duration) -> Int {
+        let parts = duration.components
+        let value = parts.seconds * 1000 + parts.attoseconds / 1_000_000_000_000_000
+        return value > 0 ? Int(value) : 0
     }
 
     /// First-send persona-prefix shortfall — the seed should be a full prefix

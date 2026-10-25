@@ -104,6 +104,22 @@ def test_the_build_line_is_the_one_the_arms_were_built_with():
     assert bea.app_path(Path("/dd")) == Path("/dd/Build/Products/Debug/M1K3.app")
 
 
+def test_a_release_build_is_the_same_line_with_the_configuration_swapped():
+    # 2026-10-25: every October arm was a Debug build (in-app Lil decoded ~28 tok/s against 65–67 in
+    # Release on the older Lil). Release is opt-in — Debug stays the default so old arms still compare —
+    # and the products land under their own configuration folder.
+    gen, build = bea.commands(Path("/dd"), configuration="Release")
+    assert gen == ["xcodegen", "generate"]
+    assert build[:4] == ["xcodebuild", "-scheme", "M1K3", "-configuration"] and build[4] == "Release"
+    assert build[5:] == bea.commands(Path("/dd"))[1][5:], "only the configuration differs"
+    assert bea.app_path(Path("/dd"), configuration="Release") == Path("/dd/Build/Products/Release/M1K3.app")
+
+
+def test_an_unknown_configuration_is_refused_before_anything_runs(capsys):
+    assert bea.main(["/nowhere", "/dd", "--configuration", "Profile", "--dry-run"]) == 2
+    assert "Debug or Release" in capsys.readouterr().err
+
+
 # ── the dirty refusal (a real, hermetic git repo) ───────────────────────────
 
 def git(repo: Path, *args: str) -> str:
@@ -198,7 +214,10 @@ def fake_build(stamp: str | None, log_text: str = OK_LOG, dirty_after_xcodegen: 
         if cmd[0] == "xcodegen" and dirty_after_xcodegen:
             (cwd / "Generated.swift").write_text("// tracked by nobody\n")
         if cmd[0] == "xcodebuild":
-            plist = bea.app_path(Path(cmd[cmd.index("-derivedDataPath") + 1])) / "Contents/Info.plist"
+            # The products land under the configuration xcodebuild was GIVEN, as the real one's do.
+            configuration = cmd[cmd.index("-configuration") + 1]
+            plist = (bea.app_path(Path(cmd[cmd.index("-derivedDataPath") + 1]), configuration)
+                     / "Contents/Info.plist")
             plist.parent.mkdir(parents=True)
             plist.write_bytes(plistlib.dumps({} if stamp is None else {"GitCommitSHA": stamp}))
             log.write(log_text)
@@ -206,14 +225,18 @@ def fake_build(stamp: str | None, log_text: str = OK_LOG, dirty_after_xcodegen: 
     return run, calls
 
 
-def test_main_prints_the_app_path_after_a_verified_build(repo, tmp_path, monkeypatch, capsys):
+@pytest.mark.parametrize("configuration", ["Debug", "Release"])
+def test_main_prints_the_app_path_after_a_verified_build(repo, tmp_path, monkeypatch, capsys, configuration):
     short = git(repo, "rev-parse", "--short", "HEAD").strip()
     run, calls = fake_build(short)
     monkeypatch.setattr(bea, "_run", run)
     dd = tmp_path / "dd"
-    assert bea.main([str(repo), str(dd)]) == 0
-    assert capsys.readouterr().out.strip() == str(bea.app_path(dd)), "stdout is the app path alone: APP=$(…)"
+    argv = [str(repo), str(dd)] + ([] if configuration == "Debug" else ["--configuration", configuration])
+    assert bea.main(argv) == 0
+    # The path printed, the stamp read and the product built all follow the configuration asked for.
+    assert capsys.readouterr().out.strip() == str(bea.app_path(dd, configuration)), "stdout is the app path alone"
     assert [c[0] for c in calls] == ["xcodegen", "xcodebuild"]
+    assert calls[1][calls[1].index("-configuration") + 1] == configuration
     assert "BUILD SUCCEEDED" in (dd / "eval-build.log").read_text()
 
 

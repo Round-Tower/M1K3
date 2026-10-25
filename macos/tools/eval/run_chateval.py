@@ -700,7 +700,8 @@ def summarise(doc_path: Path) -> str:
         if scores:
             lines.append(kind_table(kind_rows(everything)))
     prov = doc.get("provenance", {})
-    line = f"  power={prov.get('powerSource')} powermode={prov.get('powerMode')} commit={prov.get('appCommit')}"
+    line = (f"  power={prov.get('powerSource')} powermode={prov.get('powerMode')} commit={prov.get('appCommit')}"
+            f" config={prov.get('buildConfiguration') or 'unknown'}")
     power = (doc.get("driver") or {}).get("power") or {}
     seen = power.get("seen") or [power.get("start"), power.get("end")]
     ends = f"{power.get('start')} at start, {power.get('end')} at end"

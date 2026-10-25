@@ -26,6 +26,9 @@ copy); `_run`'s log-only output, exit 2, the xcodegen failure and a non-zero xco
 Review: Kev + claude-opus-5-5, 2026-10-19 — `_run` hands its child `build_env`: core.fsmonitor off. A fresh derived
 dir hung twice at "Resolve Package Graph" beside new fsmonitor daemons on the submodule checkouts; `_git` gets the
 same env. Confidence 0.85 until a fresh derived dir builds through this file.
+Review: Kev + claude-fable-5.1, 2026-10-25 — `--configuration Debug|Release` (Debug stays the default): every
+October arm was a Debug build and no document said so. The products path follows the configuration; the app
+stamps it into provenance (`buildConfiguration`), and compare_arms flags a mixed pair.
 """
 
 from __future__ import annotations
@@ -62,18 +65,24 @@ def verify_build(log_text: str, stamped_sha: str | None, head_sha: str) -> list[
     return problems
 
 
-def commands(derived_data: Path) -> list[list[str]]:
-    """xcodegen, then build10.zsh's xcodebuild line (both run in the worktree's macos/)."""
+CONFIGURATIONS = ("Debug", "Release")
+
+
+def commands(derived_data: Path, configuration: str = "Debug") -> list[list[str]]:
+    """xcodegen, then build10.zsh's xcodebuild line (both run in the worktree's macos/). Debug is the default so
+    the October arms still compare; `--configuration Release` builds what users run (2026-10-25: in-app Lil decoded
+    ~28 tok/s in Debug against 65–67 in Release on the older Lil). The app stamps its configuration into the
+    scorecard's provenance, and compare_arms flags a Debug/Release pair."""
     return [
         ["xcodegen", "generate"],
-        ["xcodebuild", "-scheme", "M1K3", "-configuration", "Debug", "-destination", "platform=macOS,arch=arm64",
+        ["xcodebuild", "-scheme", "M1K3", "-configuration", configuration, "-destination", "platform=macOS,arch=arm64",
          "-derivedDataPath", str(derived_data), "-skipPackagePluginValidation", "-skipMacroValidation",
          "-onlyUsePackageVersionsFromResolvedFile", "ARCHS=arm64", "ONLY_ACTIVE_ARCH=YES", "build"],
     ]
 
 
-def app_path(derived_data: Path) -> Path:
-    return derived_data / "Build/Products/Debug/M1K3.app"
+def app_path(derived_data: Path, configuration: str = "Debug") -> Path:
+    return derived_data / f"Build/Products/{configuration}/M1K3.app"
 
 
 # ── side effects (thin; the build itself is the `_run` seam the tests replace) ──
@@ -123,15 +132,20 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("worktree", type=Path, help="the checkout to build (its root, or its macos/)")
     ap.add_argument("derived_data", type=Path, help="-derivedDataPath; the log lands here as eval-build.log")
     ap.add_argument("--dry-run", action="store_true", help="refuse or print the commands; build nothing")
+    ap.add_argument("--configuration", default="Debug",
+                    help="Debug (default; what every arm before 2026-10-25 ran) or Release (what users run)")
     args = ap.parse_args(argv)
     worktree, dd = args.worktree.expanduser().resolve(), args.derived_data.expanduser().resolve()
     macos = worktree / "macos" if (worktree / "macos/project.yml").exists() else worktree
 
+    if args.configuration not in CONFIGURATIONS:
+        print(f"✗ --configuration must be Debug or Release, not {args.configuration!r}", file=sys.stderr)
+        return 2
     reason = dirty_reason(worktree)
     if reason:
         print(f"✗ {reason}", file=sys.stderr)
         return 2 if "not a git checkout" in reason else 3
-    cmds = commands(dd)
+    cmds = commands(dd, args.configuration)
     if args.dry_run:
         for cmd in cmds:
             print(f"cd {shlex.quote(str(macos))} && {shlex.join(cmd)}")
@@ -150,7 +164,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"✗ xcodegen left the tree dirty, so the stamp would be too — {reason}", file=sys.stderr)
             return 4
         code = _run(cmds[1], macos, log)
-    problems = verify_build(log_path.read_text(errors="replace"), app_commit(app_path(dd)), head)
+    problems = verify_build(log_path.read_text(errors="replace"), app_commit(app_path(dd, args.configuration)), head)
     if code != 0:
         problems.append(f"xcodebuild exited {code}")
     if problems:
@@ -158,7 +172,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"✗ {problem}", file=sys.stderr)
         print(f"  log: {log_path}", file=sys.stderr)
         return 4
-    print(app_path(dd))
+    print(app_path(dd, args.configuration))
     return 0
 
 

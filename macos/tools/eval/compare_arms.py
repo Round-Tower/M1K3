@@ -143,7 +143,7 @@ def wiring(doc: dict, brain: str | None) -> dict:
     power = (doc.get("driver") or {}).get("power") or {}
     return {"brain": run.get("brainID"), "model": run.get("modelID"), "commit": prov.get("appCommit"),
             "power": prov.get("powerSource"), "powermode": prov.get("powerMode"),
-            "power_mixed": bool(power.get("mixed"))}
+            "power_mixed": bool(power.get("mixed")), "config": prov.get("buildConfiguration")}
 
 
 def describe(w: dict) -> str:
@@ -151,6 +151,8 @@ def describe(w: dict) -> str:
     parts = [w["brain"] or "?", w["model"] or "stock", w["commit"] or "commit ?", w["power"] or "power ?"]
     if w["powermode"] is not None:
         parts.append(f"powermode {w['powermode']}")
+    if w.get("config") is not None:
+        parts.append(f"config {w['config']}")
     return " · ".join(str(x) for x in parts)
 
 
@@ -166,6 +168,11 @@ def wiring_flags(a: dict, b: dict, routes_a: dict | None, routes_b: dict | None)
     for key, label in (("power", "power source"), ("powermode", "powermode")):
         if a[key] is not None and b[key] is not None and a[key] != b[key]:
             flags.append(f"! {label} differs (A {a[key]} · B {b[key]}): latency and strict do not compare")
+    # 2026-10-25: a Debug arm decodes about half as fast as a Release one, so the latency ceilings (and
+    # every p50) move with no model change. An older document without the stamp is unknown, not different.
+    config_a, config_b = a.get("config"), b.get("config")
+    if config_a is not None and config_b is not None and config_a != config_b:
+        flags.append(f"! build configuration differs (A {config_a} · B {config_b}): latency and strict do not compare")
     for arm, w in (("A", a), ("B", b)):
         if w["power_mixed"]:
             flags.append(f"! {arm}'s power changed mid-run (driver block): its latency is not headline-grade")
