@@ -13,6 +13,8 @@
 //  The arithmetic is pinned here; the copy/prefill/state plumbing is verify-by-launch.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — pins `stepSnapshotLabel`, the per-step RAM snapshot's label.
 //  Review: Kev + claude-opus-5-5, 2026-10-16 — a seed that wrapped gemma's sliding window takes checkpoint mode.
+//  Review: Kev + claude-fable-5.1, 2026-10-25 — `tailCut` (the cross-turn tail's cut point, strictly inside this
+//  send's prefill) and the three-candidate ledger order: rolling over tail over persona, a diverged tail falls back.
 //
 
 import Foundation
@@ -103,5 +105,57 @@ struct ExactPrefixReuseTests {
         #expect(ExactPrefixReuse.usesCheckpoints(seedExact: true, seedLayersTrimmable: [true, false, false, true]))
         // A wrapped seed built the old way (sample, no trim) is still never appended to.
         #expect(!ExactPrefixReuse.usesCheckpoints(seedExact: false, seedLayersTrimmable: [true, false]))
+    }
+
+    // MARK: - The cross-turn tail cut (2026-10-25)
+
+    /// Turn N's render ends `…{replay}\n(framing)…{grounding}…Goal: q_N` and turn N+1's continues
+    /// `…{replay}\nUSER: q_N\nM1K3: a_N…`: they share exactly through the replay. The cut is that common
+    /// prefix, taken on the first send of a turn, and it is worth taking only strictly inside what this
+    /// send prefills: past the candidate it extends (`from`) and short of the render's last token (`to`).
+    @Test("the tail cut is the common prefix with the previous render, strictly inside this send's prefill")
+    func tailCutInsidePrefill() {
+        let previous = [1, 2, 3, 4, 5, 6, 7, 8]
+        let full = [1, 2, 3, 4, 5, 6, 9, 9, 9, 9]
+        #expect(ExactPrefixReuse.tailCut(previous: previous, full: full, from: 3, to: 9) == 6)
+    }
+
+    @Test("no previous render, no cut: the first turn of a conversation only records its render")
+    func tailCutNeedsPrevious() {
+        #expect(ExactPrefixReuse.tailCut(previous: nil, full: [1, 2, 3, 4], from: 1, to: 3) == nil)
+        #expect(ExactPrefixReuse.tailCut(previous: [], full: [1, 2, 3, 4], from: 1, to: 3) == nil)
+    }
+
+    @Test("a cut at or before the candidate buys nothing — a slid window or a switched conversation")
+    func tailCutAtOrBeforeCandidateIsNoCut() {
+        // Diverged inside the persona-length prefix (L = 2 ≤ from = 3): the persona already covers it.
+        #expect(ExactPrefixReuse.tailCut(previous: [1, 2, 9, 9], full: [1, 2, 3, 4, 5, 6], from: 3, to: 5) == nil)
+        // Diverged exactly at the candidate's end.
+        #expect(ExactPrefixReuse.tailCut(previous: [1, 2, 3, 9], full: [1, 2, 3, 4, 5, 6], from: 3, to: 5) == nil)
+    }
+
+    @Test("a cut at or past the render's last token is the rolling checkpoint's job, not the tail's")
+    func tailCutAtOrPastLastTokenIsNoCut() {
+        // Identical renders: L = 6 = full.count; to = 5.
+        #expect(ExactPrefixReuse.tailCut(previous: [1, 2, 3, 4, 5, 6], full: [1, 2, 3, 4, 5, 6], from: 3, to: 5) == nil)
+        // Same but for the last token: L = 5 = to.
+        #expect(ExactPrefixReuse.tailCut(previous: [1, 2, 3, 4, 5, 9], full: [1, 2, 3, 4, 5, 6], from: 3, to: 5) == nil)
+    }
+
+    /// The ledger is `plan` over three candidates in a fixed order — persona, tail, rolling — and the
+    /// longest strict prefix wins: the tail beats the persona it begins with, the rolling checkpoint
+    /// (this turn's own) beats the tail, and a tail the render diverged from loses to the persona.
+    @Test("ledger order: rolling over tail over persona, and a diverged tail falls back to the persona")
+    func ledgerOrder() {
+        let persona = [1, 2, 3]
+        let tail = [1, 2, 3, 4, 5]
+        let rolling = [1, 2, 3, 4, 5, 6, 7]
+        let full = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+        #expect(ExactPrefixReuse.plan(candidates: [persona, tail], full: full) == .extend(candidate: 1, from: 5, to: 8))
+        #expect(ExactPrefixReuse.plan(candidates: [persona, tail, rolling], full: full)
+            == .extend(candidate: 2, from: 7, to: 8))
+        let divergedTail = [1, 2, 3, 9, 9]
+        #expect(ExactPrefixReuse.plan(candidates: [persona, divergedTail], full: full)
+            == .extend(candidate: 0, from: 3, to: 8))
     }
 }

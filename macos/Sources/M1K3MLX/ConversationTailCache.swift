@@ -36,6 +36,17 @@
 //  test-pinned; what the retained arrays buy on a real turn is verify-at-⌘R —
 //  the `seed=conversation` reuse log line is the acceptance instrument).
 //  Prior: Unknown.
+//  Review: Kev + claude-fable-5.1, 2026-10-25 — the slot learns EXACT checkpoints. The live-path tail
+//  above was dead on every shipping tier: Lil's recurrent layers and Big's wrapped window put the tool
+//  turn in checkpoint mode, where no live cache survives to adopt, so reuse sat flat at the persona and
+//  every message re-prefilled the conversation (chat-curves 10-25: Lil 2–3 s, Big 6–12 s a message).
+//  `adoptCheckpoint` stores a cache prefilled WITHOUT sampling at the cut `ExactPrefixReuse.tailCut`
+//  names, with the model state that belongs to it, vouched `exact`; `recordRender` keeps the previous
+//  first render the next turn cuts against. Capped by MEASURED bytes (`maxCheckpointBytes`), since
+//  tokens mislead across tiers: Lil (Qwen3.5-4B: 8 full-attention layers × 4 KV heads × 256 × 2 × fp16)
+//  holds ~32 KB/token plus a constant recurrent state; Big (gemma-4-12B) carries a ~335 MiB constant
+//  sliding-window state plus ~16 KB/token in its global layers. 512 MiB admits both on a desktop.
+//  Confidence 0.8 (store decisions pinned; the per-message win and the RAM are the chat-curve's).
 //
 
 import Foundation
@@ -56,6 +67,12 @@ final class ConversationTailCache: @unchecked Sendable {
     /// only thing bounding the slot. Raise it only with a measured RAM
     /// snapshot in hand (the PersonaPrefixCache rule).
     static let maxSeedTokens = 4000
+    /// The exact-checkpoint path's bound is MEASURED bytes (`innerState().nbytes` of the cut cache),
+    /// not tokens: see the 2026-10-25 review above for the per-tier arithmetic. 512 MiB.
+    static let maxCheckpointBytes = 512 << 20
+    /// The checkpoint path's token belt — bytes bind first; this only bounds the ids array and a
+    /// tier whose per-token cost is far below the arithmetic above.
+    static let maxCheckpointTokens = 8000
 
     enum AdoptOutcome: Equatable {
         case stored
@@ -63,14 +80,35 @@ final class ConversationTailCache: @unchecked Sendable {
         /// older self-consistent (cache, ids) pair is still a strict prefix of
         /// the growing conversation, so a smaller win beats no win.
         case overCap
+        /// Refused on measured bytes (checkpoint path); the previous tail survives the same way.
+        case overBytes
+    }
+
+    private struct Entry {
+        let key: PersonaCacheKey
+        let cache: [KVCache]
+        let tokenIDs: [Int]
+        /// Vouched exact (prefilled without a sampled token) — the checkpoint path's tails only.
+        let exact: Bool
+        let state: LMOutput.State?
     }
 
     private let lock = NSLock()
     private let cap: Int
-    private var entry: (key: PersonaCacheKey, cache: [KVCache], tokenIDs: [Int])?
+    private let checkpointCap: Int
+    private let byteCap: Int
+    private var entry: Entry?
+    /// The previous turn's first render, per key — what the next turn's first send cuts against.
+    private var render: (key: PersonaCacheKey, ids: [Int])?
 
-    init(cap: Int = ConversationTailCache.maxSeedTokens) {
+    init(
+        cap: Int = ConversationTailCache.maxSeedTokens,
+        checkpointCap: Int = ConversationTailCache.maxCheckpointTokens,
+        byteCap: Int = ConversationTailCache.maxCheckpointBytes
+    ) {
         self.cap = cap
+        self.checkpointCap = checkpointCap
+        self.byteCap = byteCap
     }
 
     /// Take ownership of a finishing session's cache. The caller must not
@@ -80,8 +118,43 @@ final class ConversationTailCache: @unchecked Sendable {
         guard tokenIDs.count <= cap else { return .overCap }
         lock.lock()
         defer { lock.unlock() }
-        entry = (key, cache, tokenIDs)
+        entry = Entry(key: key, cache: cache, tokenIDs: tokenIDs, exact: false, state: nil)
         return .stored
+    }
+
+    /// Take ownership of an exact checkpoint: a cache holding exactly `tokenIDs`, prefilled without
+    /// sampling, with the state its prefill handed back. `bytes` is the caller's measurement of the
+    /// arrays it hands over (`innerState().nbytes`); over `byteCap` the previous tail survives, same
+    /// as the token cap. `cache` is an autoclosure evaluated only once the caps pass, so the caller's
+    /// copy of a refused checkpoint is never made. The caller must not touch the arrays afterwards.
+    @discardableResult
+    func adoptCheckpoint(
+        _ cache: @autoclosure () -> [KVCache], tokenIDs: [Int], state: LMOutput.State?, bytes: Int,
+        for key: PersonaCacheKey
+    ) -> AdoptOutcome {
+        guard tokenIDs.count <= checkpointCap else { return .overCap }
+        guard bytes <= byteCap else { return .overBytes }
+        let arrays = cache()
+        lock.lock()
+        defer { lock.unlock() }
+        entry = Entry(key: key, cache: arrays, tokenIDs: tokenIDs, exact: true, state: state)
+        return .stored
+    }
+
+    /// Remember this turn's first render under `key`; the next turn's first send cuts its tail at the
+    /// common prefix of the two (`ExactPrefixReuse.tailCut`). Ids only — cheap to keep.
+    func recordRender(_ ids: [Int], for key: PersonaCacheKey) {
+        lock.lock()
+        defer { lock.unlock() }
+        render = (key, ids)
+    }
+
+    /// The render `recordRender` kept for `key`, nil for any other key.
+    func previousRender(for key: PersonaCacheKey) -> [Int]? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let render, render.key == key else { return nil }
+        return render.ids
     }
 
     /// A deep, independently-mutable copy of the retained tail — nil on any
@@ -93,22 +166,25 @@ final class ConversationTailCache: @unchecked Sendable {
     /// finished).
     func snapshot(for requested: PersonaCacheKey) -> PersonaPrefixSnapshot? {
         lock.lock()
-        let held: (cache: [KVCache], tokens: [Int])? = {
+        let held: Entry? = {
             guard let entry, entry.key == requested else { return nil }
-            return (entry.cache, entry.tokenIDs)
+            return entry
         }()
         lock.unlock()
         guard let held else { return nil }
-        // Not vouched exact: a finished session's cache is only ever consumed by
-        // the tool path, which gates reuse on its own trim check (it trims back
-        // to the common prefix), never by the append-only seeded plain turn.
-        return PersonaPrefixSnapshot(cache: held.cache.map { $0.copy() }, tokenIDs: held.tokens, exact: false)
+        // A live-path tail is not vouched exact: a finished session's cache is only ever consumed by
+        // the tool path, which gates reuse on its own trim check (it trims back to the common prefix),
+        // never by the append-only seeded plain turn. A checkpoint IS exact, and carries its state.
+        return PersonaPrefixSnapshot(
+            cache: held.cache.map { $0.copy() }, tokenIDs: held.tokenIDs, exact: held.exact, state: held.state
+        )
     }
 
-    /// Drop the slot (brain swap / eager memory release).
+    /// Drop the slot and the recorded render (brain swap / eager memory release).
     func invalidate() {
         lock.lock()
         defer { lock.unlock() }
         entry = nil
+        render = nil
     }
 }

@@ -33,6 +33,10 @@
 //  takes checkpoint mode like any untrimmable seed. The probe's tool arm proved the pristine-seed path on Big
 //  (seed + turn two vs a fresh prefill); the rolling checkpoint never nested there, so nesting is unmeasured.
 //  Confidence 0.75.
+//  Review: Kev + claude-fable-5.1, 2026-10-25 — `tailCut`: the cross-turn tail checkpoint, cut at the common prefix
+//  of consecutive first renders (the 10-25 chat-curves showed every message re-prefilling the whole conversation,
+//  reuse flat at the persona: Lil 2–3 s, Big 6–12 s a message). The ledger is `plan` over [persona, tail, rolling].
+//  Confidence 0.8 on the arithmetic; what the cut buys per message is the chat-curve's to show.
 
 import Foundation
 
@@ -77,5 +81,20 @@ enum ExactPrefixReuse {
             .max { candidates[$0].count < candidates[$1].count }
         guard let best else { return .fresh }
         return .extend(candidate: best, from: candidates[best].count, to: full.count - 1)
+    }
+
+    /// Where the first send of a turn takes the cross-turn tail checkpoint (2026-10-25): the common
+    /// prefix of this render with the PREVIOUS turn's first render. Turn N ends `…{replay}\n(framing)
+    /// …{grounding}…Goal: q_N` and turn N+1 continues `…{replay}\nUSER: q_N\nM1K3: a_N…`, so they share
+    /// exactly through the replay and the cut lands at its end — a strict prefix of turn N+2's render
+    /// by construction (its replay grows), one exchange behind. Worth taking only strictly inside what
+    /// this send prefills: past the candidate it extends (`from` — at or before it the persona already
+    /// covers it: a slid window, a switched conversation) and short of the render's last token (`to` —
+    /// there the rolling checkpoint already is). The cut needs no layout knowledge, and a wrong guess
+    /// costs nothing: a tail that is not a prefix of the next render loses the plan to the persona.
+    static func tailCut(previous: [Int]?, full: [Int], from: Int, to: Int) -> Int? {
+        guard let previous, !previous.isEmpty else { return nil }
+        let shared = SystemBlockBoundary.commonPrefixLength(previous, full)
+        return from < shared && shared < to ? shared : nil
     }
 }
