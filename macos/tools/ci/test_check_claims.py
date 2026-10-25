@@ -142,3 +142,57 @@ def test_findings_names_each_unresolved_claim_with_its_location():
         ("macos/Sources/A.swift", 3, m.Claim("marker", "ghost marker:")),
         ("macos/docs/X.md", 9, m.Claim("path", "marketing/rank_check.py")),
     ]
+
+
+# --- folds from the pre-push review (2026-10-25) ----------------------------- #
+
+def test_a_plus_plus_plus_line_inside_a_hunk_is_content_not_a_header():
+    diff = (
+        "diff --git a/x.md b/x.md\n--- a/x.md\n+++ b/x.md\n@@ -1,0 +1,2 @@\n"
+        "+++ a bullet that starts with two pluses\n+see `ghost.py`\n"
+    )
+    assert m.added_lines(diff) == [
+        ("x.md", 1, "++ a bullet that starts with two pluses"),
+        ("x.md", 2, "see `ghost.py`"),
+    ]
+
+
+def test_a_tab_suffixed_header_path_is_trimmed():
+    diff = "diff --git a/my file.md b/my file.md\n--- a/my file.md\t\n+++ b/my file.md\t\n@@ -0,0 +1 @@\n+x\n"
+    assert m.added_lines(diff) == [("my file.md", 1, "x")]
+
+
+def test_a_tool_flag_resolves_when_the_repo_passes_it_bare_on_a_code_line():
+    yml = ".github/workflows/ci.yml"
+    assert m.flag_in_code(yml, "            -skipPackagePluginValidation \\", "skipPackagePluginValidation")
+    assert m.flag_in_code("x.sh", "xcodebuild -scheme M1K3 -skipMacroValidation build", "skipMacroValidation")
+    assert not m.flag_in_code("x.sh", "# pass `-skipPackagePluginValidation`", "skipPackagePluginValidation")
+    assert not m.flag_in_code("x.sh", "run -skipPackagePluginValidationX", "skipPackagePluginValidation")
+
+
+def test_a_backticked_mention_is_a_claim_never_its_own_evidence():
+    py = "macos/tools/x.py"
+    assert not m.marker_in_code(py, '    "The header says it logs `turn first token:` ..."', "turn first token:")
+
+
+def test_tests_and_the_checker_itself_are_never_evidence():
+    assert not m.evidence_file("macos/tools/ci/check_claims.py")
+    assert not m.evidence_file("macos/tools/ci/test_check_claims.py")
+    assert not m.evidence_file("macos/Tests/M1K3ChatTests/FooTests.swift")
+    assert m.evidence_file("macos/Sources/M1K3Chat/TurnPhaseTimeline.swift")
+
+
+def test_dot_directories_and_parent_relative_paths_are_claims():
+    assert m.extract_claims("see `.github/workflows/ci.yml` and `../README.md`") == [
+        m.Claim("path", ".github/workflows/ci.yml"),
+        m.Claim("path", "../README.md"),
+    ]
+    assert m.path_resolves("../README.md", {"README.md"})
+    assert m.path_resolves("./macos/tools/ci/pr_watch.py", TRACKED)
+
+
+def test_an_ignored_path_is_not_a_finding():
+    added = [("macos/docs/X.md", 1, "the cache lives in `macos/.build/` and `marketing/ranks.md`")]
+    ignored = {"macos/.build/"}
+    got = m.findings(added, TRACKED, lambda c: False, is_ignored=lambda t: t in ignored)
+    assert got == [("macos/docs/X.md", 1, m.Claim("path", "marketing/ranks.md"))]

@@ -17,8 +17,13 @@ an added line is a claim when it is one of three shapes, and it must resolve:
   from macos/ and bare basenames work. Tests are skipped: their strings are fixtures;
 * a log marker: lowercase, at least two words, ending in a colon (`turn first token:`)
   — it must sit inside a string literal on a non-comment line of a code file;
-* an in-app argv flag: single-dash camelCase (`-postToolAnswer use`) — its bare name
-  must be an exact string literal (`"postToolAnswer"`) on a non-comment code line.
+* an argv flag: single-dash camelCase (`-postToolAnswer use`) — its bare name must be an
+  exact string literal (`"postToolAnswer"`) on a non-comment code line, as the app reads
+  its argv, or the repo must pass it bare on one, as a workflow passes xcodebuild's
+  `-skipPackagePluginValidation`.
+
+Evidence never comes from tests (fixtures), from this checker, or from a backticked
+mention (that is another claim). A path git ignores (`macos/.build/`) is not a claim.
 
 Everything else in backticks (shell commands, `--long` flags git and gh own, globs,
 URLs, `~` and `$` paths, runtime files like `ranks.jsonl`) is not a claim. Eval
@@ -83,14 +88,16 @@ def added_lines(diff: str) -> list[tuple[str, int, str]]:
     out: list[tuple[str, int, str]] = []
     path: str | None = None
     n = 0
+    in_header = False  # `+++` is a header only before a file's first hunk; inside one it's content
     for raw in diff.splitlines():
-        if raw.startswith("+++ "):
-            target = raw[4:]
-            path = target[2:] if target.startswith("b/") else None  # /dev/null: a deletion
-        elif raw.startswith(("--- ", "diff --git")):
-            continue
+        if raw.startswith("diff --git"):
+            in_header, path = True, None
         elif m := _HUNK.match(raw):
-            n = int(m.group(1))
+            in_header, n = False, int(m.group(1))
+        elif in_header:
+            if raw.startswith("+++ "):
+                target = raw[4:].rstrip("\t")  # git appends a TAB after a path with spaces
+                path = target[2:] if target.startswith("b/") else None  # /dev/null: a deletion
         elif path is None:
             continue
         elif raw.startswith("+"):
@@ -122,8 +129,8 @@ def _classify(span: str) -> Claim | None:
         return Claim("path", token)
     if "/" not in token.rstrip("/") and token.count(".") != 1:
         return None  # `Foo.<T>.swift`-shaped or a bare word
-    if _ext(token) in PATH_EXT and not token.startswith("."):
-        return Claim("path", token)
+    if _ext(token) in PATH_EXT and (not token.startswith(".") or "/" in token):
+        return Claim("path", token)  # `.github/…`, `./x`, `../x` are paths; `.synthesise` isn't
     return None
 
 
@@ -134,7 +141,9 @@ def extract_claims(line: str) -> list[Claim]:
 
 
 def path_resolves(token: str, tracked: Iterable[str]) -> bool:
-    t = token.removeprefix("./")
+    t = token
+    while t.startswith(("./", "../")):
+        t = t.split("/", 1)[1]
     if t.endswith("/"):
         d = "/" + t.strip("/") + "/"
         return any(d in "/" + p for p in tracked)
@@ -155,9 +164,17 @@ def _quotes(path: str) -> str:
     return '"' if _ext(path) in {"swift", "kt", "kts", "js"} else "\"'"
 
 
+def evidence_file(path: str) -> bool:
+    """Where a marker or flag may resolve: not tests (fixtures) and not this checker."""
+    base = path.rsplit("/", 1)[-1]
+    return not ("/Tests/" in f"/{path}" or base.startswith("test_") or base == "check_claims.py")
+
+
 def marker_in_code(path: str, line: str, marker: str) -> bool:
-    """The marker sits inside a string literal (an odd count of quotes before it)."""
-    if not _is_code_line(path, line):
+    """The marker sits inside a string literal (an odd count of quotes before it).
+    A heuristic: a marker on an inner line of a multi-line string (`\"\"\"`, a YAML
+    `run: |` block) is missed, and needs `claims: skip`."""
+    if not _is_code_line(path, line) or f"`{marker}`" in line:  # a backticked mention is a claim
         return False
     at = line.find(marker)
     if at < 0:
@@ -167,25 +184,34 @@ def marker_in_code(path: str, line: str, marker: str) -> bool:
 
 
 def flag_in_code(path: str, line: str, name: str) -> bool:
-    """The flag's bare name is an exact string literal ("name", "-name" or "--name")."""
+    """The flag's bare name is an exact string literal ("name", "-name" or "--name"), as
+    the app reads its argv, or the repo passes `-name` itself on a code line, as a script
+    passes `-skipPackagePluginValidation` to xcodebuild."""
     if not _is_code_line(path, line):
         return False
-    return re.search(rf"[\"']-{{0,2}}{re.escape(name)}[\"']", line) is not None
+    n = re.escape(name)
+    return (re.search(rf"[\"']-{{0,2}}{n}[\"']", line) is not None
+            or re.search(rf"(?<![\w\-`])-{{1,2}}{n}(?![\w\-`])", line) is not None)
 
 
 def findings(
     added: Iterable[tuple[str, int, str]],
     tracked: Iterable[str],
     in_code: Callable[[Claim], bool],
+    is_ignored: Callable[[str], bool] = lambda _token: False,
 ) -> list[tuple[str, int, Claim]]:
-    """Every claim on an added line of a checked file that does not resolve."""
+    """Every claim on an added line of a checked file that does not resolve. A path git
+    ignores (`macos/.build/`) is untracked on purpose, so naming it is no claim."""
     tracked = list(tracked)
     out = []
     for path, n, text in added:
         if not checked_file(path):
             continue
         for c in extract_claims(text):
-            ok = path_resolves(c.token, tracked) if c.kind == "path" else in_code(c)
+            if c.kind == "path":
+                ok = path_resolves(c.token, tracked) or is_ignored(c.token)
+            else:
+                ok = in_code(c)
             if not ok:
                 out.append((path, n, c))
     return out
@@ -205,18 +231,26 @@ def _code_resolver() -> Callable[[Claim], bool]:
 
     def in_code(c: Claim) -> bool:
         if c not in cache:
-            hits = subprocess.run(
-                ["git", "grep", "-n", "-I", "-F", "-e", c.token],
+            hits = subprocess.run(  # -z: path\0line\0text, so a `:` in a path can't split it
+                ["git", "grep", "-z", "-n", "-I", "-F", "-e", c.token],
                 capture_output=True, text=True, check=False,  # exit 1 = no match, not an error
             ).stdout.splitlines()
             test = marker_in_code if c.kind == "marker" else flag_in_code
             cache[c] = any(
-                test(p, text, c.token)
-                for p, _, text in (h.split(":", 2) for h in hits if h.count(":") >= 2)
+                evidence_file(p) and test(p, text, c.token)
+                for p, _, text in (h.split("\0", 2) for h in hits if h.count("\0") >= 2)
             )
         return cache[c]
 
     return in_code
+
+
+def _ignored(token: str) -> bool:
+    """git ignores the path as written, or as written from macos/."""
+    return any(
+        subprocess.run(["git", "check-ignore", "-q", "--no-index", t], check=False).returncode == 0
+        for t in (token, f"macos/{token}")
+    )
 
 
 def main(argv: list[str]) -> int:
@@ -225,10 +259,18 @@ def main(argv: list[str]) -> int:
                     help="git diff range whose ADDED lines are checked")
     args = ap.parse_args(argv[1:])
 
-    os.chdir(_git("rev-parse", "--show-toplevel").strip())
-    added = added_lines(_git("diff", "-U0", "--no-color", "--no-ext-diff", args.range))
-    tracked = _git("ls-files").splitlines()
-    bad = findings(added, tracked, _code_resolver())
+    try:
+        os.chdir(_git("rev-parse", "--show-toplevel").strip())
+        # Pinned so a local diff.noprefix / mnemonicPrefix / quotePath can't hide every file.
+        diff = _git("-c", "core.quotePath=false", "diff", "-U0", "--no-color", "--no-ext-diff",
+                    "--src-prefix=a/", "--dst-prefix=b/", args.range)
+        # Untracked-but-not-ignored files count, so a local run sees a file not yet added.
+        tracked = _git("ls-files", "--cached", "--others", "--exclude-standard").splitlines()
+    except subprocess.CalledProcessError as e:  # a root commit, a shallow clone, a bad range
+        print(f"❌ check_claims: `git {' '.join(e.cmd[1:])}` failed:\n{e.stderr.strip()}")
+        return 2
+    added = added_lines(diff)
+    bad = findings(added, tracked, _code_resolver(), _ignored)
     total = sum(len(extract_claims(t)) for p, _, t in added if checked_file(p))
 
     if not bad:
