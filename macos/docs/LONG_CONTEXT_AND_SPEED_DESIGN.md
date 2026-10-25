@@ -147,11 +147,22 @@ decides (it already answers in 0.05 s); overlapping the pick with the plain gene
 it) and cancelling the loser. **Debug is not the product:** the October arms ran Debug, where Lil decoded 28 tok/s;
 decode is 40 % of a Release turn, and the wait before the first token is the larger half.
 
-Agent-route turns are a different animal (none of the 129 trials took one; the eval's tool asks dispatch outside the
-loop). The chat-curve on Lil's agent route (battery, 2026-10-25, #683) re-prefills ~2,300 tokens a message from
-message 4 — 5–8 s of `extend` the ttft line could not see — and the render plateaus at the HistoryWindow's 16 turns.
-§2a's cross-turn seed is worth more than the September arithmetic said; the AC curves (`chatcurve-{lil,big}-{agent,
-dispatch}`) carry the mains figures.
+**Every message re-prefills the conversation, on both routes, on both brains** (the 20-message chat-curves, same
+build and power, `docs/evals/2026-10-25-chatcurve-{lil,big}-{agent,dispatch}.txt`; the agent route is the tool
+session in checkpoint mode, whose transcript prefill is the `extend` column; the dispatch arm is the Mac's plain
+route, whose prefill is the generate's own past the persona seed). Reuse never grows past the persona (Lil 2,444,
+Big 2,184 tokens); from message 6 the history is ~1,400–2,500 tokens and it is prefilled again every turn:
+
+| per message, from message 6 | Lil agent | Lil plain | Big agent | Big plain |
+|---|---|---|---|---|
+| tokens re-prefilled | ~2,100–2,400 | ~1,300–1,900 | ~2,400–2,700 | ~1,500–1,800 |
+| time | 2.6–3.5 s | 2.0–2.8 s | **10–12 s** | **6–7.7 s** |
+| slope (total prefill ms / message) | 60 | 117 | 494 | 250 |
+
+None of the 129 baseline trials took the agent route (the eval's tool asks dispatch outside the loop), so the
+scorecards above are single-turn plain generations; the curves are what a conversation costs. §2a's cross-turn
+seed is worth 2–3 s a message on Lil and 6–12 s on Big, from the second exchange — far more than the September
+arithmetic said. The render plateaus at the HistoryWindow's 16 turns, so the per-message cost caps there too.
 
 ## 4. Not doing
 
@@ -167,5 +178,8 @@ here; every other gain is a published or projected number — hence the gates). 
 Unknown
 Review: Kev + claude-fable-5.1, 2026-10-25 — §4: the first Release baseline (both brains, per route) and the
 Lil row of §1 corrected to Qwen3.5-4B's geometry (the dense Qwen3-4B left Lil on 2026-10-08). The picker route's
-3 s before the first token, on half the trials, is the finding; §2a's value rose with the chat-curve's `extend`
-column. Confidence 0.85 (measured; the picker's share is attributed by route, named by the next run's pick line).
+3 s before the first token, on half the trials, is one finding (the timed pick then read a median 3.1 s over 45
+picks); the four mains chat-curves are the other: every message re-prefills the conversation on both routes, 2–3 s
+on Lil and 6–12 s on Big. Confidence 0.9 (all measured on one build, one power state).
+Review: Kev + claude-fable-5.1, 2026-10-25 (later) — §3 gains the four mains chat-curves as a table (agent and plain
+routes, both brains); the battery smoke's figures are superseded by them.
