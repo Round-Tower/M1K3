@@ -103,7 +103,8 @@ extension AppleFoundationModelsProvider: ToolPicking {
 
     public func pickTools(message: String, instructions: String) async throws -> [(tool: String, query: String)] {
         guard isAvailable else { throw InferenceError.providerUnavailable("Apple Intelligence is not ready") }
-        return try await AFMToolPicker.pickChain(session: LanguageModelSession(instructions: instructions), message: message)
+        let session = LanguageModelSession(instructions: instructions)
+        return try await AFMToolPicker.pickChain(session: session, message: message)
     }
 }
 
@@ -116,7 +117,9 @@ extension AFMToolPicker {
         return (pick.tool, pick.query)
     }
 
-    static func pickChain(session: LanguageModelSession, message: String) async throws -> [(tool: String, query: String)] {
+    static func pickChain(
+        session: LanguageModelSession, message: String
+    ) async throws -> [(tool: String, query: String)] {
         let pick = try await session.respond(
             to: message, generating: AFMToolChainPick.self, options: GenerationOptions(temperature: 0)
         ).content
@@ -134,9 +137,17 @@ extension AFMToolPicker {
 public final class PrewarmedToolPicker: ToolPicking, @unchecked Sendable {
     private let base: AppleFoundationModelsProvider
     private let slot = PrewarmSlot<LanguageModelSession>()
+    /// The second arm (`-pickerPrewarmPrefix YES`): the rules and menu ride as the PROMPT's prefix, warmed with
+    /// `prewarm(promptPrefix:)`, under a one-line instruction. The 2026-09-14 probe found instructions-only
+    /// prewarm bought ~7 %, a processed prompt prefix ~3×; the first arm (instructions warmed) read −18 %.
+    private let prefixMode: Bool
 
-    public init(base: AppleFoundationModelsProvider) {
+    /// What the prefix arm's session is instructed with; the rules and menu arrive in the prompt instead.
+    static let prefixInstructions = "You name one tool for a message, following the rules and menu the message opens with."
+
+    public init(base: AppleFoundationModelsProvider, prefixMode: Bool = false) {
         self.base = base
+        self.prefixMode = prefixMode
     }
 
     /// Whether a warm session is waiting (diagnostics).
@@ -145,11 +156,27 @@ public final class PrewarmedToolPicker: ToolPicking, @unchecked Sendable {
     }
 
     public func pickTool(message: String, instructions: String) async throws -> (tool: String, query: String) {
-        try await AFMToolPicker.pick(session: session(for: instructions), message: message)
+        try await AFMToolPicker.pick(session: session(for: instructions), message: prompt(message, instructions))
     }
 
     public func pickTools(message: String, instructions: String) async throws -> [(tool: String, query: String)] {
-        try await AFMToolPicker.pickChain(session: session(for: instructions), message: message)
+        try await AFMToolPicker.pickChain(session: session(for: instructions), message: prompt(message, instructions))
+    }
+
+    /// The prefix arm's prompt opens with the warmed prefix byte for byte, so the framework skips its prefill.
+    private func prompt(_ message: String, _ instructions: String) -> String {
+        prefixMode ? instructions + "\n\n" + message : message
+    }
+
+    private func makeSession(_ instructions: String) -> LanguageModelSession {
+        guard prefixMode else {
+            let session = LanguageModelSession(instructions: instructions)
+            session.prewarm()
+            return session
+        }
+        let session = LanguageModelSession(instructions: Self.prefixInstructions)
+        session.prewarm(promptPrefix: Prompt(instructions + "\n\n"))
+        return session
     }
 
     /// The warm session for this menu when one waits (the slot drops a mismatch), else a cold one — and
@@ -157,10 +184,13 @@ public final class PrewarmedToolPicker: ToolPicking, @unchecked Sendable {
     private func session(for instructions: String) throws -> LanguageModelSession {
         guard base.isAvailable else { throw InferenceError.providerUnavailable("Apple Intelligence is not ready") }
         let taken = slot.take(matching: instructions)
-        let next = LanguageModelSession(instructions: instructions)
-        next.prewarm()
-        slot.store(next, key: instructions)
-        AFMToolPicker.log.notice("tool picker session: \(taken == nil ? "cold" : "warm", privacy: .public), next armed")
-        return taken ?? LanguageModelSession(instructions: instructions)
+        slot.store(makeSession(instructions), key: instructions)
+        // Params only inside the Logger autoclosure (the swiftformat landmine: never a member).
+        let warmth = taken == nil ? "cold" : "warm"
+        let shape = prefixMode ? "prefix" : "instructions"
+        AFMToolPicker.log.notice(
+            "tool picker session: \(warmth, privacy: .public) (\(shape, privacy: .public)), next armed"
+        )
+        return taken ?? makeSession(instructions)
     }
 }

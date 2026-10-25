@@ -15,7 +15,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — chain fixtures: `alsoCallTools` is pinned alongside `mustCallTool`.
 //  Review: Kev + claude-opus-5-5, 2026-10-10 — the `tool-head-*` fixtures must make the shipped head
 //  dispatch, each to its own tool (real NLEmbedding).
-//  Review: Kev + claude-fable-5.1, 2026-10-25 — `pickerPrewarm` joins the flags-default-off pin (the prewarmed picker arm).
+//  Review: Kev + claude-fable-5.1, 2026-10-25 — `pickerPrewarm` joins the flags-default-off pin (the prewarmed
+//  picker arm).
 
 import Foundation
 @testable import M1K3Chat
@@ -294,14 +295,17 @@ struct ToolPickCascadeTests {
         #expect(!ToolRouterWiring.allTiersEnabled(defaults))
         #expect(!ToolRouterWiring.chainEnabled(defaults))
         #expect(!ToolRouterWiring.pickerPrewarmEnabled(defaults), "the prewarmed picker is an arm until its eval")
+        #expect(!ToolRouterWiring.pickerPrewarmPrefixEnabled(defaults))
         defaults.set(true, forKey: ToolRouterWiring.groupRouterKey)
         defaults.set(true, forKey: ToolRouterWiring.allTiersKey)
         defaults.set(true, forKey: ToolRouterWiring.chainKey)
         defaults.set(true, forKey: ToolRouterWiring.pickerPrewarmKey)
+        defaults.set(true, forKey: ToolRouterWiring.pickerPrewarmPrefixKey)
         #expect(ToolRouterWiring.groupRouterEnabled(defaults))
         #expect(ToolRouterWiring.allTiersEnabled(defaults))
         #expect(ToolRouterWiring.chainEnabled(defaults))
         #expect(ToolRouterWiring.pickerPrewarmEnabled(defaults))
+        #expect(ToolRouterWiring.pickerPrewarmPrefixEnabled(defaults))
     }
 
     @Test("a shell picks the unset default (the Mac: on, after the 10-10 arm); an explicit setting still wins")

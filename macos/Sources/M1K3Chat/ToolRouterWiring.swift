@@ -110,6 +110,14 @@ public enum ToolRouterWiring {
         flag(pickerPrewarmKey, defaults, whenUnset: whenUnset)
     }
 
+    /// The prewarmed picker's second shape (`-pickerPrewarmPrefix YES`, implies the arm): rules and menu as the
+    /// warmed prompt prefix under a one-line instruction. The instructions-warmed shape read −18 % on the pick.
+    public static let pickerPrewarmPrefixKey = "pickerPrewarmPrefix"
+
+    public static func pickerPrewarmPrefixEnabled(_ defaults: UserDefaults = .standard, whenUnset: Bool = false) -> Bool {
+        flag(pickerPrewarmPrefixKey, defaults, whenUnset: whenUnset)
+    }
+
     /// An explicit setting wins; absent, the shell's default (`whenUnset`). The shells choose:
     /// the Mac turns the router flags on (the 2026-10-10 arm), iOS keeps them off until a phone
     /// smoke (Lil + Apple's picker on an 8 GB iPhone is unmeasured).
@@ -128,8 +136,8 @@ public enum ToolRouterWiring {
     /// Apple's model as a picker for a brain that isn't Mini (all tiers). A fresh
     /// session per pick: it never touches a chat prewarm. Not ready → the pick throws → nil.
     /// Apple's model as the picker for a brain that isn't Mini; the prewarmed arm wraps it when the flag says.
-    private static let fallbackPicker: any ToolPicking = pickerPrewarmEnabled()
-        ? PrewarmedToolPicker(base: AppleFoundationModelsProvider())
+    private static let fallbackPicker: any ToolPicking = pickerPrewarmEnabled() || pickerPrewarmPrefixEnabled()
+        ? PrewarmedToolPicker(base: AppleFoundationModelsProvider(), prefixMode: pickerPrewarmPrefixEnabled())
         : AppleFoundationModelsProvider()
 
     /// This turn's plain-chat route, or nil for today's agent turn.
