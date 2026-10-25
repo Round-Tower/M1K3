@@ -189,15 +189,18 @@ collapses to the persona + preamble (Lil 2,535, Big 2,277), and the cost returns
 | per message | Lil, tail off | Lil, tail on | Big, tail off | Big, tail on |
 |---|---|---|---|---|
 | messages 3–9: reuse (tokens) | 2,444 flat | 2,520 → 3,338 | 2,184 flat | 2,262 → 3,774 |
-| messages 3–9: `extend` | 2.1 → 3.5 s | **1.6–1.9 s** | 6.1 → 11.2 s | **6.1 → 4.5 s** |
+| messages 3–9: `extend` | 2.1 → 3.5 s | **1.5–1.9 s** | 6.1 → 11.2 s | **5.7 → 4.5 s** |
 | messages 10–20: reuse | 2,444 | 2,535 | 2,184 | 2,277 |
-| messages 10–20: `extend` | 2.6–3.3 s | 2.6–3.2 s | 10.5–12.1 s | 9.4–11.2 s |
+| messages 10–20: `extend` | 2.6–3.3 s | 3.0–3.8 s | 10.5–12.1 s | 9.8–11.6 s |
 | tail checkpoint stored | — | 135–169 MiB | — | 370–382 MiB |
-| MLX own peak (max over the curve) | 4.44 GB | 4.69 GB | 8.64 GB | 9.33 GB |
+| MLX own peak (max over the curve) | 4.44 GB | **4.84 GB** | 8.64 GB | 9.36 GB |
 
-(The peaks are from the build that copied the stored tail on every turn, used or not; the shipped head copies it
-only when the plan picks it, so they are an upper bound.) The win is real and bounded by the window: block
-eviction (§2a) is what extends it past message 9.
+(Shipped head 1f557f97; the script's answers differ run to run, so the message-10+ Lil figures ride a render that
+grew to ~5,000 tokens.) Lil's peak sits 160 MB under its 5 GB own-peak cap (`BrainTier.lilOwnPeakCapMB`): the first
+send of a turn holds the pristine copy, the work cache, the tail copy and the rolling copy at once. A lower
+`maxCheckpointBytes` for Lil, or consuming the tail without the rolling copy on the first send, is the headroom lever
+if a longer render crosses it. The win is real and bounded by the window: block eviction (§2a) is what extends it
+past message 9.
 
 ## 4. Not doing
 
@@ -223,3 +226,6 @@ cut at the common prefix of consecutive renders (not the September trim), capped
 table measures it on both brains: reuse grows from message 3, Big's per-message prefill 11.2 → 4.5 s by message 9,
 and the HistoryWindow slide at message 10 takes it all back — block eviction is the next lever. Confidence 0.85
 (one build line, one power state, agent route only; the plain route is phase 2).
+Review: Kev + claude-fable-5.1, 2026-10-25 (night) — §3's second table re-read on the shipped head (the lazy tail copy):
+Lil's own peak 4.84 GB against its 5 GB cap, the headroom levers named; a single-turn kill-switch A/B (Lil ×3 ON vs OFF,
+paired, identical content, medians inside the pick's variance) clears the first-send path. Confidence 0.85.
