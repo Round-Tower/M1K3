@@ -60,6 +60,8 @@
 //  opt-in: the loop stays half-duplex. A voice turn asked over a still-generating answer now stops that
 //  generation first (it was dropped as "No answer arrived", click barge-in included). Confidence 0.6:
 //  verify-by-launch owed (speak over M1K3, with and without music, and mid-generation).
+//  Review: same day (3) — barge-in is on by default with Mac voice processing (`macEnabled`; Kev: "enable the
+//  barge in all the time"); `-macVoiceProcessing NO` turns both off. Confidence 0.7.
 //  Review: same day (2), Kev's first live run — the watch now listens with `.watches` (as `.keepsListening` the
 //  8 s silent-listen limit closed it every 8.2 s, three closes and it gave up, so "hang on" fell on a closed mic),
 //  and speech stops at SpokenAnswerEnd (the "Web sources:" block was read aloud line by line). Confidence 0.65.
@@ -455,7 +457,7 @@ extension AppEnvironment {
                   VoiceProcessingPolicy.shouldEnable(
                       platform: VoiceProcessingPolicy.current,
                       inputIsBluetooth: InputDeviceTransport.defaultInputIsBluetooth(),
-                      macOptIn: true
+                      macEnabled: true
                   ),
                   let provider = transcription.activeProvider(preferringEchoCancellation: true),
                   provider.attemptsEchoCancellation
@@ -695,7 +697,7 @@ extension AppEnvironment {
                 }
                 return .success(())
             },
-            startBargeInWatch: VoiceProcessingPolicy.macOptIn() ? startBargeInWatch : nil,
+            startBargeInWatch: VoiceProcessingPolicy.macEnabled() ? startBargeInWatch : nil,
             echoCancellationLive: echoCancellationLive
         )
     }

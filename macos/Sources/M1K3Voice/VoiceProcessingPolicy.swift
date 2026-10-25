@@ -51,6 +51,11 @@
 //  so that guard would have backed out every good listen. Echo payoff, measured: the recogniser read
 //  21/21 of M1K3's spoken words off the mic with VPIO off, 0/21 with it on. Confidence 0.7: probes,
 //  not yet a launch.
+//  Review: Kev + claude-opus-5-5, 2026-10-25 — ON by default on the Mac (Kev: "enable the barge in all the time
+//  so it's not lost behind the flag"; spoken barge-in needs live echo cancellation). Verify-by-launch on Kev's
+//  M1 Max: live by look 1 on every listen, no starve, two sessions. `macOptIn` → `macEnabled`; argv
+//  `-macVoiceProcessing NO` is the way out. Bluetooth stays off and the watchdog still backs a starve out.
+//  Confidence 0.75: one Mac's device set; the watchdog is the net for the others.
 //
 
 import Foundation
@@ -70,28 +75,29 @@ public enum VoiceProcessingPolicy {
         #endif
     }
 
-    /// Turn voice processing on for this listen? Mobile always. The Mac only when
-    /// opted in (`macOptIn`, argv `-macVoiceProcessing YES`) AND the input is
+    /// Turn voice processing on for this listen? Mobile always. The Mac when enabled
+    /// (`macEnabled`: on unless argv `-macVoiceProcessing NO`) AND the input is
     /// POSITIVELY not Bluetooth: a headset under VPIO delivered zero buffers
     /// (2026-09-12) and needs no echo cancellation anyway, and an unknown transport
     /// fails safe, since a wrongly-off built-in only loses echo cancellation while a
-    /// wrongly-on headset goes deaf. Even opted in, VPIO on macOS 27.0 can starve
+    /// wrongly-on headset goes deaf. Even enabled, VPIO on macOS 27.0 can starve
     /// when the system's device set shifts (2026-10-17), so the transcriber runs
     /// `VoiceProcessingWatchdog` and backs a starved listen out.
-    public static func shouldEnable(platform: Platform, inputIsBluetooth: Bool?, macOptIn: Bool = false) -> Bool {
+    public static func shouldEnable(platform: Platform, inputIsBluetooth: Bool?, macEnabled: Bool = false) -> Bool {
         switch platform {
         case .mobile: true
-        case .mac: macOptIn && inputIsBluetooth == false
+        case .mac: macEnabled && inputIsBluetooth == false
         }
     }
 
-    /// The Mac opt-in, read from argv (`M1K3 -macVoiceProcessing YES`; on macOS 27
-    /// `defaults write` never reaches the sandboxed app). Absent means off.
-    public static func macOptIn(
+    /// Mac voice processing, on by default since 2026-10-25 (spoken barge-in needs it).
+    /// Turned off from argv (`M1K3 -macVoiceProcessing NO`; on macOS 27 `defaults write`
+    /// never reaches the sandboxed app).
+    public static func macEnabled(
         arguments: [String: Any] = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
     ) -> Bool {
-        guard let raw = arguments["macVoiceProcessing"] as? String else { return false }
-        return ["yes", "1", "true", "on"].contains(raw.lowercased())
+        guard let raw = arguments["macVoiceProcessing"] as? String else { return true }
+        return !["no", "0", "false", "off"].contains(raw.lowercased())
     }
 
     /// Pin the engine's input unit to the user's selected mic for this listen?
