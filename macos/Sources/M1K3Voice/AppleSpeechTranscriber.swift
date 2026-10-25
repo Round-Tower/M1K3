@@ -136,6 +136,7 @@
 //  looks had ended cleared `echoCancellationLive` for the rest of the listen. The reinstall now starts a
 //  fresh run of looks unless one is pending (`watchdogLookPendingFor`, under `engineLock`; scheduling
 //  moved inside the lock). Confidence 0.75: the rule is pinned, the route change is verify-by-launch.
+//  Review: same day (2) — Mac voice processing is on by default (`macEnabled`, VoiceProcessingPolicy). Confidence 0.75.
 
 import AVFoundation
 import Foundation
@@ -238,8 +239,8 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     /// The last input-device census we logged (dedup, same reason as
     /// `lastLoggedVPDecision`).
     private var lastLoggedInputDevice: String?
-    /// The Mac's voice-processing opt-in (argv `-macVoiceProcessing YES`), read once.
-    private let macVoiceProcessingOptIn = VoiceProcessingPolicy.macOptIn()
+    /// Mac voice processing (on unless argv `-macVoiceProcessing NO`), read once.
+    private let macVoiceProcessingEnabled = VoiceProcessingPolicy.macEnabled()
     /// VPIO starved this engagement (`VoiceProcessingWatchdog`), so listens stay on
     /// the plain mic until `releaseAudioHardware`. Guarded by `engineLock`.
     private var voiceProcessingStarved = false
@@ -901,7 +902,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         let inputIsBluetooth = InputDeviceTransport.defaultInputIsBluetooth()
         let wantsVoiceProcessing = VoiceProcessingPolicy.shouldEnable(
             platform: VoiceProcessingPolicy.current, inputIsBluetooth: inputIsBluetooth,
-            macOptIn: macVoiceProcessingOptIn && !voiceProcessingStarved
+            macEnabled: macVoiceProcessingEnabled && !voiceProcessingStarved
         )
         // The one line that says which way the policy went — a mute listen
         // with no engine error is otherwise unreadable from the log. Logged

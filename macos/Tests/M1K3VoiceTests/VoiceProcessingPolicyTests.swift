@@ -41,27 +41,26 @@ struct VoiceProcessingPolicyTests {
         #expect(!VoiceProcessingPolicy.shouldEnable(platform: .mac, inputIsBluetooth: false))
     }
 
-    @Test("Mac opt-in (-macVoiceProcessing YES) turns echo cancellation on for a positively non-Bluetooth input")
-    func macOptInEnablesOnBuiltIn() {
-        #expect(VoiceProcessingPolicy.shouldEnable(platform: .mac, inputIsBluetooth: false, macOptIn: true))
+    @Test("Mac voice processing turns echo cancellation on for a positively non-Bluetooth input")
+    func macEnabledOnBuiltIn() {
+        #expect(VoiceProcessingPolicy.shouldEnable(platform: .mac, inputIsBluetooth: false, macEnabled: true))
     }
 
-    @Test("Mac opt-in never enables on Bluetooth or an unknown transport (a headset under VPIO delivered zero buffers)")
-    func macOptInFailsSafeOnBluetoothOrUnknown() {
-        #expect(!VoiceProcessingPolicy.shouldEnable(platform: .mac, inputIsBluetooth: true, macOptIn: true))
-        #expect(!VoiceProcessingPolicy.shouldEnable(platform: .mac, inputIsBluetooth: nil, macOptIn: true))
+    @Test("Mac voice processing never enables on Bluetooth or an unknown transport (a headset under VPIO delivered zero buffers)")
+    func macNeverOnBluetoothOrUnknown() {
+        #expect(!VoiceProcessingPolicy.shouldEnable(platform: .mac, inputIsBluetooth: true, macEnabled: true))
+        #expect(!VoiceProcessingPolicy.shouldEnable(platform: .mac, inputIsBluetooth: nil, macEnabled: true))
     }
 
-    @Test("the Mac opt-in reads -macVoiceProcessing from argv; absent or NO means off")
-    func macOptInReadsArgv() {
-        #expect(!VoiceProcessingPolicy.macOptIn(arguments: [:]))
-        #expect(VoiceProcessingPolicy.macOptIn(arguments: ["macVoiceProcessing": "YES"]))
-        #expect(VoiceProcessingPolicy.macOptIn(arguments: ["macVoiceProcessing": "1"]))
-        #expect(VoiceProcessingPolicy.macOptIn(arguments: ["macVoiceProcessing": "true"]))
-        #expect(VoiceProcessingPolicy.macOptIn(arguments: ["macVoiceProcessing": "On"]))
-        #expect(VoiceProcessingPolicy.macOptIn(arguments: ["macVoiceProcessing": "yes"]))
-        #expect(!VoiceProcessingPolicy.macOptIn(arguments: ["macVoiceProcessing": "NO"]))
-        #expect(!VoiceProcessingPolicy.macOptIn(arguments: ["macVoiceProcessing": "off"]))
+    @Test("Mac voice processing is ON by default (Kev 2026-10-25: barge-in all the time); -macVoiceProcessing NO turns it off")
+    func macEnabledByDefault() {
+        #expect(VoiceProcessingPolicy.macEnabled(arguments: [:]))
+        #expect(VoiceProcessingPolicy.macEnabled(arguments: ["macVoiceProcessing": "YES"]))
+        #expect(VoiceProcessingPolicy.macEnabled(arguments: ["macVoiceProcessing": "anything else"]))
+        #expect(!VoiceProcessingPolicy.macEnabled(arguments: ["macVoiceProcessing": "NO"]))
+        #expect(!VoiceProcessingPolicy.macEnabled(arguments: ["macVoiceProcessing": "0"]))
+        #expect(!VoiceProcessingPolicy.macEnabled(arguments: ["macVoiceProcessing": "false"]))
+        #expect(!VoiceProcessingPolicy.macEnabled(arguments: ["macVoiceProcessing": "Off"]))
     }
 
     @Test("the input is pinned to the selected mic only WITHOUT voice processing (2026-10-17: the pin broke VPIO by the third listen)")
