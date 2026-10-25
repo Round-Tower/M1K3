@@ -314,6 +314,35 @@ def test_a_concurrent_summon_in_the_window_does_not_eat_the_auto_runs_gh_pr_comm
     assert v.passes == 2 and v.ready
 
 
+def test_an_older_heads_late_review_inside_this_runs_window_is_not_this_runs_comment():
+    # #687 (2026-10-25): c4f2f3d8's review run queued 80 min and finished inside
+    # 13e58a5f's window; its `gh pr comment` review (VERDICT @ c4f2f3d8) was the
+    # first in the window and read as 13e58a5f's auto pass, so a head with an
+    # APPROVE naming it in full stayed unlandable. A comment whose verdict names
+    # ANOTHER sha is another head's review, whenever it was posted.
+    # Signed: Kev + claude-fable-5.1, 2026-10-25 · Prior: Unknown (this file carries no signature)
+    old_head = "c4f2f3d8" + "0" * 32
+    head = "13e58a5f" + "0" * 32
+    runs = [_run(old_head, 111, "2026-10-25T19:48:47Z", "2026-10-25T19:49:45Z"),
+            _run(head, 222, "2026-10-25T19:49:20Z", "2026-10-25T19:50:17Z")]
+    old = bot(f"Reviewed the diff (tail cache).\n\nVERDICT: APPROVE @ {old_head}", created="2026-10-25T19:49:38Z")
+    new = bot(f"Review of the cross-turn tail checkpoint:\n\nVERDICT: APPROVE @ {head}", created="2026-10-25T19:50:10Z")
+    assert m.auto_pass_comment(head, runs, [old, new]) is new
+    assert m.auto_pass_comment(old_head, runs, [old, new]) is old
+    jobs = {m.JOB_SWIFT_TEST: "success", m.JOB_APP: "skipped", m.JOB_MOBILE: "skipped",
+            m.JOB_GUARDS: "success", m.JOB_DOCS: "success", m.JOB_GATE: "success"}
+    v = m.verdict(head, jobs, [old, new], auto_ok=True, passes_needed=1, auto_comment=new, **OURS)
+    assert v.passes == 1 and v.ready, v.summary
+
+
+def test_a_window_comment_with_no_verdict_still_counts_as_the_runs_own():
+    # Summons before 2026-10-10 wrote no VERDICT line; the window rule keeps them.
+    head = "13e58a5f" + "0" * 32
+    runs = [_run(head, 222, "2026-10-25T19:49:20Z", "2026-10-25T19:50:17Z")]
+    review = bot("## Review: docs pass\nNothing to flag.", created="2026-10-25T19:50:10Z")
+    assert m.auto_pass_comment(head, runs, [review]) is review
+
+
 def test_a_run_that_posted_nothing_is_not_rescued_by_a_summon_in_its_window():
     # #408's validation-skipped run again, now with a summon landing inside its
     # 16-second window: still no pass — that comment belongs to the summon.

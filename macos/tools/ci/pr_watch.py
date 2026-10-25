@@ -189,6 +189,13 @@ checks"; `ruleset_note` names drift from ALWAYS_REQUIRED; a garbled gh body exit
 failure; and `verdict` lost its dead `changed_files`. Verified live: all eight contexts read off
 the ruleset; TruffleHog and CodeQL found on #590's code head and on #589's docs-only head.
 Confidence 0.85.
+Review: Kev + claude-fable-5.1, 2026-10-25 — #687: review runs on consecutive heads overlap when
+GitHub queues one (c4f2f3d8's run started 80 min after its push and finished 25 s inside 13e58a5f's
+window). `auto_pass_comment`'s window fallback took the first finished comment and credited the OLDER
+head's review to the new head, whose own APPROVE (naming it in full) then read "names c4f2f3d8, not
+13e58a5f" — unlandable on `--passes 0` and bare alike; a summon was the only way through. Now a window
+comment whose verdict names another sha is skipped; one with no verdict line still counts (older
+summons). Confidence: 0.85 — replayed from #687's thread; the identity-by-run-id path is unchanged.
 """
 from __future__ import annotations
 
@@ -633,7 +640,10 @@ def auto_pass_comment(head: str, review_runs: list[dict], comments: list[dict]) 
     created inside the run's window that links no OTHER run — a summon fired in
     the same breath as the push posts its placeholder seconds later, inside the
     window and ahead of the run's own comment, and was read as the auto pass
-    while the run's real `gh pr comment` review counted zero (#409). None when
+    while the run's real `gh pr comment` review counted zero (#409). A window
+    comment whose VERDICT names another sha is another head's review — an older
+    head's run can queue for an hour and finish inside this one's window (#687,
+    2026-10-25: c4f2f3d8's review read as 13e58a5f's auto pass). None when
     the run posted nothing: the action skips itself, green in ~13 s, whenever
     the workflow file on the PR differs from master's (#408), and a run that
     reviewed nothing is not a pass. ISO-8601 Z timestamps compare as strings."""
@@ -654,6 +664,9 @@ def auto_pass_comment(head: str, review_runs: list[dict], comments: list[dict]) 
         linked = linked_run_id(c.get("body", ""))
         if run_id and linked is not None and linked != run_id:
             continue  # another run's comment (a concurrent summon), not this one's
+        _, named = review_verdict(c.get("body", ""))
+        if named and not _about(head, named):
+            continue  # its verdict names another head: an older head's late review (#687)
         created = c.get("created_at", "")
         if start <= created <= (end or created):
             return c
