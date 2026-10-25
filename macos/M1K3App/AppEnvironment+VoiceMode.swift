@@ -596,7 +596,8 @@ extension AppEnvironment {
                 // never re-speak the answer, the 2026-07-25 finding) as a
                 // tested M1K3Voice seam shared with chat auto-speak.
                 var folder = StreamedAnswerFolder(
-                    stopMatcher: { SpokenAnswerEnd.start(in: $0, followUps: FollowUpSplit.trailerStart(in:)) }, leakGuard: Self.spokenLeakGuard
+                    stopMatcher: { SpokenAnswerEnd.start(in: $0, followUps: FollowUpSplit.trailerStart(in:)) },
+                    leakGuard: Self.spokenLeakGuard
                 )
                 // Spoken tool transparency (2026-08-16): tool dispatches used to
                 // be dead air in voice mode — the visual activity label lives on

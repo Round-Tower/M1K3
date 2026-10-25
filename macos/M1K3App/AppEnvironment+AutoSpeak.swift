@@ -31,6 +31,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-15 (iPhone auto-speak review fold) — each streamed sentence goes through
 //  `SpeechTextPolish.spokenSentence`: a Sources trailer arrives as its own sentence, polishes to nothing, and
 //  `speak(_:)`'s whole-answer fallback then read its raw URLs aloud. Now it is skipped. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-10-25 — speech stops at SpokenAnswerEnd: the follow-ups trailer OR a sources
+//  header, whichever is first (voice read "Web sources:" URLs aloud line by line, Kev). Confidence 0.8.
 
 import Foundation
 import M1K3Chat
@@ -70,7 +72,8 @@ extension AppEnvironment {
             // the stop can't race past and kill the new answer's first line.
             if superseding { await self?.stopSpeaking() }
             var folder = StreamedAnswerFolder(
-                stopMatcher: { FollowUpSplit.trailerStart(in: $0) }, leakGuard: Self.spokenLeakGuard
+                stopMatcher: { SpokenAnswerEnd.start(in: $0, followUps: FollowUpSplit.trailerStart(in:)) },
+                leakGuard: Self.spokenLeakGuard
             )
             var pinnedID: UUID?
             // Poll ticks before the first assistant message appears; ~10s at

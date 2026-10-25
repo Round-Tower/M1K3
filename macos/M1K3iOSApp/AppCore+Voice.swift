@@ -78,6 +78,8 @@
 //  toward the names in memory, the room line as a per-turn clause (`voiceTurnClause`), the song verdict in shadow.
 //  Confidence 0.7: verify-by-launch on the phone owed.
 //  Review: Kev + claude-opus-5-5, 2026-10-16 (follow-up) — `lastHeard` clears when a listen starts (#618 review).
+//  Review: Kev + claude-opus-5-5, 2026-10-25 — speech stops at SpokenAnswerEnd: the follow-ups trailer OR a sources
+//  header, whichever is first (voice read "Web sources:" URLs aloud line by line, Kev). Confidence 0.8.
 
 import AVFoundation
 import Foundation
@@ -371,7 +373,9 @@ extension AppCore {
                 soundEffects.play(.endpointHeard) // got it: one soft tick down
                 // The fold-forward guard (only prefix-extending updates — a
                 // FOLLOWUPS/polish shrink must never re-speak the answer).
-                var folder = StreamedAnswerFolder(stopMatcher: { FollowUpSplit.trailerStart(in: $0) })
+                var folder = StreamedAnswerFolder(stopMatcher: {
+                    SpokenAnswerEnd.start(in: $0, followUps: FollowUpSplit.trailerStart(in:))
+                })
                 // Spoken tool transparency: each dispatch is announced once as
                 // a short interstitial through the SAME onChunk lane, so it
                 // inherits the serial speak queue and the turn-generation guard.
