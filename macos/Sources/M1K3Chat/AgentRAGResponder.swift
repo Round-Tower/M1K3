@@ -204,6 +204,12 @@
 //  chateval arm with `--router dispatch` is owed).
 //  Review: Kev + claude-opus-5.5, 2026-10-23 — #670: implicit grounding runs HashingKeywordLane when no document
 //  cleared the floor (the phone's hashing arm only). Confidence 0.8 (pinned; the Mini turn is verify-by-capture).
+//  Review: Kev + claude-fable-5.1, 2026-10-25 — the stream the consumer reads forwards the turn's and logs
+//  `turn first token:` off its first real chunk (TurnPhaseTimeline); and `postToolAnswerPolicy`
+//  (PostToolAnswer, default `.synthesise` = byte-identical): every native tool turn decoded an answer it threw
+//  away (`onConclusionToken` dropped it, `synthesiseOverEvidence` was always true) and decoded again. The `use`
+//  arm keeps an answer-shaped conclusion and synthesises only after a preamble; paired chateval decides whether
+//  any tier's default moves. Confidence 0.8 (pinned both ways; the live gain is the eval's to show).
 
 import Foundation
 import M1K3Agent
@@ -294,6 +300,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// The tool router's plain-chat route, read per turn. nil (the default, and
     /// every brain but Mini with the flag on) is today's agent turn, byte for byte.
     private let plainRouteProvider: (@Sendable () -> PlainTurnRoute?)?
+    /// What a native tool turn does with the loop's own post-tool answer (plan item 2, 2026-10-25):
+    /// `.synthesise` (the default — today's second generation) or the `.use` arm (`-postToolAnswer use`).
+    private let postToolAnswerPolicy: PostToolAnswerPolicy
     /// Kinds this responder never grounds on, cites, or lets a tool hand back
     /// (caption memory, 2026-10-09): the MCP surface passes
     /// `KnowledgeKind.withheldFromMCP`; local surfaces leave it empty.
@@ -323,7 +332,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         browserContextProvider: (@Sendable () -> BrowserContext?)? = nil,
         todoContextProvider: (@Sendable () -> String?)? = nil,
         plainRouteProvider: (@Sendable () -> PlainTurnRoute?)? = nil,
-        excludedKinds: Set<KnowledgeKind> = []
+        excludedKinds: Set<KnowledgeKind> = [],
+        postToolAnswerPolicy: PostToolAnswerPolicy = PostToolAnswer.policy()
     ) {
         self.store = store
         self.embedder = embedder
@@ -349,6 +359,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         self.groundingBudgetProvider = groundingBudgetProvider
         self.plainRouteProvider = plainRouteProvider
         self.excludedKinds = excludedKinds
+        self.postToolAnswerPolicy = postToolAnswerPolicy
     }
 
     /// Fixed tool list — convenience for tests and simple callers.
@@ -1165,6 +1176,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // gathered observations (gemma's competent grounded path) via `fallBack`.
         let emittedLive = Mutex(false)
         let toolUsed = Mutex(false)
+        // The `use` arm: the first post-tool token follows whatever streamed before the tool (a
+        // "Searching the web…" preface) — a paragraph break keeps the two from gluing (review fold).
+        let postToolBreakPending = Mutex(true)
         do {
             let result = try await agent.run(
                 goal: question,
@@ -1182,7 +1196,15 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                     // tool runs we suppress the loose conclusion and synthesise
                     // explicitly below. The ReAct floor's CONCLUSION: contract is
                     // reliable — never suppress it (it carries the real answer).
-                    if style == .native, toolUsed.withLock({ $0 }) { return }
+                    // The `use` arm (PostToolAnswer) streams it and judges it after.
+                    if style == .native, toolUsed.withLock({ $0 }) {
+                        if postToolAnswerPolicy == .synthesise { return }
+                        let first = postToolBreakPending.withLock { pending in
+                            defer { pending = false }
+                            return pending
+                        }
+                        if first, emittedLive.withLock({ $0 }) { continuation.yield("\n\n") }
+                    }
                     emittedLive.withLock { $0 = true }
                     continuation.yield(token)
                 },
@@ -1198,13 +1220,34 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             let conclusion = result.conclusion
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             let streamed = emittedLive.withLock { $0 }
-            // Native tool turns ALWAYS synthesise via fallBack: gemma's loose
+            // Native tool turns synthesise via fallBack by default: gemma's loose
             // in-loop conclusion is unreliable filler, so even an error-only or
             // empty gather must route through fallBack (which filters errors and
             // degrades to plain RAG) rather than surface that conclusion. The
             // ReAct path keeps its reliable CONCLUSION:. Both still use the
-            // empty-conclusion fallback for the no-tool case.
-            let synthesiseOverEvidence = style == .native && !result.toolsUsed.isEmpty
+            // empty-conclusion fallback for the no-tool case. Under the `use` arm
+            // an answer-shaped conclusion stands (PostToolAnswer.verdict) and the
+            // second generation is skipped — a preamble still synthesises, after it.
+            let postTool: PostToolAnswer.Verdict? = style == .native && !result.toolsUsed.isEmpty
+                ? PostToolAnswer.verdict(
+                    policy: postToolAnswerPolicy, conclusion: conclusion, streamed: streamed,
+                    evidence: !Self.informativeObservations(result.reasoningTrace).isEmpty
+                )
+                : nil
+            let synthesiseOverEvidence: Bool
+            let synthesisAfterPreamble: Bool
+            switch postTool {
+            case let .synthesise(afterPreamble):
+                synthesiseOverEvidence = true
+                synthesisAfterPreamble = afterPreamble
+            case .keepConclusion:
+                synthesiseOverEvidence = false
+                synthesisAfterPreamble = false
+                Self.log.notice("post-tool answer kept: \(conclusion.count) chars from the loop, no synthesis")
+            case nil:
+                synthesiseOverEvidence = false
+                synthesisAfterPreamble = false
+            }
             // A ReAct turn can stream a preamble ("Let me check.") before the tool
             // call it ends with, then conclude empty: something streamed, but not
             // the answer. It falls back like a silent turn, after the preamble.
@@ -1213,7 +1256,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 await fallBack(
                     question: question, chunks: chunks, contextLine: contextLine,
                     result: result, synthesising: synthesiseOverEvidence,
-                    afterPreamble: danglingPreamble, into: continuation
+                    afterPreamble: danglingPreamble || synthesisAfterPreamble, into: continuation
                 )
             } else {
                 var tail = streamed ? "" : conclusion
@@ -1404,14 +1447,11 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         return !sent.isEmpty
     }
 
-    /// Pure fallback-prompt assembly: informative tool observations win;
-    /// otherwise the standard grounded prompt.
-    static func fallbackPrompt(
-        question: String, chunks: [ChunkHit], gathered: [ReasoningStep]
-    ) -> String {
-        // ONE filter, so "what lands in the prompt" and "was a page read" can
-        // never disagree (#209 review 2: two copies of this predicate).
-        let survivors = gathered.compactMap { step -> (action: String, observation: String)? in
+    /// The gathered steps that carry something a reader could use: a tool that ran and came back
+    /// with neither an error nor a "you already ran" repeat. The fallback prompt is built over these,
+    /// and a post-tool conclusion may stand (PostToolAnswer `.use`) only when there is at least one.
+    static func informativeObservations(_ gathered: [ReasoningStep]) -> [(action: String, observation: String)] {
+        gathered.compactMap { step -> (action: String, observation: String)? in
             guard let action = step.action,
                   let observation = step.observation,
                   !observation.hasPrefix("Error"),
@@ -1419,6 +1459,17 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             else { return nil }
             return (action, observation)
         }
+    }
+
+    /// Pure fallback-prompt assembly: informative tool observations win;
+    /// otherwise the standard grounded prompt.
+    static func fallbackPrompt(
+        question: String, chunks: [ChunkHit], gathered: [ReasoningStep]
+    ) -> String {
+        // ONE filter, so "what lands in the prompt" and "was a page read" can
+        // never disagree (#209 review 2: two copies of this predicate) — and, since
+        // 2026-10-25, whether the `use` arm may keep the loop's own answer.
+        let survivors = informativeObservations(gathered)
         let observations = survivors.map { "\($0.action):\n\($0.observation)" }
         guard !observations.isEmpty else {
             return ChatPromptBuilder.build(chunks: chunks, userMessage: question)

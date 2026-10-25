@@ -43,6 +43,11 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-10 — each flag reader takes `whenUnset:` (an explicit setting still
 //  wins), so a shell picks the default: the Mac turns them on after the 10-10 arm, iOS keeps them off.
 //  Review: Kev + claude-opus-5-5, 2026-10-10 — `route`'s doc no longer calls `allTiers` unmeasured.
+//  Review: Kev + claude-fable-5.1, 2026-10-25 — the picker's pick is timed and logged (`pickSummary`): on the
+//  Lil Release baseline the picker route's first token was 3.8 s against 0.65 s on the chat and head routes,
+//  half the trials took it, and the pick was the unlogged suspect. Confidence 0.85. Same day: the timed pick
+//  read 3.0 s (a cold session per turn), so `-pickerPrewarm YES` serves the fallback picker a session prewarmed
+//  for the menu (`PrewarmedToolPicker`); off until its paired eval.
 //
 
 import Foundation
@@ -96,6 +101,25 @@ public enum ToolRouterWiring {
         flag(chainKey, defaults, whenUnset: whenUnset)
     }
 
+    /// The A/B arm (2026-10-25, `M1K3 -pickerPrewarm YES`): Apple's pick on a session prewarmed for the menu
+    /// (`PrewarmedToolPicker`). Absent = OFF everywhere until its paired eval: the Release baseline put the
+    /// picker route's first token 3 s behind the chat route's, on half the trials, and the pick itself read 3.0 s.
+    public static let pickerPrewarmKey = "pickerPrewarm"
+
+    public static func pickerPrewarmEnabled(_ defaults: UserDefaults = .standard, whenUnset: Bool = false) -> Bool {
+        flag(pickerPrewarmKey, defaults, whenUnset: whenUnset)
+    }
+
+    /// The prewarmed picker's second shape (`-pickerPrewarmPrefix YES`, implies the arm): rules and menu as the
+    /// warmed prompt prefix under a one-line instruction. The instructions-warmed shape read −18 % on the pick.
+    public static let pickerPrewarmPrefixKey = "pickerPrewarmPrefix"
+
+    public static func pickerPrewarmPrefixEnabled(
+        _ defaults: UserDefaults = .standard, whenUnset: Bool = false
+    ) -> Bool {
+        flag(pickerPrewarmPrefixKey, defaults, whenUnset: whenUnset)
+    }
+
     /// An explicit setting wins; absent, the shell's default (`whenUnset`). The shells choose:
     /// the Mac turns the router flags on (the 2026-10-10 arm), iOS keeps them off until a phone
     /// smoke (Lil + Apple's picker on an 8 GB iPhone is unmeasured).
@@ -113,7 +137,10 @@ public enum ToolRouterWiring {
 
     /// Apple's model as a picker for a brain that isn't Mini (all tiers). A fresh
     /// session per pick: it never touches a chat prewarm. Not ready → the pick throws → nil.
-    private static let fallbackPicker = AppleFoundationModelsProvider()
+    /// Apple's model as the picker for a brain that isn't Mini; the prewarmed arm wraps it when the flag says.
+    private static let fallbackPicker: any ToolPicking = pickerPrewarmEnabled() || pickerPrewarmPrefixEnabled()
+        ? PrewarmedToolPicker(base: AppleFoundationModelsProvider(), prefixMode: pickerPrewarmPrefixEnabled())
+        : AppleFoundationModelsProvider()
 
     /// This turn's plain-chat route, or nil for today's agent turn.
     /// The route keeps the provider's own persona (nil). On Mini that is its trimmed,
@@ -169,9 +196,22 @@ public enum ToolRouterWiring {
             pickRecorder?.record(.agent)
             return nil
         }
+        // Timed (2026-10-25): the Lil Release baseline put the picker route's first token at 3.8 s against
+        // 0.65 s on the chat route — the pick itself was the gap's prime suspect and nothing logged it.
+        let started = ContinuousClock.now
         let picked = await pick(with: fallback, question: question, menu: menu, chain: chain)
+        let elapsed = started.duration(to: .now)
+        log.notice("\(pickSummary(tool: picked?.tool, elapsed: elapsed), privacy: .public)")
         pickRecorder?.record(picked == nil ? .agent : .picker)
         return picked
+    }
+
+    /// `tool pick: picker → web_search in 3120ms` — or `→ agent` when the picker named nothing
+    /// (a guardrail, the daemon). Whole ms, clamped at 0.
+    static func pickSummary(tool: String?, elapsed: Duration) -> String {
+        let parts = elapsed.components
+        let ms = max(0, Int(parts.seconds * 1000 + parts.attoseconds / 1_000_000_000_000_000))
+        return "tool pick: picker → \(tool ?? "agent") in \(ms)ms"
     }
 
     /// Apple's model names one tool from the menu (two with `chain`: the second rides
