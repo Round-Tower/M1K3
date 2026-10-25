@@ -23,6 +23,14 @@
 //  Review: Kev + claude-fable-5, 2026-09-03 — `listenFailed(_:)` parks with the
 //  recogniser's own reason (a stream that opens and dies is not silence); the
 //  machine's empty-listen budget now comes from the cadence.
+//  Review: Kev + claude-opus-5-5, 2026-10-25 — spoken barge-in (#640). With a
+//  `startBargeInWatch` dependency the machine runs `bargeIn: true`: while M1K3
+//  speaks, a watch listen feeds `BargeInPolicy` (against the answer being spoken,
+//  only while `echoCancellationLive`); a yes dispatches `.bargeIn` and the watch
+//  becomes the next listen. Echo around the user is dropped from the question
+//  (`BargeInPolicy.userUtterance`, stateless), and a cut-in needs two partials in a
+//  row (`bargeInVotes`). A watch the recogniser ends mid-answer reopens, at most
+//  `maxWatchReopens` times. Confidence 0.7: fakes pin it; the hearing is a live run.
 //
 
 import Foundation
@@ -59,6 +67,12 @@ public final class VoiceLoopController {
             _ question: String,
             _ onChunk: @escaping @MainActor (String) -> Void
         ) async -> Result<Void, VoiceTurnFailure>)?
+        /// Spoken barge-in (#640): open the mic while M1K3 speaks. nil keeps the loop
+        /// half-duplex; returning nil skips this answer (a route that can't cancel echo,
+        /// or would drop a Bluetooth headset into its call profile). Stopped by `stopListening`.
+        public var startBargeInWatch: (@MainActor () throws -> AsyncStream<TranscriptSegment>?)?
+        /// Is the mic hearing the room WITHOUT M1K3's own voice right now?
+        public var echoCancellationLive: @MainActor () -> Bool
 
         public init(
             startListening: @escaping @MainActor () throws -> AsyncStream<TranscriptSegment>,
@@ -69,7 +83,9 @@ public final class VoiceLoopController {
             runTurnStreaming: (@MainActor (
                 _ question: String,
                 _ onChunk: @escaping @MainActor (String) -> Void
-            ) async -> Result<Void, VoiceTurnFailure>)? = nil
+            ) async -> Result<Void, VoiceTurnFailure>)? = nil,
+            startBargeInWatch: (@MainActor () throws -> AsyncStream<TranscriptSegment>?)? = nil,
+            echoCancellationLive: @escaping @MainActor () -> Bool = { false }
         ) {
             self.startListening = startListening
             self.stopListening = stopListening
@@ -77,6 +93,8 @@ public final class VoiceLoopController {
             self.speak = speak
             self.stopSpeaking = stopSpeaking
             self.runTurnStreaming = runTurnStreaming
+            self.startBargeInWatch = startBargeInWatch
+            self.echoCancellationLive = echoCancellationLive
         }
     }
 
@@ -95,6 +113,17 @@ public final class VoiceLoopController {
     private let silence: Duration
 
     private var listenTask: Task<Void, Never>?
+    /// `listenTask` is a barge-in watch (M1K3 is speaking), not a question's listen.
+    private var watching = false
+    /// The answer the user cut in on: the adopted listen strips its echo
+    /// (`BargeInPolicy.userUtterance`) until the question ends. nil on a plain listen.
+    private var bargedAnswer: String?
+    /// Consecutive watch partials that read as the user; a barge-in needs `bargeInVotes`.
+    private var bargeInStreak = 0
+    private static let bargeInVotes = 2
+    /// Watches the recogniser ended this answer, so a dead stream can't spin.
+    private var watchReopens = 0
+    private static let maxWatchReopens = 3
     private var endpointTask: Task<Void, Never>?
     /// Held, never cancelled by exit — see the header.
     private var turnTask: Task<Void, Never>?
@@ -126,7 +155,10 @@ public final class VoiceLoopController {
         self.silence = silence
         self.echoGrace = echoGrace
         self.endpointTick = endpointTick
-        machine = VoiceLoopMachine(maxEmptyListens: emptyListensBeforeParking)
+        machine = VoiceLoopMachine(
+            maxEmptyListens: emptyListensBeforeParking,
+            bargeIn: dependencies.startBargeInWatch != nil
+        )
         endpointer = SilenceEndpointer(
             silence: silence,
             holdSilence: holdSilence,
@@ -273,7 +305,7 @@ public final class VoiceLoopController {
             // it is time the user waited for nothing. Reported unsettled.
             timeline.completed(at: now)
             flushTimeline()
-        case .exit, .interrupt, .mute, .pause:
+        case .exit, .interrupt, .mute, .pause, .bargeIn:
             // A barge-in, exit, or audio interruption mid-answer would otherwise
             // lose the turn's numbers entirely, biasing every measurement
             // towards the turns the user was patient enough to sit through.
@@ -320,9 +352,30 @@ public final class VoiceLoopController {
         case .stopListening:
             listenTask?.cancel()
             listenTask = nil
+            watching = false
             endpointTask?.cancel()
             endpointTask = nil
             dependencies.stopListening()
+
+        case .watchForBargeIn:
+            watchReopens = 0
+            startWatch()
+
+        case .stopBargeInWatch:
+            guard watching else { return }
+            watching = false
+            listenTask?.cancel()
+            listenTask = nil
+            dependencies.stopListening()
+
+        case .adoptBargeInWatch:
+            // The watch's task keeps consuming the same stream, now as the listen: the
+            // endpointer starts on what it heard, and the tick can close the turn.
+            guard watching else { return }
+            watching = false
+            endpointer.reset()
+            endpointer.ingest(partial: utterance(), at: ContinuousClock.now)
+            startEndpointTick()
 
         case let .runTurn(question):
             // Turn generation: a streaming turn's task stays in flight for the
@@ -401,6 +454,8 @@ public final class VoiceLoopController {
 
     private func startListen(graced: Bool) {
         accumulator = TranscriptAccumulator()
+        bargedAnswer = nil
+        bargeInStreak = 0
         endpointer.reset()
         let grace = graced ? echoGrace : .zero
         listenTask = Task { [weak self] in
@@ -416,39 +471,110 @@ public final class VoiceLoopController {
                 return
             }
             startEndpointTick()
-            for await segment in stream {
-                guard !Task.isCancelled else { return }
-                accumulator.ingest(segment)
-                let knownPause = endpointer.observedPause
-                endpointer.ingest(partial: accumulator.text, at: ContinuousClock.now)
-                // Breadcrumb for the next "it cut me off" report: how patient the
-                // loop has learned to be is the first thing you'd want to know,
-                // and it's otherwise invisible. .notice because .info/.debug do
-                // not persist in OSLogStore (our own logged lesson).
-                if endpointer.observedPause > knownPause {
-                    Self.log.notice(
-                        "voice cadence: speaker pauses up to \(String(describing: self.endpointer.observedPause), privacy: .public) — waiting longer before taking a turn"
-                    )
-                }
-                dispatch(.partial(accumulator.text))
-            }
-            // Stream ended (recognizer finality, an error, or a silent listen
-            // under keepsListening). If a silence endpoint already moved the
-            // machine on, this event is stale and dropped there. Logged so the
-            // trail always names WHO ended a turn — this unconditional branch
-            // is exactly where Apple Speech's own VAD used to take the user's
-            // turn invisibly (2026-08-15 finding).
-            guard !Task.isCancelled else { return }
-            Self.log.notice("voice endpoint: recognizer ended the stream")
-            dispatch(.endpointed(sanitizedUtterance()))
+            await consume(stream)
         }
+    }
+
+    /// Open the barge-in watch for the answer now playing. No echo grace: what it hears
+    /// is judged against the answer, and it only counts under live echo cancellation.
+    private func startWatch() {
+        guard let start = dependencies.startBargeInWatch else { return }
+        let stream: AsyncStream<TranscriptSegment>
+        do {
+            guard let opened = try start() else { return }
+            stream = opened
+        } catch {
+            // No watch this answer; the loop stays half-duplex, the click still interrupts.
+            Self.log.notice("voice barge-in watch unavailable: \(error.localizedDescription, privacy: .public)")
+            return
+        }
+        accumulator = TranscriptAccumulator()
+        bargedAnswer = nil
+        bargeInStreak = 0
+        watching = true
+        listenTask = Task { [weak self] in
+            await self?.consume(stream)
+        }
+    }
+
+    /// The listen loop, shared by a question's listen and the barge-in watch (`watching`),
+    /// so an adopted watch carries on as the listen without reopening the mic.
+    private func consume(_ stream: AsyncStream<TranscriptSegment>) async {
+        for await segment in stream {
+            guard !Task.isCancelled else { return }
+            accumulator.ingest(segment)
+            if watching {
+                judgeWatch()
+                continue
+            }
+            let knownPause = endpointer.observedPause
+            endpointer.ingest(partial: utterance(), at: ContinuousClock.now)
+            // Breadcrumb for the next "it cut me off" report: how patient the
+            // loop has learned to be is the first thing you'd want to know,
+            // and it's otherwise invisible. .notice because .info/.debug do
+            // not persist in OSLogStore (our own logged lesson).
+            let observedPause = endpointer.observedPause
+            if observedPause > knownPause {
+                Self.log.notice(
+                    "voice cadence: speaker pauses up to \(String(describing: observedPause), privacy: .public) — waiting longer before taking a turn"
+                )
+            }
+            dispatch(.partial(utterance()))
+        }
+        // Stream ended (recognizer finality, an error, or a silent listen
+        // under keepsListening). If a silence endpoint already moved the
+        // machine on, this event is stale and dropped there. Logged so the
+        // trail always names WHO ended a turn — this unconditional branch
+        // is exactly where Apple Speech's own VAD used to take the user's
+        // turn invisibly (2026-08-15 finding).
+        guard !Task.isCancelled else { return }
+        if watching {
+            // The recogniser closed the watch mid-answer: reopen it, a bounded number of times.
+            watching = false
+            listenTask = nil
+            guard case .speaking = machine.state else { return }
+            guard watchReopens < Self.maxWatchReopens else {
+                Self.log.notice("voice barge-in watch closed \(Self.maxWatchReopens, privacy: .public) times — off for this answer")
+                return
+            }
+            watchReopens += 1
+            startWatch()
+            return
+        }
+        Self.log.notice("voice endpoint: recognizer ended the stream")
+        dispatch(.endpointed(sanitizedUtterance()))
+    }
+
+    /// One watch partial: the user cutting in only when two in a row say so, so one
+    /// misheard flicker of M1K3's own voice can't stop it mid-sentence.
+    private func judgeWatch() {
+        guard case let .speaking(answer) = machine.state else { return }
+        let heard = BargeInPolicy.userUtterance(accumulator.text, speaking: answer)
+        let live = dependencies.echoCancellationLive()
+        guard BargeInPolicy.isBargeIn(partial: heard, speaking: answer, echoCancellationLive: live) else {
+            bargeInStreak = 0
+            return
+        }
+        bargeInStreak += 1
+        guard bargeInStreak >= Self.bargeInVotes else { return }
+        bargedAnswer = answer
+        // Word count only: the transcript is the user's speech.
+        Self.log.notice("voice barge-in: the user cut in (\(heard.split(separator: " ").count, privacy: .public) words)")
+        dispatch(.bargeIn(heard))
+    }
+
+    /// What the user said: on a listen adopted from a barge-in, without the echo of
+    /// the answer they cut in on; otherwise the transcript as heard.
+    private func utterance() -> String {
+        guard let bargedAnswer else { return accumulator.text }
+        return BargeInPolicy.userUtterance(accumulator.text, speaking: bargedAnswer)
     }
 
     /// The final transcript, hygiene-cleaned for the model (repetition / silence
     /// hallucinations / whitespace). An all-noise utterance becomes "" so the
     /// machine's empty-listen guard parks/re-listens instead of running a ghost turn.
     private func sanitizedUtterance() -> String {
-        TranscriptSanitizer.clean(accumulator.text, confidence: accumulator.confidence)
+        TranscriptSanitizer.clean(utterance(), confidence: accumulator.confidence)
     }
 
     private func startEndpointTick() {
