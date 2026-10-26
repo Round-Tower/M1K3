@@ -98,6 +98,8 @@
 //  first send renders the transcript cut at the marker as well and hands both renders to `tailCut`, so the tail is
 //  cut at the replay's end on the first render after a window shift (`stableTranscript` is the pure cut; the log line
 //  says which render won). The second render costs a template pass and a tokenise, milliseconds beside the prefill.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 (review fold) — the stable render is `try?` and skipped on an image turn:
+//  a template that rejects the cut transcript (system-only on the lfm2 shape) would have failed the whole send.
 
 import Foundation
 import M1K3Inference
@@ -1084,26 +1086,6 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                 input: UserInput(chat: rendered.chat, tools: rendered.specs, additionalContext: thinkingContext)
             )
             let fullIDs = prepared.text.tokens.asArray(Int.self)
-            // The caller-marked stable prefix (2026-10-26): on the first send, render the transcript cut
-            // at the marker and tokenise it; its common prefix with the full render is where the tail
-            // is cut today, instead of waiting for the next turn's render (ExactPrefixReuse.tailCut).
-            var stableIDs: [Int]?
-            if self.sendCount == 0, self.adoptCheckpoint != nil, let stablePrefix = self.stablePrefix,
-               let cut = Self.stableTranscript(self.transcript.full, prefix: stablePrefix)
-            {
-                let stableRender = MLXToolMapping.templateInputs(
-                    chat: cut.map {
-                        MLXToolMapping.chatMessage(from: $0, format: format, imagesAllowed: imagesAllowed)
-                    },
-                    specs: self.specs, format: format
-                )
-                let stablePrepared = try await context.processor.prepare(
-                    input: UserInput(
-                        chat: stableRender.chat, tools: stableRender.specs, additionalContext: thinkingContext
-                    )
-                )
-                stableIDs = stablePrepared.text.tokens.asArray(Int.self)
-            }
             self.logSendPhases(
                 send: self.sendCount + 1,
                 waitMS: Self.wholeMilliseconds(queued.duration(to: entered)),
@@ -1123,6 +1105,30 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                     if case let .user(_, images) = $0 { return !images.isEmpty }
                     return false
                 }
+
+            // The caller-marked stable prefix (2026-10-26): on the first send, render the transcript cut
+            // at the marker and tokenise it; its common prefix with the full render is where the tail
+            // is cut today, instead of waiting for the next turn's render (ExactPrefixReuse.tailCut).
+            // An optimisation only, so a template that rejects the cut (a system-only render on the
+            // lfm2 shape: "no user query") leaves it nil — the LCP cut stands — and an image turn,
+            // which vetoes the fast path anyway, skips it (review fold).
+            var stableIDs: [Int]?
+            if self.sendCount == 0, self.adoptCheckpoint != nil, !turnCarriesImages,
+               let stablePrefix = self.stablePrefix,
+               let cut = Self.stableTranscript(self.transcript.full, prefix: stablePrefix)
+            {
+                let stableRender = MLXToolMapping.templateInputs(
+                    chat: cut.map {
+                        MLXToolMapping.chatMessage(from: $0, format: format, imagesAllowed: imagesAllowed)
+                    },
+                    specs: self.specs, format: format
+                )
+                let stableInput = UserInput(
+                    chat: stableRender.chat, tools: stableRender.specs, additionalContext: thinkingContext
+                )
+                stableIDs = (try? await context.processor.prepare(input: stableInput))?
+                    .text.tokens.asArray(Int.self)
+            }
 
             // In checkpoint mode the seed lives in `checkpoints[0]`, not the live cache.
             let seedIDs = self.usesCheckpoints ? (self.checkpoints.first?.ids ?? []) : self.cachedIDs
