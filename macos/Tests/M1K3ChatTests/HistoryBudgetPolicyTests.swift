@@ -400,7 +400,8 @@ struct HistoryBudgetPolicyTests {
         // Whole exchanges, as a turn's history arrives (an unanswered turn flips the parity: the orphan guard's case).
         for n in stride(from: 20, through: 30, by: 2) {
             let text = HistoryWindow.render(Array(turns.prefix(n)), budget: spoken) ?? ""
-            let kept = text.components(separatedBy: "\n").filter { $0.hasPrefix("USER: ") || $0.hasPrefix("M1K3: ") }.count
+            let kept = text.components(separatedBy: "\n")
+                .filter { $0.hasPrefix("USER: ") || $0.hasPrefix("M1K3: ") }.count
             #expect(kept == 6 || kept == 8, "n=\(n) kept \(kept)")
             #expect(text.count <= typed.totalChars)
         }

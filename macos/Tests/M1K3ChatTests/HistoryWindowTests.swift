@@ -382,8 +382,9 @@ struct HistoryWindowTests {
         let plain = HistoryWindow.Budget(totalChars: 160, perTurnChars: 100, maxTurns: 40)
         var halved = 0
         for n in 20 ... 30 {
-            let b = (HistoryWindow.render(Array(turns.prefix(n)), budget: blocked) ?? "").components(separatedBy: "\n").count - 1
-            let p = (HistoryWindow.render(Array(turns.prefix(n)), budget: plain) ?? "").components(separatedBy: "\n").count - 1
+            let some = Array(turns.prefix(n))
+            let b = (HistoryWindow.render(some, budget: blocked) ?? "").components(separatedBy: "\n").count - 1
+            let p = (HistoryWindow.render(some, budget: plain) ?? "").components(separatedBy: "\n").count - 1
             #expect(b <= p)
             #expect(b * 2 >= p, "n=\(n): \(b) of \(p)")
             if b == p { halved += 1 }
@@ -396,10 +397,15 @@ struct HistoryWindowTests {
         // Mixed lengths under a char-limited window. Sliding (block 1) shares a prefix only while the
         // window is not yet full; the block shares one on most messages after that.
         let turns = (1 ... 44).map { i in
-            ChatTurn(role: i.isMultiple(of: 2) ? .assistant : .user, text: String(repeating: "w", count: i * 37 % 400 + 20) + " END\(i)")
+            ChatTurn(
+                role: i.isMultiple(of: 2) ? .assistant : .user,
+                text: String(repeating: "w", count: i * 37 % 400 + 20) + " END\(i)"
+            )
         }
         func shared(_ block: Int) -> Int {
-            let budget = HistoryWindow.Budget(totalChars: 2500, perTurnChars: 1500, maxTurns: 16, evictionBlockTurns: block)
+            let budget = HistoryWindow.Budget(
+                totalChars: 2500, perTurnChars: 1500, maxTurns: 16, evictionBlockTurns: block
+            )
             var count = 0
             for n in stride(from: 14, through: 42, by: 2) {
                 let a = HistoryWindow.render(Array(turns.prefix(n)), budget: budget) ?? ""
