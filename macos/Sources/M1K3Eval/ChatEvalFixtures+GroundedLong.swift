@@ -35,7 +35,11 @@ public extension ChatEvalFixtures {
             id: "long-hub-torque", kind: .groundedLong,
             prompt: "What torque do the hub nuts on the trailer axle take?",
             seedDoc: GroundedLongDocs.axleManual,
-            expectation: .init(mustContainAny: ["145"], minChars: 5)
+            // The figure WITH the manual's unit: a generic web spec ("120 and 145 ft-lbs", the first
+            // wired run's lookup_fact answer) carries the number by coincidence.
+            expectation: .init(
+                mustContainAny: ["145 nm", "145nm", "145 n·m", "145 n m", "145 newton"], minChars: 5
+            )
         ),
         .init(
             id: "long-itinerary-hop", kind: .groundedLong,
@@ -74,6 +78,10 @@ public extension ChatEvalFixtures {
                     "couldn't find", "can't find", "could not find", "cannot find", "no warranty",
                     "no information", "isn't in", "is not in", "not in the", "don't have", "do not have",
                     "don't see", "not covered", "not specified", "not stated",
+                    // The first wired run's honest abstentions (2026-10-26) the list above missed.
+                    "doesn't state", "does not state", "doesn't explicitly", "doesn't specify",
+                    "does not specify", "isn't listed", "not listed", "there isn't", "there is no",
+                    "there's no",
                 ],
                 minChars: 5, wholeWordFacts: true
             )

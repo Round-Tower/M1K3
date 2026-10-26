@@ -47,6 +47,27 @@ struct ChatEvalFixturesGroundedLongTests {
         }
     }
 
+    /// Lil's own answers from the first wired 1100 run (2026-10-26), scored as the run scores them.
+    @Test("the scorer reads the 1100 run's answers right: honest abstentions pass, a coincidental 145 fails")
+    func scorerReadsRealAnswers() throws {
+        func passes(_ id: String, _ answer: String) throws -> Bool {
+            let fixture = try #require(ChatEvalFixtures.groundedLong.first { $0.id == id })
+            return ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: answer, latencyMS: 1))
+                .checks.first { $0.name == "contains expected" }?.outcome == .pass
+        }
+        // Two honest abstentions the first marker list failed.
+        #expect(try passes("long-absent", "Based on the manual snippet you just pulled up, the document itself "
+                + "doesn't explicitly state a specific number of years or months for the warranty on the axles."))
+        #expect(try passes("long-absent", "Based on the service manual for T-series trailers you just had pulled up, "
+                + "there isn't a specific \"warranty period\" listed in the text we found."))
+        // An invented term must not pass on the seeded doc's title.
+        #expect(try !passes("long-absent", "The warranty on the trailer axle is 24 months (Notes)."))
+        // lookup_fact's generic spec carried "145" in the wrong unit: not the manual's figure.
+        #expect(try !passes("long-hub-torque", "Standard hub nut torque specifications for most trailer axles "
+                + "typically fall between **120 and 145 ft-lbs**."))
+        #expect(try passes("long-hub-torque", "The manual says to torque the hub nuts to **145 Nm** in a star pattern."))
+    }
+
     @Test("the torque fact is the last sentence of its section, where a budget truncates first")
     func tailFactStaysLast() {
         let torque = ChatEvalFixtures.groundedLong.first { $0.id == "long-hub-torque" }
