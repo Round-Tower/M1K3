@@ -100,6 +100,11 @@
 //  it (~2 s on Lil). A failed embedder warm says so. Confidence 0.8.
 //  Review: same day (pre-push review fold) — the embedder warm says when it failed, `runEmbeds` reads the kinds
 //  (tool-use only with a router, the rest only under LIVE_PATH), and the router doc sits on its own member again.
+//  Review: Kev + claude-opus-5-5, 2026-10-26, Confidence 0.75 — grounded-long runs the live path over a seeded
+//  store (`seededStore`, which grounded-Q now shares), timed from after ingestion, and the live path reads its
+//  grounding budget through `-groundingBudget` (unset: 1,100, as before). The budget arm; verify-by-eval.
+//  A seeded turn gets the app's three corpus tools over its store in place of the search_knowledge stub,
+//  and its score names the tools it ran (a dispatched turn answers from the tool, not the grounding).
 //
 
 import Foundation
@@ -116,6 +121,7 @@ import M1K3Chat
 import M1K3Eval
 import M1K3Inference
 import M1K3Knowledge
+import M1K3KnowledgeTools
 import M1K3LanguageModel
 import M1K3LogCore
 import M1K3MLX
@@ -350,14 +356,16 @@ enum ChatEvalStage {
     }
 
     private static func livePathObservation(
-        _ fixture: ChatEvalFixture, images: [ImageAttachment] = [], provider: any InferenceProvider,
-        thinking: EvalThinkingPlan, start: ContinuousClock.Instant, clock: ContinuousClock
+        _ fixture: ChatEvalFixture, images: [ImageAttachment] = [], seeded: KnowledgeStore? = nil,
+        provider: any InferenceProvider, thinking: EvalThinkingPlan, start: ContinuousClock.Instant,
+        clock: ContinuousClock
     ) async throws -> EvalObservation {
         // path: nil → in-memory GRDB, fresh per fixture (the groundedObservation
         // pattern). Empty on purpose: retrieval finds nothing, so the prompt
         // carries the live "No stored knowledge was injected" head — the exact
-        // shape a closed-book code ask meets in production.
-        let store = try KnowledgeStore()
+        // shape a closed-book code ask meets in production. grounded-long hands
+        // in a store it seeded (`seededStore`), the shape a question over a document meets.
+        let store = try seeded ?? KnowledgeStore()
         // The tool-router A/B on any brain (2026-09-26): `_TOOLS=none` empties the
         // palette; `_ROUTER=1` puts the shipping router and its plain-chat route in
         // front WITHOUT the app's Mini-only gate, to measure what Lil/Big would get.
@@ -366,7 +374,16 @@ enum ChatEvalStage {
         // Lil/Big cell measures `toolRouterAllTiers`. `_ROUTER_HEAD=1` puts the group
         // head in front of the pick (`toolGroupRouter`); `_ROUTER_CHAIN=1` lets a pick run
         // two read-only tools (`toolChain`).
-        let palette: [any AgentTool] = SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_TOOLS") == "none" ? [] : toolPalette
+        let stubs: [any AgentTool] = SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_TOOLS") == "none" ? [] : toolPalette
+        // A seeded turn reads its document with the app's own corpus tools (the palette's three store
+        // readers, AppEnvironment+ChatHistory): a dispatched search_knowledge answers from the tool's
+        // result alone, so the stub's canned line left the brain nothing to answer from (2026-10-26:
+        // Lil invented both names). The web tools stay stubbed, so no fixture touches the network.
+        let palette = seeded == nil || stubs.isEmpty ? stubs : [
+            SearchKnowledgeTool(store: store, embedder: Self.embedder),
+            ListDocumentsTool(store: store),
+            GetDocumentTool(store: store),
+        ] + stubs.filter { $0.name != "search_knowledge" }
         var plainRoute: (@Sendable () -> PlainTurnRoute?)?
         switch SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER") {
         case "off":
@@ -395,6 +412,7 @@ enum ChatEvalStage {
             toolsProvider: { palette }, maxIterations: 3,
             thinkingModeProvider: { Self.thinkingMode(thinking) },
             fastThinkingProvider: { thinking.liveFastByDefault },
+            groundingBudgetProvider: { Self.groundingBudget },
             // The Mac's clauses (#482, mirrors MiniLiveEvalTests): no declared age band, web
             // search on (the default), PCC offered (its switch on — the fuller clause, so the
             // answer has to name both exits). chat-what-leaves is scored against what ships.
@@ -467,11 +485,18 @@ enum ChatEvalStage {
     /// share it. EmbeddingGemma 2, the app's retriever.
     private static let embedder = MLXEmbeddingService()
 
-    /// Whether this run's fixtures can embed, read off `runFixture`'s routes: vision and grounded-Q always do,
-    /// tool-use only with a router mode, and every other kind only under LIVE_PATH.
+    /// The live path's grounding budget: the MLX tiers' (`GroundingBudgetPolicy.tokens` gives Lil and Big
+    /// exactly this) under the budget arm's `-groundingBudget N`, passed with `run_chateval.py --app-arg`.
+    /// Mini's smaller budget is not wired here, as before: the live path never told the responder its tier.
+    private static let groundingBudget = GroundingBudgetPolicy.ceiled(
+        GroundingBudget.defaultTokenBudget, ceiling: GroundingBudgetPolicy.ceiling()
+    )
+
+    /// Whether this run's fixtures can embed, read off `runFixture`'s routes: vision, grounded-Q and
+    /// grounded-long always do, tool-use only with a router mode, and every other kind only under LIVE_PATH.
     private static func runEmbeds(kinds: Set<TaskKind>?) -> Bool {
         guard let kinds else { return true }
-        if kinds.contains(.vision) || kinds.contains(.groundedQ) { return true }
+        if kinds.contains(.vision) || kinds.contains(.groundedQ) || kinds.contains(.groundedLong) { return true }
         if routerArmRequested, kinds.contains(.toolUse) { return true }
         return livePathRequested && !kinds.subtracting([.toolUse]).isEmpty
     }
@@ -759,6 +784,8 @@ enum ChatEvalStage {
         if let forcing = provider as? ThinkBudgetForcing {
             emit("  think budget: " + (forcing.forcedThinkingTokens.map { "\($0) tokens (forced close)" } ?? "off"))
         }
+        let armed = GroundingBudgetPolicy.ceiling() != nil
+        emit("  grounding budget: \(groundingBudget) tokens" + (armed ? " (-groundingBudget)" : ""))
         return await evalProvider(provider, thinking: plan, emit: emit)
     }
 
@@ -822,6 +849,21 @@ enum ChatEvalStage {
                     fixture, provider: provider, thinking: thinking, start: start, clock: clock
                 )
                 return ChatEvalScorer.score(fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit)
+            case .groundedLong:
+                // The live responder over the seeded doc, so the turn meets the budget the app's does.
+                // The clock starts after ingestion: the arm compares turns, not embedding six chunks.
+                let store = try await seededStore(fixture)
+                let observation = try await livePathObservation(
+                    fixture, seeded: store, provider: provider, thinking: thinking, start: clock.now, clock: clock
+                )
+                // Which tools the turn ran, so a miss on a dispatched turn (which drops the retrieved
+                // grounding for the tool's result) reads apart from a miss the budget caused.
+                return ChatEvalScorer.score(
+                    fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
+                ).appending(EvalCheck(
+                    name: "tools", outcome: .skip,
+                    detail: observation.toolCalls.isEmpty ? "none" : observation.toolCalls.joined(separator: ", ")
+                ))
             case .toolUse where routerArmRequested:
                 let observation = try await livePathObservation(
                     fixture, provider: provider, thinking: thinking, start: start, clock: clock
@@ -904,6 +946,15 @@ enum ChatEvalStage {
         }
     }
 
+    /// A throwaway in-memory store holding `fixture`'s seed doc, ingested the way the app ingests one.
+    private static func seededStore(_ fixture: ChatEvalFixture) async throws -> KnowledgeStore {
+        let store = try KnowledgeStore()
+        if let doc = fixture.seedDoc {
+            _ = try await DocumentIngester(store: store, embedder: Self.embedder).ingest(title: "Notes", text: doc)
+        }
+        return store
+    }
+
     /// Grounded-Q: seed the doc into a throwaway store, answer through the real
     /// RAGResponder (which retrieves, then strips hallucinated citations), and
     /// read the validated-citation count straight off the response.
@@ -913,11 +964,7 @@ enum ChatEvalStage {
     ) async throws -> EvalObservation {
         // path: nil → GRDB in-memory DatabaseQueue, fresh per fixture. Intentional:
         // keeps grounded-Q fixtures isolated and writes nothing to the app container.
-        let store = try KnowledgeStore()
-        let ingester = DocumentIngester(store: store, embedder: Self.embedder)
-        if let doc = fixture.seedDoc {
-            _ = try await ingester.ingest(title: "Notes", text: doc)
-        }
+        let store = try await seededStore(fixture)
         let responder = RAGResponder(store: store, embedder: Self.embedder, provider: provider)
         let startedAt = Date()
         // The bare RAGResponder has no per-turn policy: scope the arm's flag (the provider is
