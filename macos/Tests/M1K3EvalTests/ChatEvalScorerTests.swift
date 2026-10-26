@@ -26,6 +26,8 @@
 //  must-comply score with a content list would excuse them. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — `mustNotCallTools` (#713): each avoided tool scores its own
 //  `avoids X`, failing on a call and naming what was called; an empty list adds no check. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — an observation from a path that offers no tools (the
+//  bare-generate arm) skips `avoids X` instead of passing it by construction. Confidence 0.9.
 
 @testable import M1K3Eval
 import Testing
@@ -1306,5 +1308,22 @@ struct ChatEvalScorerTests {
             observation: EvalObservation(rawText: "Canberra.", toolCalls: ["web_search"])
         )
         #expect(!score.checks.contains { $0.name.hasPrefix("avoids") })
+    }
+
+    /// The #713 review: world knowledge runs bare generate unless the live path is asked for, with no tool on
+    /// offer, so "avoids web_search" there passed by construction. A path that offers no tools says so.
+    @Test("with no tools offered (the bare arm) an avoided tool skips, never a free pass")
+    func avoidsSkipWithNoToolsOffered() {
+        let exp = EvalExpectation(mustContainAny: ["Viking"], mustNotCallTools: ["web_search", "lookup_fact"])
+        let bare = ChatEvalScorer.score(
+            fixture: fixture(.worldKnowledge, exp),
+            observation: EvalObservation(rawText: "Dublin was a Viking port.", toolsOffered: false)
+        )
+        for tool in ["web_search", "lookup_fact"] {
+            #expect(check(bare, "avoids \(tool)")?.outcome == .skip)
+            #expect(check(bare, "avoids \(tool)")?.detail == "no tools offered (bare arm)")
+        }
+        #expect(bare.passed, "a skip is no fail: the content checks still decide")
+        #expect(EvalObservation(rawText: "x").toolsOffered, "a path offers tools unless it says otherwise")
     }
 }

@@ -101,6 +101,8 @@ read `tool-web-newest` as a picker regression; wired like the app it passed 3/3.
 Review: Kev + claude-opus-5.5, 2026-10-26 — `--router-search` (#713): the search head's veto on the dispatch route
 (M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH). Off unless asked, because the Mac app ships it off (`whenUnset: false`);
 refused without dispatch, like head and chain. Confidence 0.85.
+Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — `route_warning` flags --router-search with --bare: world
+knowledge runs bare generate there, so the #680 fixtures' avoids checks skip. Confidence 0.85.
 """
 
 from __future__ import annotations
@@ -270,6 +272,9 @@ def route_warning(opts: RunOptions) -> str | None:
     if opts.live_path and opts.router is None:
         return ("! live path without --router: no plain route, so the thinking cut, the no-think retry, the forced "
                 "budget and NoWait never run (the Mac app routes every tier: --router dispatch)")
+    if not opts.live_path and opts.router_search:
+        return ("! --router-search with --bare: world knowledge runs bare generate with no tool on offer, so the #680 "
+                "fixtures' avoids checks skip and the arm measures nothing of the search head (drop --bare)")
     return None
 
 

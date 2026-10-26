@@ -49,9 +49,10 @@ this sweep.
   explicit web ask or a question about now never reaches it. From #680 ("tell me the history of
   Dublin" web-searched, 30.8 s to the first chunk). Off on both shells (`toolSearchHead`;
   `-toolSearchHead YES` on the Mac) and shipped as an untrained stub that never vetoes.
-- Owed: the teacher pass over `tools/router/data/search_head_train.json` (835 candidate labels),
+- Owed: the teacher pass over `tools/router/data/search_head_train.json` (827 candidate labels),
   `train_search_head.py`, held-out scoring (`score_head.py --head search`), the paired arm
-  (`run_chateval.py --router dispatch --router-search`), and Kev's threshold ruling. A look on the
+  (`run_chateval.py --router dispatch --router-search`, live path: its `tool-web-unguarded-*` fixtures
+  read a false veto, the #680 ones a kept search), and Kev's threshold ruling. A look on the
   candidate labels alone still read the Dublin line as web.
 
 ### Distribution and growth
@@ -458,3 +459,5 @@ stays a possible later companion.
      Confidence 0.8. -->
 <!-- Review: Kev + claude-opus-5.5, 2026-10-26 — the search head (#713) joins Now, flagged off, its teacher pass,
      paired arm and threshold ruling owed. -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — the search head bullet counts 827 candidates (8 lexical
+     near-copies of fixtures dropped) and names what the paired arm reads. Confidence 0.85. -->

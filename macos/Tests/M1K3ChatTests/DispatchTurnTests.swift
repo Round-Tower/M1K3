@@ -25,6 +25,10 @@
 //  runs it; a local pick never asks the head. `run` gains `history:` and `staysLocal:`. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (2) — an explicit web ask never asks the head
 //  (`explicitAskIsNeverVetoed`).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — `webVerdictRuns` asks a question that reaches the head
+//  (its "this year" never did) and pins the head reading the user's question once; vetoed chains through the
+//  responder (a web head or a web tail: the local link runs alone, one generation, `search-veto`); a veto whose
+//  plain answer is empty is the agent's turn, which may still search. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -452,17 +456,26 @@ struct SearchVetoTurnTests {
         #expect(!activity.items.withLock { $0 }.contains { if case .usingTool = $0 { true } else { false } })
     }
 
-    @Test("a web verdict lets the web pick run, once")
+    /// The question carries no web or now words, so the head IS asked (the 10-26 review: its first question
+    /// said "this year", which never reaches the head, so the test passed whatever the verdict did).
+    @Test("a web verdict lets the web pick run, once, after the head read the user's own question")
     func webVerdictRuns() async throws {
         let calls = Calls()
-        let provider = Scripted(["Cork won."])
+        let asked = Mutex<[String]>([])
+        let provider = Scripted(["Kilkenny, with 36."])
+        let question = "Which county has won the most All-Ireland hurling titles?"
+        let pick = ToolPick(tool: "web_search", query: "hurling titles by county")
+        #expect(ToolDispatch.vetoable(pick, question: question), "the head must be asked here")
         _ = try await run(
-            provider, tools: [Recording(name: "web_search", output: "1. Cork win the final", calls: calls)],
-            pick: ToolPick(tool: "web_search", query: "hurling final"),
-            question: "Who won the All-Ireland hurling final this year?",
-            staysLocal: { _ in .init(verdict: .web, probability: 0.93) }
+            provider, tools: [Recording(name: "web_search", output: "1. Kilkenny lead with 36", calls: calls)],
+            pick: pick, question: question,
+            staysLocal: { asking in
+                asked.withLock { $0.append(asking) }
+                return .init(verdict: .web, probability: 0.93)
+            }
         )
-        #expect(calls.log.withLock { $0 } == ["web_search(hurling final)"])
+        #expect(asked.withLock { $0 } == [question], "the head reads the user's question, once")
+        #expect(calls.log.withLock { $0 } == ["web_search(hurling titles by county)"])
         #expect(provider.prompts.first?.contains("WHAT web_search RETURNED JUST NOW") == true)
     }
 
@@ -530,6 +543,79 @@ struct SearchVetoTurnTests {
         #expect(prompt.contains("145 Nm"), "the kept chunk grounds the plain turn")
         #expect(prompt.contains("I'm servicing the trailer."), "the history rides along")
         #expect(recorder.stages == [.searchVeto])
+    }
+
+    /// A vetoed chain keeps its local links (the fold's second deviation from the map, which made the whole
+    /// pick none): the calendar half was asked for and reads nothing off the device.
+    @Test("a vetoed chain with a web head keeps its local link: it runs alone and one generation answers")
+    func vetoedChainKeepsTheLocalLink() async throws {
+        let calls = Calls()
+        let provider = Scripted(["Dublin began as a Viking port, and your calendar is clear."])
+        let recorder = PickStageRecorder()
+        let question = "tell me the history of Dublin and what's on my calendar"
+        _ = try await ToolRouterWiring.$pickRecorder.withValue(recorder) {
+            try await run(
+                provider,
+                tools: [
+                    Recording(name: "web_search", output: "1. Dublin - Wikipedia", calls: calls),
+                    Recording(name: "calendar_peek", output: "No events", calls: calls),
+                ],
+                pick: ToolPick(
+                    tool: "web_search", query: "history of Dublin", then: [ToolPick(tool: "calendar_peek", query: "")]
+                ),
+                question: question, staysLocal: Self.local
+            )
+        }
+        #expect(calls.log.withLock { $0 } == ["calendar_peek(\(question))"], "no search leaves the device")
+        #expect(provider.prompts.count == 1)
+        let prompt = try #require(provider.prompts.first)
+        #expect(prompt.contains("WHAT calendar_peek RETURNED JUST NOW"))
+        #expect(!prompt.contains("WHAT web_search RETURNED"))
+        #expect(recorder.stages == [.searchVeto])
+    }
+
+    @Test("a vetoed web tail leaves the local head to run alone, in one generation")
+    func vetoedWebTailKeepsTheLocalHead() async throws {
+        let calls = Calls()
+        let provider = Scripted(["It's ten past four; Cork grew from a sixth-century monastery."])
+        let recorder = PickStageRecorder()
+        let question = "what time is it, and when was Cork founded?"
+        _ = try await ToolRouterWiring.$pickRecorder.withValue(recorder) {
+            try await run(
+                provider,
+                tools: [
+                    Recording(name: "datetime", output: "16:10", calls: calls),
+                    Recording(name: "web_search", output: "1. Cork - Wikipedia", calls: calls),
+                ],
+                pick: ToolPick(
+                    tool: "datetime", query: "", then: [ToolPick(tool: "web_search", query: "Cork founding")]
+                ),
+                question: question, staysLocal: Self.local
+            )
+        }
+        #expect(calls.log.withLock { $0 } == ["datetime(\(question))"], "the web tail never ran")
+        #expect(provider.prompts.count == 1)
+        #expect(provider.prompts.first?.contains("WHAT datetime RETURNED JUST NOW") == true)
+        #expect(recorder.stages == [.searchVeto])
+    }
+
+    /// The veto is no hard guarantee, by design (ADR 0009 fails open): a vetoed turn answers on the plain route,
+    /// and a plain answer that comes back empty hands the turn to the agent, palette and all, as every
+    /// dispatched plain turn does. The agent's own web_search is outside the veto.
+    @Test("a veto whose plain answer comes back empty is the agent's turn, and the agent may still search")
+    func vetoedThenEmptyIsTheAgents() async throws {
+        let calls = Calls()
+        let provider = Scripted([
+            "", "ACTION: web_search(history of Dublin)", "CONCLUSION: Dublin began as a Viking port.",
+        ])
+        let text = try await run(
+            provider, tools: [Recording(name: "web_search", output: "1. Dublin - Wikipedia", calls: calls)],
+            pick: ToolPick(tool: "web_search", query: "history of Dublin"),
+            question: "tell me the history of Dublin", staysLocal: Self.local
+        )
+        #expect(provider.prompts.first?.contains(AgentRAGResponder.plainRules) == true, "the veto answered plain first")
+        #expect(calls.log.withLock { $0 } == ["web_search(history of Dublin)"], "the agent's own call")
+        #expect(text.contains("Dublin began as a Viking port."))
     }
 }
 

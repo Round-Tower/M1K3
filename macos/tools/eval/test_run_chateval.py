@@ -20,6 +20,8 @@ Review: Kev + claude-opus-5-5, 2026-10-19 — the relaunch retries once and says
 reopens the live app (`quit_for_run`); an abbreviated flag is refused.
 Review: Kev + claude-opus-5.5, 2026-10-26 — `--router-search` (#713): off unless asked (the Mac ships the search head off),
 never without dispatch, and threaded from main to the trigger.
+Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — a --bare run with --router-search is flagged (its avoids
+checks skip there).
 """
 
 import json
@@ -143,6 +145,15 @@ def test_live_path_can_be_turned_off_for_bare_generation():
 def test_a_live_run_without_a_route_is_flagged(live_path, router, warns):
     # The plain turn (cut, retry, forced budget, NoWait) is reached only through a route, as in the app.
     assert (rc.route_warning(base_opts(live_path=live_path, router=router)) is not None) == warns
+
+
+def test_a_bare_run_with_the_search_head_is_flagged():
+    # #713 review: --bare runs world knowledge as bare generate, no tool on offer, so the #680 fixtures' avoids
+    # checks skip there and the arm measures nothing of the head.
+    warning = rc.route_warning(base_opts(live_path=False, router="dispatch", router_search=True))
+    assert warning is not None and "--router-search" in warning
+    assert rc.route_warning(base_opts(live_path=True, router="dispatch", router_search=True)) is None
+    assert rc.route_warning(base_opts(live_path=False, router="dispatch", router_search=False)) is None
 
 
 def test_dump_prompt_goes_inside_the_container():

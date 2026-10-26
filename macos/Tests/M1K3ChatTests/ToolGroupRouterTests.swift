@@ -20,6 +20,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — `toolSearchHead` (#713) joins the flags-default-off pins; the route
 //  carries the search head only with dispatch and the flag; gate and search head share the turn's one vector.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — both #713 pins can fail now: each route is required
+//  before its `staysLocal` is read, and the head is asked before the gate, so its embed proves it reads the turn's
+//  embedder and the gate's missing one proves the share. Confidence 0.9.
 
 import Foundation
 @testable import M1K3Chat
@@ -333,18 +336,26 @@ struct ToolPickCascadeTests {
         #expect(!ToolRouterWiring.searchHeadEnabled(defaults, whenUnset: true))
     }
 
+    /// Each route is required first: a nil route also has a nil `staysLocal`, which would pass the off cases.
     @Test("the route carries the search head only with dispatch and the flag: there is no veto point without a pick")
-    func searchHeadRidesTheDispatchRoute() {
-        #expect(ToolRouterWiring.route(provider: OtherBrain(), enabled: true, dispatch: true, allTiers: true)?
-            .staysLocal == nil)
-        #expect(ToolRouterWiring.route(
+    func searchHeadRidesTheDispatchRoute() throws {
+        let off = try #require(
+            ToolRouterWiring.route(provider: OtherBrain(), enabled: true, dispatch: true, allTiers: true)
+        )
+        #expect(off.staysLocal == nil)
+        let on = try #require(ToolRouterWiring.route(
             provider: OtherBrain(), enabled: true, dispatch: true, allTiers: true, searchHead: true
-        )?.staysLocal != nil)
-        #expect(ToolRouterWiring.route(provider: OtherBrain(), enabled: true, allTiers: true, searchHead: true)?
-            .staysLocal == nil)
+        ))
+        #expect(on.staysLocal != nil)
+        let pickless = try #require(
+            ToolRouterWiring.route(provider: OtherBrain(), enabled: true, allTiers: true, searchHead: true)
+        )
+        #expect(pickless.staysLocal == nil)
     }
 
-    @Test("the gate and the search head read the turn's one vector: one embed per turn (#512)")
+    /// The head is asked FIRST on each turn, so the embed it causes proves it reads the injected one-turn
+    /// embedder; the gate after it then embeds nothing, which proves the two share the vector.
+    @Test("the search head reads the turn's one vector, and the gate reuses it: one embed per turn (#512)")
     func searchHeadSharesTheTurnVector() throws {
         let calls = Mutex<[String]>([])
         let embedder = OneTurnEmbedder { text in
@@ -354,12 +365,15 @@ struct ToolPickCascadeTests {
         let route = try #require(ToolRouterWiring.compose(
             provider: OtherBrain(), enabled: true, dispatch: true, allTiers: true, searchHead: true, embedder: embedder
         ))
-        _ = route.decide("tell me the history of Dublin")
-        _ = route.staysLocal?("tell me the history of Dublin")
-        #expect(calls.withLock { $0 } == ["tell me the history of Dublin"])
-        _ = route.decide("what about Cork?")
-        _ = route.staysLocal?("what about Cork?")
-        #expect(calls.withLock { $0 } == ["tell me the history of Dublin", "what about Cork?"])
+        let staysLocal = try #require(route.staysLocal)
+        var expected: [String] = []
+        for text in ["tell me the history of Dublin", "what about Cork?"] {
+            _ = staysLocal(text)
+            expected.append(text)
+            #expect(calls.withLock { $0 } == expected, "the head embedded through the turn's embedder")
+            _ = route.decide(text)
+            #expect(calls.withLock { $0 } == expected, "the gate embedded the turn a second time")
+        }
     }
 }
 

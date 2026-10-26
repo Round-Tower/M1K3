@@ -49,6 +49,10 @@
 //  vetoed (`asksForTheWeb`): a head
 //  trained on candidate labels read "Fetch the web site m1k3.app…" as local at p=0.014. The domain pattern is
 //  shared with `asksToOpenWebPage` (`namesWebAddress`).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — the guard's holes: "lookup", Wikipedia, a wiki, Bing,
+//  DuckDuckGo and headlines join `webAskCues`, and the guard reads more domain suffixes (`guardSuffixes`: .ai, .gov,
+//  .edu, .info …) than the open ask, whose list (`openSuffixes`) is unchanged. A missed guard lets a lossy head veto
+//  an explicit ask; an over-read one only keeps a search. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -211,13 +215,21 @@ public enum ToolDispatch {
         return opens && (namesWebAddress(question) || ToolGroupRouter.mentions(question, any: webThings))
     }
 
-    /// A URL or a bare domain ("m1k3.app", "rte.ie").
-    static func namesWebAddress(_ text: String) -> Bool {
+    /// A URL or a bare domain ("m1k3.app", "rte.ie") under one of `suffixes`.
+    static func namesWebAddress(_ text: String, suffixes: [String] = openSuffixes) -> Bool {
         text.range(
-            of: #"(https?://|\b[a-z0-9-]+\.(com|ie|org|net|io|dev|app|co|uk|eu)\b)"#,
+            of: #"(https?://|\b[a-z0-9-]+\.("# + suffixes.joined(separator: "|") + #")\b)"#,
             options: [.regularExpression, .caseInsensitive]
         ) != nil
     }
+
+    /// The domains an "open …" ask names (#622).
+    static let openSuffixes = ["com", "ie", "org", "net", "io", "dev", "app", "co", "uk", "eu"]
+
+    /// The search head's guard reads more of the web's names (#713 review): a domain it misses lets a lossy
+    /// head veto a page the user named, while one it over-reads only keeps a search. The open ask keeps
+    /// its own list (`openSuffixes`).
+    static let guardSuffixes = openSuffixes + ["ai", "gov", "edu", "de", "fr", "info", "tv", "me"]
 
     private static let openLeads: Set<String> = [
         "please", "can", "could", "would", "will", "you", "hey", "mike", "m1k3", "just", "ok", "okay",
@@ -321,12 +333,15 @@ public enum ToolDispatch {
     /// labels, 2026-10-26). Accepted lookalikes stay searched, as before the head: "why is Napoleon still
     /// important today?" (the `nowCues` note), "the link between diet and heart disease".
     public static func asksForTheWeb(_ question: String) -> Bool {
-        namesWebAddress(question) || ToolGroupRouter.mentions(question, any: webAskCues + ToolNeedRouter.nowCues)
+        namesWebAddress(question, suffixes: guardSuffixes)
+            || ToolGroupRouter.mentions(question, any: webAskCues + ToolNeedRouter.nowCues)
     }
 
+    /// The words of an explicit web ask, the named sources ("Wikipedia", "Bing") among them.
     static let webAskCues = [
-        "search", "searching", "google", "googling", "look up", "look it up", "looking up", "online", "internet",
-        "the web", "website", "web site", "webpage", "web page", "url", "link", "fetch", "browse",
+        "search", "searching", "google", "googling", "look up", "look it up", "looking up", "lookup", "online",
+        "internet", "the web", "website", "web site", "webpage", "web page", "url", "link", "fetch", "browse",
+        "wikipedia", "wiki", "bing", "duckduckgo", "headlines",
     ]
 
     /// A web read on a question about what the user decided or said goes to their knowledge

@@ -108,6 +108,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — `_ROUTER_SEARCH=1` puts the search head (#713, `toolSearchHead`) on
 //  the dispatch route, as `-toolSearchHead YES` does in the app; a veto shows as a `search-veto` route stage.
 //  Confidence 0.8 (the arm runs in the eval stage; this file compiles only under xcodebuild).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — the bare-generate observation says no tool was offered,
+//  so the #680 fixtures' `avoids X` skip there instead of passing by construction. Confidence 0.85.
 //
 
 import Foundation
@@ -935,8 +937,9 @@ enum ChatEvalStage {
                     try await provider.generate(prompt: fixture.prompt)
                 }
                 let ms = milliseconds(clock.now - start)
+                // No tool is on offer here, so an avoid list skips instead of passing (#713 review).
                 return ChatEvalScorer.score(
-                    fixture: fixture, observation: EvalObservation(rawText: raw, latencyMS: ms),
+                    fixture: fixture, observation: EvalObservation(rawText: raw, latencyMS: ms, toolsOffered: false),
                     latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
             }

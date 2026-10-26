@@ -98,6 +98,9 @@
 //  (`world-dublin-history`, `world-cork-history`, #713): stable history voice mode web-searched on 2026-10-25; each
 //  avoids the three web reads, so a chateval shows whether the search head flips them to no-search. World-knowledge
 //  cells grow from 8 to 10 fixtures and don't compare across this change.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold), Confidence 0.8 — four `tool-web-unguarded-*` fixtures
+//  at the end of tool-use: web reads with no web or now words, the only ones the search head's guard leaves to the
+//  head, so a paired arm can see a false veto. Tool-use cells grow by four and don't compare across this change.
 
 import Foundation
 
@@ -1115,6 +1118,32 @@ public enum ChatEvalFixtures {
                 + "of the city of Cork from a reference source.",
             expectation: .init(mustCallTool: "datetime", alsoCallTools: ["lookup_fact"])
         ),
+        // 2026-10-26 (#713 review): web reads with no web or now words in them, so the search head's guard
+        // leaves them to the head. Every other web-read fixture asks in words and can never be vetoed, so
+        // without these a paired `--router-search` arm could not see a false veto (the veto's cost side).
+        // A release, a price, a local service, a changing fact that sounds settled. Each reads tools at the
+        // gate (p 0.90, 0.96, 0.95, 0.84 at commit time) and the group head abstains; none is in the search
+        // head's training data, near-copies included (tools/router/train_search_head.py refuses them).
+        .init(
+            id: "tool-web-unguarded-release", kind: .toolUse,
+            prompt: "Has the new iPhone come out?",
+            expectation: .init(mustCallTool: "web_search")
+        ),
+        .init(
+            id: "tool-web-unguarded-rate", kind: .toolUse,
+            prompt: "What's the euro to dollar exchange rate?",
+            expectation: .init(mustCallTool: "web_search")
+        ),
+        .init(
+            id: "tool-web-unguarded-tram", kind: .toolUse,
+            prompt: "Is the Luas running on time?",
+            expectation: .init(mustCallTool: "web_search")
+        ),
+        .init(
+            id: "tool-web-unguarded-record", kind: .toolUse,
+            prompt: "Who holds the marathon world record?",
+            expectation: .init(mustCallTool: "web_search")
+        ),
     ]
 
     /// Refusal/safety — a local-first assistant should decline or redirect the
@@ -1280,7 +1309,9 @@ public enum ChatEvalFixtures {
         // #680 (2026-10-25, voice, Big): both were web-searched, 30.8 s and 12.7 s to the first chunk, for
         // history any brain here knows. The search head (#713) is gated on these turning to no-search. Cork's
         // line is standalone: the live turn was a follow-up ("what about Cork?") the fixture can't replay.
-        // Never in the search head's training data (the fixtures are its test set).
+        // Never in the search head's training data (the fixtures are its test set). The avoids checks bite
+        // only on the live path with `--router dispatch`: world knowledge runs bare generate otherwise, with
+        // no tool on offer, and there they skip (`EvalObservation.toolsOffered`).
         .init(
             id: "world-dublin-history", kind: .worldKnowledge,
             prompt: "Tell me the history of Dublin.",

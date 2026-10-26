@@ -14,6 +14,10 @@
 //  so no head can veto it; the #680 lines and world-knowledge fixtures carry no such words and stay the head's.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (2) — no fixture prompt is in tools/router/data/search_head_train.json
 //  (exact folded matches; near-copies and the rig lines are the python pin's). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — the eval's web reads are pinned to `webSourced`; the
+//  never-vetoed pin filtered to an empty set and could not fail, so four unguarded web-read fixtures (no web or now
+//  words) replace it: they are the only web reads the guard leaves to the head, and a trained head must read them
+//  web. Confidence 0.85.
 //
 
 import Foundation
@@ -84,6 +88,14 @@ struct SearchRouterTests {
         #expect(shipping.bias.isFinite)
         #expect(shipping.threshold > 0 && shipping.threshold < 1)
     }
+
+    /// M1K3Eval can't import M1K3Chat, so the fixtures keep their own list of web reads. A web tool added to
+    /// `webSourced` and not there would leave the #680 fixtures' `avoids` checks blind to it.
+    @Test("the eval's web reads are exactly the dispatcher's web-sourced tools")
+    func evalWebReadsMirrorTheDispatcher() {
+        #expect(Set(ChatEvalFixtures.webReads) == ToolDispatch.webSourced)
+        #expect(ChatEvalFixtures.webReads.count == ToolDispatch.webSourced.count, "a web read is listed twice")
+    }
 }
 
 /// The shipped search head over the real embedder, scored on the eval fixtures and the #680 lines
@@ -103,20 +115,32 @@ struct SearchRouterFixtureTests {
         }
     }
 
-    @Test("every tool-use fixture that must read the web asks for it in words, so no head can veto it")
+    /// The web reads with no web or now words in them (#713 review): the head alone decides them, so they
+    /// are the veto's cost side. A paired arm reads a false veto as a missed `calls web_search`.
+    static let unguardedWebReadIDs: Set<String> = [
+        "tool-web-unguarded-release", "tool-web-unguarded-rate", "tool-web-unguarded-tram",
+        "tool-web-unguarded-record",
+    ]
+
+    @Test("every web-read fixture asks for the web in words, save the unguarded ones kept for the head")
     func webReadFixturesAreGuarded() {
         let webReads = Self.webReadFixtures
-        #expect(webReads.count >= 6, "the web-read fixtures went missing: \(webReads.map(\.id))")
-        let vetoable = webReads.filter { !ToolDispatch.asksForTheWeb($0.prompt) }
-        #expect(vetoable.isEmpty, "left to the head: \(vetoable.map(\.id))")
+        #expect(
+            webReads.count >= 6 + Self.unguardedWebReadIDs.count,
+            "the web-read fixtures went missing: \(webReads.map(\.id))"
+        )
+        let unguarded = Set(webReads.filter { !ToolDispatch.asksForTheWeb($0.prompt) }.map(\.id))
+        #expect(unguarded == Self.unguardedWebReadIDs, "left to the head: \(unguarded.sorted())")
     }
 
-    @Test("every web-read fixture the guard leaves to the head reads web (a veto would hide the read it needs)")
-    func webReadFixturesAreNeverVetoed() {
-        let vetoed = Self.webReadFixtures.filter {
-            !ToolDispatch.asksForTheWeb($0.prompt)
-                && SearchRouter.decide(for: $0.prompt, embed: embedder.vector).verdict == .local
-        }
+    @Test(
+        "the unguarded web reads read web: a veto would hide the read they need",
+        .enabled(if: SearchRouter.Head.shipping.isTrained)
+    )
+    func unguardedWebReadsReadWeb() {
+        let unguarded = Self.webReadFixtures.filter { Self.unguardedWebReadIDs.contains($0.id) }
+        #expect(unguarded.count == Self.unguardedWebReadIDs.count)
+        let vetoed = unguarded.filter { SearchRouter.decide(for: $0.prompt, embed: embedder.vector).verdict == .local }
         #expect(vetoed.isEmpty, "vetoed: \(vetoed.map(\.id))")
     }
 

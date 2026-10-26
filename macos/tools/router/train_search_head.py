@@ -16,17 +16,29 @@ app reads): P(the turn needs the web). SearchRouter reads it only as a VETO on a
 named, so the threshold is picked by 5-fold cross-validation to keep RECALL of the must-search items:
 a veto on a turn that needed the web is a stale answer, a missed veto is only a slower one.
 
+The threshold is picked on the turns that REACH the head. ToolDispatch.vetoable never asks it about a
+turn that asks for the web in words or about now (`asksForTheWeb`, read here from the Swift), and those
+are the easy must-search items, so counting them would overstate the recall the head really has. The
+folds are grouped by router group or generated category, so a fold never trains on its own paraphrases:
+the CV reads a new phrasing, the side that lowers the threshold, which is the safe side for a veto.
+
 Labels (data/search_head_train.json): each item's `search` is a CANDIDATE (the router group it was
 seeded from, or the class it was generated for, kept only where a cold relabel agreed). It trains
 only once confirmed: a `hand` check overrides everything, else a `teacher` (the dev-only decision
 model pass, {model, p}) must agree with p at or beyond CONFIDENT. `--labels candidates` trains on
 the candidates anyway and stamps the header so; it is for a look before the teacher pass, not a ship.
 
-Held out (refused if present): every chateval fixture prompt (the test set), the voice-rig lines,
-the two #680 lines, and near-copies of any of them (#631).
+Held out (refused if present): every chateval fixture prompt (the test set, the positional vision
+fixtures included), the voice-rig lines, the two #680 lines, and lexical near-copies of any of them
+(#631): token Jaccard 0.5 or more after folding case and punctuation, at any length. Lexical only: a
+paraphrase in other words can still sit near a held-out line in vector space.
 
 Signed: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.8 (the gate's recipe, its own entry point;
 the labels wait on the teacher pass, the threshold on Kev). Prior: none (new file).
+Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — the threshold reads only the turns that reach the head
+(the guard ported from the Swift), over folds grouped by category; one lexical near-copy bar (0.5) at every length;
+the positional vision fixtures held out; the local teacher bar is its own constant (1 - 0.8 is 0.19999999999999996
+in floats); a candidates look is never written over the shipped weights. Confidence 0.8.
 """
 from __future__ import annotations
 
@@ -34,6 +46,7 @@ import argparse
 import json
 import re
 import sys
+import textwrap
 from pathlib import Path
 
 import numpy as np
@@ -43,15 +56,18 @@ MACOS = HERE.parents[1]
 DATA = HERE / "data" / "search_head_train.json"
 OUT = MACOS / "Sources" / "M1K3Chat" / "SearchRouterWeights.swift"
 FIXTURE_SOURCES = sorted((MACOS / "Sources" / "M1K3Eval").glob("ChatEvalFixture*.swift"))
+DISPATCH_SWIFT = MACOS / "Sources" / "M1K3Chat" / "ToolDispatch.swift"
+GATE_SWIFT = MACOS / "Sources" / "M1K3Chat" / "ToolNeedRouter.swift"
 RIG_LINES = [MACOS / "tools" / "eval" / "voice_rig_turns.txt", MACOS / "tools" / "eval" / "voice_rig_history.txt"]
 # #680 (2026-10-25, voice, Big): both web-searched stable history.
 ISSUE_680 = ["tell me the history of Dublin", "what about Cork?"]
 RECALL = 0.97
 C = 4.0
-CONFIDENT = 0.8
-NEAR = 0.75  # token Jaccard at or above: a near-copy
-NEAR_SHORT = 0.5  # the bar when either line has SHORT tokens or fewer ("What time is it in Tokyo?")
-SHORT = 4
+CONFIDENT = 0.8  # a teacher p at or above confirms a must-search candidate
+LOCAL_CONFIDENT = 0.2  # at or below confirms a local one (its own constant: 1 - 0.8 misses a recorded 0.2)
+# Token Jaccard at or above: a lexical near-copy, at any length. A one-word swap on a line of n distinct
+# words scores (n - 1) / (n + 1), so from three words up a swap is caught ("the history of Galway").
+NEAR = 0.5
 
 HEADER = """//
 //  SearchRouterWeights.swift
@@ -73,7 +89,7 @@ def label(item: dict) -> bool | None:
         return None
     if item["search"] and p >= CONFIDENT:
         return True
-    if not item["search"] and p <= 1 - CONFIDENT:
+    if not item["search"] and p <= LOCAL_CONFIDENT:
         return False
     return None
 
@@ -99,17 +115,19 @@ def near_copy(a: str, b: str) -> bool:
     x, y = set(fold(a).split()), set(fold(b).split())
     if not x or not y:
         return False
-    jaccard = len(x & y) / len(x | y)
-    return jaccard >= (NEAR_SHORT if min(len(x), len(y)) <= SHORT else NEAR)
+    return len(x & y) / len(x | y) >= NEAR
 
 
 def parse_fixture_prompts(swift: str) -> list[str]:
-    """Every `prompt:` string in Swift fixture source, joined `"a" + "b"` literals included."""
+    """Every `prompt:` string in Swift fixture source, joined `"a" + "b"` literals included, and the
+    prompt the vision helper takes third and unlabelled (`visionFixture(id, image, prompt, …)`)."""
     literal = r'"((?:[^"\\]|\\.)*)"'
     prompts = []
     for match in re.finditer(rf"prompt:\s*{literal}((?:\s*\+\s*{literal})*)", swift):
         parts = [match[1]] + re.findall(literal, match[2] or "")
         prompts.append("".join(parts).replace('\\"', '"'))
+    for match in re.finditer(rf"visionFixture\(\s*{literal},\s*{literal},\s*{literal}", swift):
+        prompts.append(match[3].replace('\\"', '"'))
     return prompts
 
 
@@ -126,14 +144,65 @@ def held_out_violations(prompts: list[str], held_out: list[str]) -> list[tuple[s
     return [(prompt, line) for prompt in prompts for line in held_out if near_copy(prompt, line)]
 
 
+def _swift_strings(swift: str, name: str) -> list[str]:
+    """The string literals of `static let <name> = [<a list> +] [ … ]`: the bracket after the `=`."""
+    match = re.search(rf"static let {name}\s*=\s*(?:[\w.]+\s*\+\s*)?\[(.*?)\]", swift, re.DOTALL)
+    if match is None:
+        raise ValueError(f"no `static let {name}` list in the Swift")
+    return re.findall(r'"([^"]*)"', match[1])
+
+
+def web_guard() -> tuple[list[str], list[str]]:
+    """The search head's guard as the app reads it (ToolDispatch.asksForTheWeb): its cue words (webAskCues,
+    ToolNeedRouter.nowCues, which is ToolDispatch.nowCues plus its own) and its domain suffixes
+    (openSuffixes plus guardSuffixes' own). Read from the Swift, so the two never drift."""
+    dispatch = DISPATCH_SWIFT.read_text(encoding="utf-8")
+    gate = GATE_SWIFT.read_text(encoding="utf-8")
+    cues = _swift_strings(dispatch, "webAskCues") + _swift_strings(dispatch, "nowCues") + _swift_strings(gate, "nowCues")
+    suffixes = _swift_strings(dispatch, "openSuffixes") + _swift_strings(dispatch, "guardSuffixes")
+    return cues, suffixes
+
+
+def asks_for_the_web(question: str, guard: tuple[list[str], list[str]] | None = None) -> bool:
+    """ToolDispatch.asksForTheWeb: a cue among the turn's words (ToolGroupRouter.mentions: lower-cased
+    letters and digits, joined by single spaces), or a URL or domain under a guard suffix."""
+    cues, suffixes = guard or web_guard()
+    joined = " " + " ".join(re.findall(r"[^\W_]+", question.lower())) + " "
+    if any(f" {cue} " in joined for cue in cues):
+        return True
+    address = rf"(https?://|\b[a-z0-9-]+\.({'|'.join(suffixes)})\b)"
+    return re.search(address, question, re.IGNORECASE) is not None
+
+
+def reaches_the_head(prompts: list[str]) -> np.ndarray:
+    """Where SearchRouter would be asked about a web pick: the turn doesn't ask for the web in words."""
+    guard = web_guard()
+    return np.array([not asks_for_the_web(prompt, guard) for prompt in prompts], dtype=bool)
+
+
+def fold_group(item: dict) -> str:
+    """The CV group: a router item's group, a generated item's category."""
+    return f"{item['source']}:{item.get('group') or item.get('category')}"
+
+
+def cv_note(cv: np.ndarray, y: np.ndarray, reach: np.ndarray, threshold: float) -> str:
+    asked, local = y & reach, ~y & reach
+    return (
+        f"{int(asked.sum())} of {int(y.sum())} must-search items reach the head (the rest ask in words). "
+        f"Grouped CV at the threshold: {int((cv[asked] >= threshold).sum())}/{int(asked.sum())} of those kept, "
+        f"{int((cv[local] < threshold).sum())}/{int(local.sum())} local turns that reach it read local."
+    )
+
+
 def _render(threshold: float, bias: float, weights: str, trained: str, cv_note: str) -> str:
+    note = "\n".join(f"//  {line}" for line in textwrap.wrap(cv_note, width=112))
     return f"""{HEADER}//  {trained}
-//  {cv_note}
+{note}
 //
 
 enum SearchRouterWeights {{
     /// At or above: a web read the picker named runs; below, it is vetoed. Picked to keep {RECALL:.0%} of the
-    /// must-search items in cross-validation.
+    /// must-search items that reach the head (no web or now words), in grouped cross-validation.
     static let threshold: Double = {threshold:.9g}
     static let bias: Double = {bias:.9g}
     static let weights: [Double] = {weights}
@@ -165,6 +234,10 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--untrained", action="store_true", help="write the stub that never vetoes")
     ap.add_argument("--out", type=Path, default=OUT)
     args = ap.parse_args(argv)
+    if args.labels == "candidates" and args.out.resolve() == OUT.resolve():
+        print("refused: a look on candidate labels is never written over the shipped weights; pass --out <a scratch "
+              "path>", file=sys.stderr)
+        return 2
     if args.untrained:
         args.out.write_text(render_untrained())
         print(f"wrote {args.out}: UNTRAINED")
@@ -184,16 +257,17 @@ def main(argv: list[str]) -> int:
 
     import train_tool_router  # embed.swift, normalise, recall_threshold: the gate's recipe
     from sklearn.linear_model import LogisticRegression
-    from sklearn.model_selection import StratifiedKFold, cross_val_predict
+    from sklearn.model_selection import StratifiedGroupKFold, cross_val_predict
 
-    x = train_tool_router.normalise(train_tool_router.embed([item["prompt"] for item in items]))
+    prompts = [item["prompt"] for item in items]
+    x = train_tool_router.normalise(train_tool_router.embed(prompts))
     model = LogisticRegression(C=C, max_iter=5000, class_weight="balanced")
-    folds = StratifiedKFold(n_splits=5, shuffle=True, random_state=0)
-    cv = cross_val_predict(model, x, y, cv=folds, method="predict_proba")[:, 1]
-    threshold = train_tool_router.recall_threshold(cv, y, recall=RECALL)
-    kept = int((cv[y] >= threshold).sum())
-    local = int((cv[~y] < threshold).sum())
-    note = f"CV at the threshold: {kept}/{int(y.sum())} must-search kept, {local}/{int((~y).sum())} local turns read local."
+    folds = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=0)
+    groups = [fold_group(item) for item in items]
+    cv = cross_val_predict(model, x, y, groups=groups, cv=folds, method="predict_proba")[:, 1]
+    reach = reaches_the_head(prompts)
+    threshold = train_tool_router.recall_threshold(cv[reach], y[reach], recall=RECALL)
+    note = cv_note(cv, y, reach, threshold)
     model.fit(x, y)
     args.out.write_text(
         render_swift(model.coef_[0], float(model.intercept_[0]), threshold, len(items), note, candidates=candidates)

@@ -23,6 +23,8 @@
 //  Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (2) — `asksForTheWeb`: an explicit web ask (search, look up, online, a
 //  URL or domain) or a question about now is never vetoed; the #680 lines and stable facts are left to the head.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — the guard's holes as rows: "lookup", Wikipedia, a wiki,
+//  Bing, DuckDuckGo, headlines, and .gov/.ai/.info domains. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -516,6 +518,16 @@ struct SearchCorrectedTests {
         "What's the newest Claude model?",
         "What's the weather in Cork tomorrow?",
         "Read me the news.",
+        // The review's holes (2026-10-26): the one-word verb, named sources, and domains past the open list.
+        "Please lookup the founding year of Cork.",
+        "What does Wikipedia say about Cork?",
+        "Check the wiki for the Spire's height.",
+        "Ask Bing who designed the Spire.",
+        "Try DuckDuckGo for vegan places in Galway.",
+        "Give me the headlines.",
+        "What is on nasa.gov about the rover?",
+        "What does anthropic.ai say about its models?",
+        "Is the form on citizensinformation.info?",
     ])
     func explicitAsksAreNeverVetoable(question: String) {
         #expect(ToolDispatch.asksForTheWeb(question))

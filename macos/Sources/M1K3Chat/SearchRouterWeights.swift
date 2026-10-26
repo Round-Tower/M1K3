@@ -11,7 +11,7 @@
 
 enum SearchRouterWeights {
     /// At or above: a web read the picker named runs; below, it is vetoed. Picked to keep 97% of the
-    /// must-search items in cross-validation.
+    /// must-search items that reach the head (no web or now words), in grouped cross-validation.
     static let threshold: Double = 1
     static let bias: Double = 0
     static let weights: [Double] = []
