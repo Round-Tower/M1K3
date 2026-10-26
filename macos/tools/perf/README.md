@@ -19,8 +19,9 @@ Ran 2026-10-10 (#533); see `docs/GEMMA_1_1_PLAN.md`, the stall section, for why 
 
 The #696 Phase 1 probe. One small Swift program opens three 2 s windows (idle, a one-core CPU burn,
 a Metal compute burn) and prints how far each moved this process's `RUSAGE_INFO_V6` `ri_energy_nj`.
-It runs twice: as a plain process, then ad-hoc signed into an App Sandbox, after checking the
-sandbox is on. No root, app or model; about 20 s.
+It runs twice: as a plain process, then ad-hoc signed into an App Sandbox. The sandboxed run exits
+non-zero unless the sandbox is on (with a positive control that the check can refuse), and a refused
+read exits non-zero too. No root, app or model; about 20 s.
 
     macos/tools/perf/energy_counter_probe.sh
 

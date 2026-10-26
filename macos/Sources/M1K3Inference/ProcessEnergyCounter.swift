@@ -6,8 +6,9 @@
 //  `proc_pid_rusage(getpid(), RUSAGE_INFO_V6)`: no root, no entitlement, and it
 //  reads inside an App Sandbox (measured with a sandboxed probe, 2026-10-26).
 //  What it CANNOT see is the point of the docs: `ri_energy_nj` is CPU energy
-//  only. A Metal burn that kept the GPU busy 1.8 s of 2 s moved it by 0.02 J,
-//  and a Lil answer is about 92 % GPU (POWER_RECEIPT run 1: 34.4 of 37.1 W).
+//  only. A Metal burn that kept the GPU busy 1.94–1.99 s of 2 s moved it
+//  0.009–0.045 J (four runs, plain and sandboxed; docs/ENERGY_MEASUREMENT.md),
+//  and a Lil answer is about 93 % GPU (POWER_RECEIPT run 1: 34.42 of 37.14 W).
 //  So this is an instrument and a future CPU term, never "this answer cost X".
 //  `docs/ENERGY_MEASUREMENT.md` has the table.
 //
@@ -18,6 +19,9 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.85 (the read and the
 //  CPU-only verdict are measured on this M1 Max; the in-app read is the
 //  M1K3_SELFTEST_ENERGY stage's to prove). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (pre-push review fold) — the header quoted a GPU-burn figure no run
+//  contains (1.8 s, 0.02 J); it now quotes the four runs' range, and 93 % (34.42 / 37.14 rounds up). Comment only;
+//  the equal-readings boundary of `joules(since:)` is now pinned. Confidence 0.85.
 
 #if canImport(Darwin.libproc)
     import Darwin

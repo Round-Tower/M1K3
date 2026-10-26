@@ -134,6 +134,11 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (#696) — `energyLedger` beside `reviewLedger`; the generation-metrics
 //  sink also prices each MLX generation at `selectedBrain`'s rate (the brain serving when the report lands; a report
 //  racing a swap is billed to the new tier). Mini never reports. Verify-by-launch owed. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (#696 pre-push review fold) — corrects the line above: `selectedBrain` was
+//  NOT the brain serving. A deep dive re-points the MLX slot at Big with Lil still selected, so every Big generation
+//  in a dive was priced at Lil's rate, and an audition at the stock model's. The sink now hands the ledger the metrics
+//  alone, and the ledger bills by `metrics.modelID` (the model that ran). Pinned by a source scan in
+//  EnergyLedgerTests. Verify-by-launch still owed. Confidence 0.75.
 
 import AppKit
 import Foundation
@@ -2410,13 +2415,15 @@ extension AppEnvironment {
     /// Route the MLX backend's per-turn stats onto the streaming assistant message
     /// (the in-app testing readout). Always records — it's a cheap struct stamp; the
     /// message view decides whether to render it, gated by the Settings toggle.
-    /// The same report feeds the energy ledger, priced at the brain serving now.
+    /// The same report feeds the energy ledger, billed to the model that ran it
+    /// (`metrics.modelID`), never to `selectedBrain`: a deep dive serves Big with
+    /// Lil still selected.
     private func installGenerationMetricsSink() {
         GenerationMetricsReporter.install { [weak self] metrics in
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 chat.recordMetrics(metrics)
-                energyLedger.record(metrics: metrics, tier: selectedBrain)
+                energyLedger.record(metrics: metrics)
             }
         }
     }

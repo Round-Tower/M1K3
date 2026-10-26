@@ -2,14 +2,27 @@
 //  EnergyLedger.swift
 //  M1K3Inference
 //
-//  What M1K3's generations cost on this Mac, kept as a daily rollup (#696
-//  Phase 2). Rule zero: measure, never quote. A tier with no watts measured on
-//  this Mac has no rate and its generations are counted as unpriced, never
-//  guessed. Lil's rate is DERIVED from two measurements on this M1 Max (the
-//  2026-09-15 powermetrics receipt's watts and the 2026-10-25 Release
-//  throughput), not calibrated in one run, and it says so (`calibrated:
-//  false`). `docs/ENERGY_MEASUREMENT.md` holds the method, the error bars and
-//  the runs still owed.
+//  What M1K3's generations cost, kept as a daily rollup (#696 Phase 2). Rule
+//  zero: measure, never quote. A tier with no measured watts has no rate and
+//  its generations are counted as unpriced, never guessed. Lil's rate is
+//  DERIVED from two measurements on one Mac, an M1 Max 64 GB (the 2026-09-15
+//  powermetrics receipt's watts and the 2026-10-25 Release throughput), not
+//  calibrated in one run, and it says so (`calibrated: false`, `measuredOn`).
+//  On another chip it is still that M1 Max's figure, not the user's Mac's: a
+//  surface must say whose before it prints one. `docs/ENERGY_MEASUREMENT.md`
+//  holds the method, the error bars and the runs still owed.
+//
+//  Attribution: each generation is billed to the model that RAN it
+//  (`GenerationMetrics.modelID`), never to the brain the picker shows. A deep
+//  dive re-points the MLX slot at Big while Lil stays selected, and an audition
+//  is not the stock model. (An audition imported under the stock repo's own
+//  name carries that name, so it is billed as that tier.) A model no tier
+//  names is counted, never priced.
+//
+//  Kept: token counts per day and tier, never joules. The ledger prices them on
+//  read at the table this build ships (`priced(_:)`), so a ruling (unprice
+//  Lil) or a calibration re-prices the history, and a tier that loses its rate
+//  shows nothing.
 //
 //  Granularity: the ledger records per GENERATION, from the process-wide
 //  GenerationMetricsReporter sink. A tool turn reports two or three times, so
@@ -20,10 +33,15 @@
 //  and a checkpoint-mode tool send reports a one-token prefill (its real
 //  prefill is the reuse line's `extend`). The estimate is a floor, not a total.
 //
-//  Privacy (structure, not conversation; the 2026-08-30 heartbeat ruling):
-//  every stored field is a number, a date or a tier enum. A test walks the
-//  encoded JSON and the types and fails on any String or Data. A field added
-//  later must be Optional (a strip-the-key decode test) and must not be text.
+//  Privacy: every stored field is a number, a date or a tier enum. That borrows
+//  the 2026-08-30 heartbeat ruling for pulse tags, "structural only": a tag
+//  "describes the shape of a window, never its content" (docs/HEARTBEAT_DESIGN.md).
+//  The same ruling says a tag's counts are "banded, never exact". This rollup is
+//  not a tag: it keeps exact daily counts, on-device, for 30 days (whether that
+//  is acceptable is open for Kev), and any pulse line fed from it must band
+//  them. A test walks the encoded JSON and the types and fails on any String or
+//  Data. A field added later must be Optional (a strip-the-key decode test) and
+//  must not be text.
 //
 //  `suppressed` is the screengrab harness: it reroutes every store but not
 //  UserDefaults.standard, so the guard sits on every write
@@ -33,6 +51,11 @@
 //  TDD'd against a dictionary fake; the Lil rate is a derivation with a ±50 %
 //  band and a coverage gap the doc names; the shell wiring is verify-by-launch).
 //  Prior: none (new file; ReviewPromptLedger's storage seam and suppression).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (pre-push review fold) — billed by the generating model, not by
+//  `selectedBrain` (a deep dive's Big generations were priced at Lil's rate, and an audition at the stock model's);
+//  tokens kept and joules priced on read, so Kev's ruling on the derived Lil rate, or a calibration, re-prices the
+//  history instead of leaving 30 days of stale joules; `Rate` names its model and its Mac; `record(_ turn:)` dropped
+//  (no caller, and nothing measured to store yet); the heartbeat ruling quoted in its own words. Confidence 0.8.
 
 import Foundation
 import Observation
@@ -40,6 +63,16 @@ import Observation
 /// The tier's raw value ("mini" / "pocket" / "lil" / "big") is its stable
 /// persistence key; the ledger stores it, so the enum encodes as that string.
 extension BrainTier: Codable {}
+
+public extension BrainTier {
+    /// The tier whose STOCK MLX model is `modelID`; nil for anything else (an
+    /// audition under its own name, a folder's `dir:` key, an unknown id). Mini
+    /// runs no MLX model, so no id names it.
+    init?(generatingModelID modelID: String) {
+        guard let tier = Self.allCases.first(where: { $0.mlxModelID == modelID }) else { return nil }
+        self = tier
+    }
+}
 
 /// One generation's energy. Exactly the five fields #696 names: no text,
 /// nothing that could hold a message.
@@ -74,7 +107,7 @@ public struct TurnEnergy: Sendable, Equatable, Codable {
 }
 
 /// The per-tier joules-per-token table, in one place. `nil` = unpriced: no
-/// watts were measured for that tier on this Mac, so it gets no number.
+/// watts were measured for that tier, so it gets no number.
 public enum EnergyCoefficients {
     public struct Rate: Sendable, Equatable {
         public let joulesPerPrefillToken: Double
@@ -82,11 +115,21 @@ public enum EnergyCoefficients {
         /// True only when one powermetrics run on the shipping build measured
         /// this tier's watts and throughput together.
         public let calibrated: Bool
+        /// The model the rate was derived for. A test binds Lil's to
+        /// `BrainTier.lil.mlxModelID`, so a model swap forces a re-derivation.
+        public let modelID: String
+        /// The Mac the watts were measured on. The rate is that Mac's figure.
+        public let measuredOn: String
 
-        public init(joulesPerPrefillToken: Double, joulesPerDecodeToken: Double, calibrated: Bool) {
+        public init(
+            joulesPerPrefillToken: Double, joulesPerDecodeToken: Double, calibrated: Bool, modelID: String,
+            measuredOn: String
+        ) {
             self.joulesPerPrefillToken = joulesPerPrefillToken
             self.joulesPerDecodeToken = joulesPerDecodeToken
             self.calibrated = calibrated
+            self.modelID = modelID
+            self.measuredOn = measuredOn
         }
     }
 
@@ -111,62 +154,122 @@ public enum EnergyCoefficients {
         return Rate(
             joulesPerPrefillToken: wattsAboveIdle / prefillTokensPerSecond,
             joulesPerDecodeToken: wattsAboveIdle / decodeTokensPerSecond,
-            calibrated: false
+            calibrated: false,
+            modelID: "mlx-community/Qwen3.5-4B-MLX-4bit",
+            measuredOn: "Apple M1 Max, 64 GB"
         )
     }()
 }
 
-/// One calendar day's totals. Numbers, a date and tier enums only.
+/// One calendar day's token counts, per tier. Numbers, a date and tier enums
+/// only, and no joules: the ledger prices the tokens on read.
 public struct DailyEnergyRollup: Sendable, Equatable, Codable {
     public struct TierTotal: Sendable, Equatable, Codable {
         public let tier: BrainTier
         public private(set) var generations: Int
-        public private(set) var joules: Double
+        /// The tokens prefilled (the compute, not the context), summed.
+        public private(set) var prefillTokens: Int
+        public private(set) var decodeTokens: Int
+
+        public init(tier: BrainTier, generations: Int, prefillTokens: Int, decodeTokens: Int) {
+            self.tier = tier
+            self.generations = generations
+            self.prefillTokens = prefillTokens
+            self.decodeTokens = decodeTokens
+        }
+
+        /// A negative count (a broken report) adds nothing, as the estimate prices it at nothing.
+        mutating func add(prefillTokens prefill: Int, decodeTokens decode: Int) {
+            generations += 1
+            prefillTokens += max(0, prefill)
+            decodeTokens += max(0, decode)
+        }
+    }
+
+    /// The start of the day in the ledger's calendar.
+    public let day: Date
+    /// Generations by a model no tier names (an audition, a report with no
+    /// model id): counted, never priced, no tokens kept.
+    public private(set) var unattributedGenerations: Int
+    /// Per tier, priced or not, in the order each tier was first seen that day.
+    public private(set) var perTier: [TierTotal]
+
+    public init(day: Date) {
+        self.day = day
+        unattributedGenerations = 0
+        perTier = []
+    }
+
+    /// Every generation recorded that day.
+    public var generations: Int {
+        perTier.reduce(unattributedGenerations) { $0 + $1.generations }
+    }
+
+    /// The day's tokens priced at `rate`. A tier with no rate, and every
+    /// unattributed generation, counts as unpriced and adds no joules.
+    public func priced(by rate: (BrainTier) -> EnergyCoefficients.Rate?) -> PricedEnergy {
+        var joules = 0.0
+        var pricedGenerations = 0
+        var unpricedGenerations = unattributedGenerations
+        var perTierJoules: [PricedEnergy.TierJoules] = []
+        for total in perTier {
+            guard let rate = rate(total.tier) else {
+                unpricedGenerations += total.generations
+                continue
+            }
+            let tierJoules = Double(total.prefillTokens) * rate.joulesPerPrefillToken
+                + Double(total.decodeTokens) * rate.joulesPerDecodeToken
+            joules += tierJoules
+            pricedGenerations += total.generations
+            perTierJoules.append(.init(tier: total.tier, generations: total.generations, joules: tierJoules))
+        }
+        return PricedEnergy(
+            joules: joules, pricedGenerations: pricedGenerations, unpricedGenerations: unpricedGenerations,
+            perTier: perTierJoules
+        )
+    }
+
+    mutating func add(tier: BrainTier, prefillTokens: Int, decodeTokens: Int) {
+        if let index = perTier.firstIndex(where: { $0.tier == tier }) {
+            perTier[index].add(prefillTokens: prefillTokens, decodeTokens: decodeTokens)
+        } else {
+            var total = TierTotal(tier: tier, generations: 0, prefillTokens: 0, decodeTokens: 0)
+            total.add(prefillTokens: prefillTokens, decodeTokens: decodeTokens)
+            perTier.append(total)
+        }
+    }
+
+    mutating func addUnattributed() {
+        unattributedGenerations += 1
+    }
+}
+
+/// A day's tokens priced at a rate table, on read. Never persisted.
+public struct PricedEnergy: Sendable, Equatable {
+    public struct TierJoules: Sendable, Equatable {
+        public let tier: BrainTier
+        public let generations: Int
+        public let joules: Double
 
         public init(tier: BrainTier, generations: Int, joules: Double) {
             self.tier = tier
             self.generations = generations
             self.joules = joules
         }
-
-        mutating func add(_ turn: TurnEnergy) {
-            generations += 1
-            joules += turn.joules
-        }
     }
 
-    /// The start of the day in the ledger's calendar.
-    public let day: Date
-    /// Priced generations.
-    public private(set) var generations: Int
-    public private(set) var joules: Double
-    /// Generations on a tier with no rate: counted, never priced.
-    public private(set) var unpricedGenerations: Int
-    /// Priced totals per tier, in the order each tier was first seen that day.
-    public private(set) var perTier: [TierTotal]
+    public let joules: Double
+    public let pricedGenerations: Int
+    /// Generations on a tier with no rate, plus those no tier names.
+    public let unpricedGenerations: Int
+    /// The priced tiers only, in the order each was first seen that day.
+    public let perTier: [TierJoules]
 
-    public init(day: Date) {
-        self.day = day
-        generations = 0
-        joules = 0
-        unpricedGenerations = 0
-        perTier = []
-    }
-
-    mutating func add(_ turn: TurnEnergy) {
-        generations += 1
-        joules += turn.joules
-        if let index = perTier.firstIndex(where: { $0.tier == turn.tier }) {
-            perTier[index].add(turn)
-        } else {
-            var total = TierTotal(tier: turn.tier, generations: 0, joules: 0)
-            total.add(turn)
-            perTier.append(total)
-        }
-    }
-
-    mutating func addUnpriced() {
-        unpricedGenerations += 1
+    public init(joules: Double, pricedGenerations: Int, unpricedGenerations: Int, perTier: [TierJoules]) {
+        self.joules = joules
+        self.pricedGenerations = pricedGenerations
+        self.unpricedGenerations = unpricedGenerations
+        self.perTier = perTier
     }
 }
 
@@ -213,36 +316,34 @@ public final class EnergyLedger {
             .flatMap { try? JSONDecoder().decode([DailyEnergyRollup].self, from: $0) } ?? []
     }
 
-    /// Today's totals; an empty rollup until today's first generation.
+    /// Today's token counts; an empty rollup until today's first generation.
     public var today: DailyEnergyRollup {
         let day = calendar.startOfDay(for: now())
         return days.last(where: { $0.day == day }) ?? DailyEnergyRollup(day: day)
     }
 
-    /// Price one generation's metrics at its tier's rate and record it.
-    /// Returns what was recorded; nil when the tier is unpriced (counted as
-    /// such) or the ledger is suppressed (nothing written).
-    @discardableResult
-    public func record(metrics: GenerationMetrics, tier: BrainTier) -> TurnEnergy? {
-        guard !suppressed() else { return nil }
-        guard let rate = rate(tier) else {
-            update { $0.addUnpriced() }
-            return nil
-        }
-        let turn = TurnEnergy.estimate(
-            tier: tier,
-            prefillTokens: metrics.prefilledTokens ?? metrics.promptTokens,
-            decodeTokens: metrics.generationTokens,
-            rate: rate
-        )
-        update { $0.add(turn) }
-        return turn
+    /// A rollup priced at this ledger's rate table (the shipped one, in the app).
+    public func priced(_ rollup: DailyEnergyRollup) -> PricedEnergy {
+        rollup.priced(by: rate)
     }
 
-    /// Record an energy figure as given (a measured one, in a later phase).
-    public func record(_ turn: TurnEnergy) {
-        guard !suppressed() else { return }
-        update { $0.add(turn) }
+    /// Record one generation, billed to the model that ran it
+    /// (`metrics.modelID`), not to the brain the picker shows. Its tokens are
+    /// kept whatever the rate. Returns this generation's estimate; nil when it
+    /// is unpriced (no tier names its model, or the tier has no rate) or the
+    /// ledger is suppressed (nothing written).
+    @discardableResult
+    public func record(metrics: GenerationMetrics) -> TurnEnergy? {
+        guard !suppressed() else { return nil }
+        guard let tier = metrics.modelID.flatMap(BrainTier.init(generatingModelID:)) else {
+            update { $0.addUnattributed() }
+            return nil
+        }
+        let prefill = metrics.prefilledTokens ?? metrics.promptTokens
+        update { $0.add(tier: tier, prefillTokens: prefill, decodeTokens: metrics.generationTokens) }
+        return rate(tier).map {
+            TurnEnergy.estimate(tier: tier, prefillTokens: prefill, decodeTokens: metrics.generationTokens, rate: $0)
+        }
     }
 
     private func update(_ change: (inout DailyEnergyRollup) -> Void) {

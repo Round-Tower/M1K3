@@ -13,6 +13,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (#696) — `prefilledTokens` (Optional): what THIS generation prefilled, beside
 //  `promptTokens` (the true context). Pinned: old JSON without the key still decodes to nil, the three-argument init
 //  is unchanged, and the field round-trips and counts in equality. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (#696 pre-push review fold) — `modelID` (Optional): the model that
+//  generated, so the energy ledger bills a deep dive's Big generations to Big, not the brain the picker shows.
+//  Pinned like `prefilledTokens`: strip-the-key decode, round trip, equality. Confidence 0.85.
 
 import Foundation
 @testable import M1K3Inference
@@ -68,6 +71,21 @@ struct GenerationMetricsTests {
         #expect(back == metrics)
         #expect(back.prefilledTokens == 57)
         #expect(metrics != GenerationMetrics(promptTokens: 2444, generationTokens: 10, tokensPerSecond: 80))
+    }
+
+    @Test("old JSON without modelID still decodes to nil (strip-the-key); the id round-trips and counts in equality")
+    func modelIDIsOptional() throws {
+        let old = Data(#"{"promptTokens":1,"generationTokens":2,"tokensPerSecond":3,"prefilledTokens":1}"#.utf8)
+        #expect(try JSONDecoder().decode(GenerationMetrics.self, from: old).modelID == nil)
+        let metrics = GenerationMetrics(
+            promptTokens: 1, generationTokens: 2, tokensPerSecond: 3, prefilledTokens: 1,
+            modelID: "mlx-community/gemma-4-12B-it-4bit"
+        )
+        let back = try JSONDecoder().decode(GenerationMetrics.self, from: JSONEncoder().encode(metrics))
+        #expect(back == metrics)
+        #expect(back.modelID == "mlx-community/gemma-4-12B-it-4bit")
+        let unnamed = GenerationMetrics(promptTokens: 1, generationTokens: 2, tokensPerSecond: 3, prefilledTokens: 1)
+        #expect(metrics != unnamed)
     }
 }
 

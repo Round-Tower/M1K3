@@ -7,16 +7,18 @@
 
 ## The question, and the answer
 
-**Can the sandboxed app read its own energy?** Yes, but only its CPU energy.
-`proc_pid_rusage(getpid(), RUSAGE_INFO_V6)` returns `ri_energy_nj` without root, and it reads inside an App Sandbox. It does not
-see the GPU: a Metal burn that kept the GPU busy ~1.95 s of a 2 s window moved it by under 0.05 J. A Lil
-answer is about 92 % GPU (run 1 in `docs/POWER_RECEIPT.md`: 34.4 of 37.1 W of package power), so no
-counter the app can read will ever say "this answer cost X".
+**Can the sandboxed app read its own energy?** Its CPU energy, yes, in an ad-hoc-signed sandbox
+probe. The shipping app's two lanes (Mac App Store, Developer ID) are **UNVERIFIED** until the
+`M1K3_SELFTEST_ENERGY` stage runs (below).
+`proc_pid_rusage(getpid(), RUSAGE_INFO_V6)` returns `ri_energy_nj` without root, and the probe read it inside an App
+Sandbox. It does not see the GPU: a Metal burn that kept the GPU busy 1.94–1.99 s of a 2 s window moved it
+0.009–0.045 J (four runs). A Lil answer is about 93 % GPU (run 1 in `docs/POWER_RECEIPT.md`: 34.42 of
+37.14 W of package power), so no counter the app can read will ever say "this answer cost X".
 
 So M1K3 does what the issue's fallback describes. `powermetrics` (root, run by hand) stays the
 receipt. The app ships a per-tier coefficient (joules per prefilled token, joules per decoded
-token) derived from receipts taken on this Mac, and prices each generation's own token counts. A tier
-with no receipt is unpriced.
+token) derived from receipts taken on one Mac, an M1 Max, and prices each generation's own token
+counts. A tier with no receipt is unpriced.
 
 ## The counters (M1 Max 64 GB, macOS 27.0)
 
@@ -28,62 +30,69 @@ with no receipt is unpriced.
 | `powermetrics --samplers cpu_power,gpu_power` | **yes** | n/a (a separate tool) | package watts: CPU + GPU + ANE | **the receipt**: whole machine, so the Mac must be quiet | 2026-09-15 runs 0 and 1 |
 | `AppleSmartBattery` `InstantAmperage × Voltage` | no | not tested | whole-system draw, on battery only | a live readout on battery only; on AC it must say nothing | 2026-09-15 |
 
-## The V6 probe (2026-10-26, M1 Max 64 GB, macOS 27.0 26A428, AC, battery full)
+## The V6 probe (2026-10-26, M1 Max 64 GB, macOS 27.0 26A428, AC)
 
 `tools/perf/energy_counter_probe.sh` reproduces it, with no root, app or model. It compiles one small
 Swift program that opens three 2 s windows (idle, a one-core CPU burn, a Metal compute burn) and
 prints how far each moved the counter. It runs the program twice: as a plain process, then ad-hoc
-signed into an App Sandbox. Before reading, the sandboxed run checks the sandbox is on: HOME is the
-container and a write to the real home is refused. Two runs that night:
+signed into an App Sandbox. The sandboxed run exits 2 before it reads unless the sandbox is on
+(HOME is the container and a write to the real home is refused), and a positive control first
+checks that the guard refuses an unsandboxed process. A refused read exits 3. Two runs of the
+script as it is in the tree, that night, with the load average at 3.2–3.5 (lines marked
+`annotation` are the invoking shell's, not the script's output):
 
-    # run 1, 2026-10-26 21:13
-    Apple M1 Max, macOS 27.0 (26A428), 'AC Power'
-    == plain process
-    sandbox: container none, HOME=/Users/kevinmurphy, write to /Users/kevinmurphy allowed
-    device: Apple M1 Max
-    idle rc=0 2.00 s  energy_nj Δ 0.000 J (0.00 W)  P-cores Δ 0.000 J  billed Δ 0
-    cpu-burn rc=0 2.00 s  energy_nj Δ 6.490 J (3.25 W)  P-cores Δ 6.489 J  billed Δ 0
-    gpu-burn rc=0 2.01 s  energy_nj Δ 0.045 J (0.02 W)  P-cores Δ 0.045 J  billed Δ 0
-    the GPU was busy 1.99 s of the gpu-burn window
-    == App Sandbox (ad-hoc signed)
-    sandbox: container dev.scratch.m1k3-energy-probe, HOME=/Users/kevinmurphy/Library/Containers/dev.scratch.m1k3-energy-probe/Data, write to /Users/kevinmurphy refused
-    device: Apple M1 Max
-    idle rc=0 2.01 s  energy_nj Δ 0.000 J (0.00 W)  P-cores Δ 0.000 J  billed Δ 3220
-    cpu-burn rc=0 2.00 s  energy_nj Δ 6.450 J (3.23 W)  P-cores Δ 6.450 J  billed Δ 1313
-    gpu-burn rc=0 2.03 s  energy_nj Δ 0.028 J (0.01 W)  P-cores Δ 0.027 J  billed Δ 0
-    the GPU was busy 1.96 s of the gpu-burn window
-    exit=0
-    # run 2, 2026-10-26 21:14
+    # run 1, 2026-10-26 21:42 (annotation)
     Apple M1 Max, macOS 27.0 (26A428), 'AC Power'
     == plain process
     sandbox: container none, HOME=/Users/kevinmurphy, write to /Users/kevinmurphy allowed
     device: Apple M1 Max
     idle rc=0 2.01 s  energy_nj Δ 0.000 J (0.00 W)  P-cores Δ 0.000 J  billed Δ 0
-    cpu-burn rc=0 2.00 s  energy_nj Δ 6.725 J (3.36 W)  P-cores Δ 6.725 J  billed Δ 0
-    gpu-burn rc=0 2.01 s  energy_nj Δ 0.020 J (0.01 W)  P-cores Δ 0.020 J  billed Δ 0
+    cpu-burn rc=0 2.00 s  energy_nj Δ 6.576 J (3.29 W)  P-cores Δ 6.575 J  billed Δ 0
+    gpu-burn rc=0 2.01 s  energy_nj Δ 0.012 J (0.01 W)  P-cores Δ 0.012 J  billed Δ 0
     the GPU was busy 1.99 s of the gpu-burn window
     == App Sandbox (ad-hoc signed)
     sandbox: container dev.scratch.m1k3-energy-probe, HOME=/Users/kevinmurphy/Library/Containers/dev.scratch.m1k3-energy-probe/Data, write to /Users/kevinmurphy refused
     device: Apple M1 Max
-    idle rc=0 2.01 s  energy_nj Δ 0.000 J (0.00 W)  P-cores Δ 0.000 J  billed Δ 1821
-    cpu-burn rc=0 2.00 s  energy_nj Δ 6.598 J (3.30 W)  P-cores Δ 6.598 J  billed Δ 0
-    gpu-burn rc=0 2.04 s  energy_nj Δ 0.011 J (0.01 W)  P-cores Δ 0.010 J  billed Δ 1284
-    the GPU was busy 1.94 s of the gpu-burn window
-    exit=0
+    idle rc=0 2.01 s  energy_nj Δ 0.000 J (0.00 W)  P-cores Δ 0.000 J  billed Δ 2224
+    cpu-burn rc=0 2.00 s  energy_nj Δ 6.546 J (3.27 W)  P-cores Δ 6.543 J  billed Δ 0
+    gpu-burn rc=0 2.01 s  energy_nj Δ 0.009 J (0.00 W)  P-cores Δ 0.009 J  billed Δ 1260
+    the GPU was busy 1.99 s of the gpu-burn window
+    # exit 0 (annotation: every check passed)
+    # run 2, 2026-10-26 21:42 (annotation)
+    Apple M1 Max, macOS 27.0 (26A428), 'AC Power'
+    == plain process
+    sandbox: container none, HOME=/Users/kevinmurphy, write to /Users/kevinmurphy allowed
+    device: Apple M1 Max
+    idle rc=0 2.01 s  energy_nj Δ 0.000 J (0.00 W)  P-cores Δ 0.000 J  billed Δ 0
+    cpu-burn rc=0 2.00 s  energy_nj Δ 6.534 J (3.27 W)  P-cores Δ 6.530 J  billed Δ 0
+    gpu-burn rc=0 2.01 s  energy_nj Δ 0.016 J (0.01 W)  P-cores Δ 0.016 J  billed Δ 0
+    the GPU was busy 1.99 s of the gpu-burn window
+    == App Sandbox (ad-hoc signed)
+    sandbox: container dev.scratch.m1k3-energy-probe, HOME=/Users/kevinmurphy/Library/Containers/dev.scratch.m1k3-energy-probe/Data, write to /Users/kevinmurphy refused
+    device: Apple M1 Max
+    idle rc=0 2.01 s  energy_nj Δ 0.000 J (0.00 W)  P-cores Δ 0.000 J  billed Δ 1552
+    cpu-burn rc=0 2.00 s  energy_nj Δ 6.560 J (3.28 W)  P-cores Δ 6.557 J  billed Δ 0
+    gpu-burn rc=0 2.01 s  energy_nj Δ 0.034 J (0.02 W)  P-cores Δ 0.034 J  billed Δ 1280
+    the GPU was busy 1.99 s of the gpu-burn window
+    # exit 0 (annotation: every check passed)
+
+Two earlier runs at 21:13 and 21:14, from the same measuring code before the script gained its
+fail-closed checks (their figures are on the #696 thread), agree: a CPU burn moved it 6.45–6.73 J,
+and a GPU burn 0.011–0.045 J while the GPU was busy 1.94–1.99 s.
 
 What that shows:
 
 1. **It moves without root.** A one-core burn moved it 6.45–6.73 J in 2 s (3.2–3.4 W), plain and
-   sandboxed, on both runs. Earlier the same evening, with a cold build compiling, scratch versions
+   sandboxed, on all four runs. Earlier the same evening, with a cold build compiling, scratch versions
    of the probe read 2.0–5.0 J over 1.5–2 s burns. The other load is the likely reason (not
    measured). Only the movement matters here, not its size.
-2. **It is CPU only.** The GPU window moved it by 0.011–0.045 J while the GPU was busy 1.94–1.99 s
+2. **It is CPU only.** The GPU window moved it by 0.009–0.045 J while the GPU was busy 1.94–1.99 s
    of the 2 s. That is the CPU's own cost of waiting on the command buffer. The GPU's energy is
    invisible to it, as `task_energy`'s was in September.
 3. **It reads inside an App Sandbox.** The sandboxed run's reads return rc 0 and move like the
-   plain run's. The probe's sandbox is an ad-hoc signed command-line tool, not the shipping app.
-   The app's own two lanes (Mac App Store and Developer ID) are **UNVERIFIED** until the
-   `M1K3_SELFTEST_ENERGY` stage runs (below).
+   plain run's, and the run would have exited 2 had the sandbox not applied. The probe's sandbox
+   is an ad-hoc signed command-line tool, not the shipping app. The app's own two lanes (Mac App
+   Store and Developer ID) are **UNVERIFIED** until the `M1K3_SELFTEST_ENERGY` stage runs (below).
 4. **`ri_billed_energy` stays useless.** In the plain process it stayed at 0 in every window. In the
    sandboxed one it moved by a few thousand units in some windows, burn or not, and never tracked
    the work. That field bills work other processes do on this one's behalf, and the sandbox's own
@@ -92,8 +101,11 @@ What that shows:
 ## The per-tier coefficients
 
 Method: J per token = package watts above idle while the brain generates ÷ its tokens per second,
-both measured on this Mac. The table lives in code in one place, `EnergyCoefficients` in
-`Sources/M1K3Inference/EnergyLedger.swift`.
+both measured on one Mac, an M1 Max 64 GB. On any other chip the rate is still that M1 Max's
+figure, not the user's: every rate names its Mac (`measuredOn`) and its model (`modelID`), and no
+surface may print it as the user's cost without saying whose it is. The table lives in code in one
+place, `EnergyCoefficients` in `Sources/M1K3Inference/EnergyLedger.swift`. A test binds Lil's rate
+to Lil's model id, so a model swap fails the suite and forces a re-derivation.
 
 | Tier | Model | J / prefilled token | J / decoded token | Calibrated | Band | Provenance |
 |---|---|---|---|---|---|---|
@@ -112,32 +124,55 @@ so the prefill rate is the less certain of the two.
 ±15–20 %: per-answer package power was 35–43 W in run 1, and tokens per second varies with the
 length of the chat. The pairing across models and builds could add more. ±50 % covers both.
 
-**One cross-check, from run 1's own answers.** Run 1 recorded characters, not tokens. Fitting its
-ten answers gives joules above idle ≈ 163 J + 0.080 J per character (R² 0.36, n = 10, a weak fit).
-At an assumed ~4 characters per token (an assumption, not a measurement), the slope is **~0.32 J
-per output token** at a marginal ~92 tok/s. That is within the band of the derived 0.43, so the
-decode rate holds up. The intercept is the finding: **about 163 J per answer did not scale with
-the answer**, about 78 % of the median answer's 209 J. A 91-character answer still cost 176 J. That
-fixed part is everything in the `m1k3 ask` window that is not decode: the prefill of whatever the
-cache did not hold, embedding and retrieval, and Apple's tool picker on the ANE. The ledger prices
-only the prefill the MLX reporter sees. **So the ledger's figure is a floor for generation, not a
-whole answer's cost.** A same-build receipt with token counts settles how much of that 163 J is prefill.
+**One cross-check, from run 1's own answers, and it settles little.** Run 1 recorded characters,
+not tokens. A least-squares fit of its ten answers (fitted 2026-10-26 from
+`docs/evals/2026-09-15-power-receipt-lil-run1.json`) gives joules above idle ≈ 163 J + 0.080 J per
+character (n = 10, R² 0.36). The slope's 95 % interval is −0.007 to +0.167 J per character. At an
+assumed ~4 characters per token (an assumption, not a measurement) that is −0.03 to +0.67 J per
+output token, centred on 0.32. It is consistent with the derived 0.43, and just as consistent with
+a rate a third of that or half again, and it does not rule out zero. The marginal speed comes from
+a second fit, seconds ≈ 4.1 s + 0.00272 s per character (R² 0.55): 367 characters a second, so
+~92 tok/s at the same 4 characters per token (95 % interval about 53–350 tok/s). The two slopes
+together imply ~29 W of marginal power, below the 36 W the rate uses.
+
+The intercept, 163 J (95 % interval 103–223 J, so 49–107 % of the median answer's 209 J), is the
+part of an answer that did not scale with its length; a 91-character answer still cost 176 J. What
+it holds is open. A cold persona prefill alone is the same order: at the derived 0.060 J per token,
+today's ~2,444-token Lil seed is about 147 J, and the ledger does price a cold prefill. Whether run
+1's answers paid one is not in the receipt (its build's seed size and cache state are not
+recorded). The rest of the `m1k3 ask` window (embedding, retrieval, Apple's tool picker on the ANE)
+the ledger never sees. Only a same-build receipt with the ttft token counts separates the two.
+**What holds by construction: the ledger prices generation only, so its figure is a floor for
+generation, not a whole answer's cost.**
 
 ## What the ledger records (Phase 2)
 
 - **Per generation**, from the process-wide `GenerationMetricsReporter` sink the Mac shell already
-  installs. Each generation is priced at the serving brain's rate (`selectedBrain` when the report
-  lands; a report racing a brain swap is billed to the new tier).
+  installs, **billed to the model that ran it** (`GenerationMetrics.modelID`), never to the brain
+  the picker shows. A deep dive re-points the MLX slot at Big with Lil still selected, so billing
+  the picker would price Big's heaviest work at Lil's rate. A model id that is a tier's stock model
+  is that tier. Anything else, an audition under its own name or a report with no id, is counted
+  as unattributed and never priced. An audition imported under the stock repo's own name carries
+  that name, so it is billed as that tier.
 - **The prefill it prices** is `prefilledTokens`, what this generation actually prefilled past a
   warm persona-prefix cache. `promptTokens` is the true context and would bill the cached
   ~2,444-token Lil persona again on every turn. It falls back to `promptTokens` only when the
   reporter does not know.
-- **Kept**: a daily rollup per calendar day (priced generations, joules, unpriced generations, and
-  per-tier totals) for 30 days, as one JSON blob under the UserDefaults key `energy.days`. The
-  stored fields are numbers, dates and tier names only, never message text. A test pins the JSON
-  keys, every leaf, and the types, with a positive control
-  (`Tests/M1K3InferenceTests/EnergyLedgerTests.swift`). This is the heartbeat ruling's "structure,
-  not conversation" (`docs/HEARTBEAT_DESIGN.md`). Under the screengrab harness it records nothing.
+- **Kept: token counts, never joules.** A daily rollup per calendar day (per tier: generations,
+  prefilled tokens and decoded tokens; plus a count of unattributed generations) for 30 days, as
+  one JSON blob under the UserDefaults key `energy.days`. Joules are priced on read, at the table
+  the running build ships. So Kev's ruling on the derived Lil rate, or a calibration, re-prices the
+  history, and a tier that loses its rate shows nothing. The stored fields are numbers, dates and
+  tier names only, never message text. A test pins the JSON keys, every leaf, and the types, with a
+  positive control (`Tests/M1K3InferenceTests/EnergyLedgerTests.swift`). Under the screengrab
+  harness it records nothing.
+- **Privacy, and a question for Kev.** The shape borrows the 2026-08-30 heartbeat ruling for pulse
+  tags, "structural only": a tag "describes the shape of a window, never its content" (the
+  pulse-tags addendum in `docs/HEARTBEAT_DESIGN.md`). The same ruling says a tag's "counts are
+  banded, never exact". The ledger is not a pulse tag, so that clause does not bind it today, but
+  it does keep exact per-day, per-tier counts on the Mac for 30 days. Nothing leaves the Mac and
+  there is no text; whether exact counts are acceptable is Kev's call (open). Any Phase 3 pulse line
+  fed from the ledger bands its counts.
 - **It counts generations, not turns.** A tool turn reports two or three times. The per-turn sum an
   answer footer needs is Phase 3, at the responder's turn boundary.
 - **Never recorded**: Mini (it does not report), Private Cloud (it runs off this Mac), and the
@@ -148,22 +183,28 @@ whole answer's cost.** A same-build receipt with token counts settles how much o
   reports a one-token prefill. Its real prefill is on the reuse line's `extend` figure, so those
   sends are under-billed.
 - **Nothing shows it yet.** The answer footer, the pulse line and a site page are Phase 3. Their
-  copy is reviewed against rule zero before anything ships.
+  copy is reviewed against rule zero before anything ships, and a figure priced off a rate
+  measured on another chip says so.
 
 ## Verify-by-launch: the in-app read (`M1K3_SELFTEST_ENERGY`)
 
-`M1K3App/EnergyProbeStage.swift` reads the counter inside the sandboxed app. It loads Lil, then reads
-again around one plain generation (thinking off, 256-token cap). It prints the CPU joules, the
-generation's tokens, and the estimate the ledger would record for them. Run it alone, with no live
-M1K3 and nothing else on the MLX slot (it runs the SelfTest's core stages first):
+`M1K3App/EnergyProbeStage.swift` reads the counter inside the sandboxed app. It loads Lil and does
+everything one-time OUTSIDE the measured window: it builds the persona seed `generate` reuses
+(cold, a ~2.4k-token prefill on Lil) and runs one short throwaway generation for first-use setup,
+printing the warm-up's seconds. Then it reads the counter around one plain generation (thinking
+off, 256-token cap) and prints the CPU joules, the generation's tokens, and the estimate the ledger
+would record for them, so both figures describe the same work. Run it alone, with no live M1K3 and
+nothing else on the MLX slot (it runs the SelfTest's core stages first):
 
     APP=$(python3 macos/tools/eval/build_eval_app.py <worktree> ~/Development/m1k3-infer-dd --configuration Release)
     M1K3_SELFTEST=1 M1K3_SELFTEST_ENERGY=1 M1K3_SELFTEST_OUT=- \
       M1K3_SELFTEST_MODEL=mlx-community/Qwen3.5-4B-MLX-4bit "$APP/Contents/MacOS/M1K3"
 
-Expect `✓ energy: V6 read inside the app (sandboxed: true)` and a CPU share of the estimate in
-single-digit percent. A `✗` on the first line means the shipping sandbox refuses the read: then the
-counter is gone as an instrument, and nothing else changes.
+Expect `✓ energy: V6 read inside the app (sandboxed: true)`. The CPU share of the estimate is not
+predicted here. Run 1's median CPU power was 3.0 W against 36.05 W of package power above idle
+(about 8 %), so a share of that order would be unsurprising, and the stage measures it. A `✗` on the first line means the
+shipping sandbox refuses the read: then the counter is gone as an instrument, and nothing else
+changes.
 
 ## Owed: the receipts that would price the other tiers
 
@@ -195,4 +236,12 @@ an answer, not a token.
      2026-09-15).
      Review: Kev + claude-opus-5.5, 2026-10-26 — Brain at Home moved out of "never recorded": a paired
      device's turn runs through this Mac's raw route, which reports to the sink, so the serving Mac
-     records it (read off MLXBrainProvider and BrainServeController). Confidence 0.85. -->
+     records it (read off MLXBrainProvider and BrainServeController). Confidence 0.85.
+     Review: Kev + claude-opus-5.5, 2026-10-26 (pre-push review fold) — billing by the generating
+     model, not `selectedBrain` (a deep dive's Big generations were priced at Lil's rate); tokens
+     kept and joules priced on read; the headline says the shipping app's read is UNVERIFIED; the
+     run-1 cross-check restated with its intervals (it cannot tell 0.1 from 0.43 J per token, and
+     the intercept may be a cold persona prefill the ledger does price); the heartbeat ruling quoted
+     in its own words, its banding clause named, exact counts put to Kev; the probe re-run twice
+     with its fail-closed checks and re-quoted; the probe stage's warm-up moved outside its window.
+     Confidence 0.8. -->

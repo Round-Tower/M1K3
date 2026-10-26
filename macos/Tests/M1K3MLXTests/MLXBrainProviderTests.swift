@@ -25,6 +25,10 @@
 //  Review: same day (pre-push review fold) — the sampling pin's doc says which defaults it dodges (min-p 0 is the
 //  library's; 37 is neither 20 nor 64).
 //  Review: Kev + claude-fable-5.1, 2026-10-25 — pins `-conversationTailCheckpoint NO`, the cross-turn tail's kill switch.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (#696 pre-push review fold) — pins the metrics one generation reports:
+//  `promptTokens` the true context, `prefilledTokens` this call's own prefill (what the energy ledger prices; the
+//  whole cached persona billed again on every turn was the over-count it exists to avoid), and `modelID` the model
+//  that ran. Pure helper, no global reporter touched (GenerationMetricsTests owns that). Confidence 0.85.
 
 import Foundation
 import M1K3Chat
@@ -702,5 +706,25 @@ struct MLXBrainProviderTests {
         #expect(LocalModelConfig.slidingWindow(configJSON: twelveB(window: "null")) == 1024)
         #expect(LocalModelConfig.slidingWindow(configJSON: twelveB(window: "0")) == 1024)
         #expect(LocalModelConfig.slidingWindow(configJSON: twelveB(window: "768")) == 768, "an Int is honoured")
+    }
+
+    /// #696: the energy ledger prices `prefilledTokens`, so a regression to the true context would bill the
+    /// cached ~2,444-token Lil persona on every generation. Built through the pure helper `logGenerationInfo`
+    /// reports, never through GenerationMetricsReporter (process-wide; a second installer races its suite).
+    @Test("a generation's metrics: true context, this call's own prefill, and the model that ran")
+    func generationMetricsSplitContextFromPrefill() {
+        let info = GenerateCompletionInfo(
+            promptTokenCount: 57, generationTokenCount: 10, promptTime: 0.1, generationTime: 0.1
+        )
+        let lil = "mlx-community/Qwen3.5-4B-MLX-4bit"
+        let warm = generationMetrics(for: info, model: lil, totalContextTokens: 2444)
+        #expect(warm.promptTokens == 2444)
+        #expect(warm.prefilledTokens == 57)
+        #expect(warm.generationTokens == 10)
+        #expect(warm.modelID == lil)
+        let cold = generationMetrics(for: info, model: lil, totalContextTokens: nil)
+        #expect(cold.promptTokens == 57)
+        #expect(cold.prefilledTokens == 57)
+        #expect(cold.tokensPerSecond == info.tokensPerSecond)
     }
 }

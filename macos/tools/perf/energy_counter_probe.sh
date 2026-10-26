@@ -4,8 +4,9 @@
 # One small Swift program, three 2 s windows: idle (sleep), a one-core CPU burn, and a Metal
 # compute burn with the CPU waiting on the GPU. It prints how far each window moved the
 # counter. It runs twice: as a plain process, then ad-hoc signed into an App Sandbox. The
-# sandboxed run proves the sandbox is on before it reads: HOME is the container and a write
-# to the real home is refused. No root, no app, no model. About 20 s.
+# sandboxed run exits 2 before it reads unless the sandbox is on (HOME is the container and a
+# write to the real home is refused), and a positive control first proves that check refuses
+# an unsandboxed process. A refused read exits 3. No root, no app, no model. About 20 s.
 #
 #   macos/tools/perf/energy_counter_probe.sh
 #
@@ -17,6 +18,10 @@
 #
 # Signed: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.85 (the probe the doc quotes, run
 # twice that night). Prior: none (new file).
+# Review: Kev + claude-opus-5.5, 2026-10-26 (pre-push review fold) — the sandbox arm could not fail: it printed the
+# evidence and exited 0 either way. Now PROBE_EXPECT_SANDBOX=1 makes it exit 2 unless the sandbox is on (with a
+# positive control on the plain binary), a failed proc_pid_rusage exits 3 instead of printing zeroed deltas, and
+# codesign's stderr is shown when it fails. Re-run twice afterwards; the doc quotes those runs. Confidence 0.85.
 
 set -euo pipefail
 
@@ -36,10 +41,16 @@ func read() -> (energy: UInt64, penergy: UInt64, billed: UInt64, rc: Int32) {
     return (info.ri_energy_nj, info.ri_penergy_nj, info.ri_billed_energy, rc)
 }
 
+func fail(_ code: Int32, _ message: String) -> Never {
+    FileHandle.standardError.write(Data((message + "\n").utf8))
+    exit(code)
+}
+
 func window(_ name: String, _ body: () -> Void) {
     let a = read(), t0 = Date()
     body()
     let b = read(), s = Date().timeIntervalSince(t0)
+    if a.rc != 0 || b.rc != 0 { fail(3, "\(name): proc_pid_rusage(RUSAGE_INFO_V6) refused (rc \(a.rc), \(b.rc))") }
     let joules = Double(Int64(bitPattern: b.energy &- a.energy)) / 1e9
     let pJoules = Double(Int64(bitPattern: b.penergy &- a.penergy)) / 1e9
     let billed = Int64(bitPattern: b.billed &- a.billed)
@@ -53,6 +64,9 @@ let canary = realHome + "/.m1k3-energy-probe-\(getpid())"
 let wroteHome = FileManager.default.createFile(atPath: canary, contents: Data())
 if wroteHome { try? FileManager.default.removeItem(atPath: canary) }
 print("sandbox: container \(container ?? "none"), HOME=\(NSHomeDirectory()), write to \(realHome) \(wroteHome ? "allowed" : "refused")")
+if ProcessInfo.processInfo.environment["PROBE_EXPECT_SANDBOX"] == "1", container == nil || wroteHome {
+    fail(2, "sandbox: NOT on (no container, or the real home took a write): no sandboxed reading to report")
+}
 
 let source = """
 #include <metal_stdlib>
@@ -115,7 +129,15 @@ print "$(sysctl -n machdep.cpu.brand_string), macOS $(sw_vers -productVersion) (
 print "== plain process"
 "$work/probe"
 
+# The sandbox check's positive control: run unsandboxed, it must refuse with exit 2.
+PROBE_EXPECT_SANDBOX=1 "$work/probe" >/dev/null 2>&1 && control=0 || control=$?
+if (( control != 2 )); then
+  print -u2 "the sandbox check's control exited $control, not 2, so the sandboxed arm proves nothing"
+  exit 1
+fi
+
 cp "$work/probe" "$work/probe-sandboxed"
-codesign -s - -f -i dev.scratch.m1k3-energy-probe --entitlements "$work/sandbox.entitlements" "$work/probe-sandboxed" 2>/dev/null
+codesign -s - -f -i dev.scratch.m1k3-energy-probe --entitlements "$work/sandbox.entitlements" \
+  "$work/probe-sandboxed" 2>"$work/codesign.log" || { cat "$work/codesign.log" >&2; exit 1; }
 print "== App Sandbox (ad-hoc signed)"
-"$work/probe-sandboxed"
+PROBE_EXPECT_SANDBOX=1 "$work/probe-sandboxed"

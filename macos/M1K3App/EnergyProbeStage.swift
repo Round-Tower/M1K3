@@ -13,11 +13,16 @@
 //      M1K3_SELFTEST_MODEL=mlx-community/Qwen3.5-4B-MLX-4bit   (so the core generate stage reuses Lil)
 //      M1K3_SELFTEST_ENERGY_MODEL=<id>                          (optional; default Lil)
 //
-//  The counter is CPU-only (docs/ENERGY_MEASUREMENT.md: a Metal burn moved it
-//  0.02 J), so expect the CPU joules to be a small share of the estimate; the
-//  GPU is the rest, and only powermetrics sees it. The weights load before the
-//  window opens, so the delta is the generation's own. Thinking is off and the
-//  answer capped at 256 tokens: one ordinary answer, not a thought to the cap.
+//  The counter is CPU-only (docs/ENERGY_MEASUREMENT.md: a Metal burn that kept
+//  the GPU busy 1.94–1.99 s of 2 s moved it 0.009–0.045 J, four runs, plain and
+//  sandboxed), so expect the CPU joules to be a small share of the estimate; the
+//  GPU is the rest, and only powermetrics sees it. Everything one-time happens
+//  BEFORE the window opens: the weights load, the persona seed `generate` reuses
+//  is built (cold, that is a ~2.4k-token prefill on Lil), and one short
+//  throwaway generation absorbs first-use setup. The warm-up's seconds are
+//  printed, so the cold cost is visible rather than hidden. The window then
+//  holds one warm generation, its own prefill past the seed and its decode:
+//  what the ledger prices. Thinking is off and the answer capped at 256 tokens.
 //
 //  SelfTest never builds AppEnvironment, so no app sink is installed: the stage
 //  owns the process-wide metrics reporter for its window and clears it after.
@@ -25,6 +30,11 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.75 (compiles under the
 //  app-shell xcodebuild; never launched yet — the run's eval stage owns the MLX
 //  slot). Prior: none (new file; MemBlockProbeStage's shape).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (pre-push review fold) — the window was not the generation's own: a cold
+//  persona seed (`generate` builds it on first use) and first-use setup ran inside it, so the CPU joules and the
+//  estimate described different work. Now warmed outside the window (`warmPersonaPrefix(tools: [])`, the bare key
+//  `generate` asks for, plus one throwaway generation), with the warm-up's seconds printed. The tier comes from the
+//  ledger's own resolver. GPU figures quoted as the doc's measured range. Still never launched. Confidence 0.75.
 //
 
 import Foundation
@@ -53,7 +63,7 @@ enum EnergyProbeStage {
             emit("✗ energy: no model id")
             return
         }
-        let tier = BrainTier.allCases.first { $0.mlxModelID == modelID }
+        let tier = BrainTier(generatingModelID: modelID)
         let captured = OSAllocatedUnfairLock<GenerationMetrics?>(initialState: nil)
         GenerationMetricsReporter.install { metrics in captured.withLock { $0 = metrics } }
         defer { GenerationMetricsReporter.install(nil) }
@@ -62,13 +72,24 @@ enum EnergyProbeStage {
             emit("• energy: loading \(modelID)…")
             try await provider.prepare(progress: { _ in })
 
-            let before = ProcessEnergyCounter.read()
+            // Outside the window: the persona seed `generate` reuses, then one short
+            // throwaway generation for first-use setup. Its report is discarded.
             let clock = ContinuousClock()
+            let warmStart = clock.now
+            await provider.warmPersonaPrefix(tools: [])
+            _ = try await provider.generate(prompt: "Say OK.")
+            emit(String(
+                format: "• energy: warm-up outside the window (persona seed + one throwaway generation): %.2f s",
+                Self.seconds(clock.now - warmStart)
+            ))
+            captured.withLock { $0 = nil }
+
+            let before = ProcessEnergyCounter.read()
             let start = clock.now
             let answer = try await provider.generate(prompt: question)
             let elapsed = clock.now - start
             let after = ProcessEnergyCounter.read()
-            let seconds = Double(elapsed.components.seconds) + Double(elapsed.components.attoseconds) / 1e18
+            let seconds = Self.seconds(elapsed)
 
             guard let metrics = captured.withLock({ $0 }) else {
                 emit("✗ energy: the generation reported no GenerationMetrics")
@@ -96,8 +117,9 @@ enum EnergyProbeStage {
                 )
                 let share = estimate.joules > 0 ? 100 * cpuJoules / estimate.joules : 0
                 emit(String(
-                    format: "energy estimate (%@, %@): %.1f J = %d × %.4f + %d × %.4f; the CPU counter saw %.1f %% of it",
-                    tier.rawValue, rate.calibrated ? "calibrated" : "uncalibrated", estimate.joules,
+                    format: "energy estimate (%@, %@, rate measured on %@): %.1f J = %d × %.4f + %d × %.4f; "
+                        + "the CPU counter saw %.1f %% of it",
+                    tier.rawValue, rate.calibrated ? "calibrated" : "uncalibrated", rate.measuredOn, estimate.joules,
                     prefill, rate.joulesPerPrefillToken, metrics.generationTokens, rate.joulesPerDecodeToken, share
                 ))
             } else {
@@ -107,5 +129,9 @@ enum EnergyProbeStage {
         } catch {
             emit("✗ energy: \(error)")
         }
+    }
+
+    private static func seconds(_ duration: Duration) -> Double {
+        Double(duration.components.seconds) + Double(duration.components.attoseconds) / 1e18
     }
 }

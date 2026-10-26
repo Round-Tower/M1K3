@@ -9,6 +9,8 @@
 //  counter's size is the probe's business, not a unit test's.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.85. Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (pre-push review fold) — pins the `>=` boundary: two equal readings
+//  (the probe's idle windows read 0.000 J) are 0 J, not nil. Confidence 0.85.
 
 @testable import M1K3Inference
 import Testing
@@ -35,5 +37,11 @@ struct ProcessEnergyCounterTests {
         let after = ProcessEnergyReading(energyNJ: 3_500_000_000, performanceEnergyNJ: 3_000_000_000, billedEnergy: 7)
         #expect(after.joules(since: before) == 2.5)
         #expect(before.joules(since: after) == nil)
+    }
+
+    @Test("two equal readings are 0 J, not nil: an idle window is a measurement, not a failed read")
+    func equalReadingsAreZero() {
+        let reading = ProcessEnergyReading(energyNJ: 1_000_000_000, performanceEnergyNJ: 900_000_000, billedEnergy: 7)
+        #expect(reading.joules(since: reading) == 0)
     }
 }
