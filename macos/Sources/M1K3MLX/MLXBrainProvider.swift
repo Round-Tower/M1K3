@@ -155,6 +155,10 @@
 //  `retire()` drops a swapped-out brain for good (the loader refuses, so a straggling warm can't reload it); and
 //  the tokenizer is captured once at load, so `tokenCount`/`templatedTokenCount` stop queueing on the container
 //  lock behind a persona prefill (the grounding cap waited 48.8 s there). Verify-by-launch owed. Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (#696) — `logGenerationInfo` also reports `prefilledTokens:
+//  info.promptTokenCount` (this call's prefill) for the energy ledger; `promptTokens` keeps the true context.
+//  Known under-count: a checkpoint-mode tool send reports 1 here, its real prefill is the reuse line's `extend`.
+//  Confidence 0.85.
 
 import Foundation
 import Hub
@@ -199,7 +203,8 @@ func logGenerationInfo(
     GenerationMetricsReporter.report(GenerationMetrics(
         promptTokens: totalContextTokens ?? promptTokens,
         generationTokens: decodeTokens,
-        tokensPerSecond: info.tokensPerSecond
+        tokensPerSecond: info.tokensPerSecond,
+        prefilledTokens: promptTokens
     ))
 }
 

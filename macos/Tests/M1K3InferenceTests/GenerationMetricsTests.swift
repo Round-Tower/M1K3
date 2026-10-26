@@ -10,6 +10,9 @@
 //  `install(nil)` could land between `reportForwards`'s install and its report → `box.last → nil`. Latent since July; it
 //  failed CI on PR #383 (run 35375840922), a PR that touches none of this. No other suite installs the handler (checked),
 //  so serialising this one closes the race. Read-derived — a race has no deterministic red. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (#696) — `prefilledTokens` (Optional): what THIS generation prefilled, beside
+//  `promptTokens` (the true context). Pinned: old JSON without the key still decodes to nil, the three-argument init
+//  is unchanged, and the field round-trips and counts in equality. Confidence 0.85.
 
 import Foundation
 @testable import M1K3Inference
@@ -46,6 +49,25 @@ struct GenerationMetricsTests {
         GenerationMetricsReporter.report(
             GenerationMetrics(promptTokens: 1, generationTokens: 1, tokensPerSecond: 1)
         )
+    }
+
+    @Test("old JSON without prefilledTokens still decodes (strip-the-key); the three-argument init leaves it nil")
+    func prefilledTokensIsOptional() throws {
+        let old = Data(#"{"promptTokens":1,"generationTokens":2,"tokensPerSecond":3}"#.utf8)
+        let decoded = try JSONDecoder().decode(GenerationMetrics.self, from: old)
+        #expect(decoded.prefilledTokens == nil)
+        #expect(decoded == GenerationMetrics(promptTokens: 1, generationTokens: 2, tokensPerSecond: 3))
+    }
+
+    @Test("prefilledTokens round-trips and counts in equality")
+    func prefilledTokensRoundTrips() throws {
+        let metrics = GenerationMetrics(
+            promptTokens: 2444, generationTokens: 10, tokensPerSecond: 80, prefilledTokens: 57
+        )
+        let back = try JSONDecoder().decode(GenerationMetrics.self, from: JSONEncoder().encode(metrics))
+        #expect(back == metrics)
+        #expect(back.prefilledTokens == 57)
+        #expect(metrics != GenerationMetrics(promptTokens: 2444, generationTokens: 10, tokensPerSecond: 80))
     }
 }
 
