@@ -471,7 +471,10 @@ final class AppCore {
             reservedTokens: historyReserveTokens,
             generationTokens: historyGenerationReserveTokens,
             measuredMiniReserveTokens: measuredMiniReserve.withLock { $0 },
-            spoken: defaults.bool(forKey: VoiceModeDefaults.activeKey) && HistoryBudgetPolicy.spokenCapEnabled()
+            spoken: defaults.bool(forKey: VoiceModeDefaults.activeKey) && HistoryBudgetPolicy.spokenCapEnabled(),
+            // No cross-turn tail checkpoint on mobile (`conversationTailCheckpointsEnabled` is false there),
+            // so a block would cost replayed context for nothing: the sliding window stays.
+            evictionBlockTurns: 1
         )
     }
 
@@ -710,7 +713,7 @@ final class AppCore {
             ),
             autoCaptureEnabled: { Self.memoryAutoCaptureEnabled() },
             // The rolling distillation trigger follows the replay window in effect (#629).
-            replayTurns: { Self.liveHistoryBudget().maxTurns }
+            replayTurns: { Self.liveHistoryBudget().minimumKeptTurns }
         )
 
         // Caption memory: a deleted chat forgets its Photo memories.

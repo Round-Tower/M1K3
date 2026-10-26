@@ -274,4 +274,202 @@ struct HistoryWindowTests {
         #expect(traced.contains("Rachel"))
         #expect(traced.count <= plain.count + small.earlierUserChars)
     }
+
+    // MARK: - Block eviction (2026-10-26, design doc §2a)
+
+    private static func tiny(_ n: Int) -> [ChatTurn] {
+        (1 ... n).map { ChatTurn(role: $0.isMultiple(of: 2) ? .assistant : .user, text: "T\($0)END") }
+    }
+
+    private static func firstKept(_ text: String) -> String? {
+        text.components(separatedBy: "\n").dropFirst().first
+    }
+
+    @Test("a block of one is today's window, byte for byte")
+    func blockOfOneIsIdentity() {
+        let turns = Self.tiny(HistoryWindow.maxTurns + 7)
+        let block1 = HistoryWindow.Budget(
+            totalChars: 8000, perTurnChars: 1500, maxTurns: HistoryWindow.maxTurns, evictionBlockTurns: 1
+        )
+        #expect(HistoryWindow.render(turns, budget: block1) == HistoryWindow.render(turns))
+        #expect(HistoryWindow.Budget.default.evictionBlockTurns == 1)
+    }
+
+    @Test("the window's start is a multiple of the block, so consecutive renders share it")
+    func startSnapsToTheBlock() {
+        // 16 kept of n: today's start is n − 16, moving one turn per turn. With a block of 6 the
+        // start rounds UP to the next multiple of 6 (dropping up to five more of the oldest), so
+        // n = 17…22 all start at turn 7 and n = 23…28 at turn 13: a prefix the KV cache can keep.
+        let budget = HistoryWindow.Budget(totalChars: 8000, perTurnChars: 1500, maxTurns: 16, evictionBlockTurns: 6)
+        for n in 17 ... 22 {
+            let text = HistoryWindow.render(Self.tiny(n), budget: budget) ?? ""
+            #expect(Self.firstKept(text) == "USER: T7END", "n=\(n)")
+            #expect(text.contains("T\(n)END"))
+            #expect(!text.contains("T6END"))
+        }
+        for n in 23 ... 28 {
+            let text = HistoryWindow.render(Self.tiny(n), budget: budget) ?? ""
+            #expect(Self.firstKept(text) == "USER: T13END", "n=\(n)")
+        }
+        // Never more than the ceiling: the last render of a block keeps exactly maxTurns.
+        let full = HistoryWindow.render(Self.tiny(22), budget: budget) ?? ""
+        #expect(full.components(separatedBy: "\n").count - 1 == 16)
+    }
+
+    @Test("the char budget's cut snaps to the block too")
+    func charBudgetCutSnaps() {
+        // Each line is "USER: xxxxxxxxxxEND" ≈ 19 chars; ~200 chars of budget keeps about eight.
+        let turns = (1 ... 30).map { ChatTurn(role: .user, text: "x\(String(repeating: "x", count: 9))END\($0)") }
+        let plain = HistoryWindow.Budget(totalChars: 220, perTurnChars: 100, maxTurns: 40)
+        let blocked = HistoryWindow.Budget(totalChars: 220, perTurnChars: 100, maxTurns: 40, evictionBlockTurns: 6)
+        let p = HistoryWindow.render(turns, budget: plain) ?? ""
+        let b = HistoryWindow.render(turns, budget: blocked) ?? ""
+        let pKept = p.components(separatedBy: "\n").count - 1
+        let bKept = b.components(separatedBy: "\n").count - 1
+        #expect(bKept <= pKept)
+        #expect((30 - bKept).isMultiple(of: 6))
+        #expect(b.count <= blocked.totalChars) // the snap only ever keeps fewer: the bound holds
+        #expect(b.hasSuffix("END30"))
+    }
+
+    @Test("the newest turn always survives the snap")
+    func newestSurvivesTheSnap() {
+        // Seven turns, a two-turn ceiling: today's start is 5; snapped to 6 keeps just T7. A snap
+        // that would pass the newest turn clamps to it.
+        let budget = HistoryWindow.Budget(totalChars: 8000, perTurnChars: 1500, maxTurns: 2, evictionBlockTurns: 6)
+        let text = HistoryWindow.render(Self.tiny(7), budget: budget) ?? ""
+        #expect(text.components(separatedBy: "\n").count - 1 == 1)
+        #expect(text.contains("T7END"))
+        let one = HistoryWindow.render(Self.tiny(1), budget: budget) ?? ""
+        #expect(one.contains("T1END"))
+        // A block wider than the ceiling clamps to it (and an absurd argv value can't overflow the snap).
+        let eight = HistoryWindow.Budget(totalChars: 8000, perTurnChars: 1500, maxTurns: 1, evictionBlockTurns: 8)
+        #expect(eight.evictionBlockTurns == 1)
+        let huge = HistoryWindow.Budget(totalChars: 1, perTurnChars: 1, maxTurns: 16, evictionBlockTurns: .max)
+        #expect(huge.evictionBlockTurns == 16)
+    }
+
+    @Test("never more than the sliding window keeps, and always its newest suffix (Big's hard bound rides on this)")
+    func neverMoreThanSliding() {
+        // Mixed lengths, an odd block and the orphan guard in play: over every prefix length, the blocked
+        // render keeps a newest-suffix of what the sliding render keeps — the same lines, fewer of them.
+        let turns = (1 ... 40).map { i in
+            ChatTurn(
+                role: i.isMultiple(of: 2) ? .assistant : .user,
+                text: String(repeating: "m", count: i * 53 % 700 + 10) + " END\(i)"
+            )
+        }
+        for block in [5, 6, 7] {
+            let blocked = HistoryWindow.Budget(
+                totalChars: 3000, perTurnChars: 800, maxTurns: 12, evictionBlockTurns: block
+            )
+            let plain = HistoryWindow.Budget(totalChars: 3000, perTurnChars: 800, maxTurns: 12)
+            for n in 1 ... 40 {
+                let some = Array(turns.prefix(n))
+                let b = (HistoryWindow.render(some, budget: blocked) ?? "").components(separatedBy: "\n").dropFirst()
+                let p = (HistoryWindow.render(some, budget: plain) ?? "").components(separatedBy: "\n").dropFirst()
+                #expect(b.count <= p.count, "block \(block) n=\(n)")
+                #expect(Array(b) == Array(p.suffix(b.count)), "block \(block) n=\(n): not a newest-suffix")
+                // The snap drops at most `block` (block − 1 plus the orphan) and never past half; or it is skipped.
+                #expect(b.count >= max(p.count - block, (p.count + 1) / 2), "block \(block) n=\(n): dropped too much")
+                let opensOnUser = b.first?.hasPrefix("USER: ") == true
+                #expect(opensOnUser || b.count == p.count, "block \(block) n=\(n): orphaned opener")
+            }
+        }
+    }
+
+    @Test("turns the snap drops are evicted turns: their user lines join the earlier-user trace")
+    func snappedTurnsAreTraced() {
+        let budget = HistoryWindow.Budget(
+            totalChars: 8000, perTurnChars: 1500, maxTurns: 16, evictionBlockTurns: 6, earlierUserChars: 400
+        )
+        let text = HistoryWindow.render(Self.tiny(18), budget: budget) ?? ""
+        // Start snapped from 2 to 6: T3 and T5 (user turns) were dropped by the snap, not the ceiling.
+        #expect(text.contains("USER (earlier): T5END"))
+        #expect(text.contains("USER (earlier): T3END"))
+        #expect(text.contains("USER (earlier): T1END"))
+        #expect(!text.contains("USER: T5END"))
+    }
+
+    @Test("an orphaned opener drops with its question: the window never opens on M1K3's answer")
+    func orphanedOpenerDrops() {
+        // An unanswered user turn (T3 has no reply) flips the parity: multiples of 6 then land on an
+        // assistant turn. The snap drops one more, so the oldest kept line is a USER line.
+        var turns: [ChatTurn] = []
+        for i in 1 ... 20 {
+            if i == 3 { turns.append(ChatTurn(role: .user, text: "T3END")); continue }
+            turns.append(ChatTurn(role: i.isMultiple(of: 2) ? .user : .assistant, text: "T\(i)END"))
+        }
+        let budget = HistoryWindow.Budget(totalChars: 8000, perTurnChars: 1500, maxTurns: 16, evictionBlockTurns: 6)
+        let text = HistoryWindow.render(turns, budget: budget) ?? ""
+        #expect(Self.firstKept(text)?.hasPrefix("USER: ") == true)
+        #expect(Self.firstKept(text) == "USER: T8END")
+    }
+
+    @Test("a snap that would halve a char-limited window is skipped: today's slide instead")
+    func halvingSnapIsSkipped() {
+        // ~20-char lines under a budget that keeps about five: a block of 6 could cut five to one.
+        let turns = (1 ... 30).map { ChatTurn(role: .user, text: "x\(String(repeating: "x", count: 9))END\($0)") }
+        let blocked = HistoryWindow.Budget(totalChars: 160, perTurnChars: 100, maxTurns: 40, evictionBlockTurns: 6)
+        let plain = HistoryWindow.Budget(totalChars: 160, perTurnChars: 100, maxTurns: 40)
+        var guarded = 0, snapped = 0
+        for n in 20 ... 30 {
+            let some = Array(turns.prefix(n))
+            let b = (HistoryWindow.render(some, budget: blocked) ?? "").components(separatedBy: "\n").count - 1
+            let p = (HistoryWindow.render(some, budget: plain) ?? "").components(separatedBy: "\n").count - 1
+            // What the unguarded snap would keep (all user turns, so no orphan guard): either the guard
+            // fired (kept == plain) or the snap did (kept == the unguarded count), never anything else.
+            let unguarded = n - min((n - p + 5) / 6 * 6, n - 1)
+            if unguarded < (p + 1) / 2 {
+                #expect(b == p, "n=\(n): the guard should have kept today's \(p), got \(b)")
+                guarded += 1
+            } else {
+                #expect(b == unguarded, "n=\(n): the snap should have kept \(unguarded), got \(b)")
+                snapped += 1
+            }
+        }
+        #expect(guarded > 0 && snapped > 0) // both branches on the range
+    }
+
+    @Test("with the start held, a render is a prefix of the next: what the KV tail reuses")
+    func blockedRendersSharePrefixes() {
+        // Mixed lengths under a char-limited window. Sliding (block 1) shares a prefix only while the
+        // window is not yet full; the block shares one on most messages after that.
+        let turns = (1 ... 44).map { i in
+            ChatTurn(
+                role: i.isMultiple(of: 2) ? .assistant : .user,
+                text: String(repeating: "w", count: i * 37 % 400 + 20) + " END\(i)"
+            )
+        }
+        func shared(_ block: Int) -> Int {
+            let budget = HistoryWindow.Budget(
+                totalChars: 2500, perTurnChars: 1500, maxTurns: 16, evictionBlockTurns: block
+            )
+            var count = 0
+            for n in stride(from: 14, through: 42, by: 2) {
+                let a = HistoryWindow.render(Array(turns.prefix(n)), budget: budget) ?? ""
+                let b = HistoryWindow.render(Array(turns.prefix(n + 2)), budget: budget) ?? ""
+                if b.hasPrefix(a) { count += 1 }
+            }
+            return count
+        }
+        let sliding = shared(1)
+        let blocked = shared(6)
+        #expect(blocked > sliding)
+        #expect(blocked >= 7, "\(blocked) of 15 pairs shared a prefix") // about two in three
+    }
+
+    @Test("minimumKeptTurns: the ceiling less a block, the ceiling itself at block one")
+    func minimumKept() {
+        #expect(HistoryWindow.Budget.default.minimumKeptTurns == HistoryWindow.maxTurns)
+        let six = HistoryWindow.Budget(totalChars: 8000, perTurnChars: 1500, maxTurns: 16, evictionBlockTurns: 6)
+        #expect(six.minimumKeptTurns == 10)
+        // Never fewer than the window keeps: the orphan guard and the snap together drop at most block turns.
+        for n in 17 ... 40 {
+            let kept = (HistoryWindow.render(Self.tiny(n), budget: six) ?? "").components(separatedBy: "\n").count - 1
+            #expect(kept >= six.minimumKeptTurns, "n=\(n) kept \(kept)")
+        }
+        let tiny = HistoryWindow.Budget(totalChars: 8000, perTurnChars: 1500, maxTurns: 2, evictionBlockTurns: 6)
+        #expect(tiny.minimumKeptTurns == 1)
+    }
 }

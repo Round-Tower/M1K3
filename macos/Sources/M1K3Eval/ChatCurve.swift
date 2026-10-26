@@ -30,15 +30,19 @@
 //  the TOTAL prefill, decode tokens + throughput fold per turn (for the scorecard's GenerationFigures),
 //  MLX's own peak rides beside `ru_maxrss`, and the script runs to twenty messages so the
 //  HistoryWindow cliff (16 turns) is on the curve. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — thirty messages: block eviction (§2a) shifts the window every three
+//  messages past the cliff, and the gate wants more than one shift on the curve. The first twenty are unchanged.
 //
 
 import Foundation
 
-/// The fixed twenty-message script. Short and varied so the history grows by a few dozen
+/// The fixed thirty-message script. Short and varied so the history grows by a few dozen
 /// tokens a turn: the curve then isolates what the CACHE does, not what the user typed.
 /// Twenty, not eight (2026-10-25): `HistoryWindow` keeps 16 turns (8 exchanges), so from about
 /// message 10 the oldest line drops every turn and any shared prefix collapses to the persona.
-/// The first eight are the 2026-10-10 script byte for byte, so the two curves still line up.
+/// Thirty (2026-10-26): block eviction (§2a) shifts the window every three messages past that
+/// point, and the gate wants more than one shift on the curve. The first eight are the 2026-10-10
+/// script byte for byte and the first twenty the 2026-10-25 one, so the curves still line up.
 public enum ChatCurveScript {
     public static let messages: [String] = [
         "Hi! How's your day going?",
@@ -61,6 +65,16 @@ public enum ChatCurveScript {
         "Any tip for switching chords faster?",
         "How many minutes a day did I say I had?",
         "Last one: three words of encouragement.",
+        "Actually, one more: what's a good second song?",
+        "How long until I can play it through?",
+        "Remind me which chord you picked for tonight.",
+        "Should I learn to read tab or just copy videos?",
+        "My neighbour offered to jam with me. Too soon?",
+        "What did I say hurt after ten minutes?",
+        "Give me one warm-up I can do in a minute.",
+        "Is a cheap guitar going to hold me back?",
+        "Sum up the plan we have so far in two lines.",
+        "Okay, really the last one: three words of encouragement.",
     ]
 }
 

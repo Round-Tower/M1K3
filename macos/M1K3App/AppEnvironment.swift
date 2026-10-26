@@ -1138,7 +1138,7 @@ final class AppEnvironment {
             ),
             autoCaptureEnabled: { Self.memoryAutoCaptureEnabled() },
             // The rolling distillation trigger follows the replay window in effect (#629).
-            replayTurns: { Self.liveHistoryBudget().maxTurns }
+            replayTurns: { Self.liveHistoryBudget().minimumKeptTurns }
         )
 
         // Calls: encrypted-at-rest store (key from the Keychain), indexed into the

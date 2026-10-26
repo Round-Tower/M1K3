@@ -28,6 +28,13 @@
 //  within that allowance, overhead counted. Zero, the default, renders today's block byte for byte.
 //  Probe (voice rig, Big, cap on): the once-said fact recalled 4/4 readable runs on the dispatch route, and no run
 //  re-answered a traced question; +20–50 prompt tokens. Open: a horizon past ~8 user lines (#629).
+//  Review: Kev + claude-fable-5.1, 2026-10-26, Confidence 0.75 — block eviction (`evictionBlockTurns`, design doc
+//  §2a). With the cross-turn tail checkpoint (#687) the window's one-turn slide became the dominant prefill miss: from
+//  message 10 the common prefix of consecutive renders collapsed to the persona every turn. The start now snaps up to
+//  a multiple of the block, so the prefix holds for block/2 messages and shifts once; the cost is up to block − 1
+//  fewer turns right after a boundary (the trace, where a caller has one, carries their user lines). One is today's
+//  window byte for byte; the MLX tiers get `HistoryBudgetPolicy.defaultEvictionBlockTurns`. Open: the recall probe
+//  for a turn referenced just past a boundary, and whether the block should be exchanges rather than turns.
 //
 
 import Foundation
@@ -69,15 +76,35 @@ public enum HistoryWindow {
         public var perTurnChars: Int
         /// Hard ceiling on turn count (caps a long run of tiny turns).
         public var maxTurns: Int
+        /// Evict the oldest turns in BLOCKS of this many (design doc §2a, 2026-10-26): the window's
+        /// start index snaps UP to a multiple of it, so consecutive renders share their opening for
+        /// `block/2` messages and the KV cache can keep the conversation's prefix across turns
+        /// (`ConversationTailCache`). One (the default) is the sliding window, byte for byte. The
+        /// snap only ever keeps FEWER turns than the budget allows (up to `block − 1` fewer, right
+        /// after a boundary), so every bound above still holds; the newest turn always survives.
+        public var evictionBlockTurns: Int
+        /// The fewest turns the window keeps once it is full: the ceiling less what a block snap can
+        /// drop (block − 1, plus one for an orphaned opener). The rolling-distillation trigger reads
+        /// THIS, not `maxTurns` (#629's gap: a turn neither replayed nor distilled), so a snapped-away
+        /// turn is distilled before it is forgotten. One block: the ceiling itself.
+        public var minimumKeptTurns: Int {
+            evictionBlockTurns > 1 ? max(1, maxTurns - evictionBlockTurns) : maxTurns
+        }
+
         /// Chars for the earlier-user trace: the user's own words from the turns the window
         /// evicted, above the kept turns. Zero (the default) renders no trace. Charged on TOP of
         /// `totalChars`, so a caller with a hard bound budgets the sum.
         public var earlierUserChars: Int
 
-        public init(totalChars: Int, perTurnChars: Int, maxTurns: Int, earlierUserChars: Int = 0) {
+        public init(
+            totalChars: Int, perTurnChars: Int, maxTurns: Int, evictionBlockTurns: Int = 1, earlierUserChars: Int = 0
+        ) {
             self.totalChars = totalChars
             self.perTurnChars = perTurnChars
             self.maxTurns = maxTurns
+            // Clamped to the ceiling: a block wider than the window would snap to the newest turn alone,
+            // and an absurd argv value would overflow the snap's arithmetic (review fold, 2026-10-26).
+            self.evictionBlockTurns = min(max(1, evictionBlockTurns), max(1, maxTurns))
             self.earlierUserChars = earlierUserChars
         }
 
@@ -101,6 +128,7 @@ public enum HistoryWindow {
                 totalChars: total,
                 perTurnChars: min(perTurnChars, total),
                 maxTurns: maxTurns,
+                evictionBlockTurns: evictionBlockTurns,
                 earlierUserChars: earlierUserChars
             )
         }
@@ -144,7 +172,23 @@ public enum HistoryWindow {
         }
         guard !kept.isEmpty else { return nil }
 
-        // Everything older than the kept turns, whether the char budget or the turn ceiling cut it.
+        // Block eviction: snap the window's start up to a multiple of the block (keeping fewer,
+        // never more), clamped so the newest turn stays. Pure in the turn list — no stored anchor.
+        if budget.evictionBlockTurns > 1 {
+            let block = budget.evictionBlockTurns
+            let start = all.count - kept.count
+            var snapped = min((start + block - 1) / block * block, all.count - 1)
+            // An orphaned opener (the oldest kept line is M1K3's answer, its question snapped away —
+            // an unanswered turn earlier flipped the parity) drops too: still pure, still fewer.
+            if snapped < all.count - 1, all[snapped].role == .assistant { snapped += 1 }
+            // A char-limited window (long answers, an image reserve) can be short enough that the
+            // snap would halve it; then today's slide is the lesser evil and the snap is skipped.
+            if all.count - snapped >= (kept.count + 1) / 2 {
+                kept = Array(kept.prefix(all.count - snapped)) // newest-first: the prefix is the newest
+            }
+        }
+
+        // Everything older than the kept turns, whether the char budget, the turn ceiling or the block cut it.
         let trace = earlierTrace(all.dropLast(kept.count), chars: budget.earlierUserChars)
         return header + (trace.map { $0 + "\n" } ?? "") + kept.reversed().joined(separator: "\n")
     }

@@ -49,6 +49,11 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — the Open answered no (#626: a once-said fact was evicted and Big
 //  confabulated). Kev picked the proper fix: `spokenBigBudget` carries a 600-char earlier-user trace
 //  (HistoryWindow), threaded through the spoken merge inside the typed window. Confidence 0.7 until the probe.
+//  Review: Kev + claude-fable-5.1, 2026-10-26, Confidence 0.75 — `defaultEvictionBlockTurns` (6) rides every MLX
+//  budget and survives the spoken merge and the image reserve; Mini's windows stay at one. The block is what lets the
+//  cross-turn tail checkpoint (#687) keep paying past the 16-turn window (design doc §2a); `-historyEvictionBlock N`.
+//  Challenger fold (same day): spoken Big's block is 4 (its 8-turn ceiling would keep two exchanges one message in
+//  three at 6), and the distillation trigger reads `minimumKeptTurns`, not the ceiling.
 
 import Foundation
 import M1K3Inference
@@ -165,7 +170,8 @@ public enum HistoryBudgetPolicy {
         for tier: BrainTier,
         reservedTokens: Int,
         generationTokens: Int,
-        latencyCeilingTokens: Int = defaultLatencyCeilingTokens
+        latencyCeilingTokens: Int = defaultLatencyCeilingTokens,
+        evictionBlockTurns: Int = defaultEvictionBlockTurns
     ) -> HistoryWindow.Budget {
         let margin = tier.hasClampedContext ? rotatingSafetyMarginTokens : 0
         let contextTokens = max(
@@ -177,8 +183,36 @@ public enum HistoryBudgetPolicy {
         // constants — one home, so tuning the window can't strand the policy.
         let perTurnChars = min(HistoryWindow.maxCharsPerTurn, totalChars)
         return HistoryWindow.Budget(
-            totalChars: totalChars, perTurnChars: perTurnChars, maxTurns: HistoryWindow.maxTurns
+            totalChars: totalChars, perTurnChars: perTurnChars, maxTurns: HistoryWindow.maxTurns,
+            // Pocket is the phone's tier, and the cross-turn tail checkpoint is desktop-only: a block
+            // there would cost context for nothing (review fold, 2026-10-26).
+            evictionBlockTurns: tier == .pocket ? 1 : evictionBlockTurns
         )
+    }
+
+    /// The Mac's MLX tiers evict replayed history in blocks of six turns (three exchanges): the
+    /// window's start then holds for three messages, and the cross-turn tail checkpoint (#687) keeps
+    /// the conversation's KV prefix on the third of them (one in three, measured 2026-10-26: the LCP
+    /// cut lags a render) instead of never. The price is up to five fewer turns right after a
+    /// boundary. Mini keeps the sliding window (AFM has no cache to carry), and so do pocket and the
+    /// mobile shell (no tail checkpoint there). `-historyEvictionBlock N` overrides (0/1 = off).
+    public static let defaultEvictionBlockTurns = 6
+    /// The widest block the argv override accepts (`Budget.init` clamps to the ceiling anyway).
+    public static let maxEvictionBlockTurns = 64
+
+    /// The argv override for `defaultEvictionBlockTurns` (`M1K3 -historyEvictionBlock 8`; 0, 1 or
+    /// NO turn block eviction off), read the way the other in-app A/B overrides are.
+    public static func evictionBlockTurns(
+        arguments: [String: Any] = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
+    ) -> Int {
+        // A numeric argv value can arrive as a String or an NSNumber, depending on how the domain parsed it.
+        if let number = arguments["historyEvictionBlock"] as? NSNumber {
+            return min(max(1, number.intValue), maxEvictionBlockTurns)
+        }
+        guard let raw = arguments["historyEvictionBlock"] as? String else { return defaultEvictionBlockTurns }
+        if ["no", "false", "off"].contains(raw.lowercased()) { return 1 }
+        guard let n = Int(raw) else { return defaultEvictionBlockTurns }
+        return min(max(1, n), maxEvictionBlockTurns)
     }
 
     /// Tier-optional variant that OWNS the mini/unknown guard: nil (an unknown
@@ -201,7 +235,8 @@ public enum HistoryBudgetPolicy {
         generationTokens: Int,
         latencyCeilingTokens: Int = defaultLatencyCeilingTokens,
         measuredMiniReserveTokens: Int? = nil,
-        spoken: Bool = false
+        spoken: Bool = false,
+        evictionBlockTurns: Int = defaultEvictionBlockTurns
     ) -> HistoryWindow.Budget {
         guard let tier, tier != .mini else {
             if let measured = measuredMiniReserveTokens {
@@ -213,7 +248,8 @@ public enum HistoryBudgetPolicy {
             for: tier,
             reservedTokens: reservedTokens,
             generationTokens: generationTokens,
-            latencyCeilingTokens: latencyCeilingTokens
+            latencyCeilingTokens: latencyCeilingTokens,
+            evictionBlockTurns: evictionBlockTurns
         )
         guard spoken, tier == .big else { return typed }
         let total = min(typed.totalChars, spokenBigBudget.totalChars)
@@ -221,6 +257,9 @@ public enum HistoryBudgetPolicy {
             totalChars: total,
             perTurnChars: min(typed.perTurnChars, spokenBigBudget.perTurnChars, total),
             maxTurns: min(typed.maxTurns, spokenBigBudget.maxTurns),
+            // Spoken Big keeps eight turns: a block of six would leave two exchanges one message in
+            // three, so its block is four (six to eight kept, the tail hit on every other message).
+            evictionBlockTurns: min(typed.evictionBlockTurns, spokenBigBudget.evictionBlockTurns),
             // The trace rides inside what the typed replay was allowed (the rotating-window clamp).
             earlierUserChars: min(spokenBigBudget.earlierUserChars, max(0, typed.totalChars - total))
         )
@@ -246,7 +285,8 @@ public enum HistoryBudgetPolicy {
     /// coming" said once at turn 2 was gone by turn 8 and Big confabulated an answer. 600 chars is
     /// about 170 tokens, ~0.8 s of the ~3.8 s the cap saves, and holds 5–8 spoken user lines.
     public static let spokenBigBudget = HistoryWindow.Budget(
-        totalChars: 4400, perTurnChars: HistoryWindow.maxCharsPerTurn, maxTurns: 8, earlierUserChars: 600
+        totalChars: 4400, perTurnChars: HistoryWindow.maxCharsPerTurn, maxTurns: 8, evictionBlockTurns: 4,
+        earlierUserChars: 600
     )
 
     /// The argv kill switch for `spokenBigBudget` (`M1K3 -spokenHistoryCap NO`), read the way

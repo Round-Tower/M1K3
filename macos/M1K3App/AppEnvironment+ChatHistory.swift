@@ -629,7 +629,8 @@ extension AppEnvironment {
             reservedTokens: historyReserveTokens,
             generationTokens: historyGenerationReserveTokens,
             measuredMiniReserveTokens: measuredMiniReserve.withLock { $0 },
-            spoken: defaults.bool(forKey: voiceModeActiveKey) && HistoryBudgetPolicy.spokenCapEnabled()
+            spoken: defaults.bool(forKey: voiceModeActiveKey) && HistoryBudgetPolicy.spokenCapEnabled(),
+            evictionBlockTurns: HistoryBudgetPolicy.evictionBlockTurns()
         )
     }
 
