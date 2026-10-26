@@ -10,6 +10,8 @@
 //  Review: Kev + claude-opus-4-6, 2026-09-22 — live tool labels for 6 tools that
 //  fell through to the raw default; default fallback humanises via displayName.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `.note(String)` (#697): a line about the turn itself (Cool Head's
+//  eased effort), shown as a caption on the answer, never as the in-flight label. Confidence 0.85.
 
 import Foundation
 
@@ -18,6 +20,10 @@ public enum ResponderActivity: Sendable, Equatable {
     case retrieving
     case thinking(iteration: Int)
     case usingTool(name: String, argument: String)
+    /// A line about the turn itself, in M1K3's voice: today only Cool Head's, on the send whose
+    /// pressure eased the effort (#697). ChatSession keeps it on the answer (`ChatMessage.turnNote`),
+    /// not in the transient label, and never in the text the brain, the replay or speech reads.
+    case note(String)
 }
 
 /// Pure activity → user-facing copy.
@@ -36,6 +42,8 @@ public enum ActivityLabeler {
             "Thinking…"
         case let .usingTool(name, argument):
             toolLabel(name: name, argument: argument)
+        case let .note(line):
+            line
         }
     }
 

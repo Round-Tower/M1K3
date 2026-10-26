@@ -9,6 +9,7 @@
 //  pinned with a gated fake responder.
 //
 //  Signed: Kev + claude-fable-5, 2026-06-09, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #697: `.note` labels as its own line. Confidence 0.9.
 
 import Foundation
 @testable import M1K3Chat
@@ -90,6 +91,12 @@ struct ActivityLabelerTests {
         let label = ActivityLabeler.label(for: .usingTool(name: "web_search", argument: longQuery))
         #expect(label.count < 80)
         #expect(label.contains("…"))
+    }
+
+    @Test("a note's label is the line itself, untruncated (#697: Cool Head's fixed copy)")
+    func noteLabelIsTheLine() {
+        let line = "Low Power Mode's on, so I'm going easy on the heavy lifting."
+        #expect(ActivityLabeler.label(for: .note(line)) == line)
     }
 }
 

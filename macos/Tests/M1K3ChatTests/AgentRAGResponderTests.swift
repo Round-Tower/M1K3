@@ -33,6 +33,8 @@
 //  post-tool conclusion stands with no synthesis generation; the filler shape still synthesises after it.
 //  Review: Kev + claude-fable-5.1, 2026-10-26 — `groundingWithStablePrefix`'s test (the replay is the grounding's stable
 //  prefix), moved into the suite after the bot pass found the append had landed inside the trailing helper class.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #697: `turnNoteProvider` is read once per turn, its line
+//  rides `.note` before `.retrieving`, never a prompt byte; a deferred turn never reads it. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -1913,6 +1915,105 @@ struct AgentRAGResponderTests {
         #expect(grounded.text.hasPrefix(replay))
         #expect(grounded.text == AgentRAGResponder.grounding(chunks: [], toolNames: [], history: history))
         #expect(AgentRAGResponder.groundingWithStablePrefix(chunks: [], toolNames: []).stableChars == 0)
+    }
+
+    // MARK: - Cool Head's line (#697)
+
+    @Test("Cool Head's line rides the activity channel once, before retrieval, and never enters the prompt")
+    func turnNoteIsEmittedOnceBeforeRetrievingAndNeverEntersThePrompt() async throws {
+        let (store, embedder) = try await ingestedStore()
+        let provider = AgentScriptedProvider(["CONCLUSION: The seal failed. [Plant Notes §3.2 Seals]"])
+        let line = "This machine's running warm, so I'm going easy on the heavy lifting."
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider,
+            toolsProvider: { [] },
+            turnNoteProvider: { line }
+        )
+        let recorder = ActivityRecorder()
+        let (_, stream) = try await responder.answerStreaming(
+            "What hydraulic seal failed on the conveyor under load?", history: [], onActivity: { recorder.record($0) }
+        )
+        let answer = await collect(stream)
+        #expect(answer.contains("The seal failed."))
+        #expect(recorder.activities.first == .note(line))
+        #expect(recorder.activities.filter { $0 == .note(line) }.count == 1)
+        #expect(recorder.activities.dropFirst().first == .retrieving)
+        #expect(provider.allPrompts.count == 1)
+        #expect(provider.allPrompts.allSatisfy { !$0.contains(line) && !$0.contains("heavy lifting") })
+    }
+
+    @Test("a nil note provider is byte-identical: no note, the same prompts")
+    func nilTurnNoteProviderIsByteIdentical() async throws {
+        func prompts(note: String??) async throws -> (prompts: [String], activities: [ResponderActivity]) {
+            let (store, embedder) = try await ingestedStore()
+            let provider = AgentScriptedProvider(["CONCLUSION: The seal failed. [Plant Notes §3.2 Seals]"])
+            let responder = switch note {
+            case .none:
+                AgentRAGResponder(store: store, embedder: embedder, provider: provider, toolsProvider: { [] })
+            case let .some(line):
+                AgentRAGResponder(
+                    store: store, embedder: embedder, provider: provider, toolsProvider: { [] },
+                    turnNoteProvider: { line }
+                )
+            }
+            let recorder = ActivityRecorder()
+            let (_, stream) = try await responder.answerStreaming(
+                "What hydraulic seal failed on the conveyor under load?", history: [],
+                onActivity: { recorder.record($0) }
+            )
+            _ = await collect(stream)
+            return (provider.allPrompts, recorder.activities)
+        }
+        let unwired = try await prompts(note: .none)
+        let noLine = try await prompts(note: .some(nil))
+        let withLine = try await prompts(note: .some("Low Power Mode's on, so I'm going easy on the heavy lifting."))
+        #expect(!unwired.activities.contains { if case .note = $0 { true } else { false } })
+        #expect(noLine.activities == unwired.activities)
+        #expect(noLine.prompts == unwired.prompts)
+        // The line changes the activity channel and nothing the brain reads.
+        #expect(withLine.prompts == unwired.prompts)
+        #expect(Array(withLine.activities.dropFirst()) == unwired.activities)
+    }
+
+    @Test("the note provider is read once per turn (a send's line is taken by that send's turn)")
+    func turnNoteProviderIsReadOncePerTurn() async throws {
+        let (store, embedder) = try await ingestedStore()
+        let provider = AgentScriptedProvider(["CONCLUSION: one.", "CONCLUSION: two."])
+        let calls = Mutex(0)
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider,
+            toolsProvider: { [] },
+            turnNoteProvider: {
+                calls.withLock { $0 += 1 }
+                return nil
+            }
+        )
+        _ = try await collect(await responder.answerStreaming("first?").stream)
+        _ = try await collect(await responder.answerStreaming("second?").stream)
+        #expect(calls.withLock { $0 } == 2)
+    }
+
+    @Test("a deferred turn never reads the note: its whole answer is the honest deferral")
+    func deferredTurnDoesNotConsultTheNote() async throws {
+        let (store, embedder) = try await ingestedStore()
+        let provider = AgentScriptedProvider(["CONCLUSION: should never run."])
+        let calls = Mutex(0)
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider,
+            toolsProvider: { [] },
+            defersHeavyGenerationProvider: { true },
+            turnNoteProvider: {
+                calls.withLock { $0 += 1 }
+                return "This machine's running warm, so I'm going easy on the heavy lifting."
+            }
+        )
+        let recorder = ActivityRecorder()
+        let (_, stream) = try await responder.answerStreaming(
+            "What hydraulic seal failed?", history: [], onActivity: { recorder.record($0) }
+        )
+        #expect(await collect(stream) == AgentRAGResponder.coolHeadDeferralMessage)
+        #expect(calls.withLock { $0 } == 0)
+        #expect(recorder.activities.isEmpty)
     }
 }
 
