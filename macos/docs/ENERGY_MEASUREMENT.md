@@ -7,9 +7,11 @@
 
 ## The question, and the answer
 
-**Can the sandboxed app read its own energy?** Its CPU energy, yes, in an ad-hoc-signed sandbox
-probe. The shipping app's two lanes (Mac App Store, Developer ID) are **UNVERIFIED** until the
-`M1K3_SELFTEST_ENERGY` stage runs (below).
+**Can the sandboxed app read its own energy?** Its CPU energy, yes. The app read it from inside
+its own sandbox on 2026-10-26, twice, with `sandboxed: true` both times. That was a Release build
+of ca4e434e carrying the Mac App Store lane's entitlements, signed for development; the
+`M1K3_SELFTEST_ENERGY` stage below has the details. The Developer ID lane carries the same
+`app-sandbox` entitlement but was not built, so it stays **UNVERIFIED**.
 `proc_pid_rusage(getpid(), RUSAGE_INFO_V6)` returns `ri_energy_nj` without root, and the probe read it inside an App
 Sandbox. It does not see the GPU: a Metal burn that kept the GPU busy 1.94–1.99 s of a 2 s window moved it
 0.009–0.045 J (four runs). A Lil answer is about 93 % GPU (run 1 in `docs/POWER_RECEIPT.md`: 34.42 of
@@ -91,8 +93,9 @@ What that shows:
    invisible to it, as `task_energy`'s was in September.
 3. **It reads inside an App Sandbox.** The sandboxed run's reads return rc 0 and move like the
    plain run's, and the run would have exited 2 had the sandbox not applied. The probe's sandbox
-   is an ad-hoc signed command-line tool, not the shipping app. The app's own two lanes (Mac App
-   Store and Developer ID) are **UNVERIFIED** until the `M1K3_SELFTEST_ENERGY` stage runs (below).
+   is an ad-hoc signed command-line tool, not the shipping app. The app's own read was measured
+   later the same evening (verify-by-launch, below): the Mac App Store lane's entitlements read it,
+   twice. The Developer ID lane is **UNVERIFIED** (not built).
 4. **`ri_billed_energy` stays useless.** In the plain process it stayed at 0 in every window. In the
    sandboxed one it moved by a few thousand units in some windows, burn or not, and never tracked
    the work. That field bills work other processes do on this one's behalf, and the sandbox's own
@@ -190,7 +193,8 @@ generation, not a whole answer's cost.**
 
 `M1K3App/EnergyProbeStage.swift` reads the counter inside the sandboxed app. It loads Lil and does
 everything one-time OUTSIDE the measured window: it builds the persona seed `generate` reuses
-(cold, a ~2.4k-token prefill on Lil) and runs one short throwaway generation for first-use setup,
+(cold; with no tools it measured 1,736 tokens on Lil, the context of 1,762 less the 26 prefilled)
+and runs one short throwaway generation for first-use setup,
 printing the warm-up's seconds. Then it reads the counter around one plain generation (thinking
 off, 256-token cap) and prints the CPU joules, the generation's tokens, and the estimate the ledger
 would record for them, so both figures describe the same work. Run it alone, with no live M1K3 and
@@ -205,6 +209,52 @@ predicted here. Run 1's median CPU power was 3.0 W against 36.05 W of package po
 (about 8 %), so a share of that order would be unsurprising, and the stage measures it. A `✗` on the first line means the
 shipping sandbox refuses the read: then the counter is gone as an instrument, and nothing else
 changes.
+
+### Measured: 2026-10-26, two runs
+
+M1 Max 64 GB, macOS 27.0 26A428, AC, powermode 2. A Release build of ca4e434e (1.3.0) with the
+default entitlements, `M1K3App/M1K3-MAS.entitlements` (`app-sandbox` true), signed with an Apple
+Development certificate. Run as the command above, directly exec'd under `caffeinate -dis`, with no
+live M1K3 and nothing else on the MLX slot. The transcripts, whole, are
+`docs/evals/2026-10-26-energy-probe-lil-run1.txt` and `-run2.txt`. Run 1's stage lines:
+
+    ✓ energy: V6 read inside the app (sandboxed: true) energy_nj=16251553132 billed=34081944145
+    • energy: warm-up outside the window (persona seed + one throwaway generation): 3.35 s
+    energy gen [mlx-community/Qwen3.5-4B-MLX-4bit]: 1.46 s, context=1762 prefilled=26 decode=115 tok @ 85 tok/s, 564 chars
+    energy cpu (measured, CPU only): 3.041 J over the window (2.08 W), P-cores 3.041 J, billed Δ 1216
+    energy estimate (lil, uncalibrated, rate measured on Apple M1 Max, 64 GB): 51.5 J = 26 × 0.0601 + 115 × 0.4343; the CPU counter saw 5.9 % of it
+
+Run 2's:
+
+    ✓ energy: V6 read inside the app (sandboxed: true) energy_nj=15150773844 billed=3963861986
+    • energy: warm-up outside the window (persona seed + one throwaway generation): 3.43 s
+    energy gen [mlx-community/Qwen3.5-4B-MLX-4bit]: 1.70 s, context=1762 prefilled=26 decode=135 tok @ 85 tok/s, 709 chars
+    energy cpu (measured, CPU only): 3.459 J over the window (2.04 W), P-cores 3.459 J, billed Δ 18999
+    energy estimate (lil, uncalibrated, rate measured on Apple M1 Max, 64 GB): 60.2 J = 26 × 0.0601 + 135 × 0.4343; the CPU counter saw 5.7 % of it
+
+| Run | In-app read | Window | Prefilled / decoded | CPU J (measured) | CPU W | Estimate J (derived, ±50 %) | CPU ÷ estimate |
+|---|---|---|---|---|---|---|---|
+| 1 | ok, `sandboxed: true` | 1.46 s | 26 / 115 | 3.041 | 2.08 | 51.5 | 5.9 % |
+| 2 | ok, `sandboxed: true` | 1.70 s | 26 / 135 | 3.459 | 2.04 | 60.2 | 5.7 % |
+
+What the two runs show, and what they do not:
+
+- **The read works in the shipping sandbox.** Both runs read the counter inside the app, under the
+  Mac App Store lane's entitlements, and both windows moved. The counter is usable in the app as an
+  instrument. A store-signed or notarized build was not run; the sandbox entitlement is the same,
+  the signing certificate is not.
+- **A warm Lil generation drew 2.04–2.08 W of CPU** by this counter. That is 5.7–5.9 % of the
+  derived estimate. The two figures are different quantities: the counter is this process's CPU
+  energy, while the estimate is package watts above idle. So the ratio gives an order of magnitude,
+  not a split. It agrees in order with run 1's receipt (CPU 3.0 W of 36.05 W above idle, about 8 %).
+  It does not check the estimate: the rest is the GPU, which no in-app counter sees, and the Lil
+  rate is still derived.
+- **The P-core figure equals the total to the millijoule** in both windows, as in the probe's burns.
+  By the counter's own account, no energy in the window was billed to the efficiency cores.
+- **`ri_billed_energy` moved 1,216 and 18,999 units**, and its opening values differed tenfold
+  between the runs. It still does not track the work.
+- **The warm-up outside the window took 3.35 and 3.43 s.** It is printed, not hidden, and the
+  window holds only the warm generation the ledger prices.
 
 ## Owed: the receipts that would price the other tiers
 
@@ -244,4 +294,10 @@ an answer, not a token.
      the intercept may be a cold persona prefill the ledger does price); the heartbeat ruling quoted
      in its own words, its banding clause named, exact counts put to Kev; the probe re-run twice
      with its fail-closed checks and re-quoted; the probe stage's warm-up moved outside its window.
-     Confidence 0.8. -->
+     Confidence 0.8.
+     Review: Kev + claude-opus-5.5, 2026-10-26 (eval stage) — the in-app read, measured: EnergyProbeStage
+     ran twice on a Release build of ca4e434e (MAS entitlements, development-signed, sandboxed: true):
+     CPU 3.041 and 3.459 J over 1.46 and 1.70 s, 5.9 and 5.7 % of the derived estimate. This retires the
+     signature's Open on the in-app read for the Mac App Store lane. The Developer ID lane stays
+     unverified (not built), and every tier's same-build receipt still needs sudo. The verify section's
+     "~2.4k-token" seed became the measured 1,736 (the bare key, no tools). Confidence 0.85. -->
