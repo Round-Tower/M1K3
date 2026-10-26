@@ -31,6 +31,8 @@
 //  declines too; the wording pin covers the pronoun.
 //  Review: Kev + claude-fable-5.1, 2026-10-25 — the `use` arm of PostToolAnswer, both ways: an answer-shaped
 //  post-tool conclusion stands with no synthesis generation; the filler shape still synthesises after it.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — `groundingWithStablePrefix`'s test (the replay is the grounding's stable
+//  prefix), moved into the suite after the bot pass found the append had landed inside the trailing helper class.
 
 import Foundation
 import M1K3Agent
@@ -1899,6 +1901,18 @@ struct AgentRAGResponderTests {
         let (_, stream) = try await responder.answerStreaming("what failed?")
         let answer = await collect(stream)
         #expect(answer == "The hydraulic seal failed under load, per your notes.")
+    }
+
+    /// The stable-prefix marker (2026-10-26, Kev + claude-fable-5.1).
+    @Test("the grounding's stable prefix is the replay, which the next turn's render continues")
+    func groundingStablePrefixIsTheReplay() {
+        let history = [ChatTurn(role: .user, text: "hi"), ChatTurn(role: .assistant, text: "hello")]
+        let grounded = AgentRAGResponder.groundingWithStablePrefix(chunks: [], toolNames: [], history: history)
+        let replay = HistoryWindow.render(history) ?? ""
+        #expect(grounded.stableChars == replay.count)
+        #expect(grounded.text.hasPrefix(replay))
+        #expect(grounded.text == AgentRAGResponder.grounding(chunks: [], toolNames: [], history: history))
+        #expect(AgentRAGResponder.groundingWithStablePrefix(chunks: [], toolNames: []).stableChars == 0)
     }
 }
 

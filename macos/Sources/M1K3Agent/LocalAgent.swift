@@ -40,6 +40,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — doc comment only: ModelEvalReport.strippingThink (retired) → ThinkStripper.strip. Confidence 0.9.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — comment only: the ReAct floor's image drop was reachable
 //  (Brain at Home); AgentRAGResponder declines such a turn upstream now.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — `run(stableContextChars:)` threads the responder's stable-prefix
+//  count (its context line + replay) to the native loop, which turns it into the tool session's `stablePrefix`
+//  marker.
 
 import Foundation
 import M1K3Inference
@@ -149,6 +152,7 @@ public actor LocalAgent {
         context groundingContext: String? = nil,
         standing: String? = nil,
         thinkingEnabled: Bool = true,
+        stableContextChars: Int? = nil,
         onEvent: (@Sendable (AgentLoopEvent) -> Void)? = nil,
         onConclusionToken: (@Sendable (String) -> Void)? = nil,
         onReasoningToken: (@Sendable (String) -> Void)? = nil
@@ -156,7 +160,7 @@ public actor LocalAgent {
         try await activity.during("M1K3 agent turn") {
             try await runHeld(
                 goal: goal, images: images, context: groundingContext, standing: standing,
-                thinkingEnabled: thinkingEnabled, onEvent: onEvent,
+                thinkingEnabled: thinkingEnabled, stableContextChars: stableContextChars, onEvent: onEvent,
                 onConclusionToken: onConclusionToken, onReasoningToken: onReasoningToken
             )
         }
@@ -168,6 +172,7 @@ public actor LocalAgent {
         context groundingContext: String?,
         standing: String?,
         thinkingEnabled: Bool,
+        stableContextChars: Int?,
         onEvent: (@Sendable (AgentLoopEvent) -> Void)?,
         onConclusionToken: (@Sendable (String) -> Void)?,
         onReasoningToken: (@Sendable (String) -> Void)?
@@ -205,6 +210,7 @@ public actor LocalAgent {
                 images: images,
                 grounding: nativeGrounding,
                 thinkingEnabled: thinkingEnabled,
+                stableContextChars: stableContextChars,
                 onEvent: onEvent,
                 onConclusionToken: onConclusionToken,
                 onReasoningToken: onReasoningToken

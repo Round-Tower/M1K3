@@ -94,6 +94,12 @@
 //  kill switch; desktop only. The 10-25 chat-curves had every message re-prefilling the conversation (reuse flat
 //  at the persona: Lil 2–3 s, Big 6–12 s a message). Confidence 0.7: the arithmetic and the store are pinned;
 //  `seed=conversation` + `tail checkpoint adopted` on message 3+ of a chat-curve is the acceptance instrument.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — the caller-marked stable prefix (`ToolTurnOptions.stablePrefix`): the
+//  first send renders the transcript cut at the marker as well and hands both renders to `tailCut`, so the tail is
+//  cut at the replay's end on the first render after a window shift (`stableTranscript` is the pure cut; the log line
+//  says which render won). The second render costs a template pass and a tokenise, milliseconds beside the prefill.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 (review fold) — the stable render is `try?` and skipped on an image turn:
+//  a template that rejects the cut transcript (system-only on the lfm2 shape) would have failed the whole send.
 
 import Foundation
 import M1K3Inference
@@ -750,6 +756,7 @@ extension MLXBrainProvider: ToolCallingProvider {
             seedMayFallShort: nativePromptShape == .groundingInSystem,
             adoptTail: adoptTail,
             tail: tailCandidate,
+            stablePrefix: checkpointTails ? options.stablePrefix : nil,
             previousRender: previousRender,
             adoptCheckpoint: adoptCheckpoint,
             recordRender: recordRender
@@ -954,6 +961,10 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
     private var tailCheckpoint: ConversationTailCache.ExactTail?
     /// The previous turn's first render, for the tail cut; nil = nothing to cut against.
     private let previousRender: [Int]?
+    /// The caller-marked stable prefix of the opening messages (2026-10-26): on the first send the
+    /// transcript is rendered again cut there, and that render's common prefix with the full one is
+    /// where the tail is cut today (`ExactPrefixReuse.tailCut(stable:)`).
+    private let stablePrefix: ToolTurnStablePrefix?
     /// Hand-off for the tail checkpoint this turn cuts (nil = checkpoint tails off). The cache is an
     /// autoclosure so a refused checkpoint (over the byte cap) is never copied.
     typealias AdoptCheckpoint = (
@@ -995,12 +1006,14 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         seedMayFallShort: Bool = false,
         adoptTail: (([KVCache], [Int]) -> ConversationTailCache.AdoptOutcome)? = nil,
         tail: ConversationTailCache.ExactTail? = nil,
+        stablePrefix: ToolTurnStablePrefix? = nil,
         previousRender: [Int]? = nil,
         adoptCheckpoint: AdoptCheckpoint? = nil,
         recordRender: (([Int]) -> Void)? = nil
     ) {
         self.seedMayFallShort = seedMayFallShort
         self.previousRender = previousRender
+        self.stablePrefix = stablePrefix
         self.adoptCheckpoint = adoptCheckpoint
         self.recordRender = recordRender
         self.container = container
@@ -1093,6 +1106,30 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                     return false
                 }
 
+            // The caller-marked stable prefix (2026-10-26): on the first send, render the transcript cut
+            // at the marker and tokenise it; its common prefix with the full render is where the tail
+            // is cut today, instead of waiting for the next turn's render (ExactPrefixReuse.tailCut).
+            // An optimisation only, so a template that rejects the cut (a system-only render on the
+            // lfm2 shape: "no user query") leaves it nil — the LCP cut stands — and an image turn,
+            // which vetoes the fast path anyway, skips it (review fold).
+            var stableIDs: [Int]?
+            if self.sendCount == 0, self.adoptCheckpoint != nil, !turnCarriesImages,
+               let stablePrefix = self.stablePrefix,
+               let cut = Self.stableTranscript(self.transcript.full, prefix: stablePrefix)
+            {
+                let stableRender = MLXToolMapping.templateInputs(
+                    chat: cut.map {
+                        MLXToolMapping.chatMessage(from: $0, format: format, imagesAllowed: imagesAllowed)
+                    },
+                    specs: self.specs, format: format
+                )
+                let stableInput = UserInput(
+                    chat: stableRender.chat, tools: stableRender.specs, additionalContext: thinkingContext
+                )
+                stableIDs = (try? await context.processor.prepare(input: stableInput))?
+                    .text.tokens.asArray(Int.self)
+            }
+
             // In checkpoint mode the seed lives in `checkpoints[0]`, not the live cache.
             let seedIDs = self.usesCheckpoints ? (self.checkpoints.first?.ids ?? []) : self.cachedIDs
             let seedCount = seedIDs.count
@@ -1145,7 +1182,8 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
             // Only an OVERSTATED mirror corrupts, and no path produces one.
             if self.usesCheckpoints {
                 let turn = try self.fromCheckpoint(
-                    fullIDs: fullIDs, prepared: prepared, turnCarriesImages: turnCarriesImages, context: context
+                    fullIDs: fullIDs, prepared: prepared, turnCarriesImages: turnCarriesImages, context: context,
+                    stableIDs: stableIDs
                 )
                 (cache, input, state) = (turn.cache, turn.input, turn.state)
                 // Per-step RAM (#509 follow-up): the checkpoints are full-precision
@@ -1312,7 +1350,7 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
     }
 
     private func fromCheckpoint(
-        fullIDs: [Int], prepared: LMInput, turnCarriesImages: Bool, context: ModelContext
+        fullIDs: [Int], prepared: LMInput, turnCarriesImages: Bool, context: ModelContext, stableIDs: [Int]? = nil
     ) throws -> CheckpointTurn {
         // The first send records its render for the NEXT turn's cut, whatever happens below.
         let firstSend = sendCount == 1
@@ -1365,7 +1403,9 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
             // The cross-turn tail (2026-10-25): on the first send, prefill up to where this render and
             // the previous one part, hand a copy of the cache there to the store, then carry on.
             if firstSend, let adoptCheckpoint,
-               let cut = ExactPrefixReuse.tailCut(previous: previousRender, full: fullIDs, from: from, to: to)
+               let cut = ExactPrefixReuse.tailCut(
+                   previous: previousRender, stable: stableIDs, full: fullIDs, from: from, to: to
+               )
             {
                 let started = ContinuousClock.now
                 state = try MLXBrainProvider.prefillExactly(
@@ -1375,7 +1415,10 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                 extendMS += Self.wholeMilliseconds(started.duration(to: .now))
                 let bytes = work.flatMap { $0.innerState() }.reduce(0) { $0 + $1.nbytes }
                 let outcome = adoptCheckpoint({ work.map { $0.copy() } }, Array(fullIDs[..<cut]), state, bytes)
-                logTailCheckpoint(outcome, tokens: cut, bytes: bytes)
+                let viaStable = stableIDs.map { SystemBlockBoundary.commonPrefixLength($0, fullIDs) == cut } ?? false
+                logTailCheckpoint(
+                    outcome, tokens: cut, bytes: bytes, cut: viaStable ? "stable prefix" : "previous render"
+                )
                 resume = cut
             }
             if to > resume {
@@ -1407,6 +1450,26 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                 cache: context.model.newCache(parameters: parameters), input: prepared, state: nil, reused: 0
             )
         }
+    }
+
+    /// The transcript cut at the caller's stable prefix: message `messageIndex` truncated to `characters`,
+    /// nothing after it, and no images (the cut is text; pixels would need the processor). Nil when the
+    /// marker is outside the transcript or lands on a turn that is not text, so a wrong marker costs
+    /// nothing but the LCP fallback.
+    static func stableTranscript(_ messages: [ToolMessage], prefix: ToolTurnStablePrefix) -> [ToolMessage]? {
+        guard messages.indices.contains(prefix.messageIndex), prefix.characters > 0 else { return nil }
+        var cut = Array(messages.prefix(prefix.messageIndex + 1))
+        switch cut[prefix.messageIndex] {
+        case let .system(text):
+            guard prefix.characters <= text.count else { return nil }
+            cut[prefix.messageIndex] = .system(String(text.prefix(prefix.characters)))
+        case let .user(text, _):
+            guard prefix.characters <= text.count else { return nil }
+            cut[prefix.messageIndex] = .user(String(text.prefix(prefix.characters)), images: [])
+        default:
+            return nil
+        }
+        return cut
     }
 
     /// Param-only for the same swiftformat/autoclosure reason as its siblings.
@@ -1517,12 +1580,17 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
 
     /// Param-only for the same swiftformat/autoclosure reason. `tail checkpoint adopted` is the
     /// chat-curve's acceptance line for the cross-turn cut (2026-10-25), beside `seed=conversation`.
-    private func logTailCheckpoint(_ outcome: ConversationTailCache.AdoptOutcome, tokens: Int, bytes: Int) {
+    private func logTailCheckpoint(
+        _ outcome: ConversationTailCache.AdoptOutcome, tokens: Int, bytes: Int, cut: String
+    ) {
         let mib = bytes >> 20
         switch outcome {
         case .stored:
             mlxToolLog.notice(
-                "toolTurnSession tail checkpoint adopted: \(tokens, privacy: .public) tok (\(mib, privacy: .public) MiB) for the next turn"
+                """
+                toolTurnSession tail checkpoint adopted: \(tokens, privacy: .public) tok \
+                (\(mib, privacy: .public) MiB) for the next turn, cut at the \(cut, privacy: .public)
+                """
             )
         case .overCap:
             mlxToolLog.notice(

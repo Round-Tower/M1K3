@@ -37,6 +37,9 @@
 //  of consecutive first renders (the 10-25 chat-curves showed every message re-prefilling the whole conversation,
 //  reuse flat at the persona: Lil 2–3 s, Big 6–12 s a message). The ledger is `plan` over [persona, tail, rolling].
 //  Confidence 0.8 on the arithmetic; what the cut buys per message is the chat-curve's to show.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — `tailCut(stable:)`: the cut also reads the caller-marked stable
+//  render (the transcript cut at `ToolTurnStablePrefix`), so a window shift no longer costs the lag turn. Longer
+//  valid cut wins.
 
 import Foundation
 
@@ -92,9 +95,18 @@ enum ExactPrefixReuse {
     /// covers it: a slid window, a switched conversation) and short of the render's last token (`to` —
     /// there the rolling checkpoint already is). The cut needs no layout knowledge, and a wrong guess
     /// costs nothing: a tail that is not a prefix of the next render loses the plan to the persona.
-    static func tailCut(previous: [Int]?, full: [Int], from: Int, to: Int) -> Int? {
-        guard let previous, !previous.isEmpty else { return nil }
-        let shared = SystemBlockBoundary.commonPrefixLength(previous, full)
-        return from < shared && shared < to ? shared : nil
+    ///
+    /// `stable` (2026-10-26): the same transcript rendered cut at the caller's stable-prefix marker
+    /// (`ToolTurnStablePrefix`), tokenised. Its common prefix with the full render is where the replay
+    /// ends TODAY, so the cut no longer waits for the next turn's render: the first render after a
+    /// window shift already takes a long tail (the LCP-only cut lagged a turn — one hit in three past
+    /// a shift on #690's curves). The longer valid cut wins; either render alone still works.
+    static func tailCut(previous: [Int]?, stable: [Int]? = nil, full: [Int], from: Int, to: Int) -> Int? {
+        let cuts = [stable, previous].compactMap { render -> Int? in
+            guard let render, !render.isEmpty else { return nil }
+            let shared = SystemBlockBoundary.commonPrefixLength(render, full)
+            return from < shared && shared < to ? shared : nil
+        }
+        return cuts.max()
     }
 }

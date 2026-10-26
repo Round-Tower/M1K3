@@ -210,6 +210,9 @@
 //  away (`onConclusionToken` dropped it, `synthesiseOverEvidence` was always true) and decoded again. The `use`
 //  arm keeps an answer-shaped conclusion and synthesises only after a preamble; paired chateval decides whether
 //  any tier's default moves. Confidence 0.8 (pinned both ways; the live gain is the eval's to show).
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — `groundingWithStablePrefix`: the native turn also hands the agent
+//  where its grounding stops being stable (context line + replay), the tool session's cross-turn tail cut (the LCP
+//  cut lagged a turn).
 
 import Foundation
 import M1K3Agent
@@ -1135,6 +1138,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // they have always been, after the grounding.
         let grounding: String
         let standing: String?
+        // Where the grounding stops being stable across turns (the context line + the replay), for the
+        // tool session's cross-turn tail cut; nil on the ReAct floor, which has no KV tail.
+        let stableContextChars: Int?
         switch style {
         case .react:
             let parts = Self.reactParts(
@@ -1143,12 +1149,15 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             )
             grounding = contextPreamble + "\n\n" + parts.context
             standing = parts.standing
+            stableContextChars = nil
         case .native:
-            grounding = contextPreamble + "\n\n" + Self.grounding(
+            let native = Self.groundingWithStablePrefix(
                 chunks: chunks, memories: memories, toolNames: toolNames, history: history,
                 historyBudget: historyBudget, style: style, ambient: ambient, todos: todos
             )
+            grounding = contextPreamble + "\n\n" + native.text
             standing = nil
+            stableContextChars = native.stableChars > 0 ? contextPreamble.count + 2 + native.stableChars : nil
         }
         Self.logTurnStart(chunks: chunks, tools: tools, grounding: grounding)
         // Fresh agent per turn — its reasoning trace must not bleed across
@@ -1186,6 +1195,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 context: grounding,
                 standing: standing,
                 thinkingEnabled: thinkingEnabled,
+                stableContextChars: stableContextChars,
                 onEvent: { event in
                     if case .actionStarted = event { toolUsed.withLock { $0 = true } }
                     Self.forward(event, to: onActivity)
@@ -1540,12 +1550,27 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         style: PromptStyle = .react, now: Date = Date(), ambient: String? = nil,
         todos: String? = nil
     ) -> String {
+        groundingWithStablePrefix(
+            chunks: chunks, memories: memories, toolNames: toolNames, history: history,
+            historyBudget: historyBudget, style: style, now: now, ambient: ambient, todos: todos
+        ).text
+    }
+
+    /// `grounding` plus where its stable prefix ends (2026-10-26): the replay's character count — the
+    /// part the next turn's render continues while the history window's start holds (HistoryWindow's
+    /// block eviction). Zero without a replay. The agent maps it onto the tool session's `stablePrefix`.
+    static func groundingWithStablePrefix(
+        chunks: [ChunkHit], memories: [ChunkHit] = [], toolNames: Set<String>,
+        history: [ChatTurn] = [], historyBudget: HistoryWindow.Budget = .default,
+        style: PromptStyle = .react, now: Date = Date(), ambient: String? = nil,
+        todos: String? = nil
+    ) -> (text: String, stableChars: Int) {
         let body = groundingBody(
             chunks: chunks, memories: memories, toolNames: toolNames, style: style, now: now,
             ambient: ambient, todos: todos
         )
-        guard let replay = HistoryWindow.render(history, budget: historyBudget) else { return body }
-        return "\(replay)\n\(Self.replayFraming)\n\n\(body)"
+        guard let replay = HistoryWindow.render(history, budget: historyBudget) else { return (body, 0) }
+        return ("\(replay)\n\(Self.replayFraming)\n\n\(body)", replay.count)
     }
 
     /// The ReAct turn's grounding, split: `context` is what this turn brings

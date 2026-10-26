@@ -39,6 +39,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#418), Confidence 0.85 — `ToolTurn.rejectedToolCalls`:
 //  a turn whose calls were all rejected before running is its own case, so the loop can steer instead of
 //  taking the failed call as the final answer. Transcript and session record it as an assistant turn.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — `ToolTurnOptions.stablePrefix` (`ToolTurnStablePrefix`): the caller
+//  marks where the opening render stops being stable across turns, so the MLX session can cut its cross-turn tail on
+//  the first render after a window shift (the LCP cut lagged a turn: one hit in three on #690's curves). Default nil;
+//  AFM ignores it.
 
 import Foundation
 import Synchronization
@@ -207,13 +211,32 @@ public enum ToolMessage: Sendable, Equatable {
 
 /// Per-turn options for a tool session. Extend here rather than growing the
 /// protocol signature again.
+/// Where a turn's opening render stops being stable across turns (2026-10-26): the conversation
+/// replay ends `characters` into message `messageIndex`, and the next turn's render continues it
+/// while the history window's start holds. A session with a cross-turn tail checkpoint cuts there on
+/// the FIRST render of a turn instead of waiting for the next turn to show it the common prefix —
+/// the LCP cut lags a turn, which capped the tail at one hit in three past a window shift (#690).
+/// Providers without a KV cache ignore it; a wrong marker costs nothing but that fallback.
+public struct ToolTurnStablePrefix: Sendable, Equatable {
+    public let messageIndex: Int
+    public let characters: Int
+
+    public init(messageIndex: Int, characters: Int) {
+        self.messageIndex = messageIndex
+        self.characters = characters
+    }
+}
+
 public struct ToolTurnOptions: Sendable, Equatable {
     /// Whether the model may spend a reasoning phase this turn. Providers
     /// whose template has no thinking switch ignore it.
     public let thinkingEnabled: Bool
+    /// The caller-marked stable prefix of the opening messages, if the caller knows one.
+    public let stablePrefix: ToolTurnStablePrefix?
 
-    public init(thinkingEnabled: Bool = true) {
+    public init(thinkingEnabled: Bool = true, stablePrefix: ToolTurnStablePrefix? = nil) {
         self.thinkingEnabled = thinkingEnabled
+        self.stablePrefix = stablePrefix
     }
 
     public static let `default` = ToolTurnOptions()
