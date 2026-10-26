@@ -45,6 +45,10 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — `searchCorrected` (#713): when the search head reads a turn as local,
 //  every web read leaves the pick; a local link still runs, nothing left is a plain turn. It never adds a web read.
 //  Confidence 0.8 (pinned; the head ships untrained and flagged off until its teacher pass and paired arm).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (2) — `vetoable`: an explicit web ask or a question about now is never
+//  vetoed (`asksForTheWeb`): a head
+//  trained on candidate labels read "Fetch the web site m1k3.app…" as local at p=0.014. The domain pattern is
+//  shared with `asksToOpenWebPage` (`namesWebAddress`).
 
 import Foundation
 import M1K3Agent
@@ -204,11 +208,15 @@ public enum ToolDispatch {
         let words = ToolGroupRouter.words(question).drop { openLeads.contains(String($0)) }
         guard let verb = words.first.map(String.init) else { return false }
         let opens = ["open", "launch", "visit"].contains(verb) || (verb == "go" && words.dropFirst().first == "to")
-        let domain = question.range(
+        return opens && (namesWebAddress(question) || ToolGroupRouter.mentions(question, any: webThings))
+    }
+
+    /// A URL or a bare domain ("m1k3.app", "rte.ie").
+    static func namesWebAddress(_ text: String) -> Bool {
+        text.range(
             of: #"(https?://|\b[a-z0-9-]+\.(com|ie|org|net|io|dev|app|co|uk|eu)\b)"#,
             options: [.regularExpression, .caseInsensitive]
         ) != nil
-        return opens && (domain || ToolGroupRouter.mentions(question, any: webThings))
     }
 
     private static let openLeads: Set<String> = [
@@ -296,10 +304,30 @@ public enum ToolDispatch {
         return ToolPick(tool: head.tool, query: head.query, then: Array(kept.dropFirst()))
     }
 
-    /// Any link of the pick reads the web: the only picks the search head is asked about.
+    /// Any link of the pick reads the web.
     public static func readsTheWeb(_ pick: ToolPick) -> Bool {
         ([pick] + pick.then).contains { webSourced.contains($0.tool) }
     }
+
+    /// The only picks the search head is asked about: one that reads the web, on a question that doesn't
+    /// ask for the web in its own words (`asksForTheWeb`).
+    public static func vetoable(_ pick: ToolPick, question: String) -> Bool {
+        readsTheWeb(pick) && !asksForTheWeb(question)
+    }
+
+    /// The user asked for the web, or about now: search, look up, online, a site or a URL, or the gate's
+    /// now-words (this year, latest, today, the weather, prices, scores, the news). Never vetoed, whatever a
+    /// head reads: a sentence vector alone put "Fetch the web site m1k3.app…" at p=0.014 (a head on candidate
+    /// labels, 2026-10-26). Accepted lookalikes stay searched, as before the head: "why is Napoleon still
+    /// important today?" (the `nowCues` note).
+    public static func asksForTheWeb(_ question: String) -> Bool {
+        namesWebAddress(question) || ToolGroupRouter.mentions(question, any: webAskCues + ToolNeedRouter.nowCues)
+    }
+
+    static let webAskCues = [
+        "search", "searching", "google", "googling", "look up", "look it up", "looking up", "online", "internet",
+        "the web", "website", "web site", "webpage", "web page", "url", "link", "fetch", "browse",
+    ]
 
     /// A web read on a question about what the user decided or said goes to their knowledge
     /// instead. Apple's pick sent "What did Kev decide about which brain fronts by default?" to

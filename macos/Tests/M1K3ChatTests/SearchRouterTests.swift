@@ -10,6 +10,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.8 (math and fail-open pinned; the
 //  fixture pins wait on trained weights). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — every web-read fixture asks for the web in words (`asksForTheWeb`),
+//  so no head can veto it; the #680 lines and world-knowledge fixtures carry no such words and stay the head's.
 //
 
 import Foundation
@@ -91,15 +93,36 @@ struct SearchRouterFixtureTests {
     /// #680, live on 2026-10-25 (voice, Big): both turns web-searched a stable history.
     static let issue680Lines = ["tell me the history of Dublin", "what about Cork?"]
 
-    @Test("every tool-use fixture that must read the web is never vetoed (a veto would hide the read it needs)")
-    func webReadFixturesAreNeverVetoed() {
-        let webReads = ChatEvalFixtures.toolUse.filter { fixture in
+    /// The fixtures that must read the web, and the ones the head exists for.
+    static var webReadFixtures: [ChatEvalFixture] {
+        ChatEvalFixtures.toolUse.filter { fixture in
             let required = (fixture.expectation.mustCallTool.map { [$0] } ?? []) + fixture.expectation.alsoCallTools
             return required.contains { ToolDispatch.webSourced.contains($0) }
         }
+    }
+
+    @Test("every tool-use fixture that must read the web asks for it in words, so no head can veto it")
+    func webReadFixturesAreGuarded() {
+        let webReads = Self.webReadFixtures
         #expect(webReads.count >= 6, "the web-read fixtures went missing: \(webReads.map(\.id))")
-        let vetoed = webReads.filter { SearchRouter.decide(for: $0.prompt, embed: embedder.vector).verdict == .local }
+        let vetoable = webReads.filter { !ToolDispatch.asksForTheWeb($0.prompt) }
+        #expect(vetoable.isEmpty, "left to the head: \(vetoable.map(\.id))")
+    }
+
+    @Test("every web-read fixture the guard leaves to the head reads web (a veto would hide the read it needs)")
+    func webReadFixturesAreNeverVetoed() {
+        let vetoed = Self.webReadFixtures.filter {
+            !ToolDispatch.asksForTheWeb($0.prompt)
+                && SearchRouter.decide(for: $0.prompt, embed: embedder.vector).verdict == .local
+        }
         #expect(vetoed.isEmpty, "vetoed: \(vetoed.map(\.id))")
+    }
+
+    @Test("the #680 lines and the world-knowledge fixtures are the head's to decide: no web words guard them")
+    func stableKnowledgeIsLeftToTheHead() {
+        let stable = ChatEvalFixtures.worldKnowledge.map(\.prompt) + Self.issue680Lines
+        let guarded = stable.filter(ToolDispatch.asksForTheWeb)
+        #expect(guarded.isEmpty, "guarded, so the head never sees them: \(guarded)")
     }
 
     @Test("stable knowledge and the #680 lines stay local", .enabled(if: SearchRouter.Head.shipping.isTrained))

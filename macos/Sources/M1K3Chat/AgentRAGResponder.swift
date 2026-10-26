@@ -217,11 +217,13 @@
 //  pick when the gate kept a document chunk answers on the plain route over those chunks (grounded-long: torque went
 //  to lookup_fact 6/6 and never read the manual). Web picks keep the 09-27 lean prompt. Confidence 0.75 (pinned; paired
 //  grounded-long + cross arm on Lil/Big: torque 0/6 → 6/6, cross 17/18; Mini unmeasured).
-//  Review: Kev + claude-opus-5.5, 2026-10-26 — the search head's veto (#713) after `documentCorrected`: when the route
-//  carries `staysLocal` and the pick reads the web, a local verdict takes the web reads out (`searchCorrected`); a
-//  pick left empty answers on the plain route with the turn's chunks and history. Logged (`search head:`) and
-//  recorded as a `search-veto` stage for the eval. Chat verdicts and native agent calls are untouched. Confidence 0.8
-//  (pinned; flagged off, the head untrained until its teacher pass and paired arm).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — the search head's veto (#713) after `documentCorrected`: when the
+//  route carries `staysLocal` and the pick reads the web, a local verdict takes the web reads out
+//  (`searchCorrected`); a pick left empty answers on the plain route with the turn's chunks and history. Logged
+//  (`search head:`) and recorded as a `search-veto` stage for the eval. Chat verdicts and native agent calls are
+//  untouched. Confidence 0.8 (pinned; flagged off, the head untrained until its teacher pass and paired arm).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (2) — the head is asked only on a `ToolDispatch.vetoable` pick: an
+//  explicit web ask or a question about now never reaches it. Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -991,9 +993,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             Self.log.notice("tool dispatch: lookup_fact, but kept chunks answer — a plain turn reads them")
             return await plain()
         }
-        // The search head (#713, `toolSearchHead`): asked only when the pick reads the web, so it never
-        // adds a call. A local verdict takes the web reads out; nothing left falls to the none branch.
-        if let staysLocal, ToolDispatch.readsTheWeb(pick) {
+        // The search head (#713, `toolSearchHead`): asked only when the pick reads the web and the user
+        // didn't ask for the web in words, so it never adds a call and never overrides an explicit ask.
+        // A local verdict takes the web reads out; nothing left falls to the none branch.
+        if let staysLocal, ToolDispatch.vetoable(pick, question: question) {
             let decision = staysLocal(question)
             let score = decision.probability.map { String(format: "%.3f", $0) } ?? "none"
             let vetoed = ToolDispatch.searchCorrected(pick, staysLocal: decision.verdict == .local)

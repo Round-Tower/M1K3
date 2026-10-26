@@ -23,6 +23,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — `SearchVetoTurnTests` (#713): the search head's local verdict turns a
 //  web pick into a plain turn (no tool runs, grounding and history kept, the eval sees `search-veto`); a web verdict
 //  runs it; a local pick never asks the head. `run` gains `history:` and `staysLocal:`. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (2) — an explicit web ask never asks the head
+//  (`explicitAskIsNeverVetoed`).
 
 import Foundation
 import M1K3Agent
@@ -462,6 +464,24 @@ struct SearchVetoTurnTests {
         )
         #expect(calls.log.withLock { $0 } == ["web_search(hurling final)"])
         #expect(provider.prompts.first?.contains("WHAT web_search RETURNED JUST NOW") == true)
+    }
+
+    @Test("an explicit web ask is never vetoed and never asks the head, whatever it would say")
+    func explicitAskIsNeverVetoed() async throws {
+        let asked = Mutex(0)
+        let calls = Calls()
+        _ = try await run(
+            Scripted(["Here's what the site says."]),
+            tools: [Recording(name: "fetch_page", output: "M1K3: your AI, your devices.", calls: calls)],
+            pick: ToolPick(tool: "fetch_page", query: "https://m1k3.app"),
+            question: "Fetch the web site m1k3.app and give me your read on how we're aligning.",
+            staysLocal: { _ in
+                asked.withLock { $0 += 1 }
+                return .init(verdict: .local, probability: 0.014)
+            }
+        )
+        #expect(asked.withLock { $0 } == 0)
+        #expect(calls.log.withLock { $0 } == ["fetch_page(https://m1k3.app)"])
     }
 
     @Test("a pick that reads nothing from the web never asks the head")

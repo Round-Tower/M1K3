@@ -21,6 +21,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — `SearchCorrectedTests` (#713): a turn the search head reads as local
 //  loses every web read; a local link still runs, nothing left is a plain turn, a web verdict changes nothing.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (2) — `asksForTheWeb`: an explicit web ask (search, look up, online, a
+//  URL or domain) or a question about now is never vetoed; the #680 lines and stable facts are left to the head.
 
 import Foundation
 import M1K3Agent
@@ -500,5 +502,35 @@ struct SearchCorrectedTests {
         ))
         #expect(!ToolDispatch.readsTheWeb(ToolPick(tool: "search_knowledge", query: "seal")))
         #expect(!ToolDispatch.readsTheWeb(ToolPick(tool: ToolPick.noTool, query: "")))
+    }
+
+    /// A head trained on candidate labels (2026-10-26, uncommitted look) read "Fetch the web site m1k3.app…" as
+    /// local at p=0.014: a sentence vector alone can veto an explicit ask. The user's own words win.
+    @Test("an explicit web ask or a question about now is never vetoable", arguments: [
+        "Search the web for the latest news headlines about Apple Silicon today.",
+        "Look up the factual founding year of the city of Cork from a reference source.",
+        "Fetch the web site m1k3.app and give me your read on how we're aligning.",
+        "Can you google the train times to Galway?",
+        "What does https://example.com/about say?",
+        "Who won the All-Ireland hurling final this year?",
+        "What's the newest Claude model?",
+        "What's the weather in Cork tomorrow?",
+        "Read me the news.",
+    ])
+    func explicitAsksAreNeverVetoable(question: String) {
+        #expect(ToolDispatch.asksForTheWeb(question))
+        #expect(!ToolDispatch.vetoable(ToolPick(tool: "web_search", query: "q"), question: question))
+    }
+
+    @Test("a stable question with no web words is left to the head", arguments: [
+        "tell me the history of Dublin", "what about Cork?", "Who painted Guernica?",
+        "Which river flows through Dublin?",
+        "Why did the Titanic sink so fast?",
+    ])
+    func stableQuestionsAreLeftToTheHead(question: String) {
+        #expect(!ToolDispatch.asksForTheWeb(question))
+        #expect(ToolDispatch.vetoable(ToolPick(tool: "web_search", query: "q"), question: question))
+        let local = ToolPick(tool: "datetime", query: "")
+        #expect(!ToolDispatch.vetoable(local, question: question), "no web read, no veto")
     }
 }
