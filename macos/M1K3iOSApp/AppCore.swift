@@ -471,7 +471,8 @@ final class AppCore {
             reservedTokens: historyReserveTokens,
             generationTokens: historyGenerationReserveTokens,
             measuredMiniReserveTokens: measuredMiniReserve.withLock { $0 },
-            spoken: defaults.bool(forKey: VoiceModeDefaults.activeKey) && HistoryBudgetPolicy.spokenCapEnabled()
+            spoken: defaults.bool(forKey: VoiceModeDefaults.activeKey) && HistoryBudgetPolicy.spokenCapEnabled(),
+            evictionBlockTurns: HistoryBudgetPolicy.evictionBlockTurns()
         )
     }
 

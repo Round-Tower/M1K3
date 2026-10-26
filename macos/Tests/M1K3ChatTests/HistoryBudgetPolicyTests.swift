@@ -363,4 +363,35 @@ struct HistoryBudgetPolicyTests {
             #expect(!HistoryBudgetPolicy.spokenCapEnabled(arguments: ["spokenHistoryCap": off]))
         }
     }
+
+    // MARK: - Block eviction (2026-10-26, design doc §2a)
+
+    @Test("the MLX tiers evict history in blocks; Mini's windows do not")
+    func mlxTiersCarryTheBlock() {
+        #expect(HistoryBudgetPolicy.defaultEvictionBlockTurns == 6)
+        for tier in [BrainTier.lil, .big, .pocket] {
+            #expect(live(tier, spoken: false).evictionBlockTurns == HistoryBudgetPolicy.defaultEvictionBlockTurns)
+        }
+        #expect(HistoryBudgetPolicy.conservativeMiniBudget.evictionBlockTurns == 1)
+        #expect(HistoryBudgetPolicy.measuredMiniBudget(reservedTokens: 1500).evictionBlockTurns == 1)
+        #expect(live(.mini, spoken: false).evictionBlockTurns == 1)
+    }
+
+    @Test("the spoken merge and the image reserve keep the block")
+    func blockSurvivesTheMerges() {
+        #expect(live(.big, spoken: true).evictionBlockTurns == HistoryBudgetPolicy.defaultEvictionBlockTurns)
+        #expect(live(.lil, spoken: false).reservingImages(2).evictionBlockTurns == HistoryBudgetPolicy.defaultEvictionBlockTurns)
+    }
+
+    @Test("the argv override: -historyEvictionBlock N sets the block, 0/1/NO turn it off, junk is the default")
+    func evictionBlockArgv() {
+        #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: [:]) == HistoryBudgetPolicy.defaultEvictionBlockTurns)
+        #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": "8"]) == 8)
+        #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": "1"]) == 1)
+        #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": "0"]) == 1)
+        #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": "NO"]) == 1)
+        #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": "lots"]) == HistoryBudgetPolicy.defaultEvictionBlockTurns)
+        let off = HistoryBudgetPolicy.budget(for: .lil, reservedTokens: 1000, generationTokens: 1000, evictionBlockTurns: 1)
+        #expect(off.evictionBlockTurns == 1)
+    }
 }

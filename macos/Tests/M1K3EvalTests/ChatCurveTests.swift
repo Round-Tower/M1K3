@@ -15,14 +15,14 @@ import Foundation
 import Testing
 
 struct ChatCurveTests {
-    @Test("the script is twenty short, distinct, non-empty messages")
+    @Test("the script is thirty short, distinct, non-empty messages")
     func scriptShape() {
         // Twenty, not eight (2026-10-25): HistoryWindow keeps 16 turns (8 exchanges), so from about
         // message 10 the oldest line drops every turn and the shared prefix collapses. An 8-message
         // curve cannot see that cliff; the cross-turn reuse decision needs the far side of it.
         let script = ChatCurveScript.messages
-        #expect(script.count == 20)
-        #expect(Set(script).count == 20)
+        #expect(script.count == 30)
+        #expect(Set(script).count == 30)
         #expect(script.allSatisfy { !$0.isEmpty && $0.count <= 120 })
     }
 
