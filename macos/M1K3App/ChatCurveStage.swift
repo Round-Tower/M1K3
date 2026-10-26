@@ -31,6 +31,11 @@
 //  `extend=`, MLX's own peak per message, the turn-label set, a `_ROUTER=dispatch` arm so the curve
 //  can run the Mac's plain route, twenty messages, and the log read shared with ChatEvalStage
 //  (MetricLogReader). Re-run owed on Lil and Big, Release. Confidence 0.75.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — the stage's responder took `Budget.default` (8,000 chars, 16 turns),
+//  not the tier's live window, so the first block-eviction curves read as sliding on both arms (no tail adopted past
+//  message 10, the eviction block never reached the render). `historyBudget()` now mirrors `liveHistoryBudget` for
+//  the curve's tier and the header line prints the window it ran with. The 10-25 curves measured the default window;
+//  on Lil the 16-turn ceiling binds either way, so their shape stands.
 //
 
 import Darwin
@@ -50,6 +55,25 @@ enum ChatCurveStage {
         case "big": return BrainTier.big.mlxModelID
         default: return value
         }
+    }
+
+    /// The tier the curve runs on (a bare model id is read as Lil's window).
+    static var tier: BrainTier {
+        SelfTestEnv.value("M1K3_SELFTEST_CHATCURVE") == "big" ? .big : .lil
+    }
+
+    /// The history window the live app would give this tier (`AppEnvironment.liveHistoryBudget` reads the
+    /// SELECTED brain, which a headless run has not chosen): the policy's budget, the live reserves, and
+    /// the block-eviction argv. Until 2026-10-26 the stage's responder used `Budget.default` — 8,000 chars,
+    /// 16 turns, no block — so the 10-25 curves measured that window, not the app's, and the first block
+    /// curves could not see the block at all.
+    static func historyBudget() -> HistoryWindow.Budget {
+        HistoryBudgetPolicy.budget(
+            for: tier,
+            reservedTokens: AppEnvironment.historyReserveTokens,
+            generationTokens: AppEnvironment.historyGenerationReserveTokens,
+            evictionBlockTurns: HistoryBudgetPolicy.evictionBlockTurns()
+        )
     }
 
     static var isRequested: Bool {
@@ -84,7 +108,11 @@ enum ChatCurveStage {
             emit("✗ chatcurve: no model id for that value")
             return
         }
-        emit("• chatcurve: \(modelID), \(ChatCurveScript.messages.count) scripted messages, router \(routerArm)…")
+        let window = historyBudget()
+        emit(
+            "• chatcurve: \(modelID), \(ChatCurveScript.messages.count) scripted messages, router \(routerArm), "
+                + "history \(window.totalChars)c/\(window.maxTurns) turns, eviction block \(window.evictionBlockTurns)…"
+        )
         // Outside the `do` so a throw mid-script keeps the samples already measured:
         // a partial curve is still a curve, and the run cost minutes of GPU.
         var samples: [ChatCurveSample] = []
@@ -100,6 +128,7 @@ enum ChatCurveStage {
             let responder = try AgentRAGResponder(
                 store: KnowledgeStore(), embedder: MLXEmbeddingService(), provider: provider,
                 toolsProvider: { ChatEvalStage.toolPalette }, maxIterations: 3,
+                historyBudgetProvider: { window },
                 plainRouteProvider: plainRoute
             )
             var history: [ChatTurn] = []
