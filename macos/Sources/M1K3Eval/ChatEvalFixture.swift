@@ -98,6 +98,9 @@
 //  `ChatEvalFixtures+Format.swift`, last in `all`): shape follows content UNPROMPTED — a compare wants a table, a
 //  how-to numbered steps, banter no markup at all, and two voice-path fixtures carry `spokenNoMarkup`, the one new
 //  expectation flag: the stage hands the scorer SpeechTextPolish's text and it must carry no markup.
+//  Review: same day (pre-push review fold) — `follow-no-bullets` forbids bullet SHAPES ("\n- ", "\n1. "), not bare
+//  "\n-"/"\n*": under the scorer's new first-line read the bare star found itself inside a bold-led one-liner, the
+//  very shape the persona now asks for. Confidence 0.85.
 
 import Foundation
 
@@ -1441,10 +1444,12 @@ public enum ChatEvalFixtures {
         .init(
             id: "follow-no-bullets", kind: .instructionFollowing,
             prompt: "Explain gravity in one plain sentence. Do not use bullet points or lists.",
-            // Newline-anchored so a mid-sentence hyphen or a "1970s" can't
-            // false-fail; only real list scaffolding trips it.
+            // Newline-anchored, marker AND its space, so a mid-sentence hyphen, a "1970s" or a bold-led
+            // one-liner ("**Gravity** pulls…" — a bare "\n*" sat inside "\n**") can't false-fail; only real
+            // list scaffolding trips it, a list that OPENS the answer included (the scorer's first-line
+            // read, #716). Re-pinned on the fixture itself in ChatEvalScorerTests.
             expectation: .init(
-                mustNotContain: ["\n-", "\n*", "\n1.", "\n2.", "•"],
+                mustNotContain: ["\n- ", "\n* ", "\n1. ", "\n2. ", "•"],
                 mustComply: true, minChars: 10, maxChars: 400, lengthIsHard: true
             )
         ),

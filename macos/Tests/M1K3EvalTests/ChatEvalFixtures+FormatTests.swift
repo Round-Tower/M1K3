@@ -10,6 +10,9 @@
 //  ChatEvalFixturesTests and cover these fixtures too.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-26, Confidence 0.85. Prior: none (new file).
+//  Review: same day (pre-push review fold) — the how-to pin is three dotted steps in `mustContainAll` (the scorer
+//  reads the first line as a line start now, so step 1 may open the answer); bold is forbidden only on the pure
+//  banter bid, because the shape bullet allows the key fact bold once and the Cork bid carries one. Confidence 0.85.
 //
 
 import Foundation
@@ -45,11 +48,14 @@ struct ChatEvalFixturesFormatTests {
                 #expect(exp.mustContainAll.count >= 2, "\(fixture.id) wants both names")
                 #expect(exp.mustComply && exp.wholeWordFacts)
             case "howto":
-                #expect(exp.mustContainAny.contains("\n1.") || exp.mustContainAny.contains("\n1)"))
-                #expect(exp.mustComply)
+                // Three dotted steps at line starts; the answer may open with step 1 (the scorer's first-line read).
+                for step in ["\n1.", "\n2.", "\n3."] {
+                    #expect(exp.mustContainAll.contains(step), "\(fixture.id) wants step \(step.debugDescription)")
+                }
+                #expect(exp.mustContainAny.isEmpty && exp.mustComply && exp.wholeWordFacts)
             case "smalltalk":
                 #expect(exp.mustContainAny.isEmpty && exp.mustContainAll.isEmpty)
-                for marker in ["|", "**", "```", "\n#", "\n- ", "\n1. "] {
+                for marker in ["|", "```", "\n#", "\n- ", "\n* ", "\n1. "] {
                     #expect(exp.mustNotContain.contains(marker), "\(fixture.id) allows \(marker.debugDescription)")
                 }
                 #expect(!exp.mustComply && !exp.spokenNoMarkup)
@@ -61,32 +67,42 @@ struct ChatEvalFixturesFormatTests {
         }
         #expect(families == ["compare", "howto", "smalltalk", "voice"])
         #expect(spoken >= 2)
+        // Bold is the one markup banter may carry (the shape bullet: the key fact, once), so only the bid with
+        // nothing to bold forbids it; the Cork bid invites a fact.
+        #expect(fixtures.filter { $0.expectation.mustNotContain.contains("**") }.map(\.id) == ["fmt-smalltalk-mind"])
         // Last in the enum, so every older report's row order is unchanged.
         #expect(TaskKind.allCases.last == .format)
         #expect(TaskKind.format.rawValue == "format")
     }
 
     /// The small-talk markers are punctuation, so the whole-word matcher needs no boundary: each fires on a
-    /// banter answer that uses it, and a clean paragraph fires none.
-    @Test("a small-talk fixture fails on any markdown and passes clean prose")
+    /// banter answer that uses it, and a clean paragraph fires none. Bold is the shape bullet's own allowance
+    /// (the key fact, once): the fact-bearing Cork bid takes one, the pure banter bid has nothing to bold.
+    @Test("a small-talk fixture fails on structure, pure banter fails on bold too, and clean prose passes both")
     func smallTalkMarkersFire() throws {
-        let banter = try #require(ChatEvalFixtures.format.first { $0.id.hasPrefix("fmt-smalltalk-") })
-        func forbidden(_ answer: String) -> CheckOutcome? {
-            ChatEvalScorer.score(fixture: banter, observation: EvalObservation(rawText: answer))
+        let cork = try #require(ChatEvalFixtures.format.first { $0.id == "fmt-smalltalk-cork" })
+        let mind = try #require(ChatEvalFixtures.format.first { $0.id == "fmt-smalltalk-mind" })
+        func forbidden(_ fixture: ChatEvalFixture, _ answer: String) -> CheckOutcome? {
+            ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: answer))
                 .checks.first { $0.name == "excludes forbidden" }?.outcome
         }
         let clean = "Grand, if you like your rain sideways. The jazz weekend is the reason to come; "
             + "the English Market is the reason to stay dry. Bring a proper coat and you'll be fine."
-        #expect(forbidden(clean) == .pass)
+        #expect(forbidden(cork, clean) == .pass)
+        #expect(forbidden(mind, clean) == .pass)
         for marked in [
             "Cork in October:\n\n| Month | Rain |\n|---|---|\n| Oct | plenty |",
-            "**Cork** is grand in October.",
             "Two things:\n- the jazz weekend\n- the market",
+            "Two things:\n* the jazz weekend\n* the market",
             "Here's the plan:\n1. Pack a coat.\n2. Go anyway.",
             "# Cork in October\nGrand, mostly.",
             "Try this:\n```\nbring a coat\n```",
         ] {
-            #expect(forbidden(marked) == .fail, Comment(rawValue: marked))
+            #expect(forbidden(cork, marked) == .fail, Comment(rawValue: marked))
+            #expect(forbidden(mind, marked) == .fail, Comment(rawValue: marked))
         }
+        let oneBoldFact = "Grand: the **jazz weekend** is the last of October, and the rain is sideways either way."
+        #expect(forbidden(cork, oneBoldFact) == .pass)
+        #expect(forbidden(mind, "I used to think **tabs** were right. Spaces, now.") == .fail)
     }
 }

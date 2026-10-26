@@ -110,6 +110,10 @@
 //  lane would say (`SpeechTextPolish.polish` over the think-stripped answer, `EvalObservation.spokenText`) so a
 //  `spokenNoMarkup` fixture scores the voice path; the app target already links M1K3Voice. Verify-by-eval: the
 //  overnight run's format arm on Lil and Big, wired like the app (`--router dispatch`).
+//  Review: same day (pre-push review fold) — the spoken text is built the way auto-speak builds it (the sentence
+//  fold, then the per-sentence polish: `spokenText(of:)`), not a whole-answer polish: the fold cuts a table row at a
+//  full stop inside a cell, and a whole-answer read could not see that. The bare arm hands it in too, so the spoken
+//  check skips only under `swift test`. Confidence 0.8.
 //
 
 import Foundation
@@ -474,10 +478,24 @@ enum ChatEvalStage {
             routeStages: stages.stages.map(\.rawValue),
             thinkMS: thinkMS,
             generation: await generationFigures(since: startedAt, provider: provider, firstChunkMS: firstChunkMS),
-            // What the speech lane would say for this turn (#716): the same polish the app's speak
-            // path applies to the settled, think-stripped answer. Read only by a `spokenNoMarkup` fixture.
-            spokenText: SpeechTextPolish.polish(ThinkStripper.strip(raw))
+            spokenText: spokenText(of: raw)
         )
+    }
+
+    /// What the speech lane would say for a turn (#716), built the way auto-speak builds it: the settled,
+    /// think-stripped answer folded into sentences by `StreamedAnswerFolder` (cut at the follow-ups trailer or
+    /// a sources header, as `AppEnvironment+AutoSpeak` wires it), each polished by
+    /// `SpeechTextPolish.spokenSentence`, joined. A whole-answer polish was the first cut, and it hid a real
+    /// fail: the fold cuts a table row at a full stop inside a cell, so the tail reaches the polish without its
+    /// leading pipe. The leak guard stays off — the scorer's own leak markers read the raw answer. A pure
+    /// function of the answer, so both arms hand it in; read only by a `spokenNoMarkup` fixture.
+    private static func spokenText(of raw: String) -> String {
+        var folder = StreamedAnswerFolder(
+            stopMatcher: { SpokenAnswerEnd.start(in: $0, followUps: FollowUpSplit.trailerStart(in:)) }
+        )
+        var sentences = folder.ingest(ThinkStripper.strip(raw))
+        if let tail = folder.flush() { sentences.append(tail) }
+        return sentences.compactMap(SpeechTextPolish.spokenSentence).joined(separator: " ")
     }
 
     /// The trial's generation figures off the app's own log lines (2026-10-25) — MLX brains only: Mini and
@@ -939,7 +957,8 @@ enum ChatEvalStage {
                 }
                 let ms = milliseconds(clock.now - start)
                 return ChatEvalScorer.score(
-                    fixture: fixture, observation: EvalObservation(rawText: raw, latencyMS: ms),
+                    fixture: fixture,
+                    observation: EvalObservation(rawText: raw, latencyMS: ms, spokenText: spokenText(of: raw)),
                     latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
             }

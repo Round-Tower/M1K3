@@ -8,19 +8,28 @@
 //  numbered steps, and small talk as prose with no markdown at all — the character must survive, so a
 //  results-page answer to a bid for banter is the fail this kind exists to see.
 //
-//  Two voice-path fixtures carry `spokenNoMarkup`: the live stage hands the scorer what SpeechTextPolish
-//  would say for the turn, and that text must carry no pipe, bold, fence or heading (the flatten learned
-//  tables and dash bullets in the same change). On the bare arm, or under `swift test`, nothing is handed in
-//  and the check skips rather than guesses. The voice prompts never ask for a shape either; there is no
-//  spoken-shape turn clause today, so the flatten is what keeps speech clean (Kev's call whether to add one).
+//  Two voice-path fixtures carry `spokenNoMarkup`: the stage hands the scorer what the speech lane would say
+//  for the turn — auto-speak's sentence fold, then SpeechTextPolish on each sentence, on both arms — and that
+//  text must carry no pipe, bold, fence or heading (the flatten learned tables and dash bullets in the same
+//  change). Under `swift test` nothing is handed in and the check skips rather than guesses. The voice prompts
+//  never ask for a shape either; there is no spoken-shape turn clause today, so the flatten is what keeps
+//  speech clean (Kev's call whether to add one).
 //
-//  Run wired like the app: `--kinds format --router dispatch` (a compare prompt may be dispatched to
-//  web_search by the router; the answer must still carry the table). #717's typed answer blocks add their
-//  fixtures here.
+//  Bold is the one markup banter may carry: the shape bullet allows the key fact bold, once, so the small-talk
+//  bid that invites a fact (Cork) does not forbid it; the pure banter bid does.
+//
+//  Run wired like the app: `--kinds format --router dispatch --full-answers` (the scorecard prints a format
+//  answer whole only when the run keeps it; the preview is 240 characters otherwise, and a table or a how-to
+//  is longer). A compare prompt may be dispatched to web_search by the router; the answer must still carry
+//  the table. #717's typed answer blocks add their fixtures here.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-26, Confidence 0.75 (the fixtures are hand-written and shape-pinned
 //  by ChatEvalFixturesTests; whether Lil and Big actually answer in these shapes is what the first wired run
 //  shows — the eval stage of the overnight run, then ⌘R by feel). Prior: none (new file).
+//  Review: same day (pre-push review fold) — the how-to fixtures want three dotted steps at line starts
+//  (`mustContainAll`; the scorer reads the first line as a line start, so step 1 may open the answer; "1)" is
+//  not accepted, pinned), bold leaves the Cork bid's markers, and the run line carries `--full-answers`.
+//  Confidence 0.8.
 //
 
 import Foundation
@@ -28,9 +37,11 @@ import Foundation
 /// GFM separator rows come spaced ("| --- |"), tight ("|---|") or aligned ("|:--"); any of them is a table.
 private let gfmSeparators = ["|---", "| ---", "|:--", "| :--"]
 
-/// Any markdown at all, for the small-talk fixtures: a table pipe, bold, a fence, a heading, a bullet, a
-/// numbered item. Each fires whole on a line quoting it (ChatEvalFixturesTests.everyForbiddenMarkerFires).
-private let markupMarkers = ["|", "**", "```", "\n#", "\n- ", "\n* ", "\n1. "]
+/// Structure, for the small-talk fixtures: a table pipe, a fence, a heading, a bullet, a numbered item. Each
+/// fires whole on a line quoting it (ChatEvalFixturesTests.everyForbiddenMarkerFires). Bold is not here: the
+/// shape bullet allows the key fact bold, once, so only `pureBanterMarkers` forbids it.
+private let structureMarkers = ["|", "```", "\n#", "\n- ", "\n* ", "\n1. "]
+private let pureBanterMarkers = structureMarkers + ["**"]
 
 public extension ChatEvalFixtures {
     static let format: [ChatEvalFixture] = [
@@ -51,12 +62,15 @@ public extension ChatEvalFixtures {
                 mustNotContain: leakMarkers, mustComply: true, minChars: 80, wholeWordFacts: true
             )
         ),
-        // How-tos with ordered actions: numbered steps, "1." or "1)" at a line start.
+        // How-tos with ordered actions: three numbered steps at line starts, "1." "2." "3." — the answer may
+        // open with its list (the scorer reads the first line as a line start). Dotted numbering only: the
+        // brains write "1.", and a "1)" list is pinned as not accepted (ChatEvalScorerTests) rather than half
+        // accepted by an any-list no all-list could follow.
         .init(
             id: "fmt-howto-tyre", kind: .format,
             prompt: "How do I change a flat bicycle tyre?",
             expectation: .init(
-                mustContainAny: ["\n1.", "\n1)"], mustContainAll: ["2.", "3."],
+                mustContainAll: ["\n1.", "\n2.", "\n3."],
                 mustNotContain: leakMarkers, mustComply: true, minChars: 120, wholeWordFacts: true
             )
         ),
@@ -64,21 +78,22 @@ public extension ChatEvalFixtures {
             id: "fmt-howto-press", kind: .format,
             prompt: "How do I make a pot of French-press coffee?",
             expectation: .init(
-                mustContainAny: ["\n1.", "\n1)"], mustContainAll: ["2.", "3."],
+                mustContainAll: ["\n1.", "\n2.", "\n3."],
                 mustNotContain: leakMarkers, mustComply: true, minChars: 120, wholeWordFacts: true
             )
         ),
-        // Small talk and banter: prose, nothing else. No mustComply — a bid for an opinion may read as a
-        // decline to the refusal heuristic and still be the right answer (the interview kind's lesson).
+        // Small talk and banter: prose. No structure; bold only where there is a fact to bold (Cork invites
+        // one), none on pure banter. No mustComply — a bid for an opinion may read as a decline to the
+        // refusal heuristic and still be the right answer (the interview kind's lesson).
         .init(
             id: "fmt-smalltalk-cork", kind: .format,
             prompt: "Cork in October — worth the trip, or is it all rain?",
-            expectation: .init(mustNotContain: leakMarkers + markupMarkers, minChars: 40)
+            expectation: .init(mustNotContain: leakMarkers + structureMarkers, minChars: 40)
         ),
         .init(
             id: "fmt-smalltalk-mind", kind: .format,
             prompt: "Tell me something you've changed your mind about.",
-            expectation: .init(mustNotContain: leakMarkers + markupMarkers, minChars: 40)
+            expectation: .init(mustNotContain: leakMarkers + pureBanterMarkers, minChars: 40)
         ),
         // The voice path: whatever shape the screen gets, the spoken text carries no markup.
         .init(

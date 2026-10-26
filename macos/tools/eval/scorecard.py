@@ -34,6 +34,9 @@ transcripts), pinned in test_scorecard.py on real lines from the timed-out card-
 Review: Kev + claude-opus-5-5, 2026-10-18 — review fold: each row keeps its trial number (None for one trial, and
 in the --json rows), the Failures list names the trial, and "What they actually said" lists every trial's answer
 instead of the first one's. Confidence 0.9.
+Review: Kev + claude-fable-5.1, 2026-10-26 — #716: the format kind's answers print under "What they actually said"
+beside humour and interview, whole when the run kept full answers (--full-answers; the preview is 240 characters
+otherwise), because whether a table fitted the question is a read, not a cell. Confidence 0.9.
 """
 
 import argparse

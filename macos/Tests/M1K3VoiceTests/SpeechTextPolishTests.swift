@@ -399,3 +399,79 @@ extension SpeechTextPolishTests {
         #expect(SpeechTextPolish.polish("Tea is ready.\n\nSources:\n- Kitchen notes §brewing\n• Tea §steeping") == "Tea is ready.")
     }
 }
+
+// Review: Kev + claude-fable-5.1, 2026-10-26 (pre-push review fold) — #716, the pins the review asked for. A CRLF table
+// keeps its line breaks; the per-sentence lane (what auto-speak calls) says nothing for a separator row and a sentence
+// for a row; a row that a sentence-final full stop in a cell splits in two still speaks no pipe (a line that CLOSES
+// with a pipe is a row too); the edge-less GFM row is the deliberate gap, pinned; a dash list after a blank line keeps
+// its paragraph break (the bullet rule's `\s` used to eat it); the Sources strip, moved ahead of the flatten, takes
+// every label the screen-side cut takes, the app's Web sources block after a model's Sources list still goes, and an
+// inline attribution still goes once the link or emphasis inside it is unwrapped (the strip is back after the flatten).
+extension SpeechTextPolishTests {
+    @Test("a CRLF table keeps its line breaks and speaks no pipe or dash run")
+    func crlfTableRows() {
+        let polished = SpeechTextPolish.polish("| a | b |\r\n|---|---|\r\n| 1 | 2 |")
+        #expect(!polished.contains("|") && !polished.contains("---"))
+        #expect(polished == "a, b.\r\n1, 2.")
+    }
+
+    @Test("the sentence lane: a separator row says nothing, a row speaks as a sentence")
+    func sentenceLaneTableFragments() {
+        #expect(SpeechTextPolish.spokenSentence("|---|---|") == nil)
+        #expect(SpeechTextPolish.spokenSentence("| :-- | --: |") == nil)
+        #expect(SpeechTextPolish.spokenSentence("| Tea | less |") == "Tea, less.")
+    }
+
+    /// Auto-speak folds the stream into sentences at a full stop plus whitespace, so a cell that ends a sentence cuts
+    /// its row in two: the tail has no leading pipe. It closes with one, and that is a row as well.
+    @Test("a row cut in two by a full stop in a cell still speaks no pipe: a line that closes with a pipe is a row")
+    func rowSplitBySentenceFoldSpeaksNoPipe() {
+        var folder = StreamedAnswerFolder()
+        let table = "| Drink | Notes |\n|---|---|\n| Tea | Calm. Slow |\n| Coffee | Quick |"
+        var sentences = folder.ingest(table)
+        if let tail = folder.flush() { sentences.append(tail) }
+        #expect(sentences.count == 2)
+        let spoken = sentences.compactMap(SpeechTextPolish.spokenSentence).joined(separator: " ")
+        #expect(!spoken.contains("|"))
+        #expect(spoken == "Drink, Notes.\nTea, Calm. Slow.\nCoffee, Quick.")
+        #expect(SpeechTextPolish.polish("Slow |") == "Slow.")
+    }
+
+    @Test("the known gap, pinned: an edge-less GFM row keeps its pipes")
+    func edgelessRowIsTheKnownGap() {
+        // Valid GFM, rare from the brains: no leading or trailing pipe, so the row rule never sees it (the
+        // separator still goes). Deliberate — a pipe mid-prose ("Either A | B works.") must survive, and nothing
+        // tells the two apart without reading the table around them.
+        #expect(SpeechTextPolish.polish("a | b\n--- | ---\n1 | 2") == "a | b\n1 | 2")
+    }
+
+    @Test("a dash list after a blank line keeps its paragraph break, and a lone dash line is not a bullet")
+    func dashListKeepsParagraphBreak() {
+        #expect(SpeechTextPolish.polish("Bring:\n\n- a coat\n- boots") == "Bring:\n\na coat\nboots")
+        #expect(SpeechTextPolish.polish("Bring:\n\n* a coat\n* boots") == "Bring:\n\na coat\nboots")
+        #expect(SpeechTextPolish.polish("A\n-\nB") == "A\n-\nB")
+    }
+
+    @Test("every Sources label the screen-side cut takes is stripped ahead of the flatten")
+    func sourcesLabelsMatchTheScreenCut() {
+        for label in ["Sources:", "**Sources:**", "**Sources**:", "*Sources:*", "## Sources:", "Source:", "__Sources__:"] {
+            #expect(
+                SpeechTextPolish.polish("Tea is ready.\n\n\(label)\n- Kitchen notes §brewing\n- Tea §steeping") == "Tea is ready.",
+                Comment(rawValue: label)
+            )
+        }
+    }
+
+    @Test("a model's Sources list followed by the app's Web sources block: both go")
+    func sourcesThenWebSourcesBothGo() {
+        #expect(SpeechTextPolish.polish("Answer.\n\nSources:\n- a\n\nWeb sources:\n• b") == "Answer.")
+        #expect(SpeechTextPolish.polish("Answer.\n\n**Sources:**\n- [a](https://a.ie)\n\nWeb sources:\n• [b](https://b.ie)") == "Answer.")
+    }
+
+    @Test("an inline attribution still goes once the link or emphasis inside it is unwrapped")
+    func inlineAttributionAfterFlatten() {
+        #expect(SpeechTextPolish.polish("It's 15 degrees (Source: [met.ie](https://met.ie/x)).") == "It's 15 degrees.")
+        #expect(SpeechTextPolish.polish("It's 15 degrees (*Source: gov.ie*).") == "It's 15 degrees.")
+        #expect(SpeechTextPolish.polish("It's 15 degrees (**Source:** gov.ie).") == "It's 15 degrees.")
+    }
+}

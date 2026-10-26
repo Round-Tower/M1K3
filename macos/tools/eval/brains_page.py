@@ -59,6 +59,9 @@ Ltd, the registered name (#574). Confidence 0.95.
 Review: Kev + claude-opus-5-5, 2026-10-13 — the footer's GUIDES row (#572), as on every page. Confidence 0.9.
 Review: Kev + claude-opus-5.5, 2026-10-22 — the og:image alt follows the new tagline ("Your AI. Your
 devices. Private by design."). Confidence 0.9.
+Review: Kev + claude-fable-5.1, 2026-10-26 — #716: KIND_ORDER follows TaskKind.allCases through grounded-long
+and format, so the page's rows stop sorting the two newest kinds alphabetically (grounded-long was missing).
+Confidence 0.9.
 """
 
 from __future__ import annotations

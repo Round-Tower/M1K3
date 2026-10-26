@@ -62,8 +62,17 @@
 //  (a separator row goes with its line break; a row that opens with a pipe speaks its cells as "a, b.") runs
 //  first inside the fence-aware flatten, and the bullet rule takes `-` and `+`. The Sources-block strip moves ahead
 //  of the flatten (it keys on those markers; the existing tests caught it) and takes a bold label itself. A pipe
-//  mid-prose or in a fence is untouched; a row without a leading pipe is the known gap (rare from the brains).
+//  mid-prose or in a fence is untouched; a row with no edge pipe at all is the known gap (rare from the brains).
 //  Confidence 0.85 (every case pinned; the ", " cell separator is a taste call).
+//  Review: same day (pre-push review fold) — three things the move ahead of the flatten had cost, and one the
+//  wider bullet class exposed. The Web-sources strip now runs first (the app appends that block AFTER a model's
+//  Sources list, and the Sources scan is anchored to the tail); the Sources label takes every form the screen-side
+//  cut (`SpokenAnswerEnd.sourcesHeader`) takes — bold either side of the colon, italic, underscores, a heading —
+//  since the flatten no longer unwraps it first; and the inline "(Source: …)" strip is back AFTER the flatten, where
+//  a link or emphasis inside the parens has been unwrapped. The bullet rule matches horizontal whitespace only: its
+//  `\s` reached across a blank line and ate the paragraph break before every list. A line that CLOSES with a pipe is
+//  a row too: auto-speak's sentence fold cuts a row at a full stop inside a cell, and the tail kept its pipe. Each
+//  pinned. Confidence 0.85.
 //
 
 import Foundation
@@ -74,11 +83,17 @@ public enum SpeechTextPolish {
     public static func polish(_ text: String) -> String {
         var result = text
         result = stripFollowUpTrailer(result)
-        // Before the flatten (#716): the Sources block is recognised by its list
-        // markers, and the flatten now removes "- " ones too.
+        // Both trailing source blocks go BEFORE the flatten (#716): the model's
+        // "Sources:" block is recognised by the "- " markers the flatten now
+        // removes, and the app appends its "Web sources:" block after that one,
+        // so the web block goes first to leave the model's block as the tail
+        // its scan is anchored to.
+        result = stripWebSourcesBlock(result)
         result = stripSourcesBlock(result)
         result = flattenMarkdownOutsideFences(result)
-        result = stripWebSourcesBlock(result)
+        // After the flatten, as before #716: "(Source: [met.ie](url))" and
+        // "(*Source: gov.ie*)" are "(Source: met.ie)" by now.
+        result = stripInlineSourceParens(result)
         result = stripCitations(result)
         result = collapseURLs(result)
         result = stripEmojiOutsideFences(result)
@@ -284,8 +299,10 @@ public enum SpeechTextPolish {
         output = output.replacing(/`([^`\n]+)`/) { String($0.1) }
         // Line-leading "* ", "- " and "+ " bullet markers vanish — speech wants
         // the item, not a spoken glyph. The marker needs its space: "-5 degrees"
-        // and "well-known" are not bullets.
-        output = output.replacing(/^\s{0,3}[*+-]\s+/.anchorsMatchLineEndings()) { _ in "" }
+        // and "well-known" are not bullets. Horizontal whitespace only: a `\s`
+        // here reached across a blank line and ate the paragraph break before
+        // every list (and a lone "-" line swallowed the line after it).
+        output = output.replacing(/^[ \t]{0,3}[*+-][ \t]+/.anchorsMatchLineEndings()) { _ in "" }
         // Heading markers vanish, the heading text stays.
         output = output.replacing(/^#{1,6}\s+/.anchorsMatchLineEndings()) { _ in "" }
         return output
@@ -295,10 +312,12 @@ public enum SpeechTextPolish {
     /// are unspeakable. A separator row (`|---|:--:|`, `--- | ---`) vanishes
     /// with its line break, so the header row and the first body row read as
     /// neighbours; a row that opens with a pipe speaks its cells as one sentence
-    /// ("Tea, less."). A pipe mid-prose ("A | B") is left alone, as is a row with
-    /// no leading pipe (valid GFM, rare from the brains — the known gap). Walks
-    /// lines by `\.isNewline` like `fencedCodeRanges`, so CRLF text keeps its
-    /// own line breaks.
+    /// ("Tea, less."); so does a line that CLOSES with one, because auto-speak's
+    /// sentence fold cuts a row at a full stop inside a cell and the tail keeps
+    /// only its closing pipe. A pipe mid-prose ("A | B") is left alone, as is a
+    /// row with no edge pipe at all (valid GFM, rare from the brains — the known
+    /// gap, pinned). Walks lines by `\.isNewline` like `fencedCodeRanges`, so
+    /// CRLF text keeps its own line breaks.
     private static func flattenTables(_ text: String) -> String {
         var result = ""
         var lineStart = text.startIndex
@@ -309,7 +328,7 @@ public enum SpeechTextPolish {
             let trimmed = text[lineStart ..< contentEnd].trimmingCharacters(in: .whitespaces)
             if isTableSeparator(trimmed) {
                 // Dropped, line break and all.
-            } else if trimmed.hasPrefix("|") {
+            } else if trimmed.hasPrefix("|") || trimmed.hasSuffix("|") {
                 result += spokenRow(trimmed)
                 result += text[contentEnd ..< nextLine]
             } else {
@@ -359,15 +378,15 @@ public enum SpeechTextPolish {
     /// review measured 3.5 s at 16 characters, on the main actor).
     ///
     /// Runs BEFORE the markdown flatten since #716 (the flatten strips the "- "
-    /// markers this scan keys on), so a bold `**Sources:**` label, which the
-    /// flatten used to unwrap first, is taken here as the follow-ups key is.
+    /// markers this scan keys on), so the label takes its own markup here, in
+    /// every form the screen-side cut (`SpokenAnswerEnd.sourcesHeader`) takes:
+    /// `**Sources:**`, `**Sources**:`, `*Sources:*`, `__Sources__:`, `## Sources:`.
+    /// Fixed-size groups, so the scan stays linear (`sourcesScanIsLinear`).
     private static func stripSourcesBlock(_ text: String) -> String {
-        var result = text.replacing(
-            /(?i)(?:^|\n+)[ \t]*(?:\*\*)?Sources?:(?:\*\*)?[ \t]*(?:\[[^\n]*)?\n?(?:[ \t]*[•\-*\[\d][^\n]*(?:\n|$))*$/,
+        text.replacing(
+            /(?i)(?:^|\n+)[ \t]*(?:#{1,6}[ \t]+)?(?:\*{1,2}|_{1,2})?Sources?(?:\*{1,2}|_{1,2})?:(?:\*{1,2}|_{1,2})?[ \t]*(?:\[[^\n]*)?\n?(?:[ \t]*[•\-*\[\d][^\n]*(?:\n|$))*$/,
             with: ""
         )
-        result = stripInlineSourceParens(result)
-        return result
     }
 
     /// Parenthetical source attributions: "(Source: gov.ie)" or

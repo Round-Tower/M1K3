@@ -28,6 +28,10 @@
 //  pass on a sentence, skip with no spoken text, absent without the flag, round-trips through Codable) and
 //  `shapeMoveIsInEchoSpansAndFormatIsACharacterKind` (a replayed shape-move sentence fails a format answer; a fresh
 //  table passes) and `newlineLedMarkerReadsTheFirstLine` (a heading or bullet that OPENS the answer fires). Confidence 0.85.
+//  Review: same day (pre-push review fold) — the real fixtures under the first-line read: `followNoBulletsReadsRealBulletShapes`
+//  (its markers are bullet SHAPES now, so a bold-led one-liner is prose and a list that opens the answer is not) and
+//  `newlineLedFactReadsTheFirstLine` (`contains expected/all` take the same read, so a how-to may open with step 1;
+//  "1)" numbering is pinned as not accepted). Confidence 0.85.
 
 import Foundation
 @testable import M1K3Eval
@@ -396,6 +400,51 @@ struct ChatEvalScorerTests {
         #expect(forbidden("Grand.\n# Cork") == .fail)
         // Not a line start: a hash or a spaced hyphen mid-sentence is prose.
         #expect(forbidden("Cork - the rebel county - is grand, C# and all.") == .pass)
+    }
+
+    /// The real `follow-no-bullets` fixture under the first-line read (#716 fold): its markers are bullet SHAPES
+    /// (marker and space), so a bold-led one-liner is prose — a bare "\n*" would have found itself inside "\n**",
+    /// and the shape bullet now asks for the key fact bold — while a list, an opening one included, is the fail
+    /// the fixture exists to see.
+    @Test("follow-no-bullets: a bold-led sentence is prose, a list is a list even when it opens the answer")
+    func followNoBulletsReadsRealBulletShapes() throws {
+        let fixture = try #require(ChatEvalFixtures.instructionFollowing.first { $0.id == "follow-no-bullets" })
+        func forbidden(_ answer: String) -> CheckOutcome? {
+            check(ChatEvalScorer.score(fixture: fixture, observation: EvalObservation(rawText: answer)), "excludes forbidden")?.outcome
+        }
+        #expect(forbidden("**Gravity** pulls masses together.") == .pass)
+        #expect(forbidden("*Gravity* is the pull between masses - any two of them - since the 1970s and before.") == .pass)
+        #expect(forbidden("- gravity pulls\n- masses together") == .fail)
+        #expect(forbidden("1. gravity pulls masses together") == .fail)
+        #expect(forbidden("Gravity pulls.\n* masses together") == .fail)
+        #expect(forbidden("• gravity pulls") == .fail)
+    }
+
+    /// A required fact that opens with a newline names a line start, and the answer's first line is one (#716
+    /// fold, the same read the forbidden side has): a how-to that opens with its list passes the real how-to
+    /// fixture. Dotted numbering only, by design — pinned so a "1)" answer is a deliberate miss, not an accident.
+    /// The two document fixtures that want a bullet now also take one that opens the answer (a dated scorer event).
+    @Test("a newline-led required fact reads the answer's first line: a how-to may open with step 1")
+    func newlineLedFactReadsTheFirstLine() throws {
+        let howto = try #require(ChatEvalFixtures.format.first { $0.id == "fmt-howto-tyre" })
+        func outcome(_ answer: String, _ name: String) -> CheckOutcome? {
+            check(ChatEvalScorer.score(fixture: howto, observation: EvalObservation(rawText: answer)), name)?.outcome
+        }
+        let steps = "1. Remove the wheel and lever the tyre off the rim.\n"
+            + "2. Patch or swap the tube, and check the tyre for whatever caused the flat.\n"
+            + "3. Refit the tube, seat the tyre and pump it up."
+        #expect(outcome(steps, "contains all") == .pass)
+        #expect(ChatEvalScorer.score(fixture: howto, observation: EvalObservation(rawText: steps)).passed)
+        #expect(outcome("Flip the bike first.\n\n" + steps, "contains all") == .pass)
+        // Two steps are not a how-to's three, and "1)" numbering is not accepted.
+        #expect(outcome("1. Remove the wheel.\n2. Patch the tube.", "contains all") == .fail)
+        #expect(outcome("1) Remove the wheel.\n2) Patch the tube.\n3) Refit it.", "contains all") == .fail)
+        // The same read on a document fixture that wants a bullet: a list that opens the answer counts.
+        let brief = fixture(.document, .init(mustContainAny: ["\n- ", "\n* "], minChars: 1))
+        let opens = ChatEvalScorer.score(fixture: brief, observation: EvalObservation(rawText: "- Goal: ship.\n- Audience: schools."))
+        #expect(check(opens, "contains expected")?.outcome == .pass)
+        let noList = ChatEvalScorer.score(fixture: brief, observation: EvalObservation(rawText: "Goal - ship it to schools."))
+        #expect(check(noList, "contains expected")?.outcome == .fail)
     }
 
     /// The voice path (#716): the stage hands in what SpeechTextPolish would say; the check reads only that,

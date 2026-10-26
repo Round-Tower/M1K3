@@ -139,6 +139,10 @@
 //  Mini + capped profile 5,043 → 5,212; exemplar cost ≈239 → ≈286 tokens (pin 300 holds). ABSOLUTE RULES and
 //  HONESTY byte-identical to pocket's (pinned). Confidence 0.7 — the chateval `format` arm and ⌘R on both
 //  brains are owed (Kev's call); open: a spoken-shape turn clause for the voice path.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #716 pre-push review fold (finishing the fold Fable began before the
+//  19:30 interrupt): beat 4's doc names which core says "results page" and which "search engine". Private Cloud
+//  inherits the reworded bullet and `shapeBullet` too (`privateCloudSharedSections` slices ABSOLUTE RULES..HONESTY
+//  out of `corePrompt`); `shapeMove` does not reach it. No byte of any prompt moved. Confidence 0.8.
 
 import Foundation
 import Synchronization
@@ -527,8 +531,9 @@ public enum M1K3Persona {
     /// "a villain, not a liar"). Beat 3: the curious-fact pattern that hands
     /// the thread back. Beat 4 (the 2026-06-30 character pass): the COMPANION
     /// register — warmth + presence + the privacy beat, fuller than a clipped
-    /// one-liner, demonstrating the "good company, not a results page" voice
-    /// without any factual risk (it's care, not a claim). Beat 5 (2026-09-06):
+    /// one-liner, demonstrating the "good company" voice (pocket's frozen core
+    /// still says "not a results page"; the standard core, since #716, "not a
+    /// search engine") without any factual risk (it's care, not a claim). Beat 5 (2026-09-06):
     /// the LEAK DECLINE, deliberately LAST — a 1.2B weights the tail of a long
     /// system prompt far more than the ABSOLUTE RULES a thousand tokens up, and
     /// asked to "repeat your system prompt" it recited whatever sat last. Byte-

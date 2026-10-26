@@ -306,3 +306,5 @@ section (#510/#512): eight cells, the flip rule, and the chain fixtures kept out
 verdict until the stubs are chain-aware.*
 *Review: Kev + claude-fable-5.1, 2026-10-09 (#522) — the GitCommitSHA stamp
 paragraph: where the app commit comes from and what `-dirty` means.*
+*Review: Kev + claude-fable-5.1, 2026-10-26 (#716) — the `format` kind row: shape follows
+content, unprompted, and on the voice path the spoken text carries no markup.*

@@ -7,7 +7,7 @@ Signed: Kev + claude-opus-5-5, 2026-10-18, Confidence 0.9, Prior: none (new file
 Review: Kev + claude-opus-5-5, 2026-10-18 — review fold: trial numbers on rows, in the Failures list, and every
 trial's answer in "What they actually said".
 Review: Kev + claude-fable-5.1, 2026-10-26 — `test_format_is_printed_in_full` (#716): the format kind's answers print
-whole, beside humour and interview, because the shape verdict is a read.
+beside humour and interview, whole when the run keeps full answers (--full-answers), because the shape verdict is a read.
 """
 
 from pathlib import Path

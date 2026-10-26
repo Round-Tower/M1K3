@@ -95,8 +95,14 @@
 //  emits: fail on a pipe, bold, fence, heading or dash run in the spoken text, skip with no spoken text (#716).
 //  A forbidden marker that opens with a newline ("\n#", "\n- ": the format kind's banter markers) reads the
 //  answer's first line as a line start too. One earlier fixture carries such markers, `follow-no-bullets`, which
-//  now also fails a list that OPENS the answer (a dated tightening of that cell); every other fixture scores
-//  exactly as before. Confidence 0.85.
+//  now also fails a list that OPENS the answer (a dated tightening of that cell). Confidence 0.85.
+//  Review: same day (pre-push review fold) — the review caught the read's two edges. `follow-no-bullets` carried bare
+//  "\n*" and "\n-", so a bold-led one-liner ("**Gravity** pulls…", the shape bullet's own ask) now failed it: its
+//  markers are the bullet SHAPES (marker and space), re-pinned on the real fixture. And `contains expected/all` take
+//  the same first-line read, so a how-to that opens with "1." passes the format kind's how-to fixtures; the two
+//  document fixtures with a bullet in mustContainAny loosen the same way (a dated scorer event: an answer that OPENS
+//  with its list now counts as having one). `spokenMarkup` sits above `score`'s doc block, which it had split. Both
+//  arms hand in the spoken text now, so the check skips only under `swift test`. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -147,9 +153,10 @@ public struct EvalObservation: Sendable, Equatable {
     public let thinkMS: Int?
     /// What the turn's generations cost, read off the app's log lines (2026-10-25); nil on paths that log none.
     public let generation: GenerationFigures?
-    /// What the speech lane would say for this turn — SpeechTextPolish over the think-stripped answer, handed
-    /// in by the live stage (#716). nil on the bare arm and under `swift test`, where the `spoken has no
-    /// markup` check skips rather than guesses. M1K3Eval never imports M1K3Voice; the stage does the polish.
+    /// What the speech lane would say for this turn — auto-speak's sentence fold, then SpeechTextPolish on
+    /// each sentence, over the think-stripped answer, handed in by the stage on both arms (#716). nil under
+    /// `swift test`, where the `spoken has no markup` check skips rather than guesses. M1K3Eval never imports
+    /// M1K3Voice; the stage does the fold and the polish.
     public let spokenText: String?
 
     public init(
@@ -661,6 +668,11 @@ public enum ChatEvalScorer {
         max(4 * maxChars, 4000)
     }
 
+    /// Markup that must never reach the speech lane (#716): a table pipe, bold, a fence, a heading, a
+    /// separator or thematic-break run. SpeechTextPolish removes each outside fenced code; inside one
+    /// they are spoken verbatim by design, and a voice how-to has no business with a fence.
+    static let spokenMarkup = ["|", "**", "```", "\n#", "---"]
+
     /// Score one observation against one fixture. Emits the two always-on
     /// checks (non-empty, no-think-leak) plus one per populated expectation.
     /// `latencyCeilingMS`: when set, a turn slower than the ceiling FAILS the
@@ -673,11 +685,6 @@ public enum ChatEvalScorer {
     ///   committed transcripts readable; a bake-off passes `.max` so every fail can be
     ///   re-adjudicated later (two E4B fails on 2026-10-06 were the scorer's, and the
     ///   excerpt was too short to prove it after the fact).
-    /// Markup that must never reach the speech lane (#716): a table pipe, bold, a fence, a heading, a
-    /// separator or thematic-break run. SpeechTextPolish removes each outside fenced code; inside one
-    /// they are spoken verbatim by design, and a voice how-to has no business with a fence.
-    static let spokenMarkup = ["|", "**", "```", "\n#", "---"]
-
     public static func score(
         fixture: ChatEvalFixture, observation: EvalObservation, latencyCeilingMS: Int? = nil,
         previewLimit: Int = ChatEvalScore.answerPreviewLimit
@@ -772,8 +779,8 @@ public enum ChatEvalScorer {
         let exp = fixture.expectation
 
         // The voice path (#716): what the speech lane would say must carry no markup. The stage hands
-        // in SpeechTextPolish's text; the bare arm and `swift test` hand nothing, so the check skips
-        // rather than guesses. Read raw, not normalised: every marker is punctuation.
+        // in the spoken text on both arms; `swift test` hands nothing, so the check skips rather than
+        // guesses. Read raw, not normalised: every marker is punctuation.
         if exp.spokenNoMarkup {
             if let spoken = observation.spokenText {
                 let found = Self.spokenMarkup.filter { spoken.contains($0) }
@@ -784,7 +791,7 @@ public enum ChatEvalScorer {
                 ))
             } else {
                 checks.append(EvalCheck(
-                    name: "spoken has no markup", outcome: .skip, detail: "no spoken text (bare arm)"
+                    name: "spoken has no markup", outcome: .skip, detail: "no spoken text (swift test)"
                 ))
             }
         }
@@ -796,10 +803,14 @@ public enum ChatEvalScorer {
             $0.replacingOccurrences(of: #"(?<=\p{L})-(?=\p{L})"#, with: "", options: .regularExpression)
         }
         let normalisedForFacts = joinHyphens(RefusalHeuristic.normalised(answer))
+        // A fact that opens with a newline names a LINE START ("\n1." a numbered step, "\n- " a bullet): the
+        // answer's first line is one too, the read the forbidden-marker check has (#716 fold) — a how-to that
+        // opens with "1." has its steps, a brief that opens with "- " has its bullets.
         let containsFact: (String) -> Bool = { fact in
-            exp.wholeWordFacts
-                ? RefusalHeuristic.containsWholeWord(normalisedForFacts, joinHyphens(RefusalHeuristic.normalised(fact)))
-                : lowered.contains(fact.lowercased())
+            let needle = exp.wholeWordFacts ? joinHyphens(RefusalHeuristic.normalised(fact)) : fact.lowercased()
+            let haystack = exp.wholeWordFacts ? normalisedForFacts : lowered
+            let read = needle.hasPrefix("\n") ? "\n" + haystack : haystack
+            return exp.wholeWordFacts ? RefusalHeuristic.containsWholeWord(read, needle) : read.contains(needle)
         }
 
         if !exp.mustContainAny.isEmpty {
