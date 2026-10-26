@@ -17,8 +17,12 @@
 //  Prior: none (new file).
 //  Review: Kev + claude-fable-5.1, 2026-10-26 (pre-push review fold) — the sentence names the note and says the
 //  answer may quote what M1K3 read; a could-not-open outcome with its own caption. Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — the sentence says what Round Tower does
+//  with it (reads it to fix what went wrong, may rewrite it as a made-up test case, deletes it on request:
+//  the wording is Kev's to rule on); the outcomes are `MailHandoff.Outcome`. Confidence 0.7.
 //
 
+import M1K3Diagnostics
 import SwiftUI
 
 struct FieldReportSheet: View {
@@ -44,7 +48,8 @@ struct FieldReportSheet: View {
             This is the whole message: your message, M1K3's answer, your note, the brain and the app version — \
             nothing else from this Mac, though the answer may quote what M1K3 read to write it. \
             It goes to \(FieldReporter.recipient) from your own mail app, which opens with it filled in. \
-            M1K3 sends nothing itself. Change anything below first if you like.
+            M1K3 sends nothing itself. Round Tower reads it to fix what went wrong, may rewrite it as a \
+            made-up test case, and deletes it if you ask. Change anything below first if you like.
             """)
             .fixedSize(horizontal: false, vertical: true)
 

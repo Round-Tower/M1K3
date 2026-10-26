@@ -23,6 +23,10 @@
 //  (Apple's docs are internally inconsistent about which fires on decline).
 //
 //  Signed: Kev + claude-fable-5, 2026-07-13, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #708: `fieldReportAllowed(for:)`, the second code gate. The
+//  opt-in "Send this exchange" email to Round Tower is withheld from the bands the web tools are withheld
+//  from (fails closed per band, exhaustive switch). A static func rather than a stored field, so the
+//  policy struct keeps its shape. Kev's ruling owed (#708). Confidence 0.8.
 //
 
 import Foundation
@@ -91,6 +95,18 @@ public struct AgeAppropriateness: Equatable, Sendable {
             )
         case .adult, .undeclared:
             AgeAppropriateness(webToolsAllowed: true, promptClause: nil)
+        }
+    }
+
+    /// Whether a thumbs-down may offer to email that exchange to Round Tower (#708, the opt-in
+    /// field report). Withheld from the two bands the web tools are withheld from: under 13
+    /// (COPPA) and 13 to 15 (under Ireland's digital age of consent, 16). Enforcement in code,
+    /// not the prompt: the Mac shell hides the button. The switch is exhaustive, so a new band
+    /// needs a decision here.
+    public static func fieldReportAllowed(for band: AgeBand) -> Bool {
+        switch band {
+        case .under13, .teen13to15: false
+        case .teen16to17, .adult, .undeclared: true
         }
     }
 }

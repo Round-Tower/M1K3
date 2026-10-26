@@ -100,6 +100,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-26 — #708: `fieldReportDraft` + the FieldReportSheet beside the PCC
 //  consent sheet; MessageView's "Send this exchange…" asks `env.chat.exchange(for:)` for the one exchange and
 //  FieldReporter for the redacted draft. Confidence 0.75 (verify-by-launch, UNVERIFIED this run).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — the offer is wired only when
+//  `AgeAppropriateness.fieldReportAllowed` says the band may see it (not under 13, not 13–15), read per render
+//  like the web tools' gate; otherwise MessageView gets nil and shows no button. Confidence 0.75 (verify-by-launch).
 
 import M1K3Avatar
 import M1K3Chat
@@ -737,14 +740,7 @@ struct ContentView: View {
                                         askForRatingIfEarned()
                                     }
                                 },
-                                onSendExchange: { note in
-                                    // Opt-in field report (#708): exactly this exchange, redacted,
-                                    // shown in the sheet before anything can leave.
-                                    guard let exchange = env.chat.exchange(for: message.id) else { return }
-                                    fieldReportDraft = FieldReporter.draft(
-                                        exchange: exchange, note: note, fallbackBrain: env.selectedBrain.displayName
-                                    )
-                                },
+                                onSendExchange: fieldReportAllowed ? sendExchange(for: message.id) : nil,
                                 onSpeak: { text in Task { await env.speak(text) } },
                                 onOpenLink: { url in env.review.open(url: url) },
                                 onSendFollowUp: { text in Task { await env.send(text) } },
@@ -1261,6 +1257,23 @@ struct ContentView: View {
         pendingAttachments = []
         pendingFiles = []
         Task { await env.send(text, images: images) }
+    }
+
+    /// The opt-in field report (#708) is withheld in code from the bands the web tools are
+    /// withheld from (under 13, 13–15). Read per render, like the palette's age gate.
+    private var fieldReportAllowed: Bool {
+        AgeAppropriateness.fieldReportAllowed(for: AppEnvironment.ageBandProvider.currentBand())
+    }
+
+    /// Opt-in field report (#708): exactly this exchange, redacted, shown in the sheet before
+    /// anything can leave.
+    private func sendExchange(for messageID: UUID) -> (String?) -> Void {
+        { note in
+            guard let exchange = env.chat.exchange(for: messageID) else { return }
+            fieldReportDraft = FieldReporter.draft(
+                exchange: exchange, note: note, fallbackBrain: env.selectedBrain.displayName
+            )
+        }
     }
 
     private var hasStagedAttachments: Bool {

@@ -9,10 +9,11 @@
 //  app itself; the user's Sent folder is the record. An over-long or unopenable link puts the
 //  full body on the clipboard instead and says so.
 //
-//  The payload, the body and the link builder are the pure, unit-pinned M1K3Diagnostics core
-//  (FieldReport.swift); the pairing is ChatSession.exchange(for:). This file is the OS-facing
-//  glue (Bundle, pasteboard, workspace) and is verified by launch. FieldReportScanTests pins
-//  that nothing but FieldReportSheet calls `send`.
+//  The payload, the scrub (`FieldReportFormatter.redactedBody`), the link builder and the send
+//  decision (`MailHandoff`) are the pure, unit-pinned M1K3Diagnostics core; the pairing is
+//  ChatSession.exchange(for:). This file only supplies their OS inputs (Bundle, the home path,
+//  the display name, the canary config) and the three OS calls (workspace, pasteboard), and is
+//  verified by launch. FieldReportScanTests pins that nothing but FieldReportSheet calls `send`.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-26, Confidence 0.75 (core TDD-pinned; the mail-app
 //  hand-off and the real mailto length ceiling are verify-at-⌘R, UNVERIFIED this run).
@@ -20,6 +21,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-26 (pre-push review fold) — the redactor gets the user's display name
 //  (`AppEnvironment.userDisplayNameKey`), not the About-you profile text IssueReporter passes, which never matched
 //  a bare first name; a missing mail handler is told apart from a link that would not open. Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — the scrub order and the send outcomes left
+//  this TDD_SKIP glue for tested seams (`redactedBody`, `MailHandoff`); a link that could not be built is now
+//  a could-not-open, not "no mail app". What stays here is inputs and OS calls. Confidence 0.8.
 //
 
 import AppKit
@@ -41,24 +45,12 @@ enum FieldReporter {
     /// (#708 stays open for it).
     static let recipient = "hello@round-tower.ie"
 
-    enum SendOutcome: Equatable {
-        /// The mail app opened with the message filled in.
-        case opened
-        /// The link was over the cap: the mail app opened with the start of the body and the
-        /// full text is on the clipboard.
-        case copiedTruncated
-        /// No app on this Mac handles mailto: links — the full text is on the clipboard instead.
-        case copiedNoMailClient
-        /// A mail app exists but would not open the link (too long for it, most likely): the
-        /// full text is on the clipboard instead.
-        case copiedCouldNotOpen
-    }
-
     /// The redacted draft for one exchange. The brain is the answer's stamp, or the resident
-    /// brain for a pre-trace turn. Redaction runs over the WHOLE body, the user's own question
-    /// included — over-redaction is the safe direction, and the sheet lets them put a word back.
-    /// The name the redactor removes is the display name from onboarding (what M1K3 greets the
-    /// user by), read from the key `saveFirstRunName` writes.
+    /// brain for a pre-trace turn. The scrub is `FieldReportFormatter.redactedBody`, unit-pinned
+    /// in M1K3Diagnostics: the whole body, the user's own question included, then the canary
+    /// pass on the redacted text. This supplies its inputs: this Mac's home path, the display
+    /// name from onboarding (what M1K3 greets the user by, the key `saveFirstRunName` writes),
+    /// and the local honeypot list.
     static func draft(exchange: AnswerExchange, note: String?, fallbackBrain: String) -> FieldReportDraft {
         let report = FieldReport(
             question: exchange.question,
@@ -68,31 +60,23 @@ enum FieldReporter {
             build: infoString("CFBundleVersion"),
             note: note
         )
-        // Same scrub, same order, as the issue report: PII first, then the honeypot pass.
-        let displayName = UserDefaults.standard.string(forKey: AppEnvironment.userDisplayNameKey)
-        let redactor = DiagnosticRedactor(homeDirectory: NSHomeDirectory(), userName: displayName)
-        let body = CanaryGuard.fromLocalConfig().scan(redactor.redact(FieldReportFormatter.body(report))).text
+        let body = FieldReportFormatter.redactedBody(
+            report,
+            homeDirectory: NSHomeDirectory(),
+            userName: UserDefaults.standard.string(forKey: AppEnvironment.userDisplayNameKey),
+            scrubExtra: { CanaryGuard.fromLocalConfig().scan($0).text }
+        )
         return FieldReportDraft(subject: FieldReportFormatter.subject(report), body: body)
     }
 
     /// Open the user's mail app with the message filled in. Called from the sheet's Send
-    /// button and nowhere else. The full body rides the clipboard whenever the link cannot.
+    /// button and nowhere else. `MailHandoff` decides the outcome and when the full body
+    /// rides the clipboard; this hands it the link and the OS.
     @MainActor
-    static func send(subject: String, body: String) -> SendOutcome {
-        guard let built = MailtoURL.compose(to: recipient, subject: subject, body: body) else {
-            copy(body)
-            return .copiedNoMailClient
-        }
-        if built.truncated { copy(body) }
-        guard NSWorkspace.shared.urlForApplication(toOpen: built.url) != nil else {
-            copy(body)
-            return .copiedNoMailClient
-        }
-        guard NSWorkspace.shared.open(built.url) else {
-            copy(body)
-            return .copiedCouldNotOpen
-        }
-        return built.truncated ? .copiedTruncated : .opened
+    static func send(subject: String, body: String) -> MailHandoff.Outcome {
+        MailHandoff.send(
+            link: MailtoURL.compose(to: recipient, subject: subject, body: body), body: body, via: WorkspaceMail()
+        )
     }
 
     /// The whole body to the clipboard — the sheet's "Copy instead", and the fallback above.
@@ -104,5 +88,21 @@ enum FieldReporter {
 
     private static func infoString(_ key: String) -> String {
         Bundle.main.object(forInfoDictionaryKey: key) as? String ?? "?"
+    }
+}
+
+/// The three OS calls `MailHandoff` needs, and nothing else.
+@MainActor
+private struct WorkspaceMail: MailOpening {
+    func hasHandler(for url: URL) -> Bool {
+        NSWorkspace.shared.urlForApplication(toOpen: url) != nil
+    }
+
+    func open(_ url: URL) -> Bool {
+        NSWorkspace.shared.open(url)
+    }
+
+    func copy(_ text: String) {
+        FieldReporter.copy(text)
     }
 }

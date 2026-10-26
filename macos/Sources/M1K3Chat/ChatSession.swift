@@ -86,6 +86,9 @@
 //  "Send this exchange" sheet reads the same value. No new persisted field. Confidence 0.85 (AnswerExchangeTests).
 //  Review: Kev + claude-fable-5.1, 2026-10-26 (pre-push review fold) — one transcript scan per rate tap: a private
 //  `pairing(for:)` returns the index with the exchange, and both callers read it. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — `exchange(for:)` is the outward view: a file
+//  turn's question keeps the typed words and drops every attached file's text and name
+//  (`FileAttachment.omittingContextBlocks`); the local feedback row still pairs the whole turn. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -998,12 +1001,22 @@ public final class ChatSession {
         historyRevision += 1
     }
 
-    /// The one exchange an assistant answer belongs to: the user turn before it, the answer's
-    /// text, and the brain stamped on it (nil for a pre-trace turn). The single pairing rule —
-    /// `recordFeedback` and the "Send this exchange" sheet (#708) both read it. nil for an
-    /// unknown id or a user message.
+    /// The one exchange an assistant answer belongs to, as it may leave the Mac (#708's "Send
+    /// this exchange" sheet): the user turn before it, the answer's text, and the brain stamped
+    /// on it (nil for a pre-trace turn). Paired by the same rule as `recordFeedback`, with one
+    /// difference: the stored user turn carries every attached file's extracted text, and here
+    /// that text and the files' names are left behind for a marker, so a document never rides
+    /// along unseen. The local feedback row keeps the whole turn. nil for an unknown id or a
+    /// user message.
     public func exchange(for messageID: UUID) -> AnswerExchange? {
-        pairing(for: messageID)?.exchange
+        guard let paired = pairing(for: messageID)?.exchange else { return nil }
+        return AnswerExchange(
+            messageID: paired.messageID,
+            conversationID: paired.conversationID,
+            question: FileAttachment.omittingContextBlocks(from: paired.question),
+            answer: paired.answer,
+            brain: paired.brain
+        )
     }
 
     /// The pairing rule itself, with the answer's index so a caller that needs more of the

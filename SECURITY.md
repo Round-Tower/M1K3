@@ -66,9 +66,11 @@ conversation, or the answer. M1K3 itself has no servers and never sees or
 stores your conversations, on-device or via PCC.
 
 **M1K3 for Teams:** organisations can force the Private Cloud Compute switch
-off by policy, so on those installs no conversation goes to anyone's cloud; the
-documented crossings that remain are the model downloads you ask for and web
-search (and the lookups it makes), which the user can switch off in Settings.
+off by policy, so on those installs no conversation goes to anyone's cloud. The
+documented crossings that remain are the model downloads you ask for, web
+search (and the lookups it makes), which the user can switch off in Settings,
+and the one exchange a user chooses to email from a thumbs-down in the Mac app,
+through their own mail app. No policy key turns that last one off yet.
 
 ## Supported versions
 
@@ -88,4 +90,7 @@ search (and the lookups it makes), which the user can switch off in Settings.
      (Kev's 2026-10-20 ruling, live with iOS 1.2.0); the rest of this file is unchanged. Confidence 0.9.
      Review: Kev + claude-fable-5.1, 2026-10-26 — #708: the "Data leaving the machine" list names the fourth
      user-initiated path, one exchange emailed from a thumbs-down through the user's own mail app (the
-     in-app list is NetworkCrossings.fieldReport; the sheet shows the exact body first). Confidence 0.85. -->
+     in-app list is NetworkCrossings.fieldReport; the sheet shows the exact body first). Confidence 0.85.
+     Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — the Teams paragraph names the field report
+     among the crossings that remain on a managed install, and says no policy key turns it off yet (whether
+     Teams needs one is Kev's call on #708). Confidence 0.85. -->

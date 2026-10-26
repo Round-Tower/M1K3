@@ -29,6 +29,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-26 (pre-push review fold) — the sheet is raised from the popover's
 //  close (`pendingExchangeNote` flushed on `showComment` → false), not inside the button, so an NSPopover
 //  dismissal and a window sheet never start in one update. Confidence 0.75 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — `onSendExchange` is optional and the button
+//  exists only when ContentView wires it, which it does only for an age band allowed the field report
+//  (`AgeAppropriateness.fieldReportAllowed`). Unwired means hidden. Confidence 0.8 (verify-by-launch).
 
 import AppKit
 import M1K3Avatar
@@ -49,7 +52,8 @@ struct MessageView: View {
     var onFeedback: (FeedbackVerdict, String?) -> Void = { _, _ in }
     /// Raise the "Send this exchange to Round Tower…" sheet (#708) with the thumbs-down note.
     /// The view never builds or sends anything — ContentView composes the draft and the sheet.
-    var onSendExchange: (String?) -> Void = { _ in }
+    /// nil hides the button: ContentView wires it only for an age band allowed the offer.
+    var onSendExchange: ((String?) -> Void)?
     /// Called with the message text when the user taps speak.
     let onSpeak: (String) -> Void
     /// Called with a link found in the turn when the user taps its chip — opens it
@@ -346,7 +350,7 @@ struct MessageView: View {
                     .onChange(of: showComment) { _, shown in
                         guard !shown, let note = pendingExchangeNote else { return }
                         pendingExchangeNote = nil
-                        onSendExchange(note)
+                        onSendExchange?(note)
                     }
                 }
             }
@@ -386,13 +390,16 @@ struct MessageView: View {
             HStack {
                 // Opt-in field report (#708): commits the bad verdict + note exactly as Done does,
                 // parks the note, and closes; the sheet follows from the popover's close. Nothing
-                // leaves from here, and nothing leaves at all until that sheet's Send.
-                Button("Send this exchange…") {
-                    onFeedback(.bad, commentDraft)
-                    pendingExchangeNote = commentDraft
-                    showComment = false
+                // leaves from here, and nothing leaves at all until that sheet's Send. Only shown
+                // when ContentView wires it (the age-band gate).
+                if onSendExchange != nil {
+                    Button("Send this exchange…") {
+                        onFeedback(.bad, commentDraft)
+                        pendingExchangeNote = commentDraft
+                        showComment = false
+                    }
+                    .help("Email this one exchange to Round Tower — you see the exact text first")
                 }
-                .help("Email this one exchange to Round Tower — you see the exact text first")
                 Spacer()
                 Button("Done") {
                     onFeedback(.bad, commentDraft)

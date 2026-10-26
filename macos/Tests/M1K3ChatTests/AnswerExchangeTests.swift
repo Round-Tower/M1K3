@@ -9,10 +9,14 @@
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-26, Confidence 0.85 (in-memory GRDB store, the
 //  AnswerFeedbackTests harness). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — a file turn leaves its attached text and
+//  name behind (the stored turn holds every file's text); an answer with no user turn before it, and a
+//  second answer behind one question, are pinned; the persistence poll is a 30 s valve. Confidence 0.85.
 //
 
 import Foundation
 @testable import M1K3Chat
+import M1K3Inference
 import M1K3Knowledge
 import Testing
 
@@ -66,11 +70,18 @@ private struct Seed {
 struct AnswerExchangeTests {
     private static func seededSession() throws -> (ChatSession, GRDBChatHistoryStore, Seed) {
         let seed = Seed()
-        let store = try GRDBChatHistoryStore()
-        try store.save(id: seed.conversationID, messages: seed.messages, updatedAt: Date())
-        let session = ChatSession(responder: SilentResponder(), history: store)
-        #expect(session.messages.count == 6, "the seeded conversation resumed")
+        let (session, store) = try session(resuming: seed.messages, id: seed.conversationID)
         return (session, store, seed)
+    }
+
+    private static func session(
+        resuming messages: [ChatMessage], id: UUID = UUID()
+    ) throws -> (ChatSession, GRDBChatHistoryStore) {
+        let store = try GRDBChatHistoryStore()
+        try store.save(id: id, messages: messages, updatedAt: Date())
+        let session = ChatSession(responder: SilentResponder(), history: store)
+        #expect(session.messages.count == messages.count, "the seeded conversation resumed")
+        return (session, store)
     }
 
     /// Every String the value holds, found by reflection so a new field is covered too.
@@ -125,9 +136,11 @@ struct AnswerExchangeTests {
         session.recordFeedback(messageID: seed.answer2.id, verdict: .bad, comment: "stale", brain: "Lil")
         #expect(session.feedbackVerdicts[seed.answer2.id] == .bad)
 
-        // The row persists off the main actor — poll briefly (the ChatSessionConversationsTests idiom).
+        // The row persists off the main actor (a .utility detached GRDB write). The ceiling is a
+        // 30 s safety valve, not a timing claim: the passing path exits on the first row, and the
+        // valve opening means the write never landed (the ChatSessionPrivateCloudTests idiom).
         var rows = try store.allFeedback()
-        for _ in 0 ..< 50 where rows.isEmpty {
+        for _ in 0 ..< 3000 where rows.isEmpty {
             try await Task.sleep(for: .milliseconds(10))
             rows = try store.allFeedback()
         }
@@ -137,5 +150,38 @@ struct AnswerExchangeTests {
         #expect(row.conversationID == exchange.conversationID)
         #expect(row.brain == "Big", "the stamp wins over the caller's fallback")
         #expect(row.toolsUsed == ["web_search"], "the feedback row keeps the tell; the exchange does not carry it")
+    }
+
+    @Test("a file turn sends the typed words only: the attached file's text and name stay on this Mac")
+    func fileTurnLeavesTheFileBehind() throws {
+        let fileText = "Clause 4: the house goes to Áine. Account 9921-44."
+        let file = FileAttachment(filename: "settlement-draft.pdf", extractedText: fileText)
+        // The turn exactly as ContentView.send builds it and ChatSession.send stores it.
+        let stored = (file.contextBlock + "\n\n" + "What does clause 4 mean?")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let user = ChatMessage(role: .user, text: stored, status: .complete)
+        let answer = ChatMessage(role: .assistant, text: "It assigns the house.", status: .complete)
+        let (session, _) = try Self.session(resuming: [user, answer])
+        #expect(session.messages.first?.text.contains(fileText) == true, "the transcript keeps the whole turn")
+
+        let exchange = try #require(session.exchange(for: answer.id))
+        #expect(exchange.question == "[1 attached file — not included]\n\nWhat does clause 4 mean?")
+        for leaked in [fileText, "settlement-draft", "FILE:"] {
+            #expect(!Self.strings(of: exchange).contains { $0.contains(leaked) }, "the payload carries \(leaked)")
+        }
+    }
+
+    @Test("pairing is positional: an answer with no user turn before it gets none; a second answer shares the question")
+    func answersWithoutTheirOwnQuestion() throws {
+        // A background answer, a script's output or a PCC notice can land with no user turn of its own.
+        let orphan = ChatMessage(role: .assistant, text: "Your script printed 42.", status: .complete)
+        let user = ChatMessage(role: .user, text: "Summarise my week", status: .complete)
+        let answerA = ChatMessage(role: .assistant, text: "A busy one.", status: .complete)
+        let answerB = ChatMessage(role: .assistant, text: "The background answer.", status: .complete)
+        let (session, _) = try Self.session(resuming: [orphan, user, answerA, answerB])
+        #expect(session.exchange(for: orphan.id)?.question == "")
+        #expect(session.exchange(for: answerA.id)?.question == user.text)
+        #expect(session.exchange(for: answerB.id)?.question == user.text)
+        #expect(session.exchange(for: answerB.id)?.answer == answerB.text)
     }
 }

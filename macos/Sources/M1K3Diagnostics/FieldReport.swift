@@ -11,9 +11,11 @@
 //
 //  Transport is a mailto: link the user's own mail app opens (no new network path; their Sent
 //  folder is the record). `MailtoURL` mirrors `GitHubIssueURL`: a capped, percent-encoded link
-//  and a `truncated` flag so the app can put the full text on the clipboard. Redaction is NOT
-//  here: the shell runs `DiagnosticRedactor` and then `CanaryGuard` over the formatted body
-//  (the `DiagnosticsReportBuilder` order), and a test pins redact-then-format.
+//  and a `truncated` flag so the app can put the full text on the clipboard (`MailHandoff`).
+//  The scrub is `FieldReportFormatter.redactedBody`: format, then `DiagnosticRedactor` over the
+//  WHOLE body, then the injected extra scrub on the redacted text (the app passes CanaryGuard,
+//  which lives in M1K3Chat). That is the `DiagnosticsReportBuilder` order and seam, unit-pinned
+//  here; the shell only supplies the home path, the display name and the closure.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-26, Confidence 0.85 (pure, TDD-pinned incl. the
 //  field set and the cap; the mail-app hand-off and the real mailto length ceiling are
@@ -21,6 +23,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-26 (pre-push review fold) — the preamble claims only what the field set
 //  guarantees (the answer may quote what M1K3 read); body line breaks go out as CRLF (RFC 6068 §5); the cap is
 //  also on ENCODED bytes, since a non-ASCII scalar costs 3–12 bytes in the link. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — `redactedBody` moves the scrub out of
+//  the app glue (it ran under TDD_SKIP, pinned only by a string scan) into this pure, tested seam; the
+//  header now says the order the code runs (format, redact, scrub). Confidence 0.85.
 //
 
 import Foundation
@@ -67,6 +72,21 @@ public enum FieldReportFormatter {
             lines.append("What was off: \(note)")
         }
         return lines.joined(separator: "\n")
+    }
+
+    /// The body as the sheet shows it and the link carries it: `body(report)`, then
+    /// `DiagnosticRedactor` over the WHOLE of it (the question, the answer, the note and this
+    /// file's own copy): this Mac's home path to `~`, other `/Users/<name>` paths, email
+    /// addresses, the user's display name. Then `scrubExtra` runs on the REDACTED text; the app
+    /// passes CanaryGuard's honeypot scan. Over-redaction is the safe direction, and the sheet
+    /// lets the user put a word back.
+    public static func redactedBody(
+        _ report: FieldReport,
+        homeDirectory: String,
+        userName: String?,
+        scrubExtra: (String) -> String = { $0 }
+    ) -> String {
+        scrubExtra(DiagnosticRedactor(homeDirectory: homeDirectory, userName: userName).redact(body(report)))
     }
 
     /// The subject names only the brain and the version — never the user's words.
