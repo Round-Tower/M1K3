@@ -12,6 +12,7 @@
 //  Review: same day — `crossAnswersAreOffTheDoc`: the cross arm's world answers never appear in their seeded docs.
 //
 
+import Foundation
 @testable import M1K3Eval
 import Testing
 
@@ -62,6 +63,9 @@ struct ChatEvalFixturesGroundedLongTests {
                 + "doesn't explicitly state a specific number of years or months for the warranty on the axles."))
         #expect(try passes("long-absent", "Based on the service manual for T-series trailers you just had pulled up, "
                 + "there isn't a specific \"warranty period\" listed in the text we found."))
+        // The fix run's (2026-10-26, e4b3047c): an adverb split "doesn't list".
+        #expect(try passes("long-absent", "The manual you have for those T-series trailers doesn't actually list "
+                + "a specific warranty duration like \"three years\" or \"18 months.\""))
         // An invented term must not pass on the seeded doc's title.
         #expect(try !passes("long-absent", "The warranty on the trailer axle is 24 months (Notes)."))
         // lookup_fact's generic spec carried "145" in the wrong unit: not the manual's figure.
@@ -78,7 +82,8 @@ struct ChatEvalFixturesGroundedLongTests {
         for fixture in cross {
             let doc = try #require(fixture.seedDoc).lowercased()
             for fact in fixture.expectation.mustContainAny {
-                let found = try Regex("\\b\(fact)\\b").firstMatch(in: doc)
+                let word = NSRegularExpression.escapedPattern(for: fact)
+                let found = try Regex("\\b\(word)\\b").firstMatch(in: doc)
                 #expect(found == nil, "\(fixture.id): \(fact) is in its doc")
             }
         }

@@ -86,7 +86,7 @@ public extension ChatEvalFixtures {
                     // The first wired run's honest abstentions (2026-10-26) the list above missed.
                     "doesn't state", "does not state", "doesn't explicitly", "doesn't specify",
                     "does not specify", "isn't listed", "not listed", "there isn't", "there is no",
-                    "there's no", "don't specify",
+                    "there's no", "don't specify", "doesn't actually",
                 ],
                 minChars: 5, wholeWordFacts: true
             )
@@ -94,7 +94,8 @@ public extension ChatEvalFixtures {
         // The cross arm (2026-10-26): world questions over a seeded doc that shares their words. A kept
         // document turns a lookup_fact pick into a plain turn over it (`ToolDispatch.documentCorrected`);
         // these pass only if the brain still answers the world, not the doc. The survey notes name the
-        // River Sullane by Cork; the river through the city is the Lee.
+        // River Sullane by Cork; the river through the city is the Lee. The limit: all three are famous
+        // facts, so the arm can't show the cost on one the brain doesn't know.
         .init(
             id: "long-cross-tyre", kind: .groundedLong,
             prompt: "Who invented the pneumatic tyre?",

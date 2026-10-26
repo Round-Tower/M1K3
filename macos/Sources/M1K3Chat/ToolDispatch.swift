@@ -40,7 +40,8 @@
 //  search_knowledge. Third person is left to the menu line. Confidence 0.75 (pinned; the router chain cells owed).
 //  Review: Kev + claude-opus-5-5, 2026-10-26 — `documentCorrected`: a single lookup_fact pick when the gate kept a
 //  document chunk is a plain turn over it (grounded-long: the manual's torque lost to lookup_fact 6/6 on Lil and
-//  Big). Web reads and chains untouched. Confidence 0.7 (pinned; the paired eval and a cross arm are owed).
+//  Big). Web reads and chains untouched. Confidence 0.75 (pinned; paired run on Lil/Big: torque 0/6 → 6/6,
+//  the cross arm 17/18, its one miss Lil's own wrong river; Mini unmeasured).
 
 import Foundation
 import M1K3Agent
@@ -261,14 +262,18 @@ public enum ToolDispatch {
     /// (2026-10-26). Apple's picker never sees the store: it sent "What torque do the hub nuts on the
     /// trailer axle take?" to lookup_fact in 6 of 6 grounded-long trials, on Lil and Big, while the
     /// gate had kept the manual's chunk, and the dispatched prompt (the result only, the 09-27 ruling)
-    /// answered with a generic spec, never the manual's 145 Nm. `documentsKept` is the gate's verdict:
-    /// a document chunk cleared `EmbedderFloors` (memories don't count: "I live in Cork" must not
-    /// steer Cork's founding year). The plain turn carries those chunks, budgeted, with its rules,
-    /// which let a well-known fact stand; no lookup leaves the device.
+    /// answered with a generic spec, never the manual's 145 Nm. `documentsKept`: the turn kept a
+    /// chunk from the document lane (`KnowledgeStore.groundingDocumentKinds`: a document, note, call
+    /// or photo, all the user's own), past `EmbedderFloors`, or on the hashing arm only, the
+    /// strict-AND `HashingKeywordLane`. Memories don't count: "I live in Cork" must not steer Cork's
+    /// founding year. The plain turn carries those chunks, budgeted, with its rules, which let a
+    /// well-known fact stand; no lookup leaves the device.
     ///
     /// Only a single lookup_fact pick moves. Web reads keep the lean dispatch prompt the 09-27
     /// ruling measured, a lookup about now has already gone to the web (`recencyCorrected`), and
-    /// a chain stays whole, since a plain turn would drop its other link.
+    /// a chain stays whole, since a plain turn would drop its other link. Known limits: a doc
+    /// question Apple sends to web_search still answers from the web result alone, and an obscure
+    /// world fact that shares a kept doc's words now answers from the brain, not the reference.
     public static func documentCorrected(_ pick: ToolPick, documentsKept: Bool) -> ToolPick {
         guard documentsKept, pick.tool == "lookup_fact", pick.then.isEmpty else { return pick }
         return ToolPick(tool: ToolPick.noTool, query: pick.query)

@@ -302,6 +302,8 @@ struct DispatchTurnTests {
     /// 2026-10-26, grounded-long wired like the app: Apple's pick sent "What torque do the hub nuts
     /// take?" to lookup_fact 6 of 6 times on Lil and Big while the gate had kept the manual's chunk,
     /// and the dispatched prompt (the result only) answered with a generic spec, never the 145 Nm.
+    /// The hashing embedder here may admit the chunk by the keyword lane rather than the cone's floor;
+    /// either way the gate kept it, which is all `documentCorrected` reads.
     @Test("a lookup_fact pick on a question the user's documents answer is a plain turn over them")
     func lookupOnTheUsersDocumentIsPlain() async throws {
         let question = "What torque do the hub nuts on the trailer axle take?"

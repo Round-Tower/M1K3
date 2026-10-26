@@ -215,8 +215,8 @@
 //  cut lagged a turn).
 //  Review: Kev + claude-opus-5-5, 2026-10-26 — `ToolDispatch.documentCorrected` after `corrected`: a lone lookup_fact
 //  pick when the gate kept a document chunk answers on the plain route over those chunks (grounded-long: torque went
-//  to lookup_fact 6/6 and never read the manual). Web picks keep the 09-27 lean prompt. Confidence 0.7 (pinned; the
-//  paired grounded-long + tool-use + world-knowledge run and a noisy-corpus cross arm are owed).
+//  to lookup_fact 6/6 and never read the manual). Web picks keep the 09-27 lean prompt. Confidence 0.75 (pinned; paired
+//  grounded-long + cross arm on Lil/Big: torque 0/6 → 6/6, cross 17/18; Mini unmeasured).
 
 import Foundation
 import M1K3Agent
@@ -981,7 +981,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // A reference lookup the user's own documents answer reads them instead (2026-10-26).
         let pick = ToolDispatch.documentCorrected(corrected, documentsKept: !chunks.isEmpty)
         if pick != corrected {
-            Self.log.notice("tool dispatch: lookup_fact, but a kept document answers — a plain turn reads it")
+            Self.log.notice("tool dispatch: lookup_fact, but kept chunks answer — a plain turn reads them")
             return await plain()
         }
         if pick.tool == ToolPick.noTool {
