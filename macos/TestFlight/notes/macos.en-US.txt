@@ -1,16 +1,11 @@
-Thanks for testing M1K3 1.2.1 on the Mac.
+Thanks for testing M1K3 1.3.0 on the Mac.
 
 New in this build, please try:
-• Leave the chat window in front, composer empty, and touch nothing for about 90 seconds: the companion (or pixel face) behind the chat should fade out
-• Then hover over the window, click, type or scroll: it should fade straight back in
-• Type a draft and walk away: it should stay awake while there's text in the box
-• Ask something long, by voice or text, and don't touch anything: it should stay awake while I listen, think, answer and speak. The 90 s counts from your last input, so it may rest soon after I finish; tell us if that feels abrupt
-• While it's asleep, start voice mode: it should come back as I start listening
-• Same in the menu-bar popover and the brain picker
-• Turn on Reduce Motion (System Settings → Accessibility → Display): it should vanish and return instantly, no fade
-• With it asleep, open Activity Monitor: M1K3's CPU should drop to near zero. Tell us your Mac model and both numbers, awake and asleep
-• On a fresh install, the face should stay awake through first-run setup while the brain downloads
+• Talk over me: in voice mode, start speaking while I'm answering and I should stop and listen. Use the Mac's own mic or a USB one; Bluetooth headsets keep the old behaviour. Tell us about any time I stopped when nobody spoke, or kept talking through you
+• Let a long answer play out in voice mode: sources are no longer read aloud
+• Have a longer chat, ten messages or more, on Lil or Big: replies from the third message on should start sooner than in 1.2.1. Tell us your Mac model if it feels slower
+• Drop a manual or report onto the chat and ask for a number or name that's in it (a torque, a date, who signed off): the answer should come from your document, not a general web answer
 
-And the basics: chat on Mini, attach an image for Lil, voice mode, drop a PDF onto the chat, and the m1k3 command-line tool with your coding agent. From Oct 24 to Nov 1 the Fox should be in its Halloween look.
+And the basics: chat on Mini, attach an image for Lil, drop a PDF onto the chat, and the m1k3 command-line tool with your coding agent. Until Nov 1 the Fox should be in its Halloween look.
 
 The network is used for brain downloads and web search, which is on by default — one switch in Settings turns it off. Flag anything that looks like it left your Mac when it shouldn't have: Settings → "Report an issue…" attaches a privacy-scrubbed diagnostic.

@@ -1,12 +1,15 @@
-Thanks for testing M1K3 1.2.1 on iPhone and iPad.
+Thanks for testing M1K3 1.3.0 on iPhone and iPad.
 
-A small build: nothing new to see on iPhone and iPad, so please check nothing broke.
-• Chat on Mini, and on Lil if your device has 8 GB of memory
+New in this build, please try:
+• Ask about a PDF under Documents for a number or name that's in it: the answer should come from your document, not a general web answer
+• On Lil (8 GB devices), a longer chat of ten messages or more: replies from the third message on should start sooner than in 1.2.1
+
+And the basics:
+• Chat on Mini
 • Rate an answer with thumbs up or down
 • Voice mode, a few turns in a row
-• A PDF under Documents, then ask about it
 • Airplane mode: chat should keep working on device
 • Brain at Home with M1K3 on your Mac
-• From Oct 24 to Nov 1 the Fox should be in its Halloween look
+• Until Nov 1 the Fox should be in its Halloween look
 
 The network is used for brain downloads and web search, which is on by default — one switch in Settings turns it off. Send feedback straight from TestFlight; a screenshot of anything odd helps most.
