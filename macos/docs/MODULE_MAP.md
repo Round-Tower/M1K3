@@ -12,7 +12,7 @@ heavy backends isolated behind protocols; `M1K3App/` a thin shell over `AppEnvir
 | `M1K3Knowledge` | RAG corpus: GRDB store, embeddings, hybrid (vector + FTS) search, RRF fusion, grounding gate. The knowledge primitives. Also `SwappableEmbeddingService` (the runtime embedder-swap façade). |
 | `M1K3Memory` | Temporal memory **graph** (atomic facts + typed edges + recursive-CTE traversal). Separate DB/consent lifecycle from the corpus. |
 | `M1K3MemoryViz` | 3D memory constellation (RealityKit over a pure layout model). |
-| `M1K3Inference` | The `InferenceProvider` seam + `BrainTier`. Backends are thin adapters. No external deps. |
+| `M1K3Inference` | The `InferenceProvider` seam + `BrainTier`. Backends are thin adapters. No external deps. Also the on-device energy ledger (#696): `EnergyLedger` keeps each MLX generation's token counts, billed to the model that ran it, in a 30-day daily rollup of numbers, dates and tier enums only, and prices them on read at the tier's joules-per-token rate (`EnergyCoefficients`; a tier with no measured watts stays unpriced), and `ProcessEnergyCounter` reads the process's own CPU-only `RUSAGE_INFO_V6` counter. |
 | `M1K3Agent` | Local agent: ReAct + native tool-calling loop over the inference seam; tools injected. |
 | `M1K3LanguageModel` | WWDC26 LanguageModel bridge (ADR 0001) — local mirror of Apple's FoundationModels surface + escalation-ladder policy. Also the Private Cloud Compute rung's pure policy (ADR 0006): `PrivateCloudRung` (when the switch and the per-request control exist, hidden without a backend or under the org switch), the failure → local-fallback sentences, the answer label, and the `PrivateCloudAnswering` backend seam (question + instructions in, no tools). Dependency-free. |
 | `M1K3Eval` | Model-evals enclave: fixtures + deterministic heuristic scorer + cross-brain report (pure; the model-running half rides SelfTest). |
@@ -41,3 +41,7 @@ heavy backends isolated behind protocols; `M1K3App/` a thin shell over `AppEnvir
 Signed: Kev + claude-fable-5.1, 2026-09-25, Confidence 0.9, Prior: Unknown — the table
 itself moved here verbatim from `macos/CLAUDE.md` (2026-07-07 → 2026-09-24 rows), so
 the 23 KB every macos/ session loaded on turn one shrinks to what a cold start needs.
+Review: Kev + claude-opus-5.5, 2026-10-26 — the `M1K3Inference` row names the energy ledger and the
+process energy counter (#696; no new product, so the doc-drift job is unchanged). Confidence 0.9.
+Review: Kev + claude-opus-5.5, 2026-10-26 (pre-push review fold) — the row says what the ledger now
+keeps (token counts, billed to the generating model, priced on read). Confidence 0.9.

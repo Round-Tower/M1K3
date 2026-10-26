@@ -155,6 +155,14 @@
 //  `retire()` drops a swapped-out brain for good (the loader refuses, so a straggling warm can't reload it); and
 //  the tokenizer is captured once at load, so `tokenCount`/`templatedTokenCount` stop queueing on the container
 //  lock behind a persona prefill (the grounding cap waited 48.8 s there). Verify-by-launch owed. Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (#696) — `logGenerationInfo` also reports `prefilledTokens:
+//  info.promptTokenCount` (this call's prefill) for the energy ledger; `promptTokens` keeps the true context.
+//  Known under-count: a checkpoint-mode tool send reports 1 here, its real prefill is the reuse line's `extend`.
+//  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (#696 pre-push review fold) — the reported metrics are built by a pure
+//  `generationMetrics(for:model:totalContextTokens:)`, pinned in MLXBrainProviderTests (the context / prefill split
+//  had no test), and carry `modelID: model`, so the energy ledger bills the model that ran, not the picker's brain.
+//  `logGenerationInfo`'s signature and every call site are unchanged. Confidence 0.85.
 
 import Foundation
 import Hub
@@ -191,16 +199,29 @@ func logGenerationInfo(
     mlxTTFTLog.notice(
         "\(label, privacy: .public) [\(model, privacy: .public)]: prompt=\(promptTokens)tok prefill=\(prefillMS)ms decode=\(decodeTokens)tok @\(tokensPerSecond)tok/s"
     )
-    // The user-facing readout wants TRUE context (window pressure), not this
-    // call's prefill: with the persona-prefix KV cache warm, promptTokenCount
-    // is only the suffix past the cache — a fully-grounded turn read "2%" while
-    // actually carrying ~1.3K cached persona tokens. Callers that know the full
-    // rendered length pass it; the log line above stays per-call (prefill cost).
-    GenerationMetricsReporter.report(GenerationMetrics(
-        promptTokens: totalContextTokens ?? promptTokens,
-        generationTokens: decodeTokens,
-        tokensPerSecond: info.tokensPerSecond
-    ))
+    GenerationMetricsReporter.report(
+        generationMetrics(for: info, model: model, totalContextTokens: totalContextTokens)
+    )
+}
+
+/// The metrics one generation reports. Pure, so the split is pinned in tests.
+/// The user-facing readout wants TRUE context (window pressure) as
+/// `promptTokens`: with the persona-prefix KV cache warm, promptTokenCount is
+/// only the suffix past the cache, and a fully-grounded turn read "2%" while
+/// actually carrying ~1.3K cached persona tokens. Callers that know the full
+/// rendered length pass it. The energy ledger wants the opposite: this call's
+/// own prefill, `prefilledTokens`, so the cached persona is not billed again on
+/// every turn. `modelID` is the model that ran, for the ledger's attribution.
+func generationMetrics(
+    for info: GenerateCompletionInfo, model: String, totalContextTokens: Int?
+) -> GenerationMetrics {
+    GenerationMetrics(
+        promptTokens: totalContextTokens ?? info.promptTokenCount,
+        generationTokens: info.generationTokenCount,
+        tokensPerSecond: info.tokensPerSecond,
+        prefilledTokens: info.promptTokenCount,
+        modelID: model
+    )
 }
 
 /// `@unchecked Sendable`: model loading is coalesced through a `SingleFlightLoader`
