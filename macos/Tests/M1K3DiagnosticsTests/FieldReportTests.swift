@@ -9,6 +9,8 @@
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-26, Confidence 0.85 (pure; the mail-app hand-off is
 //  verify-by-launch). Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-10-26 (pre-push review fold) — pins the honest preamble, CRLF body
+//  line breaks, and the encoded-byte cap on a CJK body. Confidence 0.85.
 //
 
 import Foundation
@@ -42,9 +44,13 @@ struct FieldReportTests {
         #expect(body.contains("App: 1.2.1 (540)"))
         #expect(body.contains("What was off: it should have searched the web"))
         #expect(body.contains("does not contain"))
-        for absent in ["memories", "documents", "other turns"] {
+        for absent in ["memories", "documents", "other turns", "tool names"] {
             #expect(body.contains(absent), "the preamble names \(absent) as left out")
         }
+        // Truth in copy: a cited answer can quote the user's own document, so the preamble
+        // claims only what the field set guarantees and says so.
+        #expect(body.contains("may quote what M1K3 read"))
+        #expect(!body.contains("nothing else from your Mac"))
     }
 
     @Test("no note, no 'What was off' line — a blank note is the same as none")
@@ -91,7 +97,8 @@ struct MailtoURLTests {
         #expect(components.path == "hello@round-tower.ie")
         let items = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).map { ($0.name, $0.value) })
         #expect(items["subject"] == "M1K3 field report: Lil 1.2.1 (540)")
-        #expect(items["body"] == body)
+        // RFC 6068 §5: the body's line breaks go out as CRLF, everything else byte for byte.
+        #expect(items["body"] == body.replacingOccurrences(of: "\n", with: "\r\n"))
         // Raw spaces, ampersands, pluses and newlines never ride the link unencoded — a mail
         // client would read them as separators or drop them.
         let raw = built.url.absoluteString
@@ -99,6 +106,22 @@ struct MailtoURLTests {
         #expect(!raw.contains("\n"))
         #expect(!raw.contains("&two"))
         #expect(!raw.contains("+"))
+        #expect(raw.contains("%0D%0A"))
+    }
+
+    @Test("the cap is also on encoded bytes: a CJK body under the character cap is still cut to fit the link")
+    func encodedByteCapCutsAWideBody() throws {
+        let wide = String(repeating: "日", count: 10000) // 10,000 chars, ~90 KB once percent-encoded
+        let built = try #require(MailtoURL.compose(to: "a@b.ie", subject: "s", body: wide))
+        #expect(built.truncated)
+        #expect(built.url.absoluteString.utf8.count <= 24000 + 100, "the link stays within the encoded cap")
+        let components = try #require(URLComponents(url: built.url, resolvingAgainstBaseURL: false))
+        let sent = try #require(components.queryItems?.first { $0.name == "body" }?.value)
+        #expect(sent.hasPrefix("日日日"))
+        #expect(sent.contains("clipboard"))
+        // A short wide body is sent whole.
+        let short = try #require(MailtoURL.compose(to: "a@b.ie", subject: "s", body: String(repeating: "日", count: 50)))
+        #expect(!short.truncated)
     }
 
     @Test("an over-long body is cut, flagged, and says the full text is on the clipboard")

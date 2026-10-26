@@ -10,6 +10,8 @@
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-26, Confidence 0.6 (coarse tripwires over text; the
 //  mail-app hand-off is verify-by-launch). Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-10-26 (pre-push review fold) — the button parks the note and the sheet is
+//  raised from the popover's close; the redactor reads the display name. Confidence 0.6.
 //
 
 import Foundation
@@ -76,19 +78,30 @@ struct FieldReportScanTests {
         #expect(reporter.contains("MailtoURL.compose("))
         #expect(!reporter.contains("URL(string: \"mailto"), "a hand-built mailto skips the encoding and the cap")
         #expect(reporter.contains("NSPasteboard"), "an over-long or unopenable link still leaves the text in reach")
-        #expect(reporter.contains("DiagnosticRedactor("), "paths, emails and the profile name are scrubbed")
+        #expect(reporter.contains("DiagnosticRedactor("), "paths, emails and the user's name are scrubbed")
+        #expect(reporter.contains("AppEnvironment.userDisplayNameKey"), "the name scrubbed is the display name, not the profile text")
+        #expect(!reporter.contains("M1K3Persona.userProfile"), "the About-you text is not a name; it never matched one")
+        #expect(reporter.contains("urlForApplication(toOpen:"), "no mail handler is told apart from a link that would not open")
         #expect(reporter.contains("CanaryGuard.fromLocalConfig()"), "the honeypot pass runs on every outward surface")
         #expect(reporter.contains("hello@round-tower.ie"))
     }
 
-    @Test("the thumbs-down editor commits the verdict and the note before it raises the sheet")
+    @Test("the thumbs-down editor commits the verdict and note, parks the note, and the sheet follows the popover's close")
     func sendButtonCommitsFirst() throws {
         let message = try Self.code("M1K3App/MessageView.swift")
         let start = try #require(message.range(of: "private var feedbackCommentEditor"), "the editor moved")
         let editor = String(message[start.upperBound...])
-        let raise = try #require(editor.range(of: "onSendExchange("))
-        let before = editor[..<raise.lowerBound]
+        let button = try #require(editor.range(of: "Button(\"Send this exchange…\")"), "the button is named for what it does")
+        let action = editor[button.upperBound...]
+        let close = try #require(action.range(of: "showComment = false"))
+        let before = action[..<close.lowerBound]
         #expect(before.contains("onFeedback(.bad, commentDraft)"), "the bad verdict and note are saved first")
-        #expect(before.contains("Send this exchange"), "the button is named for what it does")
+        #expect(before.contains("pendingExchangeNote = commentDraft"), "the note is parked for the sheet")
+        #expect(!action[..<close.upperBound].contains("onSendExchange("), "the sheet is not raised inside the button")
+
+        let flush = try #require(message.range(of: ".onChange(of: showComment)"), "the popover's close is watched")
+        let afterFlush = message[flush.upperBound...]
+        let raise = try #require(afterFlush.range(of: "onSendExchange(note)"))
+        #expect(afterFlush[..<raise.lowerBound].contains("pendingExchangeNote = nil"), "the parked note is consumed once")
     }
 }

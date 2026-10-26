@@ -84,6 +84,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-26 — #708: `exchange(for:)` is the one pairing rule (the user turn before
 //  an answer, the answer, the brain stamp), extracted from `recordFeedback`, which now pairs through it; the Mac's
 //  "Send this exchange" sheet reads the same value. No new persisted field. Confidence 0.85 (AnswerExchangeTests).
+//  Review: Kev + claude-fable-5.1, 2026-10-26 (pre-push review fold) — one transcript scan per rate tap: a private
+//  `pairing(for:)` returns the index with the exchange, and both callers read it. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -1001,18 +1003,25 @@ public final class ChatSession {
     /// `recordFeedback` and the "Send this exchange" sheet (#708) both read it. nil for an
     /// unknown id or a user message.
     public func exchange(for messageID: UUID) -> AnswerExchange? {
+        pairing(for: messageID)?.exchange
+    }
+
+    /// The pairing rule itself, with the answer's index so a caller that needs more of the
+    /// message (recordFeedback reads its tools) does not scan the transcript twice.
+    private func pairing(for messageID: UUID) -> (index: Int, exchange: AnswerExchange)? {
         guard let index = messages.firstIndex(where: { $0.id == messageID }),
               messages[index].role == .assistant
         else { return nil }
         let answer = messages[index]
         let question = messages[..<index].last { $0.role == .user }?.text ?? ""
-        return AnswerExchange(
+        let exchange = AnswerExchange(
             messageID: messageID,
             conversationID: activeConversationID,
             question: question,
             answer: answer.text,
             brain: answer.brain
         )
+        return (index, exchange)
     }
 
     /// Record Kev's judgement on one assistant answer. Captures the paired
@@ -1022,8 +1031,8 @@ public final class ChatSession {
     /// resident `brain` is passed in as the fallback for an unstamped answer.
     /// Silently no-ops for an unknown id or a user message.
     public func recordFeedback(messageID: UUID, verdict: FeedbackVerdict, comment: String?, brain: String) {
-        guard let exchange = exchange(for: messageID) else { return }
-        let toolsUsed = messages.first { $0.id == messageID }?.toolsUsed ?? []
+        guard let (index, exchange) = pairing(for: messageID) else { return }
+        let toolsUsed = messages[index].toolsUsed ?? []
         let record = AnswerFeedback(
             messageID: messageID,
             conversationID: exchange.conversationID,

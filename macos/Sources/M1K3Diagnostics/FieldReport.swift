@@ -18,6 +18,9 @@
 //  Signed: Kev + claude-fable-5.1, 2026-10-26, Confidence 0.85 (pure, TDD-pinned incl. the
 //  field set and the cap; the mail-app hand-off and the real mailto length ceiling are
 //  verify-by-launch). Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-10-26 (pre-push review fold) — the preamble claims only what the field set
+//  guarantees (the answer may quote what M1K3 read); body line breaks go out as CRLF (RFC 6068 §5); the cap is
+//  also on ENCODED bytes, since a non-ASCII scalar costs 3–12 bytes in the link. Confidence 0.85.
 //
 
 import Foundation
@@ -49,8 +52,8 @@ public enum FieldReportFormatter {
     /// mail clients render mailto bodies verbatim, so no markdown.
     public static func body(_ report: FieldReport) -> String {
         var lines = [
-            "This email contains one exchange from M1K3: your message, M1K3's answer, the brain that wrote it, and the app version.",
-            "It does not contain memories, documents, sources, tool names or other turns — nothing else from your Mac.",
+            "This email contains one exchange from M1K3: your message, M1K3's answer, your note, the brain that wrote it, and the app version.",
+            "It does not contain other turns, tool names, attachments, or your memories and documents themselves. The answer may quote what M1K3 read to write it, so read it over before you send.",
             "",
             "Your message:",
             report.question,
@@ -85,21 +88,38 @@ public enum MailtoURL {
     /// treats a bare `+` as a plus, but some clients do not; encoding it is the safe side).
     private static let unreserved = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
 
+    private static let cutTail = "\n\n… cut here — the full text is on your clipboard. Paste it into this email."
+
     /// Build `mailto:<to>?subject=…&body=…`. Launch Services and mail clients cap URL length,
     /// so an over-long body is cut and flagged; the full text is meant to ride the clipboard.
-    public static func compose(to: String, subject: String, body: String, maxBodyChars: Int = 12000) -> Built? {
-        var body = body
-        var truncated = false
-        if body.count > maxBodyChars {
-            body = String(body.prefix(maxBodyChars))
-                + "\n\n… cut here — the full text is on your clipboard. Paste it into this email."
+    /// Two caps: characters (what the user reads) and ENCODED bytes (what the link carries — a
+    /// CJK or emoji scalar costs 3–12 bytes once percent-encoded). Neither figure is measured
+    /// against a real client yet; both err short, and the clipboard holds the whole text.
+    public static func compose(
+        to: String, subject: String, body: String, maxBodyChars: Int = 12000, maxEncodedBytes: Int = 24000
+    ) -> Built? {
+        var keep = min(body.count, maxBodyChars)
+        var truncated = body.count > maxBodyChars
+        guard var encodedBody = encode(truncated ? String(body.prefix(keep)) + cutTail : body) else { return nil }
+        // Shrink proportionally until the encoded body fits; `keep` strictly falls each pass.
+        while encodedBody.utf8.count > maxEncodedBytes, keep > 0 {
+            keep = keep * maxEncodedBytes / encodedBody.utf8.count
             truncated = true
+            guard let shorter = encode(String(body.prefix(keep)) + cutTail) else { return nil }
+            encodedBody = shorter
         }
         guard let recipient = to.addingPercentEncoding(withAllowedCharacters: unreserved.union(CharacterSet(charactersIn: "@"))),
               let encodedSubject = subject.addingPercentEncoding(withAllowedCharacters: unreserved),
-              let encodedBody = body.addingPercentEncoding(withAllowedCharacters: unreserved),
               let url = URL(string: "mailto:\(recipient)?subject=\(encodedSubject)&body=\(encodedBody)")
         else { return nil }
         return Built(url: url, truncated: truncated)
+    }
+
+    /// RFC 6068 §5: body line breaks are `%0D%0A`. Mail.app forgives a bare LF; other clients
+    /// run the lines together or stop at the first one.
+    private static func encode(_ text: String) -> String? {
+        text.replacingOccurrences(of: "\r\n", with: "\n")
+            .replacingOccurrences(of: "\n", with: "\r\n")
+            .addingPercentEncoding(withAllowedCharacters: unreserved)
     }
 }

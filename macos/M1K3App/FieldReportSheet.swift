@@ -15,6 +15,8 @@
 //  Signed: Kev + claude-fable-5.1, 2026-10-26, Confidence 0.7 (verify-by-launch owed: the sheet,
 //  the mail app's compose window, the clipboard fallback — UNVERIFIED this run).
 //  Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-10-26 (pre-push review fold) — the sentence names the note and says the
+//  answer may quote what M1K3 read; a could-not-open outcome with its own caption. Confidence 0.7.
 //
 
 import SwiftUI
@@ -39,7 +41,8 @@ struct FieldReportSheet: View {
                 .font(.title3.weight(.semibold))
 
             Text("""
-            This is the whole message: your message, M1K3's answer, the brain and the app version. \
+            This is the whole message: your message, M1K3's answer, your note, the brain and the app version — \
+            nothing else from this Mac, though the answer may quote what M1K3 read to write it. \
             It goes to \(FieldReporter.recipient) from your own mail app, which opens with it filled in. \
             M1K3 sends nothing itself. Change anything below first if you like.
             """)
@@ -77,8 +80,13 @@ struct FieldReportSheet: View {
                         """
                     case .copiedNoMailClient:
                         caption = """
-                        No mail app would open. The full text is on your clipboard — \
+                        No mail app is set up on this Mac. The full text is on your clipboard — \
                         paste it into an email to \(FieldReporter.recipient).
+                        """
+                    case .copiedCouldNotOpen:
+                        caption = """
+                        Your mail app didn't open the message — the link may be too long for it. The full text \
+                        is on your clipboard; paste it into an email to \(FieldReporter.recipient).
                         """
                     }
                 }
