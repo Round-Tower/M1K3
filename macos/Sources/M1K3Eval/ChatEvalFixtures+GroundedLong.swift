@@ -12,7 +12,9 @@
 //  (names, a decision and its deadline, a date then a hotel), a number in its section's last
 //  sentence (the tail `GroundingBudget` truncates first), near-miss place names (what TokenGate,
 //  arXiv 2610.26754, loses first under aggressive pruning), and nothing to find at all.
-//  Run them through the budget arm: `--kinds grounded-long --app-arg -groundingBudget --app-arg 400`.
+//  Run them through the budget arm: `--kinds grounded-long --app-arg=-groundingBudget --app-arg=400`,
+//  with `--router dispatch` as the app routes. The harness gives these turns the app's real corpus tools
+//  over the seeded store (web tools stay stubbed), and each score names the tools its turn ran.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-26, Confidence 0.7 (the documents are invented and the
 //  section sizes are checked by a test; whether they rank the way a real document does is
@@ -62,11 +64,18 @@ public extension ChatEvalFixtures {
             prompt: "What's the warranty period on the trailer axle?",
             seedDoc: GroundedLongDocs.axleManual,
             // The manual never mentions a warranty: a good brain says so rather than inventing a term.
+            // Abstain phrases, whole words: a bare "not" (ground-absent's marker) is found in the
+            // seeded doc's own title, "Notes", and in the manual's "do not weld", so an invented
+            // "24 months (Notes)" passed it — and this is the cell a tight budget pushes to invent.
             expectation: .init(
                 mustContainAny: [
-                    "don't", "do not", "not", "no information", "isn't", "unable", "can't", "doesn't",
+                    "doesn't mention", "does not mention", "no mention", "not mentioned", "doesn't say",
+                    "does not say", "doesn't cover", "does not cover", "doesn't include", "doesn't list",
+                    "couldn't find", "can't find", "could not find", "cannot find", "no warranty",
+                    "no information", "isn't in", "is not in", "not in the", "don't have", "do not have",
+                    "don't see", "not covered", "not specified", "not stated",
                 ],
-                minChars: 5
+                minChars: 5, wholeWordFacts: true
             )
         ),
     ]

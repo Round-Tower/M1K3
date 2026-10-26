@@ -36,6 +36,7 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-26, Confidence 0.9 — pins the `-groundingBudget` ceiling: argv strings
 //  only, positive only, and it never widens a tier or lifts the spoken cap.
 
+import Foundation
 @testable import M1K3Chat
 import M1K3Inference
 import M1K3Knowledge
@@ -198,7 +199,18 @@ struct GroundingBudgetPolicyTests {
         #expect(GroundingBudgetPolicy.ceiling(arguments: ["groundingBudget": "0"]) == nil)
         #expect(GroundingBudgetPolicy.ceiling(arguments: ["groundingBudget": "-5"]) == nil)
         #expect(GroundingBudgetPolicy.ceiling(arguments: ["groundingBudget": "lots"]) == nil)
-        #expect(GroundingBudgetPolicy.ceiling(arguments: ["groundingBudget": 400]) == nil, "argv values are strings")
+        // A numeric argv value can arrive as an NSNumber, depending on how the domain parsed it
+        // (HistoryBudgetPolicy.evictionBlockTurns): read as a String only, the arm stayed off.
+        #expect(GroundingBudgetPolicy.ceiling(arguments: ["groundingBudget": NSNumber(value: 400)]) == 400)
+        #expect(GroundingBudgetPolicy.ceiling(arguments: ["groundingBudget": NSNumber(value: 0)]) == nil)
+    }
+
+    @Test("the ceiling reaches pocket, an unknown tier and a spoken Mini turn too")
+    func ceilingOnEveryTier() {
+        #expect(GroundingBudgetPolicy.tokens(for: .pocket, ceiling: 300) == 300)
+        #expect(GroundingBudgetPolicy.tokens(for: nil, ceiling: 300) == 300)
+        #expect(GroundingBudgetPolicy.tokens(for: nil, ceiling: 900) == GroundingBudgetPolicy.miniTokenBudget)
+        #expect(GroundingBudgetPolicy.tokens(for: .mini, spoken: true, miniWindowTokens: 4096, ceiling: 250) == 250)
     }
 
     @Test("a ceiling only ever tightens a tier's budget, and spoken still caps under it")

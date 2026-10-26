@@ -103,6 +103,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-26, Confidence 0.75 — grounded-long runs the live path over a seeded
 //  store (`seededStore`, which grounded-Q now shares), timed from after ingestion, and the live path reads its
 //  grounding budget through `-groundingBudget` (unset: 1,100, as before). The budget arm; verify-by-eval.
+//  A seeded turn gets the app's three corpus tools over its store in place of the search_knowledge stub,
+//  and its score names the tools it ran (a dispatched turn answers from the tool, not the grounding).
 //
 
 import Foundation
@@ -119,6 +121,7 @@ import M1K3Chat
 import M1K3Eval
 import M1K3Inference
 import M1K3Knowledge
+import M1K3KnowledgeTools
 import M1K3LanguageModel
 import M1K3LogCore
 import M1K3MLX
@@ -371,7 +374,16 @@ enum ChatEvalStage {
         // Lil/Big cell measures `toolRouterAllTiers`. `_ROUTER_HEAD=1` puts the group
         // head in front of the pick (`toolGroupRouter`); `_ROUTER_CHAIN=1` lets a pick run
         // two read-only tools (`toolChain`).
-        let palette: [any AgentTool] = SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_TOOLS") == "none" ? [] : toolPalette
+        let stubs: [any AgentTool] = SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_TOOLS") == "none" ? [] : toolPalette
+        // A seeded turn reads its document with the app's own corpus tools (the palette's three store
+        // readers, AppEnvironment+ChatHistory): a dispatched search_knowledge answers from the tool's
+        // result alone, so the stub's canned line left the brain nothing to answer from (2026-10-26:
+        // Lil invented both names). The web tools stay stubbed, so no fixture touches the network.
+        let palette = seeded == nil || stubs.isEmpty ? stubs : [
+            SearchKnowledgeTool(store: store, embedder: Self.embedder),
+            ListDocumentsTool(store: store),
+            GetDocumentTool(store: store),
+        ] + stubs.filter { $0.name != "search_knowledge" }
         var plainRoute: (@Sendable () -> PlainTurnRoute?)?
         switch SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER") {
         case "off":
@@ -844,9 +856,14 @@ enum ChatEvalStage {
                 let observation = try await livePathObservation(
                     fixture, seeded: store, provider: provider, thinking: thinking, start: clock.now, clock: clock
                 )
+                // Which tools the turn ran, so a miss on a dispatched turn (which drops the retrieved
+                // grounding for the tool's result) reads apart from a miss the budget caused.
                 return ChatEvalScorer.score(
                     fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
-                )
+                ).appending(EvalCheck(
+                    name: "tools", outcome: .skip,
+                    detail: observation.toolCalls.isEmpty ? "none" : observation.toolCalls.joined(separator: ", ")
+                ))
             case .toolUse where routerArmRequested:
                 let observation = try await livePathObservation(
                     fixture, provider: provider, thinking: thinking, start: start, clock: clock

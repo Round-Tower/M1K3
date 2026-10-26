@@ -144,7 +144,10 @@ public enum GroundingBudgetPolicy {
     public static func ceiling(
         arguments: [String: Any] = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
     ) -> Int? {
-        guard let raw = arguments["groundingBudget"] as? String, let tokens = Int(raw), tokens > 0 else { return nil }
+        // A numeric argv value can arrive as a String or an NSNumber, depending on how the domain parsed it.
+        let value = arguments["groundingBudget"]
+        let tokens = (value as? NSNumber)?.intValue ?? (value as? String).flatMap { Int($0) }
+        guard let tokens, tokens > 0 else { return nil }
         return tokens
     }
 
