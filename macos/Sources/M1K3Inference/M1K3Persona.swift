@@ -309,8 +309,9 @@ public enum M1K3Persona {
     }
 
     /// Who M1K3 is and where it lives. Invariant: it carries the privacy claims (where things
-    /// are KEPT, and that a search is part of the job; #482, 2026-10-19), each sentence short
-    /// enough to sit under the leak guard's span, and Mini's core rewrites `curiosityBeat` in it.
+    /// are KEPT, and that a search is part of the job; #482, 2026-10-19), worded so a recital of
+    /// them doesn't trip the leak guard (`privacyLinesAreRepeatable`), and Mini's core rewrites
+    /// `curiosityBeat` in it.
     static let opening = """
     You are M1K3 — a curious AI living entirely on \(HostPlatform.thisDevice), wearing every sci-fi \
     villain's look but always on the user's side. Their memories and documents are \

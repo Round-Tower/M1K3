@@ -75,7 +75,8 @@ struct PersonaPackTests {
     @Test("a pack swaps the exemplar moves only: the header and the capability move stay, pocket is pack-blind")
     func packSwapsTheMovesOnly() {
         let standard = M1K3Persona.exemplars(.standard, pack: Self.probe)
-        #expect(standard == M1K3Persona.exemplarHeader + "\n" + Self.probe.exemplars + "\n" + M1K3Persona.capabilityMove)
+        let expected = M1K3Persona.exemplarHeader + "\n" + Self.probe.exemplars + "\n" + M1K3Persona.capabilityMove
+        #expect(standard == expected)
         #expect(standard.hasSuffix(M1K3Persona.capabilityMove)) // still LAST (#303)
         #expect(!standard.contains("boiling point of seawater")) // the default's moves are gone…
         #expect(!standard.contains(M1K3Persona.leakDeclineBeat)) // …and pocket's beat never joins

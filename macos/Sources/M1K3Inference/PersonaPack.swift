@@ -26,11 +26,12 @@
 ///   instructions' text (Lil's canned decline 9/38 → 3/38, interview 4/10 → 9/10,
 ///   2026-09-23), so a pack that softened it would bring the over-firing decline back.
 /// - The opening carries the measured privacy claims (where things are kept, and that a
-///   search is part of the job; #482, 2026-10-19), worded to sit under the leak guard's
-///   span. Mini's core also rewrites `curiosityBeat` inside it (#428). A later phase may
-///   carve a register slot out of it if a second pack needs one.
+///   search is part of the job; #482, 2026-10-19), worded so a word-for-word recital of
+///   them doesn't trip the leak guard. Mini's core also rewrites `curiosityBeat` inside it
+///   (#428). A later phase may carve a register slot out of it if a second pack needs one.
 /// - `capabilityMove` says what M1K3 can do, not how it sounds. It rides LAST in the
-///   standard set, where recency does the work (#303), and is never fingerprinted.
+///   standard set, where recency does the work (#303), and the leak guard never
+///   fingerprints it.
 /// - `leakDeclineBeat` is pocket's measured security beat (51/105 → 76/105), also LAST.
 ///   Pocket ignores the pack: its frozen core and five beats were measured as one text.
 /// - The exemplar header frames the bullets as moves, never lines to reuse (the parrot
