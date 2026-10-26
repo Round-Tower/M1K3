@@ -407,6 +407,9 @@ extension SpeechTextPolishTests {
 // its paragraph break (the bullet rule's `\s` used to eat it); the Sources strip, moved ahead of the flatten, takes
 // every label the screen-side cut takes, the app's Web sources block after a model's Sources list still goes, and an
 // inline attribution still goes once the link or emphasis inside it is unwrapped (the strip is back after the flatten).
+// Review: Kev + claude-opus-5.5, 2026-10-26 (second review fold) — `strandedPipeSaysNothing`: the empty-cells guard in
+// `spokenRow` is what keeps a pipe the sentence fold strands ("|", "||", a "|" line above a separator) from speaking as
+// a lone ".". Red with the guard removed, green with it; the folder-driven case pins the held pipe on a real stream.
 extension SpeechTextPolishTests {
     @Test("a CRLF table keeps its line breaks and speaks no pipe or dash run")
     func crlfTableRows() {
@@ -420,6 +423,27 @@ extension SpeechTextPolishTests {
         #expect(SpeechTextPolish.spokenSentence("|---|---|") == nil)
         #expect(SpeechTextPolish.spokenSentence("| :-- | --: |") == nil)
         #expect(SpeechTextPolish.spokenSentence("| Tea | less |") == "Tea, less.")
+    }
+
+    /// A row whose cell ends a sentence is cut by the fold right after that full stop, and what is left is a
+    /// stranded pipe: "| Drink | Note." then "|\n|---|---|…" for a header, "| Tea | Calm." then " |" for a body row.
+    /// A row with no cells says nothing — without the empty-cells guard the pipe would speak as a lone ".".
+    @Test("a stranded pipe left by the sentence fold says nothing, never a lone full stop")
+    func strandedPipeSaysNothing() {
+        #expect(SpeechTextPolish.polish("|") == "")
+        #expect(SpeechTextPolish.polish("| |") == "")
+        #expect(SpeechTextPolish.spokenSentence("|") == nil)
+        #expect(SpeechTextPolish.spokenSentence("||") == nil)
+        #expect(SpeechTextPolish.polish("|\n|---|---|\n| Tea | x |") == "Tea, x.")
+        // Folder-driven: the last cell of the last row ends in a full stop, so the fold strands its closing pipe.
+        var folder = StreamedAnswerFolder()
+        var sentences = folder.ingest("| Drink | Notes |\n|---|---|\n| Tea | Calm. |\n\nI'd take the tea.")
+        if let tail = folder.flush() { sentences.append(tail) }
+        let spoken = sentences.compactMap(SpeechTextPolish.spokenSentence).joined(separator: " ")
+        #expect(!spoken.contains("|"))
+        #expect(!spoken.hasPrefix("."))
+        #expect(!spoken.contains(" . "))
+        #expect(spoken == "Drink, Notes.\nTea, Calm. I'd take the tea.")
     }
 
     /// Auto-speak folds the stream into sentences at a full stop plus whitespace, so a cell that ends a sentence cuts

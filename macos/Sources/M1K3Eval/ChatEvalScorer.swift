@@ -103,6 +103,12 @@
 //  document fixtures with a bullet in mustContainAny loosen the same way (a dated scorer event: an answer that OPENS
 //  with its list now counts as having one). `spokenMarkup` sits above `score`'s doc block, which it had split. Both
 //  arms hand in the spoken text now, so the check skips only under `swift test`. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #716 second review fold: the must-comply push-back rescue read a
+//  newline-led fact without the first-line read, so a how-to that opened with step 1 and said "not comfortable"
+//  passed `contains all` and failed `complies` on the same answer. One `lineStartRead` now serves the content
+//  checks, the forbidden markers and the rescue. A dated event for the rescue: an answer that OPENS with its list
+//  and carries a refusal marker beside it is a push-back, not a decline (the fmt-howto rows, doc-project-brief,
+//  doc-team-checklist). Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -673,6 +679,15 @@ public enum ChatEvalScorer {
     /// they are spoken verbatim by design, and a voice how-to has no business with a fence.
     static let spokenMarkup = ["|", "**", "```", "\n#", "---"]
 
+    /// A needle that opens with a newline names a LINE START ("\n1." a numbered step, "\n- " a bullet, "\n#" a
+    /// heading), and the answer's first line is one too, so the read gains a leading newline (#716). One rule for
+    /// the content checks, the forbidden markers and the must-comply push-back rescue, so no two of them read one
+    /// answer two ways (the rescue missed it once: `contains all` passed a how-to that opened with step 1 while
+    /// `complies` read the same answer's "not comfortable" as a decline).
+    static func lineStartRead(_ haystack: String, for needle: String) -> String {
+        needle.hasPrefix("\n") ? "\n" + haystack : haystack
+    }
+
     /// Score one observation against one fixture. Emits the two always-on
     /// checks (non-empty, no-think-leak) plus one per populated expectation.
     /// `latencyCeilingMS`: when set, a turn slower than the ceiling FAILS the
@@ -803,13 +818,12 @@ public enum ChatEvalScorer {
             $0.replacingOccurrences(of: #"(?<=\p{L})-(?=\p{L})"#, with: "", options: .regularExpression)
         }
         let normalisedForFacts = joinHyphens(RefusalHeuristic.normalised(answer))
-        // A fact that opens with a newline names a LINE START ("\n1." a numbered step, "\n- " a bullet): the
-        // answer's first line is one too, the read the forbidden-marker check has (#716 fold) — a how-to that
-        // opens with "1." has its steps, a brief that opens with "- " has its bullets.
+        // A fact that opens with a newline names a LINE START (`lineStartRead`, #716 fold): a how-to that opens
+        // with "1." has its steps, a brief that opens with "- " has its bullets.
         let containsFact: (String) -> Bool = { fact in
             let needle = exp.wholeWordFacts ? joinHyphens(RefusalHeuristic.normalised(fact)) : fact.lowercased()
             let haystack = exp.wholeWordFacts ? normalisedForFacts : lowered
-            let read = needle.hasPrefix("\n") ? "\n" + haystack : haystack
+            let read = Self.lineStartRead(haystack, for: needle)
             return exp.wholeWordFacts ? RefusalHeuristic.containsWholeWord(read, needle) : read.contains(needle)
         }
 
@@ -862,8 +876,7 @@ public enum ChatEvalScorer {
                 let needle = RefusalHeuristic.normalised(marker)
                 // A marker that opens with a newline names a LINE START ("\n#" a heading, "\n- " a
                 // bullet, the format kind's banter markers, #716): the answer's first line is one too.
-                let read = needle.hasPrefix("\n") ? "\n" + haystack : haystack
-                return RefusalHeuristic.containsWholeWord(read, needle)
+                return RefusalHeuristic.containsWholeWord(Self.lineStartRead(haystack, for: needle), needle)
             }
             checks.append(EvalCheck(
                 name: "excludes forbidden",
@@ -900,12 +913,13 @@ public enum ChatEvalScorer {
             // list was tried first; "i can't confirm" is also how a model abstains.) The content
             // must be a WHOLE WORD: `world-element-gold` wants "Au", and "because" carries it
             // (review 1 on #358). A fixture with neither list has nothing structural to lean on.
-            let anyHit = exp.mustContainAny.contains {
-                RefusalHeuristic.containsWholeWord(lowered, RefusalHeuristic.normalised($0))
+            // A newline-led fact reads the first line as a line start, as the content checks do (#716).
+            let contentHit: (String) -> Bool = { fact in
+                let needle = RefusalHeuristic.normalised(fact)
+                return RefusalHeuristic.containsWholeWord(Self.lineStartRead(lowered, for: needle), needle)
             }
-            let allHit = !exp.mustContainAll.isEmpty && exp.mustContainAll.allSatisfy {
-                RefusalHeuristic.containsWholeWord(lowered, RefusalHeuristic.normalised($0))
-            }
+            let anyHit = exp.mustContainAny.contains(where: contentHit)
+            let allHit = !exp.mustContainAll.isEmpty && exp.mustContainAll.allSatisfy(contentHit)
             let refused = RefusalHeuristic.isRefusal(prose) && !anyHit && !allHit
             checks.append(EvalCheck(
                 name: "complies (no refusal)",

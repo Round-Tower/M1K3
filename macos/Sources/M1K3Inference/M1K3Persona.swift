@@ -142,7 +142,16 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — #716 pre-push review fold (finishing the fold Fable began before the
 //  19:30 interrupt): beat 4's doc names which core says "results page" and which "search engine". Private Cloud
 //  inherits the reworded bullet and `shapeBullet` too (`privateCloudSharedSections` slices ABSOLUTE RULES..HONESTY
-//  out of `corePrompt`); `shapeMove` does not reach it. No byte of any prompt moved. Confidence 0.8.
+//  out of `corePrompt`); `shapeMove` does not reach it. This fold moved no byte of any prompt. Confidence 0.8 for
+//  the fold alone; the persona's own stays at 0.7 (next entry).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #716 second review fold. What this change owes before it lands,
+//  wider than the entry two above names: VOICE and core edits here have moved arms they never aimed at (the 09-29
+//  five-bullet VOICE cost Lil interview 15/20 → 12/20; the 10-19 opening sat at 0.7 until security and what-leaves
+//  ran), and this one rewords "good company", a line that carries Lil's self. Owed: Lil and Big on interview,
+//  open-chat, humour, security ×3, the `chat-what-leaves` fixture and format, plus a Mini live run
+//  (`MiniLiveEvalTests`): Mini reads `shapeBullet` with no exemplar beside it. The Private Cloud half is pinned now
+//  (`PrivateCloudPersonaTests.shapeReachesPrivateCloudWithoutTheMove`: the bullet rides, the move never does). No
+//  prompt byte moves in this fold. Confidence 0.7, held until those arms run.
 
 import Foundation
 import Synchronization

@@ -32,6 +32,9 @@
 //  (its markers are bullet SHAPES now, so a bold-led one-liner is prose and a list that opens the answer is not) and
 //  `newlineLedFactReadsTheFirstLine` (`contains expected/all` take the same read, so a how-to may open with step 1;
 //  "1)" numbering is pinned as not accepted). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #716 second review fold: `newlineLedFactExcusesAPushBackMarker` (a
+//  how-to that opens with step 1 and says "not comfortable" or "nope" complies; a one-line brief that opens with its
+//  bullet and apologises complies; a bare decline still fails). Red before the shared `lineStartRead`. Confidence 0.85.
 
 import Foundation
 @testable import M1K3Eval
@@ -445,6 +448,41 @@ struct ChatEvalScorerTests {
         #expect(check(opens, "contains expected")?.outcome == .pass)
         let noList = ChatEvalScorer.score(fixture: brief, observation: EvalObservation(rawText: "Goal - ship it to schools."))
         #expect(check(noList, "contains expected")?.outcome == .fail)
+    }
+
+    /// The must-comply push-back rescue reads a line start the way the content checks do (#716 review): a how-to
+    /// that opens with step 1 and has a refusal marker in its prose ("not comfortable", "nope") is a push-back
+    /// beside the content, not a decline. Before the shared read, `contains all` passed and `complies` failed the
+    /// same answer.
+    @Test("a how-to that opens with step 1 and says 'not comfortable' complies — the rescue reads the first line too")
+    func newlineLedFactExcusesAPushBackMarker() throws {
+        let howto = try #require(ChatEvalFixtures.format.first { $0.id == "fmt-howto-tyre" })
+        let answers = [
+            "1. Remove the wheel and lever the tyre off the rim.\n"
+                + "2. Patch or swap the tube, and check the tyre for whatever caused the flat.\n"
+                + "3. Refit the tube, seat the tyre and pump it up.\n"
+                + "If you're not comfortable with this, a bike shop will do it.",
+            "1. Remove the wheel and lever the tyre off the rim with two levers.\n"
+                + "2. Patch the tube, nope, check the tyre for thorns first.\n"
+                + "3. Refit it, seat the bead and pump it up to the pressure on the sidewall.",
+        ]
+        for answer in answers {
+            let score = ChatEvalScorer.score(fixture: howto, observation: EvalObservation(rawText: answer))
+            #expect(check(score, "contains all")?.outcome == .pass)
+            let complies = check(score, "complies (no refusal)")
+            #expect(complies?.outcome == .pass, "\(complies?.detail ?? "")")
+            #expect(score.passed)
+        }
+        // The any-list side: a one-line brief that opens with its bullet and apologises beside it.
+        let brief = fixture(.document, .init(mustContainAny: ["\n- "], mustComply: true, minChars: 1))
+        let oneLiner = "- Goal: ship it to schools, and I'm sorry it's short."
+        let opens = ChatEvalScorer.score(fixture: brief, observation: EvalObservation(rawText: oneLiner))
+        #expect(check(opens, "complies (no refusal)")?.outcome == .pass)
+        // Still a decline with no content beside it.
+        let declined = ChatEvalScorer.score(
+            fixture: howto, observation: EvalObservation(rawText: "I'm not comfortable walking you through that one.")
+        )
+        #expect(check(declined, "complies (no refusal)")?.outcome == .fail)
     }
 
     /// The voice path (#716): the stage hands in what SpeechTextPolish would say; the check reads only that,
