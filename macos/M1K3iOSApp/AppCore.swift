@@ -711,7 +711,7 @@ final class AppCore {
             ),
             autoCaptureEnabled: { Self.memoryAutoCaptureEnabled() },
             // The rolling distillation trigger follows the replay window in effect (#629).
-            replayTurns: { Self.liveHistoryBudget().maxTurns }
+            replayTurns: { Self.liveHistoryBudget().minimumKeptTurns }
         )
 
         // Caption memory: a deleted chat forgets its Photo memories.

@@ -371,27 +371,62 @@ struct HistoryBudgetPolicyTests {
         #expect(HistoryBudgetPolicy.defaultEvictionBlockTurns == 6)
         for tier in [BrainTier.lil, .big, .pocket] {
             #expect(live(tier, spoken: false).evictionBlockTurns == HistoryBudgetPolicy.defaultEvictionBlockTurns)
+            #expect(live(tier, spoken: false).minimumKeptTurns == HistoryWindow.maxTurns - 6)
         }
         #expect(HistoryBudgetPolicy.conservativeMiniBudget.evictionBlockTurns == 1)
         #expect(HistoryBudgetPolicy.measuredMiniBudget(reservedTokens: 1500).evictionBlockTurns == 1)
         #expect(live(.mini, spoken: false).evictionBlockTurns == 1)
     }
 
-    @Test("the spoken merge and the image reserve keep the block")
+    @Test("the image reserve keeps the block; spoken Big takes the smaller block of four")
     func blockSurvivesTheMerges() {
-        #expect(live(.big, spoken: true).evictionBlockTurns == HistoryBudgetPolicy.defaultEvictionBlockTurns)
-        #expect(live(.lil, spoken: false).reservingImages(2).evictionBlockTurns == HistoryBudgetPolicy.defaultEvictionBlockTurns)
+        let block = HistoryBudgetPolicy.defaultEvictionBlockTurns
+        #expect(live(.lil, spoken: false).reservingImages(2).evictionBlockTurns == block)
+        // Eight turns kept on a spoken Big turn: a block of six would leave two exchanges one message
+        // in three. Four keeps six to eight, and the argv override can only lower it.
+        let spoken = live(.big, spoken: true)
+        #expect(spoken.evictionBlockTurns == 4)
+        #expect(spoken.minimumKeptTurns == 4)
+        let off = HistoryBudgetPolicy.budget(
+            for: .big, reservedTokens: HistoryBudgetPolicy.liveReserveTokens,
+            generationTokens: HistoryBudgetPolicy.liveGenerationReserveTokens, spoken: true, evictionBlockTurns: 1
+        )
+        #expect(off.evictionBlockTurns == 1)
+        // Rendered: six or eight turns kept, never fewer, and the block stays inside the typed bound.
+        let turns = (1 ... 30).map { i in
+            ChatTurn(role: i.isMultiple(of: 2) ? .assistant : .user, text: String(repeating: "s", count: 500) + " \(i)")
+        }
+        let typed = live(.big, spoken: false)
+        // Whole exchanges, as a turn's history arrives (an unanswered turn flips the parity: the orphan guard's case).
+        for n in stride(from: 20, through: 30, by: 2) {
+            let text = HistoryWindow.render(Array(turns.prefix(n)), budget: spoken) ?? ""
+            let kept = text.components(separatedBy: "\n").filter { $0.hasPrefix("USER: ") || $0.hasPrefix("M1K3: ") }.count
+            #expect(kept == 6 || kept == 8, "n=\(n) kept \(kept)")
+            #expect(text.count <= typed.totalChars)
+        }
+    }
+
+    @Test("the distillation trigger reads the fewest turns the window keeps")
+    func distillationFollowsTheFloor() {
+        let lil = live(.lil, spoken: false)
+        #expect(lil.minimumKeptTurns == HistoryWindow.maxTurns - HistoryBudgetPolicy.defaultEvictionBlockTurns)
+        let n = lil.minimumKeptTurns + ChatSession.rollingDistillBatch
+        #expect(!ChatSession.shouldRollingDistill(messageCount: n - 1, watermark: 0, replayTurns: lil.minimumKeptTurns))
+        #expect(ChatSession.shouldRollingDistill(messageCount: n, watermark: 0, replayTurns: lil.minimumKeptTurns))
     }
 
     @Test("the argv override: -historyEvictionBlock N sets the block, 0/1/NO turn it off, junk is the default")
     func evictionBlockArgv() {
-        #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: [:]) == HistoryBudgetPolicy.defaultEvictionBlockTurns)
+        let block = HistoryBudgetPolicy.defaultEvictionBlockTurns
+        #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: [:]) == block)
         #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": "8"]) == 8)
         #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": "1"]) == 1)
         #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": "0"]) == 1)
         #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": "NO"]) == 1)
-        #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": "lots"]) == HistoryBudgetPolicy.defaultEvictionBlockTurns)
-        let off = HistoryBudgetPolicy.budget(for: .lil, reservedTokens: 1000, generationTokens: 1000, evictionBlockTurns: 1)
+        #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": "lots"]) == block)
+        let off = HistoryBudgetPolicy.budget(
+            for: .lil, reservedTokens: 1000, generationTokens: 1000, evictionBlockTurns: 1
+        )
         #expect(off.evictionBlockTurns == 1)
     }
 }

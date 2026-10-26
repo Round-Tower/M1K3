@@ -52,6 +52,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-26, Confidence 0.75 — `defaultEvictionBlockTurns` (6) rides every MLX
 //  budget and survives the spoken merge and the image reserve; Mini's windows stay at one. The block is what lets the
 //  cross-turn tail checkpoint (#687) keep paying past the 16-turn window (design doc §2a); `-historyEvictionBlock N`.
+//  Challenger fold (same day): spoken Big's block is 4 (its 8-turn ceiling would keep two exchanges one message in
+//  three at 6), and the distillation trigger reads `minimumKeptTurns`, not the ceiling.
 
 import Foundation
 import M1K3Inference
@@ -246,7 +248,9 @@ public enum HistoryBudgetPolicy {
             totalChars: total,
             perTurnChars: min(typed.perTurnChars, spokenBigBudget.perTurnChars, total),
             maxTurns: min(typed.maxTurns, spokenBigBudget.maxTurns),
-            evictionBlockTurns: typed.evictionBlockTurns,
+            // Spoken Big keeps eight turns: a block of six would leave two exchanges one message in
+            // three, so its block is four (six to eight kept, the tail hit on every other message).
+            evictionBlockTurns: min(typed.evictionBlockTurns, spokenBigBudget.evictionBlockTurns),
             // The trace rides inside what the typed replay was allowed (the rotating-window clamp).
             earlierUserChars: min(spokenBigBudget.earlierUserChars, max(0, typed.totalChars - total))
         )
@@ -272,7 +276,8 @@ public enum HistoryBudgetPolicy {
     /// coming" said once at turn 2 was gone by turn 8 and Big confabulated an answer. 600 chars is
     /// about 170 tokens, ~0.8 s of the ~3.8 s the cap saves, and holds 5–8 spoken user lines.
     public static let spokenBigBudget = HistoryWindow.Budget(
-        totalChars: 4400, perTurnChars: HistoryWindow.maxCharsPerTurn, maxTurns: 8, earlierUserChars: 600
+        totalChars: 4400, perTurnChars: HistoryWindow.maxCharsPerTurn, maxTurns: 8, evictionBlockTurns: 4,
+        earlierUserChars: 600
     )
 
     /// The argv kill switch for `spokenBigBudget` (`M1K3 -spokenHistoryCap NO`), read the way

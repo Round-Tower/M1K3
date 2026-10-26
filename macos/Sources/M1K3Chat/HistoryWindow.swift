@@ -83,6 +83,14 @@ public enum HistoryWindow {
         /// snap only ever keeps FEWER turns than the budget allows (up to `block − 1` fewer, right
         /// after a boundary), so every bound above still holds; the newest turn always survives.
         public var evictionBlockTurns: Int
+        /// The fewest turns the window keeps once it is full: the ceiling less what a block snap can
+        /// drop (block − 1, plus one for an orphaned opener). The rolling-distillation trigger reads
+        /// THIS, not `maxTurns` (#629's gap: a turn neither replayed nor distilled), so a snapped-away
+        /// turn is distilled before it is forgotten. One block: the ceiling itself.
+        public var minimumKeptTurns: Int {
+            evictionBlockTurns > 1 ? max(1, maxTurns - evictionBlockTurns) : maxTurns
+        }
+
         /// Chars for the earlier-user trace: the user's own words from the turns the window
         /// evicted, above the kept turns. Zero (the default) renders no trace. Charged on TOP of
         /// `totalChars`, so a caller with a hard bound budgets the sum.
@@ -167,8 +175,15 @@ public enum HistoryWindow {
         if budget.evictionBlockTurns > 1 {
             let block = budget.evictionBlockTurns
             let start = all.count - kept.count
-            let snapped = min((start + block - 1) / block * block, all.count - 1)
-            kept = Array(kept.prefix(all.count - snapped)) // newest-first: the prefix is the newest
+            var snapped = min((start + block - 1) / block * block, all.count - 1)
+            // An orphaned opener (the oldest kept line is M1K3's answer, its question snapped away —
+            // an unanswered turn earlier flipped the parity) drops too: still pure, still fewer.
+            if snapped < all.count - 1, all[snapped].role == .assistant { snapped += 1 }
+            // A char-limited window (long answers, an image reserve) can be short enough that the
+            // snap would halve it; then today's slide is the lesser evil and the snap is skipped.
+            if all.count - snapped >= (kept.count + 1) / 2 {
+                kept = Array(kept.prefix(all.count - snapped)) // newest-first: the prefix is the newest
+            }
         }
 
         // Everything older than the kept turns, whether the char budget, the turn ceiling or the block cut it.
