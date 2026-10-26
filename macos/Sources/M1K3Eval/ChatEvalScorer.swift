@@ -90,6 +90,13 @@
 //  three anchored premise denials). A dated scorer event: under it the 10-19 guard pairs read 24/24 (cut) vs 24/24
 //  (forced), and 10 archived `refuses` fails in 9 files flip to whole passes (counted on the stored previews; each
 //  marker opens its answer). Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — `EvalObservation.spokenText` (what SpeechTextPolish would say,
+//  handed in by the live stage; nil elsewhere) and the `spoken has no markup` check a `spokenNoMarkup` fixture
+//  emits: fail on a pipe, bold, fence, heading or dash run in the spoken text, skip with no spoken text (#716).
+//  A forbidden marker that opens with a newline ("\n#", "\n- ": the format kind's banter markers) reads the
+//  answer's first line as a line start too. One earlier fixture carries such markers, `follow-no-bullets`, which
+//  now also fails a list that OPENS the answer (a dated tightening of that cell); every other fixture scores
+//  exactly as before. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -140,6 +147,10 @@ public struct EvalObservation: Sendable, Equatable {
     public let thinkMS: Int?
     /// What the turn's generations cost, read off the app's log lines (2026-10-25); nil on paths that log none.
     public let generation: GenerationFigures?
+    /// What the speech lane would say for this turn — SpeechTextPolish over the think-stripped answer, handed
+    /// in by the live stage (#716). nil on the bare arm and under `swift test`, where the `spoken has no
+    /// markup` check skips rather than guesses. M1K3Eval never imports M1K3Voice; the stage does the polish.
+    public let spokenText: String?
 
     public init(
         rawText: String,
@@ -148,7 +159,8 @@ public struct EvalObservation: Sendable, Equatable {
         latencyMS: Int = 0,
         routeStages: [String] = [],
         thinkMS: Int? = nil,
-        generation: GenerationFigures? = nil
+        generation: GenerationFigures? = nil,
+        spokenText: String? = nil
     ) {
         self.rawText = rawText
         self.toolCalls = toolCalls
@@ -157,6 +169,7 @@ public struct EvalObservation: Sendable, Equatable {
         self.routeStages = routeStages
         self.thinkMS = thinkMS
         self.generation = generation
+        self.spokenText = spokenText
     }
 }
 
@@ -660,6 +673,11 @@ public enum ChatEvalScorer {
     ///   committed transcripts readable; a bake-off passes `.max` so every fail can be
     ///   re-adjudicated later (two E4B fails on 2026-10-06 were the scorer's, and the
     ///   excerpt was too short to prove it after the fact).
+    /// Markup that must never reach the speech lane (#716): a table pipe, bold, a fence, a heading, a
+    /// separator or thematic-break run. SpeechTextPolish removes each outside fenced code; inside one
+    /// they are spoken verbatim by design, and a voice how-to has no business with a fence.
+    static let spokenMarkup = ["|", "**", "```", "\n#", "---"]
+
     public static func score(
         fixture: ChatEvalFixture, observation: EvalObservation, latencyCeilingMS: Int? = nil,
         previewLimit: Int = ChatEvalScore.answerPreviewLimit
@@ -753,6 +771,24 @@ public enum ChatEvalScorer {
 
         let exp = fixture.expectation
 
+        // The voice path (#716): what the speech lane would say must carry no markup. The stage hands
+        // in SpeechTextPolish's text; the bare arm and `swift test` hand nothing, so the check skips
+        // rather than guesses. Read raw, not normalised: every marker is punctuation.
+        if exp.spokenNoMarkup {
+            if let spoken = observation.spokenText {
+                let found = Self.spokenMarkup.filter { spoken.contains($0) }
+                checks.append(EvalCheck(
+                    name: "spoken has no markup",
+                    outcome: found.isEmpty ? .pass : .fail,
+                    detail: found.isEmpty ? "\(spoken.count) spoken chars" : "speaks \(found)"
+                ))
+            } else {
+                checks.append(EvalCheck(
+                    name: "spoken has no markup", outcome: .skip, detail: "no spoken text (bare arm)"
+                ))
+            }
+        }
+
         // Whole-word when the fixture opts in (vision, reasoning); raw substring otherwise,
         // exactly as before. A hyphen between letters joins a word, so "forty" is not
         // found in the trap answer "forty-five" while "twenty-one" still finds itself.
@@ -812,7 +848,11 @@ public enum ChatEvalScorer {
             let code = fenced.isEmpty ? normalisedAnswer : RefusalHeuristic.normalised(fenced)
             let offending = exp.mustNotContain.filter { marker in
                 let haystack = thinkTags.contains(marker) ? normalisedAnswer : leak.contains(marker) ? prose : code
-                return RefusalHeuristic.containsWholeWord(haystack, RefusalHeuristic.normalised(marker))
+                let needle = RefusalHeuristic.normalised(marker)
+                // A marker that opens with a newline names a LINE START ("\n#" a heading, "\n- " a
+                // bullet, the format kind's banter markers, #716): the answer's first line is one too.
+                let read = needle.hasPrefix("\n") ? "\n" + haystack : haystack
+                return RefusalHeuristic.containsWholeWord(read, needle)
             }
             checks.append(EvalCheck(
                 name: "excludes forbidden",

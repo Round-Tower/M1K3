@@ -7,6 +7,8 @@
 //  right and the layout must carry every brain column and kind row.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-14, Confidence 0.9. Prior: Unknown
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — `matrixHasAFormatRow` (#716): the format row is last and dashes
+//  where the kind never ran, so older reports' row order holds. Confidence 0.9.
 
 @testable import M1K3Eval
 import Testing
@@ -110,5 +112,28 @@ struct ChatEvalReportTests {
     @Test("an empty run list is handled, not crashed")
     func emptyRuns() {
         #expect(ChatEvalReport.matrix([]) == "chateval: no runs")
+    }
+
+    /// #716: `format` is LAST in `TaskKind`, so every older report's rows keep their order; a run that never ran
+    /// it shows a dash in its row, like any empty kind.
+    @Test("the matrix has a format row, last among the kinds, and a dash where the kind never ran")
+    func matrixHasAFormatRow() throws {
+        #expect(TaskKind.allCases.last == .format)
+        let ran = ChatEvalReport.BrainRun(brainID: "lil", scores: [
+            score("fmt-compare-drinks", .format, passed: true, latency: 100),
+            score("fmt-howto-tyre", .format, passed: false, latency: 300),
+        ])
+        let lines = ChatEvalReport.matrix([ran]).components(separatedBy: "\n")
+        let formatRow = try #require(lines.firstIndex { $0.hasPrefix("format") })
+        #expect(lines[formatRow].contains("1/2"))
+        for kind in TaskKind.allCases where kind != .format {
+            let row = try #require(lines.firstIndex { $0.hasPrefix(kind.label) }, "no row for \(kind.label)")
+            #expect(row < formatRow, "\(kind.label) must sit above format")
+        }
+        let overall = try #require(lines.firstIndex { $0.hasPrefix("overall") })
+        #expect(formatRow < overall)
+        let never = ChatEvalReport.BrainRun(brainID: "lil", scores: [score("o1", .openChat, passed: true, latency: 100)])
+        let dash = try #require(ChatEvalReport.matrix([never]).components(separatedBy: "\n").first { $0.hasPrefix("format") })
+        #expect(dash.contains("—"))
     }
 }

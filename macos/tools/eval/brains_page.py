@@ -426,9 +426,10 @@ def _brains_table(rows: list[dict]) -> str:
     )
 
 
+# The report's own row order (TaskKind.allCases): grounded-long and format are last, in that order (#716).
 KIND_ORDER = ("open-chat", "grounded-Q", "reasoning", "code-gen", "tool-use", "refusal", "security",
               "world-knowledge", "humour", "interview", "instruction-following", "document", "sycophancy",
-              "vision")
+              "vision", "grounded-long", "format")
 
 
 def _kind_sort(kinds) -> list[str]:

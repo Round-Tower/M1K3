@@ -151,7 +151,8 @@ def markdown(brains, rows, kinds, table, latencies, source):
     # The kinds whose verdict is explicitly HUMAN get their answers printed in
     # full, because a pass/fail cell tells a reader nothing about whether a joke
     # landed. This is the part of the scorecard you actually read.
-    human_kinds = [k for k in ("humour", "interview") if k in kinds]
+    # format too (#716): whether a table fitted the question, or banter stayed banter, is a read, not a cell.
+    human_kinds = [k for k in ("humour", "interview", "format") if k in kinds]
     if human_kinds:
         out.append("\n### What they actually said\n")
         out.append(

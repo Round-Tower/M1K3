@@ -94,6 +94,10 @@
 //  aren't).
 //  Review: Kev + claude-opus-5-5, 2026-10-26, Confidence 0.75 — the `grounded-long` kind (six fixtures over
 //  six-section documents, `ChatEvalFixtures+GroundedLong.swift`), last in `all` so no earlier run order moves.
+//  Review: Kev + claude-fable-5.1, 2026-10-26, Confidence 0.75 — the `format` kind (#716, eight fixtures in
+//  `ChatEvalFixtures+Format.swift`, last in `all`): shape follows content UNPROMPTED — a compare wants a table, a
+//  how-to numbered steps, banter no markup at all, and two voice-path fixtures carry `spokenNoMarkup`, the one new
+//  expectation flag: the stage hands the scorer SpeechTextPolish's text and it must carry no markup.
 
 import Foundation
 
@@ -205,6 +209,11 @@ public enum TaskKind: String, Sendable, CaseIterable, Equatable, Codable {
     /// decides what the brain reads (grounded-Q's one-line docs never reach it). The budget arm's
     /// kind: `-groundingBudget N` (2026-10-26, `ChatEvalFixtures+GroundedLong.swift`).
     case groundedLong = "grounded-long"
+    /// Shape follows content, unprompted (#716, 2026-10-26, `ChatEvalFixtures+Format.swift`): a comparison
+    /// across a few points wants a table, a how-to with ordered actions numbered steps, small talk no markdown
+    /// at all — none of the prompts name a shape, which is what separates this from `document`. The voice-path
+    /// fixtures (`spokenNoMarkup`) score what the speech lane would say. Last, so older reports' row order holds.
+    case format
 
     public var label: String {
         rawValue
@@ -260,6 +269,11 @@ public struct EvalExpectation: Sendable, Equatable {
     /// ("4", "7", "36", "apr") that a confabulating answer hits by accident
     /// ("€46.08", "17", "approximately") — the 2026-10-06 pre-push review.
     public let wholeWordFacts: Bool
+    /// What the speech lane would say — `EvalObservation.spokenText`, SpeechTextPolish's output, handed in by
+    /// the live stage — must carry no markup (a pipe, bold, a fence, a heading, a dash run). Skipped, never
+    /// failed, where no spoken text was handed in (the bare arm, `swift test`). The voice-path half of the
+    /// `format` kind (#716).
+    public let spokenNoMarkup: Bool
 
     public init(
         mustContainAny: [String] = [],
@@ -274,7 +288,8 @@ public struct EvalExpectation: Sendable, Equatable {
         minChars: Int? = nil,
         maxChars: Int? = nil,
         lengthIsHard: Bool = false,
-        wholeWordFacts: Bool = false
+        wholeWordFacts: Bool = false,
+        spokenNoMarkup: Bool = false
     ) {
         // The scorer renders these as opposing checks off the same
         // RefusalHeuristic call — a fixture setting both can never pass (109
@@ -293,6 +308,7 @@ public struct EvalExpectation: Sendable, Equatable {
         self.maxChars = maxChars
         self.lengthIsHard = lengthIsHard
         self.wholeWordFacts = wholeWordFacts
+        self.spokenNoMarkup = spokenNoMarkup
     }
 }
 
@@ -1553,7 +1569,7 @@ public enum ChatEvalFixtures {
 
     public static let all: [ChatEvalFixture] =
         openChat + groundedQ + reasoning + codeGen + toolUse + refusal + security + worldKnowledge
-            + humour + interview + instructionFollowing + document + sycophancy + vision + groundedLong
+            + humour + interview + instructionFollowing + document + sycophancy + vision + groundedLong + format
 
     /// Fixtures for one kind (the report groups by these).
     public static func fixtures(for kind: TaskKind) -> [ChatEvalFixture] {

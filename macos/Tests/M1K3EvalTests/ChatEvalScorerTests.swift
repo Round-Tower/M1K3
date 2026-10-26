@@ -24,8 +24,14 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — Lil's "I don't help…" declines and the self-query premise denials
 //  (#643's guard misses), one verbatim answer per marker, plus negatives asserted on `isRefusal` directly: a
 //  must-comply score with a content list would excuse them. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — #716: `spokenMarkupCheck` (fail on a spoken pipe/bold/fence/heading,
+//  pass on a sentence, skip with no spoken text, absent without the flag, round-trips through Codable) and
+//  `shapeMoveIsInEchoSpansAndFormatIsACharacterKind` (a replayed shape-move sentence fails a format answer; a fresh
+//  table passes) and `newlineLedMarkerReadsTheFirstLine` (a heading or bullet that OPENS the answer fires). Confidence 0.85.
 
+import Foundation
 @testable import M1K3Eval
+import M1K3Inference
 import Testing
 
 struct ChatEvalScorerTests {
@@ -345,6 +351,89 @@ struct ChatEvalScorerTests {
             "I'm M1K3, living right here; I talk things through, remember what matters to you"
         )
         #expect(spans.contains { $0.contains(capReply) })
+    }
+
+    /// #716: the shape move teaches a compare answered as a table plus a one-line take. Its reply sentences are
+    /// echo spans (a replay is the 2026-09-11 parrot), and `format` is a character kind, so the replay fails
+    /// there; a fresh table with its own take passes.
+    @Test("the shape move's reply sentences are echo spans, and format is a character kind")
+    func shapeMoveIsInEchoSpansAndFormatIsACharacterKind() throws {
+        let reply = ExemplarEcho.normalise(M1K3Persona.exemplarReplies(of: M1K3Persona.shapeMove))
+        let shapeSpans = ExemplarEcho.spans.filter { reply.contains($0) }
+        #expect(!shapeSpans.isEmpty)
+        #expect(shapeSpans.allSatisfy { $0.count >= ExemplarEcho.minSpan })
+        #expect(ExemplarEcho.characterKinds.contains(.format))
+        let span = try #require(shapeSpans.first)
+        let parrot = ChatEvalScorer.score(
+            fixture: fixture(.format, .init(minChars: 1)),
+            observation: EvalObservation(rawText: "Right so. \(span) Tea for me.")
+        )
+        #expect(check(parrot, "exemplar-echo")?.outcome == .fail)
+        #expect(!parrot.passed)
+        let fresh = ChatEvalScorer.score(
+            fixture: fixture(.format, .init(mustContainAny: ["|---"], minChars: 1)),
+            observation: EvalObservation(
+                rawText: "| Drink | Caffeine | Ritual |\n|---|---|---|\n| Tea | less | slow |\n| Coffee | more | quick |\n\n"
+                    + "Coffee, for the kick; tea if the morning is the point."
+            )
+        )
+        #expect(check(fresh, "exemplar-echo")?.outcome == .pass)
+        #expect(fresh.passed)
+        // The pins from before still hold with the new span in the set.
+        #expect(!ExemplarEcho.spans.contains { $0.hasPrefix("- asked") || $0.hasPrefix("asked ") })
+    }
+
+    /// A marker that opens with a newline names a line start; the answer's first line is one, so a banter answer
+    /// that OPENS with a heading or a bullet is the results-page failure the format kind exists to see (#716).
+    @Test("a newline-led forbidden marker fires on the answer's first line as well as after a line break")
+    func newlineLedMarkerReadsTheFirstLine() {
+        let banter = fixture(.format, .init(mustNotContain: ["\n#", "\n- "], minChars: 1))
+        func forbidden(_ answer: String) -> CheckOutcome? {
+            check(ChatEvalScorer.score(fixture: banter, observation: EvalObservation(rawText: answer)), "excludes forbidden")?.outcome
+        }
+        #expect(forbidden("# Cork\nGrand, mostly.") == .fail)
+        #expect(forbidden("- the jazz weekend\n- the market") == .fail)
+        #expect(forbidden("Grand.\n# Cork") == .fail)
+        // Not a line start: a hash or a spaced hyphen mid-sentence is prose.
+        #expect(forbidden("Cork - the rebel county - is grand, C# and all.") == .pass)
+    }
+
+    /// The voice path (#716): the stage hands in what SpeechTextPolish would say; the check reads only that,
+    /// and skips where nothing was handed in (the bare arm, `swift test`) instead of guessing.
+    @Test("spoken has no markup: fails on a spoken pipe, passes on a sentence, skips with no spoken text")
+    func spokenMarkupCheck() throws {
+        let voice = fixture(.format, .init(minChars: 1, spokenNoMarkup: true))
+        let piped = ChatEvalScorer.score(
+            fixture: voice,
+            observation: EvalObservation(rawText: "| Tea | less |", spokenText: "| Tea | less |")
+        )
+        #expect(check(piped, "spoken has no markup")?.outcome == .fail)
+        #expect(check(piped, "spoken has no markup")?.detail.contains("|") == true)
+        #expect(!piped.passed)
+        let spoken = ChatEvalScorer.score(
+            fixture: voice,
+            observation: EvalObservation(rawText: "| Tea | less |", spokenText: "Tea, less.")
+        )
+        #expect(check(spoken, "spoken has no markup")?.outcome == .pass)
+        #expect(spoken.passed)
+        let bare = ChatEvalScorer.score(fixture: voice, observation: EvalObservation(rawText: "Tea has less."))
+        #expect(check(bare, "spoken has no markup")?.outcome == .skip)
+        #expect(bare.passed)
+        // Bold, a fence, a heading and a dash run in the spoken text fail too.
+        for markup in ["**Tea**", "```\nx\n```", "Tea\n# Less", "Tea\n---\nless"] {
+            let score = ChatEvalScorer.score(fixture: voice, observation: EvalObservation(rawText: "x", spokenText: markup))
+            #expect(check(score, "spoken has no markup")?.outcome == .fail, Comment(rawValue: markup))
+        }
+        // A fixture without the flag emits no such check, whatever was handed in.
+        let plain = ChatEvalScorer.score(
+            fixture: fixture(.format, .init(minChars: 1)),
+            observation: EvalObservation(rawText: "x", spokenText: "| x |")
+        )
+        #expect(check(plain, "spoken has no markup") == nil)
+        #expect(plain.passed)
+        // The check rides the JSON document like every other.
+        let back = try JSONDecoder().decode(ChatEvalScore.self, from: JSONEncoder().encode(piped))
+        #expect(back.checks.contains { $0.name == "spoken has no markup" && $0.outcome == .fail })
     }
 
     @Test("a statement answer reports no trailing question")
