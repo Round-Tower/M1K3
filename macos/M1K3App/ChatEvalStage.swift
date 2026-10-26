@@ -424,7 +424,7 @@ enum ChatEvalStage {
         }
         let pendingNote = Mutex(coolHeadSlot)
         let turnNote: (@Sendable () -> String?)? = fixture.machine == nil
-            ? nil : { pendingNote.withLock { $0.take() } }
+            ? nil : { @Sendable in pendingNote.withLock { $0.take() } }
         let responder = AgentRAGResponder(
             store: store, embedder: Self.embedder, provider: provider,
             toolsProvider: { palette }, maxIterations: 3,

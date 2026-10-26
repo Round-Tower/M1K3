@@ -24,7 +24,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-20 — the live reasoning panel shows the thought's tail
 //  (ReasoningTail) with no cross-fade; Kev saw jank on a 1,024-token thought. Confidence 0.75: verify-by-eye.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — Cool Head's line (#697) as a caption above the answer (`turnNote`),
-//  apart from the text the speak, copy and share buttons read. TDD_SKIP: view body. Confidence 0.75: verify-by-launch.
+//  apart from the text the speak, copy and share buttons read (placement pinned by CoolHeadNoteCallSiteTests).
+//  Confidence 0.75: verify-by-launch.
 
 import AppKit
 import M1K3Avatar

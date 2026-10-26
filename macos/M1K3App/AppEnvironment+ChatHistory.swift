@@ -678,8 +678,6 @@ extension AppEnvironment {
     /// by the chat turn the send starts. Static for the same reason as `coolHead`.
     nonisolated static let coolHeadNote = Mutex(CoolHeadNoteSlot())
 
-    private static let coolHeadLog = Logger(subsystem: "app.m1k3", category: "cool-head")
-
     /// Advance the thermal state for this turn — degrade immediately, recover only
     /// after a sustained relief streak (hysteresis, so a bouncing thermalState can't
     /// flap the effort level). Called beside `applyAutoRouteIfEnabled` at the top
@@ -698,7 +696,8 @@ extension AppEnvironment {
         }
         Self.coolHeadNote.withLock { $0.post(step.announcement, deviceNoun: HostPlatform.noun) }
         if let cause = step.announcement {
-            Self.coolHeadLog.notice(
+            // `route`: the path a turn takes, decided here beside the auto-route.
+            Self.routeLog.notice(
                 "cool head eased: \(String(describing: cause), privacy: .public), the turn carries its line"
             )
         }
