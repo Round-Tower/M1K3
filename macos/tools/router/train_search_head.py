@@ -39,6 +39,11 @@ Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — the threshold reads 
 (the guard ported from the Swift), over folds grouped by category; one lexical near-copy bar (0.5) at every length;
 the positional vision fixtures held out; the local teacher bar is its own constant (1 - 0.8 is 0.19999999999999996
 in floats); a candidates look is never written over the shipped weights. Confidence 0.8.
+Review: Kev + claude-opus-5.5, 2026-10-26 (eval stage) — the teacher pass ran on the plan's fallback labeller,
+gemini-4-argon (Clef-flash's loader was refused by the session's permission check): 820 confirmed labels,
+threshold 0.165 at 97% grouped-CV recall (90/93 kept, 308/551 local turns read local). Held out, 3/12 stable
+lines read local and the #680 Dublin line reads web, so the stub stays shipped and Kev rules on the threshold
+(docs/evals/2026-10-26-search-head-heldout.json). Confidence 0.8.
 """
 from __future__ import annotations
 
