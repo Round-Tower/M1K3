@@ -1,0 +1,3763 @@
+{
+  "driver": {
+    "appArgs": [
+      "-groundingBudget",
+      "1100"
+    ],
+    "env": {
+      "M1K3_MCP_TOKEN": "<withheld>",
+      "M1K3_SELFTEST": "1",
+      "M1K3_SELFTEST_APP_COMMIT": "e4b3047c",
+      "M1K3_SELFTEST_CHATEVAL": "1",
+      "M1K3_SELFTEST_CHATEVAL_BRAINS": "lil,big",
+      "M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS": "1",
+      "M1K3_SELFTEST_CHATEVAL_KINDS": "grounded-long",
+      "M1K3_SELFTEST_CHATEVAL_LIVE_PATH": "1",
+      "M1K3_SELFTEST_CHATEVAL_REPEATS": "3",
+      "M1K3_SELFTEST_CHATEVAL_ROUTER": "dispatch",
+      "M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN": "1",
+      "M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD": "1",
+      "M1K3_SELFTEST_CHATEVAL_THINKING": "tier",
+      "M1K3_SELFTEST_MLX_REVISION": "3b339ad6e3b3f44c8121ecff5131c7fd55e075e6",
+      "M1K3_SELFTEST_NOTES": "grounded-long + cross arm, documentCorrected, budget 1100, Release e4b3047c",
+      "M1K3_SELFTEST_OUT": "-",
+      "M1K3_SELFTEST_POWERMODE": "2"
+    },
+    "power": {
+      "end": "ac",
+      "mixed": false,
+      "seen": [
+        "ac"
+      ],
+      "start": "ac"
+    }
+  },
+  "provenance": {
+    "appCommit": "e4b3047c",
+    "buildConfiguration": "Release",
+    "date": "2026-10-26T17:19:02Z",
+    "hardware": "Apple M1 Max · 64 GB",
+    "livePath": true,
+    "mlxSwiftLMRevision": "3b339ad6e3b3f44c8121ecff5131c7fd55e075e6",
+    "notes": "grounded-long + cross arm, documentCorrected, budget 1100, Release e4b3047c",
+    "osVersion": "macOS 27.0",
+    "powerMode": 2,
+    "powerSource": "ac",
+    "repeats": 3
+  },
+  "runs": [
+    {
+      "brainID": "lil",
+      "modelID": "mlx-community/Qwen3.5-4B-MLX-4bit",
+      "peakMemoryMB": 4369,
+      "residentMemoryMBAtStart": 274,
+      "scores": [
+        {
+          "answerPreview": "It was **Aoife Brennan**, the press operator, who spotted the sheen of fluid spreading from under Press Line 4 at 01:40. She made the crucial call to stop the cycle manually rather than hit the emergency stop, which prevented any blanks from being trapped in the die. The repair itself was officially signed off by **maintenance manager Tomasz Wilk**, who inspected the manifold, reviewed the pressure trace, and confirmed that the lockout procedures had been followed correctly before returning the line to production at 14:10 on October 4th.  Fascinating how a single person's vigilance can save hours of downtime—Aoife clearly knew exactly what she was looking for. Given her quick response, did you notice her taking initiative in your previous chats, or is that just the kind of thing people usually do when they're on their feet?",
+          "checks": [
+            {
+              "detail": "835 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/134 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …e usually do when they're on their feet?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "835 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9693ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-incident-names",
+          "generation": {
+            "decodeTokens": 179,
+            "firstChunkMS": 7545,
+            "generations": 1,
+            "prefillMS": 1379,
+            "prefillTokens": 908,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 9693,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The manual says to **torque the hub nuts to 145 Nm** in a star pattern once you've refitted them. It's crucial to rotate the hub while tightening so the bearing seats evenly, and remember: if you scored that stub axle during removal, a new bearing will get destroyed instantly—no exceptions there [Notes §3 Hubs and bearings].",
+          "checks": [
+            {
+              "detail": "326 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/54 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"145 nm\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "326 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6695ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-hub-torque",
+          "generation": {
+            "decodeTokens": 90,
+            "firstChunkMS": 5589,
+            "generations": 1,
+            "prefillMS": 2208,
+            "prefillTokens": 1474,
+            "tokensPerSecond": 81
+          },
+          "kind": "grounded-long",
+          "latencyMS": 6695,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Based on the notes you've shared, you're staying at **the G Hotel in Galway** for Wednesday night, November 12th. The plan was to check in there after your Galway City Library reception at 18:30 so you could rest before driving back south to Ennis for Thursday's talk.  The only thing that might change that is if the library reception runs late—past nine o'clock—but since Wednesday is the longest drive leg, they've already noted to ring them in advance if it happens.",
+          "checks": [
+            {
+              "detail": "470 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/80 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"doolin\"] in: Based on the notes you've shared, you're staying at **the G ",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "470 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7552ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-itinerary-hop",
+          "generation": {
+            "decodeTokens": 146,
+            "firstChunkMS": 5753,
+            "generations": 1,
+            "prefillMS": 2204,
+            "prefillTokens": 1509,
+            "tokensPerSecond": 81
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7552,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The second batch came from Ballyvourney, County Cork, specifically along the upper River Sullane in the Gaeltacht at the edge of the Derrynasaggart Mountains. Back then, flow had risen overnight and turned the water cloudy at the lower sites, but dissolved oxygen was holding steady everywhere. The landowner even stopped us from sampling the lowest point because their gate was locked, so we skipped that spot to respect their access rules.",
+          "checks": [
+            {
+              "detail": "441 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/71 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"ballyvourney\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "441 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6632ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-sample-place",
+          "generation": {
+            "decodeTokens": 113,
+            "firstChunkMS": 5263,
+            "generations": 1,
+            "prefillMS": 1391,
+            "prefillTokens": 903,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 6632,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The board voted to renew the Cork lease for three years at a revised rate of 11% lower than current rent, with no reviews until the break date. The finance director needs to serve written notice of this decision to Harrington Estates by **14 March**.",
+          "checks": [
+            {
+              "detail": "250 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/43 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"14 march\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "250 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6232ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-lease-decision",
+          "generation": {
+            "decodeTokens": 78,
+            "firstChunkMS": 5290,
+            "generations": 1,
+            "prefillMS": 1231,
+            "prefillTokens": 779,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 6232,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Alright. You're asking about the warranty for those T-series axles—specifically the rubber torsion suspension ones we just looked up in that manual snippet.  The text you pulled from **[Notes §1 About this manual]** explicitly states: *\"Service intervals are given in kilometres or months, whichever comes first.\"* It also warns to have alignment checked by a workshop if there's been an accident or a hard kerb hit, and to replace fasteners that show any damage rather than reusing them. However, it doesn't list a specific \"warranty period\" (like 12 months) in this excerpt; instead, it frames maintenance as an ongoing cycle based on distance or time limits.  If you're looking for the guaranteed coverage from the manufacturer, that's usually separate from the service manual and depends on whether you're using your own Private Cloud Compute setup or relying on a standard dealer warranty—though I can't pull up Apple's specific terms right now without searching again. But if you're just doing routine checks? Stick to the \"kilometres or months\" rule, whichever comes first.",
+          "checks": [
+            {
+              "detail": "1080 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/169 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"doesn't list\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1080 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "8041ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-absent",
+          "generation": {
+            "decodeTokens": 253,
+            "firstChunkMS": 4984,
+            "generations": 1,
+            "prefillMS": 1394,
+            "prefillTokens": 903,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 8041,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The pneumatic tyre wasn't invented by a single person at one moment, but rather by two brothers who perfected the idea in 1846. John Boyd Dunlop, an English rubber merchant, is credited with creating the first practical pneumatic tyre for bicycles using his own family name, \"Dunlop Tyres.\" Earlier attempts existed—like Jean Henri Kressel's air-filled wheel design in France—but Dunlop’s was the one that caught on and revolutionised cycling.  Since we’re sitting here in 2026 with all these wheels spinning under our feet (metaphorically or literally), how much of that innovation still matters to you today compared to modern composite materials?",
+          "checks": [
+            {
+              "detail": "649 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/99 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … compared to modern composite materials?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"dunlop\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "649 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5751ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "lookup_fact",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-cross-tyre",
+          "generation": {
+            "decodeTokens": 142,
+            "firstChunkMS": 4052,
+            "generations": 1,
+            "prefillMS": 636,
+            "prefillTokens": 400,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 5751,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The river that cuts right through the heart of Cork is the **River Blackwater**. It’s the longest in Ireland and one of the seven great rivers of the country, famous for its deep estuary which forms a natural harbour. It's not just about the water; it's where the city's history really starts, from the ancient fortifications to the modern bridges like the John Paul Jones Bridge.",
+          "checks": [
+            {
+              "detail": "380 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/66 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"lee\"] in: The river that cuts right through the heart of Cork is the *",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "380 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2111ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-cross-river",
+          "generation": {
+            "decodeTokens": 98,
+            "firstChunkMS": 937,
+            "generations": 1,
+            "prefillMS": 599,
+            "prefillTokens": 355,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 2111,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Galway Bay sits right on the edge of the Atlantic Ocean, specifically within the North Atlantic sector. That’s the consensus from sources like Britannica and Wikipedia, which map it as a bay along Ireland's west coast where the Atlantic washes in.",
+          "checks": [
+            {
+              "detail": "247 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/41 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"atlantic\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "247 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5167ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "lookup_fact",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-cross-galway",
+          "generation": {
+            "decodeTokens": 73,
+            "firstChunkMS": 4290,
+            "generations": 1,
+            "prefillMS": 637,
+            "prefillTokens": 405,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 5167,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "It looks like **Aoife Brennan** was the first to spot the issue at 01:40 on the night shift of October 3rd; she noticed a fluid sheen spreading from under Press Line 4 while loading blanks and called in via the shift radio. The repair itself was officially signed off by **Tomasz Wilk**, the maintenance manager, who inspected the manifold, verified the pressure traces, and confirmed that safety lockouts were correctly removed before returning the line to production on October 4th at 14:10.  Folks like Aoife really make a difference when things go sideways; it’s great she used a cycle stop instead of an emergency one—saved the tooling from damage. Did you notice anything odd in your own work or life recently, or just sticking with the logs?",
+          "checks": [
+            {
+              "detail": "748 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/124 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ecently, or just sticking with the logs?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "748 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7302ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-incident-names",
+          "generation": {
+            "decodeTokens": 170,
+            "firstChunkMS": 5250,
+            "generations": 1,
+            "prefillMS": 1399,
+            "prefillTokens": 908,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7302,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "145 Nm in a star pattern. That's after you've pressed the new bearing cartridge in and cleaned the stub axle—no point grinding up a fresh bearing with a scored surface, mate. [Notes §3 Hubs and bearings]",
+          "checks": [
+            {
+              "detail": "203 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/34 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"145 nm\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "203 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6837ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-hub-torque",
+          "generation": {
+            "decodeTokens": 69,
+            "firstChunkMS": 5984,
+            "generations": 1,
+            "prefillMS": 2208,
+            "prefillTokens": 1474,
+            "tokensPerSecond": 81
+          },
+          "kind": "grounded-long",
+          "latencyMS": 6837,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "You're staying at **the g Hotel in Galway** for Wednesday the 12th (the night of the library talk).  It was a toss-up between that spot and the Old Ground in Ennis, but you decided against the latter because of your early start Thursday morning. Just remember: if the reception gets busy past nine, ring them directly to let them know where you're coming from so they can secure the late slot for Thursday's drive back south.",
+          "checks": [
+            {
+              "detail": "425 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/76 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"doolin\"] in: You're staying at **the g Hotel in Galway** for Wednesday th",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "425 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7277ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-itinerary-hop",
+          "generation": {
+            "decodeTokens": 111,
+            "firstChunkMS": 5911,
+            "generations": 1,
+            "prefillMS": 2210,
+            "prefillTokens": 1509,
+            "tokensPerSecond": 81
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7277,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The second batch went to **Ballyvourney, County Cork**, specifically along the upper River Sullane near it's edge in the Gaeltacht and Derrynasaggart Mountains. The field notes mention that a recent overnight rain raised the flow levels, making the water cloudy at the lower sites due to sediment, which is why they requested an extra filtered phosphate test alongside the standard one.",
+          "checks": [
+            {
+              "detail": "386 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/61 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"ballyvourney\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "386 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6320ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-sample-place",
+          "generation": {
+            "decodeTokens": 99,
+            "firstChunkMS": 5120,
+            "generations": 1,
+            "prefillMS": 1404,
+            "prefillTokens": 903,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 6320,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The board settled on renewing the Cork office lease for three years at a revised rate of 11% lower than current rent, with a break clause triggered after two years. The finance director has already agreed to serve written notice of this renewal decision to Harrington Estates by **14 March**. They'll also be working out the specifics of that break clause during negotiations.",
+          "checks": [
+            {
+              "detail": "376 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/61 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"14 march\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "376 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6253ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-lease-decision",
+          "generation": {
+            "decodeTokens": 92,
+            "firstChunkMS": 5140,
+            "generations": 1,
+            "prefillMS": 1233,
+            "prefillTokens": 779,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 6253,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The manual you have for those T-series trailers (2,000 kg and 3,500 kg versions) doesn't actually list a specific warranty duration like \"three years\" or \"18 months.\" It focuses entirely on *how* to keep the axle alive—specifically warning that overloading is the number one cause of early failure in rubber torsion suspension. It tells you to check for rust at the beam-to-chassis joints and measure hub-to-rail distances; if those sides differ by more than 15 mm, the whole axle beam needs replacing.  Since the manual emphasizes replacing damaged fasteners rather than reusing them, I'd imagine the manufacturer's stance is that they back their *workmanship*, but the rubber components themselves are likely treated as consumables that age regardless of mileage.",
+          "checks": [
+            {
+              "detail": "765 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/115 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"doesn\\'t mention\", \"does not mention\", \"no mention\", \"not mentioned\", \"doesn\\'t say\", \"does not say\", \"doesn\\'t cover\", \"does not cover\", \"doesn\\'t include\", \"doesn\\'t list\", \"couldn\\'t find\", \"can\\'t find\", \"could not find\", \"cannot find\", \"no warranty\", \"no information\", \"isn\\'t in\", \"is not in\", \"not in the\", \"don\\'t have\", \"do not have\", \"don\\'t see\", \"not covered\", \"not specified\", \"not stated\", \"doesn\\'t state\", \"does not state\", \"doesn\\'t explicitly\", \"doesn\\'t specify\", \"does not specify\", \"isn\\'t listed\", \"not listed\", \"there isn\\'t\", \"there is no\", \"there\\'s no\", \"don\\'t specify\"] in: The manual you have for those T-series trailers (2,000 kg an",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "765 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7317ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-absent",
+          "generation": {
+            "decodeTokens": 190,
+            "firstChunkMS": 5019,
+            "generations": 1,
+            "prefillMS": 1387,
+            "prefillTokens": 903,
+            "tokensPerSecond": 82
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7317,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The web search found that John Boyd Dunlop patented the first practical pneumatic tyre in 1846, though earlier attempts by Charles Goodyear and others around the same time laid the groundwork. The specific reference material points to Dunlop's innovation as the pivotal moment for this technology.",
+          "checks": [
+            {
+              "detail": "297 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/45 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"dunlop\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "297 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5427ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "lookup_fact",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-cross-tyre",
+          "generation": {
+            "decodeTokens": 78,
+            "firstChunkMS": 4492,
+            "generations": 1,
+            "prefillMS": 639,
+            "prefillTokens": 400,
+            "tokensPerSecond": 84
+          },
+          "kind": "grounded-long",
+          "latencyMS": 5427,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The **River Lee** is the one that cuts right through Cork. It's actually the longest river entirely within Ireland, winding its way right up to the city before emptying into the Atlantic near Bantry Bay. The bridge across it—specifically the new, sleek 1930m span—is a bit of an engineering marvel for what used to be considered \"soft rock\" terrain back in the day.  Did you mean to visit the riverfront recently, or are we just talking geography?",
+          "checks": [
+            {
+              "detail": "447 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/77 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ently, or are we just talking geography?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"lee\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "447 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1931ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-cross-river",
+          "generation": {
+            "decodeTokens": 102,
+            "firstChunkMS": 708,
+            "generations": 1,
+            "prefillMS": 590,
+            "prefillTokens": 355,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 1931,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Galway Bay sits within the **Atlantic Ocean**. More specifically, it's a large bay in southwest Ireland that extends into the North Atlantic, sitting just south of the prominent Kinsale town and off the coast near the town of Kinsale. It's one of those places where the Atlantic really feels like it's pressing up against the land.",
+          "checks": [
+            {
+              "detail": "331 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/56 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"atlantic\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "331 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5731ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "lookup_fact",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-cross-galway",
+          "generation": {
+            "decodeTokens": 90,
+            "firstChunkMS": 4650,
+            "generations": 1,
+            "prefillMS": 636,
+            "prefillTokens": 405,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 5731,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The person who spotted the sheen of fluid spreading from under Press Line 4 at 01:40 was the press operator **Aoife Brennan**. She made the critical call by stopping the cycle manually rather than hitting emergency stop, which kept the ram high and prevented a blank from getting trapped in the die.  The repair itself was officially signed off by the maintenance manager **Tomasz Wilk**. He personally inspected the manifold, reviewed the pressure trace during the test run, and confirmed that the lockout procedure had been executed correctly before clearing the work order. The cooler fins were added to the weekly checklist as a preventative measure following his sign-off.",
+          "checks": [
+            {
+              "detail": "677 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/107 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "677 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6991ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-incident-names",
+          "generation": {
+            "decodeTokens": 151,
+            "firstChunkMS": 5175,
+            "generations": 1,
+            "prefillMS": 1394,
+            "prefillTokens": 908,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 6991,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The manual specifies that hub nuts should be torqued to **145 Nm** in a star pattern once refitted. Just remember, if you're working with those things, never work under a trailer supported only by a jack—use an axle stand rated for the weight instead. You know how important that is.  Did you just put on some new wheels, or are you prepping for a long haul?",
+          "checks": [
+            {
+              "detail": "358 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/65 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ls, or are you prepping for a long haul?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"145 nm\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "358 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7070ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-hub-torque",
+          "generation": {
+            "decodeTokens": 85,
+            "firstChunkMS": 6021,
+            "generations": 1,
+            "prefillMS": 2208,
+            "prefillTokens": 1474,
+            "tokensPerSecond": 81
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7070,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Based on your notes, if you're in Galway for that Wednesday evening talk at 18:30, you'll be staying at **the G Hotel** (noted as \"g Hotel\" in your documents). They considered it specifically because of the early Thursday morning start and the need to avoid an overnight stay in Limerick or Ennis.  Just a heads-up though: while Galway has great walk-in spots, you should double-check with them if the reception runs past 9 PM on Wednesday night (as per your notes), since that's when they usually want to be notified for late check-ins.",
+          "checks": [
+            {
+              "detail": "537 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/91 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"doolin\"] in: Based on your notes, if you're in Galway for that Wednesday ",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "537 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7743ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-itinerary-hop",
+          "generation": {
+            "decodeTokens": 147,
+            "firstChunkMS": 5942,
+            "generations": 1,
+            "prefillMS": 2224,
+            "prefillTokens": 1509,
+            "tokensPerSecond": 81
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7743,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The second batch was pulled up at **Ballyvourney, County Cork**, specifically along the upper River Sullane in the Gaeltacht near the Derrynasaggart Mountains. They sampled five sites between the village and a small tributary's confluence, keeping an eye on rising flows from overnight rain which made two of those lower sites look cloudy with sediment. Since it was raining, the landowners were involved right at the start; one even asked for a copy of results before the lab report came back, and they had to work around a locked field gate at the lowest site. The water temp there was 10 degrees, slightly cooler than last year's readings in this spot.",
+          "checks": [
+            {
+              "detail": "655 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/110 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"ballyvourney\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "655 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7157ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-sample-place",
+          "generation": {
+            "decodeTokens": 161,
+            "firstChunkMS": 5210,
+            "generations": 1,
+            "prefillMS": 1398,
+            "prefillTokens": 903,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7157,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The board decided to renew the Cork lease for three years at a revised rate of 11% lower than current rent, with no fixed price increases until the break clause. We need to give Harrington Estates written notice of this renewal decision by **14 March**. The finance director is also handling the negotiation on the specific terms for that two-year break clause.",
+          "checks": [
+            {
+              "detail": "361 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/60 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"14 march\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "361 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6612ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-lease-decision",
+          "generation": {
+            "decodeTokens": 91,
+            "firstChunkMS": 5513,
+            "generations": 1,
+            "prefillMS": 1236,
+            "prefillTokens": 779,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 6612,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The manual for T-series trailers with rubber torsion suspension doesn't actually list a specific warranty duration in the notes I just pulled up; it focuses heavily on service intervals, safety checks like measuring hub-to-chassis-rail distance to spot settling, and the strict rule that you must never weld or drill the axle beam since the rubber inserts are bonded inside. It does mention checking load against the plate because overloading is the biggest cause of early failure, but the exact warranty period isn't in those specific service notes.  Since it's not in this manual excerpt, I can't quote a number from there. Do you work on these T-series units often, or are you just looking into them for a project?",
+          "checks": [
+            {
+              "detail": "717 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/119 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ou just looking into them for a project?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"isn't in\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "717 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6742ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-absent",
+          "generation": {
+            "decodeTokens": 143,
+            "firstChunkMS": 5011,
+            "generations": 1,
+            "prefillMS": 1391,
+            "prefillTokens": 903,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 6742,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "According to the latest search results, John Boyd Dunlop is credited with inventing the first practical pneumatic tyre in 1846 for his son's carriage, though a French engineer named Robert William Thomson (often called \"Bob\") actually filed the patent shortly thereafter. However, because Dunlop patented it under a different name (\"the Dunlop Tyre\"), he’s generally remembered as the inventor, while Thomson is often noted as having been the first to actually build and test one.  So... are you into vintage car restoration, or just curious about tyre history?",
+          "checks": [
+            {
+              "detail": "561 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/87 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ion, or just curious about tyre history?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"dunlop\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "561 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5466ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "lookup_fact",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-cross-tyre",
+          "generation": {
+            "decodeTokens": 115,
+            "firstChunkMS": 4089,
+            "generations": 1,
+            "prefillMS": 638,
+            "prefillTokens": 400,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 5466,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The **River Lee** is the one that cuts right through Cork—specifically, it's famous for being the longest and largest river in Ireland, stretching all the way to the Atlantic. It’s a bit of a local legend too; people say it’s the only Irish river big enough to carry a full-sized ferry (though those are rare these days).    It’s interesting how rivers like this often shape city identities—Cork literally grew around its banks. Did you find yourself near Cork today, or is that just a random geography kick?",
+          "checks": [
+            {
+              "detail": "508 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/87 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …or is that just a random geography kick?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"lee\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "508 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2117ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-cross-river",
+          "generation": {
+            "decodeTokens": 110,
+            "firstChunkMS": 799,
+            "generations": 1,
+            "prefillMS": 593,
+            "prefillTokens": 355,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 2117,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Galway Bay sits right on the edge of the **Atlantic Ocean**. It’s an inlet carved by erosion along the coast of County Mayo and County Sligo, Ireland, opening directly into that vast expanse you can see from just about every cliffside there. The bay is famous for its dramatic cliffs, like those at Dún Aonghasa (the \"High Cliffs\"), which are often cited in geography texts as some of the highest sea cliffs in Europe.  You’re diving into a bit of Irish coastal geology—did you pick up that fact from a travel guide or just curious about the region?",
+          "checks": [
+            {
+              "detail": "549 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/98 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … guide or just curious about the region?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"atlantic\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "549 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5859ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "lookup_fact",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-cross-galway",
+          "generation": {
+            "decodeTokens": 124,
+            "firstChunkMS": 4369,
+            "generations": 1,
+            "prefillMS": 642,
+            "prefillTokens": 405,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 5859,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        }
+      ]
+    },
+    {
+      "brainID": "big",
+      "modelID": "mlx-community/gemma-4-12B-it-4bit",
+      "peakMemoryMB": 8377,
+      "residentMemoryMBAtStart": 274,
+      "scores": [
+        {
+          "answerPreview": "Aoife Brennan was the one who spotted the leak—she noticed a fluid sheen and a dropping pressure gauge at 01:40 on the night of October 3. She actually did quite well by using the cycle stop rather than the emergency stop, which saved everyone a lot of trouble with the tooling.  The repair was signed off by the maintenance manager, Tomasz Wilk, after he checked the manifold and the pressure trace.  Since it's Monday, how's the start of your week treating you so far?",
+          "checks": [
+            {
+              "detail": "470 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/82 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … start of your week treating you so far?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "470 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "18768ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-incident-names",
+          "generation": {
+            "decodeTokens": 107,
+            "firstChunkMS": 15404,
+            "generations": 1,
+            "prefillMS": 3942,
+            "prefillTokens": 914,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 18768,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The hub nuts need to be torqued to 145 Nm in a star pattern [Notes §3 Hubs and bearings].",
+          "checks": [
+            {
+              "detail": "89 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/17 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"145 nm\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "89 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11407ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-hub-torque",
+          "generation": {
+            "decodeTokens": 43,
+            "firstChunkMS": 10039,
+            "generations": 1,
+            "prefillMS": 6283,
+            "prefillTokens": 1459,
+            "tokensPerSecond": 30.999999999999996
+          },
+          "kind": "grounded-long",
+          "latencyMS": 11407,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "You'll be sleeping at Hotel Doolin in Doolin. You have two nights booked there, including the night after your rest in Limerick [Notes §4 Accommodation].  Since you're heading back south from Galway that night to avoid getting stuck in the city too late, I imagine you'll be looking for a decent sleep before that first morning drive.",
+          "checks": [
+            {
+              "detail": "334 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/56 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"doolin\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "334 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "13080ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-itinerary-hop",
+          "generation": {
+            "decodeTokens": 91,
+            "firstChunkMS": 10197,
+            "generations": 1,
+            "prefillMS": 6514,
+            "prefillTokens": 1479,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 13080,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The second batch was taken on 9 October at Ballyvourney, County Cork. They were gathered along the upper River Sullane, which flows through the Gaeltacht near the Derrynasaggart Mountains.  Since it's Monday again, how has your week been starting off?",
+          "checks": [
+            {
+              "detail": "251 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/39 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …in, how has your week been starting off?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"ballyvourney\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "251 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9651ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-sample-place",
+          "generation": {
+            "decodeTokens": 60,
+            "firstChunkMS": 7749,
+            "generations": 1,
+            "prefillMS": 3975,
+            "prefillTokens": 898,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 9651,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The board decided to renew the Cork office lease for three years at a lower rent rate—about 11% less than what you're paying now. They also asked for a break clause to be negotiated at the two-year mark. As for the deadline, the finance director needs to give Harrington Estates written notice of the renewal by March 14th.",
+          "checks": [
+            {
+              "detail": "323 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/57 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"march 14\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "323 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10297ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-lease-decision",
+          "generation": {
+            "decodeTokens": 88,
+            "firstChunkMS": 7528,
+            "generations": 1,
+            "prefillMS": 3454,
+            "prefillTokens": 791,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 10297,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The records I have access to don't specify a warranty period for the trailer axle; they focus on maintenance intervals and inspection criteria like checking for rubber settling or nut torque.  Since the documentation doesn't cover that, I'd have to say it isn't in the files I can see. Usually, those things are buried in the fine print of the manufacturer's warranty booklet rather than the service manual.",
+          "checks": [
+            {
+              "detail": "407 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/68 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"doesn't cover\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "407 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10187ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-absent",
+          "generation": {
+            "decodeTokens": 85,
+            "firstChunkMS": 7504,
+            "generations": 1,
+            "prefillMS": 3968,
+            "prefillTokens": 904,
+            "tokensPerSecond": 31.000000000000004
+          },
+          "kind": "grounded-long",
+          "latencyMS": 10187,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "John Boyd Dunlop is the name that comes up when looking for the inventor of the pneumatic tyre. He patented a model of a tricycle with wire-spoked wheels fitted with rubber tyres inflated with air in 1888. It was a game-changer for ride quality, moving us away from those bone-jarring solid wheels.",
+          "checks": [
+            {
+              "detail": "298 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/51 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"dunlop\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "298 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "8000ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "lookup_fact",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-cross-tyre",
+          "generation": {
+            "decodeTokens": 82,
+            "firstChunkMS": 5417,
+            "generations": 1,
+            "prefillMS": 1885,
+            "prefillTokens": 407,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 8000,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The River Lee is what snakes through the heart of Cork. It's what gives the city its distinct maritime character and those iconic bridges.  Since you're asking about Irish geography, do you have a particular interest in the rest of Ireland, or was it just the river that caught your mind?",
+          "checks": [
+            {
+              "detail": "288 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/51 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …it just the river that caught your mind?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"lee\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "288 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3829ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-cross-river",
+          "generation": {
+            "decodeTokens": 61,
+            "firstChunkMS": 1903,
+            "generations": 1,
+            "prefillMS": 1733,
+            "prefillTokens": 356,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 3829,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Galway Bay is part of the Atlantic Ocean. It's one of the largest bays in Ireland, tucked into the west coast.",
+          "checks": [
+            {
+              "detail": "110 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/21 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"atlantic\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "110 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6961ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "lookup_fact",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-cross-galway",
+          "generation": {
+            "decodeTokens": 44,
+            "firstChunkMS": 5568,
+            "generations": 1,
+            "prefillMS": 1869,
+            "prefillTokens": 412,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 6961,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Aoife Brennan was the one who first spotted the fluid sheen and called it in at 01:40. She also managed to keep the forklift lane clear while the mess was being sorted out. The repair was officially signed off by the maintenance manager, Tomasz Wilk, after he checked the manifold and the pressure trace.",
+          "checks": [
+            {
+              "detail": "304 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/53 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "304 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10395ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-incident-names",
+          "generation": {
+            "decodeTokens": 77,
+            "firstChunkMS": 7973,
+            "generations": 1,
+            "prefillMS": 3974,
+            "prefillTokens": 914,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 10395,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The hub nuts for the trailer need to be torqued to 145 Nm in a star pattern [Notes §3 Hubs and bearings].",
+          "checks": [
+            {
+              "detail": "105 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/20 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"145 nm\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "105 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11563ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-hub-torque",
+          "generation": {
+            "decodeTokens": 47,
+            "firstChunkMS": 10066,
+            "generations": 1,
+            "prefillMS": 6284,
+            "prefillTokens": 1459,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 11563,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "You'll be sleeping in Doolin that night. You have two nights booked there, and since you're heading to Ennis for the morning talk after the Galway reception, it makes sense to head back south [Notes §4 Accommodation].",
+          "checks": [
+            {
+              "detail": "217 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/36 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"doolin\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "217 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "12429ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-itinerary-hop",
+          "generation": {
+            "decodeTokens": 68,
+            "firstChunkMS": 10271,
+            "generations": 1,
+            "prefillMS": 6525,
+            "prefillTokens": 1479,
+            "tokensPerSecond": 31.000000000000004
+          },
+          "kind": "grounded-long",
+          "latencyMS": 12429,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The second batch of water samples was taken on 9 October at Ballyvourney, specifically along the upper River Sullane. It flows through the Gaeltacht area near the Derrynasaggart Mountains.  It sounds like quite a trek—the notes mention that rain had already started to cloud the water and increase the flow by the time you were there.   Since it's Monday, how are you feeling about starting the week?",
+          "checks": [
+            {
+              "detail": "400 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/66 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …are you feeling about starting the week?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"ballyvourney\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "400 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10636ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-sample-place",
+          "generation": {
+            "decodeTokens": 91,
+            "firstChunkMS": 7770,
+            "generations": 1,
+            "prefillMS": 3985,
+            "prefillTokens": 898,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 10636,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The board decided to renew the Cork office lease for three years at a revised rent that's eleven per cent lower than what you're currently paying. They also asked for a break clause at the two-year mark. As for the timeline, the finance director needs to give Harrington Estates written notice of this decision by 14 March.  Since it's Monday and we're looking at late October, I'm guessing the start of the week has already hit your inbox. How are you settling into the Monday rhythm today?",
+          "checks": [
+            {
+              "detail": "491 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/86 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …u settling into the Monday rhythm today?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"14 march\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "491 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10950ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-lease-decision",
+          "generation": {
+            "decodeTokens": 109,
+            "firstChunkMS": 7518,
+            "generations": 1,
+            "prefillMS": 3476,
+            "prefillTokens": 791,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 10950,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The documents I've been scanning don't specify a warranty period for the trailer axle; they focus on service intervals, maintenance procedures, and signs of wear like rubber settling or rust. They do mention that if the axle beam needs replacement due to settlement over 15mm, it should be replaced as a unit.  Since there is no specific warranty period listed in your records, I'm stumped on the exact duration.",
+          "checks": [
+            {
+              "detail": "412 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/69 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"there is no\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "412 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10426ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-absent",
+          "generation": {
+            "decodeTokens": 88,
+            "firstChunkMS": 7644,
+            "generations": 1,
+            "prefillMS": 3961,
+            "prefillTokens": 904,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 10426,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "John Boyd Dunlop is generally credited with inventing the practical pneumatic (air-filled) tyre. He patented a bicycle design featuring them in 1888, which really paved the way for smooth riding and high-speed travel.",
+          "checks": [
+            {
+              "detail": "217 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/32 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"dunlop\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "217 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7257ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "lookup_fact",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-cross-tyre",
+          "generation": {
+            "decodeTokens": 58,
+            "firstChunkMS": 5427,
+            "generations": 1,
+            "prefillMS": 1899,
+            "prefillTokens": 407,
+            "tokensPerSecond": 31.000000000000004
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7257,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The River Lee winds its way right through the heart of Cork city. It's one of those rivers that really defines the layout of the place, carving out the quays and shaping how the rest of the city sits around it.  Since I don't have a specific memory of your travels or a past project we worked on together yet, tell me—is there a particular spot in Ireland you're planning to explore?",
+          "checks": [
+            {
+              "detail": "383 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/72 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …t in Ireland you're planning to explore?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"lee\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "383 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4561ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-cross-river",
+          "generation": {
+            "decodeTokens": 87,
+            "firstChunkMS": 1821,
+            "generations": 1,
+            "prefillMS": 1714,
+            "prefillTokens": 356,
+            "tokensPerSecond": 30.999999999999996
+          },
+          "kind": "grounded-long",
+          "latencyMS": 4561,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Galway Bay is part of the Atlantic Ocean. It's one of the largest and most iconic bays in Ireland, famous for its rugged coastline and deep blue waters.",
+          "checks": [
+            {
+              "detail": "152 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/28 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"atlantic\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "152 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7100ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "lookup_fact",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-cross-galway",
+          "generation": {
+            "decodeTokens": 48,
+            "firstChunkMS": 5580,
+            "generations": 1,
+            "prefillMS": 1873,
+            "prefillTokens": 412,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7100,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Aoife Brennan was the one who first spotted that sheen of fluid and reported it. She actually did the right thing by using the cycle stop instead of the emergency stop—it kept the tooling from getting damaged and saved a lot of time on the restart.   The repair was signed off by Tomasz Wilk, the maintenance manager, after he checked the manifold and the pressure trace.",
+          "checks": [
+            {
+              "detail": "371 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/66 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "371 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10674ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-incident-names",
+          "generation": {
+            "decodeTokens": 89,
+            "firstChunkMS": 7865,
+            "generations": 1,
+            "prefillMS": 3968,
+            "prefillTokens": 914,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 10674,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The hub nuts need to be torqued to 145 Nm in a star pattern [Notes §3 Hubs and bearings].",
+          "checks": [
+            {
+              "detail": "89 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/17 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"145 nm\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "89 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11742ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-hub-torque",
+          "generation": {
+            "decodeTokens": 45,
+            "firstChunkMS": 10309,
+            "generations": 1,
+            "prefillMS": 6297,
+            "prefillTokens": 1459,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 11742,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "You'll be sleeping at Hotel Doolin in Doolin. You have two nights booked there, including the night after your Galway talk [Notes §4 Accommodation].   Since you're heading back south after the reception in Galway to get ready for the Ennis talk, it's a smart move—the Burren roads can be a bit of a slog in the dark.",
+          "checks": [
+            {
+              "detail": "316 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/56 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"doolin\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "316 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "13216ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-itinerary-hop",
+          "generation": {
+            "decodeTokens": 92,
+            "firstChunkMS": 10306,
+            "generations": 1,
+            "prefillMS": 6532,
+            "prefillTokens": 1479,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 13216,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The second batch of water samples was collected on 9 October at Ballyvourney, County Cork. They were taken from the upper River Sullane, which flows through the Gaeltacht near the Derrynasaggart Mountains.  Since you're tracking these river surveys so closely, how are the results for the new slurry spreading rules looking so far?",
+          "checks": [
+            {
+              "detail": "331 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/52 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …w slurry spreading rules looking so far?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"ballyvourney\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "331 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10071ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-sample-place",
+          "generation": {
+            "decodeTokens": 73,
+            "firstChunkMS": 7772,
+            "generations": 1,
+            "prefillMS": 3960,
+            "prefillTokens": 898,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 10071,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The board decided to renew the Cork office lease for three years at a lower rent rate. They also asked the finance director to negotiate a break clause in that deal. As for the timeline, you need to give the landlord, Harrington Estates, written notice of the renewal by 14 March.  Since it's Monday, does the start of the week usually have you tackling the heavy lifting or is it more about clearing out the backlog?",
+          "checks": [
+            {
+              "detail": "417 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/75 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … it more about clearing out the backlog?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"14 march\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "417 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9977ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-lease-decision",
+          "generation": {
+            "decodeTokens": 89,
+            "firstChunkMS": 7184,
+            "generations": 1,
+            "prefillMS": 3466,
+            "prefillTokens": 791,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 9977,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The records I have access to don't specify a warranty period for the axle; they focus on service intervals, maintenance procedures, and signs of wear like rubber settling or rust.  Since that's not in your notes, I can't give you a specific timeframe from your own documents. If there's anything else regarding the trailer maintenance or another topic you want to dig into, let me know.",
+          "checks": [
+            {
+              "detail": "386 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/66 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"don't specify\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "386 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10271ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-absent",
+          "generation": {
+            "decodeTokens": 83,
+            "firstChunkMS": 7651,
+            "generations": 1,
+            "prefillMS": 3964,
+            "prefillTokens": 904,
+            "tokensPerSecond": 31.000000000000004
+          },
+          "kind": "grounded-long",
+          "latencyMS": 10271,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "John Boyd Dunlop is generally credited with inventing the practical pneumatic (air-filled) tyre. He patented his design in 1888, and it was a game-changer for making bicycles and eventually motorcars more comfortable to ride.",
+          "checks": [
+            {
+              "detail": "225 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/33 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"dunlop\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "225 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7377ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "lookup_fact",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-cross-tyre",
+          "generation": {
+            "decodeTokens": 62,
+            "firstChunkMS": 5421,
+            "generations": 1,
+            "prefillMS": 1884,
+            "prefillTokens": 407,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7377,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The River Lee is the one that winds its way through the heart of Cork. It's what gives the city its distinct geography and those famous bridges.  Since you're asking about Irish landmarks, are you planning a trip over there or just curious about the scenery?",
+          "checks": [
+            {
+              "detail": "258 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/46 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …there or just curious about the scenery?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"lee\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "258 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3704ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-cross-river",
+          "generation": {
+            "decodeTokens": 55,
+            "firstChunkMS": 1969,
+            "generations": 1,
+            "prefillMS": 1733,
+            "prefillTokens": 356,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 3704,
+          "repeatIndex": 2
+        },
+        {
+          "answerPreview": "Galway Bay is part of the Atlantic Ocean. It's one of the largest bays in Ireland, tucked right into the western coast.   Since we're looking at the map, does that part of the world have a particular pull for you, or are we heading somewhere else today?",
+          "checks": [
+            {
+              "detail": "253 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/47 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … or are we heading somewhere else today?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"atlantic\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "253 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7521ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "lookup_fact",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-cross-galway",
+          "generation": {
+            "decodeTokens": 60,
+            "firstChunkMS": 5624,
+            "generations": 1,
+            "prefillMS": 1885,
+            "prefillTokens": 412,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7521,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}

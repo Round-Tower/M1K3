@@ -18,6 +18,8 @@
 //  tool runs both, shares one observation budget, and answers once; a link the app can't run is skipped.
 //
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — cancelled-chain pin (#512).
+//  Review: Kev + claude-opus-5-5, 2026-10-26 — `lookupOnTheUsersDocumentIsPlain`: a seeded manual turns a
+//  lookup_fact pick into a plain turn over its chunk; an empty store still looks it up.
 
 import Foundation
 import M1K3Agent
@@ -109,7 +111,7 @@ private final class Activity: Sendable {
 private func run(
     _ provider: Scripted, tools: [any AgentTool], pick: ToolPick?, hasPicker: Bool = true,
     activity: Activity = Activity(), question: String = "what time is it?", ageClause: String? = nil,
-    egress: String? = nil
+    egress: String? = nil, store: KnowledgeStore? = nil
 ) async throws -> String {
     let route = PlainTurnRoute(
         decide: { _ in .init(verdict: .tools, probability: 0.9) },
@@ -117,7 +119,7 @@ private func run(
         pick: hasPicker ? { @Sendable _, _ in pick } : nil
     )
     let responder = try AgentRAGResponder(
-        store: KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
+        store: store ?? KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
         toolsProvider: { tools }, ageClauseProvider: { ageClause }, egressClauseProvider: { egress },
         plainRouteProvider: { route }
     )
@@ -295,6 +297,45 @@ struct DispatchTurnTests {
         ]
         _ = try await run(provider, tools: tools, pick: nil, question: "rename my screenshots")
         #expect(provider.prompts.first?.contains("calendar_peek") == true)
+    }
+
+    /// 2026-10-26, grounded-long wired like the app: Apple's pick sent "What torque do the hub nuts
+    /// take?" to lookup_fact 6 of 6 times on Lil and Big while the gate had kept the manual's chunk,
+    /// and the dispatched prompt (the result only) answered with a generic spec, never the 145 Nm.
+    /// The hashing embedder here may admit the chunk by the keyword lane rather than the cone's floor;
+    /// either way the gate kept it, which is all `documentCorrected` reads.
+    @Test("a lookup_fact pick on a question the user's documents answer is a plain turn over them")
+    func lookupOnTheUsersDocumentIsPlain() async throws {
+        let question = "What torque do the hub nuts on the trailer axle take?"
+        let store = try KnowledgeStore()
+        try await DocumentIngester(store: store, embedder: HashingEmbeddingService()).ingest(
+            title: "Trailer Service Manual",
+            pages: [DocumentPage(
+                pageNumber: 1,
+                text: "4 Hubs\nThe hub nuts on the trailer axle take 145 Nm of torque, tightened in a star pattern."
+            )]
+        )
+        let calls = Calls()
+        let provider = Scripted(["145 Nm, in a star pattern."])
+        let text = try await run(
+            provider, tools: [Recording(name: "lookup_fact", output: "Typically 120–140 lb-ft.", calls: calls)],
+            pick: ToolPick(tool: "lookup_fact", query: "hub nut torque"), question: question, store: store
+        )
+        #expect(text == "145 Nm, in a star pattern.")
+        #expect(calls.log.withLock { $0 }.isEmpty, "no lookup leaves the device")
+        let prompt = try #require(provider.prompts.first)
+        #expect(prompt.contains("145 Nm"), "the manual's chunk grounds the answer")
+        #expect(prompt.contains(AgentRAGResponder.plainRules))
+        #expect(!prompt.contains("RETURNED JUST NOW"))
+
+        // The control: the same pick over an empty store still looks it up.
+        let unseeded = Scripted(["About 120–140 lb-ft."])
+        _ = try await run(
+            unseeded, tools: [Recording(name: "lookup_fact", output: "Typically 120–140 lb-ft.", calls: calls)],
+            pick: ToolPick(tool: "lookup_fact", query: "hub nut torque"), question: question
+        )
+        #expect(calls.log.withLock { $0 }.count == 1)
+        #expect(unseeded.prompts.first?.contains("WHAT lookup_fact RETURNED JUST NOW") == true)
     }
 
     /// The picker sends some well-known facts to a search ("Who wrote Ulysses?" →

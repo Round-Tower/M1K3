@@ -9,8 +9,10 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-26, Confidence 0.9 (pure). Prior: none (new file).
 //  Review: Kev + claude-opus-5-5, 2026-10-26 — "overfill" retired: the first wired run logged no cap at 1100.
+//  Review: same day — `crossAnswersAreOffTheDoc`: the cross arm's world answers never appear in their seeded docs.
 //
 
+import Foundation
 @testable import M1K3Eval
 import Testing
 
@@ -61,12 +63,30 @@ struct ChatEvalFixturesGroundedLongTests {
                 + "doesn't explicitly state a specific number of years or months for the warranty on the axles."))
         #expect(try passes("long-absent", "Based on the service manual for T-series trailers you just had pulled up, "
                 + "there isn't a specific \"warranty period\" listed in the text we found."))
+        // The fix run's (2026-10-26, e4b3047c): an adverb split "doesn't list".
+        #expect(try passes("long-absent", "The manual you have for those T-series trailers doesn't actually list "
+                + "a specific warranty duration like \"three years\" or \"18 months.\""))
         // An invented term must not pass on the seeded doc's title.
         #expect(try !passes("long-absent", "The warranty on the trailer axle is 24 months (Notes)."))
         // lookup_fact's generic spec carried "145" in the wrong unit: not the manual's figure.
         #expect(try !passes("long-hub-torque", "Standard hub nut torque specifications for most trailer axles "
                 + "typically fall between **120 and 145 ft-lbs**."))
         #expect(try passes("long-hub-torque", "The manual says to torque the hub nuts to **145 Nm** in a star pattern."))
+    }
+
+    /// `ToolDispatch.documentCorrected` sends these to a plain turn over the doc; they pass only on the world's answer.
+    @Test("the cross arm's answers are nowhere in its seeded docs: a doc-only answer can't pass")
+    func crossAnswersAreOffTheDoc() throws {
+        let cross = ChatEvalFixtures.groundedLong.filter { $0.id.hasPrefix("long-cross-") }
+        #expect(cross.count == 3)
+        for fixture in cross {
+            let doc = try #require(fixture.seedDoc).lowercased()
+            for fact in fixture.expectation.mustContainAny {
+                let word = NSRegularExpression.escapedPattern(for: fact)
+                let found = try Regex("\\b\(word)\\b").firstMatch(in: doc)
+                #expect(found == nil, "\(fixture.id): \(fact) is in its doc")
+            }
+        }
     }
 
     @Test("the torque fact is the last sentence of its section, where a budget truncates first")

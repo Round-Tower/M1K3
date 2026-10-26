@@ -213,6 +213,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-26 — `groundingWithStablePrefix`: the native turn also hands the agent
 //  where its grounding stops being stable (context line + replay), the tool session's cross-turn tail cut (the LCP
 //  cut lagged a turn).
+//  Review: Kev + claude-opus-5-5, 2026-10-26 — `ToolDispatch.documentCorrected` after `corrected`: a lone lookup_fact
+//  pick when the gate kept a document chunk answers on the plain route over those chunks (grounded-long: torque went
+//  to lookup_fact 6/6 and never read the manual). Web picks keep the 09-27 lean prompt. Confidence 0.75 (pinned; paired
+//  grounded-long + cross arm on Lil/Big: torque 0/6 → 6/6, cross 17/18; Mini unmeasured).
 
 import Foundation
 import M1K3Agent
@@ -973,7 +977,13 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // A reference lookup about now goes to the web (2026-10-10: "this year" picked lookup_fact).
         // An "open the website" ask read the page aloud (#622): opening is an action.
         // A question about what the user decided went to Wikipedia (2026-10-20): it goes to their knowledge.
-        let pick = ToolDispatch.corrected(picked, palette: tools, question: question)
+        let corrected = ToolDispatch.corrected(picked, palette: tools, question: question)
+        // A reference lookup the user's own documents answer reads them instead (2026-10-26).
+        let pick = ToolDispatch.documentCorrected(corrected, documentsKept: !chunks.isEmpty)
+        if pick != corrected {
+            Self.log.notice("tool dispatch: lookup_fact, but kept chunks answer — a plain turn reads them")
+            return await plain()
+        }
         if pick.tool == ToolPick.noTool {
             Self.log.notice("tool dispatch: none — a plain turn answers")
             return await plain()
