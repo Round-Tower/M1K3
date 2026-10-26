@@ -7,111 +7,67 @@ it's a signed historical record and stays that way; this file doesn't repeat it.
 The macOS 27 wave's release plan (1.0 → 1.1 → 1.2) lived in
 `docs/GOLDEN_GATE_PLAN.md`, retired once 1.0 shipped (#562; git history keeps it).
 
-Last swept: 2026-10-11 — **1.0.0 is live on the Mac App Store** (released
-2026-10-11 12:19 UTC on build 453; `itunes.apple.com/lookup?id=6780230835`
-returns it in every storefront checked). iOS 1.0.0 is still WAITING_FOR_REVIEW
-on 453 (since 10-05). **1.1.0 is master:** #561 (Kev's TestFlight list:
-Settings panes for MCP Server and Brain at Home, auditions + weight import
-retired with a one-time folder delete, backdrop-or-off avatar, no thinking
-rain, titles that never think, Halloween in the Lair, the version bump) on top
-of § v1.1.0 below; the What's New is #524. Lil is Qwen3.5-4B, thinking off by
-default (Auto; one decision per turn, #555).
-The 1.0 review weeks, as they were recorded at the time (09-17 → 10-09):
-Before 453: resubmitted on build 372 (Mac + iOS, local release, 2026-09-24);
-`itunes.apple.com/lookup?id=6780230835` returned no listing on 09-26.
-The 09-18 note below stands as the record of that week.
-(The 09-17 sweep read "1.1.0 merged" as "1.1.0 shipped". Checked 09-18:
-`itunes.apple.com/lookup?id=6780230835` → no listing; Kev: "we're releasing all
-the recent work under 1.0.0 — we're still in review, and have the room.")
-Merged to master and riding under 1.0.0: the "1.1.0" work (#362, 2026-09-16 —
-Xcode 27 toolchain, typed AFM errors, Private Cloud Compute, CI guards), 5 new
-Siri/Shortcuts intents (#366), AFM vision on macOS 27 + file-as-context (#367),
-iOS image + file attach (#371). The site's App Store CTAs (#370) went out on the
-same false premise and 404'd; reverted to TestFlight until the listing exists.
-⚠️ The build in review (Mac 362) predates all of that AND carries a dead
-sandboxed `m1k3` helper (#376) — a new build has to be attached before release.
+Last swept: 2026-10-26 — **1.2.1 is the current release** (tag
+`release-1.2.1-20261023-e4ce9115`, local build 540 via `release-local.sh`; What's New
+and promo text in 12 locales, #668). 1.2.0 was tagged 10-21 (#657), 1.1.1 on 10-20
+(#649); Mac 1.0.0 went live 2026-10-11 on build 453. iPhone & iPad App Store links
+went into the README, site, `llms.txt` and `install.txt` on 10-22 (#663). ⚠️ This
+sweep could not read `itunes.apple.com/lookup?id=6780230835` (blocked from the
+session), so which build each storefront serves is unverified: read the lookup
+before quoting it. Lil is Qwen3.5-4B with a 1,024-token thought cap (#643); Big is
+gemma-4-12B; Mini is AFM. The tagline is "Your AI. Your devices. Private by design."
+(#664). The 1.0 review-weeks record (09-17 → 10-11) lives in git history before
+this sweep.
 
 ---
 
-## Now — 1.0.0 in review, the recent work rides under it
+## Now — after 1.2.1: inference speed, voice, distribution
 
-### The next review build: 374 (master `10eff677`, uploaded 09-27; #412, #414, #420, #422, #423, #424)
+### Inference: the cross-turn cache (#687, #690, #691 — landed 10-25 → 10-26)
 
-- **One attach button** (Mac + iOS): paperclip + one picker; `AttachmentRouting`.
-- **PCC stays on for the conversation**: `PrivateCloudArming`; consent once per
-  conversation. **ADR 0007 ACCEPTED (Kev, 09-26): the whole conversation.**
-- **Call summaries fixed and evaluated**: the first quality eval
-  (`CallSummaryEval`, `M1K3_CALLS_EVAL=1`) found Mini reciting its system prompt
-  into stored overviews, action items lost to markdown headers, and no summary
-  at all past the window. Neutral instructions + leak drop + parser + map-reduce:
-  Mini 2/6 → 6, 4, 3 of 6 (`docs/evals/2026-09-26-calls-summary-mini.json`).
-  No brain carries the persona into a summary now (`InferenceIntent.instructions`);
-  a Lil/Big summary is verify-by-launch.
-- **Reasoning (Auto / Think / Off) — Kev's call.** The Settings picker is a
-  dead control on every shipping brain: Lil (Instruct-2507) never thinks, Big's
-  gemma-4 toggle is pinned off, Mini and Pocket have no think phase.
-- **Sidebar icons — C, Kev's pick (09-26)**: one symbol family, grey at rest,
-  accent only on the selection (2e48788a). A wire set (direction D) is a later
-  brand pass.
-- **Speech — SpeechAnalyzer is Apple Speech now**: `AppleSpeechTranscriber`
-  (the Mac's fallback, the iPhone's only engine) runs on SpeechAnalyzer, with
-  SFSpeech as the fallback when the analyzer can't serve a listen on-device.
-  It finalises at 0.3 s pauses, so the transcriber endpoints dictation itself
-  (`AnalyzerEndpoint`: a final plus 1.2 s of quiet). Verify-by-launch: chat
-  dictation cadence, voice mode, Bluetooth, iPhone. Calls stay on WhisperKit
-  until a real-call A/B (spike: WER 9.0% vs 7.3%, ~4× faster).
-- **Mini tool calling: 9/30 → 30/30** on the live arm (`docs/evals/2026-09-26-mini-tool-calling.json`).
-  The misses were leak declines on ordinary asks ("the machine's clock is a backdoor
-  for secrets"); the per-turn steer now says a tool ask is not an attempt on the
-  instructions, and a tool call ends the generation (no discarded answer). Cost:
-  open-chat 22→19/24 (the hash-map explain now pulls a tool 2/3), security 14→13/14
-  (a self-question took a web tool; the corpus gate held). Follow-ups: "well-known
-  knowledge needs no tool" wording; web tools on self-query turns.
-- **QLoRA to cut the prompt: no.** The July adapter is on a retired base and
-  bought ~65 tokens; Mini's window is spent by the tool palette, and Mini can't
-  take an adapter on 27 (`scratch/lora-spike/REVIEW-2026-09-26.md`).
-- **Mini's chat turns skip the tool palette** (`ToolNeedRouter`, ON by default, Kev 09-26).
-  A logistic layer over Apple's sentence embedding reads each turn; plain chat gets one
-  streamed generation instead of the agent loop. Live, app quit: open chat 51.1 s → 10.1 s,
-  first words ~5 s (the agent path never streamed), tool use 10/10 kept, security unchanged.
-  Mini only: Lil gains nothing, Big ~18% (a later call). The spike started from Laya (an MLX
-  decision encoder); trained on the same labels, the built-in embedding matched it with no
-  download. Next: tool turns are still ~50 s; the router is cautious on well-known facts.
-- **Mini runs read-only tools itself** (ADR 0009, `miniToolDispatch`, on by default). On a
-  tool turn Mini picks ONE tool in a ~1.2 s guided generation (`AFMToolPicker`), the app runs
-  it (`ToolDispatch`) and one streamed generation answers with the result. Live, app quit:
-  tool turns 50.5 s → 10.1 s (first words ~5.9 s), chat 9.2 s, security 7/7. Prompts ~1.7k
-  tokens against the native tool session's 5.1–5.6k (which overflowed Mini's window 4 times
-  in ~306 calls that day). The route keeps Mini's own persona: the standard one narrated 12/39
-  answers in the third person once a tool result sat in the prompt. Routed turns lose chips.
-- **Walking 373 found the route dead on the Mac** (#423): `servedMini` saw through the
-  swappable façade only, and the Mac responder holds `RuntimeInferenceProvider`; every eval held
-  the bare provider. `BackendRouting` fixes it; iOS was unaffected. 373 is not submitted.
-- **Dispatched turns get their own lean prompt** (#424): under the plain turn's rules and
-  grounding Mini waved web results off and pivoted to old threads (373: "I don't know what's
-  happening in the outside world"). A/B n=12: used the result 9 → 12, injection 1 → 0, prompt
-  ~3.2k → ~1.3k chars; live first words 10.6 → 8.9 s in the poisoned 373 thread, 6.9 s in a fresh chat. Also: AFM's transient not-ready
-  reads "Preparing Mini…" (was "This Mac can't run the selected brain"), and titles run on
-  neutral instructions without evicting chat's prewarm ("I don't share my own wiring" was a title).
-  Carried: the router reads "how's your Sunday going?" as a tools ask; Mini's plain-chat
-  persona claims the user's details ("I've got the Irish in me") and invents memories in its
-  "Curiosity:" line; the distiller and Heartbeat still generate under the persona.
-- **Debug builds: the visible avatar slows MLX decode 6–7×** (#413). Release on M1 Max is
-  unaffected (65 vs 67 tok/s); evals hide the app; an A-series check is owed.
+- **Tail checkpoint** (#687): a turn seeds from where the last one left off.
+- **Block eviction** (#690, `HistoryWindow.Budget.evictionBlockTurns`: 6 Mac MLX, 4 spoken Big,
+  1 Mini / pocket / mobile; `-historyEvictionBlock N`).
+- **Caller-marked stable prefix** (#691): past the window the tail hits 14/21 on both
+  brains (sliding 0/21); Big extend median 4.8 s where sliding paid 10–12 s, Lil 1.8 s;
+  peaks unchanged (Lil 4.73 GB, Big 9.19 GB). Curves in `docs/evals/2026-10-26-chatcurve-*`.
+- **Next:** plain-route tail (phase 2, `runSeededPlainTurn`); a recall probe past a block
+  boundary; #621 warm reorder; kvBits / prefillStep / clearCache A/Bs. Branches in flight:
+  `perf/grounding-budget-arm`, `perf/inference-instrument` (pushed).
 
-### Landing (open PRs)
+### Voice
 
-- ~~**#370** site: TestFlight CTAs → App Store~~ — merged on a false premise, reverted 09-18; re-land it the day the listing is live.
-- **#371** iOS: image + file attachment on iPhone/iPad + Mac help-text fix
-  (review pending).
-- **#372** agent: mid-conclusion ACTION prose now streams (#329 fix, review
-  pending).
+- Mac voice processing + spoken barge-in **on by default** (#682, #640); sources are no
+  longer read aloud (#678). NameRepair + SoundContext wired in voice mode (#618, shadow
+  verdict); Big's spoken replay holds ~4 exchanges with evicted-turn traces (#625, #630).
+- Owed: Bluetooth-headset check under voice processing (see § 1.0.1 below).
+
+### Distribution and growth
+
+- **Measure:** `ranks.py` (daily rank per term × storefront × platform, #673), `metrics.py`
+  (reach from sales reports, the Analytics API and GitHub, no telemetry, #653).
+- **Store:** Russian + en-GB keywords (#666), Arabic ar-SA (#667), ASO keyword swap (#674),
+  the ratings ask after one liked answer or ten turns (#665).
+- **In-app event:** Offline AI Flight Club, Nov 3 → Dec 1 (#669); Halloween in the Lair ends Nov 1.
+- **Site:** Terms of Service (#641), TAAFT badge (#632), the new tagline (#664).
+
+### Process
+
+- Xcode Cloud builds only `release*` tags (#635, after the 10-15 compute-hours outage);
+  `release-local.sh` ships when the hours are spent (#660).
+- Review gates: delta re-review after an approval (#686), the claims check on paths and
+  flags named in a diff (#685, `ci/claims-check`), `pr_watch` verdict fixes (#688, #689).
+- Open: #692 (root CLAUDE.md, docs-only), `ci/delta-review`, `ci/claims-check`.
 
 ### Next picks
 
 - **#303** Lil "What can you do?" 2/3 answers close on the decline line — needs
-  an in-app eval gate before any prompt change (the capabilityMove shipped in
-  #338 but the rate barely moved).
+  an in-app eval gate before any prompt change.
+- **Mini's weak kinds on the scoreboard** (`site/brains.json`, 10-06): sycophancy 2/6,
+  instruction-following 9/18, vision 1/16 — each wants an eval gate before a prompt change.
+- **Local-only branches** to push or retire (Kev's call): `fix/doc-question-skips-lookup`,
+  `spike/moe-big-audition` (4 commits), `feat/eval-harness`, `backup/face-reveal-5e8e8485`.
+  All are in `~/Development/m1k3-branch-backup-2026-10-26/all-local-branches.bundle`.
 
 ### Monetization — the 90-day plan (#369)
 
@@ -143,7 +99,7 @@ the first Teams customer, the move from engineer to honest founder.
 
 ## Next — the releases
 
-### v1.1.0 — on master since 2026-10-11 (`docs/GEMMA_1_1_PLAN.md`), What's New in #524
+### v1.1.0 — SHIPPED (tagged 2026-10-20 as 1.1.1, #649; `docs/GEMMA_1_1_PLAN.md`), What's New in #524
 
 Marketing version 1.1.0 on every surface (`VERSIONING.md`), bumped in #561 the day 1.0.0
 went live; Xcode Cloud mints the build. What rides in it, user-facing:
@@ -481,3 +437,10 @@ stays a possible later companion.
      header leads with that and iOS's open review; § v1.1.0 is on master (bumped in #561) and lists what
      landed since 10-09 instead of the open branches; GOLDEN_GATE_PLAN.md is retired (#562), so its three
      pointers say "in git history". Confidence 0.85 (store state read from the lookup + ASC today). -->
+<!-- Review: Kev + claude-opus-5-5, 2026-10-26 — the post-1.2.1 sweep: header truthed from the release
+     tags and git log (1.1.1 → 1.2.0 → 1.2.1); the store lookup was blocked from the session, so storefront
+     state is flagged unverified rather than asserted. The 09-27 "Now" (review build 374, landing #370–#372)
+     is retired to git history; Now rebuilt as the four live streams (cross-turn cache, voice, distribution,
+     process) off #616–#691 and the 10-26 session block. § v1.1.0 marked shipped. Monetization, the 1.0.1
+     verify-owed list and the standing 1.0.x items are carried unchanged: not re-verified this sweep.
+     Confidence 0.8. -->
