@@ -5,8 +5,9 @@
 //  grounded-long: a whole document, not a sentence. grounded-Q seeds one line, so its turns
 //  prefill ~160 tokens and never reach the grounding budget (the 2026-10-25 Release baseline);
 //  nothing measured what the 1100-token budget buys. Each doc here is six headed sections of
-//  ~one chunk each (`DocumentChunker.targetChars`), so the top five hits overfill 1100 and the
-//  budget, not retrieval, decides what the brain reads.
+//  ~one chunk each (`DocumentChunker.targetChars`), sized so the top five hits land near 1100.
+//  In the first wired run (2026-10-26) they came in at or under it — no "grounding cap" line
+//  fired — so 1100 is the full-retrieval arm and 400 the first that cuts.
 //
 //  The questions are built to break a tight budget in different ways: two facts in two sections
 //  (names, a decision and its deadline, a date then a hotel), a number in its section's last
@@ -19,6 +20,8 @@
 //  Signed: Kev + claude-opus-5-5, 2026-10-26, Confidence 0.7 (the documents are invented and the
 //  section sizes are checked by a test; whether they rank the way a real document does is
 //  what the first run shows). Prior: none (new file).
+//  Review: Kev + claude-opus-5-5, 2026-10-26 — the "overfill" claim was wrong: the first wired run
+//  logged no cap at 1100. The header now says so; "don't specify" (Big's abstention) joins the markers.
 //
 
 import Foundation
@@ -81,7 +84,7 @@ public extension ChatEvalFixtures {
                     // The first wired run's honest abstentions (2026-10-26) the list above missed.
                     "doesn't state", "does not state", "doesn't explicitly", "doesn't specify",
                     "does not specify", "isn't listed", "not listed", "there isn't", "there is no",
-                    "there's no",
+                    "there's no", "don't specify",
                 ],
                 minChars: 5, wholeWordFacts: true
             )

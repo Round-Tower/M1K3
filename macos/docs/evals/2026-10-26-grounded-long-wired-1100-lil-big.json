@@ -1,0 +1,2545 @@
+{
+  "driver": {
+    "appArgs": [
+      "-groundingBudget",
+      "1100"
+    ],
+    "env": {
+      "M1K3_MCP_TOKEN": "<withheld>",
+      "M1K3_SELFTEST": "1",
+      "M1K3_SELFTEST_APP_COMMIT": "7d7533e5",
+      "M1K3_SELFTEST_CHATEVAL": "1",
+      "M1K3_SELFTEST_CHATEVAL_BRAINS": "lil,big",
+      "M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS": "1",
+      "M1K3_SELFTEST_CHATEVAL_KINDS": "grounded-long",
+      "M1K3_SELFTEST_CHATEVAL_LIVE_PATH": "1",
+      "M1K3_SELFTEST_CHATEVAL_REPEATS": "3",
+      "M1K3_SELFTEST_CHATEVAL_ROUTER": "dispatch",
+      "M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN": "1",
+      "M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD": "1",
+      "M1K3_SELFTEST_CHATEVAL_THINKING": "tier",
+      "M1K3_SELFTEST_MLX_REVISION": "3b339ad6e3b3f44c8121ecff5131c7fd55e075e6",
+      "M1K3_SELFTEST_NOTES": "grounded-long wired like the app (real corpus tools), budget 1100, Release 7d7533e5",
+      "M1K3_SELFTEST_OUT": "-",
+      "M1K3_SELFTEST_POWERMODE": "2"
+    },
+    "power": {
+      "end": "ac",
+      "mixed": false,
+      "seen": [
+        "ac"
+      ],
+      "start": "ac"
+    }
+  },
+  "provenance": {
+    "appCommit": "7d7533e5",
+    "buildConfiguration": "Release",
+    "date": "2026-10-26T15:29:36Z",
+    "hardware": "Apple M1 Max · 64 GB",
+    "livePath": true,
+    "mlxSwiftLMRevision": "3b339ad6e3b3f44c8121ecff5131c7fd55e075e6",
+    "notes": "grounded-long wired like the app (real corpus tools), budget 1100, Release 7d7533e5",
+    "osVersion": "macOS 27.0",
+    "powerMode": 2,
+    "powerSource": "ac",
+    "repeats": 3
+  },
+  "runs": [
+    {
+      "brainID": "lil",
+      "modelID": "mlx-community/Qwen3.5-4B-MLX-4bit",
+      "peakMemoryMB": 4358,
+      "residentMemoryMBAtStart": 274,
+      "scores": [
+        {
+          "answerPreview": "The person who spotted the fluid sheen and drifting pressure gauge at 01:40 on the night shift of October 3rd was **Aoife Brennan**. She called in on the radio to stop the press with a cycle stop, which prevented a blank from getting trapped in the die.  As for the repair itself, it wasn't the operator who signed off; that fell to the maintenance manager, **Tomasz Wilk**. He inspected the manifold and verified the lockout was removed correctly before handing the line back to production at 14:10 on October 4th. The work order has his signature along with the parts used in the fix.",
+          "checks": [
+            {
+              "detail": "586 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/102 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "586 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9296ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-incident-names",
+          "generation": {
+            "decodeTokens": 155,
+            "firstChunkMS": 7422,
+            "generations": 1,
+            "prefillMS": 1385,
+            "prefillTokens": 908,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 9296,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The standard torque specification for most trailer axle hub nuts is typically between **80 to 120 Newton-meters (Nm)**, which translates roughly to **60 to 90 inch-pounds**. This range can vary depending on the specific axle manufacturer and load rating, but it's generally in that ballpark. Always double-check your vehicle's manual or mounting instructions for the exact value required by the OEM, as operating outside these specs can lead to wheel loosening or failure.",
+          "checks": [
+            {
+              "detail": "472 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/69 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"145\"] in: The standard torque specification for most trailer axle hub ",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "472 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5268ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "lookup_fact",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-hub-torque",
+          "generation": {
+            "decodeTokens": 111,
+            "firstChunkMS": 3951,
+            "generations": 1,
+            "prefillMS": 638,
+            "prefillTokens": 408,
+            "tokensPerSecond": 84
+          },
+          "kind": "grounded-long",
+          "latencyMS": 5268,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "You’re staying at **The g Hotel** in Galway for Wednesday, 12th November (the night of your library talk). It was on your shortlist before you decided to swap that slot up. A bit of a gamble with the early Thursday morning start, but better than missing it entirely.",
+          "checks": [
+            {
+              "detail": "266 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/48 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"doolin\"] in: You’re staying at **The g Hotel** in Galway for Wednesday, 1",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "266 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7026ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-itinerary-hop",
+          "generation": {
+            "decodeTokens": 75,
+            "firstChunkMS": 6098,
+            "generations": 1,
+            "prefillMS": 2220,
+            "prefillTokens": 1509,
+            "tokensPerSecond": 81
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7026,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The second batch came from **Ballyvourney** in County Cork, specifically along the upper River Sullane near Derrynasaggart. The team sampled five sites between the village and its confluence with a small tributary. It was a bit of a weather event; overnight rain had swollen the river enough to make the water cloudy at the lower two sites, which required extra notes on sediment levels since that can skew phosphate readings. Interestingly, because the landowner asked for a copy of the results in advance and one site's access point (a field gate) was locked, they added a filtered phosphate test to be thorough.",
+          "checks": [
+            {
+              "detail": "614 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/102 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"ballyvourney\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "614 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7505ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-sample-place",
+          "generation": {
+            "decodeTokens": 145,
+            "firstChunkMS": 5751,
+            "generations": 1,
+            "prefillMS": 1402,
+            "prefillTokens": 903,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7505,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The board went with renewing the Cork lease for three years at an 11% reduction in rent, thanks to a fixed rate that won't rise again until the break date. The finance director needs to hand Harrington Estates their formal notice of this renewal decision by **14 March**, and is also tasked with hammering out the specific terms for the two-year break clause.",
+          "checks": [
+            {
+              "detail": "359 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/61 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"14 march\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "359 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6214ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-lease-decision",
+          "generation": {
+            "decodeTokens": 96,
+            "firstChunkMS": 5057,
+            "generations": 1,
+            "prefillMS": 1213,
+            "prefillTokens": 779,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 6214,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Based on the T-series manual you just pulled up, the document itself doesn't list a specific duration like \"three years\" or \"100,000 km.\" It treats the warranty as part of the legal agreement between you and the manufacturer, noting that you should check the load against the plate rather than volume. The manual does emphasize a crucial rule: if the trailer has been in an accident or hit a kerb hard, have the axle alignment checked by a workshop before relying on any service checks.  Since the manual focuses on *how* to maintain it (checking rubber torsion settlement and tyre pressures) rather than the contract terms, the exact warranty period isn't in this text. The manufacturer's specific policy would be defined in their standard terms of trade, which usually run parallel to these service intervals.",
+          "checks": [
+            {
+              "detail": "811 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/134 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"doesn't list\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "811 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7280ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-absent",
+          "generation": {
+            "decodeTokens": 179,
+            "firstChunkMS": 5114,
+            "generations": 1,
+            "prefillMS": 1392,
+            "prefillTokens": 903,
+            "tokensPerSecond": 82
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7280,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The press operator **Aoife Brennan** spotted the sheen of fluid spreading from under Press Line 4 at 01:40 and called it in, making her the first to report it. Her quick decision to use the cycle stop (rather than emergency) meant no blank was trapped in the die, which saved several hours on restart time.  The repair itself was signed off by **Tomasz Wilk**, the maintenance manager. He inspected the manifold, checked the test-run pressure trace, and verified that the lockout had been removed correctly before handing the line back to production at 14:10 on 4 October.",
+          "checks": [
+            {
+              "detail": "572 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/93 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "572 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7173ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-incident-names",
+          "generation": {
+            "decodeTokens": 149,
+            "firstChunkMS": 5372,
+            "generations": 1,
+            "prefillMS": 1410,
+            "prefillTokens": 908,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7173,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "For most standard trailer axles, those hub nuts are typically torqued to between **100 and 125 ft-lbs** (roughly 136–170 Nm), though heavy-duty setups might push closer to 140-150 ft-lbs. That specific range is what the sources generally point to as the safe sweet spot to prevent stripping or losing the wheel without over-tightening into the metal.",
+          "checks": [
+            {
+              "detail": "350 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/52 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"145\"] in: For most standard trailer axles, those hub nuts are typicall",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "350 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5733ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "lookup_fact",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-hub-torque",
+          "generation": {
+            "decodeTokens": 120,
+            "firstChunkMS": 4294,
+            "generations": 1,
+            "prefillMS": 639,
+            "prefillTokens": 408,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 5733,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Based on the notes, that's not where you're sleeping. You're staying in **Doolin** (Hotel Doolin) for Tuesday and Wednesday nights. Your Galway talk is scheduled for **Wednesday evening**, at 18:30, which means it happens *after* you've checked into your room on the Wednesday night in Doolin.  The plan is to drive back south from Ennis after that Thursday morning talk; you don't have a hotel booked in Galway itself, just the library reception where you'll be staying for the evening.",
+          "checks": [
+            {
+              "detail": "487 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/79 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"doolin\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "487 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7580ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-itinerary-hop",
+          "generation": {
+            "decodeTokens": 135,
+            "firstChunkMS": 5923,
+            "generations": 1,
+            "prefillMS": 2218,
+            "prefillTokens": 1509,
+            "tokensPerSecond": 81
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7580,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The second batch of samples was collected on **9 October at Ballyvourney, County Cork**. Specifically, they were taken from the upper River Sullane between the village and its confluence with a small tributary below it. You got a bit more complex there; the flow had been raised by overnight rain, making the water cloudy at two of the lower sites, which led to an extra filtered phosphate test being requested just in case sediment skewed the results.",
+          "checks": [
+            {
+              "detail": "452 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/76 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"ballyvourney\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "452 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6600ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-sample-place",
+          "generation": {
+            "decodeTokens": 111,
+            "firstChunkMS": 5250,
+            "generations": 1,
+            "prefillMS": 1404,
+            "prefillTokens": 903,
+            "tokensPerSecond": 82
+          },
+          "kind": "grounded-long",
+          "latencyMS": 6600,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The board decided to renew the Cork lease for three years at a revised rent of 11% lower than current rates, with no fixed reviews until the break date. We need to give written notice to Harrington Estates by **March 14** (the notice period specified in the current lease). The finance director is handling that negotiation while the board looks into the break clause terms.",
+          "checks": [
+            {
+              "detail": "374 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/63 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"march 14\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "374 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6343ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-lease-decision",
+          "generation": {
+            "decodeTokens": 105,
+            "firstChunkMS": 5073,
+            "generations": 1,
+            "prefillMS": 1232,
+            "prefillTokens": 779,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 6343,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Based on the manual snippet you just pulled up, the document itself doesn't explicitly state a specific number of years or months for the **warranty** on the axles. It focuses heavily on *service intervals* (measured in kilometres or whichever comes first) and maintenance checks like measuring hub-to-rail distances to detect rubber arm settlement.  It does mention that you should \"replace any fastener that is damaged or corroded rather than reusing it,\" which implies a responsibility for parts integrity, but the actual warranty duration isn't listed in this specific section of the notes. The manual suggests checking load against the plate often, since overloading is the biggest cause of early wear.  Do you have the full owner's manual handy, or are you looking at a specific part number? Sometimes the warranty terms differ between the chassis manufacturer and the trailer maker itself.",
+          "checks": [
+            {
+              "detail": "896 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/141 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"doesn\\'t mention\", \"does not mention\", \"no mention\", \"not mentioned\", \"doesn\\'t say\", \"does not say\", \"doesn\\'t cover\", \"does not cover\", \"doesn\\'t include\", \"doesn\\'t list\", \"couldn\\'t find\", \"can\\'t find\", \"could not find\", \"cannot find\", \"no warranty\", \"no information\", \"isn\\'t in\", \"is not in\", \"not in the\", \"don\\'t have\", \"do not have\", \"don\\'t see\", \"not covered\", \"not specified\", \"not stated\"] in: Based on the manual snippet you just pulled up, the document",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "896 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7152ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-absent",
+          "generation": {
+            "decodeTokens": 174,
+            "firstChunkMS": 5047,
+            "generations": 1,
+            "prefillMS": 1391,
+            "prefillTokens": 903,
+            "tokensPerSecond": 82
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7152,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The press operator **Aoife Brennan** spotted the fluid sheen at 01:40 on the night shift of October 3rd; she correctly used a cycle stop rather than an emergency stop, which kept the ram high up and prevented any blanks from getting trapped in the die. The repair itself was signed off by maintenance manager **Tomasz Wilk** after he verified the manifold had been fixed, the lockout procedure followed, and the test-run pressure traces looked normal.",
+          "checks": [
+            {
+              "detail": "451 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/74 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "451 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6760ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-incident-names",
+          "generation": {
+            "decodeTokens": 118,
+            "firstChunkMS": 5330,
+            "generations": 1,
+            "prefillMS": 1390,
+            "prefillTokens": 908,
+            "tokensPerSecond": 82
+          },
+          "kind": "grounded-long",
+          "latencyMS": 6760,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Based on the latest search results, standard hub nut torque specifications for most trailer axles (like Dexter, Fleetwood, or equalizers) typically fall between **120 and 145 ft-lbs**. However, since every axle is stamped with its specific rating, you absolutely cannot guess; if your manual lists something outside that range—sometimes as high as 250+ ft-lbs for heavy-duty models—you must use the exact figure written on the axle housing or in the owner's manual.  Using the wrong torque can strip threads or, worse, cause a hub to loosen and fail while you're driving.",
+          "checks": [
+            {
+              "detail": "571 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/88 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"145\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "571 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6203ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "lookup_fact",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-hub-torque",
+          "generation": {
+            "decodeTokens": 143,
+            "firstChunkMS": 4495,
+            "generations": 1,
+            "prefillMS": 635,
+            "prefillTokens": 408,
+            "tokensPerSecond": 84
+          },
+          "kind": "grounded-long",
+          "latencyMS": 6203,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Based on the notes in front of me for that trip, you're staying at **The Old Ground Hotel** in Ennis for Thursday night (November 13th).  Since your Galway talk and reception are scheduled for Wednesday evening (November 12th), the plan is to drive back south after the event rather than stay in Galway. The notes confirm that The Old Ground Hotel in Ennis has a late check-in arrangement if needed, though since you're driving there on Thursday morning, you'd likely just arrive right before your talk at Glór theatre at 11:00.",
+          "checks": [
+            {
+              "detail": "528 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/90 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"doolin\"] in: Based on the notes in front of me for that trip, you're stay",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "528 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7812ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-itinerary-hop",
+          "generation": {
+            "decodeTokens": 149,
+            "firstChunkMS": 5979,
+            "generations": 1,
+            "prefillMS": 2214,
+            "prefillTokens": 1509,
+            "tokensPerSecond": 81
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7812,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The second batch came from **Ballyvourney, County Cork**, specifically along the upper River Sullane in Gaeltacht territory near the Derrynasaggart Mountains. It was sampled on 9 October after overnight rain had swelled the river and made the water cloudy at the lower sites, which is why the lab also requested a filtered phosphate test to account for that sediment load.",
+          "checks": [
+            {
+              "detail": "372 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/59 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"ballyvourney\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "372 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6380ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-sample-place",
+          "generation": {
+            "decodeTokens": 101,
+            "firstChunkMS": 5158,
+            "generations": 1,
+            "prefillMS": 1409,
+            "prefillTokens": 903,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 6380,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The board decided to renew the Cork office lease for three years at an 11% reduction in rent. That deal comes with a break clause after two years, and they're keeping the lower rate fixed through that whole period so there are no surprise reviews until you hit the break date. On the timing side, the finance director needs to hand Harrington Estates formal written notice of this renewal decision by 14 March (which is actually next week), with a follow-up report on the specific break clause terms coming back from them shortly after.",
+          "checks": [
+            {
+              "detail": "536 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/92 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"14 march\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "536 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6758ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-lease-decision",
+          "generation": {
+            "decodeTokens": 127,
+            "firstChunkMS": 5224,
+            "generations": 1,
+            "prefillMS": 1231,
+            "prefillTokens": 779,
+            "tokensPerSecond": 83
+          },
+          "kind": "grounded-long",
+          "latencyMS": 6758,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Based on the service manual for T-series trailers you just had pulled up, there isn't a specific \"warranty period\" listed in the text we found. The document focuses entirely on *service intervals* (measured by kilometres or months) and maintenance procedures like checking tyre pressures, inspecting the rubber torsion suspension for settling over 15mm differences, and ensuring mounting bolts are tight. It explicitly warns against welding or drilling the axle beam because it destroys the bonded rubber inserts inside.  If you're looking at a specific part number from that manual, the warranty would technically depend on what the manufacturer says on the physical plate attached to your trailer's drawbar, but the text we just reviewed doesn't define a time-based guarantee there.",
+          "checks": [
+            {
+              "detail": "784 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/120 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"doesn\\'t mention\", \"does not mention\", \"no mention\", \"not mentioned\", \"doesn\\'t say\", \"does not say\", \"doesn\\'t cover\", \"does not cover\", \"doesn\\'t include\", \"doesn\\'t list\", \"couldn\\'t find\", \"can\\'t find\", \"could not find\", \"cannot find\", \"no warranty\", \"no information\", \"isn\\'t in\", \"is not in\", \"not in the\", \"don\\'t have\", \"do not have\", \"don\\'t see\", \"not covered\", \"not specified\", \"not stated\"] in: Based on the service manual for T-series trailers you just h",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "784 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7122ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-absent",
+          "generation": {
+            "decodeTokens": 179,
+            "firstChunkMS": 4957,
+            "generations": 1,
+            "prefillMS": 1388,
+            "prefillTokens": 903,
+            "tokensPerSecond": 82
+          },
+          "kind": "grounded-long",
+          "latencyMS": 7122,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        }
+      ]
+    },
+    {
+      "brainID": "big",
+      "modelID": "mlx-community/gemma-4-12B-it-4bit",
+      "peakMemoryMB": 8377,
+      "residentMemoryMBAtStart": 274,
+      "scores": [
+        {
+          "answerPreview": "Aoife Brennan was the one who first spotted the fluid sheen and reported the leak at 01:40. She actually did a solid job by using the cycle stop instead of the emergency stop—it kept the tooling from getting damaged, which saved everyone a lot of headache. The repair was signed off by the maintenance manager, Tomasz Wilk, after he checked the manifold and the pressure traces.  Since it's Monday, how is your week starting out?",
+          "checks": [
+            {
+              "detail": "429 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/74 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …s Monday, how is your week starting out?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "429 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "18808ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-incident-names",
+          "generation": {
+            "decodeTokens": 94,
+            "firstChunkMS": 15754,
+            "generations": 1,
+            "prefillMS": 4080,
+            "prefillTokens": 914,
+            "tokensPerSecond": 30
+          },
+          "kind": "grounded-long",
+          "latencyMS": 18808,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The search results indicate that for most standard trailer axles, you're looking at a torque specification of around 100 to 120 lb-ft (roughly 135 to 163 Nm). However, because this can vary significantly based on the specific axle model and weight rating, it's best to check the manufacturer's manual or the markings on the hub itself.  Since I don't have a way to see your specific trailer, do you have the make and model handy?",
+          "checks": [
+            {
+              "detail": "429 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/71 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …r, do you have the make and model handy?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"145\"] in: The search results indicate that for most standard trailer a",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "429 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9014ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "lookup_fact",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-hub-torque",
+          "generation": {
+            "decodeTokens": 106,
+            "firstChunkMS": 5678,
+            "generations": 1,
+            "prefillMS": 1868,
+            "prefillTokens": 417,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 9014,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "You'll be sleeping at Hotel Doolin in Doolin. You have two nights booked there, including the night following your Galway talk [Notes §4 Accommodation].   Since you need to head back south after the reception that night for the Ennis talk the next morning, it's a solid spot. They even have a late check-in arranged for Wednesday because of that drive back from the city.",
+          "checks": [
+            {
+              "detail": "371 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/63 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"doolin\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "371 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "13167ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-itinerary-hop",
+          "generation": {
+            "decodeTokens": 102,
+            "firstChunkMS": 9940,
+            "generations": 1,
+            "prefillMS": 6494,
+            "prefillTokens": 1479,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 13167,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The second batch of water samples was collected on 9 October at Ballyvourney, County Cork. Specifically, they were taken from the upper River Sullane, which flows through the Gaeltacht area near the Derrynasaggart Mountains.  Since you've been tracking these water quality surveys across Munster and Connacht, is there a specific reason you're looking for the results of the 2026 autumn round today?",
+          "checks": [
+            {
+              "detail": "399 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/60 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … results of the 2026 autumn round today?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"ballyvourney\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "399 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10457ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-sample-place",
+          "generation": {
+            "decodeTokens": 90,
+            "firstChunkMS": 7618,
+            "generations": 1,
+            "prefillMS": 3966,
+            "prefillTokens": 898,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 10457,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The board decided to renew the Cork office lease for three years at a lower rent. They also asked for a break clause to be negotiated at the two-year mark. As for the deadline, the finance director needs to give Harrington Estates written notice of that renewal by 14 March.  Since it's Monday and you're looking into this, how is your week starting off?",
+          "checks": [
+            {
+              "detail": "354 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/63 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …nto this, how is your week starting off?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"14 march\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "354 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10275ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-lease-decision",
+          "generation": {
+            "decodeTokens": 79,
+            "firstChunkMS": 7796,
+            "generations": 1,
+            "prefillMS": 3457,
+            "prefillTokens": 791,
+            "tokensPerSecond": 32
+          },
+          "kind": "grounded-long",
+          "latencyMS": 10275,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The records I have access to don't specify a warranty period for the trailer axle. They focus more on maintenance requirements, like checking for rubber settling and ensuring no unauthorized welding or drilling occurs.  Since there isn't a specific duration mentioned in your notes, you might want to check the original purchase agreement or the manufacturer's paperwork for that.",
+          "checks": [
+            {
+              "detail": "380 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/59 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"doesn\\'t mention\", \"does not mention\", \"no mention\", \"not mentioned\", \"doesn\\'t say\", \"does not say\", \"doesn\\'t cover\", \"does not cover\", \"doesn\\'t include\", \"doesn\\'t list\", \"couldn\\'t find\", \"can\\'t find\", \"could not find\", \"cannot find\", \"no warranty\", \"no information\", \"isn\\'t in\", \"is not in\", \"not in the\", \"don\\'t have\", \"do not have\", \"don\\'t see\", \"not covered\", \"not specified\", \"not stated\"] in: The records I have access to don't specify a warranty period",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "380 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9918ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-absent",
+          "generation": {
+            "decodeTokens": 71,
+            "firstChunkMS": 7674,
+            "generations": 1,
+            "prefillMS": 3981,
+            "prefillTokens": 904,
+            "tokensPerSecond": 30.999999999999996
+          },
+          "kind": "grounded-long",
+          "latencyMS": 9918,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Aoife Brennan was the one who first spotted that sheen of fluid and reported the leak; she actually did the right thing by using the cycle stop so no blanks got trapped in the die. The repair was officially signed off by Tomasz Wilk, the maintenance manager, after he checked the manifold and the pressure trace.",
+          "checks": [
+            {
+              "detail": "312 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/56 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "312 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10256ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-incident-names",
+          "generation": {
+            "decodeTokens": 76,
+            "firstChunkMS": 7854,
+            "generations": 1,
+            "prefillMS": 3972,
+            "prefillTokens": 914,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 10256,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The fact I pulled up indicates the torque for those hub nuts is typically around 120 to 150 lb-ft, though it can vary depending on the specific axle manufacturer and vehicle weight rating. It's always a good idea to check the manual or look for a sticker on the trailer frame just to be sure you aren't over-tightening them.  Yes, some of it can. Web searches: I decide when to search, and my query goes to DuckDuckGo and can carry words from our chat; Wikipedia lookups and pages I read are fetched. If you pick Private Cloud Compute as my brain, what you send goes to Apple's Private Cloud Compute. My brain runs right here, and your memories and documents are stored on this machine.",
+          "checks": [
+            {
+              "detail": "686 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/123 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"145\"] in: The fact I pulled up indicates the torque for those hub nuts",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "686 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10473ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "lookup_fact",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-hub-torque",
+          "generation": {
+            "decodeTokens": 159,
+            "firstChunkMS": 5473,
+            "generations": 1,
+            "prefillMS": 1820,
+            "prefillTokens": 417,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 10473,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "You'll be staying at Hotel Doolin in Doolin. You have two nights booked there, including the night of the 11th and the night of the 12th, which is the night of your Galway talk [Notes §4 Accommodation].  Since you're heading back south after that reception to get ready for the Ennis talk, did you manage to pack those walking boots and the rain jacket for the coast path?",
+          "checks": [
+            {
+              "detail": "372 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/67 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … and the rain jacket for the coast path?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"doolin\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "372 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "13101ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-itinerary-hop",
+          "generation": {
+            "decodeTokens": 91,
+            "firstChunkMS": 10217,
+            "generations": 1,
+            "prefillMS": 6517,
+            "prefillTokens": 1479,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 13101,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The second batch of water samples was collected on 9 October at Ballyvourney, County Cork. Specifically, they were taken from the upper River Sullane, which flows through the Gaeltacht area near the Derrynasaggart Mountains.  Since it's Monday, how is your week starting off?",
+          "checks": [
+            {
+              "detail": "275 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/42 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …s Monday, how is your week starting off?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"ballyvourney\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "275 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9808ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-sample-place",
+          "generation": {
+            "decodeTokens": 64,
+            "firstChunkMS": 7788,
+            "generations": 1,
+            "prefillMS": 3973,
+            "prefillTokens": 898,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 9808,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The board decided to renew the Cork lease for three years at a lower rent rate. They've also asked for a break clause to be negotiated at the two-year mark. As for the timeline, the finance director needs to provide the landlord, Harrington Estates, with written notice of this decision by 14 March.  Since it's Monday, how are you finding the start of your week so far?",
+          "checks": [
+            {
+              "detail": "370 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/66 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …u finding the start of your week so far?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"14 march\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "370 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10143ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-lease-decision",
+          "generation": {
+            "decodeTokens": 84,
+            "firstChunkMS": 7517,
+            "generations": 1,
+            "prefillMS": 3429,
+            "prefillTokens": 791,
+            "tokensPerSecond": 32
+          },
+          "kind": "grounded-long",
+          "latencyMS": 10143,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The maintenance notes don't specify a warranty period for the axle; they focus on service intervals, inspection measurements, and what to look for regarding suspension settling. Since it isn't in your records, I'm afraid I can't give you a specific timeframe from the documents provided.",
+          "checks": [
+            {
+              "detail": "287 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/45 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"isn't in\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "287 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9872ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-absent",
+          "generation": {
+            "decodeTokens": 71,
+            "firstChunkMS": 7627,
+            "generations": 1,
+            "prefillMS": 3975,
+            "prefillTokens": 904,
+            "tokensPerSecond": 30.999999999999996
+          },
+          "kind": "grounded-long",
+          "latencyMS": 9872,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Aoife Brennan was the one who first spotted that sheen of fluid and called it in at 01:40. She actually managed to use the cycle stop rather than the emergency stop, which kept the tooling from getting damaged. The repair work was signed off by Tomasz Wilk, the maintenance manager, after he checked the manifold and the pressure trace.",
+          "checks": [
+            {
+              "detail": "336 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/58 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "336 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10601ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-incident-names",
+          "generation": {
+            "decodeTokens": 83,
+            "firstChunkMS": 7974,
+            "generations": 1,
+            "prefillMS": 3997,
+            "prefillTokens": 914,
+            "tokensPerSecond": 31.000000000000004
+          },
+          "kind": "grounded-long",
+          "latencyMS": 10601,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The search results indicate that for most standard trailer axles, you should look for a torque specification between 120 and 150 lb-ft (roughly 160 to 200 Nm). However, because these can vary significantly based on the specific axle model, weight rating, and manufacturer, it's vital to check the manual or the plate on the axle itself. You want to be careful—over-tightening can strip the threads, while under-tightening is a recipe for a loose wheel.",
+          "checks": [
+            {
+              "detail": "452 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/70 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"145\"] in: The search results indicate that for most standard trailer a",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "452 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9581ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "lookup_fact",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-hub-torque",
+          "generation": {
+            "decodeTokens": 123,
+            "firstChunkMS": 5712,
+            "generations": 1,
+            "prefillMS": 1866,
+            "prefillTokens": 417,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 9581,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "You'll be staying at Hotel Doolin in Doolin for that night [Notes §4 Accommodation]. You actually have two nights booked there—Tuesday and Wednesday. Since the rest of your plans involve heading back south after the reception to make it to Ennis, you've already sorted out the late check-in for the third night as well.",
+          "checks": [
+            {
+              "detail": "319 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/53 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"doolin\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "319 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "13147ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-itinerary-hop",
+          "generation": {
+            "decodeTokens": 91,
+            "firstChunkMS": 10262,
+            "generations": 1,
+            "prefillMS": 6506,
+            "prefillTokens": 1479,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 13147,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The second batch of water samples was collected on 9 October at Ballyvourney, County Cork. Specifically, they were taken from the upper River Sullane, which flows through the Gaeltacht near the Derrynasaggart Mountains.  Since it's Monday, how are you finding the start of your week so far?",
+          "checks": [
+            {
+              "detail": "290 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/46 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …u finding the start of your week so far?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"ballyvourney\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "290 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "9938ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-sample-place",
+          "generation": {
+            "decodeTokens": 68,
+            "firstChunkMS": 7788,
+            "generations": 1,
+            "prefillMS": 3970,
+            "prefillTokens": 898,
+            "tokensPerSecond": 31.000000000000004
+          },
+          "kind": "grounded-long",
+          "latencyMS": 9938,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The board decided to renew the Cork lease for three years at a lower rent rate—about eleven percent less than what you're currently paying. They also asked for a break clause at the two-year mark. As for the deadline, the finance director needs to give Harrington Estates written notice of that renewal by 14 March.  Since it's Monday, how is your week starting off?",
+          "checks": [
+            {
+              "detail": "366 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/63 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …s Monday, how is your week starting off?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"14 march\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "contains all",
+              "outcome": "pass"
+            },
+            {
+              "detail": "366 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "10018ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-lease-decision",
+          "generation": {
+            "decodeTokens": 81,
+            "firstChunkMS": 7463,
+            "generations": 1,
+            "prefillMS": 3451,
+            "prefillTokens": 791,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 10018,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "The manual notes don't specify a warranty period for the axle, but they do emphasize that if the rubber torsion suspension settles by more than 15 mm, the beam needs to be replaced entirely. It also warns that any work should only be done on level ground with the trailer unhitched and chocked properly.  Since there isn't a specific time frame or warranty mention in your records, I can't give you a firm answer on that.",
+          "checks": [
+            {
+              "detail": "421 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/75 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"doesn\\'t mention\", \"does not mention\", \"no mention\", \"not mentioned\", \"doesn\\'t say\", \"does not say\", \"doesn\\'t cover\", \"does not cover\", \"doesn\\'t include\", \"doesn\\'t list\", \"couldn\\'t find\", \"can\\'t find\", \"could not find\", \"cannot find\", \"no warranty\", \"no information\", \"isn\\'t in\", \"is not in\", \"not in the\", \"don\\'t have\", \"do not have\", \"don\\'t see\", \"not covered\", \"not specified\", \"not stated\"] in: The manual notes don't specify a warranty period for the axl",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "421 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "11006ms",
+              "name": "responsive",
+              "outcome": "pass"
+            },
+            {
+              "detail": "search_knowledge",
+              "name": "tools",
+              "outcome": "skip"
+            }
+          ],
+          "fixtureID": "long-absent",
+          "generation": {
+            "decodeTokens": 111,
+            "firstChunkMS": 7502,
+            "generations": 1,
+            "prefillMS": 3969,
+            "prefillTokens": 904,
+            "tokensPerSecond": 31
+          },
+          "kind": "grounded-long",
+          "latencyMS": 11006,
+          "repeatIndex": 2,
+          "routeStage": "picker"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}

@@ -2,12 +2,13 @@
 //  ChatEvalFixtures+GroundedLongTests.swift
 //  M1K3EvalTests
 //
-//  grounded-long exists to overfill the 1,100-token grounding budget, so its shape is the point:
-//  six one-chunk sections (`DocumentChunker.targetChars` is 1,200) whose top five hits come to
-//  more than the budget, no answer given away by its prompt, and the tail fixture's fact still
+//  grounded-long exists to put the grounding budget to work, so its shape is the point: six
+//  one-chunk sections (`DocumentChunker.targetChars` is 1,200) whose top five hits land near the
+//  1,100-token budget, no answer given away by its prompt, and the tail fixture's fact still
 //  the last sentence of its section, where `GroundingBudget` truncates first.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-26, Confidence 0.9 (pure). Prior: none (new file).
+//  Review: Kev + claude-opus-5-5, 2026-10-26 — "overfill" retired: the first wired run logged no cap at 1100.
 //
 
 @testable import M1K3Eval
@@ -23,7 +24,7 @@ struct ChatEvalFixturesGroundedLongTests {
         }
     }
 
-    @Test("every doc is six headed sections of 800–1,150 chars: one chunk each, five overfill the budget")
+    @Test("every doc is six headed sections of 800–1,150 chars: one chunk each, five land near the budget")
     func sectionsAreOneChunkEach() {
         let heading = #/\d+ \p{L}.{2,79}/#
         for fixture in ChatEvalFixtures.groundedLong {
