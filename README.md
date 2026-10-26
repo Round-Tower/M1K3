@@ -63,7 +63,10 @@ is on by default so answers can be current, with one switch in Settings to turn
 it off. The Mac App Store build also carries an opt-in Private Cloud Compute
 brain — off by default, picked by you, consent asked once, every PCC answer
 labelled. The Developer ID DMG has no cloud path at all — see
-[SECURITY.md](./SECURITY.md).
+[SECURITY.md](./SECURITY.md). One more path is yours rather than M1K3's: a
+thumbs-down on an answer can offer to email that one exchange to Round Tower —
+the exact text is shown and editable first, your own mail app sends it, and
+nothing goes without you pressing Send.
 
 | Surface | Where | Stack | Status |
 |---|---|---|---|
