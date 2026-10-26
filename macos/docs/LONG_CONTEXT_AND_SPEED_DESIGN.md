@@ -69,6 +69,20 @@ Lil and up to 6.7 s on Big — **until the HistoryWindow slides at message 10**,
 collapses to the persona and both brains pay the September cost again. So the sliding history IS the
 dominant miss now, exactly as this section guessed, and block eviction is the next lever; its gate stands.
 
+**Status 2026-10-26 — block eviction is in** (`HistoryWindow.Budget.evictionBlockTurns`): after the newest-first
+fill the window's start snaps UP to a multiple of the block (fewer turns, never more, so every bound holds; the
+newest turn survives; an orphaned M1K3 opener drops too; a snap that would halve a char-limited window is skipped).
+Six on the MLX tiers, four on spoken Big (its 8-turn ceiling), one on Mini; `-historyEvictionBlock N`. The
+distillation trigger reads `minimumKeptTurns` (the ceiling less a block), so a snapped-away turn is distilled
+before it is forgotten. Measured (§3, third table): past message 10 the tail hits on **one message in three**
+on both brains, not the two in three the arithmetic promised, because the LCP cut lags a turn: the first
+render after a shift shares nothing, the second adopts the long tail, the third reuses it. On a hit Big's
+transcript prefill is 5.8 s against 11.8 s on a miss, Lil's 1.8 s against 2.8 s; peaks unchanged. The lag is
+the next lever: a caller-marked stable prefix (the plan's `StableUserPrefix`) would cut at the replay boundary
+on the first render after a shift and lift the rate to two in three at the same block — or a block of eight
+buys one in two at a floor of ten turns. The recall probe (a turn referenced just past a boundary) is still
+owed: the curve records answer lengths, not answers.
+
 ### 2b. Persona prefixes survive a relaunch
 `savePromptCache`/`loadPromptCache` round-trip in-app via the SelfTest probe
 (`MLXBrainProvider+PromptCachePersistence.swift`) — weakly: `toolNames: []` only, judged
@@ -202,6 +216,23 @@ send of a turn holds the pristine copy, the work cache, the tail copy and the ro
 if a longer render crosses it. The win is real and bounded by the window: block eviction (§2a) is what extends it
 past message 9.
 
+**With block eviction (2026-10-26, head 2d6a197d, agent route, 30 messages, `docs/evals/2026-10-26-chatcurve-
+{lil,big}-agent-{blocks,block1}.txt`; the stage now runs the tier's LIVE window — Lil 28,000 chars, Big 7,420 —
+where the 10-25 curves ran the eval's default 8,000-char window):** messages 3–9 are unchanged; from message 10 the
+block holds the window's start for three messages and the tail hits on the third of each:
+
+| messages 10–30 | Lil, block 1 | Lil, block 6 | Big, block 1 | Big, block 6 |
+|---|---|---|---|---|
+| tail hits | 0/21 | **7/21** | 0/21 | **7/21** |
+| `extend` on a hit | — | **1.8 s** (1.6–2.2) | — | **5.8 s** (4.3–7.5) |
+| `extend` on a miss | 3.0 s (2.6–4.0) | 2.8 s (2.4–3.3) | 17–44 s † | 11.8 s (9.6–14.1) |
+| MLX own peak (max over the curve) | 4.82 GB | 4.85 GB | 9.33 GB | 9.35 GB |
+
+Run on battery (powermode 0), so the seconds pair within the run, not with the mains table above. † Big's block-1
+run was the last of four and ended at 7 % battery; its extends climbed from 17 to 44 s over the run (the same
+~2,300-token miss took 10–14 s in the block-6 run minutes earlier), so read that column's reuse, not its clock.
+The floor is unchanged on typed Lil (12–16 of 16 turns kept); the lag of the LCP cut is what caps the rate.
+
 ## 4. Not doing
 
 - Neural Engine / Core AI prefill: the GPU wins at every input length on published
@@ -229,3 +260,5 @@ and the HistoryWindow slide at message 10 takes it all back — block eviction i
 Review: Kev + claude-fable-5.1, 2026-10-25 (night) — §3's second table re-read on the shipped head (the lazy tail copy):
 Lil's own peak 4.84 GB against its 5 GB cap, the headroom levers named; a single-turn kill-switch A/B (Lil ×3 ON vs OFF,
 paired, identical content, medians inside the pick's variance) clears the first-send path. Confidence 0.85.
+Review: Kev + claude-fable-5.1, 2026-10-26 — §2a status (block eviction shipped, one hit in three, the LCP lag named as the next
+lever) and §3's third table (block 1 vs 6, both brains, 30 messages, live window; the battery caveat on Big's block-1 clock).
