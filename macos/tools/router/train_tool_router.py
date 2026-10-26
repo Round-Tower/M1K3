@@ -31,6 +31,10 @@ read-only tools without thinking or a tool-call format. Confidence 0.7 (the floo
 precision is cross-validated on synthetic data; the live gain is the eval arm's to show).
 Review: Kev + claude-fable-5.1, 2026-10-09 — the generated floor comment says a floor above 1
 is unreachable by design (#512).
+Review: Kev + claude-opus-5.5, 2026-10-26 — a third head, the search head (#713, SearchRouterWeights),
+trains through its own entry point, train_search_head.py, which imports embed / normalise /
+recall_threshold from here: this script still rewrites the gate and the group head on every run
+(the 10-17 rule), so it must never be the way a search retrain ships. Confidence 0.85.
 """
 from __future__ import annotations
 

@@ -12,6 +12,8 @@
 //  fixture pins wait on trained weights). Prior: none (new file).
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — every web-read fixture asks for the web in words (`asksForTheWeb`),
 //  so no head can veto it; the #680 lines and world-knowledge fixtures carry no such words and stay the head's.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (2) — no fixture prompt is in tools/router/data/search_head_train.json
+//  (exact folded matches; near-copies and the rig lines are the python pin's). Confidence 0.85.
 //
 
 import Foundation
@@ -130,6 +132,31 @@ struct SearchRouterFixtureTests {
         let prompts = ChatEvalFixtures.worldKnowledge.map(\.prompt) + Self.issue680Lines
         let searched = prompts.filter { SearchRouter.decide(for: $0, embed: embedder.vector).verdict == .web }
         #expect(searched.isEmpty, "still searching: \(searched)")
+    }
+
+    /// The fixtures are the head's test set (#631): not one may train it. Exact folded matches here;
+    /// near-copies, the rig lines and the #680 lines are pinned by tools/router/test_train_search_head.py.
+    @Test("no fixture prompt is in the search head's training data")
+    func noFixturePromptIsInTheTrainingData() throws {
+        var root = URL(filePath: #filePath).deletingLastPathComponent()
+        while !FileManager.default.fileExists(atPath: root.appending(path: "Package.swift").path) {
+            root = root.deletingLastPathComponent()
+            try #require(root.path != "/", "no Package.swift above \(#filePath)")
+        }
+        let data = try Data(contentsOf: root.appending(path: "tools/router/data/search_head_train.json"))
+        let items = try #require(
+            (JSONSerialization.jsonObject(with: data) as? [String: Any])?["items"] as? [[String: Any]]
+        )
+        let trained = Set(items.compactMap { ($0["prompt"] as? String).map(Self.fold) })
+        #expect(trained.count > 400)
+        let leaked = ChatEvalFixtures.all.filter { trained.contains(Self.fold($0.prompt)) }
+        #expect(leaked.isEmpty, "fixtures in the training data: \(leaked.map(\.id))")
+    }
+
+    /// Lowercased words, apostrophes dropped: train_search_head.fold's reading, accented letters kept.
+    static func fold(_ text: String) -> String {
+        text.lowercased().replacingOccurrences(of: "'", with: "").replacingOccurrences(of: "’", with: "")
+            .split { !$0.isLetter && !$0.isNumber }.joined(separator: " ")
     }
 
     @Test("most open chat and humour stays local", .enabled(if: SearchRouter.Head.shipping.isTrained))
