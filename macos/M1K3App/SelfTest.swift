@@ -36,6 +36,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the MLX embed smoke names the
 //  fingerprint (ci_post_xcodebuild greps `✓ MLX embed (`);
 //  KEYEVAL's floor lines come from EmbedderFloors.forFingerprint of the candidate.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (#696) — dispatches EnergyProbeStage (M1K3_SELFTEST_ENERGY=1: the
+//  RUSAGE_INFO_V6 read inside the sandboxed app plus one Lil generation's CPU joules beside the ledger's
+//  estimate; M1K3_SELFTEST_ENERGY_MODEL overrides the model); no other change. Confidence 0.8.
 
 import Foundation
 import M1K3Chat
@@ -521,6 +524,14 @@ enum SelfTest {
         //     reuse, prefill and peak RSS. See ChatCurveStage.swift.
         if ChatCurveStage.isRequested {
             await ChatCurveStage.run(emit: emit)
+        }
+
+        // 8h. Optional energy probe (M1K3_SELFTEST_ENERGY=1, #696): the process's
+        //     RUSAGE_INFO_V6 counter read inside the sandboxed app, then one Lil
+        //     generation's CPU joules beside the energy ledger's estimate for the
+        //     same tokens. See EnergyProbeStage.swift.
+        if EnergyProbeStage.isRequested {
+            await EnergyProbeStage.run(emit: emit)
         }
 
         emit("=== END SELF-TEST ===")

@@ -131,6 +131,9 @@
 //  Review: same day (Kev's steer) — the launch M1K3 Voice restore waits for an MLX brain to settle (capped 90 s), so
 //  Kokoro's graph compile no longer lands on the brain load. Voice asked for in that window gets the system voice.
 //  Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (#696) — `energyLedger` beside `reviewLedger`; the generation-metrics
+//  sink also prices each MLX generation at `selectedBrain`'s rate (the brain serving when the report lands; a report
+//  racing a swap is billed to the new tier). Mini never reports. Verify-by-launch owed. Confidence 0.8.
 
 import AppKit
 import Foundation
@@ -700,6 +703,15 @@ final class AppEnvironment {
     let reviewLedger = ReviewPromptLedger(
         storage: UserDefaults.standard,
         version: ReviewPromptLedger.marketingVersion(),
+        suppressed: { ScreengrabHarness.current.isActive }
+    )
+
+    /// The on-device energy ledger (#696): each MLX generation priced at its
+    /// tier's rate into a daily rollup of numbers, dates and tier enums, never
+    /// text. Fed by the metrics sink; under the screengrab harness it records
+    /// nothing. Nothing shows it yet (the footer and the pulse are Phase 3).
+    let energyLedger = EnergyLedger(
+        storage: UserDefaults.standard,
         suppressed: { ScreengrabHarness.current.isActive }
     )
 
@@ -2398,9 +2410,14 @@ extension AppEnvironment {
     /// Route the MLX backend's per-turn stats onto the streaming assistant message
     /// (the in-app testing readout). Always records — it's a cheap struct stamp; the
     /// message view decides whether to render it, gated by the Settings toggle.
+    /// The same report feeds the energy ledger, priced at the brain serving now.
     private func installGenerationMetricsSink() {
         GenerationMetricsReporter.install { [weak self] metrics in
-            Task { @MainActor in self?.chat.recordMetrics(metrics) }
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                chat.recordMetrics(metrics)
+                energyLedger.record(metrics: metrics, tier: selectedBrain)
+            }
         }
     }
 
