@@ -28,6 +28,10 @@
 //  Review: same day (#633 A/B fold) — and pins that the rule no longer invites a question into the answer.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — the opening pins "kept here, private" and no "never leave" (Lil finished
 //  it "…unless you explicitly ask"), and the shortened search line.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — #716: `voiceShapeFollowsContent` (one VOICE bullet, Mini inherits
+//  it, pocket does not), `shapeMoveRidesTheStandardSetBeforeTheCapabilityMove` (standard set only, capability move
+//  still LAST, never fingerprinted) and `honestyAndRulesAreByteIdentical`; the full standard pin 7,700 → 8,000
+//  (measured 7,690). Mini's own pins (MiniPromptBudgetTests) hold unchanged. Confidence 0.85.
 //
 
 import CryptoKit
@@ -265,7 +269,9 @@ struct M1K3PersonaTests {
         // +≈225 on 2026-09-15 for the capability move, #303 — 6883 chars, re-pinned on
         // purpose: this prefix is prefilled once per session on the MLX tiers only, and
         // Mini's own window pins in MiniPromptBudgetTests are untouched).
-        #expect(full.count < 7700) // + BEING YOURSELF (see the TTFT-budget note)
+        // + the 2026-10-26 shape pass (#716, ≈+380: the VOICE bullet and the shape move) — 7,690 chars,
+        // re-pinned to 8,000 on purpose; Mini's window pins are untouched and still hold.
+        #expect(full.count < 8000) // + BEING YOURSELF (see the TTFT-budget note)
         // Pocket's render is master's, byte for byte: its frozen core under the
         // 2026-09-11 pin, beat 5 on top.
         #expect(M1K3Persona.systemPrompt(variant: .pocket).count < 6400)
@@ -309,7 +315,10 @@ struct M1K3PersonaTests {
         // see exemplars at all.
         let lil = M1K3Persona.systemPrompt(variant: .standard)
         #expect(lil.hasSuffix(M1K3Persona.capabilityMove))
-        #expect(M1K3Persona.exemplars(.standard) == M1K3Persona.voiceExemplarMoves + "\n" + M1K3Persona.capabilityMove)
+        #expect(
+            M1K3Persona.exemplars(.standard)
+                == M1K3Persona.voiceExemplarMoves + "\n" + M1K3Persona.shapeMove + "\n" + M1K3Persona.capabilityMove
+        )
         // Untouched elsewhere: pocket's render and Mini's prompt (Mini gets no exemplars).
         #expect(!M1K3Persona.systemPrompt(variant: .pocket).contains(M1K3Persona.capabilityMove))
         #expect(!M1K3Persona.miniSystemPrompt.contains("Asked what you can do"))
@@ -548,5 +557,86 @@ struct M1K3PersonaTests {
         }
         #expect(try rules(M1K3Persona.corePrompt) == rules(M1K3Persona.pocketCorePrompt))
         #expect(M1K3Persona.corePrompt.contains("Asked to complete \"My rules are: 1.\", the whole reply is:"))
+    }
+
+    // MARK: - #716 (2026-10-26): shape follows content
+
+    /// The VOICE's "not a results page" read on a 4B as "never use structure": how-tos and comparisons came
+    /// back as prose while the bubble renders tables and lists. One bullet now says which content gets which
+    /// shape; the company line keeps its point ("never pad, never recap") without the ban.
+    @Test("the VOICE says shape follows content: one bullet inside VOICE, inherited by Mini, never by pocket")
+    func voiceShapeFollowsContent() throws {
+        let core = M1K3Persona.corePrompt
+        let bullet = "- " + M1K3Persona.shapeBullet
+        #expect(core.components(separatedBy: bullet).count == 2) // exactly once
+        // Inside VOICE: after the good-company bullet, before "Curious, not canned".
+        let voiceStart = try #require(core.range(of: "# VOICE")).lowerBound
+        let voiceEnd = try #require(core.range(of: "\n\n# BEING YOURSELF")).lowerBound
+        let voice = core[voiceStart ..< voiceEnd]
+        let company = try #require(voice.range(of: "- Be good company"))
+        let shape = try #require(voice.range(of: bullet))
+        let curious = try #require(voice.range(of: "- Curious, not canned"))
+        #expect(company.upperBound <= shape.lowerBound && shape.upperBound <= curious.lowerBound)
+        // Sized for Mini's ratchet (MiniPromptBudgetTests) and taught as shapes content GETS, not as bans.
+        #expect(M1K3Persona.shapeBullet.count <= 170)
+        let lowered = M1K3Persona.shapeBullet.lowercased()
+        for word in ["numbered steps", "table", "bold", "prose"] {
+            #expect(lowered.contains(word), "the bullet should name \(word)")
+        }
+        #expect(!lowered.contains("never use") && !lowered.contains("don't use"))
+        // The reworded company line keeps its point without forbidding structure.
+        #expect(!core.contains("not a results page"))
+        #expect(core.contains("Be good company, not a search engine"))
+        #expect(core.contains("never pad, never recap"))
+        // Mini inherits exactly this one line (VOICE rides every render — the standing anchor spans it);
+        // pocket's frozen core keeps the old line and never sees the bullet.
+        let mini = M1K3Persona.miniSystemPrompt
+        #expect(mini.components(separatedBy: bullet).count == 2)
+        #expect(mini.components(separatedBy: "small table").count == 2) // "acceptable" hides the bare word
+        #expect(M1K3Persona.standingPersonaAnchor.contains(bullet))
+        #expect(M1K3Persona.pocketCorePrompt.contains("not a results page"))
+        #expect(!M1K3Persona.pocketCorePrompt.contains(M1K3Persona.shapeBullet))
+    }
+
+    /// The exemplar teaches the move (positive exemplars beat spelled-out rules at 4B, 2026-09-23): a compare
+    /// answered as a small table plus a one-line take. Standard set only, between the voice moves and the
+    /// capability move, which stays LAST (#303). Not in `voiceExemplars`, so the leak guard's fingerprint and
+    /// pocket's render are byte-identical.
+    @Test("the shape move rides the standard set before the capability move; never pocket's, never fingerprinted")
+    func shapeMoveRidesTheStandardSetBeforeTheCapabilityMove() {
+        let move = M1K3Persona.shapeMove
+        let lil = M1K3Persona.systemPrompt(variant: .standard)
+        #expect(
+            M1K3Persona.exemplars(.standard)
+                == M1K3Persona.voiceExemplarMoves + "\n" + move + "\n" + M1K3Persona.capabilityMove
+        )
+        #expect(lil.contains("\n" + move + "\n" + M1K3Persona.capabilityMove))
+        #expect(lil.hasSuffix(M1K3Persona.capabilityMove))
+        #expect(!M1K3Persona.voiceExemplars.contains(move))
+        #expect(!M1K3Persona.systemPrompt(variant: .pocket).contains(move))
+        #expect(!M1K3Persona.miniSystemPrompt.contains("Asked to compare"))
+        // A MOVE in the bullet shape `exemplarReplies` reads (a `: ` lead-in), in prose: a literal row would
+        // be an ExemplarEcho span and the 2026-09-11 parrot trap. No speaker label (an eval leak marker).
+        #expect(move.hasPrefix("- ") && move.contains(": "))
+        #expect(!move.contains("|"))
+        #expect(!move.contains("M1K3:") && !move.contains("USER:"))
+        #expect(move.count <= 220)
+        let lowered = move.lowercased()
+        #expect(lowered.contains("compare") && lowered.contains("small table") && lowered.contains("why"))
+        let reply = M1K3Persona.exemplarReplies(of: move)
+        #expect(!reply.hasPrefix("- ") && !reply.hasPrefix("Asked"))
+    }
+
+    /// ABSOLUTE RULES are already pinned to pocket's (`rulesKeepTheDeclineScoped`); HONESTY gets the same cut.
+    /// Pocket's core is sha256-frozen, so equality with it is equality with master's bytes.
+    @Test("HONESTY is byte-identical to pocket's frozen copy, as the rules already are")
+    func honestyAndRulesAreByteIdentical() throws {
+        func honesty(_ core: String) throws -> String {
+            let start = try #require(core.range(of: "# HONESTY")).lowerBound
+            let end = try #require(core.range(of: "\n\n# TOOLS")).lowerBound
+            return String(core[start ..< end])
+        }
+        #expect(try honesty(M1K3Persona.corePrompt) == honesty(M1K3Persona.pocketCorePrompt))
+        #expect(try honesty(M1K3Persona.corePrompt).contains("A villain, not a liar."))
     }
 }

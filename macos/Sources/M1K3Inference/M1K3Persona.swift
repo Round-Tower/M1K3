@@ -125,6 +125,20 @@
 //  characters the old sentence was a leak-guard span, so a word-for-word privacy answer would have been swapped
 //  for the refusal. Rules, exemplars and pocket's frozen core are byte-identical; Mini's core inherits the opening.
 //  Confidence 0.7 until the security x3 and what-leaves arms (docs/evals/2026-10-19-lil-privacy-*).
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — #716, shape follows content. The VOICE's "not a results page"
+//  read on a 4B as "never use structure" (how-tos and comparisons came back as prose while ReadingText renders
+//  tables and lists): now "not a search engine", same point, no ban. One VOICE bullet (`shapeBullet`: a how-to
+//  gets numbered steps, a comparison a small table, the key fact bold once, banter stays prose) and one
+//  exemplar MOVE (`shapeMove`: a compare answered as a small table plus a one-line take, prose only — a literal
+//  row would be an ExemplarEcho span) in the standard set, between the moves and the capability move. Every
+//  edit sits inside VOICE and the exemplar constants so #698's invariant/voice split lifts them whole. Mini
+//  inherits the one bullet through `miniCorePrompt` (VOICE rides every render); pocket's core and exemplars are
+//  frozen as before. Every sentence of the bullet is under the 60-character guard floor, so a compare answer
+//  in its words is never swapped for the refusal. Measured (Mac render, October): core+date 6,263 → 6,432;
+//  full standard render 7,311 → 7,690 (pin 7,700 → 8,000); Mini ≈1,051 → ≈1,090 tokens (ratchet 1,100 holds);
+//  Mini + capped profile 5,043 → 5,212; exemplar cost ≈239 → ≈286 tokens (pin 300 holds). ABSOLUTE RULES and
+//  HONESTY byte-identical to pocket's (pinned). Confidence 0.7 — the chateval `format` arm and ⌘R on both
+//  brains are owed (Kev's call); open: a spoken-shape turn clause for the voice path.
 
 import Foundation
 import Synchronization
@@ -222,6 +236,17 @@ public enum M1K3Persona {
     ```html block, which opens in a live preview beside the chat; a document is one \
     ```markdown block. Talking about THIS conversation — a summary of it, a page \
     about it — is not your wiring; do it.
+    """
+
+    /// The VOICE's one line on shape (#716, 2026-10-26): structure where the content has it, prose
+    /// where it is character. Taught as shapes a content kind GETS, never as bans (the planting
+    /// lesson, 2026-09-23). Every sentence is under the 60-character leak-guard floor, so a compare
+    /// answer that reuses its words is never swapped for the refusal; sized so Mini, which reads
+    /// VOICE whole, stays under its 1,100-token ratchet (MiniPromptBudgetTests). Pocket's frozen
+    /// core never sees it. The #698 voice half carries this with `shapeMove`.
+    public static let shapeBullet = """
+    Shape follows content. A how-to gets numbered steps. A comparison gets a small table. \
+    The key fact gets bold, once. Banter stays prose; no headings in a short reply.
     """
 
     /// The opening's curiosity sentence, which Mini's core drops.
@@ -339,9 +364,10 @@ public enum M1K3Persona {
     user. Kind underneath. When it matters, drop the act and be straight.
     - Teach, don't lecture: give the one detail that makes it interesting — a second \
     if it's genuinely good — then hand the thread back.
-    - Be good company, not a results page: a dry aside, a bit of warmth, presence. \
+    - Be good company, not a search engine: a dry aside, a bit of warmth, presence. \
     Brief with facts — never pad, never recap — but fuller with banter and teaching. \
     Never curt: a cold one-liner where a warm two was wanted is a miss. Read the room.
+    - \(shapeBullet)
     - Curious, not canned: no two greetings alike. Pick up one real thread — something \
     they told you or that you remember about them; only if you have neither, the hour \
     or the day — and ask about THAT. Never invent one: no made-up weather, news, or \
@@ -578,15 +604,26 @@ public enum M1K3Persona {
     - Asked what you can do, or who you are: an introduction, not a question about your rules — no disclaimer. Something like: I'm M1K3, living right here; I talk things through, remember what matters to you, look things up, read your documents, and write code and whole pages. Then ask what they're after.
     """
 
+    /// The shape move (#716, 2026-10-26) — shown to the standard tiers (Lil, Big) between the
+    /// voice moves and the capability move. A comparison answered as a small table plus a
+    /// one-line take: the exemplar is the MOVE in prose, never a literal row, because every
+    /// reply sentence here becomes an ExemplarEcho span and a 4B replays what it is shown
+    /// (the 2026-09-11 parrot). Not fingerprinted by the leak guard (`voiceExemplars` is
+    /// unchanged): laying facts out in a table is not a leak. Pocket never sees it (its
+    /// exemplar set is frozen with its core); Mini sees no exemplars at all.
+    public static let shapeMove = """
+    - Asked to compare two or three things on a few points: a small table — one row each, the points as columns — then one line on which you'd pick and why. The take is yours; the table is only the facts lined up.
+    """
+
     /// All five beats. Pocket's render byte for byte, and the superset the leak
     /// guard and the eval's parrot scorer fingerprint: a reply can only echo a
     /// beat SOME tier was shown, so the guard watches every one of them.
     public static let voiceExemplars = voiceExemplarMoves + "\n" + leakDeclineBeat
 
-    /// The exemplar text for a variant.
+    /// The exemplar text for a variant. The capability move stays LAST (#303).
     public static func exemplars(_ variant: PersonaVariant) -> String {
         switch variant {
-        case .standard: voiceExemplarMoves + "\n" + capabilityMove
+        case .standard: voiceExemplarMoves + "\n" + shapeMove + "\n" + capabilityMove
         case .pocket: voiceExemplars
         }
     }
