@@ -81,6 +81,9 @@
 //  Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-10-17 (pre-push review fold) — `skipCaptureOffTurns` also after a background
 //  answer, logs a failed write, and the distill task never moves the watermark backwards. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — #708: `exchange(for:)` is the one pairing rule (the user turn before
+//  an answer, the answer, the brain stamp), extracted from `recordFeedback`, which now pairs through it; the Mac's
+//  "Send this exchange" sheet reads the same value. No new persisted field. Confidence 0.85 (AnswerExchangeTests).
 
 import Foundation
 import M1K3Inference
@@ -993,30 +996,46 @@ public final class ChatSession {
         historyRevision += 1
     }
 
+    /// The one exchange an assistant answer belongs to: the user turn before it, the answer's
+    /// text, and the brain stamped on it (nil for a pre-trace turn). The single pairing rule —
+    /// `recordFeedback` and the "Send this exchange" sheet (#708) both read it. nil for an
+    /// unknown id or a user message.
+    public func exchange(for messageID: UUID) -> AnswerExchange? {
+        guard let index = messages.firstIndex(where: { $0.id == messageID }),
+              messages[index].role == .assistant
+        else { return nil }
+        let answer = messages[index]
+        let question = messages[..<index].last { $0.role == .user }?.text ?? ""
+        return AnswerExchange(
+            messageID: messageID,
+            conversationID: activeConversationID,
+            question: question,
+            answer: answer.text,
+            brain: answer.brain
+        )
+    }
+
     /// Record Kev's judgement on one assistant answer. Captures the paired
     /// question + the answer's tools/text at rate-time so the row is a
     /// self-contained curation datum, persists it (replacing any prior verdict
     /// on that answer), and updates the observable map so the thumb fills. The
-    /// resident `brain` is passed in (ChatMessage carries no per-turn brain).
+    /// resident `brain` is passed in as the fallback for an unstamped answer.
     /// Silently no-ops for an unknown id or a user message.
     public func recordFeedback(messageID: UUID, verdict: FeedbackVerdict, comment: String?, brain: String) {
-        guard let index = messages.firstIndex(where: { $0.id == messageID }),
-              messages[index].role == .assistant
-        else { return }
-        let answer = messages[index]
-        let question = messages[..<index].last { $0.role == .user }?.text ?? ""
+        guard let exchange = exchange(for: messageID) else { return }
+        let toolsUsed = messages.first { $0.id == messageID }?.toolsUsed ?? []
         let record = AnswerFeedback(
             messageID: messageID,
-            conversationID: activeConversationID,
+            conversationID: exchange.conversationID,
             verdict: verdict,
             comment: comment,
-            question: question,
-            answer: answer.text,
-            toolsUsed: answer.toolsUsed ?? [],
+            question: exchange.question,
+            answer: exchange.answer,
+            toolsUsed: toolsUsed,
             // The brain STAMPED on the answer wins — it's who actually rendered
             // it; the caller's current selection is only the fallback for a
             // pre-traceability turn that carries no stamp.
-            brain: answer.brain ?? brain,
+            brain: exchange.brain ?? brain,
             createdAt: Date()
         )
         feedbackVerdicts[messageID] = verdict
