@@ -140,8 +140,10 @@ whole answer's cost.** A same-build receipt with token counts settles how much o
   not conversation" (`docs/HEARTBEAT_DESIGN.md`). Under the screengrab harness it records nothing.
 - **It counts generations, not turns.** A tool turn reports two or three times. The per-turn sum an
   answer footer needs is Phase 3, at the responder's turn boundary.
-- **Never recorded**: Mini (it does not report), Private Cloud and Brain at Home (they do not run
-  through MLX's reporter), and anything off this Mac.
+- **Never recorded**: Mini (it does not report), Private Cloud (it runs off this Mac), and the
+  iPhone and iPad shells (they install no sink). Brain at Home is recorded on the Mac that serves
+  it: a paired device's turn runs on this Mac's MLX and reports here, which is right, because the
+  energy is this Mac's.
 - **Known under-counts**: the fixed per-answer work above. Also a checkpoint-mode tool send
   reports a one-token prefill. Its real prefill is on the reuse line's `extend` figure, so those
   sends are under-billed.
@@ -190,4 +192,7 @@ an answer, not a token.
      rate is a derivation from two earlier runs; its cross-check is run 1's own receipt JSON, fitted
      here. Open: the in-app read (EnergyProbeStage, needs the MLX slot) and every tier's same-build
      receipt (needs sudo). Prior: none (new file; builds on POWER_RECEIPT.md, Kev + claude-fable-5.1,
-     2026-09-15). -->
+     2026-09-15).
+     Review: Kev + claude-opus-5.5, 2026-10-26 — Brain at Home moved out of "never recorded": a paired
+     device's turn runs through this Mac's raw route, which reports to the sink, so the serving Mac
+     records it (read off MLXBrainProvider and BrainServeController). Confidence 0.85. -->
