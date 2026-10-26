@@ -288,7 +288,7 @@ Review: Kev + claude-opus-5-5, 2026-10-17 — Xcode Cloud builds only `release*`
 the compute hours ran out on per-merge archives. Confidence 0.85.
 Review: Kev + claude-opus-5.5, 2026-10-21 — the same line names the local route (`release-local.sh`,
 `upload-local.zsh`, `testflight.py notes`): 537–539 each shipped from hand-typed scratch scripts. Confidence 0.8.
--->
 Review: Kev + claude-fable-5.1, 2026-10-26 — two carry-forwards from the perf stream (#690, #691): "wire like the app"
 now includes the responder's injected closures (the chat-curve ran `Budget.default` until 2d6a197d) and how to count tail
 hits; and an appended test can land in a trailing helper type past the suite's closing brace.
+-->
