@@ -95,9 +95,9 @@
 //  at the persona: Lil 2–3 s, Big 6–12 s a message). Confidence 0.7: the arithmetic and the store are pinned;
 //  `seed=conversation` + `tail checkpoint adopted` on message 3+ of a chat-curve is the acceptance instrument.
 //  Review: Kev + claude-fable-5.1, 2026-10-26 — the caller-marked stable prefix (`ToolTurnOptions.stablePrefix`): the
-//  first send renders the transcript cut at the marker as well and hands both renders to `tailCut`, so the tail is cut
-//  at the replay's end on the first render after a window shift (`stableTranscript` is the pure cut; the log line says
-//  which render won). The second render costs a template pass and a tokenise, milliseconds beside the prefill.
+//  first send renders the transcript cut at the marker as well and hands both renders to `tailCut`, so the tail is
+//  cut at the replay's end on the first render after a window shift (`stableTranscript` is the pure cut; the log line
+//  says which render won). The second render costs a template pass and a tokenise, milliseconds beside the prefill.
 
 import Foundation
 import M1K3Inference
@@ -1092,11 +1092,15 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                let cut = Self.stableTranscript(self.transcript.full, prefix: stablePrefix)
             {
                 let stableRender = MLXToolMapping.templateInputs(
-                    chat: cut.map { MLXToolMapping.chatMessage(from: $0, format: format, imagesAllowed: imagesAllowed) },
+                    chat: cut.map {
+                        MLXToolMapping.chatMessage(from: $0, format: format, imagesAllowed: imagesAllowed)
+                    },
                     specs: self.specs, format: format
                 )
                 let stablePrepared = try await context.processor.prepare(
-                    input: UserInput(chat: stableRender.chat, tools: stableRender.specs, additionalContext: thinkingContext)
+                    input: UserInput(
+                        chat: stableRender.chat, tools: stableRender.specs, additionalContext: thinkingContext
+                    )
                 )
                 stableIDs = stablePrepared.text.tokens.asArray(Int.self)
             }
@@ -1406,7 +1410,9 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
                 let bytes = work.flatMap { $0.innerState() }.reduce(0) { $0 + $1.nbytes }
                 let outcome = adoptCheckpoint({ work.map { $0.copy() } }, Array(fullIDs[..<cut]), state, bytes)
                 let viaStable = stableIDs.map { SystemBlockBoundary.commonPrefixLength($0, fullIDs) == cut } ?? false
-                logTailCheckpoint(outcome, tokens: cut, bytes: bytes, cut: viaStable ? "stable prefix" : "previous render")
+                logTailCheckpoint(
+                    outcome, tokens: cut, bytes: bytes, cut: viaStable ? "stable prefix" : "previous render"
+                )
                 resume = cut
             }
             if to > resume {

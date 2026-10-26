@@ -40,8 +40,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — doc comment only: ModelEvalReport.strippingThink (retired) → ThinkStripper.strip. Confidence 0.9.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — comment only: the ReAct floor's image drop was reachable
 //  (Brain at Home); AgentRAGResponder declines such a turn upstream now.
-//  Review: Kev + claude-fable-5.1, 2026-10-26 — `run(stableContextChars:)` threads the responder's stable-prefix count
-//  (its context line + replay) to the native loop, which turns it into the tool session's `stablePrefix` marker.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — `run(stableContextChars:)` threads the responder's stable-prefix
+//  count (its context line + replay) to the native loop, which turns it into the tool session's `stablePrefix`
+//  marker.
 
 import Foundation
 import M1K3Inference

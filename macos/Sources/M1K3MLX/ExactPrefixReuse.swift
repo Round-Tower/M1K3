@@ -37,8 +37,9 @@
 //  of consecutive first renders (the 10-25 chat-curves showed every message re-prefilling the whole conversation,
 //  reuse flat at the persona: Lil 2–3 s, Big 6–12 s a message). The ledger is `plan` over [persona, tail, rolling].
 //  Confidence 0.8 on the arithmetic; what the cut buys per message is the chat-curve's to show.
-//  Review: Kev + claude-fable-5.1, 2026-10-26 — `tailCut(stable:)`: the cut also reads the caller-marked stable render
-//  (the transcript cut at `ToolTurnStablePrefix`), so a window shift no longer costs the lag turn. Longer valid cut wins.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — `tailCut(stable:)`: the cut also reads the caller-marked stable
+//  render (the transcript cut at `ToolTurnStablePrefix`), so a window shift no longer costs the lag turn. Longer
+//  valid cut wins.
 
 import Foundation
 

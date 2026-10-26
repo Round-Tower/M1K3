@@ -210,8 +210,9 @@
 //  away (`onConclusionToken` dropped it, `synthesiseOverEvidence` was always true) and decoded again. The `use`
 //  arm keeps an answer-shaped conclusion and synthesises only after a preamble; paired chateval decides whether
 //  any tier's default moves. Confidence 0.8 (pinned both ways; the live gain is the eval's to show).
-//  Review: Kev + claude-fable-5.1, 2026-10-26 — `groundingWithStablePrefix`: the native turn also hands the agent where its
-//  grounding stops being stable (context line + replay), the tool session's cross-turn tail cut (the LCP cut lagged a turn).
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — `groundingWithStablePrefix`: the native turn also hands the agent
+//  where its grounding stops being stable (context line + replay), the tool session's cross-turn tail cut (the LCP
+//  cut lagged a turn).
 
 import Foundation
 import M1K3Agent

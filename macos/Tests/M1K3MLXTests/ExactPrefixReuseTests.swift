@@ -16,7 +16,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-25 — `tailCut` (the cross-turn tail's cut point, strictly inside this
 //  send's prefill) and the three-candidate ledger order: rolling over tail over persona, a diverged tail falls back.
 //  Review: Kev + claude-fable-5.1, 2026-10-26 — `tailCut(stable:)` and `stableTranscript`: the caller-marked stable
-//  render cuts on the first render after a window shift; the longer valid cut wins; a bad marker is nil, never a crash.
+//  render cuts on the first render after a window shift; the longer valid cut wins; a bad marker is nil, never a
+//  crash.
 //
 
 import Foundation
@@ -144,7 +145,9 @@ struct ExactPrefixReuseTests {
             previous: [1, 2, 3, 4, 5, 6, 7, 8, 0], stable: [1, 2, 3, 4, 5, 0], full: full, from: 3, to: 9
         ) == 8)
         // A stable render outside the prefill (at or before the candidate, or the whole render) falls back.
-        #expect(ExactPrefixReuse.tailCut(previous: [1, 2, 3, 4, 5, 0], stable: [1, 2, 0], full: full, from: 3, to: 9) == 5)
+        #expect(ExactPrefixReuse.tailCut(
+            previous: [1, 2, 3, 4, 5, 0], stable: [1, 2, 0], full: full, from: 3, to: 9
+        ) == 5)
         #expect(ExactPrefixReuse.tailCut(previous: nil, stable: full, full: full, from: 3, to: 9) == nil)
         #expect(ExactPrefixReuse.tailCut(previous: nil, stable: [], full: full, from: 3, to: 9) == nil)
     }

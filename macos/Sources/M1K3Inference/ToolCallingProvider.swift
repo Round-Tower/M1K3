@@ -39,9 +39,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#418), Confidence 0.85 — `ToolTurn.rejectedToolCalls`:
 //  a turn whose calls were all rejected before running is its own case, so the loop can steer instead of
 //  taking the failed call as the final answer. Transcript and session record it as an assistant turn.
-//  Review: Kev + claude-fable-5.1, 2026-10-26 — `ToolTurnOptions.stablePrefix` (`ToolTurnStablePrefix`): the caller marks
-//  where the opening render stops being stable across turns, so the MLX session can cut its cross-turn tail on the first
-//  render after a window shift (the LCP cut lagged a turn: one hit in three on #690's curves). Default nil; AFM ignores it.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — `ToolTurnOptions.stablePrefix` (`ToolTurnStablePrefix`): the caller
+//  marks where the opening render stops being stable across turns, so the MLX session can cut its cross-turn tail on
+//  the first render after a window shift (the LCP cut lagged a turn: one hit in three on #690's curves). Default nil;
+//  AFM ignores it.
 
 import Foundation
 import Synchronization
