@@ -93,6 +93,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — `EvalObservation.turnNotes` and the `mechanic` checks (#697): the
 //  note count the scenario expects, no number in a note, no fan, battery, charger, chip or temperature word in
 //  one. Only the mechanic kind reads notes, so every other kind scores as before. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #697 pre-push review fold: the hardware list now enforces what the line
+//  above claims. Chip, silicon, temperature, thermal and a spelled-out percent joined it, with the plural forms
+//  cpus, gpus and chargers. Every entry is exercised by a table test. Confidence 0.9.
 
 import Foundation
 import M1K3Inference
@@ -958,11 +961,12 @@ public enum ChatEvalScorer {
     }
 
     /// Words a Cool Head note may never use (#697): nothing behind it reads a fan (fanless Airs have
-    /// none), a battery or charger (Low Power Mode exists on desktops), a chip's load, memory or a
-    /// temperature. Whole words, so "fantastic" is no fan.
+    /// none), a battery or charger (Low Power Mode exists on desktops), a chip's load, memory, a
+    /// temperature or a percentage. Whole words, so "fantastic" is no fan.
     static let hardwareClaimWords = [
-        "fan", "fans", "battery", "batteries", "charge", "charged", "charger", "charging", "plugged", "unplugged",
-        "cpu", "gpu", "memory", "ram", "degree", "degrees", "celsius", "fahrenheit",
+        "fan", "fans", "battery", "batteries", "charge", "charged", "charger", "chargers", "charging", "plugged",
+        "unplugged", "cpu", "cpus", "gpu", "gpus", "chip", "chips", "silicon", "memory", "ram", "degree", "degrees",
+        "celsius", "fahrenheit", "temperature", "thermal", "percent",
     ]
 
     /// The `mechanic` kind's checks on the turn's notes: as many as the scenario expects (one when

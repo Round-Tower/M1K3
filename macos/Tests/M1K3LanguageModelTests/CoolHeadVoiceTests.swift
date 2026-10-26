@@ -10,6 +10,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.85 (pure; the copy is Kev's to hear
 //  before it ships). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #697 pre-push review fold: the forbidden stems match the scorer's
+//  claim (chip, silicon, temperature, thermal, percent joined them). Confidence 0.9.
 //
 
 import Foundation
@@ -95,9 +97,12 @@ struct CoolHeadVoiceTests {
     // MARK: - the lines
 
     /// Words a line may never use: nothing here reads a fan (fanless Airs have none), a battery
-    /// (Low Power Mode exists on desktops), a charger or a chip's load. Matched as substrings, so
-    /// "fans" and "charging" are caught by their stems.
-    private static let forbiddenStems = ["fan", "batter", "charg", "plugged", "cpu", "gpu", "memory", "degree"]
+    /// (Low Power Mode exists on desktops), a charger, a chip's load, a temperature or a percentage.
+    /// Matched as substrings, so "fans" and "charging" are caught by their stems.
+    private static let forbiddenStems = [
+        "fan", "batter", "charg", "plugged", "cpu", "gpu", "chip", "silicon", "memory", "degree", "temperature",
+        "thermal", "percent",
+    ]
 
     @Test(
         "every line is honest: no number, no percent, no fan, battery, charger or chip",

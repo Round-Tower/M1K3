@@ -139,6 +139,11 @@
 //  in a dive was priced at Lil's rate, and an audition at the stock model's. The sink now hands the ledger the metrics
 //  alone, and the ledger bills by `metrics.modelID` (the model that ran). Pinned by a source scan in
 //  EnergyLedgerTests. Verify-by-launch still owed. Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (#697) — the interactive chat responder, and only it, passes
+//  `turnNoteProvider`, which takes Cool Head's one line for the send from `coolHeadNote`. The ask, MCP, menu-bar and
+//  deep-dive responders come from the same factory and pass none, or they would eat the chat turn's line. `send`
+//  folds Cool Head before the chat turn starts. Both pinned by CoolHeadNoteCallSiteTests. Confidence 0.8
+//  (verify-by-launch owed: `-coolHeadForce heat` in a Debug build).
 
 import AppKit
 import Foundation

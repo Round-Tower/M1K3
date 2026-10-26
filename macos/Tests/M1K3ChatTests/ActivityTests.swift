@@ -10,6 +10,8 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-06-09, Confidence 0.85, Prior: Unknown
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — #697: `.note` labels as its own line. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #697 pre-push review fold: a late `.note` hop is a straggler like
+//  any other, so it cannot caption a settled answer. Confidence 0.9.
 
 import Foundation
 @testable import M1K3Chat
@@ -261,6 +263,28 @@ struct ToolTraceTests {
         #expect(assistant?.status == .complete)
         #expect(assistant?.toolsUsed == ["web_search"])
         #expect(assistant?.activityLabel == nil)
+    }
+
+    @Test("a late note hop cannot caption a settled answer")
+    func lateNoteHopIsDropped() async throws {
+        // Cool Head's line (#697) rides the same unstructured hop. One landing after the turn
+        // settles must not write a caption onto an answer already complete and persisted.
+        let responder = CallbackCapturingResponder()
+        let session = ChatSession(responder: responder)
+        await session.send("hi")
+        for _ in 0 ..< 200 where session.messages.last?.toolsUsed == nil {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        #expect(session.messages.last?.status == .complete)
+
+        responder.capturedActivity?(.note("This machine's running warm, so I'll do less legwork on this one."))
+        // The hop is a main-actor Task; one enqueued behind it runs after it.
+        await Task { @MainActor in }.value
+        try await Task.sleep(for: .milliseconds(50))
+        let assistant = session.messages.last
+        #expect(assistant?.turnNote == nil)
+        #expect(assistant?.activityLabel == nil)
+        #expect(assistant?.status == .complete)
     }
 
     @Test("the tool trace persists in the transcript, absent key decodes nil")

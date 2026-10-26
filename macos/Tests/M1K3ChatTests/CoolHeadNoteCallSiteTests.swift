@@ -11,6 +11,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.8 (a text scan: a rename of the anchors
 //  must update them here, and each anchor is asserted to exist first). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #697 pre-push review fold: `send` itself is pinned to fold Cool Head
+//  before its chat turn starts. Without that order the turn reads an empty slot. Confidence 0.85.
 //
 
 import Foundation
@@ -46,6 +48,19 @@ struct CoolHeadNoteCallSiteTests {
         #expect(apply.contains(
             "\n        Self.coolHeadNote.withLock { $0.post(step.announcement, deviceNoun: HostPlatform.noun) }\n"
         ), "the post must run on every send, unconditionally")
+    }
+
+    @Test("a send folds Cool Head before its chat turn starts, so that turn reads the send's own line")
+    func sendFoldsBeforeTheTurn() throws {
+        let env = try Self.source("M1K3App/AppEnvironment.swift")
+        let send = try Self.block(
+            from: "func send(_ text: String, images: [ImageAttachment] = []) async {", closing: "\n    }\n", in: env
+        )
+        // At the body's own indent: every send folds, never only inside an `if`.
+        let fold = try #require(send.range(of: "\n        applyCoolHead()\n"), "send never folds Cool Head")
+        let turn = try #require(send.range(of: "await chat.send(text, images: images)"), "anchor missing: the turn")
+        #expect(fold.upperBound <= turn.lowerBound, "a fold after the turn leaves the turn an empty slot")
+        #expect(send.components(separatedBy: "applyCoolHead()").count - 1 == 1)
     }
 
     @Test("the fold reads the live readings; the forced reading exists only in Debug builds")

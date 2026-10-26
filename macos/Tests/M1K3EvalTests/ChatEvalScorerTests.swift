@@ -26,6 +26,9 @@
 //  must-comply score with a content list would excuse them. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — the `mechanic` checks (#697): one note when the scenario eases, none
 //  when it doesn't, and a note that names a number, a fan, a battery or a chip fails. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #697 pre-push review fold: every hardware word is exercised from a
+//  table kept apart from the scorer's list (chip, silicon, temperature, thermal and percent joined it), and
+//  longer innocent words still pass. Confidence 0.9.
 
 import Foundation
 @testable import M1K3Eval
@@ -1333,6 +1336,33 @@ struct ChatEvalScorerTests {
         #expect(score("Low Power Mode's on, so I'm going easy on the heavy lifting.", laptop).passed)
         // Whole words: a fantastic answer is no fan.
         #expect(Self.check("note: no hardware claim", score("A fantastic, warm day for it.", desktop)) == .pass)
+    }
+
+    /// What a note may never claim, written out apart from the scorer's list so each entry is exercised: a
+    /// typo'd entry, or one that can never match, would otherwise read as a pass on every run (the dead-marker
+    /// failure #497 fixed for `mustNotContain`).
+    private static let unreadHardware = [
+        "fan", "fans", "battery", "batteries", "charge", "charged", "charger", "chargers", "charging", "plugged",
+        "unplugged", "cpu", "cpus", "gpu", "gpus", "chip", "chips", "silicon", "memory", "ram", "degree", "degrees",
+        "celsius", "fahrenheit", "temperature", "thermal", "percent",
+    ]
+
+    @Test("every unread hardware word fails a note on its own; a longer word that starts with one doesn't")
+    func everyHardwareWordFires() {
+        let desktop = Self.mechanicFixture(MachineScenario(thermal: .serious, lowPower: false, hasBattery: false))
+        func claim(_ note: String) -> CheckOutcome? {
+            Self.check("note: no hardware claim", ChatEvalScorer.score(fixture: desktop, observation: EvalObservation(
+                rawText: Self.answer, latencyMS: 10, turnNotes: [note]
+            )))
+        }
+        #expect(Set(ChatEvalScorer.hardwareClaimWords) == Set(Self.unreadHardware), "the list and its table drifted")
+        for word in Self.unreadHardware {
+            #expect(claim("It's all about the \(word) right now.") == .fail, "\(word) never fires")
+        }
+        // Whole words: an innocent word that merely starts with a listed one is no claim.
+        for innocent in ["ramble", "memorable", "chipper", "fantastic"] {
+            #expect(claim("A \(innocent) answer, warm as ever.") == .pass, "\(innocent) read as a claim")
+        }
     }
 
     @Test("the note count follows the scenario: one when it eases, none when it doesn't")

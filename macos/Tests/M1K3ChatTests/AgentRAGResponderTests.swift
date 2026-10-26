@@ -35,6 +35,9 @@
 //  prefix), moved into the suite after the bot pass found the append had landed inside the trailing helper class.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — #697: `turnNoteProvider` is read once per turn, its line
 //  rides `.note` before `.retrieving`, never a prompt byte; a deferred turn never reads it. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #697 pre-push review fold: the other two gates are pinned too (an
+//  unavailable brain and a declined image turn leave the line unread), and an empty line emits no note.
+//  Confidence 0.9.
 
 import Foundation
 import M1K3Agent
@@ -2014,6 +2017,68 @@ struct AgentRAGResponderTests {
         #expect(await collect(stream) == AgentRAGResponder.coolHeadDeferralMessage)
         #expect(calls.withLock { $0 } == 0)
         #expect(recorder.activities.isEmpty)
+    }
+
+    @Test("an unavailable brain never reads the note: the turn that throws leaves the line unread")
+    func unavailableTurnDoesNotConsultTheNote() async throws {
+        let (store, embedder) = try await ingestedStore()
+        let calls = Mutex(0)
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: UnavailableProvider(),
+            toolsProvider: { [] },
+            turnNoteProvider: {
+                calls.withLock { $0 += 1 }
+                return "This machine's running warm, so I'm going easy on the heavy lifting."
+            }
+        )
+        let recorder = ActivityRecorder()
+        await #expect(throws: InferenceError.self) {
+            _ = try await responder.answerStreaming(
+                "What hydraulic seal failed?", history: [], onActivity: { recorder.record($0) }
+            )
+        }
+        #expect(calls.withLock { $0 } == 0)
+        #expect(recorder.activities.isEmpty)
+    }
+
+    @Test("a declined image turn never reads the note: its whole answer is the decline")
+    func declinedImageTurnDoesNotConsultTheNote() async throws {
+        let (store, embedder) = try await ingestedStore()
+        let provider = AgentScriptedProvider(["CONCLUSION: should never run."])
+        let calls = Mutex(0)
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider,
+            toolsProvider: { [] },
+            turnNoteProvider: {
+                calls.withLock { $0 += 1 }
+                return "This machine's running warm, so I'm going easy on the heavy lifting."
+            }
+        )
+        let recorder = ActivityRecorder()
+        let (_, stream) = try await responder.answerStreaming(
+            "what's in this?", images: [Self.fox], history: [], onActivity: { recorder.record($0) }
+        )
+        #expect(await collect(stream) == AgentRAGResponder.imageNotCarriedReply(imageCount: 1, brainName: ""))
+        #expect(calls.withLock { $0 } == 0)
+        #expect(recorder.activities.isEmpty)
+    }
+
+    @Test("an empty line is no line: the turn emits no note")
+    func emptyTurnNoteIsNotEmitted() async throws {
+        let (store, embedder) = try await ingestedStore()
+        let provider = AgentScriptedProvider(["CONCLUSION: The seal failed. [Plant Notes §3.2 Seals]"])
+        let responder = AgentRAGResponder(
+            store: store, embedder: embedder, provider: provider,
+            toolsProvider: { [] },
+            turnNoteProvider: { "" }
+        )
+        let recorder = ActivityRecorder()
+        let (_, stream) = try await responder.answerStreaming(
+            "What hydraulic seal failed on the conveyor under load?", history: [], onActivity: { recorder.record($0) }
+        )
+        #expect(await collect(stream).contains("The seal failed."))
+        #expect(!recorder.activities.contains { if case .note = $0 { true } else { false } })
+        #expect(recorder.activities.first == .retrieving)
     }
 }
 
