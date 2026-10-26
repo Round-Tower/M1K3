@@ -42,6 +42,9 @@
 //  document chunk is a plain turn over it (grounded-long: the manual's torque lost to lookup_fact 6/6 on Lil and
 //  Big). Web reads and chains untouched. Confidence 0.75 (pinned; paired run on Lil/Big: torque 0/6 → 6/6,
 //  the cross arm 17/18, its one miss Lil's own wrong river; Mini unmeasured).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `searchCorrected` (#713): when the search head reads a turn as local,
+//  every web read leaves the pick; a local link still runs, nothing left is a plain turn. It never adds a web read.
+//  Confidence 0.8 (pinned; the head ships untrained and flagged off until its teacher pass and paired arm).
 
 import Foundation
 import M1K3Agent
@@ -277,6 +280,25 @@ public enum ToolDispatch {
     public static func documentCorrected(_ pick: ToolPick, documentsKept: Bool) -> ToolPick {
         guard documentsKept, pick.tool == "lookup_fact", pick.then.isEmpty else { return pick }
         return ToolPick(tool: ToolPick.noTool, query: pick.query)
+    }
+
+    /// The search head's veto (#713): a turn it reads as local loses every web read in the pick. On
+    /// 2026-10-25 voice mode on Big sent "tell me the history of Dublin" to web_search (#680): 30.8 s to
+    /// the first chunk for stable history, though the picker's own rules say history needs no tool. A
+    /// local link of a chain still runs ("the weather and my calendar" keeps the calendar), first in
+    /// line; a pick left with nothing is a plain turn, with the head's query kept. A web verdict, or a
+    /// pick that reads nothing from the web, is returned as is. It never adds a web read: a wrong web
+    /// pick is egress (ADR 0009), and the head only ever takes one away.
+    public static func searchCorrected(_ pick: ToolPick, staysLocal: Bool) -> ToolPick {
+        guard staysLocal, readsTheWeb(pick) else { return pick }
+        let kept = ([pick] + pick.then).filter { !webSourced.contains($0.tool) }
+        guard let head = kept.first else { return ToolPick(tool: ToolPick.noTool, query: pick.query) }
+        return ToolPick(tool: head.tool, query: head.query, then: Array(kept.dropFirst()))
+    }
+
+    /// Any link of the pick reads the web: the only picks the search head is asked about.
+    public static func readsTheWeb(_ pick: ToolPick) -> Bool {
+        ([pick] + pick.then).contains { webSourced.contains($0.tool) }
     }
 
     /// A web read on a question about what the user decided or said goes to their knowledge

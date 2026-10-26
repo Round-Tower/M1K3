@@ -20,6 +20,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — cancelled-chain pin (#512).
 //  Review: Kev + claude-opus-5-5, 2026-10-26 — `lookupOnTheUsersDocumentIsPlain`: a seeded manual turns a
 //  lookup_fact pick into a plain turn over its chunk; an empty store still looks it up.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `SearchVetoTurnTests` (#713): the search head's local verdict turns a
+//  web pick into a plain turn (no tool runs, grounding and history kept, the eval sees `search-veto`); a web verdict
+//  runs it; a local pick never asks the head. `run` gains `history:` and `staysLocal:`. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -111,12 +114,14 @@ private final class Activity: Sendable {
 private func run(
     _ provider: Scripted, tools: [any AgentTool], pick: ToolPick?, hasPicker: Bool = true,
     activity: Activity = Activity(), question: String = "what time is it?", ageClause: String? = nil,
-    egress: String? = nil, store: KnowledgeStore? = nil
+    egress: String? = nil, store: KnowledgeStore? = nil, history: [ChatTurn] = [],
+    staysLocal: (@Sendable (String) -> SearchRouter.Decision)? = nil
 ) async throws -> String {
     let route = PlainTurnRoute(
         decide: { _ in .init(verdict: .tools, probability: 0.9) },
         instructions: nil,
-        pick: hasPicker ? { @Sendable _, _ in pick } : nil
+        pick: hasPicker ? { @Sendable _, _ in pick } : nil,
+        staysLocal: staysLocal
     )
     let responder = try AgentRAGResponder(
         store: store ?? KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
@@ -125,7 +130,7 @@ private func run(
     )
     var text = ""
     let stream = try await responder.answerStreaming(
-        question, images: [], history: [],
+        question, images: [], history: history,
         onActivity: { event in activity.items.withLock { $0.append(event) } }
     ).stream
     for await piece in stream {
@@ -416,6 +421,95 @@ struct DispatchTurnTests {
         )
         #expect(text.hasPrefix("Here's the latest."))
         #expect(text.contains("Web sources:\n• https://example.com/apple"))
+    }
+}
+
+/// The search head's veto inside the dispatched turn (#713): "tell me the history of Dublin" went to web_search
+/// on 2026-10-25 (#680). A local verdict answers on the plain route; it never adds a web call.
+struct SearchVetoTurnTests {
+    private static let local: @Sendable (String) -> SearchRouter.Decision = { _ in
+        .init(verdict: .local, probability: 0.08)
+    }
+
+    @Test("a web pick on a turn the head reads as local runs no tool and answers in one plain generation")
+    func vetoedWebPickIsPlain() async throws {
+        let calls = Calls()
+        let provider = Scripted(["Dublin began as a Viking port on the Liffey."])
+        let activity = Activity()
+        let text = try await run(
+            provider, tools: [Recording(name: "web_search", output: "1. Dublin - Wikipedia", calls: calls)],
+            pick: ToolPick(tool: "web_search", query: "history of Dublin"), activity: activity,
+            question: "tell me the history of Dublin", staysLocal: Self.local
+        )
+        #expect(text == "Dublin began as a Viking port on the Liffey.")
+        #expect(calls.log.withLock { $0 }.isEmpty, "no search leaves the device")
+        #expect(provider.prompts.count == 1)
+        let prompt = try #require(provider.prompts.first)
+        #expect(prompt.contains(AgentRAGResponder.plainRules))
+        #expect(!prompt.contains("RETURNED JUST NOW"))
+        #expect(!activity.items.withLock { $0 }.contains { if case .usingTool = $0 { true } else { false } })
+    }
+
+    @Test("a web verdict lets the web pick run, once")
+    func webVerdictRuns() async throws {
+        let calls = Calls()
+        let provider = Scripted(["Cork won."])
+        _ = try await run(
+            provider, tools: [Recording(name: "web_search", output: "1. Cork win the final", calls: calls)],
+            pick: ToolPick(tool: "web_search", query: "hurling final"),
+            question: "Who won the All-Ireland hurling final this year?",
+            staysLocal: { _ in .init(verdict: .web, probability: 0.93) }
+        )
+        #expect(calls.log.withLock { $0 } == ["web_search(hurling final)"])
+        #expect(provider.prompts.first?.contains("WHAT web_search RETURNED JUST NOW") == true)
+    }
+
+    @Test("a pick that reads nothing from the web never asks the head")
+    func localPickNeverAsks() async throws {
+        let asked = Mutex(0)
+        let calls = Calls()
+        _ = try await run(
+            Scripted(["It's eight."]), tools: [Recording(name: "datetime", output: "20:00", calls: calls)],
+            pick: ToolPick(tool: "datetime", query: ""),
+            staysLocal: { _ in
+                asked.withLock { $0 += 1 }
+                return .init(verdict: .local, probability: 0)
+            }
+        )
+        #expect(asked.withLock { $0 } == 0)
+        #expect(calls.log.withLock { $0 } == ["datetime(what time is it?)"])
+    }
+
+    @Test("a veto keeps the turn's grounding and history, and the eval's recorder sees it")
+    func vetoKeepsGroundingAndHistory() async throws {
+        let store = try KnowledgeStore()
+        try await DocumentIngester(store: store, embedder: HashingEmbeddingService()).ingest(
+            title: "Trailer Service Manual",
+            pages: [DocumentPage(
+                pageNumber: 1,
+                text: "4 Hubs\nThe hub nuts on the trailer axle take 145 Nm of torque, tightened in a star pattern."
+            )]
+        )
+        let calls = Calls()
+        let provider = Scripted(["145 Nm."])
+        let recorder = PickStageRecorder()
+        _ = try await ToolRouterWiring.$pickRecorder.withValue(recorder) {
+            try await run(
+                provider, tools: [Recording(name: "web_search", output: "x", calls: calls)],
+                pick: ToolPick(tool: "web_search", query: "hub nut torque"),
+                question: "What torque do the hub nuts on the trailer axle take?", store: store,
+                history: [
+                    ChatTurn(role: .user, text: "I'm servicing the trailer."),
+                    ChatTurn(role: .assistant, text: "Good."),
+                ],
+                staysLocal: Self.local
+            )
+        }
+        #expect(calls.log.withLock { $0 }.isEmpty)
+        let prompt = try #require(provider.prompts.first)
+        #expect(prompt.contains("145 Nm"), "the kept chunk grounds the plain turn")
+        #expect(prompt.contains("I'm servicing the trailer."), "the history rides along")
+        #expect(recorder.stages == [.searchVeto])
     }
 }
 

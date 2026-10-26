@@ -61,7 +61,9 @@ struct SearchRouterTests {
         #expect(!untrained.isTrained)
         #expect(head.isTrained)
         #expect(SearchRouter.probability([], head: untrained) == nil)
-        let decision = SearchRouter.decide(for: "tell me the history of Dublin", embed: { _ in [1, 0, 0, 0] }, head: untrained)
+        let decision = SearchRouter.decide(
+            for: "tell me the history of Dublin", embed: { _ in [1, 0, 0, 0] }, head: untrained
+        )
         #expect(decision == SearchRouter.Decision(verdict: .web, probability: nil))
     }
 

@@ -64,7 +64,9 @@ public enum SearchRouter {
         }
 
         public static let shipping = Head(
-            threshold: SearchRouterWeights.threshold, bias: SearchRouterWeights.bias, weights: SearchRouterWeights.weights
+            threshold: SearchRouterWeights.threshold,
+            bias: SearchRouterWeights.bias,
+            weights: SearchRouterWeights.weights
         )
     }
 

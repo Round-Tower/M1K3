@@ -17,6 +17,9 @@
 //  dispatch, each to its own tool (real NLEmbedding).
 //  Review: Kev + claude-fable-5.1, 2026-10-25 — `pickerPrewarm` joins the flags-default-off pin (the prewarmed
 //  picker arm).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `toolSearchHead` (#713) joins the flags-default-off pins; the route
+//  carries the search head only with dispatch and the flag; gate and search head share the turn's one vector.
+//  Confidence 0.85.
 
 import Foundation
 @testable import M1K3Chat
@@ -296,16 +299,19 @@ struct ToolPickCascadeTests {
         #expect(!ToolRouterWiring.chainEnabled(defaults))
         #expect(!ToolRouterWiring.pickerPrewarmEnabled(defaults), "the prewarmed picker is an arm until its eval")
         #expect(!ToolRouterWiring.pickerPrewarmPrefixEnabled(defaults))
+        #expect(!ToolRouterWiring.searchHeadEnabled(defaults), "an arm until its teacher pass and eval")
         defaults.set(true, forKey: ToolRouterWiring.groupRouterKey)
         defaults.set(true, forKey: ToolRouterWiring.allTiersKey)
         defaults.set(true, forKey: ToolRouterWiring.chainKey)
         defaults.set(true, forKey: ToolRouterWiring.pickerPrewarmKey)
         defaults.set(true, forKey: ToolRouterWiring.pickerPrewarmPrefixKey)
+        defaults.set(true, forKey: ToolRouterWiring.searchHeadKey)
         #expect(ToolRouterWiring.groupRouterEnabled(defaults))
         #expect(ToolRouterWiring.allTiersEnabled(defaults))
         #expect(ToolRouterWiring.chainEnabled(defaults))
         #expect(ToolRouterWiring.pickerPrewarmEnabled(defaults))
         #expect(ToolRouterWiring.pickerPrewarmPrefixEnabled(defaults))
+        #expect(ToolRouterWiring.searchHeadEnabled(defaults))
     }
 
     @Test("a shell picks the unset default (the Mac: on, after the 10-10 arm); an explicit setting still wins")
@@ -316,12 +322,44 @@ struct ToolPickCascadeTests {
         #expect(ToolRouterWiring.groupRouterEnabled(defaults, whenUnset: true))
         #expect(ToolRouterWiring.allTiersEnabled(defaults, whenUnset: true))
         #expect(ToolRouterWiring.chainEnabled(defaults, whenUnset: true))
+        #expect(ToolRouterWiring.searchHeadEnabled(defaults, whenUnset: true))
         defaults.set(false, forKey: ToolRouterWiring.groupRouterKey)
         defaults.set(false, forKey: ToolRouterWiring.allTiersKey)
         defaults.set(false, forKey: ToolRouterWiring.chainKey)
+        defaults.set(false, forKey: ToolRouterWiring.searchHeadKey)
         #expect(!ToolRouterWiring.groupRouterEnabled(defaults, whenUnset: true))
         #expect(!ToolRouterWiring.allTiersEnabled(defaults, whenUnset: true))
         #expect(!ToolRouterWiring.chainEnabled(defaults, whenUnset: true))
+        #expect(!ToolRouterWiring.searchHeadEnabled(defaults, whenUnset: true))
+    }
+
+    @Test("the route carries the search head only with dispatch and the flag: there is no veto point without a pick")
+    func searchHeadRidesTheDispatchRoute() {
+        #expect(ToolRouterWiring.route(provider: OtherBrain(), enabled: true, dispatch: true, allTiers: true)?
+            .staysLocal == nil)
+        #expect(ToolRouterWiring.route(
+            provider: OtherBrain(), enabled: true, dispatch: true, allTiers: true, searchHead: true
+        )?.staysLocal != nil)
+        #expect(ToolRouterWiring.route(provider: OtherBrain(), enabled: true, allTiers: true, searchHead: true)?
+            .staysLocal == nil)
+    }
+
+    @Test("the gate and the search head read the turn's one vector: one embed per turn (#512)")
+    func searchHeadSharesTheTurnVector() throws {
+        let calls = Mutex<[String]>([])
+        let embedder = OneTurnEmbedder { text in
+            calls.withLock { $0.append(text) }
+            return [Double](repeating: 0.1, count: 512)
+        }
+        let route = try #require(ToolRouterWiring.compose(
+            provider: OtherBrain(), enabled: true, dispatch: true, allTiers: true, searchHead: true, embedder: embedder
+        ))
+        _ = route.decide("tell me the history of Dublin")
+        _ = route.staysLocal?("tell me the history of Dublin")
+        #expect(calls.withLock { $0 } == ["tell me the history of Dublin"])
+        _ = route.decide("what about Cork?")
+        _ = route.staysLocal?("what about Cork?")
+        #expect(calls.withLock { $0 } == ["tell me the history of Dublin", "what about Cork?"])
     }
 }
 

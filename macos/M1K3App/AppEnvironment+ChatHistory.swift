@@ -44,6 +44,8 @@
 //  budget-forcing arm (`-thinkBudgetTokens`) closes the thought; nil (the responder's 4,000) otherwise. Confidence 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — that stand-aside moves into the responder, which asks the brain each
 //  turn (`ThinkBudgetForcing`, forwarded by RuntimeInferenceProvider): the shell passes no budget now, like iOS.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — the route reads `toolSearchHead` (#713) with `whenUnset: false`: off
+//  as shipped, `M1K3 -toolSearchHead YES` turns the search head's veto on for the A/B. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -556,7 +558,8 @@ extension AppEnvironment {
             // the read-only tool(s). Every tier, the head and chains are ON on the Mac since the
             // 2026-10-10 router arm (Lil 38/48 → 48/48 at half the latency, Big 3× faster, Mini's
             // head 0.6 s faster; docs/adr/0009); an explicit setting still wins. iOS keeps them
-            // off until a phone smoke (AppCore). Read per turn.
+            // off until a phone smoke (AppCore). Read per turn. The search head (#713) is OFF until
+            // its teacher pass and paired arm: `-toolSearchHead YES` is the A/B switch.
             plainRouteProvider: {
                 ToolRouterWiring.route(
                     provider: provider,
@@ -564,7 +567,8 @@ extension AppEnvironment {
                     dispatch: ToolRouterWiring.dispatchEnabled(),
                     groupRouter: ToolRouterWiring.groupRouterEnabled(whenUnset: true),
                     allTiers: ToolRouterWiring.allTiersEnabled(whenUnset: true),
-                    chain: ToolRouterWiring.chainEnabled(whenUnset: true)
+                    chain: ToolRouterWiring.chainEnabled(whenUnset: true),
+                    searchHead: ToolRouterWiring.searchHeadEnabled(whenUnset: false)
                 )
             },
             excludedKinds: excludedKinds
