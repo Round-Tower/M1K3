@@ -431,7 +431,8 @@ struct HistoryBudgetPolicyTests {
         // The argument domain may hand a numeric value over as a number; a huge or negative one is clamped.
         #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": NSNumber(value: 8)]) == 8)
         #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": NSNumber(value: 0)]) == 1)
-        #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": "9223372036854775807"]) == 64)
+        let huge = ["historyEvictionBlock": "9223372036854775807"]
+        #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: huge) == 64)
         #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": "-3"]) == 1)
         let off = HistoryBudgetPolicy.budget(
             for: .lil, reservedTokens: 1000, generationTokens: 1000, evictionBlockTurns: 1

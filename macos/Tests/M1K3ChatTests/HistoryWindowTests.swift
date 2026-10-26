@@ -345,7 +345,8 @@ struct HistoryWindowTests {
         // A block wider than the ceiling clamps to it (and an absurd argv value can't overflow the snap).
         let eight = HistoryWindow.Budget(totalChars: 8000, perTurnChars: 1500, maxTurns: 1, evictionBlockTurns: 8)
         #expect(eight.evictionBlockTurns == 1)
-        #expect(HistoryWindow.Budget(totalChars: 1, perTurnChars: 1, maxTurns: 16, evictionBlockTurns: .max).evictionBlockTurns == 16)
+        let huge = HistoryWindow.Budget(totalChars: 1, perTurnChars: 1, maxTurns: 16, evictionBlockTurns: .max)
+        #expect(huge.evictionBlockTurns == 16)
     }
 
     @Test("never more than the sliding window keeps, and always its newest suffix (Big's hard bound rides on this)")
@@ -359,7 +360,9 @@ struct HistoryWindowTests {
             )
         }
         for block in [5, 6, 7] {
-            let blocked = HistoryWindow.Budget(totalChars: 3000, perTurnChars: 800, maxTurns: 12, evictionBlockTurns: block)
+            let blocked = HistoryWindow.Budget(
+                totalChars: 3000, perTurnChars: 800, maxTurns: 12, evictionBlockTurns: block
+            )
             let plain = HistoryWindow.Budget(totalChars: 3000, perTurnChars: 800, maxTurns: 12)
             for n in 1 ... 40 {
                 let some = Array(turns.prefix(n))
@@ -369,7 +372,8 @@ struct HistoryWindowTests {
                 #expect(Array(b) == Array(p.suffix(b.count)), "block \(block) n=\(n): not a newest-suffix")
                 // The snap drops at most `block` (block − 1 plus the orphan) and never past half; or it is skipped.
                 #expect(b.count >= max(p.count - block, (p.count + 1) / 2), "block \(block) n=\(n): dropped too much")
-                #expect(b.first?.hasPrefix("USER: ") == true || b.count == p.count, "block \(block) n=\(n): orphaned opener")
+                let opensOnUser = b.first?.hasPrefix("USER: ") == true
+                #expect(opensOnUser || b.count == p.count, "block \(block) n=\(n): orphaned opener")
             }
         }
     }
