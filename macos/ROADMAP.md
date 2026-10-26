@@ -10,7 +10,7 @@ The macOS 27 wave's release plan (1.0 → 1.1 → 1.2) lived in
 Last swept: 2026-10-26 — **1.2.1 is the current release** (tag
 `release-1.2.1-20261023-e4ce9115`, local build 540 via `release-local.sh`; What's New
 and promo text in 12 locales, #668). 1.2.0 was tagged 10-21 (#657), 1.1.1 on 10-20
-(#649); Mac 1.0.0 went live 2026-10-11 on build 453. iPhone & iPad App Store links
+(#649), 1.1.0 on 10-19; Mac 1.0.0 went live 2026-10-11 on build 453. iPhone & iPad App Store links
 went into the README, site, `llms.txt` and `install.txt` on 10-22 (#663). ⚠️ This
 sweep could not read `itunes.apple.com/lookup?id=6780230835` (blocked from the
 session), so which build each storefront serves is unverified: read the lookup
@@ -33,7 +33,7 @@ this sweep.
   peaks unchanged (Lil 4.73 GB, Big 9.19 GB). Curves in `docs/evals/2026-10-26-chatcurve-*`.
 - **Next:** plain-route tail (phase 2, `runSeededPlainTurn`); a recall probe past a block
   boundary; #621 warm reorder; kvBits / prefillStep / clearCache A/Bs. Branches in flight:
-  `perf/grounding-budget-arm`, `perf/inference-instrument` (pushed).
+  `perf/grounding-budget-arm`, `perf/inference-instrument` (local; no branch on origin).
 
 ### Voice
 
@@ -57,7 +57,7 @@ this sweep.
   `release-local.sh` ships when the hours are spent (#660).
 - Review gates: delta re-review after an approval (#686), the claims check on paths and
   flags named in a diff (#685, `ci/claims-check`), `pr_watch` verdict fixes (#688, #689).
-- Open: #692 (root CLAUDE.md, docs-only), `ci/delta-review`, `ci/claims-check`.
+- Open: #692 (root CLAUDE.md, docs-only). The claims check and delta re-review landed as #685 and #686.
 
 ### Next picks
 
@@ -99,7 +99,7 @@ the first Teams customer, the move from engineer to honest founder.
 
 ## Next — the releases
 
-### v1.1.0 — SHIPPED (tagged 2026-10-20 as 1.1.1, #649; `docs/GEMMA_1_1_PLAN.md`), What's New in #524
+### v1.1.0 — SHIPPED (tagged 2026-10-19, `release-1.1.0-20261019-29fbc135`; 1.1.1 followed 10-20, #649; `docs/GEMMA_1_1_PLAN.md`), What's New in #524
 
 Marketing version 1.1.0 on every surface (`VERSIONING.md`), bumped in #561 the day 1.0.0
 went live; Xcode Cloud mints the build. What rides in it, user-facing:
