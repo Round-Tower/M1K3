@@ -18,6 +18,9 @@
 //  default table (Lil at the doc's 0.060 / 0.434 J, bound to Lil's model id; Big and pocket unpriced); history
 //  re-priced by a new table; the shell wiring read off AppEnvironment.swift. Test rates are exact binary fractions,
 //  so a priced-on-read total equals the sum of the per-generation estimates bit for bit. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (CI fold) — repricedOnRead's expected joules are typed Double constants:
+//  CI's Swift 6.3 timed out type-checking `100 * 0.5 + 10 * 2` inside #expect (twice on bc5d22a1), Swift 6.4 did not.
+//  Same values, no logic change. Confidence 0.9.
 
 import Foundation
 @testable import M1K3Inference
@@ -242,14 +245,17 @@ struct EnergyLedgerTests {
         let storage = MemoryStorage()
         let first = ledger(storage: storage)
         first.record(metrics: metrics(prompt: 100, decode: 10, prefilled: 100))
-        #expect(first.priced(first.today).joules == 100 * 0.5 + 10 * 2)
+        // Typed constants: Swift 6.3 (CI's Xcode 26.6) cannot type-check Double and Int literals mixed inside #expect.
+        let derivedJoules: Double = 100 * 0.5 + 10 * 2
+        #expect(first.priced(first.today).joules == derivedJoules)
 
         let doubled = EnergyCoefficients.Rate(
             joulesPerPrefillToken: 1, joulesPerDecodeToken: 4, calibrated: true, modelID: "test-model",
             measuredOn: "a test"
         )
         let calibrated = ledger(storage: storage, rate: { _ in doubled })
-        #expect(calibrated.priced(calibrated.today).joules == 100 * 1 + 10 * 4)
+        let calibratedJoules: Double = 100 * 1 + 10 * 4
+        #expect(calibrated.priced(calibrated.today).joules == calibratedJoules)
 
         let unpriced = ledger(storage: storage, rate: { _ in nil })
         #expect(unpriced.priced(unpriced.today).joules == 0)
