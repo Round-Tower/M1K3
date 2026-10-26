@@ -319,7 +319,7 @@ public enum ToolDispatch {
     /// now-words (this year, latest, today, the weather, prices, scores, the news). Never vetoed, whatever a
     /// head reads: a sentence vector alone put "Fetch the web site m1k3.app…" at p=0.014 (a head on candidate
     /// labels, 2026-10-26). Accepted lookalikes stay searched, as before the head: "why is Napoleon still
-    /// important today?" (the `nowCues` note).
+    /// important today?" (the `nowCues` note), "the link between diet and heart disease".
     public static func asksForTheWeb(_ question: String) -> Bool {
         namesWebAddress(question) || ToolGroupRouter.mentions(question, any: webAskCues + ToolNeedRouter.nowCues)
     }

@@ -224,6 +224,8 @@
 //  untouched. Confidence 0.8 (pinned; flagged off, the head untrained until its teacher pass and paired arm).
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (2) — the head is asked only on a `ToolDispatch.vetoable` pick: an
 //  explicit web ask or a question about now never reaches it. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (3) — the veto's log names the web reads it dropped (a chain's web link
+//  can be its tail, where the head tool was named). Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -1001,8 +1003,11 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             let score = decision.probability.map { String(format: "%.3f", $0) } ?? "none"
             let vetoed = ToolDispatch.searchCorrected(pick, staysLocal: decision.verdict == .local)
             if vetoed != pick {
+                // Name the web reads that left, not the head: a chain's web link can be its tail.
+                let dropped = ([pick] + pick.then).map(\.tool).filter(ToolDispatch.webSourced.contains)
+                    .joined(separator: ",")
                 Self.log.notice(
-                    "search head: local p=\(score, privacy: .public) — \(pick.tool, privacy: .public) vetoed"
+                    "search head: local p=\(score, privacy: .public) — \(dropped, privacy: .public) vetoed"
                 )
                 ToolRouterWiring.pickRecorder?.record(.searchVeto)
                 pick = vetoed
