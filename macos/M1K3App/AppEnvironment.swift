@@ -1081,7 +1081,9 @@ final class AppEnvironment {
             ),
             contextSenses: .live,
             recentActivity: recentActivityHook,
-            ageBandProvider: Self.ageBandProvider
+            ageBandProvider: Self.ageBandProvider,
+            // Cool Head's line (#697): only this responder takes it (AppEnvironment+ChatHistory).
+            turnNoteProvider: { Self.coolHeadNote.withLock { $0.take() } }
         )
 
         // TTS seam: Built-in Apple voice wrapped in a swappable façade so the
