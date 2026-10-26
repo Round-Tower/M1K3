@@ -13,6 +13,8 @@
 //  must update the anchors here, and each anchor is asserted to exist first). Prior: none (new file).
 //  Review: same day (pre-push review fold) — the scans skip `//` lines, anchor the embedder's declaration and want
 //  `Self.embedder` in both per-fixture bodies.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — the `mechanic` arm (#697) wires like the app: the scenario runs
+//  through `CoolHeadPolicy.advance` into a `CoolHeadNoteSlot` the responder takes from, and `.note` is captured.
 //
 
 import Foundation
@@ -64,5 +66,25 @@ struct ChatEvalStageWiringTests {
         let prepare = try #require(body.range(of: ".prepare("), "no prepare in evalBrain")
         let fixtures = try #require(body.range(of: "evalProvider("), "anchor missing: evalProvider(")
         #expect(prepare.lowerBound < fixtures.lowerBound)
+    }
+
+    @Test("the mechanic arm takes the live path and folds its scenario through the app's own Cool Head step")
+    func mechanicWiresLikeTheApp() throws {
+        let text = try Self.code(Self.stageSource())
+        let live = try Self.body(of: "private static func livePathObservation(", in: text)
+        #expect(live.contains("CoolHeadPolicy.advance("), "the scenario must run the app's fold, not a copy of it")
+        #expect(live.contains("CoolHeadNoteSlot()"), "the note must come out of the app's slot")
+        #expect(live.contains("minRecoveryTurns: AppEnvironment.coolHeadMinRecoveryTurns"))
+        #expect(live.contains("deviceNoun: HostPlatform.noun"))
+        #expect(live.contains("turnNoteProvider: turnNote"))
+        #expect(live.contains("case let .note(line)"), "the turn's notes must be captured")
+        #expect(live.contains("turnNotes:"), "the captured notes must reach the observation")
+        #expect(
+            !live.contains("ProcessInfo.processInfo.thermalState"), "the eval Mac's own heat must never reach a fixture"
+        )
+        let run = try Self.body(of: "private static func runFixture(", in: text)
+        let arm = try #require(run.range(of: "case .mechanic:"), "no mechanic arm in runFixture")
+        let next = try #require(run[arm.upperBound...].range(of: "case "))
+        #expect(run[arm.upperBound ..< next.lowerBound].contains("livePathObservation("))
     }
 }

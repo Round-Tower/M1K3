@@ -105,6 +105,10 @@
 //  grounding budget through `-groundingBudget` (unset: 1,100, as before). The budget arm; verify-by-eval.
 //  A seeded turn gets the app's three corpus tools over its store in place of the search_knowledge stub,
 //  and its score names the tools it ran (a dispatched turn answers from the tool, not the grounding).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — the `mechanic` kind (#697) always takes the live path: the fixture's
+//  `MachineScenario` runs through the app's own `CoolHeadPolicy.advance` from a fresh state into a
+//  `CoolHeadNoteSlot`, the responder takes it as the app's chat responder does (`turnNoteProvider`), and the turn's
+//  `.note` activities are scored. Confidence 0.8 (the arm is owed: `--kinds mechanic --router dispatch`).
 //
 
 import Foundation
@@ -407,11 +411,26 @@ enum ChatEvalStage {
         }
         // The think-steer arm (2026-10-10): one rules clause on HOW to reason, nothing else.
         let steer = ThinkSteer(envValue: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_THINK_STEER"))
+        // The mechanic kind (#697): the scenario's readings through the app's own Cool Head fold, from a fresh
+        // state as a launch's first send has, into the slot the app's chat responder takes its line from. Never
+        // the eval Mac's own heat. At `.eased` the app caps the agent loop at 3, this path's own `maxIterations`.
+        var coolHeadSlot = CoolHeadNoteSlot()
+        if let machine = fixture.machine {
+            let step = CoolHeadPolicy.advance(
+                CoolHeadState(), thermal: machine.thermal, lowPower: machine.lowPower,
+                minRecoveryTurns: AppEnvironment.coolHeadMinRecoveryTurns
+            )
+            coolHeadSlot.post(step.announcement, deviceNoun: HostPlatform.noun)
+        }
+        let pendingNote = Mutex(coolHeadSlot)
+        let turnNote: (@Sendable () -> String?)? = fixture.machine == nil
+            ? nil : { pendingNote.withLock { $0.take() } }
         let responder = AgentRAGResponder(
             store: store, embedder: Self.embedder, provider: provider,
             toolsProvider: { palette }, maxIterations: 3,
             thinkingModeProvider: { Self.thinkingMode(thinking) },
             fastThinkingProvider: { thinking.liveFastByDefault },
+            turnNoteProvider: turnNote,
             groundingBudgetProvider: { Self.groundingBudget },
             // The Mac's clauses (#482, mirrors MiniLiveEvalTests): no declared age band, web
             // search on (the default), PCC offered (its switch on — the fuller clause, so the
@@ -428,6 +447,7 @@ enum ChatEvalStage {
         // The tools the turn ran and the stage that picked them (2026-10-10): the 10-09 arm could
         // see neither. The recorder is a task-local, so the turn runs inside its scope.
         let tools = EvalToolLog()
+        let notes = Mutex<[String]>([])
         let stages = PickStageRecorder()
         // The log window for this trial's generation figures (MetricLogReader): wall-clock, because
         // OSLogStore entries are dated; the latency itself stays on the monotonic clock.
@@ -435,7 +455,11 @@ enum ChatEvalStage {
         let (raw, thinkMS, firstChunkMS) = try await ToolRouterWiring.$pickRecorder.withValue(stages) {
             let (_, stream) = try await responder.answerStreaming(
                 fixture.prompt, images: images, history: [], onActivity: { activity in
-                    if case let .usingTool(name, _) = activity { tools.append(name) }
+                    switch activity {
+                    case let .usingTool(name, _): tools.append(name)
+                    case let .note(line): notes.withLock { $0.append(line) }
+                    case .retrieving, .thinking: break
+                    }
                 }
             )
             var raw = ""
@@ -467,7 +491,8 @@ enum ChatEvalStage {
             latencyMS: latencyMS,
             routeStages: stages.stages.map(\.rawValue),
             thinkMS: thinkMS,
-            generation: await generationFigures(since: startedAt, provider: provider, firstChunkMS: firstChunkMS)
+            generation: await generationFigures(since: startedAt, provider: provider, firstChunkMS: firstChunkMS),
+            turnNotes: notes.withLock { $0 }
         )
     }
 
@@ -492,11 +517,13 @@ enum ChatEvalStage {
         GroundingBudget.defaultTokenBudget, ceiling: GroundingBudgetPolicy.ceiling()
     )
 
-    /// Whether this run's fixtures can embed, read off `runFixture`'s routes: vision, grounded-Q and
-    /// grounded-long always do, tool-use only with a router mode, and every other kind only under LIVE_PATH.
+    /// Whether this run's fixtures can embed, read off `runFixture`'s routes: vision, grounded-Q,
+    /// grounded-long and mechanic always do, tool-use only with a router mode, and every other kind only
+    /// under LIVE_PATH.
     private static func runEmbeds(kinds: Set<TaskKind>?) -> Bool {
         guard let kinds else { return true }
-        if kinds.contains(.vision) || kinds.contains(.groundedQ) || kinds.contains(.groundedLong) { return true }
+        if kinds.contains(.vision) || kinds.contains(.groundedQ) || kinds.contains(.groundedLong)
+            || kinds.contains(.mechanic) { return true }
         if routerArmRequested, kinds.contains(.toolUse) { return true }
         return livePathRequested && !kinds.subtracting([.toolUse]).isEmpty
     }
@@ -864,6 +891,15 @@ enum ChatEvalStage {
                     name: "tools", outcome: .skip,
                     detail: observation.toolCalls.isEmpty ? "none" : observation.toolCalls.joined(separator: ", ")
                 ))
+            case .mechanic:
+                // Always the live path: Cool Head's line rides the responder's activity channel (#697).
+                let observation = try await livePathObservation(
+                    fixture, provider: provider, thinking: thinking, start: start, clock: clock
+                )
+                return ChatEvalScorer.score(
+                    fixture: fixture, observation: observation,
+                    latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
+                )
             case .toolUse where routerArmRequested:
                 let observation = try await livePathObservation(
                     fixture, provider: provider, thinking: thinking, start: start, clock: clock

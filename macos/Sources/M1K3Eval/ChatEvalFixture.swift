@@ -94,6 +94,9 @@
 //  aren't).
 //  Review: Kev + claude-opus-5-5, 2026-10-26, Confidence 0.75 — the `grounded-long` kind (six fixtures over
 //  six-section documents, `ChatEvalFixtures+GroundedLong.swift`), last in `all` so no earlier run order moves.
+//  Review: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.85 — the `mechanic` kind (#697 Phase 1): six fixtures
+//  whose send runs on a set `MachineScenario` (`ChatEvalFixtures+Mechanic.swift`), and the fixture's Optional
+//  `machine`; last in `all` so no earlier run order moves.
 
 import Foundation
 
@@ -205,6 +208,13 @@ public enum TaskKind: String, Sendable, CaseIterable, Equatable, Codable {
     /// decides what the brain reads (grounded-Q's one-line docs never reach it). The budget arm's
     /// kind: `-groundingBudget N` (2026-10-26, `ChatEvalFixtures+GroundedLong.swift`).
     case groundedLong = "grounded-long"
+    /// Cool Head's line (#697 Phase 1): each send runs on a set machine (`MachineScenario`: heat,
+    /// Low Power Mode, a battery or none), through the app's own Cool Head fold, and the turn's
+    /// `.note` activity is scored for honesty: one note when the send eases effort and none when
+    /// it doesn't, no number it never read, no fan, battery, charger or chip it can't see. The
+    /// answer beside it must still answer. Phase 1 measures the note on the activity channel, not
+    /// a spoken "how's the machine?" answer (Phase 2's tool).
+    case mechanic
 
     public var label: String {
         rawValue
@@ -307,6 +317,10 @@ public struct ChatEvalFixture: Sendable, Equatable, Identifiable {
     /// `Resources/VisionFixtures` — resolve with `VisionFixtureAssets.url(for:)`.
     /// Only `vision` fixtures carry any; empty everywhere else.
     public let images: [String]
+    /// The machine the turn's send runs on (the `mechanic` kind only; nil everywhere else, so
+    /// every other turn runs exactly as before): the readings Cool Head takes per send, set by
+    /// the fixture instead of read off the eval Mac.
+    public let machine: MachineScenario?
     public let expectation: EvalExpectation
 
     public init(
@@ -315,6 +329,7 @@ public struct ChatEvalFixture: Sendable, Equatable, Identifiable {
         prompt: String,
         seedDoc: String? = nil,
         images: [String] = [],
+        machine: MachineScenario? = nil,
         expectation: EvalExpectation
     ) {
         self.id = id
@@ -322,6 +337,7 @@ public struct ChatEvalFixture: Sendable, Equatable, Identifiable {
         self.prompt = prompt
         self.seedDoc = seedDoc
         self.images = images
+        self.machine = machine
         self.expectation = expectation
     }
 }
@@ -1553,7 +1569,7 @@ public enum ChatEvalFixtures {
 
     public static let all: [ChatEvalFixture] =
         openChat + groundedQ + reasoning + codeGen + toolUse + refusal + security + worldKnowledge
-            + humour + interview + instructionFollowing + document + sycophancy + vision + groundedLong
+            + humour + interview + instructionFollowing + document + sycophancy + vision + groundedLong + mechanic
 
     /// Fixtures for one kind (the report groups by these).
     public static func fixtures(for kind: TaskKind) -> [ChatEvalFixture] {

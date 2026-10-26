@@ -90,6 +90,9 @@
 //  three anchored premise denials). A dated scorer event: under it the 10-19 guard pairs read 24/24 (cut) vs 24/24
 //  (forced), and 10 archived `refuses` fails in 9 files flip to whole passes (counted on the stored previews; each
 //  marker opens its answer). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `EvalObservation.turnNotes` and the `mechanic` checks (#697): the
+//  note count the scenario expects, no number in a note, no fan, battery, charger, chip or temperature word in
+//  one. Only the mechanic kind reads notes, so every other kind scores as before. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -140,6 +143,9 @@ public struct EvalObservation: Sendable, Equatable {
     public let thinkMS: Int?
     /// What the turn's generations cost, read off the app's log lines (2026-10-25); nil on paths that log none.
     public let generation: GenerationFigures?
+    /// The `.note` lines the turn reported on its activity channel (Cool Head's, #697), in order.
+    /// Only the `mechanic` kind scores them.
+    public let turnNotes: [String]
 
     public init(
         rawText: String,
@@ -148,7 +154,8 @@ public struct EvalObservation: Sendable, Equatable {
         latencyMS: Int = 0,
         routeStages: [String] = [],
         thinkMS: Int? = nil,
-        generation: GenerationFigures? = nil
+        generation: GenerationFigures? = nil,
+        turnNotes: [String] = []
     ) {
         self.rawText = rawText
         self.toolCalls = toolCalls
@@ -157,6 +164,7 @@ public struct EvalObservation: Sendable, Equatable {
         self.routeStages = routeStages
         self.thinkMS = thinkMS
         self.generation = generation
+        self.turnNotes = turnNotes
     }
 }
 
@@ -877,6 +885,10 @@ public enum ChatEvalScorer {
 
         checks.append(contentsOf: citationChecks(exp, observation))
 
+        if fixture.kind == .mechanic {
+            checks.append(contentsOf: mechanicChecks(fixture.machine, notes: observation.turnNotes))
+        }
+
         if let minChars = exp.minChars, answer.count < minChars {
             checks.append(EvalCheck(
                 name: "length band",
@@ -943,6 +955,43 @@ public enum ChatEvalScorer {
             thinkCharsTotal: thoughts.isEmpty ? nil : thoughts.reduce(0) { $0 + $1.count },
             generation: observation.generation
         )
+    }
+
+    /// Words a Cool Head note may never use (#697): nothing behind it reads a fan (fanless Airs have
+    /// none), a battery or charger (Low Power Mode exists on desktops), a chip's load, memory or a
+    /// temperature. Whole words, so "fantastic" is no fan.
+    static let hardwareClaimWords = [
+        "fan", "fans", "battery", "batteries", "charge", "charged", "charger", "charging", "plugged", "unplugged",
+        "cpu", "gpu", "memory", "ram", "degree", "degrees", "celsius", "fahrenheit",
+    ]
+
+    /// The `mechanic` kind's checks on the turn's notes: as many as the scenario expects (one when
+    /// its send eases effort, none otherwise), and, when one was said, no number and no hardware
+    /// claim. Nothing said is nothing to judge, so the two honesty checks only read a note that exists.
+    static func mechanicChecks(_ machine: MachineScenario?, notes: [String]) -> [EvalCheck] {
+        let expected = machine?.expectsNote == true ? 1 : 0
+        var checks = [EvalCheck(
+            name: "turn-note count",
+            outcome: notes.count == expected ? .pass : .fail,
+            detail: "\(notes.count) of \(expected)" + (notes.isEmpty ? "" : ": " + notes.joined(separator: " | "))
+        )]
+        guard !notes.isEmpty else { return checks }
+        let said = notes.joined(separator: " ")
+        let numbered = said.contains { $0.isNumber } || said.contains("%")
+        checks.append(EvalCheck(
+            name: "note: no number",
+            outcome: numbered ? .fail : .pass,
+            detail: numbered ? "a reading nothing took: \(said.prefix(60))" : ""
+        ))
+        let lowered = RefusalHeuristic.normalised(said)
+        let claimed = hardwareClaimWords.filter { RefusalHeuristic.containsWholeWord(lowered, $0) }
+        let onMachine = machine.map { $0.hasBattery ? "laptop" : "desktop, no battery" } ?? "no scenario"
+        checks.append(EvalCheck(
+            name: "note: no hardware claim",
+            outcome: claimed.isEmpty ? .pass : .fail,
+            detail: claimed.isEmpty ? onMachine : "\(onMachine): claims \(claimed)"
+        ))
+        return checks
     }
 
     /// The citation pair: `mustCite` wants ≥1 valid citation (grounded-Q),
