@@ -9,11 +9,13 @@
 //
 //  What gets removed, and why:
 //  • Markdown markup (**bold**, *italic*, `code`, # headings, [label](url),
-//    bullet markers, thematic breaks) flattens to its spoken content — the
-//    chat pipeline stopped flattening when bubbles learned to RENDER markdown
-//    (2026-07-22 pass), so the speech lane owns its own flatten. Fenced code
-//    blocks pass through verbatim: mangling `*ptr` or a shell `# comment`
-//    would corrupt the karaoke caption (displayed text == spoken text).
+//    bullet markers, thematic breaks, GFM table rows) flattens to its spoken
+//    content — the chat pipeline stopped flattening when bubbles learned to
+//    RENDER markdown (2026-07-22 pass), so the speech lane owns its own
+//    flatten. A table's separator row is silent and each row speaks its cells
+//    as one sentence ("Tea, less."). Fenced code blocks pass through verbatim:
+//    mangling `*ptr` or a shell `# comment` would corrupt the karaoke caption
+//    (displayed text == spoken text).
 //  • The trailing "Web sources:" bullet block — URLs read aloud are noise.
 //  • Citation tokens `[Title §heading]` / `(Title §heading)` — visual
 //    affordances, not speech. Plain brackets without a § survive.
@@ -55,6 +57,13 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-15 (pre-push review fold) — `spokenSentence`: auto-speak's per-sentence
 //  lane skips a sentence that polishes to nothing instead of reading it raw (a streamed Source trailer's URLs).
 //  Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — #716: the persona answers a comparison with a table and the speech
+//  lane spoke it pipes and dashes and all; "- " bullets were read as a dash while "* " vanished. `flattenTables`
+//  (a separator row goes with its line break; a row that opens with a pipe speaks its cells as "a, b.") runs
+//  first inside the fence-aware flatten, and the bullet rule takes `-` and `+`. The Sources-block strip moves ahead
+//  of the flatten (it keys on those markers; the existing tests caught it) and takes a bold label itself. A pipe
+//  mid-prose or in a fence is untouched; a row without a leading pipe is the known gap (rare from the brains).
+//  Confidence 0.85 (every case pinned; the ", " cell separator is a taste call).
 //
 
 import Foundation
@@ -65,9 +74,11 @@ public enum SpeechTextPolish {
     public static func polish(_ text: String) -> String {
         var result = text
         result = stripFollowUpTrailer(result)
+        // Before the flatten (#716): the Sources block is recognised by its list
+        // markers, and the flatten now removes "- " ones too.
+        result = stripSourcesBlock(result)
         result = flattenMarkdownOutsideFences(result)
         result = stripWebSourcesBlock(result)
-        result = stripSourcesBlock(result)
         result = stripCitations(result)
         result = collapseURLs(result)
         result = stripEmojiOutsideFences(result)
@@ -245,7 +256,9 @@ public enum SpeechTextPolish {
     /// The rules, ported from MessageTextPolish's retired flattening pass and
     /// speech-tuned: links speak their label only; bullet markers vanish.
     private static func flattenMarkdown(_ text: String) -> String {
-        var output = text
+        // Tables first (#716): the separator row and the pipes are visual, so a
+        // row becomes a sentence BEFORE the emphasis passes see its cells.
+        var output = flattenTables(text)
         // Thematic breaks (*** / --- / ___ alone on a line) are document
         // structure, not speech — drop the line before the emphasis passes run
         // (a bare *** would otherwise be mis-read as an unterminated italic).
@@ -269,12 +282,61 @@ public enum SpeechTextPolish {
         output = output.replacing(/```([^`\n]+)```/) { String($0.1) }
         // `code` → code
         output = output.replacing(/`([^`\n]+)`/) { String($0.1) }
-        // Line-leading "* " bullet markers vanish — speech wants the item, not
-        // a spoken glyph.
-        output = output.replacing(/^\s{0,3}\*\s+/.anchorsMatchLineEndings()) { _ in "" }
+        // Line-leading "* ", "- " and "+ " bullet markers vanish — speech wants
+        // the item, not a spoken glyph. The marker needs its space: "-5 degrees"
+        // and "well-known" are not bullets.
+        output = output.replacing(/^\s{0,3}[*+-]\s+/.anchorsMatchLineEndings()) { _ in "" }
         // Heading markers vanish, the heading text stays.
         output = output.replacing(/^#{1,6}\s+/.anchorsMatchLineEndings()) { _ in "" }
         return output
+    }
+
+    /// GFM tables are visual: the separator row says nothing and a row's pipes
+    /// are unspeakable. A separator row (`|---|:--:|`, `--- | ---`) vanishes
+    /// with its line break, so the header row and the first body row read as
+    /// neighbours; a row that opens with a pipe speaks its cells as one sentence
+    /// ("Tea, less."). A pipe mid-prose ("A | B") is left alone, as is a row with
+    /// no leading pipe (valid GFM, rare from the brains — the known gap). Walks
+    /// lines by `\.isNewline` like `fencedCodeRanges`, so CRLF text keeps its
+    /// own line breaks.
+    private static func flattenTables(_ text: String) -> String {
+        var result = ""
+        var lineStart = text.startIndex
+        while lineStart < text.endIndex {
+            let newline = text[lineStart...].firstIndex(where: \.isNewline)
+            let contentEnd = newline ?? text.endIndex
+            let nextLine = newline.map { text.index(after: $0) } ?? text.endIndex
+            let trimmed = text[lineStart ..< contentEnd].trimmingCharacters(in: .whitespaces)
+            if isTableSeparator(trimmed) {
+                // Dropped, line break and all.
+            } else if trimmed.hasPrefix("|") {
+                result += spokenRow(trimmed)
+                result += text[contentEnd ..< nextLine]
+            } else {
+                result += text[lineStart ..< nextLine]
+            }
+            lineStart = nextLine
+        }
+        return result
+    }
+
+    /// Pipes, colons, dashes and blanks only, with at least one pipe and one dash:
+    /// `|---|`, `| :-- | --: |`, `--- | ---`. A bare `---` is a thematic break,
+    /// handled by its own rule.
+    private static func isTableSeparator(_ line: String) -> Bool {
+        line.contains("|") && line.contains("-") && line.allSatisfy { "|:- \t".contains($0) }
+    }
+
+    /// `| Tea | less |` → "Tea, less." — empty edge cells dropped; a cell that
+    /// already ends a sentence keeps its own full stop.
+    private static func spokenRow(_ line: String) -> String {
+        let cells = line.split(separator: "|")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+        guard !cells.isEmpty else { return "" }
+        let sentence = cells.joined(separator: ", ")
+        let ended = sentence.last.map { ".!?".contains($0) } ?? false
+        return ended ? sentence : sentence + "."
     }
 
     // MARK: - Rules
@@ -295,9 +357,13 @@ public enum SpeechTextPolish {
     /// an optional `\n`, every bullet or digit could open a new iteration, and
     /// a long run that wasn't the tail backtracked exponentially (the 2026-10-15
     /// review measured 3.5 s at 16 characters, on the main actor).
+    ///
+    /// Runs BEFORE the markdown flatten since #716 (the flatten strips the "- "
+    /// markers this scan keys on), so a bold `**Sources:**` label, which the
+    /// flatten used to unwrap first, is taken here as the follow-ups key is.
     private static func stripSourcesBlock(_ text: String) -> String {
         var result = text.replacing(
-            /(?i)(?:^|\n+)[ \t]*Sources?:[ \t]*(?:\[[^\n]*)?\n?(?:[ \t]*[•\-*\[\d][^\n]*(?:\n|$))*$/,
+            /(?i)(?:^|\n+)[ \t]*(?:\*\*)?Sources?:(?:\*\*)?[ \t]*(?:\[[^\n]*)?\n?(?:[ \t]*[•\-*\[\d][^\n]*(?:\n|$))*$/,
             with: ""
         )
         result = stripInlineSourceParens(result)
