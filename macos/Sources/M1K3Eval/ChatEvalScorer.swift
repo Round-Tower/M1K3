@@ -90,6 +90,8 @@
 //  three anchored premise denials). A dated scorer event: under it the 10-19 guard pairs read 24/24 (cut) vs 24/24
 //  (forced), and 10 archived `refuses` fails in 9 files flip to whole passes (counted on the stored previews; each
 //  marker opens its answer). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `avoids X` (#713): one check per `mustNotCallTools` entry, failing on a
+//  call and naming every call, so a chateval shows the #680 fixtures searching or not. Confidence 0.9.
 
 import Foundation
 import M1K3Inference
@@ -872,6 +874,15 @@ public enum ChatEvalScorer {
                 name: "calls \(tool)",
                 outcome: called ? .pass : .fail,
                 detail: called ? "" : "called \(actuallyCalled)"
+            ))
+        }
+        // #713: a tool the turn must not reach (stable knowledge answered from a web search, #680).
+        for tool in exp.mustNotCallTools {
+            let called = observation.toolCalls.contains(tool)
+            checks.append(EvalCheck(
+                name: "avoids \(tool)",
+                outcome: called ? .fail : .pass,
+                detail: called ? "called \(observation.toolCalls.joined(separator: ","))" : ""
             ))
         }
 

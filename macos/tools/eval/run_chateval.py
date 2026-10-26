@@ -98,6 +98,9 @@ Review: Kev + claude-opus-5.5, 2026-10-24 — `--router dispatch` wires like the
 (AppEnvironment+ChatHistory.swift, `whenUnset: true`), `--no-router-head` / `--no-router-chain` turn one off for an arm.
 The MoE Big audition ran a bare dispatch, failed every tool-chain fixture (gemma-12B 0/9 vs 9/9 wired like the app) and
 read `tool-web-newest` as a picker regression; wired like the app it passed 3/3. Confidence 0.85.
+Review: Kev + claude-opus-5.5, 2026-10-26 — `--router-search` (#713): the search head's veto on the dispatch route
+(M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH). Off unless asked, because the Mac app ships it off (`whenUnset: false`);
+refused without dispatch, like head and chain. Confidence 0.85.
 """
 
 from __future__ import annotations
@@ -259,6 +262,7 @@ class RunOptions:
     router: str | None = None  # "dispatch": the app's own tool route, every tier on (the router arm)
     router_head: bool | None = None  # the group head (toolGroupRouter); None → on under dispatch, like the Mac app
     router_chain: bool | None = None  # two-tool chains (toolChain); None → on under dispatch, like the Mac app
+    router_search: bool | None = None  # the search head's veto (toolSearchHead, #713); None → off, like the Mac app
 
 
 def route_warning(opts: RunOptions) -> str | None:
@@ -365,8 +369,9 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         raise ValueError(f"thinking {opts.thinking!r}: choose from {', '.join(THINKING_MODES)}")
     if opts.router is not None and opts.router not in ROUTER_MODES:
         raise ValueError(f"router {opts.router!r}: choose from {', '.join(ROUTER_MODES)}")
-    if (opts.router_head or opts.router_chain) and opts.router != "dispatch":  # an explicit off is fine anywhere
-        raise ValueError("router head/chain need --router dispatch (the app reads them only there)")
+    if (opts.router_head or opts.router_chain or opts.router_search) and opts.router != "dispatch":
+        # An explicit off is fine anywhere.
+        raise ValueError("router head/chain/search need --router dispatch (the app reads them only there)")
     report = out_path(container, opts.name)
     trig = {
         "M1K3_SELFTEST": "1",
@@ -399,6 +404,9 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
             trig["M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD"] = "1"
         if opts.router == "dispatch" and opts.router_chain is not False:
             trig["M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN"] = "1"
+        # The search head ships OFF (`whenUnset: false`): only an explicit --router-search turns it on.
+        if opts.router == "dispatch" and opts.router_search:
+            trig["M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH"] = "1"
     if powermode is not None:
         trig["M1K3_SELFTEST_POWERMODE"] = str(powermode)
     if commit:
@@ -828,6 +836,9 @@ def main(argv: list[str] | None = None) -> int:
                     help="with --router dispatch: the group head in front of the pick (default on, as the Mac app)")
     ap.add_argument("--router-chain", action=argparse.BooleanOptionalAction, default=None,
                     help="with --router dispatch: let a pick run two read-only tools (default on, as the Mac app)")
+    ap.add_argument("--router-search", action=argparse.BooleanOptionalAction, default=None,
+                    help="with --router dispatch: the search head vetoes a web read on a turn it reads as local "
+                         "(toolSearchHead, #713; default off, as the Mac app)")
     ap.add_argument("--notes", help="free-text provenance note")
     ap.add_argument("--dump-prompt", action="store_true", help="dump no-call turns' exact prompts")
     ap.add_argument("--app", default=LIVE_APP, help="the M1K3.app bundle to run (default: installed)")
@@ -863,6 +874,7 @@ def main(argv: list[str] | None = None) -> int:
         thinking=args.thinking, think_steer=args.think_steer, full_answers=args.full_answers,
         calculator=args.calculator,
         router=args.router, router_head=args.router_head, router_chain=args.router_chain,
+        router_search=args.router_search,
     )
     if args.app_arg and not args.direct:
         print("✗ --app-arg needs --direct (an `open -a` launch carries no argv)", file=sys.stderr)

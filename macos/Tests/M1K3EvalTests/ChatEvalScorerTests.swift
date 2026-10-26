@@ -24,6 +24,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — Lil's "I don't help…" declines and the self-query premise denials
 //  (#643's guard misses), one verbatim answer per marker, plus negatives asserted on `isRefusal` directly: a
 //  must-comply score with a content list would excuse them. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `mustNotCallTools` (#713): each avoided tool scores its own
+//  `avoids X`, failing on a call and naming what was called; an empty list adds no check. Confidence 0.9.
 
 @testable import M1K3Eval
 import Testing
@@ -1274,5 +1276,35 @@ struct ChatEvalScorerTests {
         #expect(RefusalHeuristic.codeInsideFences("a\n```\nx\n```\nb") == "")
         #expect(RefusalHeuristic.codeInsideFences("a\n```html\n<p>x</p>\n```\nb") == "<p>x</p>")
         #expect(RefusalHeuristic.codeInsideFences("```\nx\n```\n```js\ny\n```") == "y")
+    }
+
+    @Test("an avoided tool scores its own check: a call fails it, naming the calls; no call passes it")
+    func mustNotCallToolsScoresAvoids() {
+        let exp = EvalExpectation(mustContainAny: ["Viking"], mustNotCallTools: ["web_search", "lookup_fact"])
+        func run(_ calls: [String]) -> ChatEvalScore {
+            ChatEvalScorer.score(
+                fixture: fixture(.worldKnowledge, exp),
+                observation: EvalObservation(rawText: "Dublin was a Viking port.", toolCalls: calls)
+            )
+        }
+        let searched = run(["web_search"])
+        #expect(check(searched, "avoids web_search")?.outcome == .fail)
+        #expect(check(searched, "avoids web_search")?.detail.contains("web_search") == true)
+        #expect(check(searched, "avoids lookup_fact")?.outcome == .pass)
+        let answered = run([])
+        #expect(check(answered, "avoids web_search")?.outcome == .pass)
+        #expect(check(answered, "avoids lookup_fact")?.outcome == .pass)
+        #expect(answered.checks.filter { $0.name.hasPrefix("avoids") }.count == 2)
+        let local = run(["datetime"])
+        #expect(check(local, "avoids web_search")?.outcome == .pass)
+    }
+
+    @Test("an empty avoid list adds no check")
+    func noAvoidListNoCheck() {
+        let score = ChatEvalScorer.score(
+            fixture: fixture(.worldKnowledge, EvalExpectation(mustContainAny: ["Canberra"])),
+            observation: EvalObservation(rawText: "Canberra.", toolCalls: ["web_search"])
+        )
+        #expect(!score.checks.contains { $0.name.hasPrefix("avoids") })
     }
 }

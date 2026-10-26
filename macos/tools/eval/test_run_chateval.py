@@ -18,6 +18,8 @@ and run_direct's glue on a stand-in app that execs /bin/sleep (timeout → 6, Ct
 binary: the child is gone and the live app reopened every time).
 Review: Kev + claude-opus-5-5, 2026-10-19 — the relaunch retries once and says UNVERIFIED; a Ctrl-C in the cool-down
 reopens the live app (`quit_for_run`); an abbreviated flag is refused.
+Review: Kev + claude-opus-5.5, 2026-10-26 — `--router-search` (#713): off unless asked (the Mac ships the search head off),
+never without dispatch, and threaded from main to the trigger.
 """
 
 import json
@@ -563,6 +565,36 @@ def test_main_threads_no_router_head_and_chain_to_the_trigger(tmp_path, monkeypa
     assert rc.main([*base, "--no-router-head", "--router-chain"]) == 0
     chain_cell = capsys.readouterr().out
     assert head_key not in chain_cell and chain_key in chain_cell
+
+
+def test_router_search_is_off_unless_asked_even_under_dispatch():
+    # #713: the Mac app ships the search head off (`whenUnset: false`), so a bare dispatch run wires like it.
+    assert "M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH" not in _trig(router="dispatch")
+    assert "M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH" not in _trig(router="dispatch", router_search=False)
+    assert _trig(router="dispatch", router_search=True)["M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH"] == "1"
+
+
+def test_router_search_without_dispatch_is_refused():
+    # The app reads it only on the dispatch route: a silent no-op arm would read as "the head changes nothing".
+    for router in (None, "off", "1"):
+        with pytest.raises(ValueError):
+            _trig(router=router, router_search=True)
+    assert "M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH" not in _trig(router="off", router_search=False)
+
+
+def test_main_threads_router_search_to_the_trigger(tmp_path, monkeypatch, capsys):
+    app = tmp_path / "M1K3.app"
+    (app / "Contents").mkdir(parents=True)
+    with open(app / "Contents/Info.plist", "wb") as handle:
+        plistlib.dump({"CFBundleIdentifier": rc.BUNDLE_ID}, handle)
+    monkeypatch.setattr(rc, "sh", lambda *cmd: BATT_AC if cmd[-1] == "batt" else PMSET_G)
+    monkeypatch.setattr(rc, "running_instances", list)
+    base = ["--name", "x", "--brains", "big", "--app", str(app), "--dry-run", "--router", "dispatch"]
+    key = '"M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH"'
+    assert rc.main(base) == 0
+    assert key not in capsys.readouterr().out
+    assert rc.main([*base, "--router-search"]) == 0
+    assert f'{key}: "1"' in capsys.readouterr().out
 
 
 def test_unknown_router_mode_is_refused():

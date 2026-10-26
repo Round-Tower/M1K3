@@ -105,6 +105,9 @@
 //  grounding budget through `-groundingBudget` (unset: 1,100, as before). The budget arm; verify-by-eval.
 //  A seeded turn gets the app's three corpus tools over its store in place of the search_knowledge stub,
 //  and its score names the tools it ran (a dispatched turn answers from the tool, not the grounding).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `_ROUTER_SEARCH=1` puts the search head (#713, `toolSearchHead`) on the
+//  dispatch route, as `-toolSearchHead YES` does in the app; a veto shows as a `search-veto` route stage. Confidence
+//  0.8 (the arm runs in the eval stage; this file compiles only under xcodebuild).
 //
 
 import Foundation
@@ -373,7 +376,8 @@ enum ChatEvalStage {
         // dispatch on: a tool turn is picked (Apple's model) and run by the app, so a
         // Lil/Big cell measures `toolRouterAllTiers`. `_ROUTER_HEAD=1` puts the group
         // head in front of the pick (`toolGroupRouter`); `_ROUTER_CHAIN=1` lets a pick run
-        // two read-only tools (`toolChain`).
+        // two read-only tools (`toolChain`); `_ROUTER_SEARCH=1` lets the search head veto a web
+        // read on a turn it reads as local (`toolSearchHead`, #713).
         let stubs: [any AgentTool] = SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_TOOLS") == "none" ? [] : toolPalette
         // A seeded turn reads its document with the app's own corpus tools (the palette's three store
         // readers, AppEnvironment+ChatHistory): a dispatched search_knowledge answers from the tool's
@@ -396,10 +400,12 @@ enum ChatEvalStage {
             let route = PlainTurnRoute(decide: { ToolNeedRouter.decide(for: $0, embed: embedder.vector) }, instructions: nil)
             plainRoute = { route }
         case "dispatch":
+            let searchHead: Bool = SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH") == "1"
             let route = ToolRouterWiring.route(
                 provider: provider, enabled: true, dispatch: true,
                 groupRouter: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD") == "1", allTiers: true,
-                chain: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN") == "1"
+                chain: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN") == "1",
+                searchHead: searchHead
             )
             plainRoute = { route }
         default:

@@ -94,6 +94,10 @@
 //  aren't).
 //  Review: Kev + claude-opus-5-5, 2026-10-26, Confidence 0.75 — the `grounded-long` kind (six fixtures over
 //  six-section documents, `ChatEvalFixtures+GroundedLong.swift`), last in `all` so no earlier run order moves.
+//  Review: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.8 — `mustNotCallTools` and two #680 fixtures
+//  (`world-dublin-history`, `world-cork-history`, #713): stable history voice mode web-searched on 2026-10-25; each
+//  avoids the three web reads, so a chateval shows whether the search head flips them to no-search. World-knowledge
+//  cells grow from 8 to 10 fixtures and don't compare across this change.
 
 import Foundation
 
@@ -237,6 +241,10 @@ public struct EvalExpectation: Sendable, Equatable {
     /// stops after the first fails the second check instead of banking a pass. Order is
     /// not pinned — the two reads are independent.
     public let alsoCallTools: [String]
+    /// Tools the brain must NOT invoke (#713): stable knowledge answered from a web search costs a tool
+    /// round and seconds of wait (#680, "tell me the history of Dublin"). Each scores its own
+    /// "avoids X" check, so a run shows which turns still searched.
+    public let mustNotCallTools: [String]
     /// The answer must carry at least one citation that validates against the
     /// retrieved corpus (grounded-Q fixtures).
     public let mustCite: Bool
@@ -269,6 +277,7 @@ public struct EvalExpectation: Sendable, Equatable {
         mustComply: Bool = false,
         mustCallTool: String? = nil,
         alsoCallTools: [String] = [],
+        mustNotCallTools: [String] = [],
         mustCite: Bool = false,
         mustNotCite: Bool = false,
         minChars: Int? = nil,
@@ -287,6 +296,7 @@ public struct EvalExpectation: Sendable, Equatable {
         self.mustComply = mustComply
         self.mustCallTool = mustCallTool
         self.alsoCallTools = alsoCallTools
+        self.mustNotCallTools = mustNotCallTools
         self.mustCite = mustCite
         self.mustNotCite = mustNotCite
         self.minChars = minChars
@@ -1267,7 +1277,30 @@ public enum ChatEvalFixtures {
             prompt: "Who wrote the play Waiting for Godot?",
             expectation: .init(mustContainAny: ["Beckett"], mustComply: true, minChars: 1, maxChars: 800)
         ),
+        // #680 (2026-10-25, voice, Big): both were web-searched, 30.8 s and 12.7 s to the first chunk, for
+        // history any brain here knows. The search head (#713) is gated on these turning to no-search. Cork's
+        // line is standalone: the live turn was a follow-up ("what about Cork?") the fixture can't replay.
+        // Never in the search head's training data (the fixtures are its test set).
+        .init(
+            id: "world-dublin-history", kind: .worldKnowledge,
+            prompt: "Tell me the history of Dublin.",
+            expectation: .init(
+                mustContainAny: ["Viking", "Norse", "Liffey", "Dubh Linn", "Easter Rising"],
+                mustComply: true, mustNotCallTools: Self.webReads, minChars: 40
+            )
+        ),
+        .init(
+            id: "world-cork-history", kind: .worldKnowledge,
+            prompt: "Tell me the history of Cork.",
+            expectation: .init(
+                mustContainAny: ["Viking", "Norse", "Finbarr", "Fin Barre", "River Lee", "Rebel"],
+                mustComply: true, mustNotCallTools: Self.webReads, minChars: 40
+            )
+        ),
     ]
+
+    /// The tools that read the web (`ToolDispatch.webSourced`, which this module can't import).
+    static let webReads = ["web_search", "lookup_fact", "fetch_page"]
 
     /// The AI-cliché non-answer, in the phrasings that actually show up. Shared
     /// by `humour` and `interview` — both kinds fail the same way, by retreating
