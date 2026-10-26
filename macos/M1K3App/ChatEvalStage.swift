@@ -105,9 +105,9 @@
 //  grounding budget through `-groundingBudget` (unset: 1,100, as before). The budget arm; verify-by-eval.
 //  A seeded turn gets the app's three corpus tools over its store in place of the search_knowledge stub,
 //  and its score names the tools it ran (a dispatched turn answers from the tool, not the grounding).
-//  Review: Kev + claude-opus-5.5, 2026-10-26 — `_ROUTER_SEARCH=1` puts the search head (#713, `toolSearchHead`) on the
-//  dispatch route, as `-toolSearchHead YES` does in the app; a veto shows as a `search-veto` route stage. Confidence
-//  0.8 (the arm runs in the eval stage; this file compiles only under xcodebuild).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `_ROUTER_SEARCH=1` puts the search head (#713, `toolSearchHead`) on
+//  the dispatch route, as `-toolSearchHead YES` does in the app; a veto shows as a `search-veto` route stage.
+//  Confidence 0.8 (the arm runs in the eval stage; this file compiles only under xcodebuild).
 //
 
 import Foundation

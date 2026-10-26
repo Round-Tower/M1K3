@@ -42,6 +42,18 @@ this sweep.
   verdict); Big's spoken replay holds ~4 exchanges with evicted-turn traces (#625, #630).
 - Owed: Bluetooth-headset check under voice processing (see § 1.0.1 below).
 
+### Routing: the search head (#713, open for Kev)
+
+- `SearchRouter` reads whether a turn needs the web, over the router's one sentence vector, and only
+  vetoes a web read the picker named (`ToolDispatch.searchCorrected`): it never adds a search, and an
+  explicit web ask or a question about now never reaches it. From #680 ("tell me the history of
+  Dublin" web-searched, 30.8 s to the first chunk). Off on both shells (`toolSearchHead`;
+  `-toolSearchHead YES` on the Mac) and shipped as an untrained stub that never vetoes.
+- Owed: the teacher pass over `tools/router/data/search_head_train.json` (835 candidate labels),
+  `train_search_head.py`, held-out scoring (`score_head.py --head search`), the paired arm
+  (`run_chateval.py --router dispatch --router-search`), and Kev's threshold ruling. A look on the
+  candidate labels alone still read the Dublin line as web.
+
 ### Distribution and growth
 
 - **Measure:** `ranks.py` (daily rank per term × storefront × platform, #673), `metrics.py`
@@ -444,3 +456,5 @@ stays a possible later companion.
      process) off #616–#691 and the 10-26 session block. § v1.1.0 marked shipped. Monetization, the 1.0.1
      verify-owed list and the standing 1.0.x items are carried unchanged: not re-verified this sweep.
      Confidence 0.8. -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-26 — the search head (#713) joins Now, flagged off, its teacher pass,
+     paired arm and threshold ruling owed. -->
