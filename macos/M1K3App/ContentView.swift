@@ -97,6 +97,9 @@
 //  swap (`requestSemanticMemory(after:)`); O2/O4 the toggle's reserved slot and "Starts after X is ready". Confidence 0.7.
 //  Review: Kev + claude-sonnet-5.5, 2026-10-22 — Offline AI Flight Club: the greeting's season is
 //  `SeasonalLook.now(enabled:offline:)` with `NetworkPathWatch.shared.isOffline`. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — #708: `fieldReportDraft` + the FieldReportSheet beside the PCC
+//  consent sheet; MessageView's "Send this exchange…" asks `env.chat.exchange(for:)` for the one exchange and
+//  FieldReporter for the redacted draft. Confidence 0.75 (verify-by-launch, UNVERIFIED this run).
 
 import M1K3Avatar
 import M1K3Chat
@@ -170,6 +173,8 @@ struct ContentView: View {
     )
     /// A send waiting on the consent sheet; the draft stays until it's confirmed.
     @State private var privateCloudPending: PendingPrivateCloudSend?
+    /// One exchange waiting on the "Send this exchange to Round Tower?" sheet (#708).
+    @State private var fieldReportDraft: FieldReportDraft?
     @State private var attachmentError: String?
     @State private var showConsentDialog = false
     @State private var isDropTargeted = false
@@ -575,6 +580,10 @@ struct ContentView: View {
                 }
             )
         }
+        .sheet(item: $fieldReportDraft) { draft in
+            // Every send shows this sheet; nothing is remembered between them (#708).
+            FieldReportSheet(draft: draft, onDone: { fieldReportDraft = nil })
+        }
         .task { await env.refreshPrivateCloudStatus() }
         .modifier(privateCloudLifecycle)
         .sheet(isPresented: Binding(
@@ -727,6 +736,14 @@ struct ContentView: View {
                                         env.reviewLedger.recordDelight()
                                         askForRatingIfEarned()
                                     }
+                                },
+                                onSendExchange: { note in
+                                    // Opt-in field report (#708): exactly this exchange, redacted,
+                                    // shown in the sheet before anything can leave.
+                                    guard let exchange = env.chat.exchange(for: message.id) else { return }
+                                    fieldReportDraft = FieldReporter.draft(
+                                        exchange: exchange, note: note, fallbackBrain: env.selectedBrain.displayName
+                                    )
                                 },
                                 onSpeak: { text in Task { await env.speak(text) } },
                                 onOpenLink: { url in env.review.open(url: url) },

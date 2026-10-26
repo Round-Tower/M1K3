@@ -23,6 +23,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — avatarDisplay reads through AvatarDisplay(persisted:) (panel retired; the legibility card keys on the backdrop). Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-10-20 — the live reasoning panel shows the thought's tail
 //  (ReasoningTail) with no cross-fade; Kev saw jank on a 1,024-token thought. Confidence 0.75: verify-by-eye.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — #708: "Send this exchange…" in the thumbs-down editor commits the
+//  verdict + note exactly as Done does, then hands the note up through `onSendExchange`; the sheet, the draft and
+//  the mailto live in ContentView / FieldReporter, never here. Confidence 0.8 (verify-by-launch).
 
 import AppKit
 import M1K3Avatar
@@ -41,6 +44,9 @@ struct MessageView: View {
     var existingComment: String?
     /// Record Kev's judgement — verdict + optional comment.
     var onFeedback: (FeedbackVerdict, String?) -> Void = { _, _ in }
+    /// Raise the "Send this exchange to Round Tower…" sheet (#708) with the thumbs-down note.
+    /// The view never builds or sends anything — ContentView composes the draft and the sheet.
+    var onSendExchange: (String?) -> Void = { _ in }
     /// Called with the message text when the user taps speak.
     let onSpeak: (String) -> Void
     /// Called with a link found in the turn when the user taps its chip — opens it
@@ -366,6 +372,15 @@ struct MessageView: View {
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 260)
             HStack {
+                // Opt-in field report (#708): commits the bad verdict + note exactly as Done does,
+                // then asks the shell for the sheet. Nothing leaves from here, and nothing leaves
+                // at all until that sheet's Send.
+                Button("Send this exchange…") {
+                    onFeedback(.bad, commentDraft)
+                    showComment = false
+                    onSendExchange(commentDraft)
+                }
+                .help("Email this one exchange to Round Tower — you see the exact text first")
                 Spacer()
                 Button("Done") {
                     onFeedback(.bad, commentDraft)
