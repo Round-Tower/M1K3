@@ -38,6 +38,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-20 — `personalCorrected`: a web read on what the user decided or said
 //  goes to search_knowledge (word order, not a bag of words, per the challenger), and the menu names decisions under
 //  search_knowledge. Third person is left to the menu line. Confidence 0.75 (pinned; the router chain cells owed).
+//  Review: Kev + claude-opus-5-5, 2026-10-26 — `documentCorrected`: a single lookup_fact pick when the gate kept a
+//  document chunk is a plain turn over it (grounded-long: the manual's torque lost to lookup_fact 6/6 on Lil and
+//  Big). Web reads and chains untouched. Confidence 0.7 (pinned; the paired eval and a cross arm are owed).
 
 import Foundation
 import M1K3Agent
@@ -252,6 +255,23 @@ public enum ToolDispatch {
             openCorrected(recencyCorrected(pick, palette: palette, question: question), question: question),
             palette: palette, question: question
         )
+    }
+
+    /// A reference lookup on a question the user's own documents answer is a plain turn over them
+    /// (2026-10-26). Apple's picker never sees the store: it sent "What torque do the hub nuts on the
+    /// trailer axle take?" to lookup_fact in 6 of 6 grounded-long trials, on Lil and Big, while the
+    /// gate had kept the manual's chunk, and the dispatched prompt (the result only, the 09-27 ruling)
+    /// answered with a generic spec, never the manual's 145 Nm. `documentsKept` is the gate's verdict:
+    /// a document chunk cleared `EmbedderFloors` (memories don't count: "I live in Cork" must not
+    /// steer Cork's founding year). The plain turn carries those chunks, budgeted, with its rules,
+    /// which let a well-known fact stand; no lookup leaves the device.
+    ///
+    /// Only a single lookup_fact pick moves. Web reads keep the lean dispatch prompt the 09-27
+    /// ruling measured, a lookup about now has already gone to the web (`recencyCorrected`), and
+    /// a chain stays whole, since a plain turn would drop its other link.
+    public static func documentCorrected(_ pick: ToolPick, documentsKept: Bool) -> ToolPick {
+        guard documentsKept, pick.tool == "lookup_fact", pick.then.isEmpty else { return pick }
+        return ToolPick(tool: ToolPick.noTool, query: pick.query)
     }
 
     /// A web read on a question about what the user decided or said goes to their knowledge

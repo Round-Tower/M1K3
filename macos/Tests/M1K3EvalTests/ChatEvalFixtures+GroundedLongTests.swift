@@ -9,6 +9,7 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-26, Confidence 0.9 (pure). Prior: none (new file).
 //  Review: Kev + claude-opus-5-5, 2026-10-26 — "overfill" retired: the first wired run logged no cap at 1100.
+//  Review: same day — `crossAnswersAreOffTheDoc`: the cross arm's world answers never appear in their seeded docs.
 //
 
 @testable import M1K3Eval
@@ -67,6 +68,20 @@ struct ChatEvalFixturesGroundedLongTests {
         #expect(try !passes("long-hub-torque", "Standard hub nut torque specifications for most trailer axles "
                 + "typically fall between **120 and 145 ft-lbs**."))
         #expect(try passes("long-hub-torque", "The manual says to torque the hub nuts to **145 Nm** in a star pattern."))
+    }
+
+    /// `ToolDispatch.documentCorrected` sends these to a plain turn over the doc; they pass only on the world's answer.
+    @Test("the cross arm's answers are nowhere in its seeded docs: a doc-only answer can't pass")
+    func crossAnswersAreOffTheDoc() throws {
+        let cross = ChatEvalFixtures.groundedLong.filter { $0.id.hasPrefix("long-cross-") }
+        #expect(cross.count == 3)
+        for fixture in cross {
+            let doc = try #require(fixture.seedDoc).lowercased()
+            for fact in fixture.expectation.mustContainAny {
+                let found = try Regex("\\b\(fact)\\b").firstMatch(in: doc)
+                #expect(found == nil, "\(fixture.id): \(fact) is in its doc")
+            }
+        }
     }
 
     @Test("the torque fact is the last sentence of its section, where a budget truncates first")

@@ -16,6 +16,8 @@
 //  otherwise or with web search off; the chained pick too).
 //  Review: Kev + claude-fable-5.1, 2026-10-25 — `ToolPickTimingTests`: the picker's timing line (the Lil baseline's
 //  3.8 s picker-route first token had no line to attribute it to).
+//  Review: Kev + claude-opus-5-5, 2026-10-26 — `DocumentCorrectedTests`: a lone lookup_fact with a kept document is
+//  plain; no document, web reads, chains and a lookup about now stay put.
 
 import Foundation
 import M1K3Agent
@@ -401,5 +403,44 @@ struct ToolPickTimingTests {
         #expect(ToolRouterWiring.pickSummary(tool: nil, elapsed: .milliseconds(1200) + .microseconds(700))
             == "tool pick: picker → agent in 1200ms")
         #expect(ToolRouterWiring.pickSummary(tool: "datetime", elapsed: .zero) == "tool pick: picker → datetime in 0ms")
+    }
+}
+
+/// A reference lookup on a question the user's own documents answer (2026-10-26): Apple's pick sent
+/// "What torque do the hub nuts take?" to lookup_fact in 6 of 6 grounded-long trials, on Lil and Big,
+/// while the gate had kept the manual's chunk; the answer was a generic spec, never its 145 Nm.
+struct DocumentCorrectedTests {
+    @Test("a lookup_fact pick with document chunks kept is a plain turn over them")
+    func lookupWithDocumentsIsPlain() {
+        let pick = ToolPick(tool: "lookup_fact", query: "hub nut torque")
+        #expect(ToolDispatch.documentCorrected(pick, documentsKept: true)
+            == ToolPick(tool: ToolPick.noTool, query: "hub nut torque"))
+    }
+
+    @Test("with no document kept, the lookup stands")
+    func lookupWithoutDocumentsStands() {
+        let pick = ToolPick(tool: "lookup_fact", query: "founding year of Cork")
+        #expect(ToolDispatch.documentCorrected(pick, documentsKept: false) == pick)
+    }
+
+    @Test("web reads and the user's knowledge stay put: the 09-27 dispatch prompt is untouched for them",
+          arguments: ["web_search", "fetch_page", "search_knowledge", "datetime", ToolPick.action])
+    func otherPicksStay(tool: String) {
+        let pick = ToolPick(tool: tool, query: "q")
+        #expect(ToolDispatch.documentCorrected(pick, documentsKept: true) == pick)
+    }
+
+    @Test("a chain is left whole, its lookup_fact head too: a plain turn would drop the other link")
+    func chainStays() {
+        let chain = ToolPick(tool: "lookup_fact", query: "q", then: [ToolPick(tool: "datetime", query: "")])
+        #expect(ToolDispatch.documentCorrected(chain, documentsKept: true) == chain)
+    }
+
+    @Test("a lookup about now went to the web first and stays there, documents or not")
+    func recencyWinsFirst() {
+        let pick = ToolPick(tool: "lookup_fact", query: "hurling final")
+        let question = "Who won the hurling final this year?"
+        let corrected = ToolDispatch.corrected(pick, palette: palette, question: question)
+        #expect(ToolDispatch.documentCorrected(corrected, documentsKept: true).tool == "web_search")
     }
 }

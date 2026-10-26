@@ -22,6 +22,8 @@
 //  what the first run shows). Prior: none (new file).
 //  Review: Kev + claude-opus-5-5, 2026-10-26 — the "overfill" claim was wrong: the first wired run
 //  logged no cap at 1100. The header now says so; "don't specify" (Big's abstention) joins the markers.
+//  Review: Kev + claude-opus-5-5, 2026-10-26 — the cross arm: three world questions over keyword-sharing docs,
+//  the false-steer check `ToolDispatch.documentCorrected` owes (challenger). Confidence 0.7.
 //
 
 import Foundation
@@ -88,6 +90,28 @@ public extension ChatEvalFixtures {
                 ],
                 minChars: 5, wholeWordFacts: true
             )
+        ),
+        // The cross arm (2026-10-26): world questions over a seeded doc that shares their words. A kept
+        // document turns a lookup_fact pick into a plain turn over it (`ToolDispatch.documentCorrected`);
+        // these pass only if the brain still answers the world, not the doc. The survey notes name the
+        // River Sullane by Cork; the river through the city is the Lee.
+        .init(
+            id: "long-cross-tyre", kind: .groundedLong,
+            prompt: "Who invented the pneumatic tyre?",
+            seedDoc: GroundedLongDocs.axleManual,
+            expectation: .init(mustContainAny: ["dunlop", "thomson"], minChars: 5, wholeWordFacts: true)
+        ),
+        .init(
+            id: "long-cross-river", kind: .groundedLong,
+            prompt: "Which river flows through the centre of Cork city?",
+            seedDoc: GroundedLongDocs.surveyNotes,
+            expectation: .init(mustContainAny: ["lee"], minChars: 5, wholeWordFacts: true)
+        ),
+        .init(
+            id: "long-cross-galway", kind: .groundedLong,
+            prompt: "Which ocean is Galway Bay part of?",
+            seedDoc: GroundedLongDocs.itinerary,
+            expectation: .init(mustContainAny: ["atlantic"], minChars: 5, wholeWordFacts: true)
         ),
     ]
 }
