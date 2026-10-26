@@ -472,7 +472,9 @@ final class AppCore {
             generationTokens: historyGenerationReserveTokens,
             measuredMiniReserveTokens: measuredMiniReserve.withLock { $0 },
             spoken: defaults.bool(forKey: VoiceModeDefaults.activeKey) && HistoryBudgetPolicy.spokenCapEnabled(),
-            evictionBlockTurns: HistoryBudgetPolicy.evictionBlockTurns()
+            // No cross-turn tail checkpoint on mobile (`conversationTailCheckpointsEnabled` is false there),
+            // so a block would cost replayed context for nothing: the sliding window stays.
+            evictionBlockTurns: 1
         )
     }
 

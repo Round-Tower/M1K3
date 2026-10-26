@@ -20,6 +20,7 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — the spoken budget carries the earlier-user trace (#626) and still fits
 //  inside the typed window.
 
+import Foundation
 @testable import M1K3Chat
 import M1K3Inference
 import Testing
@@ -366,13 +367,15 @@ struct HistoryBudgetPolicyTests {
 
     // MARK: - Block eviction (2026-10-26, design doc §2a)
 
-    @Test("the MLX tiers evict history in blocks; Mini's windows do not")
+    @Test("the Mac's MLX tiers evict history in blocks; Mini's and pocket's windows do not")
     func mlxTiersCarryTheBlock() {
         #expect(HistoryBudgetPolicy.defaultEvictionBlockTurns == 6)
-        for tier in [BrainTier.lil, .big, .pocket] {
+        for tier in [BrainTier.lil, .big] {
             #expect(live(tier, spoken: false).evictionBlockTurns == HistoryBudgetPolicy.defaultEvictionBlockTurns)
             #expect(live(tier, spoken: false).minimumKeptTurns == HistoryWindow.maxTurns - 6)
         }
+        // Pocket is the phone's tier and the tail checkpoint is desktop-only: a block would cost context for nothing.
+        #expect(live(.pocket, spoken: false).evictionBlockTurns == 1)
         #expect(HistoryBudgetPolicy.conservativeMiniBudget.evictionBlockTurns == 1)
         #expect(HistoryBudgetPolicy.measuredMiniBudget(reservedTokens: 1500).evictionBlockTurns == 1)
         #expect(live(.mini, spoken: false).evictionBlockTurns == 1)
@@ -425,6 +428,11 @@ struct HistoryBudgetPolicyTests {
         #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": "0"]) == 1)
         #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": "NO"]) == 1)
         #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": "lots"]) == block)
+        // The argument domain may hand a numeric value over as a number; a huge or negative one is clamped.
+        #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": NSNumber(value: 8)]) == 8)
+        #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": NSNumber(value: 0)]) == 1)
+        #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": "9223372036854775807"]) == 64)
+        #expect(HistoryBudgetPolicy.evictionBlockTurns(arguments: ["historyEvictionBlock": "-3"]) == 1)
         let off = HistoryBudgetPolicy.budget(
             for: .lil, reservedTokens: 1000, generationTokens: 1000, evictionBlockTurns: 1
         )

@@ -102,7 +102,9 @@ public enum HistoryWindow {
             self.totalChars = totalChars
             self.perTurnChars = perTurnChars
             self.maxTurns = maxTurns
-            self.evictionBlockTurns = max(1, evictionBlockTurns)
+            // Clamped to the ceiling: a block wider than the window would snap to the newest turn alone,
+            // and an absurd argv value would overflow the snap's arithmetic (review fold, 2026-10-26).
+            self.evictionBlockTurns = min(max(1, evictionBlockTurns), max(1, maxTurns))
             self.earlierUserChars = earlierUserChars
         }
 

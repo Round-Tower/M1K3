@@ -328,7 +328,7 @@ struct HistoryWindowTests {
         let bKept = b.components(separatedBy: "\n").count - 1
         #expect(bKept <= pKept)
         #expect((30 - bKept).isMultiple(of: 6))
-        #expect(b.count <= blocked.totalChars + 0) // the snap only ever keeps fewer: the bound holds
+        #expect(b.count <= blocked.totalChars) // the snap only ever keeps fewer: the bound holds
         #expect(b.hasSuffix("END30"))
     }
 
@@ -342,8 +342,36 @@ struct HistoryWindowTests {
         #expect(text.contains("T7END"))
         let one = HistoryWindow.render(Self.tiny(1), budget: budget) ?? ""
         #expect(one.contains("T1END"))
+        // A block wider than the ceiling clamps to it (and an absurd argv value can't overflow the snap).
         let eight = HistoryWindow.Budget(totalChars: 8000, perTurnChars: 1500, maxTurns: 1, evictionBlockTurns: 8)
-        #expect((HistoryWindow.render(Self.tiny(9), budget: eight) ?? "").contains("T9END"))
+        #expect(eight.evictionBlockTurns == 1)
+        #expect(HistoryWindow.Budget(totalChars: 1, perTurnChars: 1, maxTurns: 16, evictionBlockTurns: .max).evictionBlockTurns == 16)
+    }
+
+    @Test("never more than the sliding window keeps, and always its newest suffix (Big's hard bound rides on this)")
+    func neverMoreThanSliding() {
+        // Mixed lengths, an odd block and the orphan guard in play: over every prefix length, the blocked
+        // render keeps a newest-suffix of what the sliding render keeps — the same lines, fewer of them.
+        let turns = (1 ... 40).map { i in
+            ChatTurn(
+                role: i.isMultiple(of: 2) ? .assistant : .user,
+                text: String(repeating: "m", count: i * 53 % 700 + 10) + " END\(i)"
+            )
+        }
+        for block in [5, 6, 7] {
+            let blocked = HistoryWindow.Budget(totalChars: 3000, perTurnChars: 800, maxTurns: 12, evictionBlockTurns: block)
+            let plain = HistoryWindow.Budget(totalChars: 3000, perTurnChars: 800, maxTurns: 12)
+            for n in 1 ... 40 {
+                let some = Array(turns.prefix(n))
+                let b = (HistoryWindow.render(some, budget: blocked) ?? "").components(separatedBy: "\n").dropFirst()
+                let p = (HistoryWindow.render(some, budget: plain) ?? "").components(separatedBy: "\n").dropFirst()
+                #expect(b.count <= p.count, "block \(block) n=\(n)")
+                #expect(Array(b) == Array(p.suffix(b.count)), "block \(block) n=\(n): not a newest-suffix")
+                // The snap drops at most `block` (block − 1 plus the orphan) and never past half; or it is skipped.
+                #expect(b.count >= max(p.count - block, (p.count + 1) / 2), "block \(block) n=\(n): dropped too much")
+                #expect(b.first?.hasPrefix("USER: ") == true || b.count == p.count, "block \(block) n=\(n): orphaned opener")
+            }
+        }
     }
 
     @Test("turns the snap drops are evicted turns: their user lines join the earlier-user trace")
@@ -380,16 +408,23 @@ struct HistoryWindowTests {
         let turns = (1 ... 30).map { ChatTurn(role: .user, text: "x\(String(repeating: "x", count: 9))END\($0)") }
         let blocked = HistoryWindow.Budget(totalChars: 160, perTurnChars: 100, maxTurns: 40, evictionBlockTurns: 6)
         let plain = HistoryWindow.Budget(totalChars: 160, perTurnChars: 100, maxTurns: 40)
-        var halved = 0
+        var guarded = 0, snapped = 0
         for n in 20 ... 30 {
             let some = Array(turns.prefix(n))
             let b = (HistoryWindow.render(some, budget: blocked) ?? "").components(separatedBy: "\n").count - 1
             let p = (HistoryWindow.render(some, budget: plain) ?? "").components(separatedBy: "\n").count - 1
-            #expect(b <= p)
-            #expect(b * 2 >= p, "n=\(n): \(b) of \(p)")
-            if b == p { halved += 1 }
+            // What the unguarded snap would keep (all user turns, so no orphan guard): either the guard
+            // fired (kept == plain) or the snap did (kept == the unguarded count), never anything else.
+            let unguarded = n - min((n - p + 5) / 6 * 6, n - 1)
+            if unguarded < (p + 1) / 2 {
+                #expect(b == p, "n=\(n): the guard should have kept today's \(p), got \(b)")
+                guarded += 1
+            } else {
+                #expect(b == unguarded, "n=\(n): the snap should have kept \(unguarded), got \(b)")
+                snapped += 1
+            }
         }
-        #expect(halved > 0) // the guard fired at least once over the range
+        #expect(guarded > 0 && snapped > 0) // both branches on the range
     }
 
     @Test("with the start held, a render is a prefix of the next: what the KV tail reuses")

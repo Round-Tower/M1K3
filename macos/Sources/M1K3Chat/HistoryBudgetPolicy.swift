@@ -184,26 +184,35 @@ public enum HistoryBudgetPolicy {
         let perTurnChars = min(HistoryWindow.maxCharsPerTurn, totalChars)
         return HistoryWindow.Budget(
             totalChars: totalChars, perTurnChars: perTurnChars, maxTurns: HistoryWindow.maxTurns,
-            evictionBlockTurns: evictionBlockTurns
+            // Pocket is the phone's tier, and the cross-turn tail checkpoint is desktop-only: a block
+            // there would cost context for nothing (review fold, 2026-10-26).
+            evictionBlockTurns: tier == .pocket ? 1 : evictionBlockTurns
         )
     }
 
-    /// The MLX tiers evict replayed history in blocks of six turns (three exchanges): the window's
-    /// start then holds for three messages, and the cross-turn tail checkpoint (#687) keeps the
-    /// conversation's KV prefix for two of every three turns past the window instead of none. The
-    /// price is up to five fewer turns right after a boundary. Mini keeps the sliding window: AFM
-    /// has no cache to carry. `-historyEvictionBlock N` overrides (0/1 = off).
+    /// The Mac's MLX tiers evict replayed history in blocks of six turns (three exchanges): the
+    /// window's start then holds for three messages, and the cross-turn tail checkpoint (#687) keeps
+    /// the conversation's KV prefix on the third of them (one in three, measured 2026-10-26: the LCP
+    /// cut lags a render) instead of never. The price is up to five fewer turns right after a
+    /// boundary. Mini keeps the sliding window (AFM has no cache to carry), and so do pocket and the
+    /// mobile shell (no tail checkpoint there). `-historyEvictionBlock N` overrides (0/1 = off).
     public static let defaultEvictionBlockTurns = 6
+    /// The widest block the argv override accepts (`Budget.init` clamps to the ceiling anyway).
+    public static let maxEvictionBlockTurns = 64
 
     /// The argv override for `defaultEvictionBlockTurns` (`M1K3 -historyEvictionBlock 8`; 0, 1 or
     /// NO turn block eviction off), read the way the other in-app A/B overrides are.
     public static func evictionBlockTurns(
         arguments: [String: Any] = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
     ) -> Int {
+        // A numeric argv value can arrive as a String or an NSNumber, depending on how the domain parsed it.
+        if let number = arguments["historyEvictionBlock"] as? NSNumber {
+            return min(max(1, number.intValue), maxEvictionBlockTurns)
+        }
         guard let raw = arguments["historyEvictionBlock"] as? String else { return defaultEvictionBlockTurns }
         if ["no", "false", "off"].contains(raw.lowercased()) { return 1 }
         guard let n = Int(raw) else { return defaultEvictionBlockTurns }
-        return max(1, n)
+        return min(max(1, n), maxEvictionBlockTurns)
     }
 
     /// Tier-optional variant that OWNS the mini/unknown guard: nil (an unknown
