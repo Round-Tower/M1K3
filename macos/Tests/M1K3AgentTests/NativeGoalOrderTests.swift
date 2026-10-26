@@ -98,4 +98,33 @@ struct NativeGoalOrderTests {
         let message = LocalAgent.buildNativeGoal(goal: "hi", grounding: "x")
         #expect(message.hasPrefix("Use the available tools"))
     }
+
+    /// The stable-prefix marker (2026-10-26, Kev + claude-fable-5.1): where the replay ends inside the
+    /// message the grounding lands in, for the tool session's cross-turn tail cut.
+    @Test("the stable prefix ends where the replay does: in the user turn, or the system turn for the lfm2 shape")
+    func stablePrefixFollowsTheShape() {
+        let grounding = "DATE\n\nCONVERSATION SO FAR\nUSER: hi\nM1K3: hello\n(framing)\n\nFACTS"
+        let stable = "DATE\n\nCONVERSATION SO FAR\nUSER: hi\nM1K3: hello".count
+        let user = LocalAgent.stablePrefix(
+            shape: .groundingInUser, persona: "P", goal: "hi", grounding: grounding, stableChars: stable
+        )
+        let message = LocalAgent.buildNativeGoal(goal: "hi", grounding: grounding)
+        #expect(user?.messageIndex == 1)
+        #expect(user.map { String(message.prefix($0.characters)) }?.hasSuffix("M1K3: hello") == true)
+        let system = LocalAgent.stablePrefix(
+            shape: .groundingInSystem, persona: "PERSONA", goal: "hi", grounding: grounding, stableChars: stable
+        )
+        #expect(system?.messageIndex == 0)
+        #expect(system?.characters == "PERSONA\n\n".count + stable)
+        #expect(LocalAgent.stablePrefix(
+            shape: .groundingInUser, persona: "P", goal: "hi", grounding: nil, stableChars: 3
+        ) == nil)
+        #expect(LocalAgent.stablePrefix(
+            shape: .groundingInUser, persona: "P", goal: "hi", grounding: grounding, stableChars: 0
+        ) == nil)
+        #expect(LocalAgent.stablePrefix(
+            shape: .groundingInUser, persona: "P", goal: "hi", grounding: grounding, stableChars: grounding.count + 1
+        ) == nil)
+        #expect(ToolTurnOptions().stablePrefix == nil)
+    }
 }

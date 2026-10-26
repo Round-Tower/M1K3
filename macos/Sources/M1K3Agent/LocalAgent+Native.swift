@@ -34,6 +34,8 @@
 //  steered once with its reason ("rejected before it ran (invalid_arguments (search): …)"); a second
 //  rejection concludes with the model's prose. Unlike the backed-out empty-turn steer, this one carries
 //  the schema error the model needs; the live rate on Lil is the verify-owed (ChatEval tool-use).
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — `stablePrefix(shape:…)` maps the responder's stable count onto the
+//  message it lands in (user turn or, for the lfm2 shape, the system turn) for `ToolTurnOptions.stablePrefix`.
 
 import Foundation
 import M1K3Inference
@@ -53,6 +55,7 @@ extension LocalAgent {
         images: [ImageAttachment] = [],
         grounding: String?,
         thinkingEnabled: Bool = true,
+        stableContextChars: Int? = nil,
         onEvent: (@Sendable (AgentLoopEvent) -> Void)?,
         onConclusionToken: (@Sendable (String) -> Void)?,
         onReasoningToken: (@Sendable (String) -> Void)?
@@ -67,7 +70,14 @@ extension LocalAgent {
         let toolDefinitions = tools.values.map(\.toolDefinition).sorted { $0.name < $1.name }
         let session = try await provider.makeToolTurnSession(
             tools: toolDefinitions,
-            options: ToolTurnOptions(thinkingEnabled: thinkingEnabled)
+            options: ToolTurnOptions(
+                thinkingEnabled: thinkingEnabled,
+                stablePrefix: Self.stablePrefix(
+                    shape: provider.nativePromptShape,
+                    persona: M1K3Persona.systemPrompt(variant: provider.personaVariant),
+                    goal: goal, grounding: grounding, stableChars: stableContextChars
+                )
+            )
         )
         do {
             let result = try await runNativeLoop(
@@ -418,6 +428,26 @@ extension LocalAgent {
     /// goal-last lets the conversation-tail seed reuse everything up to this
     /// turn's grounding. Recency helps too — small models weight the end of
     /// the prompt, and the task should sit closest to the generation.
+    /// Where the opening messages stop being stable across turns (2026-10-26): the first `stableChars`
+    /// of `grounding` (the responder's context line and conversation replay) end inside the user turn
+    /// (`.groundingInUser`: after the preamble and the `Context:` label) or the system turn
+    /// (`.groundingInSystem`: after the persona and its separator). Nil without grounding, with nothing
+    /// stable in it, or with a count past its end — the session then falls back to the LCP cut.
+    static func stablePrefix(
+        shape: NativePromptShape, persona: String, goal: String, grounding: String?, stableChars: Int?
+    ) -> ToolTurnStablePrefix? {
+        guard let grounding, let stableChars, stableChars > 0, stableChars <= grounding.count else { return nil }
+        switch shape {
+        case .groundingInUser:
+            let message = buildNativeGoal(goal: goal, grounding: grounding)
+            guard let range = message.range(of: grounding) else { return nil }
+            let offset = message.distance(from: message.startIndex, to: range.lowerBound)
+            return ToolTurnStablePrefix(messageIndex: 1, characters: offset + stableChars)
+        case .groundingInSystem:
+            return ToolTurnStablePrefix(messageIndex: 0, characters: persona.count + 2 + stableChars)
+        }
+    }
+
     static func buildNativeGoal(goal: String, grounding: String?) -> String {
         let groundingBlock = grounding.map { "Context:\n\($0)\n\n" } ?? ""
         return """

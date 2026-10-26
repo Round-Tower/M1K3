@@ -15,9 +15,12 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-16 — a seed that wrapped gemma's sliding window takes checkpoint mode.
 //  Review: Kev + claude-fable-5.1, 2026-10-25 — `tailCut` (the cross-turn tail's cut point, strictly inside this
 //  send's prefill) and the three-candidate ledger order: rolling over tail over persona, a diverged tail falls back.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — `tailCut(stable:)` and `stableTranscript`: the caller-marked stable
+//  render cuts on the first render after a window shift; the longer valid cut wins; a bad marker is nil, never a crash.
 //
 
 import Foundation
+import M1K3Inference
 @testable import M1K3MLX
 import Testing
 
@@ -124,6 +127,45 @@ struct ExactPrefixReuseTests {
     func tailCutNeedsPrevious() {
         #expect(ExactPrefixReuse.tailCut(previous: nil, full: [1, 2, 3, 4], from: 1, to: 3) == nil)
         #expect(ExactPrefixReuse.tailCut(previous: [], full: [1, 2, 3, 4], from: 1, to: 3) == nil)
+    }
+
+    @Test("a stable render cuts on the first render after a window shift; the longer valid cut wins")
+    func tailCutPrefersTheStableRender() {
+        let full = [1, 2, 3, 4, 5, 6, 7, 8, 9, 9]
+        // The previous render shares only the persona (a window shift); the stable render shares the replay.
+        #expect(ExactPrefixReuse.tailCut(
+            previous: [1, 2, 3, 0], stable: [1, 2, 3, 4, 5, 6, 7, 0], full: full, from: 3, to: 9
+        ) == 7)
+        // Both valid: the longer wins, whichever it is.
+        #expect(ExactPrefixReuse.tailCut(
+            previous: [1, 2, 3, 4, 5, 0], stable: [1, 2, 3, 4, 5, 6, 7, 0], full: full, from: 3, to: 9
+        ) == 7)
+        #expect(ExactPrefixReuse.tailCut(
+            previous: [1, 2, 3, 4, 5, 6, 7, 8, 0], stable: [1, 2, 3, 4, 5, 0], full: full, from: 3, to: 9
+        ) == 8)
+        // A stable render outside the prefill (at or before the candidate, or the whole render) falls back.
+        #expect(ExactPrefixReuse.tailCut(previous: [1, 2, 3, 4, 5, 0], stable: [1, 2, 0], full: full, from: 3, to: 9) == 5)
+        #expect(ExactPrefixReuse.tailCut(previous: nil, stable: full, full: full, from: 3, to: 9) == nil)
+        #expect(ExactPrefixReuse.tailCut(previous: nil, stable: [], full: full, from: 3, to: 9) == nil)
+    }
+
+    @Test("the stable transcript is the marked message cut at the marker, nothing after it, no images")
+    func stableTranscriptCut() {
+        let messages: [ToolMessage] = [
+            .system("persona"),
+            .user("preamble Context: replay rest", images: []),
+            .assistant(text: "x", toolCalls: []),
+        ]
+        let user = MLXToolTurnSession.stableTranscript(messages, prefix: .init(messageIndex: 1, characters: 22))
+        let userCut: [ToolMessage] = [.system("persona"), .user("preamble Context: repl", images: [])]
+        #expect(user == userCut)
+        let system = MLXToolTurnSession.stableTranscript(messages, prefix: .init(messageIndex: 0, characters: 4))
+        let systemCut: [ToolMessage] = [.system("pers")]
+        #expect(system == systemCut)
+        #expect(MLXToolTurnSession.stableTranscript(messages, prefix: .init(messageIndex: 1, characters: 99)) == nil)
+        #expect(MLXToolTurnSession.stableTranscript(messages, prefix: .init(messageIndex: 2, characters: 1)) == nil)
+        #expect(MLXToolTurnSession.stableTranscript(messages, prefix: .init(messageIndex: 5, characters: 1)) == nil)
+        #expect(MLXToolTurnSession.stableTranscript(messages, prefix: .init(messageIndex: 1, characters: 0)) == nil)
     }
 
     @Test("a cut at or before the candidate buys nothing — a slid window or a switched conversation")
