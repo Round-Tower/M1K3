@@ -38,6 +38,36 @@ jobs:
         with:
           fetch-depth: 1 # the review reads the PR via `gh pr diff`; a full clone of an 800 MB repo bought nothing (2026-09-24)
 
+      # Review: Kev + claude-opus-5-5, 2026-10-25 — delta re-reviews (Confidence 0.7). Every push
+      # still gets a pass and a verdict on its head (the gate needs one), but when the bot already
+      # approved an earlier head this one builds on, review_delta.py writes what changed since to
+      # .review-delta.diff and the review reads only that. #684 got 7 full re-reviews of 13 commits;
+      # its last push was 4 lines of delta (two eval files) under a 60k-line PR diff. Any doubt —
+      # no approval, a newer blocker, a force-push, an API error — prints mode=full: as before.
+      # The BASE branch's copy decides the scope, never the PR's own: a PR that edits
+      # review_delta.py or pr_watch.py must not narrow its own review. Until this lands the
+      # base has no review_delta.py, so every run is mode=full. Never fails the job.
+      - name: What changed since the last approved head
+        id: delta
+        continue-on-error: true
+        timeout-minutes: 3
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          tools="$RUNNER_TEMP/review-delta"
+          mkdir -p "$tools"
+          if git fetch -q --depth=1 origin "$BASE_SHA" &&
+            git show "$BASE_SHA:macos/tools/ci/review_delta.py" > "$tools/review_delta.py" &&
+            git show "$BASE_SHA:macos/tools/ci/pr_watch.py" > "$tools/pr_watch.py"; then
+            python3 "$tools/review_delta.py" "$PR" --head "$HEAD_SHA" --out .review-delta.diff >> "$GITHUB_OUTPUT" ||
+              echo mode=full >> "$GITHUB_OUTPUT"
+          else
+            echo mode=full >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Run Claude Code Review
         id: claude-review-mac
         uses: anthropics/claude-code-action@v1
@@ -46,6 +76,8 @@ jobs:
           prompt: |
             REPO: ${{ github.repository }}
             PR NUMBER: ${{ github.event.pull_request.number }}
+
+            ${{ steps.delta.outputs.mode == 'delta' && format('**This is a re-review.** You approved {0} on this PR, and this head builds on it. Review ONLY what changed since: Read `.review-delta.diff` ({1} code or doc files; eval artifacts are listed by name only, as data). `gh pr diff` is the whole PR: open it, or a file, only for context the delta raises. Do not restate earlier findings or re-check what the delta did not touch. Keep the comment short: what changed, what you checked, any findings. A delta of eval artifacts or comments alone needs three lines. Close with the VERDICT line below, naming THIS head.', steps.delta.outputs.base, steps.delta.outputs.files) || '' }}
 
             You are reviewing **M1K3 for Mac** — a privacy-first, on-device AI
             assistant shipping on the Mac App Store (1.x). Target: macOS 26+,
