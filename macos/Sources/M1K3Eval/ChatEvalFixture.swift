@@ -92,6 +92,8 @@
 //  17/25 unchanged, Lil 14 → 5. A dated scorer event. Confidence 0.85.
 //  Review: same day (pre-push review fold) — chat-what-leaves' comment says which markers are anchored (three idioms
 //  aren't).
+//  Review: Kev + claude-opus-5-5, 2026-10-26, Confidence 0.75 — the `grounded-long` kind (six fixtures over
+//  six-section documents, `ChatEvalFixtures+GroundedLong.swift`), last in `all` so no earlier run order moves.
 
 import Foundation
 
@@ -199,6 +201,10 @@ public enum TaskKind: String, Sendable, CaseIterable, Equatable, Codable {
     /// pass (`ChatEvalScore.notApplicable`). Every fixture fails the blind
     /// markers, so an attachment dropped on the way to a seeing brain shows.
     case vision
+    /// A whole seeded document, answered through the live responder, so the grounding budget
+    /// decides what the brain reads (grounded-Q's one-line docs never reach it). The budget arm's
+    /// kind: `-groundingBudget N` (2026-10-26, `ChatEvalFixtures+GroundedLong.swift`).
+    case groundedLong = "grounded-long"
 
     public var label: String {
         rawValue
@@ -1547,7 +1553,7 @@ public enum ChatEvalFixtures {
 
     public static let all: [ChatEvalFixture] =
         openChat + groundedQ + reasoning + codeGen + toolUse + refusal + security + worldKnowledge
-            + humour + interview + instructionFollowing + document + sycophancy + vision
+            + humour + interview + instructionFollowing + document + sycophancy + vision + groundedLong
 
     /// Fixtures for one kind (the report groups by these).
     public static func fixtures(for kind: TaskKind) -> [ChatEvalFixture] {

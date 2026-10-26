@@ -30,6 +30,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.85 — Mini's grounding follows the device window:
 //  `miniTokens(windowTokens:)` = 600 at 4,096, +¼ token per extra window token, capped at MLX parity
 //  (1,100 from a 6,096 window on), floor 200 below 4,096. pocket and an unknown tier keep 600. Byte-identical at 4,096.
+//  Review: Kev + claude-opus-5-5, 2026-10-26, Confidence 0.85 — the budget arm: `ceiling(arguments:)` reads
+//  `-groundingBudget N` and `tokens` applies it like `spoken`, tightening only. No arg, no change for any tier.
 
 import Foundation
 import M1K3Inference
@@ -108,10 +110,13 @@ public enum GroundingBudgetPolicy {
     ///
     /// `miniWindowTokens`: Mini's window — the device's (`MiniContextWindow`)
     /// unless a test pins one. pocket is not AFM and ignores it.
+    ///
+    /// `ceiling`: the A/B arm's `-groundingBudget N` (`ceiling(arguments:)`), applied like `spoken`.
     public static func tokens(
         for tier: BrainTier?,
         spoken: Bool = false,
-        miniWindowTokens: Int = MiniContextWindow.current
+        miniWindowTokens: Int = MiniContextWindow.current,
+        ceiling: Int? = GroundingBudgetPolicy.ceiling()
     ) -> Int {
         // nil is an unresolvable persisted brain string. Fail small, matching
         // HistoryBudgetPolicy's nil guard: the cost of being wrong is asymmetric.
@@ -127,6 +132,25 @@ public enum GroundingBudgetPolicy {
         case .some:
             typed = GroundingBudget.defaultTokenBudget
         }
-        return spoken ? min(typed, spokenTokenBudget) : typed
+        let capped = ceiled(typed, ceiling: ceiling)
+        return spoken ? min(capped, spokenTokenBudget) : capped
+    }
+
+    /// `M1K3 -groundingBudget N`: the budget arm (2026-10-26), read the way the other in-app A/B
+    /// switches are (on macOS 27 `defaults write` never reaches the sandboxed app). It asks whether
+    /// retrieval rank alone can drop most of a turn's grounding without losing the answer: the
+    /// chunk-level form of learned token pruning (TokenGate, arXiv 2610.26754), at no code cost.
+    /// A positive whole number of tokens; anything else is no ceiling.
+    public static func ceiling(
+        arguments: [String: Any] = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
+    ) -> Int? {
+        guard let raw = arguments["groundingBudget"] as? String, let tokens = Int(raw), tokens > 0 else { return nil }
+        return tokens
+    }
+
+    /// `typed` under the arm's ceiling. Like `spoken`, a ceiling can only tighten: an arm that
+    /// widened Big's budget could rotate the persona head out of its window (`PromptSizeStage`).
+    public static func ceiled(_ typed: Int, ceiling: Int?) -> Int {
+        ceiling.map { min(typed, $0) } ?? typed
     }
 }
