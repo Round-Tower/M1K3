@@ -83,6 +83,16 @@ on the first render after a shift and lift the rate to two in three at the same 
 buys one in two at a floor of ten turns. The recall probe (a turn referenced just past a boundary) is still
 owed: the curve records answer lengths, not answers.
 
+**Status 2026-10-26, later — the caller-marked stable prefix is in**, and the lag with it. The responder knows
+where its grounding stops being stable (the context line + the replay, `groundingWithStablePrefix`); the agent
+maps that onto the message it lands in (`LocalAgent.stablePrefix`, `ToolTurnOptions.stablePrefix`); the MLX
+session renders the transcript cut there on its first send and hands both renders to `tailCut(stable:)`, the
+longer valid cut winning. Measured (§3, fourth table, mains): past the window the tail hits on **two messages
+in three** on both brains (14/21; the miss is the first render after each block shift, by construction), and
+every adoption was cut at the stable prefix (58/58 in the log); messages 3–9 hit 7/7, the message-3 lag gone
+too. Big's transcript prefill past the window: 4.4 s on a hit against 9.4 s on a miss, a median of 4.8 s
+where the sliding window paid 10–12 s. The recall probe is still owed.
+
 ### 2b. Persona prefixes survive a relaunch
 `savePromptCache`/`loadPromptCache` round-trip in-app via the SelfTest probe
 (`MLXBrainProvider+PromptCachePersistence.swift`) — weakly: `toolNames: []` only, judged
@@ -233,6 +243,23 @@ run was the last of four and ended at 7 % battery; its extends climbed from 17 t
 ~2,300-token miss took 10–14 s in the block-6 run minutes earlier), so read that column's reuse, not its clock.
 The floor is unchanged on typed Lil (12–16 of 16 turns kept); the lag of the LCP cut is what caps the rate.
 
+**With the stable-prefix marker (2026-10-26, head 15b93a09, mains, agent route, 30 messages,
+`docs/evals/2026-10-26-chatcurve-{lil,big}-agent-marker.txt`; block 6 as above):**
+
+| messages 10–30 | Lil, block 6 (LCP cut) | Lil, block 6 + marker | Big, block 6 (LCP cut) | Big, block 6 + marker |
+|---|---|---|---|---|
+| tail hits | 7/21 | **14/21** | 7/21 | **14/21** |
+| `extend` on a hit | 1.8 s | **1.7 s** (1.5–1.9) | 5.8 s † | **4.4 s** (4.1–5.5) |
+| `extend` on a miss | 2.8 s | 3.4 s (3.0–6.7) | 11.8 s † | 9.4 s (8.5–10.5) |
+| `extend`, median over 10–30 | 2.6 s | **1.8 s** | 10.6 s † | **4.8 s** |
+| messages 3–9: hits | 6/7 | 7/7 | 6/7 | 7/7 |
+| MLX own peak (max over the curve) | 4.85 GB | 4.73 GB | 9.35 GB | 9.19 GB |
+
+† the block-6 columns are this morning's battery run; the marker columns ran on mains. Compare the hit
+fractions and the hit-to-miss ratio within a column, not the seconds across. Every tail in the marker run was
+cut at the stable prefix (58 of 58 adoptions); the remaining miss is the first render after a block shift,
+which no prefix of the previous render can cover.
+
 ## 4. Not doing
 
 - Neural Engine / Core AI prefill: the GPU wins at every input length on published
@@ -262,3 +289,5 @@ Lil's own peak 4.84 GB against its 5 GB cap, the headroom levers named; a single
 paired, identical content, medians inside the pick's variance) clears the first-send path. Confidence 0.85.
 Review: Kev + claude-fable-5.1, 2026-10-26 — §2a status (block eviction shipped, one hit in three, the LCP lag named as the next
 lever) and §3's third table (block 1 vs 6, both brains, 30 messages, live window; the battery caveat on Big's block-1 clock).
+Review: Kev + claude-fable-5.1, 2026-10-26 (later) — the stable-prefix marker: §2a's lag is closed (two hits in three past the
+window, 58/58 cuts at the marker) and §3 carries the fourth table (block 6 with and without the marker, both brains).
