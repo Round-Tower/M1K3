@@ -4,8 +4,9 @@ Each fixture is a shape the claude-review bots have actually posted on this
 repo (read off PR #293, 2026-09-12) or a CI job list read off the Actions API.
 """
 
-import pr_watch as m
 import pytest
+
+import pr_watch as m
 
 # The real gh readers, kept before the autouse stub below replaces them.
 _REAL_RULESET_REQUIRED = m.ruleset_required
@@ -72,6 +73,43 @@ def test_auto_review_quoting_an_unchecked_checklist_in_a_fence_is_a_review():
             "```\n- [ ] gemma-4 native tool-call smoke on this head (in-app SelfTest)\n"
             "- [ ] Lil tool-use spot check\n```\n\nPlease don't merge until both boxes are checked.")
     assert m.classify(body) is m.Kind.REVIEW
+
+
+def test_a_finished_pass_with_a_verdict_is_done_whatever_its_boxes_say():
+    # #685 + #686, 2026-10-25: two finished summons used "- [ ]" for what the
+    # sandbox stopped them doing, closed with a full-sha APPROVE, and read as
+    # placeholders — passes 1/2 on two twice-approved heads, a third pass each.
+    sha = "73eba5a9da02df54bc694ca21e38b86fa3030a2f"
+    body = ("**Claude finished @kpmmmurphy's task in 39s** —— [View job](x)\n\n---\n"
+            "### Review of #685: claims check\n\n- [x] Read `check_claims.py` in full\n"
+            "- [ ] Not done: I couldn't run `pytest` (the sandbox blocked it).\n\n"
+            f"I found nothing that blocks landing.\n\nVERDICT: APPROVE @ {sha}")
+    assert m.classify(body) is m.Kind.SUMMON
+    comment = {"user": {"login": "claude[bot]"}, "body": body, "created_at": "2026-10-25T17:42:18Z"}
+    assert m.summon_passes(sha, [comment], head_seen_at="2026-10-25T17:41:57Z") == 1
+
+
+def test_a_finished_blocker_with_an_unchecked_box_still_blocks():
+    # before the fix this read as a placeholder, so its blocker was never seen
+    body = ("**Claude finished @kev's task** —— [View job](x)\n\n---\n### Review of head `abc1234`\n"
+            "- [x] Read the diff\n- [ ] Not done: ran no tests\n\nThe lock drops early.\n\n"
+            "VERDICT: CHANGES_REQUESTED @ abc1234")
+    assert m.classify(body) is m.Kind.SUMMON
+
+
+def test_a_finished_pass_with_a_malformed_verdict_counts_and_refuses():
+    # concluded but unreadable: a counted pass whose verdict blocks, never a skipped placeholder
+    body = ("**Claude finished @kev's task** —— [View job](x)\n\n---\n### Review of head `abc1234`\n"
+            "- [ ] Not done: ran no tests\n\nVERDICT: CHANGES REQUESTED @ abc1234")
+    assert m.classify(body) is m.Kind.SUMMON
+    assert m.verdict_refusal("abc1234" + "0" * 33, {"body": body}) == "verdict: unparseable on abc12340"
+
+
+def test_an_unchecked_box_with_no_verdict_is_still_progress_even_when_finished():
+    # a run that ran out of turns mid-checklist concluded nothing
+    body = "**Claude finished @kev's task** ---\n### Review of head `abc1234`\n- [x] Fetch\n- [ ] Post findings"
+    assert m.classify(body) is m.Kind.PLACEHOLDER
+    assert m.classify(body + "\n\n```\nVERDICT: APPROVE @ abc1234\n```") is m.Kind.PLACEHOLDER  # quoted, not said
 
 
 def test_an_unfenced_unchecked_box_without_a_pass_header_is_still_progress():

@@ -23,7 +23,8 @@ in project memory. Now they are code, tested in test_pr_watch.py:
   no pass. The comment it does post is summon-shaped and may name the head
   ("Claude finished … Reviewed head `x`", #404); it is counted once.
 * Placeholders ("**Claude working…**", an unchecked `- [ ]` checklist, the
-  older "I'll analyze this and get back to you") never count.
+  older "I'll analyze this and get back to you") never count. A "**Claude
+  finished**" pass with a verdict line is done, unchecked boxes or not.
 * Required CI is what the base branch's ruleset requires, read live once per
   watch: ci.yml's six jobs (the iOS + visionOS shells among them, whatever the
   diff, #558), TruffleHog and CodeQL. ci.yml skips the App-shell and mobile
@@ -196,6 +197,13 @@ head's review to the new head, whose own APPROVE (naming it in full) then read "
 13e58a5f" — unlandable on `--passes 0` and bare alike; a summon was the only way through. Now a window
 comment whose verdict names another sha is skipped; one with no verdict line still counts (older
 summons). Confidence: 0.85 — replayed from #687's thread; the identity-by-run-id path is unchanged.
+Review: Kev + claude-opus-5-5, 2026-10-26 — #685 and #686: a finished summon wrote "- [ ] Not done:
+I couldn't run pytest" for what its sandbox refused, closed with a full-sha APPROVE, and `classify` read
+it as a placeholder, so both twice-approved heads read 1/2 and needed a third pass each. A "**Claude
+finished**" body with a verdict line outside fences is now a pass whatever its boxes say. It also
+makes the gate stricter: a finished CHANGES_REQUESTED with an unchecked box used to be ignored as a
+placeholder and now blocks. A finished run with no verdict line (it ran out of turns mid-checklist)
+and an auto review are unchanged. Confidence: 0.85 — replayed on both real threads (2/2 each).
 """
 from __future__ import annotations
 
@@ -425,9 +433,13 @@ def classify(body: str) -> Kind:
         or "I'll analyze this" in text
     ):
         return Kind.PLACEHOLDER
-    if _progress_unchecked(text):
+    finished = text.startswith("**Claude finished")
+    # A finished pass that says a verdict has concluded, whatever its boxes say: the bot
+    # writes "- [ ] Not done: …" for what its sandbox refused (#685, #686). Only a verdict
+    # line outside fences counts, so a quoted one leaves a stalled run a placeholder.
+    if _progress_unchecked(text) and not (finished and review_verdict(text)[0] != "missing"):
         return Kind.PLACEHOLDER
-    if text.startswith("**Claude finished"):
+    if finished:
         return Kind.SUMMON
     return Kind.REVIEW
 

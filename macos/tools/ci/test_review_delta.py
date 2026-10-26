@@ -149,3 +149,11 @@ def test_main_prints_mode_full_and_exits_zero_on_any_failure(capsys, monkeypatch
     monkeypatch.setattr(m, "_gh", boom)
     assert m.main(["review_delta.py", "1", "--head", HEAD, "--repo", "o/r"]) == 0
     assert capsys.readouterr().out == "mode=full\n"
+
+
+def test_a_finished_blocker_with_an_unchecked_box_vetoes_the_delta():
+    # pr_watch.classify counts it as a pass now (#685/#686), so its blocker is the newest word
+    blocker = ("**Claude finished @kev's task** —— [View job](x)\n\n---\n### Review of head `bbbbbbb`\n"
+               f"- [ ] Not done: ran no tests\n\nVERDICT: CHANGES_REQUESTED @ {B}")
+    comments = [bot(review("APPROVE", A), "2026-10-25T13:00:00Z"), bot(blocker, "2026-10-25T14:00:00Z")]
+    assert m.delta_base(HEAD, comments) is None
