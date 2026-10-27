@@ -102,6 +102,15 @@
 //  here while one does, as ChatScreen's brainReady gate does on iOS: env.send ran its side effects (auto-route,
 //  preempt, auto-speak, then the landing chime and artifact surfacing on the in-flight answer) before ChatSession
 //  dropped the send. Confidence 0.75 (verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — #708: `fieldReportDraft` + the FieldReportSheet beside the PCC
+//  consent sheet; MessageView's "Send this exchange…" asks `env.chat.exchange(for:)` for the one exchange and
+//  FieldReporter for the redacted draft. Confidence 0.75 (verify-by-launch, UNVERIFIED this run).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — the offer is wired only when
+//  `AgeAppropriateness.fieldReportAllowed` says the band may see it (not under 13, not 13–15), read per render
+//  like the web tools' gate; otherwise MessageView gets nil and shows no button. Confidence 0.75 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold) — and only for `message.isExchangeAnswer`: a script's
+//  output or a PCC notice has no exchange, so it gets no button rather than one that silently does nothing.
+//  Confidence 0.75 (verify-by-launch).
 
 import M1K3Avatar
 import M1K3Chat
@@ -175,6 +184,8 @@ struct ContentView: View {
     )
     /// A send waiting on the consent sheet; the draft stays until it's confirmed.
     @State private var privateCloudPending: PendingPrivateCloudSend?
+    /// One exchange waiting on the "Send this exchange to Round Tower?" sheet (#708).
+    @State private var fieldReportDraft: FieldReportDraft?
     @State private var attachmentError: String?
     @State private var showConsentDialog = false
     @State private var isDropTargeted = false
@@ -580,6 +591,10 @@ struct ContentView: View {
                 }
             )
         }
+        .sheet(item: $fieldReportDraft) { draft in
+            // Every send shows this sheet; nothing is remembered between them (#708).
+            FieldReportSheet(draft: draft, onDone: { fieldReportDraft = nil })
+        }
         .task { await env.refreshPrivateCloudStatus() }
         .modifier(privateCloudLifecycle)
         .sheet(isPresented: Binding(
@@ -733,6 +748,8 @@ struct ContentView: View {
                                         askForRatingIfEarned()
                                     }
                                 },
+                                onSendExchange: fieldReportAllowed && message.isExchangeAnswer
+                                    ? sendExchange(for: message.id) : nil,
                                 onSpeak: { text in Task { await env.speak(text) } },
                                 onOpenLink: { url in env.review.open(url: url) },
                                 onSendFollowUp: { text in
@@ -1255,6 +1272,23 @@ struct ContentView: View {
         pendingAttachments = []
         pendingFiles = []
         Task { await env.send(text, images: images) }
+    }
+
+    /// The opt-in field report (#708) is withheld in code from the bands the web tools are
+    /// withheld from (under 13, 13–15). Read per render, like the palette's age gate.
+    private var fieldReportAllowed: Bool {
+        AgeAppropriateness.fieldReportAllowed(for: AppEnvironment.ageBandProvider.currentBand())
+    }
+
+    /// Opt-in field report (#708): exactly this exchange, redacted, shown in the sheet before
+    /// anything can leave.
+    private func sendExchange(for messageID: UUID) -> (String?) -> Void {
+        { note in
+            guard let exchange = env.chat.exchange(for: messageID) else { return }
+            fieldReportDraft = FieldReporter.draft(
+                exchange: exchange, note: note, fallbackBrain: env.selectedBrain.displayName
+            )
+        }
     }
 
     private var hasStagedAttachments: Bool {

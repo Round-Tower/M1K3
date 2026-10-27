@@ -19,6 +19,9 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.85 (pure; pinned by NetworkCrossingsTests).
 //  Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — #708: `.fieldReport`, the opt-in "Send this exchange" email.
+//  The user's own mail app makes that connection (madeByApp false, like updates), so Hello's App-Review line
+//  is unchanged by construction; per-message opt-in is the control, so no Settings switch. Confidence 0.85.
 
 import Foundation
 
@@ -37,6 +40,9 @@ public enum NetworkCrossings {
 
     public enum Kind: String, Sendable, CaseIterable {
         case modelDownloads, webTools, updates, privateCloud
+        /// One exchange the user chooses to email Round Tower from a thumbs-down (#708): shown in
+        /// full first, sent by their own mail app, never by M1K3.
+        case fieldReport
     }
 
     public struct Crossing: Identifiable, Equatable, Sendable {
@@ -77,6 +83,14 @@ public enum NetworkCrossings {
                 phrase: String(localized: "use the optional Private Cloud Compute brain"), hasSettingsSwitch: true
             ))
         }
+        // Last in both lanes: the one crossing M1K3 never makes itself. A thumbs-down can offer to
+        // email that exchange to Round Tower; the sheet shows the exact body and the user's mail
+        // app sends it, so it is opt-in per message with nothing in Settings to leave on.
+        list.append(Crossing(
+            kind: .fieldReport, optIn: true, madeByApp: false,
+            phrase: String(localized: "email one exchange to Round Tower when you choose to"),
+            hasSettingsSwitch: false
+        ))
         return list
     }
 

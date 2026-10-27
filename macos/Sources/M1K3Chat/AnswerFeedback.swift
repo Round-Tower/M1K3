@@ -22,6 +22,13 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-13 — the contract gains two user actions on the phone (Settings ▸ Answer
 //  ratings): the rows leave the device ONLY when the user shares the JSONL export, and Clear ratings deletes them
 //  all. Still local, never synced, never over MCP. Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — #708: `AnswerExchange`, the one-exchange value the Mac's
+//  "Send this exchange to Round Tower…" sheet is built from (question, answer, the brain stamp — never tools,
+//  sources, reasoning or another turn). It leaves ONLY through the user's own mail app, after a sheet that
+//  shows the exact body; the feedback row itself is unchanged and still never leaves. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold) — `ChatMessage.isExchangeAnswer`: display-only text
+//  (a script's output, a PCC fallback notice) is not M1K3's answer to the turn before it, so it has no exchange and
+//  the shell offers no button for it. Confidence 0.85 (AnswerExchangeTests.displayOnlyTextHasNoExchange).
 //
 
 import Foundation
@@ -84,6 +91,40 @@ public struct AnswerFeedback: Sendable, Equatable, Identifiable {
         self.toolsUsed = toolsUsed
         self.brain = brain
         self.createdAt = createdAt
+    }
+}
+
+/// One exchange, paired the way `recordFeedback` pairs it: the user turn before an answer and the
+/// answer itself. This is the WHOLE of what the opt-in "Send this exchange" sheet (#708) can show
+/// and send — by construction it holds no tool names, sources, reasoning, attachments or other
+/// turns (AnswerExchangeTests pins the field set by reflection). Built on demand from the live
+/// transcript, never persisted.
+public struct AnswerExchange: Sendable, Equatable {
+    public let messageID: UUID
+    public let conversationID: UUID
+    public let question: String
+    public let answer: String
+    /// The brain stamped on the answer at finalization; nil for a pre-trace turn, where the
+    /// shell supplies the resident brain as the fallback (the package never guesses).
+    public let brain: String?
+
+    public init(messageID: UUID, conversationID: UUID, question: String, answer: String, brain: String?) {
+        self.messageID = messageID
+        self.conversationID = conversationID
+        self.question = question
+        self.answer = answer
+        self.brain = brain
+    }
+}
+
+public extension ChatMessage {
+    /// Whether this message is an answer `ChatSession.exchange(for:)` pairs, and so one the Mac
+    /// may offer to send (#708): an assistant turn that is not display-only. A script's output
+    /// and a Private Cloud fallback notice are `contextExcluded`. Neither is M1K3's answer to the
+    /// turn before it, and script stdout is text the app keeps out of M1K3's own context, so
+    /// neither is offered as "M1K3's answer".
+    var isExchangeAnswer: Bool {
+        role == .assistant && contextExcluded != true
     }
 }
 

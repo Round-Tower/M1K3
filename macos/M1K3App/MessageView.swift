@@ -36,6 +36,15 @@
 //  only when ContentView says so (`acceptsChoices`: the newest message, no turn responding). Blocks derive
 //  from the persisted text, so without it every reloaded or earlier card sent a stale option into a chat
 //  that had moved on (the chips' 2026-07-14 ruling, ChatSession.followUps). Confidence 0.75.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — #708: "Send this exchange…" in the thumbs-down editor commits the
+//  verdict + note exactly as Done does, then hands the note up through `onSendExchange`; the sheet, the draft and
+//  the mailto live in ContentView / FieldReporter, never here. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-10-26 (pre-push review fold) — the sheet is raised from the popover's
+//  close (`pendingExchangeNote` flushed on `showComment` → false), not inside the button, so an NSPopover
+//  dismissal and a window sheet never start in one update. Confidence 0.75 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — `onSendExchange` is optional and the button
+//  exists only when ContentView wires it, which it does only for an age band allowed the field report
+//  (`AgeAppropriateness.fieldReportAllowed`). Unwired means hidden. Confidence 0.8 (verify-by-launch).
 
 import AppKit
 import M1K3AnswerBlocks
@@ -55,6 +64,10 @@ struct MessageView: View {
     var existingComment: String?
     /// Record Kev's judgement — verdict + optional comment.
     var onFeedback: (FeedbackVerdict, String?) -> Void = { _, _ in }
+    /// Raise the "Send this exchange to Round Tower…" sheet (#708) with the thumbs-down note.
+    /// The view never builds or sends anything — ContentView composes the draft and the sheet.
+    /// nil hides the button: ContentView wires it only for an age band allowed the offer.
+    var onSendExchange: ((String?) -> Void)?
     /// Called with the message text when the user taps speak.
     let onSpeak: (String) -> Void
     /// Called with a link found in the turn when the user taps its chip — opens it
@@ -93,6 +106,8 @@ struct MessageView: View {
     @State private var didCopy = false
     @State private var showComment = false
     @State private var commentDraft = ""
+    /// A "Send this exchange…" waiting for the popover to close before the sheet is raised (#708).
+    @State private var pendingExchangeNote: String?
     /// Monotonic token for the Speak button's acknowledge bounce — an Int, not a
     /// Bool, so repeat taps re-fire (Bool value effects double-fire; the
     /// speakDownbeat precedent in VoiceModeView).
@@ -358,6 +373,13 @@ struct MessageView: View {
                     .popover(isPresented: $showComment, arrowEdge: .bottom) {
                         feedbackCommentEditor
                     }
+                    // The sheet is raised once the popover has closed, never in the same update
+                    // as its dismissal (#708): the editor only parks the note.
+                    .onChange(of: showComment) { _, shown in
+                        guard !shown, let note = pendingExchangeNote else { return }
+                        pendingExchangeNote = nil
+                        onSendExchange?(note)
+                    }
                 }
             }
         }
@@ -394,6 +416,18 @@ struct MessageView: View {
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 260)
             HStack {
+                // Opt-in field report (#708): commits the bad verdict + note exactly as Done does,
+                // parks the note, and closes; the sheet follows from the popover's close. Nothing
+                // leaves from here, and nothing leaves at all until that sheet's Send. Only shown
+                // when ContentView wires it (the age-band gate).
+                if onSendExchange != nil {
+                    Button("Send this exchange…") {
+                        onFeedback(.bad, commentDraft)
+                        pendingExchangeNote = commentDraft
+                        showComment = false
+                    }
+                    .help("Email this one exchange to Round Tower — you see the exact text first")
+                }
                 Spacer()
                 Button("Done") {
                     onFeedback(.bad, commentDraft)
