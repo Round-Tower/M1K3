@@ -14,6 +14,8 @@
 //  Review (2026-07-08, Kev + claude-fable-5): kind now flows through the seam —
 //  each DistilledFactKind must land as the matching MemoryKind (the rawValues
 //  align by construction; this pins that they stay aligned).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #711: an injected `source` tags plain and revived writes; the
+//  one-argument init still writes `distilled`. Confidence 0.85.
 //
 
 import M1K3Chat
@@ -56,5 +58,19 @@ struct DistilledFactGraphAdapterTests {
             let match = all.first { $0.text == "fact classified as \(kind.rawValue)" }
             #expect(match?.kind == expected[kind])
         }
+    }
+
+    @Test("an injected source tags plain and revived nodes; the one-argument init still writes distilled")
+    func sourceIsInjectable() async throws {
+        let store = try MemoryStore(path: nil)
+        let tagged = DistilledFactGraphAdapter(store: store, source: "import/chatgpt/2026-10-26")
+
+        try await tagged.writeDistilledFact("Kev keeps bees", kind: .profile, embedding: [0.1, 0.2, 0.3])
+        _ = try await tagged.reviveFact("Kev keeps hens", kind: .note, embedding: [0.3, 0.2, 0.1])
+
+        let all = try store.allMemories()
+        #expect(all.first { $0.text == "Kev keeps bees" }?.source == "import/chatgpt/2026-10-26")
+        #expect(all.first { $0.text == "Kev keeps hens" }?.source == "import/chatgpt/2026-10-26")
+        #expect(DistilledFactGraphAdapter(store: store).source == "distilled")
     }
 }

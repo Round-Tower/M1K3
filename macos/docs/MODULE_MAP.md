@@ -19,6 +19,7 @@ heavy backends isolated behind protocols; `M1K3App/` a thin shell over `AppEnvir
 | `M1K3KnowledgeTools` / `M1K3AgentTools` | Knowledge-backed agent tools (search/list/get document). |
 | `M1K3Chat` | RAG chat brain: embed → hybrid search → documents-first prompt → generate; multi-conversation history. Also the `MemoryDistillationCoordinator` (distils durable facts from chat). |
 | `M1K3MemoryChatBridge` | Leaf bridge (deps `[M1K3Chat, M1K3Memory]`): `DistilledFactGraphAdapter`, the Chat→memory-graph dual-write. Shared by BOTH the macOS app and the iOS/visionOS shell (relocated out of the app target). |
+| `M1K3Import` | Memory import (#711), a leaf over `M1K3MemoryChatBridge` + the three stores: `ChatGPTExportParser` (the `mapping` tree, main branch only) and `ClaudeExportParser` (the extracted `conversations.json`) and `OKFImportParser` (another M1K3's `OKFExport` folder, as files: the reader stays out of `M1K3Memory`, ADR 0003) → one `ImportBundle`; `ImportSourceTag` (`import/<provider>/<UTC day>` on both stores); `ImportSensitivity` (the review screen's untick-by-default table); `ConversationImportPipeline` (propose through the distiller's #288 fence, nothing written → commit the accepted facts through the one dedupe/supersede write path, each conversation filed as a cited `.conversation` item); `ImportForget` (one action removes the tag from both stores and revives what it superseded). No shell links it yet. |
 | `M1K3Voice` | TTS (`SpeechProvider`) + transcription (`TranscriptionProvider`) seams (system AVFoundation/Speech only). |
 | `M1K3MLX` | **Heavy.** MLX embeddings + Gemma/Qwen generation on Metal. Conforms to the `EmbeddingService`/`InferenceProvider` seams. |
 | `M1K3WhisperKit` | **Heavy.** WhisperKit on-device transcription (CoreML). Apple Speech is the always-available fallback behind the same seam. |
@@ -47,3 +48,4 @@ Review: Kev + claude-opus-5.5, 2026-10-26 — the `M1K3LanguageModel` row names 
 (#697 Phase 1; no new product). Confidence 0.9.
 Review: Kev + claude-opus-5.5, 2026-10-26 (pre-push review fold) — the row says what the ledger now
 keeps (token counts, billed to the generating model, priced on read). Confidence 0.9.
+Review: Kev + claude-opus-5.5, 2026-10-27 — the `M1K3Import` row (#711, a new product). Confidence 0.85.

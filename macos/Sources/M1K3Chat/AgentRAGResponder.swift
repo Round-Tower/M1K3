@@ -217,6 +217,10 @@
 //  pick when the gate kept a document chunk answers on the plain route over those chunks (grounded-long: torque went
 //  to lookup_fact 6/6 and never read the manual). Web picks keep the 09-27 lean prompt. Confidence 0.75 (pinned; paired
 //  grounded-long + cross arm on Lil/Big: torque 0/6 → 6/6, cross 17/18; Mini unmeasured).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold on #711) — `keptUserDocument`: a kept chunk from an
+//  imported `.conversation` (another assistant's old answer, on the document lane since #711) no longer counts as the
+//  user's own document for `documentCorrected`, so an import can't silently turn world-fact lookups into plain turns.
+//  Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — `turnNoteProvider` (#697): Cool Head's line for the send that eased
 //  effort, read once per turn after the defer, availability and image gates and sent as `.note` on the activity
 //  channel. It never reaches `turnClauses()` or a prompt builder: every prompt byte is unchanged, pinned by test.
@@ -758,6 +762,13 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         memories.filter { !SelfNoteClassifier.isWiringNote(title: $0.itemTitle, text: $0.content) }
     }
 
+    /// Whether the kept document-lane chunks hold one of the USER's own documents, the premise
+    /// of `ToolDispatch.documentCorrected`. An imported conversation (#711) shares the lane but
+    /// is another assistant's old answer on any topic, so it never turns a lookup into a plain turn.
+    static func keptUserDocument(_ chunks: [ChunkHit]) -> Bool {
+        chunks.contains { $0.kind != .conversation }
+    }
+
     /// This turn's cut, in characters of open reasoning: a net above the brain's own budget when it forces its
     /// close (asked through the façade each turn, so a hot-swap follows), else `thinkingBudget`.
     private var thinkingCut: Int {
@@ -997,7 +1008,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // A question about what the user decided went to Wikipedia (2026-10-20): it goes to their knowledge.
         let corrected = ToolDispatch.corrected(picked, palette: tools, question: question)
         // A reference lookup the user's own documents answer reads them instead (2026-10-26).
-        let pick = ToolDispatch.documentCorrected(corrected, documentsKept: !chunks.isEmpty)
+        let pick = ToolDispatch.documentCorrected(corrected, documentsKept: Self.keptUserDocument(chunks))
         if pick != corrected {
             Self.log.notice("tool dispatch: lookup_fact, but kept chunks answer — a plain turn reads them")
             return await plain()

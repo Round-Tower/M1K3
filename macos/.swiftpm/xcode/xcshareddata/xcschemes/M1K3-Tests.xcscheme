@@ -62,6 +62,9 @@
             <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "M1K3MemoryChatBridgeTests" BuildableName = "M1K3MemoryChatBridgeTests" BlueprintName = "M1K3MemoryChatBridgeTests" ReferencedContainer = "container:"></BuildableReference>
          </TestableReference>
          <TestableReference skipped = "NO">
+            <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "M1K3ImportTests" BuildableName = "M1K3ImportTests" BlueprintName = "M1K3ImportTests" ReferencedContainer = "container:"></BuildableReference>
+         </TestableReference>
+         <TestableReference skipped = "NO">
             <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "M1K3VoiceTests" BuildableName = "M1K3VoiceTests" BlueprintName = "M1K3VoiceTests" ReferencedContainer = "container:"></BuildableReference>
          </TestableReference>
          <TestableReference skipped = "NO">
