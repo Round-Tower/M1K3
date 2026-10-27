@@ -36,6 +36,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (merge of master's #711 into #699) — a re-filed node carries the
 //  injected `source` like every other node this adapter writes, so `MemoryStore.forget(source:)` undoes an
 //  import's re-file (it was hard-coded `distilled`). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699 contradiction fix: `liveStyleTexts()` hands the coordinator the
+//  graph's live style rows, newest first, so a style correction under the twin bar can retire the ask it corrects
+//  on its axis (the corpus has no kind). Confidence 0.85.
 //
 
 import M1K3Chat
@@ -102,5 +105,9 @@ public struct DistilledFactGraphAdapter: DistilledFactGraphWriting {
         let refiled = Memory(kind: target, text: live.text, source: source)
         try store.rememberConnected(refiled, embedding: embedding, supersedes: live.id)
         return true
+    }
+
+    public func liveStyleTexts() async throws -> [String] {
+        try store.liveStyleTexts()
     }
 }

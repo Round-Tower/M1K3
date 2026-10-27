@@ -62,6 +62,11 @@
 //  #284's in `propose`, so an import's review is fenced too; `didWrite` fires from `store`, the one write path
 //  (a `defer` there, so the throw path still re-reads); `reassert` honours `revivesSupersededFacts` before the
 //  style re-file, and `forgetCorpus` reads the ledger key that moved to MemoryCorpusEdit.swift. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699 contradiction fix (MEMSTAT: 7 of 8 style corrections under the
+//  0.95 twin bar left both rows live): with no twin, a `.style` fact from the live writer retires the newest live
+//  style row it covers on its axes (StyleAxis, StyleAxisSupersede.swift) through the same `supersede`, which now
+//  takes a corpus id + graph text instead of a ChunkHit. The bar is untouched. `supersedesStyleByAxis` (default
+//  true) gates it; the seam gains `liveStyleTexts()` (default []), since the corpus has no kind. Confidence 0.85.
 
 import CryptoKit
 import Foundation
@@ -101,6 +106,10 @@ public protocol DistilledFactGraphWriting: Sendable {
     /// store filed "The user prefers short answers." under `preference`. Re-file it as `kind`,
     /// superseding that node (lineage kept). False when none matched or it already is `kind`.
     func refileDistilledFact(_ text: String, as kind: DistilledFactKind, embedding: [Float]) async throws -> Bool
+
+    /// #699: every live `.style` fact's text, newest first, the rows a new style ask may retire on its
+    /// axis (`StyleAxis`). The corpus carries no kind, so the graph is the only place that knows.
+    func liveStyleTexts() async throws -> [String]
 }
 
 public extension DistilledFactGraphWriting {
@@ -112,6 +121,11 @@ public extension DistilledFactGraphWriting {
     /// A graph that cannot re-file re-files nothing.
     func refileDistilledFact(_: String, as _: DistilledFactKind, embedding _: [Float]) async throws -> Bool {
         false
+    }
+
+    /// A graph that files no style holds none.
+    func liveStyleTexts() async throws -> [String] {
+        []
     }
 }
 
@@ -129,11 +143,11 @@ public struct MemoryDistillationCoordinator: Sendable {
 
     private let distiller: any MemoryDistilling
     private let ingester: DocumentIngester
-    private let store: KnowledgeStore
+    let store: KnowledgeStore
     private let embedder: any EmbeddingService
     /// Optional: nil keeps the legacy corpus-only behaviour (tests, any caller
     /// that hasn't wired the graph yet).
-    private let graph: (any DistilledFactGraphWriting)?
+    let graph: (any DistilledFactGraphWriting)?
     /// The corpus-twin kind transition (Tier 2). Injectable so the
     /// divergence-audit path (a re-kind failing AFTER the graph committed —
     /// spec fixture #9) is testable; nil uses `store.setKind` directly.
@@ -161,6 +175,10 @@ public struct MemoryDistillationCoordinator: Sendable {
     /// (#711): no — an old conversation is history, and reviving from it would undo a newer
     /// correction without a tag "forget this import" could find.
     private let revivesSupersededFacts: Bool
+    /// #699: whether a new `.style` fact retires the newest live style it covers on its axis
+    /// (`StyleAxis`). Live chat: yes, the user correcting how they want answers. A memory import:
+    /// no — an old conversation's ask is history, and it files as a preference anyway.
+    let supersedesStyleByAxis: Bool
 
     public init(
         distiller: any MemoryDistilling,
@@ -173,6 +191,7 @@ public struct MemoryDistillationCoordinator: Sendable {
         didWrite: (@Sendable (Int) -> Void)? = nil,
         corpusSource: KnowledgeSource = .distilled,
         revivesSupersededFacts: Bool = true,
+        supersedesStyleByAxis: Bool = true,
         selfNames: DistillationAttribution.UserNames = DistillationAttribution.systemUserNames
     ) {
         self.distiller = distiller
@@ -186,6 +205,7 @@ public struct MemoryDistillationCoordinator: Sendable {
         self.selfNames = selfNames
         self.corpusSource = corpusSource
         self.revivesSupersededFacts = revivesSupersededFacts
+        self.supersedesStyleByAxis = supersedesStyleByAxis
     }
 
     /// Distill the slice and store what's new. Returns the number of facts
@@ -277,7 +297,16 @@ public struct MemoryDistillationCoordinator: Sendable {
             }
             written += 1
             if let twin {
-                await supersede(twin, with: fact, newItemID: result.itemID, vector: vector)
+                await supersede(
+                    corpusItemID: twin.itemID, graphText: twin.content, with: fact, newItemID: result.itemID,
+                    vector: vector, reason: .twin
+                )
+            } else if let victim = await styleAxisVictim(for: fact, vector: vector) {
+                // #699: a style correction under the twin bar retires the ask it corrects (StyleAxis).
+                await supersede(
+                    corpusItemID: victim.corpusItemID, graphText: victim.text, with: fact, newItemID: result.itemID,
+                    vector: vector, reason: .styleAxis
+                )
             } else {
                 Self.log.info("remembered: \(LogPreview.preview(fact.text, max: 80), privacy: .public)")
                 await dualWriteToGraph(fact, vector: vector)
@@ -365,28 +394,43 @@ public struct MemoryDistillationCoordinator: Sendable {
 
     // MARK: - Tier 2: write-time repair
 
-    /// The new fact corrects (or restates) `twin`: graph gets a supersede
-    /// write joined by fact text, then the twin's corpus row leaves retrieval
-    /// via the `.memorySuperseded` re-kind. Order is deliberate — graph
+    /// Why a write supersedes a live row.
+    enum SupersedeReason {
+        /// A semantic twin at the embedder's dedupe bar (Tier 2).
+        case twin
+        /// #699: a style ask on the same axis (`StyleAxis`), under the bar.
+        case styleAxis
+    }
+
+    /// The new fact corrects (or restates) the live row whose graph node carries
+    /// `graphText` and whose corpus twin is `corpusItemID` (nil: no live twin to move):
+    /// graph gets a supersede write joined by fact text, then the twin's corpus row
+    /// leaves retrieval via the `.memorySuperseded` re-kind. Order is deliberate — graph
     /// commit FIRST, corpus transition second — so a failure between the two
     /// lands in the audited divergence path (spec fixture #9), never as a
     /// live corpus row whose graph node is secretly superseded going
     /// unnoticed.
     private func supersede(
-        _ twin: ChunkHit, with fact: DistilledFact, newItemID: UUID, vector: [Float]?
+        corpusItemID: UUID?, graphText: String, with fact: DistilledFact, newItemID: UUID, vector: [Float]?,
+        reason: SupersedeReason
     ) async {
         if let graph, let vector {
             do {
                 try await graph.writeDistilledFact(
-                    fact.text, kind: fact.kind, embedding: vector, superseding: twin.content
+                    fact.text, kind: fact.kind, embedding: vector, superseding: graphText
                 )
             } catch {
                 Self.log.notice("graph supersede failed (corpus write stands): \(error.localizedDescription, privacy: .public)")
             }
         }
-        transitionCorpusTwin(itemID: twin.itemID, context: "supersede")
-        recordSupersededLink(from: twin.itemID, to: newItemID)
-        Self.log.notice("memory superseded: 1 fact corrected at write time")
+        if let corpusItemID {
+            transitionCorpusTwin(itemID: corpusItemID, context: "supersede")
+            recordSupersededLink(from: corpusItemID, to: newItemID)
+        }
+        switch reason {
+        case .twin: Self.log.notice("memory superseded: 1 fact corrected at write time")
+        case .styleAxis: Self.log.notice("style superseded: 1 stated style replaced on its axis")
+        }
     }
 
     // MARK: - The corpus supersede ledger (its key and write: MemoryCorpusEdit.swift, shared with the edit)
