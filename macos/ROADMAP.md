@@ -322,7 +322,9 @@ stays a possible later companion.
   MEMSTAT measured 10-27: 7 of 8 style corrections stay below Gemma's 0.95 bar and leave both rows
   live (1 of 8 superseded, 0 eaten). Fixed 10-27 on the branch (Kev: fix first): a style correction
   retires the newest live style on its axis (`StyleAxis`), and an imported style ask files as a
-  preference. The other calls ship as the PR's defaults. Still owed: the paired style chateval arm.
+  preference. MEMSTAT on the fix (Release build, 10-27): 8 of 8 corrections superseded, 11 of 11
+  different-axis asks kept both live. The other calls ship as the PR's defaults. Still owed: the
+  paired style chateval arm.
 
 - **LinkedIn + the first Teams customer** — the 90-day founder move (#369).
   One post a week; the product demos itself; the DyslexiaAI story is the
@@ -463,3 +465,6 @@ stays a possible later companion.
      style corrections leave both rows live, so the axis-scoped supersede joins the calls. Confidence 0.8. -->
 <!-- Review: Kev + claude-opus-5.5, 2026-10-27 — #699's contradiction is fixed on the branch (axis supersede,
      imports as preferences); the line says so and keeps the chateval arm owed. Confidence 0.8. -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-27 — MEMSTAT measured the #699 fix on a Release build: 8/8 style
+     corrections superseded, 11/11 compatibles both live (docs/evals/2026-10-27-memstat-style-axis.txt).
+     Confidence 0.85. -->

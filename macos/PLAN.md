@@ -930,3 +930,26 @@ PCC wiring behind the FM27 gate) was challenger-tested; two findings flipped the
      corpus half, the one-hop revive (residue line retired), an import's twin at the bar of a live ask, and the
      said-order sort (unplaced facts sorted first; any turn re-dated a fact). Named instead: the re-filed
      preference residue. Confidence 0.8. -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-27 — the residue line "MEMSTAT's probe has no graph" is retired: the
+     style classes now go through StyleIngestProbe, measured in the block below. Confidence 0.85. -->
+
+## Update — 2026-10-27: #699 MEMSTAT on the fix — 8 of 8 style corrections superseded, 11 of 11 compatibles kept
+
+- **The rewire first:** the old ingest probe wrote untyped `.note` facts with no graph through `distillAndStore`,
+  so it could not see the axis rule (a `.style` fact with a graph wired), and `propose` would fence a scripted
+  ask out. `StyleIngestProbe` (M1K3MemoryChatBridge) stores each pair as two `.style` facts with
+  `coordinator.store`, over an in-memory corpus and `MemoryStore()` behind the graph adapter, and reads the
+  prior's fate off BOTH stores plus the style line the persona would carry. A style-compatible class (the
+  eleven asks `StyleAxisSupersedeTests` pins, now one shared fixture) joins it. Contradiction, compatible and
+  restatement run exactly as before; their lines match the morning's transcript.
+- **Result** (Release build of `10589552`, EmbeddingGemma 2 at its 0.95 bar, M1 Max, AC;
+  `docs/evals/2026-10-27-memstat-style-axis.txt`): style corrections **8/8 superseded** (was 1/8), 0 both live,
+  0 eaten, 0 divergent. Seven retire by axis under the bar (0.861–0.912); the 0.982 order pair goes through the
+  twin path, once. Every style line after a correction carries the correction alone ("The user prefers long,
+  detailed answers."). Style compatibles **11/11 both live** (0.729–0.865, none at the bar), newest first.
+- **Still owed:** the paired style chateval arm (does a brain honour the line), and the cue table's recall on
+  real distiller wording, which the no-axis count watches in the field.
+
+<!-- Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85 — the probe is the live writer's store path with
+     the production embedder; the pairs are hand-curated and phrased as the distiller writes style facts, so real
+     wording may place differently. Prior: none (new block). -->
