@@ -276,6 +276,29 @@ struct StyleAxisSupersedeTests {
         #expect(try rig.corpusKind(long) == .memorySuperseded)
     }
 
+    @Test("forgetting the correction in Memories brings the ask it retired back, in both stores")
+    func forgetUndoes() async throws {
+        let rig = try Rig()
+        let short = "The user prefers short answers."
+        let long = "The user prefers long, detailed answers."
+        try await rig.say(short)
+        try await rig.say(long)
+
+        let editor = MemoryEditor(
+            graph: rig.graph, corpus: rig.corpus,
+            ingester: DocumentIngester(store: rig.corpus, embedder: rig.embedder), embedder: rig.embedder
+        )
+        _ = try editor.forget(#require(try rig.node(long)).id)
+
+        #expect(try rig.liveStyles() == [short])
+        #expect(try rig.corpusKind(short) == .memory)
+        #expect(try rig.corpusKind(long) == nil)
+
+        // Saying it again is a true duplicate: one live row, never two.
+        #expect(try await rig.say(short) == 0)
+        #expect(try rig.liveStyles() == [short])
+    }
+
     @Test("the order pair (the 0.982 MEMSTAT twin) supersedes once, through the twin path")
     func orderPairSupersedesOnce() async throws {
         let rig = try Rig(embedder: HashingEmbeddingService())

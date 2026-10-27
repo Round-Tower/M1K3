@@ -376,16 +376,7 @@ public struct MemoryDistillationCoordinator: Sendable {
     public static func forgetCorpus(source: KnowledgeSource, in store: KnowledgeStore) throws -> Int {
         let doomed = try Set(store.itemIDs(source: source, kinds: [.memory, .memorySuperseded]))
         guard !doomed.isEmpty else { return 0 }
-        var restored = 0
-        for twin in try store.allItems(kind: .memorySuperseded, limit: Int.max) where !doomed.contains(twin.id) {
-            guard let corrector = supersededLink(for: twin.id, in: store), doomed.contains(corrector) else {
-                continue
-            }
-            if try store.setKind(id: twin.id, newKind: .memory) {
-                try store.deleteMeta(key: supersededLinkKey(twin.id))
-                restored += 1
-            }
-        }
+        let restored = try restoreTwins(correctedBy: doomed, in: store)
         let removed = try store.deleteItems(ids: Array(doomed))
         try store.deleteMeta(keys: doomed.map(supersededLinkKey))
         log.notice("corpus source forgotten: \(removed) memory row(s) removed, \(restored) restored")
@@ -441,10 +432,6 @@ public struct MemoryDistillationCoordinator: Sendable {
 
     private func supersededLink(for itemID: UUID) -> UUID? {
         Self.supersededLink(for: itemID, in: store)
-    }
-
-    private static func supersededLink(for itemID: UUID, in store: KnowledgeStore) -> UUID? {
-        (try? store.meta(key: supersededLinkKey(itemID))).flatMap { $0 }.flatMap(UUID.init(uuidString:))
     }
 
     /// Exact re-assertion of a superseded fact: the graph writes a fresh node

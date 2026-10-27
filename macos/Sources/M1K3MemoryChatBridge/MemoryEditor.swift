@@ -22,6 +22,9 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.8 (pinned over real stores;
 //  the forget walk is a product rule, Kev's call), Prior: none (new file)
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699 contradiction fix: the corpus half of a forget is
+//  `MemoryDistillationCoordinator.forgetCorpusTwins`, which also restores the twin a forgotten row superseded,
+//  as the graph's own forget does. The walk itself is unchanged. Confidence 0.85.
 //
 
 import Foundation
@@ -78,7 +81,8 @@ public struct MemoryEditor: Sendable {
 
     /// Forget the fact `id` everywhere: its graph node, and when it is an edit, the wording
     /// each edit replaced, back to the first row that is not an edit; then every corpus twin
-    /// of what was forgotten. Oldest first, so no forget revives a row this one is about to
+    /// of what was forgotten, restoring any twin those had superseded (the corpus mirror of the
+    /// graph's undo). Oldest first, so no forget revives a row this one is about to
     /// remove. Returns the corpus item ids deleted (the app de-indexes them from Spotlight),
     /// or nil when no row has `id`.
     public func forget(_ id: UUID) throws -> [UUID]? {
@@ -97,12 +101,7 @@ public struct MemoryEditor: Sendable {
         for memory in doomed.reversed() {
             _ = try graph.forget(id: memory.id)
         }
-        return doomed.compactMap { memory in
-            let ref = MemoryDistillationCoordinator.factSourceRef(memory.text)
-            guard let twinID = try? corpus.itemID(forSourceRef: ref),
-                  (try? corpus.deleteItem(id: twinID)) == true
-            else { return nil }
-            return twinID
-        }
+        // The store's forget revived whatever the oldest row superseded; the corpus follows it back.
+        return MemoryDistillationCoordinator.forgetCorpusTwins(of: doomed.map(\.text), in: corpus)
     }
 }

@@ -10,6 +10,10 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85 (pinned in
 //  MemoryCorpusEditTests over a real store). Prior: the ledger key and the twin transition
 //  moved here from MemoryDistillationCoordinator.swift, whose signature carries their history.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699 contradiction fix: `forgetCorpusTwins`, the corpus half of a
+//  Memories forget, now mirrors the graph's undo (a twin the forgotten row superseded returns to retrieval), with
+//  `restoreTwins` shared with `forgetCorpus` and the ledger read moved here beside its key. The style axis made a
+//  forgotten correction common; without the restore the next restatement left two live rows. Confidence 0.85.
 //
 
 import Foundation
@@ -74,6 +78,33 @@ public extension MemoryDistillationCoordinator {
         }
         return .superseded
     }
+
+    /// The corpus half of a Memories forget, after the graph forgot the rows: delete the twin of
+    /// each of `texts`, and put back what those twins corrected (each `.memorySuperseded` twin
+    /// whose ledger entry names one of them returns to `.memory`), the corpus mirror of
+    /// `MemoryStore.forget(id:)` un-superseding in the graph. Without it, forgetting a correction
+    /// brought the ask back in the graph while its twin stayed out of retrieval, and the next
+    /// restatement revived it a second time: two live graph rows for one ask, said twice in the
+    /// style line (#699). Best-effort, never throws: the graph forget has committed. Returns the
+    /// corpus ids deleted, in `texts` order.
+    static func forgetCorpusTwins(of texts: [String], in store: KnowledgeStore) -> [UUID] {
+        var twins: [UUID] = []
+        for text in texts {
+            guard let id = (try? store.itemID(forSourceRef: factSourceRef(text))).flatMap({ $0 }),
+                  !twins.contains(id)
+            else { continue }
+            twins.append(id)
+        }
+        guard !twins.isEmpty else { return [] }
+        do {
+            try restoreTwins(correctedBy: Set(twins), in: store)
+        } catch {
+            log.error("memory forget: restoring the rows a forgotten twin corrected failed")
+        }
+        let deleted = twins.filter { (try? store.deleteItem(id: $0)) == true }
+        try? store.deleteMeta(keys: deleted.map(supersededLinkKey))
+        return deleted
+    }
 }
 
 // MARK: - The corpus primitives the supersede, the revive and the edit share
@@ -88,6 +119,28 @@ extension MemoryDistillationCoordinator {
     /// (PR #87 review finding 1).
     static func supersededLinkKey(_ itemID: UUID) -> String {
         "memory.superseded-by:\(itemID.uuidString)"
+    }
+
+    /// The row that superseded `itemID`, from the ledger; nil when none is recorded.
+    static func supersededLink(for itemID: UUID, in store: KnowledgeStore) -> UUID? {
+        (try? store.meta(key: supersededLinkKey(itemID))).flatMap { $0 }.flatMap(UUID.init(uuidString:))
+    }
+
+    /// Every `.memorySuperseded` twin whose ledger names one of `correctors` (and is not itself one)
+    /// returns to `.memory` and loses its entry: what a forget of the correctors undoes. Returns the count.
+    @discardableResult
+    static func restoreTwins(correctedBy correctors: Set<UUID>, in store: KnowledgeStore) throws -> Int {
+        var restored = 0
+        for twin in try store.allItems(kind: .memorySuperseded, limit: Int.max) where !correctors.contains(twin.id) {
+            guard let corrector = supersededLink(for: twin.id, in: store), correctors.contains(corrector) else {
+                continue
+            }
+            if try store.setKind(id: twin.id, newKind: .memory) {
+                try store.deleteMeta(key: supersededLinkKey(twin.id))
+                restored += 1
+            }
+        }
+        return restored
     }
 
     static func recordSupersededLink(from oldItemID: UUID, to newItemID: UUID, store: KnowledgeStore) {
