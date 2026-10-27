@@ -49,11 +49,15 @@ this sweep.
   explicit web ask or a question about now never reaches it. From #680 ("tell me the history of
   Dublin" web-searched, 30.8 s to the first chunk). Off on both shells (`toolSearchHead`;
   `-toolSearchHead YES` on the Mac) and shipped as an untrained stub that never vetoes.
-- Owed: the teacher pass over `tools/router/data/search_head_train.json` (827 candidate labels),
-  `train_search_head.py`, held-out scoring (`score_head.py --head search`), the paired arm
-  (`run_chateval.py --router dispatch --router-search`, live path: its `tool-web-unguarded-*` fixtures
-  read a false veto, the #680 ones a kept search), and Kev's threshold ruling. A look on the
-  candidate labels alone still read the Dublin line as web.
+- Measured 2026-10-26 (`docs/evals/2026-10-26-search-head.md`):
+  - The teacher pass ran on the plan's fallback labeller (gemini-4-argon; Clef-flash's loader was
+    refused) and confirmed 820 labels.
+  - The trained head misses the gate. Held out, 3/12 stable lines read local and the #680 Dublin line
+    reads web, so the stub stays shipped.
+  - The paired Lil arm vetoed nothing (113 → 114/126). The #680 fixtures search through the picker,
+    the dispatch route the veto covers.
+- Owed: Kev's threshold ruling. 0.165 keeps 90/93 must-search turns in CV; the #680 lines flip only from
+  0.65, where CV keeps 50/93. Or a stronger base than the NLEmbedding vector, then Big's arm.
 
 ### Distribution and growth
 
@@ -461,3 +465,6 @@ stays a possible later companion.
      paired arm and threshold ruling owed. -->
 <!-- Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — the search head bullet counts 827 candidates (8 lexical
      near-copies of fixtures dropped) and names what the paired arm reads. Confidence 0.85. -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-27 — the search head bullet carries the eval stage's numbers:
+     the teacher pass on the fallback labeller, the gate missed, the stub kept, the threshold ruling owed.
+     Confidence 0.85. -->
