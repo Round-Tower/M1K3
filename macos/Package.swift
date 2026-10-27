@@ -31,6 +31,8 @@
 //  deadlock + a leak, 0.32.3 the < 26.4 launch crash). Owed: the gemma-4 tool smoke + the voice launch check.
 //  Review: Kev + claude-fable-5.1, 2026-10-10 — M1K3MLX declares MLXFast (already a transitive mlx-swift
 //  product); no pin moves.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — M1K3AnswerBlocks target + tests (#717: typed answer blocks,
+//  a Foundation + SwiftUI leaf). No package dependency moves. Confidence 0.85.
 
 import Foundation
 import PackageDescription
@@ -86,6 +88,10 @@ let package = Package(
         // routed ReviewTarget. Pure + dependency-free; the QuickLook/WKWebView
         // renderers live in the app target (verify-by-run).
         .library(name: "M1K3Preview", targets: ["M1K3Preview"]),
+        // Typed answer blocks (#717): the `m1k3-steps` / `m1k3-choices` fence
+        // parser, the stream-safe segmenter, their spoken form, and the one
+        // SwiftUI renderer both shells share. A leaf: Foundation + SwiftUI only.
+        .library(name: "M1K3AnswerBlocks", targets: ["M1K3AnswerBlocks"]),
         // The `m1k3` command-line client's pure half: argument parsing, the
         // JSON-RPC frames it POSTs at the running app's loopback MCP server,
         // the AGENTS.md "M1K3 is the resident" block, the per-client connect
@@ -642,6 +648,20 @@ let package = Package(
             name: "M1K3PreviewTests",
             dependencies: ["M1K3Preview"],
             path: "Tests/M1K3PreviewTests"
+        ),
+        // Typed answer blocks (#717). A LEAF on purpose: M1K3Voice speaks the
+        // blocks (SpeechTextPolish) and may not import M1K3Chat, and the shells
+        // render them through ReadingText. The parser, segmenter and speech are
+        // pure and unit-tested; the SwiftUI cards are verify-by-launch (the
+        // M1K3MemoryViz precedent for a view inside a Sources target).
+        .target(
+            name: "M1K3AnswerBlocks",
+            path: "Sources/M1K3AnswerBlocks"
+        ),
+        .testTarget(
+            name: "M1K3AnswerBlocksTests",
+            dependencies: ["M1K3AnswerBlocks"],
+            path: "Tests/M1K3AnswerBlocksTests"
         ),
         // The CLI's pure half (see the products list). Foundation-only and
         // dependency-free BY DESIGN: `m1k3` is a thin client of the running
