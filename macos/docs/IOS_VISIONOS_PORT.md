@@ -347,6 +347,13 @@ no new policy logic:
   (`.complete`-gated, tap-to-send via `core.send`), with the Mac's
   `LegibilityScrim` treatment on flat assistant turns over the live backdrop.
   Autoscroll also fires on chip arrival (no text change at `.complete`).
+- **Typed answer blocks (#717)**: `m1k3-steps` / `m1k3-choices` fences render as
+  native cards through the same `ReadingText.swift` the template already compiles;
+  the parser, segmenter and cards live in `Sources/M1K3AnswerBlocks/`, so the
+  mobile shells link the `M1K3AnswerBlocks` product and wrap nothing. A choice tap
+  rides `MessageBubble`'s `onSendFollowUp` (`ChatScreen`'s brainReady gate). Plain
+  cards and bordered buttons, no glass: `glassEffect` is unavailable on visionOS.
+  Verify-owed: the cards and VoiceOver on iPhone.
 - **Platform-honest copy**: `BrainTier.detail` for Lil said "Runs entirely on
   your Mac" on an iPhone (caught on-simulator) — now `#if os(macOS)` branched.
 
@@ -370,6 +377,8 @@ _Signed: Kev + claude-fable-5, 2026-07-18 (Mac-feel pass), Confidence 0.85
 (composition of TDD'd shared pieces; sim-verified live — bloom/recede/scrim/
 streaming seen working; on-device feel + thermals verify-owed as named).
 Prior: Kev + claude-opus-4-8 (the shell this restyles)._
+
+_Review: Kev + claude-opus-5.5, 2026-10-27 — the typed answer blocks bullet (#717). Confidence 0.8._
 
 ---
 

@@ -33,7 +33,15 @@
 //  in ScrollView(.horizontal) with the card background moved outside it, so the
 //  card also spans the bubble now instead of hugging a narrow table. iOS shares
 //  this file (project.yml) and has no window to give.
+//  Review: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.75 — typed answer
+//  blocks (#717): the text is split by AnswerBlockSegmenter first. Markdown runs
+//  take the ChatMarkdownParser path exactly as before; a closed `m1k3-steps` /
+//  `m1k3-choices` fence renders as AnswerBlockView in the reading mode's font, an
+//  open one as a static skeleton, and a malformed one stays markdown (today's code
+//  card). One edit, three platforms. Verify-by-launch owed (bionic mode leaves the
+//  cards in the plain base font).
 
+import M1K3AnswerBlocks
 import M1K3Chat
 import SwiftUI
 
@@ -53,17 +61,36 @@ struct ReadingText: View {
         forcedMode ?? ReadingMode(rawValue: savedModeRaw) ?? .standard
     }
 
-    private var blocks: [ChatMarkdownBlock] {
-        ChatMarkdownParser.parse(text)
+    /// The text split around typed answer blocks; usually one markdown run.
+    private var segments: [AnswerBlockSegment] {
+        AnswerBlockSegmenter.segments(in: text)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
-                blockView(block)
+            ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
+                segmentView(segment)
             }
         }
         .textSelection(.enabled)
+    }
+
+    @ViewBuilder
+    private func segmentView(_ segment: AnswerBlockSegment) -> some View {
+        switch segment {
+        case let .markdown(source):
+            ForEach(Array(ChatMarkdownParser.parse(source).enumerated()), id: \.offset) { _, block in
+                blockView(block)
+            }
+        case let .block(block):
+            // The reading mode's typeface and spacing carry into the card.
+            AnswerBlockView(block)
+                .font(baseFont)
+                .lineSpacing(mode == .dyslexia ? 6 : 2)
+                .tracking(mode == .dyslexia ? 0.5 : 0)
+        case let .pending(kind):
+            AnswerBlockSkeletonView(kind: kind)
+        }
     }
 
     @ViewBuilder

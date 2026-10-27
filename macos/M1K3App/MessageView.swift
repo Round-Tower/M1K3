@@ -23,8 +23,12 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — avatarDisplay reads through AvatarDisplay(persisted:) (panel retired; the legibility card keys on the backdrop). Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-10-20 — the live reasoning panel shows the thought's tail
 //  (ReasoningTail) with no cross-fade; Kev saw jank on a 1,024-token thought. Confidence 0.75: verify-by-eye.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — a tapped option in a typed `m1k3-choices` block (#717) sends
+//  through `onSendFollowUp`, set on the answer's ReadingText only once the turn is `.complete` (the chips'
+//  gate). TDD_SKIP: view body. Confidence 0.75 (verify-by-launch owed).
 
 import AppKit
+import M1K3AnswerBlocks
 import M1K3Avatar
 import M1K3Chat
 import M1K3Knowledge
@@ -204,6 +208,7 @@ struct MessageView: View {
                 // at the ~20Hz stream cadence). Plain append reads as live; a true
                 // per-word fade-in would need per-word views (not worth the frame cost).
                 ReadingText(message.text)
+                    .environment(\.answerChoiceAction, answerChoiceAction)
             } else if case .streaming = message.status {
                 // While the agent works (thinking, searching the web…) show what
                 // it's doing — the label doubles as the privacy surface for any
@@ -446,6 +451,14 @@ struct MessageView: View {
             }
             .padding(.horizontal, 6)
         }
+    }
+
+    /// Where a tapped option in a typed `m1k3-choices` block goes: the follow-up
+    /// send, so it lands as the next user message. Only on a finished answer, the
+    /// chips' gate; nil leaves the card read-only.
+    private var answerChoiceAction: AnswerChoiceAction? {
+        guard case .complete = message.status else { return nil }
+        return AnswerChoiceAction(onSendFollowUp)
     }
 
     /// Up to 3 tap-to-send follow-up questions (FollowUpSplit parsed them from

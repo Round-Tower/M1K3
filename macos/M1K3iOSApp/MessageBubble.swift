@@ -26,7 +26,11 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-13 (#597 follow-up) — 44 pt hit targets, the note field takes focus, and
 //  a typed note can't be swiped away. Confidence 0.85.
 //  TDD_SKIP: view body.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — a tapped option in a typed `m1k3-choices` block (#717) sends
+//  through `onSendFollowUp` (ChatScreen's brainReady gate), set only once the turn is `.complete`, as on the
+//  Mac. TDD_SKIP: view body. Confidence 0.75 (verify-by-launch on iPhone owed).
 
+import M1K3AnswerBlocks
 import M1K3Chat
 import M1K3Knowledge
 import SwiftUI
@@ -89,6 +93,7 @@ struct MessageBubble: View {
                 if !message.text.isEmpty {
                     ReadingText(message.text)
                         .foregroundStyle(.primary)
+                        .environment(\.answerChoiceAction, answerChoiceAction)
                         .modifier(LegibilityScrim(active: scrimmed))
                 }
                 if message.interrupted == true {
@@ -233,6 +238,13 @@ struct MessageBubble: View {
                 .lineLimit(1)
         }
         .padding(.top, 2)
+    }
+
+    /// A tapped option in a typed `m1k3-choices` block sends like a follow-up chip,
+    /// once the turn is complete; nil leaves the card read-only.
+    private var answerChoiceAction: AnswerChoiceAction? {
+        guard case .complete = message.status else { return nil }
+        return AnswerChoiceAction(onSendFollowUp)
     }
 
     /// Up to 3 tap-to-send follow-up questions (FollowUpSplit parsed them from
