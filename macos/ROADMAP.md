@@ -316,6 +316,9 @@ stays a possible later companion.
 - **#699 stated style (Phase 1, PR open):** four calls before it lands. The style line's own
   160-char budget, or the issue's shared 400 with About-you; style kept out of the catalogued
   kinds, so MCP can't write it; an edit as a supersede; the StyleAskFence cue list, a heuristic.
+  Three more from its review: iOS stores style rows but does not apply them yet (wire it, or
+  keep Phase 1 Mac-only); forgetting an edited fact also deletes the wording it replaced; a
+  later fact of another kind at the twin bar still supersedes a live style row.
   Owed evals: MEMSTAT's style-correction class and the paired style chateval arm.
 
 - **LinkedIn + the first Teams customer** — the 90-day founder move (#369).
@@ -451,3 +454,5 @@ stays a possible later companion.
      Confidence 0.8. -->
 <!-- Review: Kev + claude-opus-5.5, 2026-10-27 — #699 Phase 1's four open calls joined "Needs Kev"
      (the PR stays open for them). Confidence 0.85. -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — three more #699 calls from the review:
+     the iOS gap, the forget walk, the cross-kind supersede. Confidence 0.85. -->

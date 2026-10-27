@@ -26,6 +26,10 @@
 //  Review (2026-07-30, Kev + claude-fable-5): Tier-2 write-time repair — the
 //  seam gains supersede-by-text and revive-on-reassert (scratch/dream-cycle/
 //  SPEC.md §2); fact text is the corpus↔graph join key.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (#699 pre-push review fold) — `refileDistilledFact`: an asked-for
+//  style fact whose text the corpus already holds (a pre-#699 preference row with the same words) re-files the
+//  live node as style, superseding it so the lineage stays, joined by the corpus's normalised identity. A node
+//  already of that kind is left alone. Confidence 0.85.
 //
 
 import M1K3Chat
@@ -73,5 +77,20 @@ public struct DistilledFactGraphAdapter: DistilledFactGraphWriting {
         }
         try store.rememberConnected(memory, embedding: embedding, supersedes: head.id)
         return head.text
+    }
+
+    public func refileDistilledFact(
+        _ text: String, as kind: DistilledFactKind, embedding: [Float]
+    ) async throws -> Bool {
+        let target = MemoryKind(rawValue: kind.rawValue)
+        // The corpus dedupe that sent us here matches the NORMALISED text, so this join must too.
+        let identity = MemoryFactNormalizer.normalize(text)
+        guard let live = try store.liveMemory(where: { MemoryFactNormalizer.normalize($0) == identity }),
+              live.kind != target
+        else { return false }
+        // The live node's own text, not the fact's: text is the join key the corpus twin shares.
+        let refiled = Memory(kind: target, text: live.text, source: "distilled")
+        try store.rememberConnected(refiled, embedding: embedding, supersedes: live.id)
+        return true
     }
 }

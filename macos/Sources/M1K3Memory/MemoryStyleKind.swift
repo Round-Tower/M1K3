@@ -20,6 +20,9 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85 (pinned in
 //  MemoryStyleKindTests; whether the distiller files real asks under it is the
 //  on-device half, measured by MEMSTAT and the chateval style arm), Prior: none (new file)
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — `liveStyleMemories()` returns the rows,
+//  and `reviewableMemories` is the Memories list: its newest-first window plus every live style row past it, so
+//  what rides every prompt is always visible and forgettable. Confidence 0.85.
 //
 
 public extension MemoryKind {
@@ -36,8 +39,25 @@ public extension MemoryStore {
     /// covers a write landing between the count and the read. A store with no style
     /// rows costs one grouped count.
     func liveStyleTexts() throws -> [String] {
+        try liveStyleMemories().map(\.text)
+    }
+
+    /// Every live `.style` row, newest first, over the whole live set (see `liveStyleTexts`).
+    func liveStyleMemories() throws -> [Memory] {
         guard try (liveCountsByKind()[MemoryKind.style.rawValue] ?? 0) > 0 else { return [] }
         let window = try liveCount() + 64
-        return try allMemories(limit: window).filter { $0.kind == .style }.map(\.text)
+        return try allMemories(limit: window).filter { $0.kind == .style }
+    }
+
+    /// The Memories list: `allMemories`' newest-first window plus every live style row the
+    /// window missed, merged newest first. Visibility is the other half of consent: a row
+    /// that rides every system prompt must never sit past the list's reach, unseen and
+    /// unforgettable, however many newer facts the graph holds.
+    func reviewableMemories(includeSuperseded: Bool = false, limit: Int = 500) throws -> [Memory] {
+        let window = try allMemories(includeSuperseded: includeSuperseded, limit: limit)
+        let listed = Set(window.map(\.id))
+        let missing = try liveStyleMemories().filter { !listed.contains($0.id) }
+        guard !missing.isEmpty else { return window }
+        return (window + missing).sorted { $0.createdAt > $1.createdAt }
     }
 }

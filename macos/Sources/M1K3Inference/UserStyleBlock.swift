@@ -15,6 +15,9 @@
 //  cut at a word boundary with an ellipsis, the About block's own rule.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85, Prior: none (new file)
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — a cut that lands exactly on a word end
+//  keeps that word ("aaa bbb ccc" at 8 was "aaa…", now "aaa bbb…"); the boundaries are pinned exactly.
+//  Confidence 0.9.
 //
 
 import Foundation
@@ -42,10 +45,12 @@ public enum UserStyleBlock {
         return fact + "."
     }
 
-    /// `text` cut to fit `cap` with its ellipsis, at the last word boundary that fits.
+    /// `text` cut to fit `cap` with its ellipsis, at the last word boundary that fits. When the
+    /// room ends exactly at a word end (the next character is a space) the whole room is kept.
     static func cutAtAWord(_ text: String, cap: Int) -> String {
         let room = String(text.prefix(max(cap - 1, 0)))
-        let atWord = room.lastIndex(of: " ").map { String(room[..<$0]) } ?? room
+        let endsAWord = text.dropFirst(room.count).first?.isWhitespace ?? true
+        let atWord = endsAWord ? room : room.lastIndex(of: " ").map { String(room[..<$0]) } ?? room
         return atWord.trimmingCharacters(in: .whitespaces) + "…"
     }
 }

@@ -16,6 +16,9 @@
 //  align by construction; this pins that they stay aligned).
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: `.style` maps onto `MemoryKind.style` (the
 //  uncatalogued kind in M1K3Memory/MemoryStyleKind.swift). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (#699 pre-push review fold) — `refileDistilledFact` re-files a live
+//  node of another kind as style by the corpus's normalised identity, lineage kept, and declines a node that is
+//  already style or a text nothing carries. Confidence 0.85.
 //
 
 import M1K3Chat
@@ -59,5 +62,41 @@ struct DistilledFactGraphAdapterTests {
             let match = all.first { $0.text == "fact classified as \(kind.rawValue)" }
             #expect(match?.kind == expected[kind])
         }
+    }
+
+    @Test("#699: a live node of another kind re-files as style by normalised text, its lineage kept")
+    func refileMakesALiveNodeStyle() async throws {
+        let store = try MemoryStore(path: nil)
+        let adapter: any DistilledFactGraphWriting = DistilledFactGraphAdapter(store: store)
+        try await adapter.writeDistilledFact("The user prefers short answers.", kind: .preference, embedding: [1, 0, 0])
+
+        // The corpus dedupes on the normalised text, so the join here must too.
+        let refiled = try await adapter.refileDistilledFact(
+            "the user prefers short answers", as: .style, embedding: [1, 0, 0]
+        )
+        #expect(refiled)
+
+        #expect(try store.liveStyleTexts() == ["The user prefers short answers."])
+        #expect(try store.allMemories().count == 1)
+        let all = try store.allMemories(includeSuperseded: true)
+        let head = try #require(all.first { $0.supersededBy == nil })
+        #expect(SupersessionChain.history(endingAt: head, in: all).map(\.kind) == [.preference, .style])
+    }
+
+    @Test("#699: a node that is already style, or a text no live node carries, is not re-filed")
+    func refileDeclines() async throws {
+        let store = try MemoryStore(path: nil)
+        let adapter: any DistilledFactGraphWriting = DistilledFactGraphAdapter(store: store)
+        try await adapter.writeDistilledFact("The user wants no bullet lists.", kind: .style, embedding: [1, 0, 0])
+
+        let alreadyStyle = try await adapter.refileDistilledFact(
+            "The user wants no bullet lists.", as: .style, embedding: [1, 0, 0]
+        )
+        let nothingCarriesIt = try await adapter.refileDistilledFact(
+            "The user prefers metric.", as: .style, embedding: [0, 1, 0]
+        )
+        #expect(!alreadyStyle)
+        #expect(!nothingCarriesIt)
+        #expect(try store.allMemories(includeSuperseded: true).count == 1)
     }
 }

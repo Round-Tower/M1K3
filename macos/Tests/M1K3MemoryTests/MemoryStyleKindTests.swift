@@ -11,6 +11,9 @@
 //  is a supersede whose lineage the "How I learned this" section can show.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85, Prior: none (new file)
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — visibility is the other half of consent:
+//  the Memories list (`reviewableMemories`) carries every live style row however far past the 500-row window it
+//  sits, so an ask that rides every prompt can always be seen and forgotten. Confidence 0.85.
 //
 
 import Foundation
@@ -92,7 +95,7 @@ struct MemoryStyleKindTests {
         #expect(try reopened.liveStyleTexts() == ["The user wants no bullet lists.", "The user prefers short answers."])
     }
 
-    @Test("an edit supersedes: the old text leaves the live set, the lineage keeps it, and \"user:edit\" reads as you told me")
+    @Test("an edit supersedes: the old text leaves the live set, the lineage keeps it, \"user:edit\" reads as told")
     func editIsASupersede() throws {
         let store = try MemoryStore(path: nil)
         let old = style("The user prefers short answers.", at: t0)
@@ -102,7 +105,42 @@ struct MemoryStyleKindTests {
 
         #expect(try store.liveStyleTexts() == ["The user prefers answers of three sentences or fewer."])
         let lineage = try SupersessionChain.history(endingAt: edited, in: store.allMemories(includeSuperseded: true))
-        #expect(lineage.map(\.text) == ["The user prefers short answers.", "The user prefers answers of three sentences or fewer."])
+        #expect(lineage.map(\.text) == [
+            "The user prefers short answers.", "The user prefers answers of three sentences or fewer.",
+        ])
         #expect(MemoryProvenance(source: "user:edit") == .youToldMe)
+    }
+
+    @Test("the Memories list carries every live style row, even one 600 newer rows push out of the window")
+    func listShowsAnOldStyleRow() throws {
+        let store = try MemoryStore(path: nil)
+        let old = style("The user prefers short answers.", at: t0)
+        try store.remember(old, embedding: [1, 0, 0])
+        for index in 0 ..< 600 {
+            try store.remember(
+                Memory(kind: .note, text: "note \(index)", source: "distilled", createdAt: t0 + Double(index + 1)),
+                embedding: [0, 1, Float(index)]
+            )
+        }
+        #expect(try !store.allMemories(limit: 500).contains { $0.id == old.id }) // the window misses it
+
+        let listed = try store.reviewableMemories(limit: 500)
+
+        #expect(listed.count == 501)
+        #expect(listed.last?.id == old.id) // newest first, the old ask at the end
+        #expect(listed.filter { $0.id == old.id }.count == 1)
+        #expect(try store.liveStyleMemories().map(\.id) == [old.id])
+    }
+
+    @Test("a list window that already holds the style rows is returned as it is, never doubled")
+    func listWithinTheWindowIsUnchanged() throws {
+        let store = try MemoryStore(path: nil)
+        try store.remember(style("The user prefers short answers.", at: t0), embedding: [1, 0, 0])
+        try store.remember(
+            Memory(kind: .note, text: "The user lives in Cork.", source: "distilled", createdAt: t0 + 30),
+            embedding: [0, 1, 0]
+        )
+        #expect(try store.reviewableMemories() == store.allMemories())
+        #expect(try store.reviewableMemories(includeSuperseded: true) == store.allMemories(includeSuperseded: true))
     }
 }

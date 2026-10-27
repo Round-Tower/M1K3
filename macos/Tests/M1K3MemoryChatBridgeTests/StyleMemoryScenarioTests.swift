@@ -19,6 +19,10 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85, Prior: none (new file)
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — the stored rows also render through the real
 //  UserStyleBlock, so the scenario ends at the text the persona carries. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — the kind-blind dedupe, both ways: a store
+//  from before #699 that filed the same text as a preference gets its node re-filed as style when the user asks
+//  (it vanished as a duplicate before), and a later fact of another kind at the twin bar still supersedes a live
+//  style row (pinned as it is: the named cost Kev rules on). Confidence 0.85.
 //
 
 import Foundation
@@ -123,5 +127,40 @@ struct StyleMemoryScenarioTests {
 
         let reopened = try MemoryStore(path: path)
         #expect(try reopened.liveStyleTexts() == [correction])
+    }
+
+    @Test("a store from before #699 that filed the ask as a preference gets it re-filed as style when the user asks")
+    func preferenceRowIsRefiledByAnAsk() async throws {
+        let harness = try Harness(corpus: KnowledgeStore(), graph: MemoryStore(path: nil))
+        // Before #699 the distiller had no style kind: the same words landed as a preference.
+        #expect(try await harness.distill(
+            DistilledFact(text: "The user prefers short answers.", kind: .preference),
+            saying: "I prefer short answers, honestly"
+        ) == 1)
+        #expect(try harness.graph.liveStyleTexts().isEmpty)
+
+        #expect(try await harness.distill(
+            DistilledFact(text: "The user prefers short answers.", kind: .style), saying: "short answers please"
+        ) == 1)
+
+        #expect(try harness.graph.liveStyleTexts() == ["The user prefers short answers."])
+        #expect(try harness.graph.allMemories().count == 1)
+        #expect(try harness.corpus.allItems(kind: .memory).count == 1)
+    }
+
+    @Test("known cost, Kev's call: a later fact of another kind at the twin bar supersedes a live style row")
+    func crossKindTwinSupersedesAStyleRow() async throws {
+        let harness = try Harness(corpus: KnowledgeStore(), graph: MemoryStore(path: nil))
+        #expect(try await harness.distill(
+            DistilledFact(text: "\(filler) short", kind: .style), saying: "please keep it \(filler) short"
+        ) == 1)
+
+        // The coordinator's twin search ignores kind, and the adapter supersedes by text.
+        #expect(try await harness.distill(
+            DistilledFact(text: "\(filler) long", kind: .note), saying: "\(filler) long"
+        ) == 1)
+
+        #expect(try harness.graph.liveStyleTexts().isEmpty) // the style line has lost the ask
+        #expect(try harness.graph.allMemories().map(\.kind) == [.note])
     }
 }

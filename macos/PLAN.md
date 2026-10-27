@@ -834,3 +834,31 @@ PCC wiring behind the FM27 gate) was challenger-tested; two findings flipped the
 <!-- Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.8 — Phase 1 is pinned in swift test; whether
      a brain honours the line and whether real corrections supersede are the two evals named above.
      Prior: none (new block). -->
+
+## Update — 2026-10-27: #699 pre-push review fold
+
+- **Edit and forget, now tested:** both live in `MemoryEditor.swift` (M1K3MemoryChatBridge), over real
+  stores. An edit re-reads the row first, so a row corrected since its screen loaded is refused. It also
+  refuses wording another live fact already says, and it keeps the row's title. The corpus half is
+  `MemoryDistillationCoordinator.applyEdit`: the new wording is ingested before the old twin leaves, an
+  edit that changes only case or punctuation moves nothing, an edit back to a retired wording restores
+  it, and failures are audited by ids. Forgetting an edited fact also forgets the wording it replaced.
+- **Consent:** the style re-read moved to `refreshCounts()`, which MCP forget_memory already calls. The
+  Memories list now shows every live style row, even past its 500-row window.
+- **The fence, narrowed (fail-closed):** the anchor and the ask must sit in one sentence or line, and
+  "prefers"/"wants" never anchor. Every cue and lead is pinned one by one.
+- **Kind-blind dedupe:** when the user asks, a pre-#699 preference row with the same words is re-filed
+  as style. Before, the ask vanished as a duplicate.
+- **Kev's calls added:**
+  - **iOS and visionOS:** the shared distiller files style rows there too, but the iOS shell never calls
+    `setUserStyle`. On iPhone a style row is stored and listed, and it changes nothing yet. Either wire
+    it (two hooks in `AppCore.swift`, a mobile CI run, Mini's on-device window re-measured) or keep
+    Phase 1 Mac-only. This fold left the shell untouched.
+  - **The forget walk:** forgetting an edited fact deletes the wording it replaced, back to the first
+    row that is not an edit, where the store's forget would revive it. The alternative is to keep undo
+    and say so in the Forget confirmation.
+  - **Cross-kind supersede:** a later fact of another kind at the twin bar still supersedes a live
+    style row, so the line loses that ask (pinned in `StyleMemoryScenarioTests.swift`).
+
+<!-- Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.8 — the fold's logic is pinned in swift test;
+     the same two evals and the click-through stay owed. Prior: none (new block). -->

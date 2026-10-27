@@ -17,6 +17,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: a `.style` fact also needs StyleAskFence's explicit
 //  ask (anchored-but-unasked is dropped, other kinds untouched), and `didWrite` fires once with the count
 //  when facts land, never when nothing did. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — the #699 tests moved, with their own
+//  fixtures, to MemoryDistillationCoordinatorStyleTests (this file had grown past its lint bounds); the corpus
+//  half of a Memories edit is pinned in MemoryCorpusEditTests. Confidence 0.85.
 
 import Foundation
 @testable import M1K3Chat
@@ -88,28 +91,6 @@ private func makeFixture(
             store: store,
             embedder: embedder,
             graph: graph,
-            selfNames: .none
-        ),
-        store
-    )
-}
-
-/// A coordinator over typed facts (#699's style tests), with the `didWrite` hook.
-private func makeTypedFixture(
-    _ facts: [DistilledFact],
-    graph: (any DistilledFactGraphWriting)? = nil,
-    didWrite: (@Sendable (Int) -> Void)? = nil
-) throws -> (MemoryDistillationCoordinator, KnowledgeStore) {
-    let store = try KnowledgeStore()
-    let embedder = HashingEmbeddingService()
-    return (
-        MemoryDistillationCoordinator(
-            distiller: FakeDistiller(typed: facts),
-            ingester: DocumentIngester(store: store, embedder: embedder),
-            store: store,
-            embedder: embedder,
-            graph: graph,
-            didWrite: didWrite,
             selfNames: .none
         ),
         store
@@ -343,63 +324,5 @@ struct MemoryDistillationCoordinatorTests {
         #expect(memories.count == 1)
         #expect(memories.first?.title.contains("Ardmore") == true)
         #expect(try store.searchFTS(query: "honey").isEmpty)
-    }
-
-    // MARK: - Style facts need an explicit ask (#699)
-
-    @Test("a style fact the user's turns anchor but never ask for is dropped; other kinds are untouched")
-    func styleWithoutAnAskIsDropped() async throws {
-        let graph = FakeGraphWriter()
-        let slice = [
-            ChatTurn(role: .user, text: "short answers are what I give at work, and I live in Cork"),
-            ChatTurn(role: .assistant, text: "Want me to keep mine short too?"),
-        ]
-        let (coordinator, store) = try makeTypedFixture([
-            DistilledFact(text: "The user prefers short answers.", kind: .style),
-            DistilledFact(text: "The user lives in Cork.", kind: .profile),
-        ], graph: graph)
-
-        let written = try await coordinator.distillAndStore(turns: slice)
-
-        #expect(written == 1)
-        #expect(await graph.kinds() == [.profile])
-        #expect(try store.searchFTS(query: "short").isEmpty)
-    }
-
-    @Test("a style fact the user asked for lands, and reaches the graph as .style")
-    func styleWithAnAskLands() async throws {
-        let graph = FakeGraphWriter()
-        let slice = [
-            ChatTurn(role: .user, text: "can you keep your answers short from now on"),
-            ChatTurn(role: .assistant, text: "Short it is."),
-        ]
-        let (coordinator, _) = try makeTypedFixture(
-            [DistilledFact(text: "The user prefers short answers.", kind: .style)], graph: graph
-        )
-
-        let written = try await coordinator.distillAndStore(turns: slice)
-
-        #expect(written == 1)
-        #expect(await graph.kinds() == [.style])
-        #expect(await graph.texts() == ["The user prefers short answers."])
-    }
-
-    @Test("didWrite fires once with the count when facts land, and not at all when nothing did")
-    func didWriteFiresOncePerWritingSlice() async throws {
-        nonisolated(unsafe) var calls: [Int] = []
-        let (coordinator, _) = try makeTypedFixture(
-            [
-                DistilledFact(text: "Kev's sister is called Aoife.", kind: .profile),
-                DistilledFact(text: "The user prefers metric units.", kind: .preference),
-            ],
-            didWrite: { calls.append($0) }
-        )
-
-        #expect(try await coordinator.distillAndStore(turns: someTurns) == 2)
-        #expect(calls == [2])
-
-        // The same slice again: both are exact duplicates, nothing is written, nothing fires.
-        #expect(try await coordinator.distillAndStore(turns: someTurns) == 0)
-        #expect(calls == [2])
     }
 }

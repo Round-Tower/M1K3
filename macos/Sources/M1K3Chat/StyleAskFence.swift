@@ -8,11 +8,15 @@
 //  The distiller prompt says so; this is the deterministic backstop the prompt
 //  cannot guarantee, the same shape as #284's attribution fence and applied after it.
 //
-//  One rule, fail-closed: a style fact survives only if ONE user turn both anchors it
-//  (shares a content token, by DistillationAttribution's own token rule) and reads as
-//  a request: a cue phrase anywhere in the turn, or an imperative lead about form.
-//  The cue must sit in the anchoring turn, so "please tell me about Cork" cannot
-//  vouch for a style fact some other turn anchors.
+//  One rule, fail-closed: a style fact survives only if ONE sentence of a user turn (or
+//  one line of it) both anchors it (shares a content token, by DistillationAttribution's
+//  own token rule) and reads as a request: a cue phrase anywhere in that sentence, or an
+//  imperative lead about form. The cue must sit in the anchoring sentence, so "please
+//  tell me about Cork" cannot vouch for a style fact some other turn anchors, and a
+//  pasted email or article (a "please" in one line, "answers" in another) cannot vouch
+//  for one either. The verb the distiller prompt mandates ("The user prefers/wants…")
+//  is scaffold, not content: it never anchors, or any turn saying "my sister wants…"
+//  would.
 //
 //  Known, accepted costs (Kev's call, named in the PR):
 //  - A bare "yes" to M1K3's own "want me to be briefer?" fails, as in #284: the
@@ -21,10 +25,20 @@
 //  - The fence cannot tell a one-off task ask ("write me a shorter email") from a
 //    standing one; the distiller prompt carries that line, and an edit or forget in
 //    the Memories list undoes a wrong row.
+//  - An ask split across sentences ("Too long. Shorter, please." anchors only in the
+//    second, which also asks, so it passes; "Your answers. Please." does not).
+//  - Kind-blind supersede: the coordinator's twin search ignores kind, so a later
+//    fact filed under another kind ("The user prefers shorter answers." as a
+//    preference) at or above the embedder's twin bar supersedes a live style row,
+//    and the line loses that ask. Pinned in StyleMemoryScenarioTests; Kev's call.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.8 (pure and pinned in
 //  StyleAskFenceTests; the cue list is a heuristic, so its width is unmeasured on
 //  live conversations), Prior: none (new file)
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — narrowed twice, both fail-closed: the
+//  anchor and the ask must share one sentence or line (a pasted paragraph carried a cue in one line and an
+//  anchor in another), and "prefers"/"wants", which the prompt puts in every style fact, no longer anchor.
+//  Every cue and lead is pinned one by one. Confidence 0.8.
 //
 
 import Foundation
@@ -65,19 +79,47 @@ public enum StyleAskFence {
         "ok", "okay", "and", "also", "oh", "so", "right", "hey", "alright", "um",
     ]
 
-    /// True when one of `userTurns` both anchors `fact` and reads as a request.
-    /// `selfNames` never count as anchoring evidence, as in `isAnchored`.
+    /// The words the distiller prompt puts in every style fact ("The user prefers…",
+    /// "The user wants…"). Scaffold, not content: they never anchor.
+    static let scaffoldTokens: Set<String> = ["prefers", "prefer", "wants", "want"]
+
+    /// True when one sentence (or line) of one of `userTurns` both anchors `fact` and
+    /// reads as a request. `selfNames` never count as anchoring evidence, as in `isAnchored`.
     public static func isExplicitAsk(
         fact: String,
         userTurns: [String],
         selfNames: DistillationAttribution.UserNames = .none
     ) -> Bool {
         let factTokens = DistillationAttribution.contentTokens(in: fact, selfNames: selfNames)
+            .subtracting(scaffoldTokens)
         guard !factTokens.isEmpty else { return false }
-        return userTurns.contains { turn in
-            !factTokens.isDisjoint(with: DistillationAttribution.contentTokens(in: turn, selfNames: selfNames))
-                && isRequest(turn)
+        return userTurns.lazy.flatMap(segments).contains { segment in
+            !factTokens.isDisjoint(with: DistillationAttribution.contentTokens(in: segment, selfNames: selfNames))
+                && isRequest(segment)
         }
+    }
+
+    /// A turn's sentences and lines: split at every line break, and after a `.`, `!` or `?`
+    /// that ends the text or meets whitespace (so "3.5" stays whole). Trimmed, none empty.
+    static func segments(_ turn: String) -> [String] {
+        var segments: [String] = []
+        var current = ""
+        let characters = Array(turn)
+        for (index, character) in characters.enumerated() {
+            if character.isNewline {
+                segments.append(current)
+                current = ""
+                continue
+            }
+            current.append(character)
+            let atBoundary = index + 1 == characters.count || characters[index + 1].isWhitespace
+            if ".!?".contains(character), atBoundary {
+                segments.append(current)
+                current = ""
+            }
+        }
+        segments.append(current)
+        return segments.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     }
 
     /// Whether `turn` reads as a request: an imperative lead about form, or any cue phrase.

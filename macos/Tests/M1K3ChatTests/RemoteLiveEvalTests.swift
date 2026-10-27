@@ -33,6 +33,9 @@
 //  scorer and document are the harness's own; the wire is pinned by
 //  OpenRouterWireTests; the live path differs from the app's only in the
 //  embedder, which an empty store never consults). Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (#699 pre-push review fold) — the stated-style line rides the
+//  same `compose` door as the profile, so the promise that nothing about the user leaves now requires an empty
+//  style too. Confidence 0.9.
 //
 
 import Foundation
@@ -132,6 +135,10 @@ struct RemoteLiveEvalTests {
         // The persona goes to third parties: the standard composition is the one door a user
         // profile has, and a plain test process never sets one. Make that a promise.
         try #require(M1K3Persona.userProfile == nil, "a user profile is set in this process; nothing about the user leaves")
+        // #699: the stated-style line rides the same door, so the same promise holds.
+        try #require(
+            M1K3Persona.userStyle.isEmpty, "a stated style is set in this process; nothing about the user leaves"
+        )
         try #require(!Self.models.isEmpty, "M1K3_REMOTE_EVAL_MODELS names no model")
         let unknown = Self.kindNames.filter { TaskKind(rawValue: $0) == nil }
         try #require(unknown.isEmpty, "unknown kinds: \(unknown)")

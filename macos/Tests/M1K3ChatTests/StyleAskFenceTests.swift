@@ -13,6 +13,11 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.8 (the rule is pure and pinned;
 //  whether the cue list is the right width is Kev's call, see the PR), Prior: none (new file)
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — every cue and every lead is now pinned one
+//  by one, with the list sizes snapshotted, so an edit to either is a visible diff; the task-verb exclusion, the
+//  word boundaries and the filler path are pinned on their own. New fail-closed cases: the verb the prompt
+//  mandates ("prefers"/"wants") never anchors, and the anchor and the ask must sit in ONE sentence or line, so a
+//  pasted paragraph cannot vouch for a style fact. Confidence 0.85.
 //
 
 @testable import M1K3Chat
@@ -48,7 +53,7 @@ struct StyleAskFenceTests {
             "from now on, no bullet points", // a standing directive
             "too many bullet points", // a complaint about the form
             "avoid bullet points", // an imperative lead
-            "ok, skip the bullet points", // a lead after a filler
+            "ok, avoid bullet points", // a lead after a filler (no cue in the turn: only the lead path passes it)
         ] {
             #expect(asks(fact, [turn]), "\(turn)")
         }
@@ -91,6 +96,97 @@ struct StyleAskFenceTests {
     func noCommaIsNotALead() {
         #expect(!StyleAskFence.isRequest("no, the lists were fine"))
         #expect(StyleAskFence.isRequest("no lists"))
+    }
+
+    // MARK: - The mandated verb is not evidence
+
+    @Test("\"prefers\" and \"wants\" are the prompt's own scaffold, so a turn sharing only them never anchors")
+    func templateVerbsDoNotAnchor() {
+        #expect(!asks("The user wants no bullet lists.", ["please tell me what my sister wants for her birthday"]))
+        #expect(!asks("The user prefers short answers.", ["my sister prefers tea, could you suggest a blend please"]))
+        // A real content token still anchors beside them.
+        #expect(asks("The user prefers short answers.", ["I prefer short answers please"]))
+    }
+
+    @Test("a fact made only of the scaffold has nothing to anchor on")
+    func scaffoldOnlyFactFails() {
+        #expect(!asks("The user prefers.", ["please, the user prefers"]))
+    }
+
+    // MARK: - One sentence carries both
+
+    @Test("the anchor and the ask must sit in one sentence or line: a pasted paragraph cannot vouch for a style fact")
+    func anchorAndAskShareOneSegment() {
+        let pasted = """
+        Dear team, please find the minutes attached.
+        The answers to the survey were short this quarter.
+        """
+        #expect(!asks("The user prefers short answers.", [pasted]))
+        #expect(!asks("The user prefers short answers.", ["Please read this. Your answers on the quiz were short."]))
+        #expect(!asks("The user prefers short answers.", ["Stop! The answers were short; it was fine"]))
+    }
+
+    @Test("a polite closer in the same sentence still asks, and an opener before it doesn't break it")
+    func oneSentenceAsksPass() {
+        #expect(asks("The user prefers shorter answers.", ["Thanks! Shorter answers please."]))
+        #expect(asks("The user prefers shorter answers.", ["Great work.\nCan you keep the answers shorter?"]))
+        #expect(asks("The user wants no bullet points.", ["Thanks! Skip the bullet points."]))
+    }
+
+    @Test("a turn splits at line breaks and at sentence ends, never inside a number")
+    func segmentsSplitAtSentencesAndLines() {
+        #expect(StyleAskFence.segments("Thanks! Shorter answers please.") == ["Thanks!", "Shorter answers please."])
+        #expect(StyleAskFence.segments("one\ntwo") == ["one", "two"])
+        #expect(StyleAskFence.segments("keep it to 3.5 lines?") == ["keep it to 3.5 lines?"])
+        #expect(StyleAskFence.segments("  \n ").isEmpty)
+    }
+
+    // MARK: - The lists, one entry at a time
+
+    @Test("every request cue reads as a request on its own, word-bounded after normalisation")
+    func everyCueMatches() {
+        for cue in StyleAskFence.requestCues {
+            #expect(StyleAskFence.isRequest("\(cue) bullet points"), "\(cue)")
+            #expect(StyleAskFence.isRequest("well \(cue) bullet points"), "\(cue) mid-turn")
+        }
+    }
+
+    @Test("every imperative lead reads as a request when it opens a turn")
+    func everyLeadMatches() {
+        for lead in StyleAskFence.imperativeLeads {
+            #expect(StyleAskFence.isRequest("\(lead) bullet points"), "\(lead)")
+        }
+    }
+
+    @Test("the lists are snapshotted, so an edit to either is a visible, reviewed diff")
+    func listsAreSnapshotted() {
+        #expect(StyleAskFence.requestCues.count == 54)
+        #expect(Set(StyleAskFence.requestCues).count == StyleAskFence.requestCues.count) // no duplicates
+        #expect(StyleAskFence.imperativeLeads == [
+            "be", "keep", "skip", "stop", "use", "avoid", "drop", "ditch", "lose", "cut",
+            "answer", "reply", "respond", "talk", "speak", "always", "never", "no", "less", "fewer",
+        ])
+    }
+
+    @Test("task verbs open asks for content, never a standing ask about answers")
+    func taskVerbsAreNotLeads() {
+        for verb in ["write", "explain", "tell", "give", "make"] {
+            #expect(!StyleAskFence.imperativeLeads.contains(verb), "\(verb)")
+        }
+        #expect(!StyleAskFence.isRequest("write me a short poem"))
+        #expect(!StyleAskFence.isRequest("explain how bridges work"))
+        #expect(!StyleAskFence.isRequest("tell me about Cork"))
+        #expect(!StyleAskFence.isRequest("give me a recipe"))
+        #expect(!StyleAskFence.isRequest("make a list of tasks"))
+        #expect(!asks("The user prefers short answers.", ["write me a short summary of the answers"]))
+    }
+
+    @Test("cues are word-bounded: pleased, stopped and regardless are not please, stop and less")
+    func cuesAreWordBounded() {
+        #expect(!StyleAskFence.isRequest("I was pleased with the answers"))
+        #expect(!StyleAskFence.isRequest("they stopped by with answers"))
+        #expect(!StyleAskFence.isRequest("regardless of the lists"))
+        #expect(!StyleAskFence.isRequest("the shortest answers won"))
     }
 
     @Test("a fact with no content tokens never passes")

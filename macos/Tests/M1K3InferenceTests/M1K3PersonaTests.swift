@@ -37,6 +37,9 @@
 //  block with its own cap (`styleComposesAfterTheAboutBlock`, `styleHasItsOwnBudget`); with no style every
 //  render is byte-identical (the pins also require an empty style now). Mini's bound re-pinned from the
 //  measured cap-length profile + cap-length style render. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — `compose` has no default `style:` now, so a
+//  call site that forgets the style is a compile error rather than a silent drop; every call here names it, and
+//  the no-style check compares against the literal profile-only bytes. Confidence 0.9.
 //
 
 import CryptoKit
@@ -163,7 +166,8 @@ struct M1K3PersonaTests {
         let september = try #require(Calendar(identifier: .gregorian).date(from: comps))
         let worst = M1K3Persona.compose(
             core: M1K3Persona.corePrompt + "\n" + M1K3Persona.currentDateLine(september),
-            profile: nil
+            profile: nil,
+            style: []
         )
         // v2 floor ≈3250 + the 2026-06-30 character pass (≈+270, VOICE breathes)
         // + the 2026-07-14 FOLLOW-UPS section (≈+50, always-on across ALL tiers
@@ -457,18 +461,18 @@ struct M1K3PersonaTests {
 
     @Test("a user profile composes in as an About-the-user block")
     func profileComposes() {
-        let composed = M1K3Persona.compose(core: "CORE", profile: "Kev — dyslexic, prefers brief answers.")
+        let composed = M1K3Persona.compose(core: "CORE", profile: "Kev — dyslexic, prefers brief answers.", style: [])
         #expect(composed.hasPrefix("CORE"))
         #expect(composed.contains("About the user: Kev — dyslexic"))
 
-        #expect(M1K3Persona.compose(core: "CORE", profile: nil) == "CORE")
-        #expect(M1K3Persona.compose(core: "CORE", profile: "   ") == "CORE")
+        #expect(M1K3Persona.compose(core: "CORE", profile: nil, style: []) == "CORE")
+        #expect(M1K3Persona.compose(core: "CORE", profile: "   ", style: []) == "CORE")
     }
 
     @Test("profiles are hard-capped — they ride the system turn every launch")
     func profileCap() {
         let long = String(repeating: "fact ", count: 200)
-        let composed = M1K3Persona.compose(core: "CORE", profile: long)
+        let composed = M1K3Persona.compose(core: "CORE", profile: long, style: [])
         #expect(composed.count < 500 + M1K3Persona.profileCharacterCap)
         #expect(composed.contains("…"))
     }
@@ -482,8 +486,7 @@ struct M1K3PersonaTests {
         #expect(M1K3Persona.compose(core: "CORE", profile: nil, style: style)
             == "CORE\nHow the user wants answers: The user prefers short answers.")
         // No style: byte-identical to the profile-only composition every pin was taken on.
-        #expect(M1K3Persona.compose(core: "CORE", profile: "Kev", style: [])
-            == M1K3Persona.compose(core: "CORE", profile: "Kev"))
+        #expect(M1K3Persona.compose(core: "CORE", profile: "Kev", style: []) == "CORE\nAbout the user: Kev")
         #expect(M1K3Persona.compose(core: "CORE", profile: nil, style: ["  "]) == "CORE")
     }
 

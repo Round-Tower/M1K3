@@ -142,6 +142,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (#699) — the stated style reaches the persona: restored at launch
 //  beside the profile (`refreshUserStyle`), and re-read by the distillation coordinator's `didWrite` hook when a
 //  slice wrote facts. Verify-by-launch owed (state a style, leave the chat, relaunch). Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (#699 pre-push review fold) — `refreshCounts()` re-reads the style:
+//  every memory write and forget already calls it, MCP forget_memory included, which had no re-read (a forgotten
+//  ask kept riding every prompt until relaunch). Pinned by StatedStyleWiringTests. Confidence 0.8.
 
 import AppKit
 import Foundation
@@ -2163,6 +2166,9 @@ extension AppEnvironment {
     func refreshCounts() { // internal: MCP remember tool refreshes after ingest
         indexedItemCount = (try? store.itemCount()) ?? indexedItemCount
         callCount = (try? callPersistence.count()) ?? callCount
+        // #699: every memory write and forget lands here (the Memories list, MCP remember and
+        // forget_memory), so the persona's stated-style line is re-read at this one seam.
+        refreshUserStyle()
     }
 }
 

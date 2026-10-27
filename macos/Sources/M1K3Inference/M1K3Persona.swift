@@ -140,6 +140,9 @@
 //  Outside the PersonaPack slot, so it layers on any voice; the PCC prompt never calls compose. With no style every
 //  render is byte-identical (`everyRenderMatchesItsPin`). Confidence 0.8 (whether a brain honours the line is the
 //  chateval style arm's to say).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — `compose(core:profile:style:)` has no
+//  default `style:`: a call site that forgot it compiled and silently dropped the line, and no test may set the
+//  global to notice (the parallel race). Now it is a compile error. Confidence 0.9.
 
 import Foundation
 import Synchronization
@@ -205,7 +208,8 @@ public enum M1K3Persona {
 
     /// Pure composition: core + the capped About-the-user block + the capped style line.
     /// The one door either has into a prompt; the PCC prompt never opens it.
-    static func compose(core: String, profile: String?, style: [String] = []) -> String {
+    /// No default for `style`: a call site that forgets it must not compile.
+    static func compose(core: String, profile: String?, style: [String]) -> String {
         var prompt = core
         if var profileText = profile?.trimmingCharacters(in: .whitespacesAndNewlines), !profileText.isEmpty {
             if profileText.count > profileCharacterCap {
