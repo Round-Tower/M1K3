@@ -33,6 +33,16 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11 (review 10 fold on #288) — `selfNames` is injected
 //  like every other collaborator (default: the account's names); tests pass `.none` and stop
 //  depending on the machine's user name.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #711 (memory import): `distillAndStore` is now `store(propose(turns:))`,
+//  byte-identical in behaviour, so an import can show the fenced proposals for review before anything is written and
+//  then write the accepted ones through the SAME exact + semantic dedupe/supersede path (bar unchanged:
+//  `semanticDedupeThreshold(for:)`). `corpusSource` (default `.distilled`) tags the rows; `forgetCorpus(source:in:)`
+//  deletes one source's memory rows and restores every twin its ledger says they superseded. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold on #711) — `revivesSupersededFacts` (default
+//  true, so live distillation is unchanged): an import passes false, because an old chat exactly restating a fact the
+//  user has since corrected is history, not a repair, and its revive left no tag for Forget to undo (the graph and
+//  corpus then disagreed). `forgetCorpus` deletes in one transaction (`deleteItems(ids:)` + `deleteMeta(keys:)`).
+//  Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — #699 Phase 1: a `.style` fact must ALSO pass StyleAskFence
 //  (one user turn that anchors it reads as a request), because a stored style rides every system prompt;
 //  the drops get their own `.info` count. `didWrite` (the `auditSink` closure shape) fires once with the
@@ -48,6 +58,10 @@
 //  row) re-files that graph node through the seam's `refileDistilledFact` instead of vanishing as a duplicate.
 //  The edit, and the twin transition and ledger it shares with this file, live in MemoryCorpusEdit.swift;
 //  the two fences are one `fenceDrop` helper. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (merge of master's #711 into #699) — the #699 style fence joins
+//  #284's in `propose`, so an import's review is fenced too; `didWrite` fires from `store`, the one write path
+//  (a `defer` there, so the throw path still re-reads); `reassert` honours `revivesSupersededFacts` before the
+//  style re-file, and `forgetCorpus` reads the ledger key that moved to MemoryCorpusEdit.swift. Confidence 0.8.
 
 import CryptoKit
 import Foundation
@@ -128,7 +142,7 @@ public struct MemoryDistillationCoordinator: Sendable {
     /// never fact text) — the M2 typed-audit hook. The same line always
     /// goes to the security-relevant `.error` log regardless.
     private let auditSink: (@Sendable (String) -> Void)?
-    /// Fired once, off the main actor, when a `distillAndStore` wrote at least one fact, with
+    /// Fired once, off the main actor, when a `store` (so a `distillAndStore`) wrote at least one fact, with
     /// the count (#699), including when a later fact threw after earlier ones landed: the
     /// app's hook to re-read the style rows into the persona. Any write may change them (a
     /// cross-kind supersede included), and a re-read that finds the same rows leaves the
@@ -138,6 +152,15 @@ public struct MemoryDistillationCoordinator: Sendable {
     /// app, `.none` in tests, so a suite never depends on who runs it
     /// (review 10 on #288: a tester surnamed Corkery would have lost "cork").
     private let selfNames: DistillationAttribution.UserNames
+    /// Who every corpus row this coordinator writes says wrote it: `.distilled` for live
+    /// distillation, an import's `import/<provider>/<date>` tag for #711, so one action can find
+    /// (and forget) exactly what that import added.
+    private let corpusSource: KnowledgeSource
+    /// Whether an exact re-assertion of a superseded fact revives it (spec finding #8). Live
+    /// chat: yes, the user repeating a fact they had corrected IS the repair. A memory import
+    /// (#711): no — an old conversation is history, and reviving from it would undo a newer
+    /// correction without a tag "forget this import" could find.
+    private let revivesSupersededFacts: Bool
 
     public init(
         distiller: any MemoryDistilling,
@@ -148,6 +171,8 @@ public struct MemoryDistillationCoordinator: Sendable {
         rekind: (@Sendable (UUID, KnowledgeKind) throws -> Bool)? = nil,
         auditSink: (@Sendable (String) -> Void)? = nil,
         didWrite: (@Sendable (Int) -> Void)? = nil,
+        corpusSource: KnowledgeSource = .distilled,
+        revivesSupersededFacts: Bool = true,
         selfNames: DistillationAttribution.UserNames = DistillationAttribution.systemUserNames
     ) {
         self.distiller = distiller
@@ -159,11 +184,22 @@ public struct MemoryDistillationCoordinator: Sendable {
         self.auditSink = auditSink
         self.didWrite = didWrite
         self.selfNames = selfNames
+        self.corpusSource = corpusSource
+        self.revivesSupersededFacts = revivesSupersededFacts
     }
 
     /// Distill the slice and store what's new. Returns the number of facts
     /// actually written (dedupe skips don't count). Rethrows distiller
     /// failure so the caller withholds the watermark and retries the slice.
+    /// Exactly `store(propose(turns:))`.
+    @discardableResult
+    public func distillAndStore(turns: [ChatTurn]) async throws -> Int {
+        try await store(propose(turns: turns))
+    }
+
+    /// Distill the slice and return the facts that survive the fence, writing
+    /// NOTHING — the review half of a memory import (#711), where the user
+    /// ticks what to keep before `store` runs. Rethrows distiller failure.
     ///
     /// #284 attribution fence, applied AFTER MemoryFactParser's own validator +
     /// durability filters: a trivial user turn (a bare greeting) never even
@@ -174,27 +210,48 @@ public struct MemoryDistillationCoordinator: Sendable {
     /// #699: a `.style` fact also needs an explicit ask (`StyleAskFence`): it
     /// renders into every system prompt, so it must come from a request the
     /// user made, never from how they behave.
-    @discardableResult
-    public func distillAndStore(turns: [ChatTurn]) async throws -> Int {
+    public func propose(turns: [ChatTurn]) async throws -> [DistilledFact] {
         guard !DistillationAttribution.userContributionIsTrivial(turns: turns) else {
             Self.log.info("distillation skipped: user contribution trivial (\(turns.count) turn(s))")
-            return 0
+            return []
         }
         let facts = try await distiller.distill(turns: turns)
         guard !facts.isEmpty else {
             Self.log.info("distilled 0 facts from \(turns.count) turn(s)")
-            return 0
+            return []
         }
         let userTurns = turns.filter { $0.role == .user }.map(\.text)
         var dropped: [FenceDrop: Int] = [:]
+        var fenced: [DistilledFact] = []
+        for fact in facts {
+            if let drop = fenceDrop(fact, userTurns: userTurns) {
+                dropped[drop, default: 0] += 1
+            } else {
+                fenced.append(fact)
+            }
+        }
+        if let count = dropped[.unanchored] {
+            Self.log.info("distillation dropped \(count) unanchored fact(s)")
+        }
+        if let count = dropped[.unasked] {
+            Self.log.info("distillation dropped \(count) style fact(s) the user never asked for")
+        }
+        return fenced
+    }
+
+    /// Write `facts` through the one memory write path: exact dedupe on the
+    /// normalized-text sourceRef, semantic supersede at the embedder's own bar,
+    /// revive on an exact re-assertion of a superseded fact, and the graph
+    /// dual-write. Returns the number of facts written (dedupe skips don't
+    /// count). The caller owns attribution: pass `propose`'s output, or facts
+    /// the user stated outright (an OKF import from another M1K3).
+    @discardableResult
+    public func store(_ facts: [DistilledFact]) async throws -> Int {
+        guard !facts.isEmpty else { return 0 }
         var written = 0
         // Fires on the throw path too: facts written before a later one threw are in the stores.
         defer { if written > 0 { didWrite?(written) } }
         for fact in facts {
-            if let drop = fenceDrop(fact, userTurns: userTurns) {
-                dropped[drop, default: 0] += 1
-                continue
-            }
             // Embed ONCE: the same vector finds the semantic twin AND seeds
             // the graph node, so the repair costs no extra embed.
             let vector = await embed(fact.text)
@@ -212,7 +269,7 @@ public struct MemoryDistillationCoordinator: Sendable {
                 text: fact.text,
                 sourceRef: Self.factSourceRef(fact.text),
                 kind: .memory,
-                source: .distilled
+                source: corpusSource
             )
             if result.wasDeduped {
                 if try await reassert(fact, itemID: result.itemID, vector: vector) { written += 1 }
@@ -225,12 +282,6 @@ public struct MemoryDistillationCoordinator: Sendable {
                 Self.log.info("remembered: \(LogPreview.preview(fact.text, max: 80), privacy: .public)")
                 await dualWriteToGraph(fact, vector: vector)
             }
-        }
-        if let count = dropped[.unanchored] {
-            Self.log.info("distillation dropped \(count) unanchored fact(s)")
-        }
-        if let count = dropped[.unasked] {
-            Self.log.info("distillation dropped \(count) style fact(s) the user never asked for")
         }
         Self.log.info("distillation wrote \(written)/\(facts.count) fact(s)")
         return written
@@ -250,11 +301,15 @@ public struct MemoryDistillationCoordinator: Sendable {
         return asked ? nil : .unasked
     }
 
-    /// Exact re-assertion. A superseded row is the user's REPAIR: revive it (spec finding #8).
-    /// An asked-for style fact re-files a live row of another kind (#699). Anything else is a
-    /// true duplicate. True when it wrote.
+    /// Exact re-assertion. A superseded row is the user's REPAIR: revive it (spec finding #8),
+    /// unless this writer never revives (an import, #711). An asked-for style fact re-files a
+    /// live row of another kind (#699). Anything else is a true duplicate. True when it wrote.
     private func reassert(_ fact: DistilledFact, itemID: UUID, vector: [Float]?) async throws -> Bool {
         if try store.item(id: itemID)?.kind == .memorySuperseded {
+            guard revivesSupersededFacts else {
+                Self.log.debug("skip (exact dup of a superseded fact; this writer never revives)")
+                return false
+            }
             try await revive(fact, itemID: itemID, vector: vector)
             return true
         }
@@ -275,6 +330,37 @@ public struct MemoryDistillationCoordinator: Sendable {
             Self.log.notice("graph re-file failed (the row stands): \(error.localizedDescription, privacy: .public)")
             return false
         }
+    }
+
+    // MARK: - Forgetting one source (#711)
+
+    /// Forget every corpus MEMORY row `source` wrote (an import's
+    /// `import/<provider>/<date>` tag) and put back what those rows corrected:
+    /// each `.memorySuperseded` twin whose ledger entry names a forgotten row
+    /// returns to `.memory` and loses the entry — the corpus mirror of
+    /// `MemoryStore.forget(id:)` un-superseding in the graph. Restores run
+    /// BEFORE the deletes because the ledger names the corrector by id. Other
+    /// kinds carrying the tag (an import's `.conversation` items) are the
+    /// caller's to delete. The rows and their ledger entries go in one
+    /// transaction each. Returns the number of rows removed.
+    @discardableResult
+    public static func forgetCorpus(source: KnowledgeSource, in store: KnowledgeStore) throws -> Int {
+        let doomed = try Set(store.itemIDs(source: source, kinds: [.memory, .memorySuperseded]))
+        guard !doomed.isEmpty else { return 0 }
+        var restored = 0
+        for twin in try store.allItems(kind: .memorySuperseded, limit: Int.max) where !doomed.contains(twin.id) {
+            guard let corrector = supersededLink(for: twin.id, in: store), doomed.contains(corrector) else {
+                continue
+            }
+            if try store.setKind(id: twin.id, newKind: .memory) {
+                try store.deleteMeta(key: supersededLinkKey(twin.id))
+                restored += 1
+            }
+        }
+        let removed = try store.deleteItems(ids: Array(doomed))
+        try store.deleteMeta(keys: doomed.map(supersededLinkKey))
+        log.notice("corpus source forgotten: \(removed) memory row(s) removed, \(restored) restored")
+        return removed
     }
 
     // MARK: - Tier 2: write-time repair
@@ -310,7 +396,11 @@ public struct MemoryDistillationCoordinator: Sendable {
     }
 
     private func supersededLink(for itemID: UUID) -> UUID? {
-        (try? store.meta(key: Self.supersededLinkKey(itemID))).flatMap { $0 }.flatMap(UUID.init(uuidString:))
+        Self.supersededLink(for: itemID, in: store)
+    }
+
+    private static func supersededLink(for itemID: UUID, in store: KnowledgeStore) -> UUID? {
+        (try? store.meta(key: supersededLinkKey(itemID))).flatMap { $0 }.flatMap(UUID.init(uuidString:))
     }
 
     /// Exact re-assertion of a superseded fact: the graph writes a fresh node

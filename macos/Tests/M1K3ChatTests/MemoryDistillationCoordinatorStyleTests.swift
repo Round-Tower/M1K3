@@ -12,6 +12,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85, Prior: the first three tests
 //  moved here unchanged from MemoryDistillationCoordinatorTests (this PR's earlier commit).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (merge of master's #711 into #699) — `propose` alone fences an
+//  unasked style fact, and `store` alone fires `didWrite`. Confidence 0.85.
 //
 
 import Foundation
@@ -215,5 +217,37 @@ struct MemoryDistillationCoordinatorStyleTests {
         )
         #expect(try await style.distillAndStore(turns: ask) == 0)
         #expect(await graph.refiles.count == 1)
+    }
+
+    // MARK: - The propose/store split (#711) keeps both #699 rules
+
+    @Test("propose fences an unasked style fact, so an import's review never offers one, and writes nothing")
+    func proposeFencesStyle() async throws {
+        let slice = [
+            ChatTurn(role: .user, text: "short answers are what I give at work, and I live in Cork"),
+            ChatTurn(role: .assistant, text: "Want me to keep mine short too?"),
+        ]
+        let (coordinator, store) = try makeFixture([
+            DistilledFact(text: "The user prefers short answers.", kind: .style),
+            DistilledFact(text: "The user lives in Cork.", kind: .profile),
+        ])
+
+        let proposed = try await coordinator.propose(turns: slice)
+
+        #expect(proposed.map(\.kind) == [.profile])
+        #expect(try store.allItems(kind: .memory).isEmpty)
+    }
+
+    @Test("store alone, an import's write path, fires didWrite once with the count")
+    func storeFiresDidWrite() async throws {
+        nonisolated(unsafe) var calls: [Int] = []
+        let (coordinator, _) = try makeFixture([], didWrite: { calls.append($0) })
+
+        let written = try await coordinator.store([
+            DistilledFact(text: "The user prefers short answers.", kind: .style),
+        ])
+
+        #expect(written == 1)
+        #expect(calls == [1])
     }
 }
