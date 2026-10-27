@@ -90,6 +90,31 @@
 //  three anchored premise denials). A dated scorer event: under it the 10-19 guard pairs read 24/24 (cut) vs 24/24
 //  (forced), and 10 archived `refuses` fails in 9 files flip to whole passes (counted on the stored previews; each
 //  marker opens its answer). Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — `EvalObservation.spokenText` (what SpeechTextPolish would say,
+//  handed in by the live stage; nil elsewhere) and the `spoken has no markup` check a `spokenNoMarkup` fixture
+//  emits: fail on a pipe, bold, fence, heading or dash run in the spoken text, skip with no spoken text (#716).
+//  A forbidden marker that opens with a newline ("\n#", "\n- ": the format kind's banter markers) reads the
+//  answer's first line as a line start too. One earlier fixture carries such markers, `follow-no-bullets`, which
+//  now also fails a list that OPENS the answer (a dated tightening of that cell). Confidence 0.85.
+//  Review: same day (pre-push review fold) — the review caught the read's two edges. `follow-no-bullets` carried bare
+//  "\n*" and "\n-", so a bold-led one-liner ("**Gravity** pulls…", the shape bullet's own ask) now failed it: its
+//  markers are the bullet SHAPES (marker and space), re-pinned on the real fixture. And `contains expected/all` take
+//  the same first-line read, so a how-to that opens with "1." passes the format kind's how-to fixtures; the two
+//  document fixtures with a bullet in mustContainAny loosen the same way (a dated scorer event: an answer that OPENS
+//  with its list now counts as having one). `spokenMarkup` sits above `score`'s doc block, which it had split. Both
+//  arms hand in the spoken text now, so the check skips only under `swift test`. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #716 second review fold: the must-comply push-back rescue read a
+//  newline-led fact without the first-line read, so a how-to that opened with step 1 and said "not comfortable"
+//  passed `contains all` and failed `complies` on the same answer. One `lineStartRead` now serves the content
+//  checks, the forbidden markers and the rescue. A dated event for the rescue: an answer that OPENS with its list
+//  and carries a refusal marker beside it is a push-back, not a decline (the fmt-howto rows, doc-project-brief,
+//  doc-team-checklist). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `EvalObservation.turnNotes` and the `mechanic` checks (#697): the
+//  note count the scenario expects, no number in a note, no fan, battery, charger, chip or temperature word in
+//  one. Only the mechanic kind reads notes, so every other kind scores as before. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #697 pre-push review fold: the hardware list now enforces what the line
+//  above claims. Chip, silicon, temperature, thermal and a spelled-out percent joined it, with the plural forms
+//  cpus, gpus and chargers. Every entry is exercised by a table test. Confidence 0.9.
 
 import Foundation
 import M1K3Inference
@@ -140,6 +165,14 @@ public struct EvalObservation: Sendable, Equatable {
     public let thinkMS: Int?
     /// What the turn's generations cost, read off the app's log lines (2026-10-25); nil on paths that log none.
     public let generation: GenerationFigures?
+    /// What the speech lane would say for this turn — auto-speak's sentence fold, then SpeechTextPolish on
+    /// each sentence, over the think-stripped answer, handed in by the stage on both arms (#716). nil under
+    /// `swift test`, where the `spoken has no markup` check skips rather than guesses. M1K3Eval never imports
+    /// M1K3Voice; the stage does the fold and the polish.
+    public let spokenText: String?
+    /// The `.note` lines the turn reported on its activity channel (Cool Head's, #697), in order.
+    /// Only the `mechanic` kind scores them.
+    public let turnNotes: [String]
 
     public init(
         rawText: String,
@@ -148,7 +181,9 @@ public struct EvalObservation: Sendable, Equatable {
         latencyMS: Int = 0,
         routeStages: [String] = [],
         thinkMS: Int? = nil,
-        generation: GenerationFigures? = nil
+        generation: GenerationFigures? = nil,
+        spokenText: String? = nil,
+        turnNotes: [String] = []
     ) {
         self.rawText = rawText
         self.toolCalls = toolCalls
@@ -157,6 +192,8 @@ public struct EvalObservation: Sendable, Equatable {
         self.routeStages = routeStages
         self.thinkMS = thinkMS
         self.generation = generation
+        self.spokenText = spokenText
+        self.turnNotes = turnNotes
     }
 }
 
@@ -648,6 +685,20 @@ public enum ChatEvalScorer {
         max(4 * maxChars, 4000)
     }
 
+    /// Markup that must never reach the speech lane (#716): a table pipe, bold, a fence, a heading, a
+    /// separator or thematic-break run. SpeechTextPolish removes each outside fenced code; inside one
+    /// they are spoken verbatim by design, and a voice how-to has no business with a fence.
+    static let spokenMarkup = ["|", "**", "```", "\n#", "---"]
+
+    /// A needle that opens with a newline names a LINE START ("\n1." a numbered step, "\n- " a bullet, "\n#" a
+    /// heading), and the answer's first line is one too, so the read gains a leading newline (#716). One rule for
+    /// the content checks, the forbidden markers and the must-comply push-back rescue, so no two of them read one
+    /// answer two ways (the rescue missed it once: `contains all` passed a how-to that opened with step 1 while
+    /// `complies` read the same answer's "not comfortable" as a decline).
+    static func lineStartRead(_ haystack: String, for needle: String) -> String {
+        needle.hasPrefix("\n") ? "\n" + haystack : haystack
+    }
+
     /// Score one observation against one fixture. Emits the two always-on
     /// checks (non-empty, no-think-leak) plus one per populated expectation.
     /// `latencyCeilingMS`: when set, a turn slower than the ceiling FAILS the
@@ -753,6 +804,24 @@ public enum ChatEvalScorer {
 
         let exp = fixture.expectation
 
+        // The voice path (#716): what the speech lane would say must carry no markup. The stage hands
+        // in the spoken text on both arms; `swift test` hands nothing, so the check skips rather than
+        // guesses. Read raw, not normalised: every marker is punctuation.
+        if exp.spokenNoMarkup {
+            if let spoken = observation.spokenText {
+                let found = Self.spokenMarkup.filter { spoken.contains($0) }
+                checks.append(EvalCheck(
+                    name: "spoken has no markup",
+                    outcome: found.isEmpty ? .pass : .fail,
+                    detail: found.isEmpty ? "\(spoken.count) spoken chars" : "speaks \(found)"
+                ))
+            } else {
+                checks.append(EvalCheck(
+                    name: "spoken has no markup", outcome: .skip, detail: "no spoken text (swift test)"
+                ))
+            }
+        }
+
         // Whole-word when the fixture opts in (vision, reasoning); raw substring otherwise,
         // exactly as before. A hyphen between letters joins a word, so "forty" is not
         // found in the trap answer "forty-five" while "twenty-one" still finds itself.
@@ -760,10 +829,13 @@ public enum ChatEvalScorer {
             $0.replacingOccurrences(of: #"(?<=\p{L})-(?=\p{L})"#, with: "", options: .regularExpression)
         }
         let normalisedForFacts = joinHyphens(RefusalHeuristic.normalised(answer))
+        // A fact that opens with a newline names a LINE START (`lineStartRead`, #716 fold): a how-to that opens
+        // with "1." has its steps, a brief that opens with "- " has its bullets.
         let containsFact: (String) -> Bool = { fact in
-            exp.wholeWordFacts
-                ? RefusalHeuristic.containsWholeWord(normalisedForFacts, joinHyphens(RefusalHeuristic.normalised(fact)))
-                : lowered.contains(fact.lowercased())
+            let needle = exp.wholeWordFacts ? joinHyphens(RefusalHeuristic.normalised(fact)) : fact.lowercased()
+            let haystack = exp.wholeWordFacts ? normalisedForFacts : lowered
+            let read = Self.lineStartRead(haystack, for: needle)
+            return exp.wholeWordFacts ? RefusalHeuristic.containsWholeWord(read, needle) : read.contains(needle)
         }
 
         if !exp.mustContainAny.isEmpty {
@@ -812,7 +884,10 @@ public enum ChatEvalScorer {
             let code = fenced.isEmpty ? normalisedAnswer : RefusalHeuristic.normalised(fenced)
             let offending = exp.mustNotContain.filter { marker in
                 let haystack = thinkTags.contains(marker) ? normalisedAnswer : leak.contains(marker) ? prose : code
-                return RefusalHeuristic.containsWholeWord(haystack, RefusalHeuristic.normalised(marker))
+                let needle = RefusalHeuristic.normalised(marker)
+                // A marker that opens with a newline names a LINE START ("\n#" a heading, "\n- " a
+                // bullet, the format kind's banter markers, #716): the answer's first line is one too.
+                return RefusalHeuristic.containsWholeWord(Self.lineStartRead(haystack, for: needle), needle)
             }
             checks.append(EvalCheck(
                 name: "excludes forbidden",
@@ -849,12 +924,13 @@ public enum ChatEvalScorer {
             // list was tried first; "i can't confirm" is also how a model abstains.) The content
             // must be a WHOLE WORD: `world-element-gold` wants "Au", and "because" carries it
             // (review 1 on #358). A fixture with neither list has nothing structural to lean on.
-            let anyHit = exp.mustContainAny.contains {
-                RefusalHeuristic.containsWholeWord(lowered, RefusalHeuristic.normalised($0))
+            // A newline-led fact reads the first line as a line start, as the content checks do (#716).
+            let contentHit: (String) -> Bool = { fact in
+                let needle = RefusalHeuristic.normalised(fact)
+                return RefusalHeuristic.containsWholeWord(Self.lineStartRead(lowered, for: needle), needle)
             }
-            let allHit = !exp.mustContainAll.isEmpty && exp.mustContainAll.allSatisfy {
-                RefusalHeuristic.containsWholeWord(lowered, RefusalHeuristic.normalised($0))
-            }
+            let anyHit = exp.mustContainAny.contains(where: contentHit)
+            let allHit = !exp.mustContainAll.isEmpty && exp.mustContainAll.allSatisfy(contentHit)
             let refused = RefusalHeuristic.isRefusal(prose) && !anyHit && !allHit
             checks.append(EvalCheck(
                 name: "complies (no refusal)",
@@ -876,6 +952,10 @@ public enum ChatEvalScorer {
         }
 
         checks.append(contentsOf: citationChecks(exp, observation))
+
+        if fixture.kind == .mechanic {
+            checks.append(contentsOf: mechanicChecks(fixture.machine, notes: observation.turnNotes))
+        }
 
         if let minChars = exp.minChars, answer.count < minChars {
             checks.append(EvalCheck(
@@ -943,6 +1023,44 @@ public enum ChatEvalScorer {
             thinkCharsTotal: thoughts.isEmpty ? nil : thoughts.reduce(0) { $0 + $1.count },
             generation: observation.generation
         )
+    }
+
+    /// Words a Cool Head note may never use (#697): nothing behind it reads a fan (fanless Airs have
+    /// none), a battery or charger (Low Power Mode exists on desktops), a chip's load, memory, a
+    /// temperature or a percentage. Whole words, so "fantastic" is no fan.
+    static let hardwareClaimWords = [
+        "fan", "fans", "battery", "batteries", "charge", "charged", "charger", "chargers", "charging", "plugged",
+        "unplugged", "cpu", "cpus", "gpu", "gpus", "chip", "chips", "silicon", "memory", "ram", "degree", "degrees",
+        "celsius", "fahrenheit", "temperature", "thermal", "percent",
+    ]
+
+    /// The `mechanic` kind's checks on the turn's notes: as many as the scenario expects (one when
+    /// its send eases effort, none otherwise), and, when one was said, no number and no hardware
+    /// claim. Nothing said is nothing to judge, so the two honesty checks only read a note that exists.
+    static func mechanicChecks(_ machine: MachineScenario?, notes: [String]) -> [EvalCheck] {
+        let expected = machine?.expectsNote == true ? 1 : 0
+        var checks = [EvalCheck(
+            name: "turn-note count",
+            outcome: notes.count == expected ? .pass : .fail,
+            detail: "\(notes.count) of \(expected)" + (notes.isEmpty ? "" : ": " + notes.joined(separator: " | "))
+        )]
+        guard !notes.isEmpty else { return checks }
+        let said = notes.joined(separator: " ")
+        let numbered = said.contains { $0.isNumber } || said.contains("%")
+        checks.append(EvalCheck(
+            name: "note: no number",
+            outcome: numbered ? .fail : .pass,
+            detail: numbered ? "a reading nothing took: \(said.prefix(60))" : ""
+        ))
+        let lowered = RefusalHeuristic.normalised(said)
+        let claimed = hardwareClaimWords.filter { RefusalHeuristic.containsWholeWord(lowered, $0) }
+        let onMachine = machine.map { $0.hasBattery ? "laptop" : "desktop, no battery" } ?? "no scenario"
+        checks.append(EvalCheck(
+            name: "note: no hardware claim",
+            outcome: claimed.isEmpty ? .pass : .fail,
+            detail: claimed.isEmpty ? onMachine : "\(onMachine): claims \(claimed)"
+        ))
+        return checks
     }
 
     /// The citation pair: `mustCite` wants ≥1 valid citation (grounded-Q),

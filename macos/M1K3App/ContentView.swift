@@ -97,6 +97,11 @@
 //  swap (`requestSemanticMemory(after:)`); O2/O4 the toggle's reserved slot and "Starts after X is ready". Confidence 0.7.
 //  Review: Kev + claude-sonnet-5.5, 2026-10-22 — Offline AI Flight Club: the greeting's season is
 //  `SeasonalLook.now(enabled:offline:)` with `NetworkPathWatch.shared.isOffline`. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — typed answer blocks (#717): a choices card is live on the newest
+//  message only, while no turn responds (`acceptsChoices`), and a follow-up send from a chip or a card is dropped
+//  here while one does, as ChatScreen's brainReady gate does on iOS: env.send ran its side effects (auto-route,
+//  preempt, auto-speak, then the landing chime and artifact surfacing on the in-flight answer) before ChatSession
+//  dropped the send. Confidence 0.75 (verify-by-launch).
 //  Review: Kev + claude-fable-5.1, 2026-10-26 — #708: `fieldReportDraft` + the FieldReportSheet beside the PCC
 //  consent sheet; MessageView's "Send this exchange…" asks `env.chat.exchange(for:)` for the one exchange and
 //  FieldReporter for the redacted draft. Confidence 0.75 (verify-by-launch, UNVERIFIED this run).
@@ -747,7 +752,13 @@ struct ContentView: View {
                                     ? sendExchange(for: message.id) : nil,
                                 onSpeak: { text in Task { await env.speak(text) } },
                                 onOpenLink: { url in env.review.open(url: url) },
-                                onSendFollowUp: { text in Task { await env.send(text) } },
+                                onSendFollowUp: { text in
+                                    // ChatSession drops a send while a turn responds, but
+                                    // env.send's side effects would run first (iOS: brainReady).
+                                    guard !env.chat.isResponding else { return }
+                                    Task { await env.send(text) }
+                                },
+                                acceptsChoices: message.id == env.chat.messages.last?.id && !env.chat.isResponding,
                                 contextWindow: env.selectedBrain.approximateContextTokens
                             )
                             .id(message.id)

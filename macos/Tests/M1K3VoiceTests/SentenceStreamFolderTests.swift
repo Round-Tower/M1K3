@@ -9,6 +9,8 @@
 //  takes ages" report — the loop previously spoke only on answerReady).
 //
 //  Signed: Kev + claude-fable-5, 2026-07-25, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — a typed answer-block fence (#717) is held and handed over
+//  whole like any fence, and its chunk speaks as sentences through SpeechTextPolish. Confidence 0.85.
 //
 
 import M1K3Voice
@@ -89,6 +91,17 @@ struct SentenceStreamFolderTests {
         #expect(after.count == 2)
         #expect(after[1] == "That works.")
         #expect(after[0].hasPrefix("```swift"))
+    }
+
+    @Test("a typed answer-block fence is held while open, then handed over whole and spoken as sentences (#717)")
+    func typedFenceHeldWhole() {
+        var folder = SentenceStreamFolder()
+        let fence = "```m1k3-steps\n{\"steps\": [\"Loosen the nut.\", \"Lift the cover.\"]}\n```"
+        #expect(folder.ingest("Here's how:\n```m1k3-steps\n{\"steps\": [\"Loosen the nut.\", ") == ["Here's how:"])
+        #expect(folder.ingest("Here's how:\n```m1k3-steps\n{\"steps\": [\"Loosen the nut.\", \"Lift the cover.\"]}\n``") == [])
+        let after = folder.ingest("Here's how:\n\(fence)\nThat's it. And")
+        #expect(after == [fence, "That's it."])
+        #expect(SpeechTextPolish.spokenSentence(after[0]) == "Step 1: Loosen the nut. Step 2: Lift the cover.")
     }
 
     // MARK: - Stop marker (the FOLLOWUPS trailer must never be spoken)

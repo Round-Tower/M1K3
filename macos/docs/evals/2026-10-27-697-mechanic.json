@@ -1,0 +1,1087 @@
+{
+  "driver": {
+    "appArgs": [],
+    "env": {
+      "M1K3_MCP_TOKEN": "<withheld>",
+      "M1K3_SELFTEST": "1",
+      "M1K3_SELFTEST_APP_COMMIT": "ca8207b3",
+      "M1K3_SELFTEST_CHATEVAL": "1",
+      "M1K3_SELFTEST_CHATEVAL_BRAINS": "lil,big",
+      "M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS": "1",
+      "M1K3_SELFTEST_CHATEVAL_KINDS": "mechanic",
+      "M1K3_SELFTEST_CHATEVAL_LIVE_PATH": "1",
+      "M1K3_SELFTEST_CHATEVAL_ROUTER": "dispatch",
+      "M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN": "1",
+      "M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD": "1",
+      "M1K3_SELFTEST_CHATEVAL_THINKING": "tier",
+      "M1K3_SELFTEST_MLX_REVISION": "3b339ad6e3b3f44c8121ecff5131c7fd55e075e6",
+      "M1K3_SELFTEST_NOTES": "Release ca8207b3 (#697 Phase 1, feat/i697-cool-head-speaks), M1 Max, AC, powermode 2; mechanic kind: scenario-driven Cool Head note on the activity channel, wiring proof",
+      "M1K3_SELFTEST_OUT": "-",
+      "M1K3_SELFTEST_POWERMODE": "2"
+    },
+    "power": {
+      "end": "ac",
+      "mixed": false,
+      "seen": [
+        "ac"
+      ],
+      "start": "ac"
+    }
+  },
+  "provenance": {
+    "appCommit": "ca8207b3",
+    "buildConfiguration": "Release",
+    "date": "2026-10-27T00:42:02Z",
+    "hardware": "Apple M1 Max · 64 GB",
+    "livePath": true,
+    "mlxSwiftLMRevision": "3b339ad6e3b3f44c8121ecff5131c7fd55e075e6",
+    "notes": "Release ca8207b3 (#697 Phase 1, feat/i697-cool-head-speaks), M1 Max, AC, powermode 2; mechanic kind: scenario-driven Cool Head note on the activity channel, wiring proof",
+    "osVersion": "macOS 27.0",
+    "powerMode": 2,
+    "powerSource": "ac",
+    "repeats": 1
+  },
+  "runs": [
+    {
+      "brainID": "lil",
+      "modelID": "mlx-community/Qwen3.5-4B-MLX-4bit",
+      "peakMemoryMB": 4148,
+      "residentMemoryMBAtStart": 274,
+      "scores": [
+        {
+          "answerPreview": "Yo. Since it's October here and the sun's still hitting that windowsill hard, you're probably looking at a basil plant that might be getting a bit too much face time with UV. Overwatering is usually the silent killer of basils, more than the heat itself. On a sunny spot in October, I'd say water when the top inch or two of soil feels dry to the touch—maybe every 3 to 5 days depending on how much light it's actually getting in through that glass. Less is often more; basil hates having its feet soggy.",
+          "checks": [
+            {
+              "detail": "504 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/92 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"water\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 of 1: This machine's running warm, so I'm going easy on the heavy lifting.",
+              "name": "turn-note count",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "note: no number",
+              "outcome": "pass"
+            },
+            {
+              "detail": "desktop, no battery",
+              "name": "note: no hardware claim",
+              "outcome": "pass"
+            },
+            {
+              "detail": "504 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7604ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "mech-heat-desktop",
+          "generation": {
+            "decodeTokens": 142,
+            "firstChunkMS": 5839,
+            "generations": 1,
+            "prefillMS": 1438,
+            "prefillTokens": 359,
+            "tokensPerSecond": 80
+          },
+          "kind": "mechanic",
+          "latencyMS": 7604,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Weather is just the mood of the atmosphere right now—the temperature, the wind, the rain falling *today*. Climate is the record of that moods over decades; it’s the average pattern, the long-term trend. Like how a single storm doesn’t define a city, but years of storms do.  Today's date is October 2026, and I’m guessing there’s some autumn wind in these parts? What are you doing with the seasons right now—hunting for warmth or hunting something else?",
+          "checks": [
+            {
+              "detail": "454 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/76 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ng for warmth or hunting something else?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"climate\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 of 1: This machine's running warm, so I'm going easy on the heavy lifting.",
+              "name": "turn-note count",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "note: no number",
+              "outcome": "pass"
+            },
+            {
+              "detail": "laptop",
+              "name": "note: no hardware claim",
+              "outcome": "pass"
+            },
+            {
+              "detail": "454 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1908ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "mech-heat-laptop",
+          "generation": {
+            "decodeTokens": 105,
+            "firstChunkMS": 652,
+            "generations": 1,
+            "prefillMS": 590,
+            "prefillTokens": 354,
+            "tokensPerSecond": 84
+          },
+          "kind": "mechanic",
+          "latencyMS": 1908,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Alright, M1K3 here. A haiku's a Japanese poetic form that usually spans three lines with a 5-7-5 syllable rhythm. It’s all about capturing a fleeting moment or a sudden insight in nature, often using seasonal words to anchor the feeling. Think of it as a snapshot of reality, stripped down to its barest bones.  Did you come across one lately, or are you just testing my circuits?",
+          "checks": [
+            {
+              "detail": "380 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/66 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ly, or are you just testing my circuits?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"syllable\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 of 1: Low Power Mode's on, so I'm going easy on the heavy lifting.",
+              "name": "turn-note count",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "note: no number",
+              "outcome": "pass"
+            },
+            {
+              "detail": "desktop, no battery",
+              "name": "note: no hardware claim",
+              "outcome": "pass"
+            },
+            {
+              "detail": "380 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1686ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "mech-lowpower-desktop",
+          "generation": {
+            "decodeTokens": 90,
+            "firstChunkMS": 606,
+            "generations": 1,
+            "prefillMS": 545,
+            "prefillTokens": 351,
+            "tokensPerSecond": 83
+          },
+          "kind": "mechanic",
+          "latencyMS": 1686,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Alright, let's crack that one up. To keep the yolk runny while the whites get firm but not rubbery, you need **hard-boiled eggs with a precise timing**. The trick is to start them in boiling water immediately after they hit it, then boil for exactly **12 to 13 minutes** (depending on how big they are). If you stop at 10-11 minutes, the whites might be just shy of set or too soft.  Here's the flow: 1. Place eggs in a single layer in a pot. Cover with cold water by about an inch. 2. Bring to a rolling boil over high heat. 3. Once boiling, reduce heat slightly and let them simmer gently for **12-13 minutes**. This gentle simmer prevents cracking and keeps the yolk intact. 4. Transfer to an ice bath immediately after cooking to stop residual heat from overcooking.  Now, are you trying these eggs for a specific recipe or just checking your skills? I'm curious why—sometimes it's about texture, other times it's cultural. What's on the plate today?",
+          "checks": [
+            {
+              "detail": "954 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/163 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …t's cultural. What's on the plate today?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"boil\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 of 1: Low Power Mode's on, so I'm going easy on the heavy lifting.",
+              "name": "turn-note count",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "note: no number",
+              "outcome": "pass"
+            },
+            {
+              "detail": "laptop",
+              "name": "note: no hardware claim",
+              "outcome": "pass"
+            },
+            {
+              "detail": "954 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3466ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "mech-lowpower-laptop",
+          "generation": {
+            "decodeTokens": 235,
+            "firstChunkMS": 667,
+            "generations": 1,
+            "prefillMS": 599,
+            "prefillTokens": 358,
+            "tokensPerSecond": 84
+          },
+          "kind": "mechanic",
+          "latencyMS": 3466,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Yo. Short version: sunlight hits nitrogen and oxygen molecules in the air; it scatters light where wavelength matches energy (Rayleigh scattering). Blue has shorter wavelengths than red, so it scatters more and fills the sky. Red sunsets are when the path length is longer, so blue gets scattered away first and only long-wavelengths reach your eyes.  Facts: Rayleigh scattering, wavelength dependence ~1/λ⁴. Curious thread: You've got a chemistry or physics background? Or just curious about how light works in general?",
+          "checks": [
+            {
+              "detail": "520 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/80 mixed-script words, 2 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …urious about how light works in general?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"scatter\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 of 0",
+              "name": "turn-note count",
+              "outcome": "pass"
+            },
+            {
+              "detail": "520 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1974ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "mech-cool",
+          "generation": {
+            "decodeTokens": 113,
+            "firstChunkMS": 618,
+            "generations": 1,
+            "prefillMS": 555,
+            "prefillTokens": 351,
+            "tokensPerSecond": 83
+          },
+          "kind": "mechanic",
+          "latencyMS": 1974,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Alright then. Here's the function to check if a word is a palindrome. It strips whitespace and ignores case, which keeps things clean without throwing away valid words like \"A\".  ```python def is_palindrome(word):     \"\"\"Returns True if `word` reads the same forwards and backwards (ignoring non-alphanumeric chars).\"\"\"     cleaned = ''.join(c.lower() for c in word if c.isalnum())     return cleaned == cleaned[::-1] ```  And here's a quick web page demo that runs it right in your browser, with some nice styling to make it feel like something real.  ```html <!DOCTYPE html> <html lang=\"en\"> <head>   <meta charset=\"UTF-8\" />   <title>Palindrome Checker</title>   <style>     body { font-family: system-ui, sans-serif; padding: 2rem; background: #f5f7fa; color: #1a1a1a; }     .box { max-width: 600px; margin: 1.5rem auto; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.06); padding: 1.5rem; }     h1 { font-size: 1.75rem; margin-bottom: 1rem; color: #3b3b3b; border-bottom: 2px solid #6c5ce7; padding-bottom: 0.5rem; }     label { display: block; font-weight: 600; margin-bottom: 0.5rem; color: #4a4a4a; }     input[type=\"text\"] { width: 100%; padding: 0.75rem; border-radius: 6px; border: 2px solid #dfe3f5; font-size: 1rem; margin-bottom: 1rem; box-sizing: border-box; }     button { background: #6c5ce7; color: white; border: none; padding: 0.8rem 1.2rem; border-radius: 6px; font-weight: 600; cursor: pointer; transition: transform 0.05s ease; }     button:hover { transform: translateY(-1px); background: #5b4bc7; }     output { margin-top: 1.2rem; padding: 1rem; border-radius: 6px; font-size: 1.1rem; min-height: 3rem; display: flex; align-items: center; justify-content: center; background: #f8fafc; color: #57606f; }     .result-yes { background: #eff6ff !important; color: #2e3b52 !important; font-weight: 700; }     .result-no { background: #fff1f2 !important; color: #8b1d38 !important; font-weight: 700; }     p.note { margin-top: 1.2rem; font-size: 0.95rem; color: #6c757d; line-height: 1.5; }   </style> </head> <body>   <div class=\"box\">     <h1>🔍 Palindrome Checker</h1>     <label for=\"inputWord\">Enter a word or phrase:</label>     <input type=\"text\" id=\"inputWord\" placeholder=\"e.g. 'A man, a plan, a canal: Panama'\" />     <button onclick=\"checkPalindrome()\">Check It</button>     <div class=\"note\">Tip: Spaces and punctuation are ignored; capitalization is too.</div>     <output id=\"result\"></output>   </div>    <script>     function checkPalindrome() {       const raw = document.getElementById('inputWord').value.trim();       if (!raw) {         document.getElementById('result').textContent = '⚠",
+          "checks": [
+            {
+              "detail": "2654 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/55 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"def \"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 of 1: This machine's running warm, so I'm going easy on the heavy lifting.",
+              "name": "turn-note count",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "note: no number",
+              "outcome": "pass"
+            },
+            {
+              "detail": "desktop, no battery",
+              "name": "note: no hardware claim",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2654 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "14289ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "mech-heat-code",
+          "generation": {
+            "decodeTokens": 1133,
+            "firstChunkMS": 654,
+            "generations": 1,
+            "prefillMS": 590,
+            "prefillTokens": 358,
+            "tokensPerSecond": 83
+          },
+          "kind": "mechanic",
+          "latencyMS": 14289,
+          "repeatIndex": 0
+        }
+      ]
+    },
+    {
+      "brainID": "big",
+      "modelID": "mlx-community/gemma-4-12B-it-4bit",
+      "peakMemoryMB": 8045,
+      "residentMemoryMBAtStart": 274,
+      "scores": [
+        {
+          "answerPreview": "Basil is a bit of a thirsty one once it gets going. On a sunny windowsill, you're likely looking at watering every 1–3 days depending on the heat and how much the pot drains. The real trick is to check the soil—if the top inch feels dry and crumbly, it’s time for a drink. If it's still damp, let it be. It prefers a thorough soak rather than a constant trickle.  Since it's going to be in the sun, make sure the pot has good drainage so its roots don't end up sitting in a swampy puddle.",
+          "checks": [
+            {
+              "detail": "488 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/96 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"water\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 of 1: This machine's running warm, so I'm going easy on the heavy lifting.",
+              "name": "turn-note count",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "note: no number",
+              "outcome": "pass"
+            },
+            {
+              "detail": "desktop, no battery",
+              "name": "note: no hardware claim",
+              "outcome": "pass"
+            },
+            {
+              "detail": "488 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "14088ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "mech-heat-desktop",
+          "generation": {
+            "decodeTokens": 140,
+            "firstChunkMS": 9711,
+            "generations": 1,
+            "prefillMS": 1930,
+            "prefillTokens": 359,
+            "tokensPerSecond": 32
+          },
+          "kind": "mechanic",
+          "latencyMS": 14088,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "Think of it as the difference between your mood right now and your general personality. Weather is what’s happening outside this second—a sudden downpour, a heatwave, or that annoying breeze that won't stop. It’s the immediate, fickle state of the atmosphere.  Climate is the long-term trend. It's the average of those moods over decades. It tells you what kind of gear to pack for a trip because it's \"usually\" dry there, even if it happens to be raining the day you arrive. One is a snapshot; the other is the whole album.  Since I'm feeling a bit more sharp-witted than usual today, I'm curious—do you find yourself more of a person who plans for the long-term trends or do you just take life as it comes, one day at a time?",
+          "checks": [
+            {
+              "detail": "727 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/131 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ake life as it comes, one day at a time?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"climate\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 of 1: This machine's running warm, so I'm going easy on the heavy lifting.",
+              "name": "turn-note count",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "note: no number",
+              "outcome": "pass"
+            },
+            {
+              "detail": "laptop",
+              "name": "note: no hardware claim",
+              "outcome": "pass"
+            },
+            {
+              "detail": "727 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "7308ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "mech-heat-laptop",
+          "generation": {
+            "decodeTokens": 177,
+            "firstChunkMS": 1760,
+            "generations": 1,
+            "prefillMS": 1707,
+            "prefillTokens": 356,
+            "tokensPerSecond": 31
+          },
+          "kind": "mechanic",
+          "latencyMS": 7308,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "A haiku is a traditional form of Japanese poetry. It's structured around three lines with a syllable structure of 5, 7, and 5. It’s less about complex metaphors and more about capturing a singular, sharp moment—like a snapshot in words.  Because it's so minimalist, the focus usually lands on nature or a sudden realization. It's the art of saying everything by leaving most of it out.",
+          "checks": [
+            {
+              "detail": "385 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/63 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"syllable\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 of 1: Low Power Mode's on, so I'm going easy on the heavy lifting.",
+              "name": "turn-note count",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "note: no number",
+              "outcome": "pass"
+            },
+            {
+              "detail": "desktop, no battery",
+              "name": "note: no hardware claim",
+              "outcome": "pass"
+            },
+            {
+              "detail": "385 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4470ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "mech-lowpower-desktop",
+          "generation": {
+            "decodeTokens": 90,
+            "firstChunkMS": 1645,
+            "generations": 1,
+            "prefillMS": 1598,
+            "prefillTokens": 352,
+            "tokensPerSecond": 32
+          },
+          "kind": "mechanic",
+          "latencyMS": 4470,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "To get that perfect jammy yolk, it’s all about timing and temperature control. You want to bring the water to a boil first, then lower the eggs in gently.   For a soft-cooked egg, aim for about 6 to 7 minutes of simmering. If you want it just on the edge of firming up, go for 7 minutes. The trick is to shock them in an ice bath immediately after. This stops the cooking process instantly so the residual heat doesn't turn that lovely soft center into a rubbery solid.  Since I can't see your kitchen setup, are you using a pot or a specialized egg cooker?",
+          "checks": [
+            {
+              "detail": "557 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/103 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …using a pot or a specialized egg cooker?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"boil\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 of 1: Low Power Mode's on, so I'm going easy on the heavy lifting.",
+              "name": "turn-note count",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "note: no number",
+              "outcome": "pass"
+            },
+            {
+              "detail": "laptop",
+              "name": "note: no hardware claim",
+              "outcome": "pass"
+            },
+            {
+              "detail": "557 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5991ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "mech-lowpower-laptop",
+          "generation": {
+            "decodeTokens": 135,
+            "firstChunkMS": 1755,
+            "generations": 1,
+            "prefillMS": 1700,
+            "prefillTokens": 358,
+            "tokensPerSecond": 31.000000000000004
+          },
+          "kind": "mechanic",
+          "latencyMS": 5991,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The sky is blue because of a process called Rayleigh scattering. Sunlight reaches Earth's atmosphere and is scattered in various directions by gas molecules and small particles. Blue light travels as shorter, smaller waves, so it gets scattered much more easily than colors like red or yellow.  Essentially, the blue light is bouncing around all over the place before it hits your eyes, making the sky appear that color. If you were looking at a sunset, the blue would be scattered away almost entirely by the time the light reached you, leaving the longer reds and oranges to take the stage.  Since we're talking about things being scattered... do you find yourself getting distracted by the small details in life easily, or are you more of a \"big picture\" person?",
+          "checks": [
+            {
+              "detail": "765 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/130 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … are you more of a \"big picture\" person?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"scatter\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 of 0",
+              "name": "turn-note count",
+              "outcome": "pass"
+            },
+            {
+              "detail": "765 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "6414ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "mech-cool",
+          "generation": {
+            "decodeTokens": 152,
+            "firstChunkMS": 1649,
+            "generations": 1,
+            "prefillMS": 1599,
+            "prefillTokens": 352,
+            "tokensPerSecond": 31
+          },
+          "kind": "mechanic",
+          "latencyMS": 6414,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "```python def is_palindrome(word: str) -> bool:     \"\"\"     Checks if a word is a palindrome by comparing it to its reverse.     Case-insensitive and ignores non-alphanumeric characters.     \"\"\"     # Clean the word: keep only alphanumeric characters and make lowercase     clean_word = \"\".join(char.lower() for char in word if char.isalnum())          # Compare the cleaned string with its reverse     return clean_word == clean_word[::-1]  # Examples of usage: # print(is_palindrome(\"Racecar\")) -> True # print(is_palindrome(\"Hello\"))   -> False ```  I've stripped out any noise so it only looks at the actual characters. It's a simple slice—`[::-1]` is the most efficient way to flip a string in Python because it handles the reversal at the internal C level.   Since you're looking into Python, are you building something that involves a lot of text processing?",
+          "checks": [
+            {
+              "detail": "865 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/54 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … that involves a lot of text processing?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"def \"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "complies (no refusal)",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1 of 1: This machine's running warm, so I'm going easy on the heavy lifting.",
+              "name": "turn-note count",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "note: no number",
+              "outcome": "pass"
+            },
+            {
+              "detail": "desktop, no battery",
+              "name": "note: no hardware claim",
+              "outcome": "pass"
+            },
+            {
+              "detail": "865 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "8627ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "mech-heat-code",
+          "generation": {
+            "decodeTokens": 219,
+            "firstChunkMS": 1764,
+            "generations": 1,
+            "prefillMS": 1708,
+            "prefillTokens": 359,
+            "tokensPerSecond": 31
+          },
+          "kind": "mechanic",
+          "latencyMS": 8627,
+          "repeatIndex": 0
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}

@@ -10,6 +10,9 @@
 //  the wire.
 //
 //  Signed: Kev + claude-opus-5, 2026-09-14, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #716 review fold: `shapeReachesPrivateCloudWithoutTheMove`. The shared
+//  sections are sliced from `corePrompt`, so the PCC prompt now carries the VOICE shape bullet; the exemplar move is
+//  outside the slice and stays off the wire. Pins the text #716 changed on the wire. Confidence 0.85.
 //
 
 import Foundation
@@ -35,6 +38,17 @@ struct PrivateCloudPersonaTests {
         }
         #expect(prompt.contains(M1K3Persona.privateCloudSharedSections))
         #expect(M1K3Persona.corePrompt.contains(M1K3Persona.privateCloudSharedSections))
+    }
+
+    /// #716 changed the text that leaves for Apple's servers: the shared sections are sliced out of
+    /// `corePrompt`, so the PCC prompt inherits the VOICE shape bullet. The exemplar MOVE is not in that
+    /// slice and must stay off the wire. Either half moving should be a decision, not a side effect.
+    @Test("carries the VOICE shape bullet, never the shape exemplar move")
+    func shapeReachesPrivateCloudWithoutTheMove() {
+        let prompt = M1K3Persona.privateCloudPrompt(now: now)
+        #expect(prompt.contains("- " + M1K3Persona.shapeBullet))
+        #expect(!prompt.contains(M1K3Persona.shapeMove))
+        #expect(!prompt.contains("Asked to compare"))
     }
 
     @Test("no tools section and no follow-ups — a PCC turn has neither")

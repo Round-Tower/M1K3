@@ -13,6 +13,15 @@
 //  must update the anchors here, and each anchor is asserted to exist first). Prior: none (new file).
 //  Review: same day (pre-push review fold) — the scans skip `//` lines, anchor the embedder's declaration and want
 //  `Self.embedder` in both per-fixture bodies.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #716 review fold: `spokenTextFeedsBothArmsLikeAutoSpeak`. The spoken
+//  check skips on a nil spoken text, so a dropped `spokenText:` argument would turn the voice fixtures green by skip:
+//  both arms are pinned, `spokenText(of:)` to auto-speak's seams (and never the whole-answer polish), format to the
+//  live arm, and the stop matcher to the one `AppEnvironment+AutoSpeak` uses. Red against a mutated stage (bare arm
+//  without the argument, a whole-answer polish), restored byte for byte. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — the `mechanic` arm (#697) wires like the app: the scenario runs
+//  through `CoolHeadPolicy.advance` into a `CoolHeadNoteSlot` the responder takes from, and `.note` is captured.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #697 pre-push review fold: `runEmbeds` keeps its `mechanic` clause,
+//  so a mechanic-only run warms the embedder before fixture 1. Confidence 0.85.
 //
 
 import Foundation
@@ -20,12 +29,17 @@ import Testing
 
 struct ChatEvalStageWiringTests {
     private static func stageSource() throws -> String {
+        try appSource("M1K3App/ChatEvalStage.swift")
+    }
+
+    /// A file under `macos/`, found by walking up to `Package.swift`.
+    private static func appSource(_ path: String) throws -> String {
         var root = URL(filePath: #filePath).deletingLastPathComponent()
         while !FileManager.default.fileExists(atPath: root.appending(path: "Package.swift").path) {
             root = root.deletingLastPathComponent()
             try #require(root.path != "/", "no Package.swift above \(#filePath)")
         }
-        return try String(contentsOf: root.appending(path: "M1K3App/ChatEvalStage.swift"), encoding: .utf8)
+        return try String(contentsOf: root.appending(path: path), encoding: .utf8)
     }
 
     /// The body of the static func whose declaration starts with `head`, to the next member declaration.
@@ -64,5 +78,59 @@ struct ChatEvalStageWiringTests {
         let prepare = try #require(body.range(of: ".prepare("), "no prepare in evalBrain")
         let fixtures = try #require(body.range(of: "evalProvider("), "anchor missing: evalProvider(")
         #expect(prepare.lowerBound < fixtures.lowerBound)
+    }
+
+    /// #716: `spoken has no markup` SKIPS when the observation carries no spoken text, and a skip never fails a
+    /// fixture, so a dropped `spokenText:` argument (or a return to the whole-answer polish, which hid a real fail)
+    /// would turn both voice fixtures quietly green. Pinned here: both arms hand it in, it is built from the same
+    /// seams auto-speak speaks through, and the format kind takes the live arm when the live path is asked for.
+    @Test("both arms hand in the spoken text, built the way auto-speak speaks, and format rides the live arm")
+    func spokenTextFeedsBothArmsLikeAutoSpeak() throws {
+        let text = try Self.code(Self.stageSource())
+        #expect(text.components(separatedBy: "spokenText: spokenText(of: raw)").count - 1 == 2)
+        let live = try Self.body(of: "private static func livePathObservation(", in: text)
+        #expect(live.contains("spokenText: spokenText(of: raw)"), "the live arm drops the spoken text")
+        #expect(text.contains("EvalObservation(rawText: raw, latencyMS: ms, spokenText: spokenText(of: raw))"),
+                "the bare arm drops the spoken text")
+        let spoken = try Self.body(of: "private static func spokenText(of ", in: text)
+        let seams = ["ThinkStripper.strip(", "StreamedAnswerFolder(", "SpokenAnswerEnd.start(in:",
+                     "FollowUpSplit.trailerStart", "SpeechTextPolish.spokenSentence"]
+        for seam in seams {
+            #expect(spoken.contains(seam), "spokenText(of:) lost \(seam)")
+        }
+        #expect(!spoken.contains("SpeechTextPolish.polish("), "a whole-answer polish hides a row cut by the fold")
+        #expect(text.contains(".format where livePathRequested"))
+        // Parity with what auto-speak speaks: the same stop matcher in both files.
+        let stop = "SpokenAnswerEnd.start(in: $0, followUps: FollowUpSplit.trailerStart(in:))"
+        #expect(text.contains(stop))
+        #expect(try Self.code(Self.appSource("M1K3App/AppEnvironment+AutoSpeak.swift")).contains(stop))
+    }
+
+    @Test("the mechanic arm takes the live path and folds its scenario through the app's own Cool Head step")
+    func mechanicWiresLikeTheApp() throws {
+        let text = try Self.code(Self.stageSource())
+        let live = try Self.body(of: "private static func livePathObservation(", in: text)
+        #expect(live.contains("CoolHeadPolicy.advance("), "the scenario must run the app's fold, not a copy of it")
+        #expect(live.contains("CoolHeadNoteSlot()"), "the note must come out of the app's slot")
+        #expect(live.contains("minRecoveryTurns: AppEnvironment.coolHeadMinRecoveryTurns"))
+        #expect(live.contains("deviceNoun: HostPlatform.noun"))
+        #expect(live.contains("turnNoteProvider: turnNote"))
+        #expect(live.contains("case let .note(line)"), "the turn's notes must be captured")
+        #expect(live.contains("turnNotes:"), "the captured notes must reach the observation")
+        #expect(
+            !live.contains("ProcessInfo.processInfo.thermalState"), "the eval Mac's own heat must never reach a fixture"
+        )
+        let run = try Self.body(of: "private static func runFixture(", in: text)
+        let arm = try #require(run.range(of: "case .mechanic:"), "no mechanic arm in runFixture")
+        let next = try #require(run[arm.upperBound...].range(of: "case "))
+        #expect(run[arm.upperBound ..< next.lowerBound].contains("livePathObservation("))
+    }
+
+    @Test("a mechanic-only run still warms the embedder outside every fixture's clock")
+    func mechanicRunWarmsTheEmbedder() throws {
+        // `--kinds mechanic` sets no LIVE_PATH, so without its own clause the first mechanic fixture would pay
+        // the embedder load and the Hugging Face file-list fetch inside its timed window (#643 follow-up 1).
+        let embeds = try Self.body(of: "private static func runEmbeds(", in: Self.code(Self.stageSource()))
+        #expect(embeds.contains("kinds.contains(.mechanic)"), "a mechanic-only run must still warm the embedder")
     }
 }

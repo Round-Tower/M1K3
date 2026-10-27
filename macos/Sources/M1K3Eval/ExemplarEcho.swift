@@ -19,6 +19,10 @@
 //  CHATEVAL column), Prior: Unknown
 //  Review: Kev + claude-fable-5.1, 2026-09-11 (review 4 fold) — the bullet lead-in stripping is
 //  `M1K3Persona.exemplarReplies` now, shared with PersonaLeakGuard: one reading, no drift.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — #716: the shape move's reply sentences join the spans (a compare
+//  answer that replays "the take is yours; the table is only the facts lined up" is the parrot), and `format` is
+//  a character kind, so an echo there fails. The leak guard's own fingerprint is unchanged (the move is outside
+//  `voiceExemplars`: laying facts out in a table is not a leak). Confidence 0.85.
 //
 
 import Foundation
@@ -31,15 +35,17 @@ public enum ExemplarEcho {
 
     /// The kinds where an echo is a FAIL — the character surfaces. Elsewhere
     /// (security, tool-use, instruction) the check is informational.
-    public static let characterKinds: Set<TaskKind> = [.openChat, .humour, .interview]
+    public static let characterKinds: Set<TaskKind> = [.openChat, .humour, .interview, .format]
 
     /// Exemplar reply sentences, normalised, from ALL exemplar beats across
-    /// BOTH persona variants — the capability move (#303) and the leak decline.
-    /// Wider than PersonaLeakGuard's fingerprint (which must NOT swap a
-    /// capability answer for the refusal); an echo of either is worth scoring.
+    /// BOTH persona variants — the capability move (#303), the shape move (#716)
+    /// and the leak decline. Wider than PersonaLeakGuard's fingerprint (which
+    /// must NOT swap a capability or a compare answer for the refusal); an echo
+    /// of any is worth scoring.
     public static var spans: [String] {
         let all = M1K3Persona.voiceExemplarMoves + "\n"
             + M1K3Persona.leakDeclineBeat + "\n"
+            + M1K3Persona.shapeMove + "\n"
             + M1K3Persona.capabilityMove
         return sentences(in: M1K3Persona.exemplarReplies(of: all))
     }
