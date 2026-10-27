@@ -69,8 +69,8 @@ water, and a chip that was already on. The attic's "energy saved" arithmetic, wh
 cloud with 50 Wh per answer, was off by three orders of magnitude; the cred survives the
 correction.
 
-Not yet measured: Mini (Apple Foundation Models — expect the ANE line to matter) and Big
-(gemma-4-12B), tokens per answer (v1 records chars), and a battery-powered run. Next: a row per
+Since measured (2026-10-27, `docs/ENERGY_MEASUREMENT.md`): Mini and Big, and tokens per answer
+(the ttft lines, joined by time). Still not measured: a battery-powered run. Next: a row per
 brain on `/brains` beside tokens per second, then the word "eco" goes back on the site's receipts
 band and into the store copy, and one clause returns to the persona behind an A/B gate.
 
@@ -93,4 +93,8 @@ band and into the store copy, and one clause returns to the persona behind an A/
      (a Metal burn that kept the GPU busy ~1.95 s of 2 s moved it under 0.05 J); ri_billed_energy
      again never tracked the work. The
      table above is left as measured; the new row, the per-tier coefficients the app ships and
-     the receipts still owed are in docs/ENERGY_MEASUREMENT.md. Confidence 0.85. -->
+     the receipts still owed are in docs/ENERGY_MEASUREMENT.md. Confidence 0.85.
+     Review: Kev + claude-opus-5.5, 2026-10-27 (#696) — Mini, Big and per-answer token counts are now
+     measured (docs/ENERGY_MEASUREMENT.md), which retires the Open on the token count. The run-1 table
+     above stays as that night's tool wrote it; re-run on today's placement it reads 0.0596 Wh a median
+     answer against 0.0581. Confidence 0.85. -->

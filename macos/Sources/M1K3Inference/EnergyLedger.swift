@@ -3,12 +3,11 @@
 //  M1K3Inference
 //
 //  What M1K3's generations cost, kept as a daily rollup (#696 Phase 2). Rule
-//  zero: measure, never quote. A tier with no measured watts has no rate and
-//  its generations are counted as unpriced, never guessed. Lil's rate is
-//  DERIVED from two measurements on one Mac, an M1 Max 64 GB (the 2026-09-15
-//  powermetrics receipt's watts and the 2026-10-25 Release throughput), not
-//  calibrated in one run, and it says so (`calibrated: false`, `measuredOn`).
-//  On another chip it is still that M1 Max's figure, not the user's Mac's: a
+//  zero: measure, never quote. A tier with no per-token receipt has no rate and
+//  its generations are counted as unpriced, never guessed. Lil's and Big's
+//  rates are CALIBRATED: watts and tokens from the same build, two powermetrics
+//  runs per tier on one Mac, an M1 Max 64 GB (2026-10-27). On another chip a
+//  rate is still that M1 Max's figure, not the user's Mac's (`measuredOn`): a
 //  surface must say whose before it prints one. `docs/ENERGY_MEASUREMENT.md`
 //  holds the method, the error bars and the runs still owed.
 //
@@ -56,6 +55,12 @@
 //  tokens kept and joules priced on read, so Kev's ruling on the derived Lil rate, or a calibration, re-prices the
 //  history instead of leaving 30 days of stale joules; `Rate` names its model and its Mac; `record(_ turn:)` dropped
 //  (no caller, and nothing measured to store yet); the heartbeat ruling quoted in its own words. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — calibrated. Kev ran two powermetrics receipts per tier on the 1.3.0
+//  (541) app, and `power_receipt.py rates` fitted each phase's watts across the samples, timing every
+//  generation's prefill and decode by its ttft line. The derived Lil rate (0.060 / 0.434 J) gives way to Lil
+//  0.0738 / 0.422 J and Big, newly priced, 0.213 / 1.17 J, the two runs agreeing within 1.2 % and a blind
+//  re-derivation within 0.1 %. Mini stays unpriced: it reports no tokens. A test pins each rate to its
+//  committed receipts. Confidence 0.85 (two runs per tier, one Mac, one ~800-token prompt shape).
 
 import Foundation
 import Observation
@@ -107,16 +112,17 @@ public struct TurnEnergy: Sendable, Equatable, Codable {
 }
 
 /// The per-tier joules-per-token table, in one place. `nil` = unpriced: no
-/// watts were measured for that tier, so it gets no number.
+/// per-token receipt for that tier (Mini is measured per answer, but reports
+/// no tokens), so it gets no number.
 public enum EnergyCoefficients {
     public struct Rate: Sendable, Equatable {
         public let joulesPerPrefillToken: Double
         public let joulesPerDecodeToken: Double
-        /// True only when one powermetrics run on the shipping build measured
-        /// this tier's watts and throughput together.
+        /// True only when powermetrics receipts on one build measured this
+        /// tier's watts and token counts together.
         public let calibrated: Bool
-        /// The model the rate was derived for. A test binds Lil's to
-        /// `BrainTier.lil.mlxModelID`, so a model swap forces a re-derivation.
+        /// The model the rate was measured for. A test binds each to its
+        /// tier's `mlxModelID`, so a model swap forces a new receipt.
         public let modelID: String
         /// The Mac the watts were measured on. The rate is that Mac's figure.
         public let measuredOn: String
@@ -135,30 +141,41 @@ public enum EnergyCoefficients {
 
     public static func rate(for tier: BrainTier) -> Rate? {
         switch tier {
-        case .lil: lilDerived
-        // Owed: a sudo powermetrics run per tier (docs/ENERGY_MEASUREMENT.md).
-        case .mini, .pocket, .big: nil
+        case .lil: lil
+        case .big: big
+        // Mini reports no tokens, so a per-token rate would price nothing (its
+        // receipt prices an answer instead); pocket has no receipt.
+        case .mini, .pocket: nil
         }
     }
 
-    /// Lil (M1 Max 64 GB, AC): package watts above idle ÷ tokens per second.
-    /// The watts are POWER_RECEIPT run 1 (2026-09-15, Qwen3-4B DWQ, median
-    /// 37.14 W during an answer, idle 1.09 W); the throughput is the
-    /// 2026-10-25 Release baseline (Qwen3.5-4B: decode 83 tok/s, prefill
-    /// ~600 tok/s past the persona seed). Two runs, two models, one Mac,
-    /// hence uncalibrated: about 0.43 J per decoded token, 0.06 J per prefilled.
-    static let lilDerived: Rate = {
-        let wattsAboveIdle = 37.14 - 1.09
-        let decodeTokensPerSecond = 83.0
-        let prefillTokensPerSecond = 600.0
-        return Rate(
-            joulesPerPrefillToken: wattsAboveIdle / prefillTokensPerSecond,
-            joulesPerDecodeToken: wattsAboveIdle / decodeTokensPerSecond,
-            calibrated: false,
-            modelID: "mlx-community/Qwen3.5-4B-MLX-4bit",
-            measuredOn: "Apple M1 Max, 64 GB"
-        )
-    }()
+    // Both rates: M1 Max 64 GB, AC, the 1.3.0 (541) app, 2026-10-27. Two
+    // powermetrics runs of ten `m1k3 ask` answers each; each phase's watts
+    // above idle fitted across the samples, with every generation's prefill
+    // and decode timed by its ttft line (`tools/eval/power_receipt.py rates`).
+    // Each rate is phase joules over phase tokens, both runs pooled, to three
+    // figures. The receipts are docs/evals/2026-10-27-power-rates-<tier>-run<N>.json,
+    // and a test holds each constant to within 1 % of them.
+
+    /// Lil: prefill drew 47 W above idle, decode 35 W (runs 0.0741 / 0.0736 J
+    /// per prefilled token, 0.4214 / 0.4223 per decoded).
+    static let lil = Rate(
+        joulesPerPrefillToken: 0.0738,
+        joulesPerDecodeToken: 0.422,
+        calibrated: true,
+        modelID: "mlx-community/Qwen3.5-4B-MLX-4bit",
+        measuredOn: "Apple M1 Max, 64 GB"
+    )
+
+    /// Big: prefill drew 48 W above idle, decode 37 W (runs 0.2142 / 0.2116 J
+    /// per prefilled token, 1.1739 / 1.1659 per decoded).
+    static let big = Rate(
+        joulesPerPrefillToken: 0.213,
+        joulesPerDecodeToken: 1.17,
+        calibrated: true,
+        modelID: "mlx-community/gemma-4-12B-it-4bit",
+        measuredOn: "Apple M1 Max, 64 GB"
+    )
 }
 
 /// One calendar day's token counts, per tier. Numbers, a date and tier enums

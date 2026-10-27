@@ -1,0 +1,102 @@
+{
+  "provenance": {
+    "brain": "big",
+    "log": "big-run1.log.gz",
+    "ttft": "big-run1-ttft.log",
+    "machine": "Apple M1 Max, 64 GB",
+    "power_source": "ac",
+    "app": "1.3.0 (541)"
+  },
+  "idle_watts": 1.98,
+  "placement_slack_seconds": 0.009,
+  "placement_runs": 1,
+  "model": "mlx-community/gemma-4-12B-it-4bit",
+  "estimator": "least-squares phase watts over the samples that touch a turn",
+  "generations": 10,
+  "prefill_tokens": 7928,
+  "decode_tokens": 1154,
+  "prefill_seconds": 35.638,
+  "decode_seconds": 36.39,
+  "prefill_watts_above_idle": 47.66,
+  "decode_watts_above_idle": 37.23,
+  "rest_of_turn_watts_above_idle": 0.35,
+  "fit_rms_watts": 3.55,
+  "prefill_joules": 1698.49,
+  "decode_joules": 1354.63,
+  "joules_per_prefill_token": 0.2142,
+  "joules_per_decode_token": 1.1739,
+  "generation_share_of_turn_energy": 0.999,
+  "generations_ending_outside_a_turn": 0,
+  "cross_check_prorated": {
+    "joules_per_prefill_token": 0.2083,
+    "joules_per_decode_token": 1.1552
+  },
+  "rows": [
+    {
+      "prompt_tokens": 784,
+      "prefill_s": 3.946,
+      "decode_tokens": 31,
+      "decode_s": 0.984
+    },
+    {
+      "prompt_tokens": 772,
+      "prefill_s": 3.484,
+      "decode_tokens": 230,
+      "decode_s": 7.541
+    },
+    {
+      "prompt_tokens": 666,
+      "prefill_s": 2.962,
+      "decode_tokens": 163,
+      "decode_s": 5.175
+    },
+    {
+      "prompt_tokens": 779,
+      "prefill_s": 3.491,
+      "decode_tokens": 119,
+      "decode_s": 3.662
+    },
+    {
+      "prompt_tokens": 776,
+      "prefill_s": 3.466,
+      "decode_tokens": 43,
+      "decode_s": 1.365
+    },
+    {
+      "prompt_tokens": 670,
+      "prefill_s": 2.96,
+      "decode_tokens": 247,
+      "decode_s": 7.6
+    },
+    {
+      "prompt_tokens": 836,
+      "prefill_s": 3.741,
+      "decode_tokens": 130,
+      "decode_s": 4.0
+    },
+    {
+      "prompt_tokens": 865,
+      "prefill_s": 3.79,
+      "decode_tokens": 20,
+      "decode_s": 0.635
+    },
+    {
+      "prompt_tokens": 764,
+      "prefill_s": 3.359,
+      "decode_tokens": 81,
+      "decode_s": 2.571
+    },
+    {
+      "prompt_tokens": 1016,
+      "prefill_s": 4.439,
+      "decode_tokens": 90,
+      "decode_s": 2.857
+    }
+  ],
+  "alignment": {
+    "best_shift_seconds": 0.05,
+    "fit_rms_watts_at_best": 3.55,
+    "fit_rms_watts_at_zero": 3.55,
+    "fit_rms_watts_half_a_sample_off": 10.26
+  }
+}

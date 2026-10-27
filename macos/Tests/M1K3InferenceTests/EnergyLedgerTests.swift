@@ -3,7 +3,7 @@
 //  M1K3InferenceTests
 //
 //  The energy ledger (#696 Phase 2): the coefficient estimate, the per-tier
-//  table (Lil derived, the rest unpriced), the model → tier resolver, the
+//  table (Lil and Big calibrated, Mini and pocket unpriced), the model → tier resolver, the
 //  daily rollup with its day rollover and 30-day cap, pricing on read,
 //  persistence through a dictionary storage fake (`swift test` is unsandboxed;
 //  a UserDefaults suite would leave a plist behind), the screengrab
@@ -21,6 +21,13 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (CI fold) — repricedOnRead's expected joules are typed Double constants:
 //  CI's Swift 6.3 timed out type-checking `100 * 0.5 + 10 * 2` inside #expect (twice on bc5d22a1), Swift 6.4 did not.
 //  Same values, no logic change. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — the calibration: Lil and Big are priced from Kev's two same-build
+//  powermetrics runs per tier, and a new pin reads the committed phase receipts (docs/evals/2026-10-27-power-rates-*)
+//  and holds each shipped rate to within 1 % of its tier's two runs pooled, so a constant can't drift from its
+//  evidence. The shipped-table and production-default pins now expect Lil 0.0738 / 0.422 and Big 0.213 / 1.17 J,
+//  both calibrated, each bound to its tier's model id; Mini and pocket stay unpriced. A source scan holds the
+//  doc's rate table to the shipped constants (the doc drifted from them three times while this was made).
+//  Confidence 0.85.
 
 import Foundation
 @testable import M1K3Inference
@@ -105,21 +112,74 @@ struct EnergyLedgerTests {
         #expect(TurnEnergy.estimate(tier: .lil, prefillTokens: -5, decodeTokens: -9, rate: rate).joules == 0)
     }
 
-    @Test("the shipped table: Lil derived at the doc's 0.060 / 0.434 J, bound to Lil's model; the rest unpriced")
+    @Test("the shipped table: Lil and Big calibrated at the doc's rates, bound to their models; Mini, pocket unpriced")
     func shippedTable() throws {
         let lil = try #require(EnergyCoefficients.rate(for: .lil))
-        #expect(lil == EnergyCoefficients.lilDerived)
-        #expect(lil.calibrated == false)
-        // docs/ENERGY_MEASUREMENT.md quotes these two: the doc and the code move together.
-        #expect(abs(lil.joulesPerPrefillToken - 0.060) < 0.001)
-        #expect(abs(lil.joulesPerDecodeToken - 0.434) < 0.001)
-        // Derived for one model on one Mac. A Lil model swap fails here and forces a re-derivation.
-        #expect(lil.modelID == BrainTier.lil.mlxModelID)
-        #expect(lil.measuredOn == "Apple M1 Max, 64 GB")
-        // Rule zero: no watts measured for these tiers, so no number.
+        let big = try #require(EnergyCoefficients.rate(for: .big))
+        #expect(lil == EnergyCoefficients.lil)
+        #expect(big == EnergyCoefficients.big)
+        // docs/ENERGY_MEASUREMENT.md quotes these four: the doc and the code move together.
+        #expect(abs(lil.joulesPerPrefillToken - 0.0738) < 0.00005)
+        #expect(abs(lil.joulesPerDecodeToken - 0.422) < 0.0005)
+        #expect(abs(big.joulesPerPrefillToken - 0.213) < 0.0005)
+        #expect(abs(big.joulesPerDecodeToken - 1.17) < 0.0005)
+        for (tier, rate) in [(BrainTier.lil, lil), (BrainTier.big, big)] {
+            // Watts and tokens from one build: calibrated. A model swap fails here and forces a new receipt.
+            #expect(rate.calibrated, "\(tier)")
+            #expect(rate.modelID == tier.mlxModelID, "\(tier)")
+            #expect(rate.measuredOn == "Apple M1 Max, 64 GB", "\(tier)")
+        }
+        // Mini reports no tokens, so a per-token rate would price nothing; pocket has no receipt.
         #expect(EnergyCoefficients.rate(for: .mini) == nil)
         #expect(EnergyCoefficients.rate(for: .pocket) == nil)
-        #expect(EnergyCoefficients.rate(for: .big) == nil)
+    }
+
+    /// The fields of a `power_receipt.py rates` file this pin reads.
+    private struct PhaseReceipt: Decodable {
+        let model: String
+        let prefillTokens: Int
+        let decodeTokens: Int
+        let prefillJoules: Double
+        let decodeJoules: Double
+    }
+
+    @Test("each shipped rate is its tier's two committed receipts pooled (phase joules over tokens), to within 1 %")
+    func ratesAreThePooledReceipts() throws {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        for (tier, name) in [(BrainTier.lil, "lil"), (BrainTier.big, "big")] {
+            let rate = try #require(EnergyCoefficients.rate(for: tier))
+            var prefillJoules = 0.0, decodeJoules = 0.0, prefillTokens = 0, decodeTokens = 0
+            for run in 1 ... 2 {
+                let file = "docs/evals/2026-10-27-power-rates-\(name)-run\(run).json"
+                let url = try Self.packageRoot().appending(path: file)
+                let receipt = try decoder.decode(PhaseReceipt.self, from: Data(contentsOf: url))
+                #expect(receipt.model == rate.modelID, "\(name) run \(run) measured another model")
+                prefillJoules += receipt.prefillJoules
+                decodeJoules += receipt.decodeJoules
+                prefillTokens += receipt.prefillTokens
+                decodeTokens += receipt.decodeTokens
+            }
+            let pooledPrefill: Double = prefillJoules / Double(prefillTokens)
+            let pooledDecode: Double = decodeJoules / Double(decodeTokens)
+            let prefillGap: Double = abs(rate.joulesPerPrefillToken - pooledPrefill) / pooledPrefill
+            let decodeGap: Double = abs(rate.joulesPerDecodeToken - pooledDecode) / pooledDecode
+            #expect(prefillGap < 0.01, "\(name) prefill")
+            #expect(decodeGap < 0.01, "\(name) decode")
+        }
+    }
+
+    @Test("the doc's rate table quotes the shipped rates, so docs/ENERGY_MEASUREMENT.md moves with the code")
+    func docQuotesTheShippedRates() throws {
+        let url = try Self.packageRoot().appending(path: "docs/ENERGY_MEASUREMENT.md")
+        let rows = try String(contentsOf: url, encoding: .utf8).split(separator: "\n").map(String.init)
+        for (tier, name) in [(BrainTier.lil, "Lil"), (BrainTier.big, "Big")] {
+            let rate = try #require(EnergyCoefficients.rate(for: tier))
+            let row = try #require(rows.first { $0.hasPrefix("| \(name) |") }, "no \(name) row in the rate table")
+            #expect(row.contains("**\(rate.joulesPerPrefillToken)**"), "\(name) prefill: \(row)")
+            #expect(row.contains("**\(rate.joulesPerDecodeToken)**"), "\(name) decode: \(row)")
+            #expect(row.contains("**yes**") == rate.calibrated, "\(name) calibrated: \(row)")
+        }
     }
 
     @Test("a model id names a tier only when it is that tier's stock model; anything else names none")
@@ -137,7 +197,7 @@ struct EnergyLedgerTests {
 
     // MARK: - Recording
 
-    @Test("billed to the model that ran: a deep dive's Big generation stays Big's, unpriced, whatever Lil's rate")
+    @Test("billed to the model that ran: a deep dive's Big generation stays Big's whatever rate table is injected")
     func billedByGeneratingModel() {
         let lilOnly = rate
         let ledger = ledger(storage: MemoryStorage(), rate: { $0 == .lil ? lilOnly : nil })
@@ -181,23 +241,34 @@ struct EnergyLedgerTests {
         #expect(storage.values[EnergyLedger.daysKey] != nil)
     }
 
-    @Test("the production default table prices Lil at lilDerived; Big, pocket and a missing id stay unpriced")
+    @Test("the production default table prices Lil and Big at their own rates; pocket and a missing id stay unpriced")
     func productionDefaults() throws {
         let clock = Clock(epoch)
         // No `rate:` argument: exactly how AppEnvironment builds it.
         let ledger = EnergyLedger(storage: MemoryStorage(), now: { clock.now }, calendar: utc)
-        let derived = EnergyCoefficients.lilDerived
         let lil = try #require(ledger.record(metrics: metrics(prompt: 2444, decode: 10, prefilled: 100)))
-        #expect(lil == TurnEnergy.estimate(tier: .lil, prefillTokens: 100, decodeTokens: 10, rate: derived))
-        #expect(lil.joules == 100 * derived.joulesPerPrefillToken + 10 * derived.joulesPerDecodeToken)
-        for model in [BrainTier.big.mlxModelID, BrainTier.pocket.mlxModelID, nil] {
+        let lilEstimate = TurnEnergy.estimate(
+            tier: .lil, prefillTokens: 100, decodeTokens: 10, rate: EnergyCoefficients.lil
+        )
+        #expect(lil == lilEstimate)
+        let big = try #require(ledger.record(metrics: metrics(
+            prompt: 2444, decode: 10, prefilled: 100, model: BrainTier.big.mlxModelID
+        )))
+        // A deep dive's Big generation costs Big's rate, not Lil's.
+        let bigEstimate = TurnEnergy.estimate(
+            tier: .big, prefillTokens: 100, decodeTokens: 10, rate: EnergyCoefficients.big
+        )
+        #expect(big == bigEstimate)
+        #expect(big.joules > lil.joules)
+        for model in [BrainTier.pocket.mlxModelID, nil] {
             #expect(ledger.record(metrics: metrics(prompt: 100, decode: 10, prefilled: 100, model: model)) == nil)
         }
         let priced = ledger.priced(ledger.today)
-        #expect(priced.pricedGenerations == 1)
-        #expect(priced.unpricedGenerations == 3)
-        #expect(priced.perTier.map(\.tier) == [.lil])
-        #expect(priced.joules == lil.joules)
+        #expect(priced.pricedGenerations == 2)
+        #expect(priced.unpricedGenerations == 2)
+        #expect(priced.perTier.map(\.tier) == [.lil, .big])
+        let expected: Double = lil.joules + big.joules
+        #expect(priced.joules == expected)
         #expect(ledger.today.generations == 4)
     }
 
