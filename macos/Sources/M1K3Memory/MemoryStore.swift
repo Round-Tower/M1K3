@@ -88,6 +88,9 @@
 //  OSAllocatedUnfairLock — written from the main actor on a swap, read from any task.
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — #180: `liveMemory(where:)`, the newest live row whose
 //  text passes a predicate (ids and texts only). Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #711: `memories(source:)` and `forget(source:)`, the memory
+//  import's one-action undo. `forget(source:)` is `forget(id:)` per tagged row, so the consent cascade and the
+//  un-supersede are the same code. No migration: `source` is a v1 column. Confidence 0.85.
 
 import Foundation
 import GRDB
@@ -505,6 +508,23 @@ public final class MemoryStore: @unchecked Sendable {
             try db.execute(sql: "DELETE FROM memories WHERE id = ?", arguments: [mid])
             return true
         }
+    }
+
+    /// Hard-delete every row whose `source` is exactly `source` — an import's
+    /// `import/<provider>/<date>` tag, so "forget everything from this import"
+    /// is one action (#711). Each row goes through `forget(id:)`: the same
+    /// cascade, and anything a tagged row superseded is live again. Returns the
+    /// number of rows removed.
+    @discardableResult
+    public func forget(source: String) throws -> Int {
+        let ids = try dbQueue.read { db in
+            try String.fetchAll(db, sql: "SELECT id FROM memories WHERE source = ?", arguments: [source])
+        }
+        var removed = 0
+        for id in ids.compactMap(UUID.init(uuidString:)) where try forget(id: id) {
+            removed += 1
+        }
+        return removed
     }
 
     // MARK: - Recall (the retrieval-with-cutoff query)
@@ -1058,6 +1078,20 @@ public final class MemoryStore: @unchecked Sendable {
                 db,
                 sql: "SELECT * FROM memories WHERE superseded_by IS NOT NULL ORDER BY created_at DESC LIMIT ?",
                 arguments: [limit]
+            )
+            return rows.compactMap { Self.memory(from: $0) }
+        }
+    }
+
+    /// Every row one writer tagged (an import's `import/<provider>/<date>`),
+    /// live and superseded, newest first — what "forget this import" would
+    /// remove, for a review surface to show before it does.
+    public func memories(source: String, limit: Int = 100_000) throws -> [Memory] {
+        try dbQueue.read { db in
+            let rows = try Row.fetchAll(
+                db,
+                sql: "SELECT * FROM memories WHERE source = ? ORDER BY created_at DESC LIMIT ?",
+                arguments: [source, limit]
             )
             return rows.compactMap { Self.memory(from: $0) }
         }
