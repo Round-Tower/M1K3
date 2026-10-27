@@ -28,6 +28,9 @@
 //  the challenger's 2026-10-27 prototype, verified on the 8 MEMSTAT corrections and 11
 //  compatibles, its recall on live asks unmeasured: the coordinator counts style rows with no
 //  axis as the field signal). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — `inSaidOrder`: one slice's style facts follow the user's turns, so
+//  "newest" means said last (exit-path distillation sends a whole chat as one slice). A tie keeps the distiller's
+//  order: "not short, long" in one turn cannot be placed by words alone. Confidence 0.8.
 //
 
 import Foundation
@@ -96,6 +99,41 @@ public enum StyleAxis: String, CaseIterable, Sendable {
             let oldAxes = axes(of: old)
             return !oldAxes.isEmpty && oldAxes.isSubset(of: newAxes)
         }
+    }
+
+    // MARK: - Said order
+
+    /// Words every style fact is about, so they place nothing: "answers" is in most asks.
+    static let formWords: Set<String> = ["answer", "answers", "response", "responses", "reply", "replies"]
+
+    /// `facts` with its style facts reordered by when the user SAID them: the last user turn holding
+    /// a distinctive word of each (its content tokens, minus StyleAskFence's scaffold and `formWords`).
+    /// Exit-path distillation sends a whole chat as one slice, so "short… later, actually long" comes
+    /// back together, in whatever order the distiller wrote it, and the store treats the later write
+    /// as the newer ask. Only the style slots move; a tie, or a fact no turn places (it goes first),
+    /// keeps the distiller's order.
+    public static func inSaidOrder(
+        _ facts: [DistilledFact],
+        userTurns: [String],
+        selfNames: DistillationAttribution.UserNames = .none
+    ) -> [DistilledFact] {
+        let slots = facts.indices.filter { facts[$0].kind == .style }
+        guard slots.count > 1 else { return facts }
+        let turnTokens = userTurns.map { DistillationAttribution.contentTokens(in: $0, selfNames: selfNames) }
+        func saidAt(_ fact: DistilledFact) -> Int {
+            let distinctive = DistillationAttribution.contentTokens(in: fact.text, selfNames: selfNames)
+                .subtracting(StyleAskFence.scaffoldTokens)
+                .subtracting(formWords)
+            return turnTokens.lastIndex { !$0.isDisjoint(with: distinctive) } ?? -1
+        }
+        let ordered = slots.enumerated()
+            .map { (offset: $0.offset, fact: facts[$0.element], said: saidAt(facts[$0.element])) }
+            .sorted { ($0.said, $0.offset) < ($1.said, $1.offset) }
+        var result = facts
+        for (slot, entry) in zip(slots, ordered) {
+            result[slot] = entry.fact
+        }
+        return result
     }
 
     private static func matches(_ fragments: [String], in text: String) -> Bool {

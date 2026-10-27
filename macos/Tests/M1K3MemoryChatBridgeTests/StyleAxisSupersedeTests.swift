@@ -315,6 +315,24 @@ struct StyleAxisSupersedeTests {
         #expect(try rig.liveStyles() == [new])
     }
 
+    @Test("one slice that says short and later long ends with long live, whatever order the distiller emits")
+    func sliceOrderFollowsTheUser() async throws {
+        let rig = try Rig()
+        let short = DistilledFact(text: "The user prefers short answers.", kind: .style)
+        let long = DistilledFact(text: "The user prefers long, detailed answers.", kind: .style)
+        // Exit-path distillation sends the whole chat as one slice.
+        let written = try await rig.coordinator([long, short]).distillAndStore(turns: [
+            ChatTurn(role: .user, text: "short answers please"),
+            ChatTurn(role: .assistant, text: "Short it is."),
+            ChatTurn(role: .user, text: "actually, make them long and detailed please"),
+            ChatTurn(role: .assistant, text: "Long it is."),
+        ])
+
+        #expect(written == 2)
+        try rig.expectRetired(short.text, by: long.text)
+        #expect(try rig.liveStyles() == [long.text])
+    }
+
     @Test("a coordinator with no graph does no axis work and does not fail")
     func noGraphNoAxisWork() async throws {
         var rig = try Rig()

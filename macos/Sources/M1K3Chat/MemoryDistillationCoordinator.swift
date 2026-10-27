@@ -67,6 +67,8 @@
 //  style row it covers on its axes (StyleAxis, StyleAxisSupersede.swift) through the same `supersede`, which now
 //  takes a corpus id + graph text instead of a ChunkHit. The bar is untouched. `supersedesStyleByAxis` (default
 //  true) gates it; the seam gains `liveStyleTexts()` (default []), since the corpus has no kind. Confidence 0.85.
+//  Review: same day — `distillAndStore` stores a slice's style facts in the order the user said them
+//  (`StyleAxis.inSaidOrder`), so "short… later, actually long" in one exit-path slice ends with long live.
 
 import CryptoKit
 import Foundation
@@ -211,10 +213,14 @@ public struct MemoryDistillationCoordinator: Sendable {
     /// Distill the slice and store what's new. Returns the number of facts
     /// actually written (dedupe skips don't count). Rethrows distiller
     /// failure so the caller withholds the watermark and retries the slice.
-    /// Exactly `store(propose(turns:))`.
+    /// `store(propose(turns:))`, with the slice's style facts in the order the
+    /// user said them (`StyleAxis.inSaidOrder`, #699): the later write is the
+    /// newer ask, and a whole chat can arrive as one slice.
     @discardableResult
     public func distillAndStore(turns: [ChatTurn]) async throws -> Int {
-        try await store(propose(turns: turns))
+        let facts = try await propose(turns: turns)
+        let userTurns = turns.filter { $0.role == .user }.map(\.text)
+        return try await store(StyleAxis.inSaidOrder(facts, userTurns: userTurns, selfNames: selfNames))
     }
 
     /// Distill the slice and return the facts that survive the fence, writing

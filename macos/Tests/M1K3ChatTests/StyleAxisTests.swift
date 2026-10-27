@@ -200,6 +200,37 @@ struct StyleAxisTests {
         #expect(StyleAxis.newestRetired(by: "The user wants no fluff.", amongNewestFirst: live) == nil)
     }
 
+    // MARK: - Said order: "newest" means said last, inside one slice too
+
+    @Test("a slice's style facts are reordered by the last user turn that says a distinctive word of each")
+    func styleFactsFollowTheTurns() {
+        let short = DistilledFact(text: "The user prefers short answers.", kind: .style)
+        let long = DistilledFact(text: "The user prefers long, detailed answers.", kind: .style)
+        let turns = ["short answers please", "actually, make them long and detailed please"]
+
+        // The distiller emitted the correction first; the user said it last.
+        #expect(StyleAxis.inSaidOrder([long, short], userTurns: turns) == [short, long])
+        #expect(StyleAxis.inSaidOrder([short, long], userTurns: turns) == [short, long])
+    }
+
+    @Test("only style slots move; other facts keep theirs, and a tie keeps the distiller's order")
+    func onlyStyleSlotsMove() {
+        let note = DistilledFact(text: "Kev lives in Cork.", kind: .profile)
+        let short = DistilledFact(text: "The user prefers short answers.", kind: .style)
+        let long = DistilledFact(text: "The user prefers long answers.", kind: .style)
+        let emoji = DistilledFact(text: "The user wants no emoji.", kind: .style)
+
+        #expect(StyleAxis.inSaidOrder(
+            [long, note, short], userTurns: ["short please, I live in Cork", "no, long please"]
+        ) == [short, note, long])
+        // One turn says both: a tie, so the distiller's order stands.
+        #expect(StyleAxis.inSaidOrder([long, short], userTurns: ["not short, long please"]) == [long, short])
+        // "answers" is form, not a distinctive word: only "emoji" places that fact.
+        #expect(StyleAxis.inSaidOrder(
+            [emoji, short], userTurns: ["no emoji please", "short answers please", "answers without emoji"]
+        ) == [short, emoji])
+    }
+
     @Test("a live row with the new ask's own identity is never its victim")
     func sameIdentityIsNeverTheVictim() {
         let live = ["The user prefers short answers", "The user prefers long answers."]
