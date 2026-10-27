@@ -9,8 +9,11 @@
 //  • A closed typed fence whose body does NOT parse stays inside the markdown,
 //    byte for byte, so ChatMarkdownParser renders it as today's code card. No
 //    error UI: the model's words are all still there.
-//  • An open typed fence is `.pending` to the end of the text, so the skeleton
-//    shows and the half-written JSON never does.
+//  • An open typed fence, while the turn is still streaming, is `.pending` to the
+//    end of the text, so the skeleton shows and the half-written JSON never does.
+//    Once the turn has ended (finished, stopped, failed, cut off at the token
+//    cap) a fence that never closed is malformed: raw markdown, not a skeleton
+//    forever. Only the caller knows which, so it says (`streaming:`).
 //  • Ordinary fences (``` or ~~~) are tracked and never split; a typed opener
 //    inside one is code (a model showing the format, not using it).
 //
@@ -26,6 +29,9 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85 (pure; pinned case
 //  by case and by a seeded fuzz suite). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (self-review fold) — `streaming:`; an open fence was a
+//  skeleton forever once a turn ended mid-fence. Defaults to false, the safe side: a caller that
+//  forgets it shows today's code card, never a stuck skeleton. Confidence 0.85.
 //
 
 import Foundation
@@ -36,14 +42,15 @@ public enum AnswerBlockSegment: Equatable, Sendable {
     case markdown(String)
     /// A closed typed fence that parsed.
     case block(AnswerBlock)
-    /// A typed fence still open (streaming, or the answer was cut off).
+    /// A typed fence still open while the turn streams.
     case pending(AnswerBlockKind)
 }
 
 public enum AnswerBlockSegmenter {
     /// The answer as segments. Whitespace-only markdown between blocks is
-    /// dropped; empty text has no segments.
-    public static func segments(in text: String) -> [AnswerBlockSegment] {
+    /// dropped; empty text has no segments. `streaming`: the turn is still
+    /// generating, so an open typed fence is a skeleton rather than raw markdown.
+    public static func segments(in text: String, streaming: Bool = false) -> [AnswerBlockSegment] {
         var segments: [AnswerBlockSegment] = []
         func appendMarkdown(_ slice: Substring) {
             guard slice.contains(where: { !$0.isWhitespace }) else { return }
@@ -55,12 +62,13 @@ public enum AnswerBlockSegmenter {
                 appendMarkdown(text[cursor ..< region.range.lowerBound])
                 segments.append(.block(block))
                 cursor = region.range.upperBound
-            } else if !region.isClosed {
+            } else if !region.isClosed, streaming {
                 appendMarkdown(text[cursor ..< region.range.lowerBound])
                 segments.append(.pending(region.kind))
                 cursor = text.endIndex
             }
-            // A closed region that didn't parse stays in the markdown run.
+            // A region that didn't parse (or never closed, once the turn is
+            // over) stays in the markdown run.
         }
         appendMarkdown(text[cursor...])
         return segments

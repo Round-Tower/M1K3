@@ -40,6 +40,9 @@
 //  open one as a static skeleton, and a malformed one stays markdown (today's code
 //  card). One edit, three platforms. Verify-by-launch owed (bionic mode leaves the
 //  cards in the plain base font).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (self-review fold), Confidence 0.75 —
+//  `streaming:`: only a turn still generating shows a skeleton for an open typed
+//  fence; once it ends, a fence that never closed is today's raw code card.
 
 import M1K3AnswerBlocks
 import M1K3Chat
@@ -49,12 +52,16 @@ struct ReadingText: View {
     let text: String
     /// Force a specific mode (Settings previews); otherwise follow the saved choice.
     private let forcedMode: ReadingMode?
+    /// The text is a turn still generating: an open typed answer block shows its
+    /// skeleton. Otherwise an unclosed one renders as the raw markdown it is.
+    private let streaming: Bool
 
     @AppStorage(ReadingMode.storageKey) private var savedModeRaw = ReadingMode.standard.rawValue
 
-    init(_ text: String, mode: ReadingMode? = nil) {
+    init(_ text: String, mode: ReadingMode? = nil, streaming: Bool = false) {
         self.text = text
         forcedMode = mode
+        self.streaming = streaming
     }
 
     private var mode: ReadingMode {
@@ -63,7 +70,7 @@ struct ReadingText: View {
 
     /// The text split around typed answer blocks; usually one markdown run.
     private var segments: [AnswerBlockSegment] {
-        AnswerBlockSegmenter.segments(in: text)
+        AnswerBlockSegmenter.segments(in: text, streaming: streaming)
     }
 
     var body: some View {

@@ -26,6 +26,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — a tapped option in a typed `m1k3-choices` block (#717) sends
 //  through `onSendFollowUp`, set on the answer's ReadingText only once the turn is `.complete` (the chips'
 //  gate). TDD_SKIP: view body. Confidence 0.75 (verify-by-launch owed).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (self-review fold) — the answer's ReadingText says when the turn
+//  is still streaming, so an open typed fence is a skeleton only then. Confidence 0.75.
 
 import AppKit
 import M1K3AnswerBlocks
@@ -207,7 +209,7 @@ struct MessageView: View {
                 // so a growing streamed answer flashes ALL words on each token (worse
                 // at the ~20Hz stream cadence). Plain append reads as live; a true
                 // per-word fade-in would need per-word views (not worth the frame cost).
-                ReadingText(message.text)
+                ReadingText(message.text, streaming: message.status == .streaming)
                     .environment(\.answerChoiceAction, answerChoiceAction)
             } else if case .streaming = message.status {
                 // While the agent works (thinking, searching the web…) show what

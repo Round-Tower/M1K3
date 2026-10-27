@@ -5,8 +5,9 @@
 //  The renderer's split of an answer into markdown, typed blocks and pending
 //  (still-streaming) blocks (#717). The rules it must keep: a closed typed fence
 //  that parses becomes a block; a malformed one stays the markdown it was (today's
-//  code card, no error UI); an open one is a skeleton and its partial JSON never
-//  shows; ordinary fences are never split, and a typed opener inside one is code.
+//  code card, no error UI); an open one is a skeleton while the turn streams and
+//  its partial JSON never shows, and once the turn ends it is raw markdown too;
+//  ordinary fences are never split, and a typed opener inside one is code.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85 (pure, pinned case by
 //  case here and by the seeded fuzz suite). Prior: none (new file).
@@ -44,7 +45,7 @@ struct AnswerBlockSegmenterTests {
     @Test("an open typed fence at the end is pending, and none of its partial JSON is in a markdown segment")
     func openFenceIsPending() {
         let text = "Here's how:\n```m1k3-steps\n{\"steps\": [\"Loosen the"
-        let segments = AnswerBlockSegmenter.segments(in: text)
+        let segments = AnswerBlockSegmenter.segments(in: text, streaming: true)
         #expect(segments == [.markdown("Here's how:\n"), .pending(.steps)])
         for case let .markdown(source) in segments {
             #expect(!source.contains("{"))
@@ -59,7 +60,7 @@ struct AnswerBlockSegmenterTests {
         var sawBlock = false
         for end in text.indices {
             let prefix = String(text[..<end])
-            for segment in AnswerBlockSegmenter.segments(in: prefix) {
+            for segment in AnswerBlockSegmenter.segments(in: prefix, streaming: true) {
                 switch segment {
                 case let .markdown(source): #expect(!source.contains("\"steps\""), "\(prefix)")
                 case .pending: sawPending = true
@@ -73,8 +74,24 @@ struct AnswerBlockSegmenterTests {
 
     @Test("an opener line that has fully arrived is pending even before its first body byte")
     func bareOpenerIsPending() {
-        #expect(AnswerBlockSegmenter.segments(in: "Pick one:\n```m1k3-choices") == [
+        #expect(AnswerBlockSegmenter.segments(in: "Pick one:\n```m1k3-choices", streaming: true) == [
             .markdown("Pick one:\n"),
+            .pending(.choices),
+        ])
+    }
+
+    @Test("once the turn has ended, a typed fence that never closed is the raw markdown it was, not a skeleton forever")
+    func unclosedAfterStreamIsMarkdown() {
+        let cut = "Here's how:\n```m1k3-steps\n{\"steps\": [\"Lo"
+        #expect(AnswerBlockSegmenter.segments(in: cut) == [.markdown(cut)])
+        let text = "\(stepsFence)\nThen:\n```m1k3-choices\n{"
+        #expect(AnswerBlockSegmenter.segments(in: text, streaming: false) == [
+            .block(steps),
+            .markdown("\nThen:\n```m1k3-choices\n{"),
+        ])
+        #expect(AnswerBlockSegmenter.segments(in: text, streaming: true) == [
+            .block(steps),
+            .markdown("\nThen:\n"),
             .pending(.choices),
         ])
     }

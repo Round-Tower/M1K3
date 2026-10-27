@@ -29,6 +29,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — a tapped option in a typed `m1k3-choices` block (#717) sends
 //  through `onSendFollowUp` (ChatScreen's brainReady gate), set only once the turn is `.complete`, as on the
 //  Mac. TDD_SKIP: view body. Confidence 0.75 (verify-by-launch on iPhone owed).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (self-review fold) — the answer's ReadingText says when the turn
+//  is still streaming, so an open typed fence is a skeleton only then. Confidence 0.75.
 
 import M1K3AnswerBlocks
 import M1K3Chat
@@ -91,7 +93,7 @@ struct MessageBubble: View {
                     activityRow(label)
                 }
                 if !message.text.isEmpty {
-                    ReadingText(message.text)
+                    ReadingText(message.text, streaming: message.status == .streaming)
                         .foregroundStyle(.primary)
                         .environment(\.answerChoiceAction, answerChoiceAction)
                         .modifier(LegibilityScrim(active: scrimmed))

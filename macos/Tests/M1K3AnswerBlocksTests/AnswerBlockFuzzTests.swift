@@ -121,7 +121,9 @@ struct AnswerBlockFuzzTests {
         var pendings = 0
         var malformed = 0
         for text in AnswerBlockFuzz.cases() {
-            let segments = AnswerBlockSegmenter.segments(in: text)
+            // A finished answer never shows a skeleton.
+            #expect(!AnswerBlockSegmenter.segments(in: text).contains { if case .pending = $0 { true } else { false } })
+            let segments = AnswerBlockSegmenter.segments(in: text, streaming: true)
             for (index, segment) in segments.enumerated() {
                 switch segment {
                 case let .markdown(source):
@@ -151,7 +153,7 @@ struct AnswerBlockFuzzTests {
         for text in AnswerBlockFuzz.cases() {
             let spoken = AnswerBlockSpeech.replacingTypedFences(in: text)
             // Every typed region is gone: re-segmenting finds no block or skeleton.
-            let again = AnswerBlockSegmenter.segments(in: spoken)
+            let again = AnswerBlockSegmenter.segments(in: spoken, streaming: true)
             #expect(!again.contains { if case .markdown = $0 { false } else { true } }, "\(text.debugDescription)")
             #expect(AnswerBlockSpeech.replacingTypedFences(in: spoken) == spoken)
             // A JSON key reaches speech only from text outside the typed regions
