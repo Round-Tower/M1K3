@@ -1,0 +1,69 @@
+{
+  "brain": "big",
+  "idle_window": {
+    "start": "2026-10-27T16:48:45.175759+00:00",
+    "end": "2026-10-27T16:49:15.181217+00:00"
+  },
+  "turns": [
+    {
+      "question": "In one sentence, what is a knowledge graph?",
+      "answer_chars": 186,
+      "start": "2026-10-27T16:49:15.181261+00:00",
+      "end": "2026-10-27T16:49:20.654967+00:00"
+    },
+    {
+      "question": "Give me three tips for focusing on a long task.",
+      "answer_chars": 1000,
+      "start": "2026-10-27T16:49:23.660172+00:00",
+      "end": "2026-10-27T16:49:36.070984+00:00"
+    },
+    {
+      "question": "Explain what a hash function is, briefly.",
+      "answer_chars": 746,
+      "start": "2026-10-27T16:49:39.076460+00:00",
+      "end": "2026-10-27T16:49:49.320895+00:00"
+    },
+    {
+      "question": "What's a good name for a fox who fixes computers? One or two suggestions.",
+      "answer_chars": 492,
+      "start": "2026-10-27T16:49:52.326372+00:00",
+      "end": "2026-10-27T16:50:00.025073+00:00"
+    },
+    {
+      "question": "Summarise the plot of Frankenstein in two sentences.",
+      "answer_chars": 243,
+      "start": "2026-10-27T16:50:03.032928+00:00",
+      "end": "2026-10-27T16:50:08.132829+00:00"
+    },
+    {
+      "question": "How do I boil an egg so the yolk is jammy?",
+      "answer_chars": 955,
+      "start": "2026-10-27T16:50:11.138028+00:00",
+      "end": "2026-10-27T16:50:23.544122+00:00"
+    },
+    {
+      "question": "What's the difference between weather and climate?",
+      "answer_chars": 554,
+      "start": "2026-10-27T16:50:26.545699+00:00",
+      "end": "2026-10-27T16:50:36.754700+00:00"
+    },
+    {
+      "question": "Write a haiku about a quiet machine.",
+      "answer_chars": 78,
+      "start": "2026-10-27T16:50:39.760202+00:00",
+      "end": "2026-10-27T16:50:44.610535+00:00"
+    },
+    {
+      "question": "Why is the sky blue? Keep it short.",
+      "answer_chars": 390,
+      "start": "2026-10-27T16:50:47.615764+00:00",
+      "end": "2026-10-27T16:50:53.877804+00:00"
+    },
+    {
+      "question": "List four uses for a Raspberry Pi.",
+      "answer_chars": 347,
+      "start": "2026-10-27T16:50:56.883124+00:00",
+      "end": "2026-10-27T16:51:11.387751+00:00"
+    }
+  ]
+}

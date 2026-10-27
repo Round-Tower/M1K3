@@ -1,0 +1,152 @@
+{
+  "provenance": {
+    "brain": "lil",
+    "samples": 196,
+    "log": "lil-run2.log.gz",
+    "machine": "Apple M1 Max, 64 GB",
+    "power_source": "ac",
+    "app": "1.3.0 (541)"
+  },
+  "summary": {
+    "turns": 10,
+    "idle_watts": 0.28,
+    "sample_interval_seconds": 0.51738,
+    "median_wh_per_answer": 0.02459,
+    "mean_wh_per_answer": 0.03095,
+    "median_seconds_per_answer": 2.54,
+    "median_mean_watts": 34.92,
+    "median_mean_cpu_watts": 1.96,
+    "median_mean_gpu_watts": 32.95,
+    "total_wh_above_idle": 0.3095,
+    "idle_min_watts": 0.13,
+    "idle_max_watts": 2.44,
+    "idle_samples": 56,
+    "idle_cpu_watts": 0.26,
+    "idle_gpu_watts": 0.02,
+    "idle_ane_watts": 0.0,
+    "placement_slack_seconds": 0.012,
+    "placement_runs": 1
+  },
+  "turns": [
+    {
+      "question": "In one sentence, what is a knowledge graph?",
+      "answer_chars": 137,
+      "seconds": 1.79,
+      "samples": 5,
+      "mean_watts": 36.87,
+      "peak_watts": 48.5,
+      "mean_cpu_watts": 2.28,
+      "mean_gpu_watts": 34.59,
+      "joules_above_idle": 65.61,
+      "wh_above_idle": 0.01822
+    },
+    {
+      "question": "Give me three tips for focusing on a long task.",
+      "answer_chars": 819,
+      "seconds": 4.34,
+      "samples": 9,
+      "mean_watts": 34.69,
+      "peak_watts": 47.88,
+      "mean_cpu_watts": 2.34,
+      "mean_gpu_watts": 32.36,
+      "joules_above_idle": 149.44,
+      "wh_above_idle": 0.04151
+    },
+    {
+      "question": "Explain what a hash function is, briefly.",
+      "answer_chars": 638,
+      "seconds": 3.04,
+      "samples": 7,
+      "mean_watts": 34.43,
+      "peak_watts": 48.16,
+      "mean_cpu_watts": 2.18,
+      "mean_gpu_watts": 32.26,
+      "joules_above_idle": 103.77,
+      "wh_above_idle": 0.02882
+    },
+    {
+      "question": "What's a good name for a fox who fixes computers? One or two suggestions.",
+      "answer_chars": 341,
+      "seconds": 2.46,
+      "samples": 5,
+      "mean_watts": 36.48,
+      "peak_watts": 47.69,
+      "mean_cpu_watts": 1.62,
+      "mean_gpu_watts": 34.85,
+      "joules_above_idle": 89.2,
+      "wh_above_idle": 0.02478
+    },
+    {
+      "question": "Summarise the plot of Frankenstein in two sentences.",
+      "answer_chars": 248,
+      "seconds": 2.39,
+      "samples": 6,
+      "mean_watts": 35.16,
+      "peak_watts": 48.14,
+      "mean_cpu_watts": 1.68,
+      "mean_gpu_watts": 33.48,
+      "joules_above_idle": 83.5,
+      "wh_above_idle": 0.0232
+    },
+    {
+      "question": "How do I boil an egg so the yolk is jammy?",
+      "answer_chars": 321,
+      "seconds": 2.51,
+      "samples": 6,
+      "mean_watts": 33.94,
+      "peak_watts": 48.26,
+      "mean_cpu_watts": 1.89,
+      "mean_gpu_watts": 32.05,
+      "joules_above_idle": 84.51,
+      "wh_above_idle": 0.02348
+    },
+    {
+      "question": "What's the difference between weather and climate?",
+      "answer_chars": 781,
+      "seconds": 4.02,
+      "samples": 9,
+      "mean_watts": 35.82,
+      "peak_watts": 49.0,
+      "mean_cpu_watts": 2.59,
+      "mean_gpu_watts": 33.23,
+      "joules_above_idle": 142.92,
+      "wh_above_idle": 0.0397
+    },
+    {
+      "question": "Write a haiku about a quiet machine.",
+      "answer_chars": 109,
+      "seconds": 2.24,
+      "samples": 5,
+      "mean_watts": 36.68,
+      "peak_watts": 48.36,
+      "mean_cpu_watts": 1.76,
+      "mean_gpu_watts": 34.91,
+      "joules_above_idle": 81.48,
+      "wh_above_idle": 0.02263
+    },
+    {
+      "question": "Why is the sky blue? Keep it short.",
+      "answer_chars": 340,
+      "seconds": 2.56,
+      "samples": 6,
+      "mean_watts": 34.55,
+      "peak_watts": 48.63,
+      "mean_cpu_watts": 1.88,
+      "mean_gpu_watts": 32.68,
+      "joules_above_idle": 87.82,
+      "wh_above_idle": 0.0244
+    },
+    {
+      "question": "List four uses for a Raspberry Pi.",
+      "answer_chars": 1510,
+      "seconds": 12.36,
+      "samples": 25,
+      "mean_watts": 18.56,
+      "peak_watts": 49.04,
+      "mean_cpu_watts": 2.02,
+      "mean_gpu_watts": 16.04,
+      "joules_above_idle": 225.92,
+      "wh_above_idle": 0.06276
+    }
+  ]
+}
