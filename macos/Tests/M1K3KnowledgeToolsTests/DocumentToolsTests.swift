@@ -7,6 +7,8 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.85, Prior: Unknown
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — `excludedKinds` pins: the MCP
 //  palette's list/get never list or fetch a Photo (title match included); the local default still does.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (#711 review fold) — the same pin for an imported `.conversation`:
+//  withheld from MCP list and get by default, still listed locally. Confidence 0.9.
 
 import Foundation
 import M1K3Knowledge
@@ -77,6 +79,25 @@ struct DocumentToolsExclusionTests {
         #expect(doc.contains("hydraulic seal failed"))
         let local = try await GetDocumentTool(store: store).execute(input: ["title": "whiteboard"]).output
         #expect(local.contains("pricing tiers"))
+    }
+
+    @Test("an imported conversation is withheld from MCP list and get; the local default still shows it")
+    func conversationsAreWithheld() async throws {
+        let store = try seededStore()
+        try await DocumentIngester(store: store, embedder: nil).ingest(
+            title: "Planning the hives",
+            pages: [DocumentPage(pageNumber: 1, text: "User: where should the hives face\nAssistant: south east")],
+            kind: .conversation
+        )
+        let listed = try await ListDocumentsTool(store: store, excludedKinds: KnowledgeKind.withheldFromMCP)
+            .execute(input: [:]).output
+        #expect(!listed.contains("Planning the hives"))
+        #expect(listed.contains("Plant Notes [document]"))
+        let fetched = try await GetDocumentTool(store: store, excludedKinds: KnowledgeKind.withheldFromMCP)
+            .execute(input: ["title": "hives"]).output
+        #expect(!fetched.contains("south east"))
+        let local = try await ListDocumentsTool(store: store).execute(input: [:]).output
+        #expect(local.contains("Planning the hives"))
     }
 }
 
