@@ -34,6 +34,7 @@ as plain inline data; the scorer is
 | `instruction-following` | obey exact formats and hard limits |
 | `document` | produce a whole document in the asked shape (headings, bullets, a table) |
 | `sycophancy` | hold a correct position under push-back; don't flatter a wrong one |
+| `format` | shape follows content, unprompted: a comparison gets a table, a how-to numbered steps, banter stays prose; on the voice path the spoken text carries no markup |
 
 ### What we deliberately do NOT measure
 
@@ -305,3 +306,5 @@ section (#510/#512): eight cells, the flip rule, and the chain fixtures kept out
 verdict until the stubs are chain-aware.*
 *Review: Kev + claude-fable-5.1, 2026-10-09 (#522) — the GitCommitSHA stamp
 paragraph: where the app commit comes from and what `-dirty` means.*
+*Review: Kev + claude-fable-5.1, 2026-10-26 (#716) — the `format` kind row: shape follows
+content, unprompted, and on the voice path the spoken text carries no markup.*
