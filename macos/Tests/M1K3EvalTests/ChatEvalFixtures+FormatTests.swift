@@ -13,6 +13,8 @@
 //  Review: same day (pre-push review fold) — the how-to pin is three dotted steps in `mustContainAll` (the scorer
 //  reads the first line as a line start now, so step 1 may open the answer); bold is forbidden only on the pure
 //  banter bid, because the shape bullet allows the key fact bold once and the Cork bid carries one. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #729's master merge appends `mechanic` after `format`: the order pin
+//  reads "right after grounded-long" instead of "last". Confidence 0.9.
 //
 
 import Foundation
@@ -70,8 +72,9 @@ struct ChatEvalFixturesFormatTests {
         // Bold is the one markup banter may carry (the shape bullet: the key fact, once), so only the bid with
         // nothing to bold forbids it; the Cork bid invites a fact.
         #expect(fixtures.filter { $0.expectation.mustNotContain.contains("**") }.map(\.id) == ["fmt-smalltalk-mind"])
-        // Last in the enum, so every older report's row order is unchanged.
-        #expect(TaskKind.allCases.last == .format)
+        // Right after grounded-long, with newer kinds (#697's mechanic) only appended after it, so every older
+        // report's row order is unchanged.
+        #expect(TaskKind.allCases.firstIndex(of: .format).map { TaskKind.allCases[$0 - 1] } == .groundedLong)
         #expect(TaskKind.format.rawValue == "format")
     }
 
