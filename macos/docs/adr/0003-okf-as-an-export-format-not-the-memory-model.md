@@ -91,6 +91,18 @@ chunk text. It was considered and deferred, not rejected — it earns its place
 when a bundle exists that Kev actually wants ingested. Building an importer
 for a format nobody has handed us yet is speculative work.
 
+**2026-10-27 (#711): the condition is met.** Memory import brings ChatGPT and
+Claude exports home, and an OKF folder written by another M1K3 is the third
+source it accepts. The reader lives in the `M1K3Import` target
+(`OKFImportParser`), takes the files the import UI read from the folder the
+user chose, and never a path, so `M1K3Memory` still does not learn the word on
+either side. It takes a different route from the one sketched above: an OKF
+file is one remembered fact, so it is proposed as a memory for the user's
+review rather than chunked as a document. Once accepted, it carries the
+import's `import/m1k3/<day>` source tag, so the whole import can be forgotten
+in one action. OKF is still never a storage format: the folder is read once,
+and the facts live in the encrypted stores.
+
 ### Why not serve OKF over MCP
 
 Because that is exporting the user's memories over a wire to a visiting agent,
