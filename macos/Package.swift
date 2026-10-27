@@ -436,12 +436,12 @@ let package = Package(
         // three stores; nothing depends back on it, and it links no MLX.
         .target(
             name: "M1K3Import",
-            dependencies: ["M1K3MemoryChatBridge", "M1K3Chat", "M1K3Memory", "M1K3Knowledge"],
+            dependencies: ["M1K3MemoryChatBridge", "M1K3Chat", "M1K3Memory", "M1K3Knowledge", "M1K3LogCore"],
             path: "Sources/M1K3Import"
         ),
         .testTarget(
             name: "M1K3ImportTests",
-            dependencies: ["M1K3Import", "M1K3Chat", "M1K3Memory", "M1K3Knowledge"],
+            dependencies: ["M1K3Import", "M1K3MemoryChatBridge", "M1K3Chat", "M1K3Memory", "M1K3Knowledge"],
             path: "Tests/M1K3ImportTests"
         ),
         // Voice. TTS now (AVSpeech behind SpeechProvider; Kokoro later);

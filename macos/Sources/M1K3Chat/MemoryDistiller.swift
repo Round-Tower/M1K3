@@ -31,6 +31,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — `distill` runs under `withThinking(false)`: outside a
 //  turn a thinking-on build thought, a capped think parsed to [] without throwing and the facts were
 //  lost. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #711: `line(for:)` is the one rendering of a transcript line (`build`
+//  uses it, bytes unchanged) and `maxTotalChars` is public, so a memory import slices long conversations to what one
+//  prompt holds instead of letting the total cap drop their early turns. Confidence 0.9.
 
 import Foundation
 import M1K3Inference
@@ -87,7 +90,15 @@ public enum MemoryDistillationPrompt {
     """
 
     static let maxCharsPerTurn = 400
-    static let maxTotalChars = 6000
+    /// The transcript's total budget. Public so a caller with more history
+    /// than one prompt holds (a memory import, #711) can slice it to fit.
+    public static let maxTotalChars = 6000
+
+    /// One turn's transcript line, exactly as `build` renders and charges it.
+    public static func line(for turn: ChatTurn) -> String {
+        let label = turn.role == .user ? "USER" : "ASSISTANT"
+        return "\(label): \(turn.text.prefix(maxCharsPerTurn))"
+    }
 
     /// The transcript rendered newest-last with role labels, capped per turn
     /// and in total (newest turns survive the total cap — they're the ones
@@ -96,9 +107,7 @@ public enum MemoryDistillationPrompt {
         var lines: [String] = []
         var total = 0
         for turn in turns.reversed() {
-            let label = turn.role == .user ? "USER" : "ASSISTANT"
-            let text = String(turn.text.prefix(maxCharsPerTurn))
-            let line = "\(label): \(text)"
+            let line = Self.line(for: turn)
             if total + line.count > maxTotalChars { break }
             lines.append(line)
             total += line.count
