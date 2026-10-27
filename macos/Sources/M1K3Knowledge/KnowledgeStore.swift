@@ -28,6 +28,9 @@
 //  withhold is query-side too (Photos crowding bm25 top-K starved the MCP page).
 //  Review: Kev + claude-opus-5.5, 2026-10-23 — `searchFTS(relaxedFallback:)`: the strict pass alone, for the
 //  hashing keyword lane (#670). Default unchanged. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #711: `itemIDs(source:kinds:)` and `deleteItems(source:)`, the
+//  corpus half of forgetting one import by its tag (deleteItem's cascade per row); `.conversation` joins
+//  groundingDocumentKinds so an imported chat is retrieved and cited like a document. No migration. Confidence 0.85.
 
 import Foundation
 import GRDB
@@ -260,6 +263,44 @@ public final class KnowledgeStore: @unchecked Sendable {
             )
             return raw.flatMap(UUID.init(uuidString:))
         }
+    }
+
+    /// Every item one writer tagged — an import's `import/<provider>/<date>`
+    /// (#711) — optionally narrowed to `kinds`. A named kind is matched even
+    /// when it is hidden from retrieval (`.memorySuperseded`): this is the
+    /// forget path's inventory, not a search surface.
+    public func itemIDs(source: KnowledgeSource, kinds: Set<KnowledgeKind>? = nil) throws -> [UUID] {
+        try dbQueue.read { db in
+            let raw: [String]
+            if let kinds {
+                guard !kinds.isEmpty else { return [] }
+                let named = kinds.map(\.rawValue).sorted()
+                let holes = named.map { _ in "?" }.joined(separator: ", ")
+                raw = try String.fetchAll(
+                    db,
+                    sql: "SELECT id FROM knowledge_items WHERE source = ? AND kind IN (\(holes))",
+                    arguments: StatementArguments([source.rawValue] + named)
+                )
+            } else {
+                raw = try String.fetchAll(
+                    db, sql: "SELECT id FROM knowledge_items WHERE source = ?", arguments: [source.rawValue]
+                )
+            }
+            return raw.compactMap(UUID.init(uuidString:))
+        }
+    }
+
+    /// Hard-delete every item tagged `source`, each through `deleteItem(id:)`
+    /// (chunks, FTS mirror, vectors). Returns the number removed. Callers that
+    /// must restore what a tagged memory superseded run that first
+    /// (`MemoryDistillationCoordinator.forgetCorpus(source:in:)`).
+    @discardableResult
+    public func deleteItems(source: KnowledgeSource) throws -> Int {
+        var removed = 0
+        for id in try itemIDs(source: source) where try deleteItem(id: id) {
+            removed += 1
+        }
+        return removed
     }
 
     public func itemCount() throws -> Int {
@@ -596,7 +637,7 @@ public extension KnowledgeStore {
     /// The non-memory kinds that share the document grounding budget. Memory is
     /// retrieved on its own lane (see `searchGrounding`) so short atomic facts
     /// are never crowded out of a single top-K by the larger document corpus.
-    static let groundingDocumentKinds: Set<KnowledgeKind> = [.document, .call, .note, .image]
+    static let groundingDocumentKinds: Set<KnowledgeKind> = [.document, .call, .note, .image, .conversation]
 
     /// Two-lane grounding retrieval: documents and memories ranked + budgeted
     /// SEPARATELY, then concatenated for the caller to gate by kind.
