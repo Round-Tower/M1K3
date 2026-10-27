@@ -11,9 +11,13 @@
 //    session-only `@State`; nothing is persisted, so a block is derived from the
 //    message text alone, like the transient follow-up chips.
 //  • Choices: the prompt, then one button per option. A tap calls the
-//    environment's `answerChoiceAction` (the shell's follow-up send), so the
-//    option lands as the user's next message. Without an action (a user bubble,
-//    the reasoning panel, a turn still streaming) the buttons are disabled.
+//    environment's `answerChoiceAction` (the shell's follow-up send) with the
+//    words the button shows (`AnswerBlockText.sent`), so the option lands as the
+//    user's next message. No local "chosen" mark: the shells drop a send while a
+//    turn responds, so a mark could claim a tap nothing received; the user's
+//    message in the transcript is the receipt, as with the chips. Without an
+//    action (an earlier or reloaded answer, a turn still streaming) the buttons
+//    are disabled.
 //  • Skeleton: a static placeholder while the fence is open. Static on purpose:
 //    nothing ticks during a stream (the idle-CPU and glass rules).
 //
@@ -23,6 +27,11 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.7 (compiles for all three
 //  shells; the look, the tap path and VoiceOver are verify-by-launch, owed to Kev).
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (code-quality review fold) — a tap sends what the button shows
+//  (it sent the raw markdown, link destinations included); the optimistic checkmark is gone (a dropped send
+//  still showed it, and VoiceOver never heard it); step rows take the touch-target minimum the choices had;
+//  the cards opt out of ReadingText's text selection, which on the Mac can eat a click on a button's words.
+//  Confidence 0.7 (the click and the look stay verify-by-launch).
 //
 
 import SwiftUI
@@ -56,14 +65,28 @@ public struct AnswerBlockView: View {
     }
 
     public var body: some View {
-        switch block {
-        case let .steps(steps):
-            StepsCard(steps: steps)
-        case let .choices(prompt, options):
-            ChoicesCard(prompt: prompt, options: options)
+        Group {
+            switch block {
+            case let .steps(steps):
+                StepsCard(steps: steps)
+            case let .choices(prompt, options):
+                ChoicesCard(prompt: prompt, options: options)
+            }
         }
+        // The cards are controls, not prose: ReadingText makes its text
+        // selectable, and on the Mac a selectable label can take a click on its
+        // words as a selection instead of a tap.
+        .textSelection(.disabled)
     }
 }
+
+// The shortest a tappable row may be: the Mac's control height, and the
+// 44 pt touch target on iPhone, iPad and Vision Pro.
+#if os(macOS)
+    private let answerBlockMinRowHeight: CGFloat = 28
+#else
+    private let answerBlockMinRowHeight: CGFloat = 44
+#endif
 
 /// The placeholder for a typed fence that is still streaming.
 public struct AnswerBlockSkeletonView: View {
@@ -127,6 +150,7 @@ private struct StepsCard: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
+            .frame(minHeight: answerBlockMinRowHeight, alignment: .leading)
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
@@ -140,8 +164,6 @@ private struct ChoicesCard: View {
     let prompt: String
     let options: [String]
     @Environment(\.answerChoiceAction) private var choose
-    /// The option tapped this session, marked so the tap reads as received.
-    @State private var chosen: String?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -149,23 +171,20 @@ private struct ChoicesCard: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
             ForEach(options, id: \.self) { option in
+                // What the button shows is what a tap sends, never the source.
+                let words = AnswerBlockText.sent(option)
+                let enabled = choose != nil && words != nil
                 Button {
-                    chosen = option
-                    choose?(option)
+                    if let choose, let words { choose(words) }
                 } label: {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        if chosen == option {
-                            Image(systemName: "checkmark")
-                        }
-                        Text(AnswerBlockText.inline(option))
-                            .multilineTextAlignment(.leading)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    Text(AnswerBlockText.inline(option))
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .buttonStyle(ChoiceButtonStyle())
-                .disabled(choose == nil)
+                .disabled(!enabled)
                 .accessibilityLabel(AnswerBlockText.choiceLabel(option))
-                .accessibilityHint(choose == nil ? "" : AnswerBlockText.choiceHint)
+                .accessibilityHint(enabled ? AnswerBlockText.choiceHint : "")
             }
         }
         .answerBlockCard()
@@ -186,17 +205,11 @@ private struct ChoiceChrome: ViewModifier {
     let isPressed: Bool
     @Environment(\.isEnabled) private var isEnabled
 
-    #if os(macOS)
-        private let minHeight: CGFloat = 28
-    #else
-        private let minHeight: CGFloat = 44 // the touch target
-    #endif
-
     func body(content: Content) -> some View {
         content
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .frame(minHeight: minHeight, alignment: .leading)
+            .frame(minHeight: answerBlockMinRowHeight, alignment: .leading)
             .background(Color.accentColor.opacity(isPressed ? 0.22 : 0.1), in: .rect(cornerRadius: 8))
             .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.accentColor.opacity(0.4)))
             .contentShape(.rect(cornerRadius: 8))

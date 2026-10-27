@@ -34,8 +34,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — M1K3AnswerBlocks target + tests (#717: typed answer blocks,
 //  a Foundation + SwiftUI leaf). No package dependency moves. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — M1K3Voice depends on the M1K3AnswerBlocks leaf, so
-//  SpeechTextPolish speaks typed blocks as sentences instead of reading their JSON. Kev's taste call (a Voice →
-//  leaf edge, the M1K3LogCore precedent; the fallback is a duplicated scanner). Confidence 0.8.
+//  SpeechTextPolish speaks typed blocks as sentences instead of reading their JSON. Confidence 0.8.
+//  Open: Kev's taste call, not yet made — a Voice → leaf edge (the M1K3LogCore precedent) vs a duplicated
+//  scanner in M1K3Voice with a cross-module equality pin. Retire this line when he rules.
 
 import Foundation
 import PackageDescription

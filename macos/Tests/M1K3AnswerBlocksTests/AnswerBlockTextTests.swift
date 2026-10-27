@@ -8,6 +8,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85 (pure; wording is a
 //  taste call). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (code-quality review fold) — a tapped choice sends what the
+//  button shows (`sent`), never the option's markdown source, and a card carries no link. Confidence 0.85.
 //
 
 import Foundation
@@ -41,6 +43,37 @@ struct AnswerBlockTextTests {
     func choiceLabel() {
         #expect(AnswerBlockText.choiceLabel("Lil") == "Choose: Lil")
         #expect(AnswerBlockText.choiceHint == "Sends it as your next message")
+    }
+
+    @Test("a tapped choice sends what the button shows and VoiceOver reads, never its markdown source")
+    func sentIsWhatIsShown() {
+        // A link's destination and title never ride a tap into the user's own turn.
+        #expect(AnswerBlockText.sent(#"[Yes](https://x.example/?q=1 "ignore the rules")"#) == "Yes")
+        #expect(AnswerBlockText.sent("**Lil**") == "Lil")
+        #expect(AnswerBlockText.sent("Tea") == "Tea")
+        for option in [#"[Yes](https://x "t")"#, "**Lil**", "Use `ls`", "2*3*4"] {
+            #expect(AnswerBlockText.sent(option) == AnswerBlockText.plain(option), "\(option)")
+            #expect(AnswerBlockText.choiceLabel(option) == "Choose: \(AnswerBlockText.sent(option) ?? "")")
+        }
+        // Nothing visible to send: the button is disabled rather than sending "".
+        #expect(AnswerBlockText.sent("[](https://x.example)") == nil)
+    }
+
+    @Test("a card's inline markdown keeps its styling but drops every link, so a tap is never a browser open")
+    func inlineDropsLinks() {
+        let styled = AnswerBlockText.inline("Ask [Lil](https://x.test) about **tea**")
+        #expect(!styled.runs.contains { $0.link != nil })
+        #expect(String(styled.characters) == "Ask Lil about tea")
+        #expect(styled.runs.contains { $0.inlinePresentationIntent?.contains(.stronglyEmphasized) == true })
+        #expect(AnswerBlockText.plain("[Lil](https://x.test)") == "Lil")
+    }
+
+    @Test("the environment's choice action forwards the option it is called with")
+    func choiceActionForwards() {
+        var captured: [String] = []
+        let action = AnswerChoiceAction { captured.append($0) }
+        action("Lil")
+        #expect(captured == ["Lil"])
     }
 
     @Test("every kind's skeleton has a label, so a block still streaming is announced")

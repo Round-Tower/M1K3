@@ -25,6 +25,10 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85 (pure, every rule
 //  pinned in AnswerBlockTests; the caps are a taste call). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (code-quality review fold) — a depth guard before
+//  JSONSerialization: 16,000 `[` under the byte cap overflowed a test thread's stack (SIGBUS) once the
+//  review asked for the boundary test. Structure deeper than `maxDepth` is nil, like any wrong shape.
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -45,6 +49,11 @@ public enum AnswerBlock: Equatable, Sendable {
     /// A real block is a few hundred bytes. The cap keeps a runaway body (the
     /// renderer re-segments on every streamed frame) out of the JSON parser.
     static let maxBodyBytes = 16384
+    /// A real block nests two deep (`{"steps": [...]}`); the rest is room for
+    /// the unknown keys parse ignores. JSONSerialization recurses once per level,
+    /// so a nesting bomb under the byte cap would overflow a background thread's
+    /// stack (the speech lane polishes off the main thread): deeper is nil.
+    static let maxDepth = 16
     static let maxSteps = 12
     static let maxStepLength = 300
     static let maxOptions = 6
@@ -63,6 +72,7 @@ public enum AnswerBlock: Equatable, Sendable {
     /// kind's shape. Never throws.
     public static func parse(kind: AnswerBlockKind, body: String) -> AnswerBlock? {
         guard body.utf8.count <= maxBodyBytes,
+              nestsWithin(body, limit: maxDepth),
               let data = body.data(using: .utf8),
               let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return nil }
@@ -109,6 +119,39 @@ public enum AnswerBlock: Equatable, Sendable {
             result.append(string)
         }
         return result
+    }
+
+    /// True when the body's arrays and objects nest no deeper than `limit`.
+    /// Brackets inside a JSON string are text, not structure; malformed nesting
+    /// is left for JSONSerialization to refuse.
+    private static func nestsWithin(_ body: String, limit: Int) -> Bool {
+        var depth = 0
+        var inString = false
+        var escaped = false
+        for byte in body.utf8 {
+            if inString {
+                if escaped {
+                    escaped = false
+                } else if byte == UInt8(ascii: "\\") {
+                    escaped = true
+                } else if byte == UInt8(ascii: "\"") {
+                    inString = false
+                }
+                continue
+            }
+            switch byte {
+            case UInt8(ascii: "\""):
+                inString = true
+            case UInt8(ascii: "["), UInt8(ascii: "{"):
+                depth += 1
+                if depth > limit { return false }
+            case UInt8(ascii: "]"), UInt8(ascii: "}"):
+                depth -= 1
+            default:
+                break
+            }
+        }
+        return true
     }
 
     private static func trimmed(_ text: String) -> String {

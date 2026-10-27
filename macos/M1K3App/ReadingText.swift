@@ -43,6 +43,11 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (self-review fold), Confidence 0.75 —
 //  `streaming:`: only a turn still generating shows a skeleton for an open typed
 //  fence; once it ends, a fence that never closed is today's raw code card.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (code-quality review fold), Confidence 0.8 —
+//  typed blocks are opt-in (`answerBlocks:`), on for the assistant's answer only. Every
+//  other caller (the user's own bubble, the reasoning panel, the Settings previews)
+//  renders exactly as before, so a fence a user pastes stays the code they typed and a
+//  block drafted in a thought never turns into a dead card.
 
 import M1K3AnswerBlocks
 import M1K3Chat
@@ -52,15 +57,19 @@ struct ReadingText: View {
     let text: String
     /// Force a specific mode (Settings previews); otherwise follow the saved choice.
     private let forcedMode: ReadingMode?
+    /// Render typed answer blocks (#717) as cards. Only the assistant's answer
+    /// opts in; off, the text takes the markdown path exactly as it always has.
+    private let answerBlocks: Bool
     /// The text is a turn still generating: an open typed answer block shows its
     /// skeleton. Otherwise an unclosed one renders as the raw markdown it is.
     private let streaming: Bool
 
     @AppStorage(ReadingMode.storageKey) private var savedModeRaw = ReadingMode.standard.rawValue
 
-    init(_ text: String, mode: ReadingMode? = nil, streaming: Bool = false) {
+    init(_ text: String, mode: ReadingMode? = nil, answerBlocks: Bool = false, streaming: Bool = false) {
         self.text = text
         forcedMode = mode
+        self.answerBlocks = answerBlocks
         self.streaming = streaming
     }
 
@@ -68,9 +77,11 @@ struct ReadingText: View {
         forcedMode ?? ReadingMode(rawValue: savedModeRaw) ?? .standard
     }
 
-    /// The text split around typed answer blocks; usually one markdown run.
+    /// The text split around typed answer blocks; usually one markdown run, and
+    /// always exactly one when the caller didn't opt in.
     private var segments: [AnswerBlockSegment] {
-        AnswerBlockSegmenter.segments(in: text, streaming: streaming)
+        guard answerBlocks else { return [.markdown(text)] }
+        return AnswerBlockSegmenter.segments(in: text, streaming: streaming)
     }
 
     var body: some View {

@@ -8,6 +8,10 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85 (pure; the wording
 //  is a taste call, the no-JSON rule is not). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (code-quality review fold) — a parsed block whose words clean
+//  to nothing says it's on screen (it spoke "", and the shells' raw fallback read the JSON); only a
+//  fence-length tilde run is stripped ("~5 minutes" keeps its tilde); two fences and CRLF pinned exactly.
+//  Confidence 0.85.
 //
 
 @testable import M1K3AnswerBlocks
@@ -43,6 +47,44 @@ struct AnswerBlockSpeechTests {
     func itemsAreOneLine() {
         let spoken = AnswerBlockSpeech.spoken(.steps(["Run `ls`\nthen\n```m1k3-steps"]))
         #expect(spoken == "Step 1: Run ls then m1k3-steps.")
+    }
+
+    @Test("only a fence-length run of tildes is stripped: the prompt can't open a fence, and ~5 keeps its tilde")
+    func tildeGuard() {
+        #expect(AnswerBlockSpeech.spoken(.choices(prompt: "~~~ Pick", options: ["a"])) == "Pick. Options: a.")
+        #expect(
+            AnswerBlockSpeech.spoken(.steps(["~5 minutes", "~/Library"])) == "Step 1: ~5 minutes. Step 2: ~/Library."
+        )
+        #expect(AnswerBlockSpeech.spoken(.choices(prompt: "~~ Pick", options: ["~1"])) == "~~ Pick. Options: ~1.")
+        // The replacement re-segments with no typed region, and no tilde fence.
+        let text = "```m1k3-choices\n{\"prompt\": \"~~~~ Which?\", \"options\": [\"A\"]}\n```\n"
+            + "```m1k3-steps\n{\"steps\": [\"One\"]}\n```"
+        let spoken = AnswerBlockSpeech.replacingTypedFences(in: text)
+        #expect(spoken == "Which? Options: A.\nStep 1: One.")
+        #expect(AnswerBlockSegmenter.typedRegions(in: spoken).isEmpty)
+    }
+
+    @Test("a parsed block whose words clean to nothing says it's on screen, never an empty utterance")
+    func blankSpokenSaysOnScreen() {
+        let blank = "```m1k3-choices\n{\"prompt\": \"`\", \"options\": [\"?\"]}\n```"
+        #expect(AnswerBlock.parse(kind: .choices, body: "{\"prompt\": \"`\", \"options\": [\"?\"]}") != nil)
+        #expect(AnswerBlockSpeech.replacingTypedFences(in: blank) == AnswerBlockSpeech.onScreen)
+    }
+
+    @Test("two typed fences with prose between are each replaced in place, in order")
+    func twoFencesReplaced() {
+        let text = "First:\n```m1k3-steps\n{\"steps\": [\"Boil\", \"Steep\"]}\n```\nThen pick.\n"
+            + "```m1k3-choices\n{\"prompt\": \"Milk?\", \"options\": [\"Yes\", \"No\"]}\n```\nEnjoy."
+        #expect(
+            AnswerBlockSpeech.replacingTypedFences(in: text)
+                == "First:\nStep 1: Boil. Step 2: Steep.\nThen pick.\nMilk? Options: Yes or No.\nEnjoy."
+        )
+    }
+
+    @Test("CRLF around a typed fence survives the replacement")
+    func crlfSurvives() {
+        let text = "Intro\r\n```m1k3-steps\r\n{\"steps\": [\"One\"]}\r\n```\r\nOutro"
+        #expect(AnswerBlockSpeech.replacingTypedFences(in: text) == "Intro\r\nStep 1: One.\r\nOutro")
     }
 
     @Test("a parsed block is replaced in place by its sentences")

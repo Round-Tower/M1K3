@@ -10,6 +10,9 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85 (2,000 seeded
 //  mutations; invariants, not snapshots). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (code-quality review fold) — two invariants the renderer and
+//  the speech lane lean on: an open last region while streaming IS the trailing skeleton (so its partial
+//  JSON can't sit in markdown), and every typed region speaks as something (never ""). Confidence 0.85.
 //
 
 import Foundation
@@ -139,6 +142,10 @@ struct AnswerBlockFuzzTests {
             }
             let regions = AnswerBlockSegmenter.typedRegions(in: text)
             malformed += regions.count { $0.isClosed && $0.block == nil }
+            // An open fence while streaming is the trailing skeleton, never markdown.
+            if let last = regions.last, !last.isClosed {
+                #expect(segments.last == .pending(last.kind), "\(text.debugDescription)")
+            }
             // A block segment exists exactly where a closed region parsed.
             #expect(regions.count { $0.block != nil } == segments.count { if case .block = $0 { true } else { false } })
         }
@@ -163,6 +170,8 @@ struct AnswerBlockFuzzTests {
             for region in AnswerBlockSegmenter.typedRegions(in: text) {
                 outside += text[cursor ..< region.range.lowerBound]
                 cursor = region.range.upperBound
+                // Never an empty utterance: "" sends the shells to the raw JSON.
+                #expect(!AnswerBlockSpeech.replacement(for: region).isEmpty, "\(text.debugDescription)")
             }
             outside += text[cursor...]
             for key in ["\"steps\"", "\"options\"", "\"prompt\""] where spoken.contains(key) {

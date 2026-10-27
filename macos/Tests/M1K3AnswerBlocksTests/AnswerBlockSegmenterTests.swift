@@ -11,6 +11,11 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85 (pure, pinned case by
 //  case here and by the seeded fuzz suite). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (code-quality review fold) — pins for the branches no test
+//  reached: a `~~~m1k3-steps` opener is code, a longer closer closes, tab indentation, a closed ordinary
+//  fence hands the scan back (the old ordinary-fence case had no tag, so the scan never ran), and the
+//  live case: a typed opener inside a still-open ordinary fence while streaming is never a skeleton.
+//  Confidence 0.85.
 //
 
 @testable import M1K3AnswerBlocks
@@ -62,7 +67,11 @@ struct AnswerBlockSegmenterTests {
             let prefix = String(text[..<end])
             for segment in AnswerBlockSegmenter.segments(in: prefix, streaming: true) {
                 switch segment {
-                case let .markdown(source): #expect(!source.contains("\"steps\""), "\(prefix)")
+                case let .markdown(source):
+                    // Every prefix that stops before the key completes would pass a
+                    // key check, so check the first byte of the body and the tag.
+                    #expect(!source.contains("{"), "\(prefix)")
+                    #expect(!source.contains("m1k3-steps"), "\(prefix)")
                 case .pending: sawPending = true
                 case .block: sawBlock = true
                 }
@@ -102,10 +111,50 @@ struct AnswerBlockSegmenterTests {
         #expect(AnswerBlockSegmenter.segments(in: text) == [.markdown(text)])
     }
 
-    @Test("an ordinary fenced code block is never split")
+    @Test("an ordinary fenced code block is never split, and a typed fence after it is still a block")
     func ordinaryFenceUntouched() {
-        let text = "Code:\n```swift\nlet steps = [\"a\"]\n```\nDone."
+        // The tag is in the code so the scan runs (text without "m1k3-" skips it).
+        let code = "Code:\n```swift\nlet tag = \"m1k3-steps\"\n```\n"
+        #expect(AnswerBlockSegmenter.segments(in: code + "Done.") == [.markdown(code + "Done.")])
+        #expect(AnswerBlockSegmenter.segments(in: code + stepsFence) == [.markdown(code), .block(steps)])
+    }
+
+    @Test("while streaming, a typed opener inside a still-open ordinary fence is code: never a skeleton or a card")
+    func typedOpenerInsideOpenCodeWhileStreaming() {
+        let cut = "Format:\n````markdown\n```m1k3-steps\n{\"steps\": [\"Lo"
+        #expect(AnswerBlockSegmenter.segments(in: cut, streaming: true) == [.markdown(cut)])
+        // Every frame of a model showing the format inside a four-tick fence.
+        let nested = "Format:\n````markdown\n\(stepsFence)\n````\nUse it."
+        for end in nested.indices {
+            let prefix = String(nested[..<end])
+            let expected: [AnswerBlockSegment] = prefix.contains { !$0.isWhitespace } ? [.markdown(prefix)] : []
+            let segments = AnswerBlockSegmenter.segments(in: prefix, streaming: true)
+            #expect(segments == expected, "\(prefix.debugDescription)")
+        }
+    }
+
+    @Test("a tilde opener with a typed tag is an ordinary fence, never a block")
+    func tildeTypedOpenerIsCode() {
+        let text = "~~~m1k3-steps\n{\"steps\": [\"One\"]}\n~~~"
         #expect(AnswerBlockSegmenter.segments(in: text) == [.markdown(text)])
+        let open = "~~~m1k3-steps\n{"
+        #expect(AnswerBlockSegmenter.segments(in: open, streaming: true) == [.markdown(open)])
+    }
+
+    @Test("a longer closing run closes a typed fence; a tilde line, a shorter run or trailing text does not")
+    func closerRules() {
+        let longer = "```m1k3-steps\n{\"steps\": [\"One\"]}\n````"
+        #expect(AnswerBlockSegmenter.segments(in: longer) == [.block(.steps(["One"]))])
+        for closer in ["~~~", "``", "``` and more"] {
+            let text = "```m1k3-steps\n{\"steps\": [\"One\"]}\n\(closer)"
+            #expect(AnswerBlockSegmenter.segments(in: text) == [.markdown(text)], "\(closer)")
+        }
+    }
+
+    @Test("tab indentation opens and closes a typed fence like spaces do")
+    func tabIndentation() {
+        let text = "\t```m1k3-steps\n\t{\"steps\": [\"One\"]}\n\t```"
+        #expect(AnswerBlockSegmenter.segments(in: text) == [.block(.steps(["One"]))])
     }
 
     @Test("a typed opener INSIDE an open ordinary fence is code, not a block")

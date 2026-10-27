@@ -52,6 +52,19 @@ struct CodeBlockDetectorTests {
         #expect(swift.first?.languageLabel == "swift")
     }
 
+    // Review: Kev + claude-opus-5.5, 2026-10-27 — typed answer blocks (#717) render as cards in the bubble;
+    // their fences are never artifacts. Prior: Unknown (this file is unsigned). Confidence 0.85.
+    @Test("a typed answer-block fence (m1k3-*) is a card, never an artifact; a code fence beside it still is")
+    func typedAnswerBlockFenceSkipped() {
+        let steps = "```m1k3-steps\n{\"steps\": [\"Loosen the nut.\"]}\n```"
+        let choices = "```m1k3-choices\n{\"prompt\": \"Which?\", \"options\": [\"A\", \"B\"]}\n```"
+        #expect(CodeBlockDetector.detect(in: "Here's how:\n\(steps)\nThen:\n\(choices)").isEmpty)
+        #expect(CodeBlockDetector.detect(in: "```M1K3-Steps\n{\"steps\": [\"One\"]}\n```").isEmpty)
+        let mixed = CodeBlockDetector.detect(in: "\(steps)\nCode:\n```swift\nlet x = 1\n```")
+        #expect(mixed.count == 1)
+        #expect(mixed.first?.languageLabel == "swift")
+    }
+
     @Test("detects a fenced markdown block (fallback signal)")
     func fencedMarkdown() {
         let text = """

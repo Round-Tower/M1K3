@@ -17,6 +17,12 @@ public enum CodeBlockDetector {
 
         let fenced = extractFencedBlocks(from: remaining)
         for block in fenced {
+            // A typed answer block (`m1k3-steps`, `m1k3-choices`, #717) renders as
+            // a card in the bubble; surfacing it here would pop the review panel
+            // with its raw JSON. Any `m1k3-` tag, so a later kind needs no edit
+            // here and M1K3Preview stays dependency-free. (Tags arrive lowercased.)
+            // Review: Kev + claude-opus-5.5, 2026-10-27 — this skip only; Prior: Unknown. Confidence 0.85.
+            guard !block.tag.hasPrefix("m1k3-") else { continue }
             let language = resolveLanguage(tag: block.tag, source: block.source)
             guard let language else { continue }
             // A generic .code artifact carries its fence tag as the display label.

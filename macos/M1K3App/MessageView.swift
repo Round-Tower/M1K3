@@ -28,6 +28,11 @@
 //  gate). TDD_SKIP: view body. Confidence 0.75 (verify-by-launch owed).
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (self-review fold) — the answer's ReadingText says when the turn
 //  is still streaming, so an open typed fence is a skeleton only then. Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (code-quality review fold) — only the answer's ReadingText opts
+//  into typed blocks (the user bubble and the reasoning panel render as before), and a choices card is live
+//  only when ContentView says so (`acceptsChoices`: the newest message, no turn responding). Blocks derive
+//  from the persisted text, so without it every reloaded or earlier card sent a stale option into a chat
+//  that had moved on (the chips' 2026-07-14 ruling, ChatSession.followUps). Confidence 0.75.
 
 import AppKit
 import M1K3AnswerBlocks
@@ -57,6 +62,10 @@ struct MessageView: View {
     /// accessibility win FOLLOWUPS exists for: fewer keystrokes, fewer chances
     /// to mistype, a tap instead of a sentence.
     var onSendFollowUp: (String) -> Void = { _ in }
+    /// A typed `m1k3-choices` card in this answer may send (#717): the caller
+    /// passes true only for the newest message while no turn is responding, so an
+    /// earlier or reloaded card stays readable but never sends a stale option.
+    var acceptsChoices = false
     /// The active brain's context window, so the stats footer can show how full it
     /// got. 0 = unknown (the footer then shows the raw token count).
     var contextWindow: Int = 0
@@ -209,7 +218,7 @@ struct MessageView: View {
                 // so a growing streamed answer flashes ALL words on each token (worse
                 // at the ~20Hz stream cadence). Plain append reads as live; a true
                 // per-word fade-in would need per-word views (not worth the frame cost).
-                ReadingText(message.text, streaming: message.status == .streaming)
+                ReadingText(message.text, answerBlocks: true, streaming: message.status == .streaming)
                     .environment(\.answerChoiceAction, answerChoiceAction)
             } else if case .streaming = message.status {
                 // While the agent works (thinking, searching the web…) show what
@@ -456,10 +465,10 @@ struct MessageView: View {
     }
 
     /// Where a tapped option in a typed `m1k3-choices` block goes: the follow-up
-    /// send, so it lands as the next user message. Only on a finished answer, the
-    /// chips' gate; nil leaves the card read-only.
+    /// send, so it lands as the next user message. Only on the newest finished
+    /// answer (`acceptsChoices`); nil leaves the card read-only.
     private var answerChoiceAction: AnswerChoiceAction? {
-        guard case .complete = message.status else { return nil }
+        guard acceptsChoices, case .complete = message.status else { return nil }
         return AnswerChoiceAction(onSendFollowUp)
     }
 

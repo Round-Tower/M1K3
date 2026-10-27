@@ -24,6 +24,9 @@
 //  is a taste call, pinned in AnswerBlockSpeechTests). Prior: none (new file).
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (self-review fold) — a malformed or unclosed fence says it is
 //  on screen instead of vanishing: "" tripped the shells' raw fallback in voice mode. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (code-quality review fold) — the same rule for a PARSED block
+//  whose words clean to nothing (a prompt of one backtick, an option of "?"): it spoke "". And `clean`
+//  strips only a fence-length tilde run, so "~5 minutes" keeps its tilde. Confidence 0.85.
 //
 
 import Foundation
@@ -57,11 +60,18 @@ public enum AnswerBlockSpeech {
         var cursor = text.startIndex
         for region in regions {
             result += text[cursor ..< region.range.lowerBound]
-            result += region.block.map(spoken) ?? onScreen
+            result += replacement(for: region)
             cursor = region.range.upperBound
         }
         result += text[cursor...]
         return result
+    }
+
+    /// What one typed fence speaks as: never empty, because a lone fence chunk
+    /// that polished to "" would send the shells' speak() to the raw JSON.
+    static func replacement(for region: AnswerBlockSegmenter.TypedRegion) -> String {
+        let words = region.block.map(spoken) ?? ""
+        return words.isEmpty ? onScreen : words
     }
 
     // MARK: - Wording
@@ -76,7 +86,10 @@ public enum AnswerBlockSpeech {
             .replacingOccurrences(of: "`", with: "")
             .split(whereSeparator: { $0.isWhitespace || $0.isNewline })
             .joined(separator: " ")
-        // A leading ~~~ would read as a tilde fence opener to the passes after.
+        // A leading ~~~ would read as a tilde fence opener to the passes after
+        // (only a choices prompt starts a line). Fewer tildes open nothing and
+        // can carry meaning ("~5 minutes", "~/Library"), so they stay.
+        guard flat.hasPrefix("~~~") else { return flat }
         return String(flat.drop { $0 == "~" || $0 == " " })
     }
 

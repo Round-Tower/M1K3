@@ -31,6 +31,10 @@
 //  Mac. TDD_SKIP: view body. Confidence 0.75 (verify-by-launch on iPhone owed).
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (self-review fold) — the answer's ReadingText says when the turn
 //  is still streaming, so an open typed fence is a skeleton only then. Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (code-quality review fold) — the answer's ReadingText opts into
+//  typed blocks explicitly, and a choices card is live only when ChatScreen says so (`acceptsChoices`: the
+//  newest message, no turn responding), as on the Mac: a reloaded or earlier card never sends a stale option.
+//  TDD_SKIP: view body (the gate is pinned by AnswerBlockWiringScanTests). Confidence 0.75.
 
 import M1K3AnswerBlocks
 import M1K3Chat
@@ -50,6 +54,9 @@ struct MessageBubble: View {
     var onFeedback: (FeedbackVerdict, String?) -> Void = { _, _ in }
     var onSpeak: (String) -> Void = { _ in }
     var onSendFollowUp: (String) -> Void = { _ in }
+    /// A typed `m1k3-choices` card in this answer may send (#717): ChatScreen
+    /// passes true only for the newest message while no turn is responding.
+    var acceptsChoices = false
 
     @State private var didCopy = false
     @State private var showComment = false
@@ -93,7 +100,7 @@ struct MessageBubble: View {
                     activityRow(label)
                 }
                 if !message.text.isEmpty {
-                    ReadingText(message.text, streaming: message.status == .streaming)
+                    ReadingText(message.text, answerBlocks: true, streaming: message.status == .streaming)
                         .foregroundStyle(.primary)
                         .environment(\.answerChoiceAction, answerChoiceAction)
                         .modifier(LegibilityScrim(active: scrimmed))
@@ -243,9 +250,10 @@ struct MessageBubble: View {
     }
 
     /// A tapped option in a typed `m1k3-choices` block sends like a follow-up chip,
-    /// once the turn is complete; nil leaves the card read-only.
+    /// on the newest finished answer only (`acceptsChoices`); nil leaves the card
+    /// read-only.
     private var answerChoiceAction: AnswerChoiceAction? {
-        guard case .complete = message.status else { return nil }
+        guard acceptsChoices, case .complete = message.status else { return nil }
         return AnswerChoiceAction(onSendFollowUp)
     }
 

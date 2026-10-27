@@ -275,6 +275,42 @@ struct SpeechTextPolishTests {
         let polished = SpeechTextPolish.polish(text)
         #expect(polished.contains("{\"steps\": [\"One\"]}"))
     }
+
+    // Review: Kev + claude-opus-5.5, 2026-10-27 (code-quality review fold) — the typed blocks beside an
+    // ordinary fence (where the segmenter's fence rules and fencedCodeRanges must agree), a block's words
+    // through the later passes (URL, emoji, the name), and the fixed point on every typed output.
+    @Test("typed blocks around an ordinary fence: both spoken, the code between them verbatim")
+    func typedBlocksAroundOrdinaryFence() {
+        let text = "First:\n```m1k3-steps\n{\"steps\": [\"Boil\"]}\n```\nCode:\n```swift\nlet p = *ptr*\n```\n"
+            + "Then:\n```m1k3-choices\n{\"prompt\": \"Milk?\", \"options\": [\"Yes\", \"No\"]}\n```"
+        let polished = SpeechTextPolish.polish(text)
+        #expect(polished.contains("```swift\nlet p = *ptr*\n```"))
+        #expect(polished.hasPrefix("First:\nStep 1: Boil.\n"))
+        #expect(polished.hasSuffix("Then:\nMilk? Options: Yes or No."))
+        #expect(!polished.contains("m1k3-"))
+        #expect(SpeechTextPolish.polish(polished) == polished)
+    }
+
+    @Test("a block's words take the later passes like prose: a URL to its host, no emoji, the name as Mike")
+    func typedBlockWordsArePolished() {
+        let text = "```m1k3-steps\n"
+            + "{\"steps\": [\"Open https://www.example.org/setup 🎉\", \"Ask **M1K3** to help.\"]}\n```"
+        let polished = SpeechTextPolish.polish(text)
+        #expect(polished == "Step 1: Open example.org. Step 2: Ask Mike to help.")
+        #expect(SpeechTextPolish.polish(polished) == polished)
+    }
+
+    @Test("one pass is a fixed point for every typed output: sentences and the on-screen line")
+    func typedOutputsAreFixedPoints() {
+        for text in [
+            "```m1k3-choices\n{\"prompt\": \"Which engine?\", \"options\": [\"Lil\", \"Big\"]}\n```",
+            "```m1k3-steps\n{\"steps\": [1]}\n```",
+            "Before.\n```m1k3-steps\n{\"steps\": [\"Lo",
+        ] {
+            let once = SpeechTextPolish.polish(text)
+            #expect(SpeechTextPolish.polish(once) == once, "\(text.debugDescription)")
+        }
+    }
 }
 
 // Review: Kev + claude-fable-5.1, 2026-09-12 — narration read a "Sources:" list and a

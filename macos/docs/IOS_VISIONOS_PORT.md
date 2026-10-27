@@ -351,9 +351,10 @@ no new policy logic:
   native cards through the same `ReadingText.swift` the template already compiles;
   the parser, segmenter and cards live in `Sources/M1K3AnswerBlocks/`, so the
   mobile shells link the `M1K3AnswerBlocks` product and wrap nothing. A choice tap
-  rides `MessageBubble`'s `onSendFollowUp` (`ChatScreen`'s brainReady gate). Plain
-  cards and bordered buttons, no glass: `glassEffect` is unavailable on visionOS.
-  Verify-owed: the cards and VoiceOver on iPhone.
+  rides `MessageBubble`'s `onSendFollowUp` (`ChatScreen`'s brainReady gate), on the
+  latest answer only (`acceptsChoices`): an earlier or reloaded card stays readable
+  and never sends. Plain cards and bordered buttons, no glass: `glassEffect` is
+  unavailable on visionOS. Verify-owed: the cards and VoiceOver on iPhone.
 - **Platform-honest copy**: `BrainTier.detail` for Lil said "Runs entirely on
   your Mac" on an iPhone (caught on-simulator) — now `#if os(macOS)` branched.
 
@@ -379,6 +380,9 @@ streaming seen working; on-device feel + thermals verify-owed as named).
 Prior: Kev + claude-opus-4-8 (the shell this restyles)._
 
 _Review: Kev + claude-opus-5.5, 2026-10-27 — the typed answer blocks bullet (#717). Confidence 0.8._
+
+_Review: Kev + claude-opus-5.5, 2026-10-27 (code-quality review fold) — the bullet says a choice tap sends
+from the latest answer only. Confidence 0.8._
 
 ---
 
