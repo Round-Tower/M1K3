@@ -44,6 +44,10 @@
 //  budget-forcing arm (`-thinkBudgetTokens`) closes the thought; nil (the responder's 4,000) otherwise. Confidence 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — that stand-aside moves into the responder, which asks the brain each
 //  turn (`ThinkBudgetForcing`, forwarded by RuntimeInferenceProvider): the shell passes no budget now, like iOS.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — Cool Head speaks (#697): `applyCoolHead()` folds the send through
+//  `CoolHeadPolicy.advance` and posts its line (or nil) to `coolHeadNote` on every send; the factory threads a
+//  `turnNoteProvider`, which only the interactive chat responder passes. `-coolHeadForce heat|lowPower|eased`
+//  holds a reading in Debug builds so the line can be seen on a cool Mac. Confidence 0.8 (verify-by-launch owed).
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (#699) — `makeMemoryDistillation(…, didWrite:)` threads the
 //  coordinator's write hook through (defaulted, so the eval stages keep compiling). Confidence 0.85.
 
@@ -445,7 +449,8 @@ extension AppEnvironment {
         contextSenses: ContextSenseHook? = nil,
         recentActivity: (any ActivityReading)? = nil,
         ageBandProvider: (any AgeBandProviding)? = nil, // swiftformat:disable:next unusedArguments
-        excludedKinds: Set<KnowledgeKind> = []
+        excludedKinds: Set<KnowledgeKind> = [],
+        turnNoteProvider: (@Sendable () -> String?)? = nil
     ) -> any RAGResponding {
         // Hits the model retrieves itself (search_knowledge) flow through the
         // collector into the turn's sources + the citation allow-list.
@@ -516,6 +521,10 @@ extension AppEnvironment {
                 // top of THIS send().
                 CoolHeadPolicy.defersHeavyGeneration(Self.coolHead.withLock(\.level))
             },
+            // Cool Head's line (#697): the slot `applyCoolHead()` fills on each send, taken once by
+            // the turn that send starts. Only the interactive chat responder passes a provider: the
+            // ask, MCP, menu-bar and deep-dive responders share this factory and must not eat it.
+            turnNoteProvider: turnNoteProvider,
             groundingBudgetProvider: {
                 // Grounding sized to the brain, for the same reason the replay
                 // above is. `GroundingBudget.defaultTokenBudget` (1100) was DERIVED
@@ -668,22 +677,58 @@ extension AppEnvironment {
     /// static` responder factory must read the live level without capturing `self`.
     nonisolated static let coolHead = Mutex(CoolHeadState())
 
+    /// Cool Head's line for the send in flight (#697): posted by every `applyCoolHead()` (nil when
+    /// that send eased nothing, so a line nobody read never carries to a later turn) and taken once
+    /// by the chat turn the send starts. Static for the same reason as `coolHead`.
+    nonisolated static let coolHeadNote = Mutex(CoolHeadNoteSlot())
+
     /// Advance the thermal state for this turn — degrade immediately, recover only
     /// after a sustained relief streak (hysteresis, so a bouncing thermalState can't
     /// flap the effort level). Called beside `applyAutoRouteIfEnabled` at the top
     /// of `send`, so the level is current for the SAME turn's
     /// `maxIterationsProvider` read. Always runs — Prudent Compute is standing
     /// behaviour, not opt-in (2026-07-13).
+    ///
+    /// The same fold names the transition (#697): on the send that rises into `.eased`, this send's
+    /// chat turn carries one line saying why (`CoolHeadVoice`, fixed copy, never generated). Posted
+    /// on every send, so a send that eased nothing clears a line an earlier turn never read.
     func applyCoolHead() {
-        let info = ProcessInfo.processInfo
-        let target = CoolHeadPolicy.target(
-            thermal: info.thermalState,
-            lowPower: info.isLowPowerModeEnabled
-        )
-        Self.coolHead.withLock { state in
-            state = CoolHeadPolicy.next(
-                state, target: target, minRecoveryTurns: Self.coolHeadMinRecoveryTurns
+        let step = Self.coolHead.withLock { state in
+            let step = Self.coolHeadStep(from: state)
+            state = step.state
+            return step
+        }
+        Self.coolHeadNote.withLock { $0.post(step.announcement, deviceNoun: HostPlatform.noun) }
+        if let cause = step.announcement {
+            // `route`: the path a turn takes, decided here beside the auto-route.
+            Self.routeLog.notice(
+                "cool head eased: \(String(describing: cause), privacy: .public), the turn carries its line"
             )
         }
+    }
+
+    /// This send's fold from the live readings. In a Debug build `M1K3 -coolHeadForce heat|lowPower|eased`
+    /// holds one instead, so Kev can see the line on a cool Mac: heat and lowPower stand in for the two
+    /// real readings, eased for the unnamed pressure no current OS reports. The forced reading eases the
+    /// chat turn like a real one (the agent-loop cap included); background work still reads `ProcessInfo`.
+    nonisolated static func coolHeadStep(from state: CoolHeadState) -> CoolHeadStep {
+        #if DEBUG
+            let forced: CoolHeadCause? = switch UserDefaults.standard.string(forKey: "coolHeadForce") {
+            case "heat": .heat
+            case "lowPower": .lowPower
+            case "eased": .unknownPressure
+            default: nil
+            }
+            if let forced {
+                return CoolHeadPolicy.advance(
+                    state, target: .eased, cause: forced, minRecoveryTurns: coolHeadMinRecoveryTurns
+                )
+            }
+        #endif
+        let info = ProcessInfo.processInfo
+        return CoolHeadPolicy.advance(
+            state, thermal: info.thermalState, lowPower: info.isLowPowerModeEnabled,
+            minRecoveryTurns: coolHeadMinRecoveryTurns
+        )
     }
 }

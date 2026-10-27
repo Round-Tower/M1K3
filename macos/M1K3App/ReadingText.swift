@@ -33,7 +33,23 @@
 //  in ScrollView(.horizontal) with the card background moved outside it, so the
 //  card also spans the bubble now instead of hugging a narrow table. iOS shares
 //  this file (project.yml) and has no window to give.
+//  Review: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.75 — typed answer
+//  blocks (#717): the text is split by AnswerBlockSegmenter first. Markdown runs
+//  take the ChatMarkdownParser path exactly as before; a closed `m1k3-steps` /
+//  `m1k3-choices` fence renders as AnswerBlockView in the reading mode's font, an
+//  open one as a static skeleton, and a malformed one stays markdown (today's code
+//  card). One edit, three platforms. Verify-by-launch owed (bionic mode leaves the
+//  cards in the plain base font).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (self-review fold), Confidence 0.75 —
+//  `streaming:`: only a turn still generating shows a skeleton for an open typed
+//  fence; once it ends, a fence that never closed is today's raw code card.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (code-quality review fold), Confidence 0.8 —
+//  typed blocks are opt-in (`answerBlocks:`), on for the assistant's answer only. Every
+//  other caller (the user's own bubble, the reasoning panel, the Settings previews)
+//  renders exactly as before, so a fence a user pastes stays the code they typed and a
+//  block drafted in a thought never turns into a dead card.
 
+import M1K3AnswerBlocks
 import M1K3Chat
 import SwiftUI
 
@@ -41,29 +57,58 @@ struct ReadingText: View {
     let text: String
     /// Force a specific mode (Settings previews); otherwise follow the saved choice.
     private let forcedMode: ReadingMode?
+    /// Render typed answer blocks (#717) as cards. Only the assistant's answer
+    /// opts in; off, the text takes the markdown path exactly as it always has.
+    private let answerBlocks: Bool
+    /// The text is a turn still generating: an open typed answer block shows its
+    /// skeleton. Otherwise an unclosed one renders as the raw markdown it is.
+    private let streaming: Bool
 
     @AppStorage(ReadingMode.storageKey) private var savedModeRaw = ReadingMode.standard.rawValue
 
-    init(_ text: String, mode: ReadingMode? = nil) {
+    init(_ text: String, mode: ReadingMode? = nil, answerBlocks: Bool = false, streaming: Bool = false) {
         self.text = text
         forcedMode = mode
+        self.answerBlocks = answerBlocks
+        self.streaming = streaming
     }
 
     private var mode: ReadingMode {
         forcedMode ?? ReadingMode(rawValue: savedModeRaw) ?? .standard
     }
 
-    private var blocks: [ChatMarkdownBlock] {
-        ChatMarkdownParser.parse(text)
+    /// The text split around typed answer blocks; usually one markdown run, and
+    /// always exactly one when the caller didn't opt in.
+    private var segments: [AnswerBlockSegment] {
+        guard answerBlocks else { return [.markdown(text)] }
+        return AnswerBlockSegmenter.segments(in: text, streaming: streaming)
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            ForEach(Array(blocks.enumerated()), id: \.offset) { _, block in
-                blockView(block)
+            ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
+                segmentView(segment)
             }
         }
         .textSelection(.enabled)
+    }
+
+    @ViewBuilder
+    private func segmentView(_ segment: AnswerBlockSegment) -> some View {
+        switch segment {
+        case let .markdown(source):
+            ForEach(Array(ChatMarkdownParser.parse(source).enumerated()), id: \.offset) { _, block in
+                blockView(block)
+            }
+        case let .block(block):
+            // The reading mode's typeface and spacing carry into the card.
+            AnswerBlockView(block)
+                .font(baseFont)
+                .lineSpacing(mode == .dyslexia ? 6 : 2)
+                .tracking(mode == .dyslexia ? 0.5 : 0)
+        case let .pending(kind):
+            AnswerBlockSkeletonView(kind: kind)
+        }
     }
 
     @ViewBuilder

@@ -13,6 +13,8 @@
 //      safety boundary — the CanaryGuard doctrine).
 //
 //  Signed: Kev + claude-fable-5, 2026-07-13, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #708: the field report ("Send this exchange", an email to
+//  Round Tower) is withheld from the same two bands as the web tools, pinned per band. Confidence 0.85.
 //
 
 import Foundation
@@ -99,6 +101,18 @@ struct AgeAppropriatenessPolicyTests {
             let containsDigit = clause.contains { $0.isNumber }
             #expect(!containsDigit, "\(band) clause leaks a number")
             #expect(!clause.localizedCaseInsensitiveContains("age range"))
+        }
+    }
+
+    @Test func fieldReportIsWithheldFromUnder16Bands() {
+        // #708: a thumbs-down can offer to email the exchange to Round Tower. Under 13 is COPPA's
+        // line and 16 is Ireland's digital age of consent, so those two bands never see the offer.
+        // Enforced in code (the Mac shell hides the button), like the web tools.
+        let expected: [AgeBand: Bool] = [
+            .under13: false, .teen13to15: false, .teen16to17: true, .adult: true, .undeclared: true,
+        ]
+        for band in AgeBand.allCases {
+            #expect(AgeAppropriateness.fieldReportAllowed(for: band) == expected[band], "\(band)")
         }
     }
 }

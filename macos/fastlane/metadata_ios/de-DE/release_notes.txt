@@ -1,16 +1,7 @@
-NEU IN 1.2.1
+NEU IN 1.3
 
-• Ein leises Update. Kleine Änderungen unter der Haube, nichts Neues zu lernen. Die großen Neuerungen kamen mit 1.2, siehe unten.
-
-FALLS DU 1.2 VERPASST HAST
-
-• Downloads, die weiterlaufen. Ein Hirn-Download läuft weiter, wenn du die App verlässt, mit dem Fortschritt auf dem Sperrbildschirm und in der Dynamic Island. Der Balken bleibt nie auf 0 % hängen, und hakt es irgendwo, siehst du, woran.
-• Hör dir meine Antworten an. Schalte „Speak answers“ ein, und ich lese jede Antwort laut vor, während sie ankommt, mit der Stimme, die du gewählt hast. Kleine Klänge markieren Antworten und den Sprachmodus; „Sound effects“ schaltet sie aus.
-• Flüssigeres Denken. Lil hält sein Denken in einem festen Budget und antwortet gleich danach, damit eine schwere Frage nie ausufert.
-• Ich verstehe Namen besser. Im Sprachmodus gleiche ich einen falsch verstandenen Namen mit den Menschen und Orten ab, die schon in meinem Gedächtnis sind.
-• Bessere Antworten aus dem Gedächtnis. Frag, was du entschieden oder mir erzählt hast, und ich schaue zuerst in dein Wissen, nicht ins Web.
-• Gedächtnis-Aufnahme aus heißt jetzt: nie. Was du mit ausgeschalteter Aufnahme schickst, wird nie behalten, auch nicht nach einem Neustart der App.
-• Eine ehrliche Antwort zur Privatsphäre. Frag, was dein Gerät verlässt, und du hörst zuerst die Wahrheit. Und ich entscheide, wann ich suche.
+• Antworten statt Links. Wenn ich eine Antwort laut vorlese, im Sprachmodus oder mit eingeschaltetem „Speak answers“, höre ich bei den Quellen auf, statt jede Webadresse mitzulesen.
+• Kleine Änderungen unter der Haube. Nichts Neues zu lernen.
 
 NEU BEI M1K3? DAS MACHE ICH
 

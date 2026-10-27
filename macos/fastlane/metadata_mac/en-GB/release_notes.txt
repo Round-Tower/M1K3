@@ -1,17 +1,9 @@
-NEW IN 1.2.1
+NEW IN 1.3
 
-• I rest when you do. Leave me alone for about 90 seconds, with nothing in the box and nothing on the go, and the companion behind your chat fades out and stops drawing. Hover, click, type or scroll, or let me start listening, thinking or speaking, and I'm back. Measured on an M1 Max with the chat window in front: idle CPU fell from about 46% to near zero. Your battery and fans should notice. Same in the menu bar and the brain picker; Reduce Motion skips the fade.
-
-IN CASE YOU MISSED 1.2
-
-• Smoother thinking. Lil keeps its thinking to a set budget and answers straight after, so a hard question never runs away. The live thought streams smoothly as it grows.
-• A lighter Constellation. The memory field behind your chat draws as a few shapes instead of a thousand, at about a third of the CPU it took before.
-• Lil wakes fast. Switching brains no longer leaves the old one warming up in the background, and the progress never freezes at 0%.
-• Quicker voice with Big. Big keeps your last few exchanges close, about four seconds faster per spoken turn, and still remembers what you said earlier.
-• I hear names better. In voice mode I fix a misheard name towards the people and places already in my memory.
-• Better memory answers. Ask what you decided or told me and I look in your knowledge first, not the web.
-• Memory capture off now means never. Turns you send with it off are never kept, even after a relaunch.
-• A straight answer about privacy. Ask what leaves your Mac and I lead with the truth: some of it can, when web search or the private cloud is on.
+• Talk over me. In voice mode, start speaking while I'm answering and I stop and listen. Echo cancellation is now on by default, so I hear you and not myself. It works with your Mac's own mic or a USB one; Bluetooth headsets keep the old behaviour.
+• Answers, not links. When I speak a reply aloud, I stop at the sources instead of reading out every web address.
+• Quicker in long chats. I pick up where the last message left off instead of rereading the whole conversation. Measured on an M1 Max, past the tenth message: Big gets to its answer about six seconds sooner, Lil nearly a second.
+• Your documents first. Ask for a number or a name that's in a manual or report you've added, like a torque, a date or who signed off, and I answer from your document, on your Mac, instead of looking it up online.
 
 NEW TO M1K3? HERE'S WHAT I DO
 

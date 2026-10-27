@@ -10,6 +10,8 @@
 //  byte); see git history for the old flattening-era pins.
 //
 //  Signed: Kev + claude-sonnet-5, 2026-07-22, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — pins that a typed answer-block fence (#717) survives the
+//  final polish byte for byte, blank lines in its JSON body included. Confidence 0.85.
 
 import Foundation
 @testable import M1K3Chat
@@ -123,5 +125,12 @@ struct MessageTextPolishTests {
     func unclosedArtifactPreservedVerbatim() {
         let text = "Intro *here*\n<artifact title=\"Doc\">\n# Heading **kept**"
         #expect(MessageTextPolish.polish(text) == text)
+    }
+
+    @Test("a typed answer-block fence keeps its JSON body byte for byte; only the prose around it tidies (#717)")
+    func typedFenceVerbatim() {
+        let fence = "```m1k3-choices\n{\n  \"prompt\": \"Which?\",\n\n\n\n  \"options\": [\"A\", \"B\"]\n}\n```"
+        let text = "Pick one:\n\n\n\n\(fence)\n\n\n\nThanks."
+        #expect(MessageTextPolish.polish(text) == "Pick one:\n\n\(fence)\n\nThanks.")
     }
 }

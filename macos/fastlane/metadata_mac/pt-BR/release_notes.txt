@@ -1,17 +1,9 @@
-NOVIDADES DA 1.2.1
+NOVIDADES DA 1.3
 
-• Eu descanso quando você descansa. Fique uns 90 segundos sem mexer em nada, sem nada na caixa de texto e nada em andamento, e o companheiro atrás da sua conversa vai sumindo e para de ser desenhado. Passe o mouse, clique, digite ou role, ou me deixe começar a ouvir, pensar ou falar, e eu volto. Medido em um M1 Max com a janela do chat em primeiro plano: o uso de CPU em repouso caiu de cerca de 46 % para quase zero. Sua bateria e suas ventoinhas vão notar. O mesmo vale na barra de menus e no seletor de cérebros; com Reduzir Movimento ativado, ele some sem transição.
-
-SE VOCÊ PERDEU A 1.2
-
-• Um pensamento mais fluido. O Lil mantém o raciocínio dentro de um orçamento fixo e responde logo depois, então uma pergunta difícil nunca foge do controle. O pensamento ao vivo flui suave conforme cresce.
-• Uma Constellation mais leve. O campo de memória atrás da sua conversa é desenhado com algumas formas em vez de mil, usando cerca de um terço da CPU de antes.
-• O Lil acorda rápido. Trocar de cérebro não deixa mais o antigo esquentando em segundo plano, e o progresso nunca trava em 0 %.
-• Voz mais rápida com o Big. O Big mantém suas últimas trocas por perto, cerca de quatro segundos mais rápido por fala, e ainda lembra o que você disse antes.
-• Ouço melhor os nomes. No modo de voz, corrijo um nome que ouvi errado com base nas pessoas e nos lugares que já estão na minha memória.
-• Respostas melhores da memória. Pergunte o que você decidiu ou me contou e eu procuro primeiro no seu conhecimento, não na web.
-• Captura de memória desligada agora significa nunca. As mensagens que você envia com ela desligada jamais são guardadas, nem depois de reabrir o app.
-• Uma resposta direta sobre privacidade. Pergunte o que sai do seu Mac e eu começo pela verdade: parte pode sair, quando a busca na web ou a nuvem privada está ligada.
+• Pode me interromper. No modo de voz, comece a falar enquanto eu respondo e eu paro para ouvir. O cancelamento de eco agora vem ativado por padrão, então eu ouço você, e não a minha própria voz. Funciona com o microfone embutido do Mac ou com um microfone USB; fones Bluetooth continuam funcionando como antes.
+• Respostas, não links. Quando leio uma resposta em voz alta, paro ao chegar às fontes em vez de ler cada endereço da web.
+• Mais rápido em conversas longas. Eu continuo de onde a última mensagem parou, em vez de reler a conversa inteira. Medido em um M1 Max, depois da décima mensagem: o Big chega à resposta cerca de seis segundos mais cedo; o Lil, quase um segundo.
+• Seus documentos primeiro. Peça um número ou um nome que esteja em um manual ou relatório que você adicionou, como um torque de aperto, uma data ou quem aprovou, e eu respondo com base no seu documento, no seu Mac, em vez de procurar na internet.
 
 NOVO NO M1K3? O QUE EU FAÇO
 

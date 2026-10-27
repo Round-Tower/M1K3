@@ -105,6 +105,19 @@
 //  grounding budget through `-groundingBudget` (unset: 1,100, as before). The budget arm; verify-by-eval.
 //  A seeded turn gets the app's three corpus tools over its store in place of the search_knowledge stub,
 //  and its score names the tools it ran (a dispatched turn answers from the tool, not the grounding).
+//  Review: Kev + claude-fable-5.1, 2026-10-26, Confidence 0.75 — the `format` kind (#716) takes the live arm and
+//  the bare arm like the other closed-book kinds, and every live-path observation now carries what the speech
+//  lane would say (`SpeechTextPolish.polish` over the think-stripped answer, `EvalObservation.spokenText`) so a
+//  `spokenNoMarkup` fixture scores the voice path; the app target already links M1K3Voice. Verify-by-eval: the
+//  overnight run's format arm on Lil and Big, wired like the app (`--router dispatch`).
+//  Review: same day (pre-push review fold) — the spoken text is built the way auto-speak builds it (the sentence
+//  fold, then the per-sentence polish: `spokenText(of:)`), not a whole-answer polish: the fold cuts a table row at a
+//  full stop inside a cell, and a whole-answer read could not see that. The bare arm hands it in too, so the spoken
+//  check skips only under `swift test`. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — the `mechanic` kind (#697) always takes the live path: the fixture's
+//  `MachineScenario` runs through the app's own `CoolHeadPolicy.advance` from a fresh state into a
+//  `CoolHeadNoteSlot`, the responder takes it as the app's chat responder does (`turnNoteProvider`), and the turn's
+//  `.note` activities are scored. Confidence 0.8 (the arm is owed: `--kinds mechanic --router dispatch`).
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (#699) — `M1K3_SELFTEST_CHATEVAL_STYLE=<line>` sets the persona's
 //  stated-style line (`M1K3Persona.setUserStyle`) for every local brain, so the paired style-on/style-off
 //  open-chat arm runs on one build; the PCC column skips while a style is set, like a profile (nothing about
@@ -129,6 +142,7 @@ import M1K3KnowledgeTools
 import M1K3LanguageModel
 import M1K3LogCore
 import M1K3MLX
+import M1K3Voice
 import Synchronization
 
 /// The free-text argument the query-taking eval tools take. `@Generable` gives
@@ -343,8 +357,8 @@ enum ChatEvalStage {
 
     /// LIVE-PATH arm (M1K3_SELFTEST_CHATEVAL_LIVE_PATH=1): every closed-book kind
     /// (open-chat, code-gen, reasoning, refusal, security, world-knowledge, humour,
-    /// interview, instruction-following, document, sycophancy; tool-use under a
-    /// router mode) runs through AgentRAGResponder — the SAME prompt stack
+    /// interview, instruction-following, document, sycophancy, format; tool-use under
+    /// a router mode) runs through AgentRAGResponder — the SAME prompt stack
     /// the chat UI assembles every turn (retrieve-first grounding head + RULES
     /// incl. the generative carve-out + the agent loop with tools) — instead of
     /// bare `provider.generate`. The bare arm isolates the persona; this arm
@@ -411,11 +425,26 @@ enum ChatEvalStage {
         }
         // The think-steer arm (2026-10-10): one rules clause on HOW to reason, nothing else.
         let steer = ThinkSteer(envValue: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_THINK_STEER"))
+        // The mechanic kind (#697): the scenario's readings through the app's own Cool Head fold, from a fresh
+        // state as a launch's first send has, into the slot the app's chat responder takes its line from. Never
+        // the eval Mac's own heat. At `.eased` the app caps the agent loop at 3, this path's own `maxIterations`.
+        var coolHeadSlot = CoolHeadNoteSlot()
+        if let machine = fixture.machine {
+            let step = CoolHeadPolicy.advance(
+                CoolHeadState(), thermal: machine.thermal, lowPower: machine.lowPower,
+                minRecoveryTurns: AppEnvironment.coolHeadMinRecoveryTurns
+            )
+            coolHeadSlot.post(step.announcement, deviceNoun: HostPlatform.noun)
+        }
+        let pendingNote = Mutex(coolHeadSlot)
+        let turnNote: (@Sendable () -> String?)? = fixture.machine == nil
+            ? nil : { @Sendable in pendingNote.withLock { $0.take() } }
         let responder = AgentRAGResponder(
             store: store, embedder: Self.embedder, provider: provider,
             toolsProvider: { palette }, maxIterations: 3,
             thinkingModeProvider: { Self.thinkingMode(thinking) },
             fastThinkingProvider: { thinking.liveFastByDefault },
+            turnNoteProvider: turnNote,
             groundingBudgetProvider: { Self.groundingBudget },
             // The Mac's clauses (#482, mirrors MiniLiveEvalTests): no declared age band, web
             // search on (the default), PCC offered (its switch on — the fuller clause, so the
@@ -432,6 +461,7 @@ enum ChatEvalStage {
         // The tools the turn ran and the stage that picked them (2026-10-10): the 10-09 arm could
         // see neither. The recorder is a task-local, so the turn runs inside its scope.
         let tools = EvalToolLog()
+        let notes = Mutex<[String]>([])
         let stages = PickStageRecorder()
         // The log window for this trial's generation figures (MetricLogReader): wall-clock, because
         // OSLogStore entries are dated; the latency itself stays on the monotonic clock.
@@ -439,7 +469,11 @@ enum ChatEvalStage {
         let (raw, thinkMS, firstChunkMS) = try await ToolRouterWiring.$pickRecorder.withValue(stages) {
             let (_, stream) = try await responder.answerStreaming(
                 fixture.prompt, images: images, history: [], onActivity: { activity in
-                    if case let .usingTool(name, _) = activity { tools.append(name) }
+                    switch activity {
+                    case let .usingTool(name, _): tools.append(name)
+                    case let .note(line): notes.withLock { $0.append(line) }
+                    case .retrieving, .thinking: break
+                    }
                 }
             )
             var raw = ""
@@ -471,8 +505,26 @@ enum ChatEvalStage {
             latencyMS: latencyMS,
             routeStages: stages.stages.map(\.rawValue),
             thinkMS: thinkMS,
-            generation: await generationFigures(since: startedAt, provider: provider, firstChunkMS: firstChunkMS)
+            generation: await generationFigures(since: startedAt, provider: provider, firstChunkMS: firstChunkMS),
+            spokenText: spokenText(of: raw),
+            turnNotes: notes.withLock { $0 }
         )
+    }
+
+    /// What the speech lane would say for a turn (#716), built the way auto-speak builds it: the settled,
+    /// think-stripped answer folded into sentences by `StreamedAnswerFolder` (cut at the follow-ups trailer or
+    /// a sources header, as `AppEnvironment+AutoSpeak` wires it), each polished by
+    /// `SpeechTextPolish.spokenSentence`, joined. A whole-answer polish was the first cut, and it hid a real
+    /// fail: the fold cuts a table row at a full stop inside a cell, so the tail reaches the polish without its
+    /// leading pipe. The leak guard stays off — the scorer's own leak markers read the raw answer. A pure
+    /// function of the answer, so both arms hand it in; read only by a `spokenNoMarkup` fixture.
+    private static func spokenText(of raw: String) -> String {
+        var folder = StreamedAnswerFolder(
+            stopMatcher: { SpokenAnswerEnd.start(in: $0, followUps: FollowUpSplit.trailerStart(in:)) }
+        )
+        var sentences = folder.ingest(ThinkStripper.strip(raw))
+        if let tail = folder.flush() { sentences.append(tail) }
+        return sentences.compactMap(SpeechTextPolish.spokenSentence).joined(separator: " ")
     }
 
     /// The trial's generation figures off the app's own log lines (2026-10-25) — MLX brains only: Mini and
@@ -496,11 +548,13 @@ enum ChatEvalStage {
         GroundingBudget.defaultTokenBudget, ceiling: GroundingBudgetPolicy.ceiling()
     )
 
-    /// Whether this run's fixtures can embed, read off `runFixture`'s routes: vision, grounded-Q and
-    /// grounded-long always do, tool-use only with a router mode, and every other kind only under LIVE_PATH.
+    /// Whether this run's fixtures can embed, read off `runFixture`'s routes: vision, grounded-Q,
+    /// grounded-long and mechanic always do, tool-use only with a router mode, and every other kind only
+    /// under LIVE_PATH.
     private static func runEmbeds(kinds: Set<TaskKind>?) -> Bool {
         guard let kinds else { return true }
-        if kinds.contains(.vision) || kinds.contains(.groundedQ) || kinds.contains(.groundedLong) { return true }
+        if kinds.contains(.vision) || kinds.contains(.groundedQ) || kinds.contains(.groundedLong)
+            || kinds.contains(.mechanic) { return true }
         if routerArmRequested, kinds.contains(.toolUse) { return true }
         return livePathRequested && !kinds.subtracting([.toolUse]).isEmpty
     }
@@ -887,6 +941,15 @@ enum ChatEvalStage {
                     name: "tools", outcome: .skip,
                     detail: observation.toolCalls.isEmpty ? "none" : observation.toolCalls.joined(separator: ", ")
                 ))
+            case .mechanic:
+                // Always the live path: Cool Head's line rides the responder's activity channel (#697).
+                let observation = try await livePathObservation(
+                    fixture, provider: provider, thinking: thinking, start: start, clock: clock
+                )
+                return ChatEvalScorer.score(
+                    fixture: fixture, observation: observation,
+                    latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
+                )
             case .toolUse where routerArmRequested:
                 let observation = try await livePathObservation(
                     fixture, provider: provider, thinking: thinking, start: start, clock: clock
@@ -921,7 +984,7 @@ enum ChatEvalStage {
                  .interview where livePathRequested, .reasoning where livePathRequested,
                  .instructionFollowing where livePathRequested, .refusal where livePathRequested,
                  .security where livePathRequested, .document where livePathRequested,
-                 .sycophancy where livePathRequested:
+                 .sycophancy where livePathRequested, .format where livePathRequested:
                 // The live-path arm: the production AgentRAGResponder stack
                 // (grounding head + RULES + agent loop) instead of bare generate.
                 let observation = try await livePathObservation(
@@ -937,7 +1000,7 @@ enum ChatEvalStage {
                     detail: observation.toolCalls.joined(separator: ", ")
                 ))
             case .openChat, .reasoning, .codeGen, .refusal, .security, .worldKnowledge,
-                 .humour, .interview, .instructionFollowing, .document, .sycophancy:
+                 .humour, .interview, .instructionFollowing, .document, .sycophancy, .format:
                 // codeGen is closed-book like the others: plain generate, then the
                 // scorer checks artifact markers + must-comply (no tools, no seed).
                 //
@@ -953,7 +1016,8 @@ enum ChatEvalStage {
                 }
                 let ms = milliseconds(clock.now - start)
                 return ChatEvalScorer.score(
-                    fixture: fixture, observation: EvalObservation(rawText: raw, latencyMS: ms),
+                    fixture: fixture,
+                    observation: EvalObservation(rawText: raw, latencyMS: ms, spokenText: spokenText(of: raw)),
                     latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
             }

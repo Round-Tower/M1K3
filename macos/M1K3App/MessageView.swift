@@ -23,8 +23,31 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — avatarDisplay reads through AvatarDisplay(persisted:) (panel retired; the legibility card keys on the backdrop). Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-10-20 — the live reasoning panel shows the thought's tail
 //  (ReasoningTail) with no cross-fade; Kev saw jank on a 1,024-token thought. Confidence 0.75: verify-by-eye.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — Cool Head's line (#697) as a caption above the answer (`turnNote`),
+//  apart from the text the speak, copy and share buttons read (placement pinned by CoolHeadNoteCallSiteTests).
+//  Confidence 0.75: verify-by-launch.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — a tapped option in a typed `m1k3-choices` block (#717) sends
+//  through `onSendFollowUp`, set on the answer's ReadingText only once the turn is `.complete` (the chips'
+//  gate). TDD_SKIP: view body. Confidence 0.75 (verify-by-launch owed).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (self-review fold) — the answer's ReadingText says when the turn
+//  is still streaming, so an open typed fence is a skeleton only then. Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (code-quality review fold) — only the answer's ReadingText opts
+//  into typed blocks (the user bubble and the reasoning panel render as before), and a choices card is live
+//  only when ContentView says so (`acceptsChoices`: the newest message, no turn responding). Blocks derive
+//  from the persisted text, so without it every reloaded or earlier card sent a stale option into a chat
+//  that had moved on (the chips' 2026-07-14 ruling, ChatSession.followUps). Confidence 0.75.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — #708: "Send this exchange…" in the thumbs-down editor commits the
+//  verdict + note exactly as Done does, then hands the note up through `onSendExchange`; the sheet, the draft and
+//  the mailto live in ContentView / FieldReporter, never here. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-fable-5.1, 2026-10-26 (pre-push review fold) — the sheet is raised from the popover's
+//  close (`pendingExchangeNote` flushed on `showComment` → false), not inside the button, so an NSPopover
+//  dismissal and a window sheet never start in one update. Confidence 0.75 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — `onSendExchange` is optional and the button
+//  exists only when ContentView wires it, which it does only for an age band allowed the field report
+//  (`AgeAppropriateness.fieldReportAllowed`). Unwired means hidden. Confidence 0.8 (verify-by-launch).
 
 import AppKit
+import M1K3AnswerBlocks
 import M1K3Avatar
 import M1K3Chat
 import M1K3Knowledge
@@ -41,6 +64,10 @@ struct MessageView: View {
     var existingComment: String?
     /// Record Kev's judgement — verdict + optional comment.
     var onFeedback: (FeedbackVerdict, String?) -> Void = { _, _ in }
+    /// Raise the "Send this exchange to Round Tower…" sheet (#708) with the thumbs-down note.
+    /// The view never builds or sends anything — ContentView composes the draft and the sheet.
+    /// nil hides the button: ContentView wires it only for an age band allowed the offer.
+    var onSendExchange: ((String?) -> Void)?
     /// Called with the message text when the user taps speak.
     let onSpeak: (String) -> Void
     /// Called with a link found in the turn when the user taps its chip — opens it
@@ -51,6 +78,10 @@ struct MessageView: View {
     /// accessibility win FOLLOWUPS exists for: fewer keystrokes, fewer chances
     /// to mistype, a tap instead of a sentence.
     var onSendFollowUp: (String) -> Void = { _ in }
+    /// A typed `m1k3-choices` card in this answer may send (#717): the caller
+    /// passes true only for the newest message while no turn is responding, so an
+    /// earlier or reloaded card stays readable but never sends a stale option.
+    var acceptsChoices = false
     /// The active brain's context window, so the stats footer can show how full it
     /// got. 0 = unknown (the footer then shows the raw token count).
     var contextWindow: Int = 0
@@ -75,6 +106,8 @@ struct MessageView: View {
     @State private var didCopy = false
     @State private var showComment = false
     @State private var commentDraft = ""
+    /// A "Send this exchange…" waiting for the popover to close before the sheet is raised (#708).
+    @State private var pendingExchangeNote: String?
     /// Monotonic token for the Speak button's acknowledge bounce — an Int, not a
     /// Bool, so repeat taps re-fire (Bool value effects double-fire; the
     /// speakDownbeat precedent in VoiceModeView).
@@ -197,13 +230,23 @@ struct MessageView: View {
 
     private var assistantBody: some View {
         VStack(alignment: .leading, spacing: 8) {
+            // Cool Head's line (#697): why this answer took fewer steps, said once per hot spell.
+            // A caption, not the answer: speak, copy and share read `message.text`, which never holds it.
+            if let note = message.turnNote {
+                Text(note)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .textSelection(.enabled)
+            }
+
             if !message.text.isEmpty {
                 // NO .contentTransition(.opacity)/.animation(value: message.text) here:
                 // contentTransition cross-fades the WHOLE Text on every value change,
                 // so a growing streamed answer flashes ALL words on each token (worse
                 // at the ~20Hz stream cadence). Plain append reads as live; a true
                 // per-word fade-in would need per-word views (not worth the frame cost).
-                ReadingText(message.text)
+                ReadingText(message.text, answerBlocks: true, streaming: message.status == .streaming)
+                    .environment(\.answerChoiceAction, answerChoiceAction)
             } else if case .streaming = message.status {
                 // While the agent works (thinking, searching the web…) show what
                 // it's doing — the label doubles as the privacy surface for any
@@ -330,6 +373,13 @@ struct MessageView: View {
                     .popover(isPresented: $showComment, arrowEdge: .bottom) {
                         feedbackCommentEditor
                     }
+                    // The sheet is raised once the popover has closed, never in the same update
+                    // as its dismissal (#708): the editor only parks the note.
+                    .onChange(of: showComment) { _, shown in
+                        guard !shown, let note = pendingExchangeNote else { return }
+                        pendingExchangeNote = nil
+                        onSendExchange?(note)
+                    }
                 }
             }
         }
@@ -366,6 +416,18 @@ struct MessageView: View {
                 .textFieldStyle(.roundedBorder)
                 .frame(width: 260)
             HStack {
+                // Opt-in field report (#708): commits the bad verdict + note exactly as Done does,
+                // parks the note, and closes; the sheet follows from the popover's close. Nothing
+                // leaves from here, and nothing leaves at all until that sheet's Send. Only shown
+                // when ContentView wires it (the age-band gate).
+                if onSendExchange != nil {
+                    Button("Send this exchange…") {
+                        onFeedback(.bad, commentDraft)
+                        pendingExchangeNote = commentDraft
+                        showComment = false
+                    }
+                    .help("Email this one exchange to Round Tower — you see the exact text first")
+                }
                 Spacer()
                 Button("Done") {
                     onFeedback(.bad, commentDraft)
@@ -446,6 +508,14 @@ struct MessageView: View {
             }
             .padding(.horizontal, 6)
         }
+    }
+
+    /// Where a tapped option in a typed `m1k3-choices` block goes: the follow-up
+    /// send, so it lands as the next user message. Only on the newest finished
+    /// answer (`acceptsChoices`); nil leaves the card read-only.
+    private var answerChoiceAction: AnswerChoiceAction? {
+        guard acceptsChoices, case .complete = message.status else { return nil }
+        return AnswerChoiceAction(onSendFollowUp)
     }
 
     /// Up to 3 tap-to-send follow-up questions (FollowUpSplit parsed them from
