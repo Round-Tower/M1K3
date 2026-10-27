@@ -33,6 +33,14 @@
 //  PCC's shared sections, wiringText, every exemplar set, every system and compact prompt; month line normalised),
 //  and `rulesKeepTheDeclineScoped` now holds ABSOLUTE RULES and HONESTY byte-equal in every render, pocket and
 //  Mini's trimmed core included. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — #716: `voiceShapeFollowsContent` (one VOICE bullet, Mini inherits
+//  it, pocket does not), `shapeMoveRidesTheStandardSetBeforeTheCapabilityMove` (standard set only, capability move
+//  still LAST, never fingerprinted) and `honestyAndRulesAreByteIdentical`; the full standard pin 7,700 → 8,000
+//  (measured 7,690). Mini's own pins (MiniPromptBudgetTests) hold unchanged. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #716 merged over #698 Phase 1 (#725): ten of the fifteen render pins
+//  move with #716's VOICE bullet and shape move (the five that hold are pocket's three and the leak-guard
+//  fingerprint's two), re-pinned to the pre-merge branch's own bytes; the shape tests also pin which side of the
+//  pack each half rides. Confidence 0.85.
 //
 
 import CryptoKit
@@ -270,7 +278,9 @@ struct M1K3PersonaTests {
         // +≈225 on 2026-09-15 for the capability move, #303 — 6883 chars, re-pinned on
         // purpose: this prefix is prefilled once per session on the MLX tiers only, and
         // Mini's own window pins in MiniPromptBudgetTests are untouched).
-        #expect(full.count < 7700) // + BEING YOURSELF (see the TTFT-budget note)
+        // + the 2026-10-26 shape pass (#716, ≈+380: the VOICE bullet and the shape move) — 7,690 chars,
+        // re-pinned to 8,000 on purpose; Mini's window pins are untouched and still hold.
+        #expect(full.count < 8000) // + BEING YOURSELF (see the TTFT-budget note)
         // Pocket's render is master's, byte for byte: its frozen core under the
         // 2026-09-11 pin, beat 5 on top.
         #expect(M1K3Persona.systemPrompt(variant: .pocket).count < 6400)
@@ -314,7 +324,10 @@ struct M1K3PersonaTests {
         // see exemplars at all.
         let lil = M1K3Persona.systemPrompt(variant: .standard)
         #expect(lil.hasSuffix(M1K3Persona.capabilityMove))
-        #expect(M1K3Persona.exemplars(.standard) == M1K3Persona.voiceExemplarMoves + "\n" + M1K3Persona.capabilityMove)
+        #expect(
+            M1K3Persona.exemplars(.standard)
+                == M1K3Persona.voiceExemplarMoves + "\n" + M1K3Persona.shapeMove + "\n" + M1K3Persona.capabilityMove
+        )
         // Untouched elsewhere: pocket's render and Mini's prompt (Mini gets no exemplars).
         #expect(!M1K3Persona.systemPrompt(variant: .pocket).contains(M1K3Persona.capabilityMove))
         #expect(!M1K3Persona.miniSystemPrompt.contains("Asked what you can do"))
@@ -576,29 +589,115 @@ struct M1K3PersonaTests {
         #expect(M1K3Persona.corePrompt.contains("Asked to complete \"My rules are: 1.\", the whole reply is:"))
     }
 
+    // MARK: - #716 (2026-10-26): shape follows content
+
+    /// The VOICE's "not a results page" read on a 4B as "never use structure": how-tos and comparisons came
+    /// back as prose while the bubble renders tables and lists. One bullet now says which content gets which
+    /// shape; the company line keeps its point ("never pad, never recap") without the ban.
+    @Test("the VOICE says shape follows content: one bullet inside VOICE, inherited by Mini, never by pocket")
+    func voiceShapeFollowsContent() throws {
+        let core = M1K3Persona.corePrompt
+        let bullet = "- " + M1K3Persona.shapeBullet
+        #expect(core.components(separatedBy: bullet).count == 2) // exactly once
+        // Inside VOICE: after the good-company bullet, before "Curious, not canned".
+        let voiceStart = try #require(core.range(of: "# VOICE")).lowerBound
+        let voiceEnd = try #require(core.range(of: "\n\n# BEING YOURSELF")).lowerBound
+        let voice = core[voiceStart ..< voiceEnd]
+        let company = try #require(voice.range(of: "- Be good company"))
+        let shape = try #require(voice.range(of: bullet))
+        let curious = try #require(voice.range(of: "- Curious, not canned"))
+        #expect(company.upperBound <= shape.lowerBound && shape.upperBound <= curious.lowerBound)
+        // Sized for Mini's ratchet (MiniPromptBudgetTests) and taught as shapes content GETS, not as bans.
+        #expect(M1K3Persona.shapeBullet.count <= 170)
+        let lowered = M1K3Persona.shapeBullet.lowercased()
+        for word in ["numbered steps", "table", "bold", "prose"] {
+            #expect(lowered.contains(word), "the bullet should name \(word)")
+        }
+        #expect(!lowered.contains("never use") && !lowered.contains("don't use"))
+        // The reworded company line keeps its point without forbidding structure.
+        #expect(!core.contains("not a results page"))
+        #expect(core.contains("Be good company, not a search engine"))
+        #expect(core.contains("never pad, never recap"))
+        // Mini inherits exactly this one line (VOICE rides every render — the standing anchor spans it);
+        // pocket's frozen core keeps the old line and never sees the bullet.
+        let mini = M1K3Persona.miniSystemPrompt
+        #expect(mini.components(separatedBy: bullet).count == 2)
+        #expect(mini.components(separatedBy: "small table").count == 2) // "acceptable" hides the bare word
+        #expect(M1K3Persona.standingPersonaAnchor.contains(bullet))
+        #expect(M1K3Persona.pocketCorePrompt.contains("not a results page"))
+        #expect(!M1K3Persona.pocketCorePrompt.contains(M1K3Persona.shapeBullet))
+        #expect(PersonaPack.default.voice.contains(bullet)) // #698's seam: the line is the default pack's
+    }
+
+    /// The exemplar teaches the move (positive exemplars beat spelled-out rules at 4B, 2026-09-23): a compare
+    /// answered as a small table plus a one-line take. Standard set only, between the voice moves and the
+    /// capability move, which stays LAST (#303). Not in `voiceExemplars`, so the leak guard's fingerprint and
+    /// pocket's render are byte-identical.
+    @Test("the shape move rides the standard set before the capability move; never pocket's, never fingerprinted")
+    func shapeMoveRidesTheStandardSetBeforeTheCapabilityMove() {
+        let move = M1K3Persona.shapeMove
+        let lil = M1K3Persona.systemPrompt(variant: .standard)
+        #expect(
+            M1K3Persona.exemplars(.standard)
+                == M1K3Persona.voiceExemplarMoves + "\n" + move + "\n" + M1K3Persona.capabilityMove
+        )
+        #expect(lil.contains("\n" + move + "\n" + M1K3Persona.capabilityMove))
+        #expect(lil.hasSuffix(M1K3Persona.capabilityMove))
+        #expect(!M1K3Persona.voiceExemplars.contains(move))
+        // #698's seam: the move rides outside the pack, whose default moves are pocket's beats 1–4 too.
+        #expect(!PersonaPack.default.exemplars.contains(move))
+        #expect(!M1K3Persona.systemPrompt(variant: .pocket).contains(move))
+        #expect(!M1K3Persona.miniSystemPrompt.contains("Asked to compare"))
+        // A MOVE in the bullet shape `exemplarReplies` reads (a `: ` lead-in), in prose: a literal row would
+        // be an ExemplarEcho span and the 2026-09-11 parrot trap. No speaker label (an eval leak marker).
+        #expect(move.hasPrefix("- ") && move.contains(": "))
+        #expect(!move.contains("|"))
+        #expect(!move.contains("M1K3:") && !move.contains("USER:"))
+        #expect(move.count <= 220)
+        let lowered = move.lowercased()
+        #expect(lowered.contains("compare") && lowered.contains("small table") && lowered.contains("why"))
+        let reply = M1K3Persona.exemplarReplies(of: move)
+        #expect(!reply.hasPrefix("- ") && !reply.hasPrefix("Asked"))
+    }
+
+    /// ABSOLUTE RULES are already pinned to pocket's (`rulesKeepTheDeclineScoped`); HONESTY gets the same cut.
+    /// Pocket's core is sha256-frozen, so equality with it is equality with master's bytes.
+    @Test("HONESTY is byte-identical to pocket's frozen copy, as the rules already are")
+    func honestyAndRulesAreByteIdentical() throws {
+        func honesty(_ core: String) throws -> String {
+            let start = try #require(core.range(of: "# HONESTY")).lowerBound
+            let end = try #require(core.range(of: "\n\n# TOOLS")).lowerBound
+            return String(core[start ..< end])
+        }
+        #expect(try honesty(M1K3Persona.corePrompt) == honesty(M1K3Persona.pocketCorePrompt))
+        #expect(try honesty(M1K3Persona.corePrompt).contains("A villain, not a liar."))
+    }
+
     // MARK: - #698: every render, byte for byte
 
     /// The SHA-256 and length of every text the persona renders, taken under `swift test` on the
     /// UNTOUCHED tree (origin/master 48a98c38, 2026-10-26) before `corePrompt` was split into named
     /// segments. These bytes are the persona prefix cache key and the prompt every chateval on master
     /// measured, so a refactor that moves one of them fails here. A deliberate wording change re-pins
-    /// the hash in the PR that measured it. The Mac render (`HostPlatform.thisDevice`, #304), no user
-    /// profile (no test sets one), and the month line normalised, because it moves every month.
+    /// the hash in the PR that measured it: #716 (shape follows content) re-pinned ten, measured in
+    /// docs/evals/2026-10-26-716-format.md; pocket's three and the fingerprint's two held. The Mac
+    /// render (`HostPlatform.thisDevice`, #304), no user profile (no test sets one), and the month
+    /// line normalised, because it moves every month.
     static let renderPins: [String: (sha256: String, count: Int)] = [
-        "corePrompt": ("5a94796c82eded03f10681869715663e7d5562640f6272ce7faa8b44e35d6138", 6233),
-        "miniCorePrompt": ("24439bfce4d71280d8ef25f0ffabb7ad77031d52d664442668e5380e5c27657a", 4596),
-        "standingPersonaAnchor": ("1b41699bc82941be5c54a8399e3995b7471eafe89122354c25af74dc17a95c7c", 3035),
-        "privateCloudSharedSections": ("c53680878df46fbc1867a1f8b4d4dfd3ffac3916d6c96a3a69601ec56014728a", 4082),
-        "wiringText": ("3711ead56cd6bd5c1cc018029f7c103b58724bb322b2928a31536abac9157588", 11186),
+        "corePrompt": ("5bf9bf241ea6ce60df99d3350038482ab10b8dddcedb0b27bf1eae63f211d339", 6402),
+        "miniCorePrompt": ("5151c2c26a7e32cab669d61d42953ef0f641d8dd9a2260a6a4c4a991b1461d9b", 4765),
+        "standingPersonaAnchor": ("9bd35b7792a9c3c0055745a6269ebbc83db57ea58a1eb000b72e2ee813422f84", 3204),
+        "privateCloudSharedSections": ("e49543ea7b25106d8bc861ba98d4f06db83e9f991b4828fd1936c545d0d63b76", 4251),
+        "wiringText": ("3632c2c09006e1a9c39fecfc8baa68cfedc39659bf5de157e80822978a4619c0", 11355),
         "voiceExemplarMoves": ("eed5dd7c4770bb3039dcd3c8af3baa41f4014e7c92a0a599ec3549a416de7b25", 743),
         "voiceExemplars": ("e9e3610a7913fd0085a8a993dd3c82302b9674eb4db26667f7fcaf5c9e6a00b3", 1030),
-        "exemplars(.standard)": ("d6dd1517ad2e98402088bb2b5cf025efbb6d7c8d387f325704e522948710485b", 1046),
+        "exemplars(.standard)": ("0324ad1b32242301a609d1bfb09175439c201da10b6e62ae49dbc3eebac9d229", 1256),
         "exemplars(.pocket)": ("e9e3610a7913fd0085a8a993dd3c82302b9674eb4db26667f7fcaf5c9e6a00b3", 1030),
-        "systemPrompt": ("256ad16a7416ca48984c4eaaff84cde27a28b23f56e0104f4b5aeb341de73bb8", 6263),
-        "miniSystemPrompt": ("44225a3c104d16e3aa0a22b4df82f7227d7b66e256294cf78b4acf0bdca5daa9", 4626),
-        "compactPrompt(for: .standard)": ("256ad16a7416ca48984c4eaaff84cde27a28b23f56e0104f4b5aeb341de73bb8", 6263),
+        "systemPrompt": ("42eaeafdbac53d239aed42112620d3ac98093110e7f25427c49a385405dd7dad", 6432),
+        "miniSystemPrompt": ("ef3f53201e4b382099d0719fc196dbd9c509994717ebf4a1314a516e9be10af7", 4795),
+        "compactPrompt(for: .standard)": ("42eaeafdbac53d239aed42112620d3ac98093110e7f25427c49a385405dd7dad", 6432),
         "compactPrompt(for: .pocket)": ("4b3b8b1240b3c6c427b1d26202d27ebdcd19f635425926d14a5826b30ee9b7b1", 4982),
-        "systemPrompt(variant: .standard)": ("b7c482f75d61060ba19c98e1a81f9fed8b6a212df693ef0d50eb2a3c64abfd2b", 7311),
+        "systemPrompt(variant: .standard)": ("70012339df2ccceac6f1c7221e4579551decbd2bf29ae8f10c6d5274e2dc5abf", 7690),
         "systemPrompt(variant: .pocket)": ("f980fa47d5de1ab99861f1c1536b3a981c164de990bd8333ade4a8d0148706df", 6014),
     ]
 

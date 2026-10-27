@@ -9,6 +9,8 @@
 //  (`everyRenderMatchesItsPin`, `rulesKeepTheDeclineScoped`).
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.85, Prior: none (new file)
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #716 merged: a pack swaps its moves around #716's shape move,
+//  which rides outside every pack like the capability move. Confidence 0.85.
 //
 
 @testable import M1K3Inference
@@ -72,10 +74,12 @@ struct PersonaPackTests {
         #expect(M1K3Persona.pocketCorePrompt.contains(M1K3Persona.honesty + "\n\n# TOOLS"))
     }
 
-    @Test("a pack swaps the exemplar moves only: the header and the capability move stay, pocket is pack-blind")
+    @Test("a pack swaps the moves only: header, shape move and capability move stay, pocket is pack-blind")
     func packSwapsTheMovesOnly() {
         let standard = M1K3Persona.exemplars(.standard, pack: Self.probe)
-        let expected = M1K3Persona.exemplarHeader + "\n" + Self.probe.exemplars + "\n" + M1K3Persona.capabilityMove
+        // #716's shape move rides outside the pack: the default pack's moves are pocket's beats 1–4 too.
+        let expected = M1K3Persona.exemplarHeader + "\n" + Self.probe.exemplars + "\n" + M1K3Persona.shapeMove
+            + "\n" + M1K3Persona.capabilityMove
         #expect(standard == expected)
         #expect(standard.hasSuffix(M1K3Persona.capabilityMove)) // still LAST (#303)
         #expect(!standard.contains("boiling point of seawater")) // the default's moves are gone…

@@ -11,6 +11,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.8 (the bytes are hash-pinned;
 //  whether a second pack is ever worth shipping is unmeasured), Prior: none (new file)
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #716 merged over this seam: `shapeMove` is named below as riding
+//  outside the pack, and `.default`'s voice now carries `shapeBullet`. Confidence 0.8.
 //
 
 /// The part of the persona a pack may change, and nothing else.
@@ -32,6 +34,11 @@
 /// - `capabilityMove` says what M1K3 can do, not how it sounds. It rides LAST in the
 ///   standard set, where recency does the work (#303), and the leak guard never
 ///   fingerprints it.
+/// - `shapeMove` (#716: a comparison answered as a small table) rides after the pack's moves,
+///   before `capabilityMove`. The default pack's moves are also pocket's frozen beats 1–4 and
+///   the leak guard's fingerprint (`voiceExemplars`), so the move cannot join them without
+///   moving both. Its VOICE line, `shapeBullet`, is in `.default`'s voice: a second pack
+///   carries its own shape line or none, and still gets the move.
 /// - `leakDeclineBeat` is pocket's measured security beat (51/105 → 76/105), also LAST.
 ///   Pocket ignores the pack: its frozen core and five beats were measured as one text.
 /// - The exemplar header frames the bullets as moves, never lines to reuse (the parrot

@@ -6,6 +6,8 @@ transcript parsed to nothing: the fixture regex knew only the first shape.
 Signed: Kev + claude-opus-5-5, 2026-10-18, Confidence 0.9, Prior: none (new file).
 Review: Kev + claude-opus-5-5, 2026-10-18 — review fold: trial numbers on rows, in the Failures list, and every
 trial's answer in "What they actually said".
+Review: Kev + claude-fable-5.1, 2026-10-26 — `test_format_is_printed_in_full` (#716): the format kind's answers print
+beside humour and interview, whole when the run keeps full answers (--full-answers), because the shape verdict is a read.
 """
 
 from pathlib import Path
@@ -101,3 +103,20 @@ def test_what_they_said_lists_every_trial(tmp_path):
 def test_fixture_regex_still_refuses_a_line_that_is_not_a_fixture():
     assert sc.FIXTURE.match("  thinking: always (bare on, live always)") is None
     assert sc.FIXTURE.match("  [trial x/2]   reason-age [reasoning]: PASS (94178ms)") is None
+
+
+def test_format_is_printed_in_full(tmp_path):
+    # #716: the format kind's verdict is by feel (did the shape fit the content?), so its answers print whole.
+    transcript = tmp_path / "format-x1.txt"
+    transcript.write_text(
+        "• chateval brain lil (Lil)…\n"
+        "  fmt-compare-drinks [format]: PASS (100ms)\n"
+        "    · said: | Drink | Caffeine | |---|---| | Tea | less |\n"
+        "  fmt-smalltalk-cork [format]: FAIL (90ms)\n"
+        "    ✗ excludes forbidden — leaked [\"**\"]\n"
+        "    · said: **Cork** in October is grand.\n",
+        encoding="utf-8")
+    md = _markdown(transcript)
+    assert "#### format" in md
+    assert "- *Lil*: | Drink | Caffeine | |---|---| | Tea | less |" in md
+    assert "- *Lil*: **Cork** in October is grand." in md

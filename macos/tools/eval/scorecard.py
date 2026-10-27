@@ -34,6 +34,9 @@ transcripts), pinned in test_scorecard.py on real lines from the timed-out card-
 Review: Kev + claude-opus-5-5, 2026-10-18 — review fold: each row keeps its trial number (None for one trial, and
 in the --json rows), the Failures list names the trial, and "What they actually said" lists every trial's answer
 instead of the first one's. Confidence 0.9.
+Review: Kev + claude-fable-5.1, 2026-10-26 — #716: the format kind's answers print under "What they actually said"
+beside humour and interview, whole when the run kept full answers (--full-answers; the preview is 240 characters
+otherwise), because whether a table fitted the question is a read, not a cell. Confidence 0.9.
 """
 
 import argparse
@@ -151,7 +154,8 @@ def markdown(brains, rows, kinds, table, latencies, source):
     # The kinds whose verdict is explicitly HUMAN get their answers printed in
     # full, because a pass/fail cell tells a reader nothing about whether a joke
     # landed. This is the part of the scorecard you actually read.
-    human_kinds = [k for k in ("humour", "interview") if k in kinds]
+    # format too (#716): whether a table fitted the question, or banter stayed banter, is a read, not a cell.
+    human_kinds = [k for k in ("humour", "interview", "format") if k in kinds]
     if human_kinds:
         out.append("\n### What they actually said\n")
         out.append(
