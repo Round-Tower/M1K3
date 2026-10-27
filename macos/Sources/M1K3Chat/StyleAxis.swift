@@ -31,6 +31,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — `inSaidOrder`: one slice's style facts follow the user's turns, so
 //  "newest" means said last (exit-path distillation sends a whole chat as one slice). A tie keeps the distiller's
 //  order: "not short, long" in one turn cannot be placed by words alone. Confidence 0.8.
+//  Review: same day — `unplaced` says why a style fact has no axis (scoped, or unknown to the table), for the
+//  coordinator's count-only `.notice` line: the field signal for the cue table's recall.
 //
 
 import Foundation
@@ -99,6 +101,20 @@ public enum StyleAxis: String, CaseIterable, Sendable {
             let oldAxes = axes(of: old)
             return !oldAxes.isEmpty && oldAxes.isSubset(of: newAxes)
         }
+    }
+
+    /// Why a style fact takes no part in the axis supersede.
+    public enum Unplaced: Sendable, Hashable {
+        /// It qualifies a standing ask ("…when driving"): no axis on purpose.
+        case scoped
+        /// No cue matched: the cue table's recall gap, counted in the field.
+        case unknown
+    }
+
+    /// Why `fact` has no axis, or nil when it has one.
+    public static func unplaced(_ fact: String) -> Unplaced? {
+        if matches(scopeCues, in: StyleAskFence.normalised(fact)) { return .scoped }
+        return axes(of: fact).isEmpty ? .unknown : nil
     }
 
     // MARK: - Said order

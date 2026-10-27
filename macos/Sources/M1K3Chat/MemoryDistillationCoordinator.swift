@@ -69,6 +69,8 @@
 //  true) gates it; the seam gains `liveStyleTexts()` (default []), since the corpus has no kind. Confidence 0.85.
 //  Review: same day — `distillAndStore` stores a slice's style facts in the order the user said them
 //  (`StyleAxis.inSaidOrder`), so "short… later, actually long" in one exit-path slice ends with long live.
+//  Review: same day — a count-only `.notice` line ("style rows on no axis: N unknown, M scoped") per write that
+//  stored a style fact the axis rule cannot place: the field signal for the cue table's recall. No text.
 
 import CryptoKit
 import Foundation
@@ -275,6 +277,7 @@ public struct MemoryDistillationCoordinator: Sendable {
     public func store(_ facts: [DistilledFact]) async throws -> Int {
         guard !facts.isEmpty else { return 0 }
         var written = 0
+        var unplaced: [StyleAxis.Unplaced: Int] = [:]
         // Fires on the throw path too: facts written before a later one threw are in the stores.
         defer { if written > 0 { didWrite?(written) } }
         for fact in facts {
@@ -302,6 +305,9 @@ public struct MemoryDistillationCoordinator: Sendable {
                 continue
             }
             written += 1
+            if supersedesStyleByAxis, fact.kind == .style, let why = StyleAxis.unplaced(fact.text) {
+                unplaced[why, default: 0] += 1
+            }
             if let twin {
                 await supersede(
                     corpusItemID: twin.itemID, graphText: twin.content, with: fact, newItemID: result.itemID,
@@ -319,6 +325,12 @@ public struct MemoryDistillationCoordinator: Sendable {
             }
         }
         Self.log.info("distillation wrote \(written)/\(facts.count) fact(s)")
+        if !unplaced.isEmpty {
+            // Counts only, never the text: the field signal for StyleAxis's cue table.
+            let unknown = unplaced[.unknown] ?? 0
+            let scoped = unplaced[.scoped] ?? 0
+            Self.log.notice("style rows on no axis: \(unknown) unknown, \(scoped) scoped")
+        }
         return written
     }
 

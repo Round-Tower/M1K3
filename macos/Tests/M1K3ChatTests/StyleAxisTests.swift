@@ -200,6 +200,17 @@ struct StyleAxisTests {
         #expect(StyleAxis.newestRetired(by: "The user wants no fluff.", amongNewestFirst: live) == nil)
     }
 
+    // MARK: - Unplaced: the field signal for the cue table's recall
+
+    @Test("a style fact with no axis says why: scoped on purpose, or unknown to the cue table")
+    func unplacedSaysWhy() {
+        #expect(StyleAxis.unplaced("The user wants answers in Irish.") == .unknown)
+        #expect(StyleAxis.unplaced("The user wants no fluff.") == .unknown)
+        #expect(StyleAxis.unplaced("The user wants short answers when driving.") == .scoped)
+        #expect(StyleAxis.unplaced("The user wants a detailed answer for code reviews.") == .scoped)
+        #expect(StyleAxis.unplaced("The user prefers short answers.") == nil)
+    }
+
     // MARK: - Said order: "newest" means said last, inside one slice too
 
     @Test("a slice's style facts are reordered by the last user turn that says a distinctive word of each")
