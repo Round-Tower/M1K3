@@ -40,6 +40,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold, #732) — `statedIn` names each conversation once (two
 //  slices of one long chat, or one slice that says a fact twice, listed it twice; the newest stays last), and every log
 //  line carries an error's type, never its text (a distiller or embedder error can echo the prompt). Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699, Kev's ruling: an imported style ask files as a PREFERENCE
+//  (`filed`, applied to the review's proposals and again at commit), and the coordinator is built with
+//  `supersedesStyleByAxis: false`, so an import never retires a live ask on its axis. Confidence 0.85.
 
 import Foundation
 import M1K3Chat
@@ -180,8 +183,16 @@ public struct ConversationImportPipeline: Sendable {
             graph: DistilledFactGraphAdapter(store: memoryStore, source: tag.graphSource),
             corpusSource: tag.knowledgeSource,
             revivesSupersededFacts: false,
+            supersedesStyleByAxis: false,
             selfNames: selfNames
         )
+    }
+
+    /// #699, Kev's ruling (2026-10-27): a style ask found in an import files as a PREFERENCE, listed in
+    /// Memories but never riding the system prompt and never retiring a live ask. An old chat's
+    /// "shorter, please" is history, not what the user wants now (OKF's style→note is the same rule).
+    static func filed(_ fact: DistilledFact) -> DistilledFact {
+        fact.kind == .style ? DistilledFact(text: fact.text, kind: .preference) : fact
     }
 
     // MARK: - Propose
@@ -231,7 +242,7 @@ public struct ConversationImportPipeline: Sendable {
             do {
                 for slice in Self.slices(of: conversation.chatTurns) {
                     for fact in try await coordinator.propose(turns: slice) {
-                        offer(fact, conversationID: conversation.id, title: conversation.title)
+                        offer(Self.filed(fact), conversationID: conversation.id, title: conversation.title)
                     }
                 }
             } catch is CancellationError {
@@ -296,7 +307,7 @@ public struct ConversationImportPipeline: Sendable {
                 let right = rhs.element.conversationID.flatMap { position[$0] } ?? -1
                 return left == right ? lhs.offset < rhs.offset : left < right
             }
-            .map(\.element.fact)
+            .map { Self.filed($0.element.fact) }
         let batches = stride(from: 0, to: facts.count, by: Self.factBatchSize).map {
             Array(facts[$0 ..< min($0 + Self.factBatchSize, facts.count)])
         }
