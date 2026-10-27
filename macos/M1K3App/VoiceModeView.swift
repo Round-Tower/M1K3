@@ -47,6 +47,9 @@
 //  voice mode (ContentView) so the full-window hero keeps clean edges. Confidence 0.6 (taste gate).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the thinking rain named above is unmounted (Kev, TestFlight:
 //  "janky — remove for now"); the InferencePhosphor model and BackdropInk.rain stay as the seam to restore it.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — the 10-09 UNVERIFIED is answered: the transcript and sidebar DID
+//  ghost through (541, Kev), so ContentView now fades the split view under this overlay. The glass here stays as
+//  the hero's floor. Confidence 0.7 (verify-by-launch owed).
 
 import M1K3Avatar
 import M1K3Voice
@@ -62,8 +65,9 @@ struct VoiceModeView: View {
     var body: some View {
         ZStack {
             // The window's own glass (the chat's floor), so the hero sits on the
-            // same background as everything else and the chat behind the overlay
-            // does not bleed through. The avatar is the room now.
+            // same background as everything else. It does NOT hide the chat on its
+            // own (541 showed it through); ContentView fades the split view out
+            // underneath. The avatar is the room now.
             Color.clear
                 .ignoresSafeArea()
                 .glassBackdrop()
