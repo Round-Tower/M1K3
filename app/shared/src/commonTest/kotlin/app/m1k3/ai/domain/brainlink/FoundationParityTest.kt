@@ -1,5 +1,6 @@
 package app.m1k3.ai.domain.brainlink
 
+import kotlinx.serialization.json.JsonObject
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -10,13 +11,21 @@ import kotlin.test.assertNull
  * (Swift's Int from a string, CharacterSet.whitespaces, JSONSerialization's
  * `as? String` / `as? Int`), so the Kotlin twins read the wire the same way.
  *
- * Every expected value was printed by Foundation on macOS 27 from a scratch
- * build of `macos/Sources/M1K3BrainLink/BrainLinkPolicies.swift` and its
- * siblings (2026-10-27), not assumed.
+ * Every expected value was printed on macOS 27 (2026-10-27) by a swiftc probe
+ * built from `macos/Sources/M1K3BrainLink/BrainLinkPolicies.swift` and its
+ * siblings plus a main that prints Int(_:), trimmingCharacters(in:
+ * .whitespaces), JSONSerialization's `as? [String: Any]` and the `as? String`
+ * and `as? Int` reads for each literal below; the printed lines are in the PR
+ * that added this file. Where the twin answers differently, the test names the
+ * gap.
  *
  * Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85 (each literal
  * read off the Mac's own Foundation; the two named gaps are deliberate).
  * Prior: none (new file).
+ * Review: Kev + claude-opus-5.5, 2026-10-27 — the code-quality fold: the strict
+ * walk pinned on nested values and JSON's number grammar, the Int read's full
+ * match pinned on mixed-script digits, the Int edges named, and the provenance
+ * made reproducible (each literal re-run through the probe). Confidence 0.85.
  */
 class FoundationParityTest {
     @Test
@@ -30,16 +39,21 @@ class FoundationParityTest {
 
     @Test
     fun `anything Swift Int refuses reads as absent`() {
-        // U+0663 is ARABIC-INDIC DIGIT THREE: Kotlin's toIntOrNull takes it, Swift does not.
-        for (junk in listOf("", "+", "+-1", "1e3", " 80", "٣")) {
+        // U+0663 is ARABIC-INDIC DIGIT THREE and U+FF18 FULLWIDTH DIGIT EIGHT: Kotlin's
+        // toIntOrNull takes both, alone or beside an ASCII digit; Swift takes neither.
+        for (junk in listOf("", "+", "+-1", "1e3", " 80", "80 ", "80\n", "٣", "٣0", "8٣", "８")) {
             assertNull(junk.toSwiftIntOrNull(), "'$junk' is not an Int on the Mac")
         }
     }
 
     @Test
     fun `an integer past Int range reads as absent`() {
-        // Gap one: Swift's 64-bit Int takes this. No port or retry the Mac sends comes near it.
-        assertNull("99999999999".toSwiftIntOrNull())
+        assertEquals(Int.MAX_VALUE, "2147483647".toSwiftIntOrNull())
+        assertEquals(Int.MIN_VALUE, "-2147483648".toSwiftIntOrNull())
+        // Gap one: Swift's 64-bit Int takes these. No port or retry the Mac sends comes near them.
+        for (past in listOf("2147483648", "-2147483649", "99999999999")) {
+            assertNull(past.toSwiftIntOrNull(), past)
+        }
     }
 
     @Test
@@ -61,6 +75,31 @@ class FoundationParityTest {
         assertNull(parseJsonObject("""{"a":abc}"""))
         assertNull(parseJsonObject(""))
         assertNull(parseJsonObject(null))
+    }
+
+    @Test
+    fun `the strict walk reaches nested values`() {
+        // Foundation refuses every one of these; kotlinx alone keeps the bad token as a primitive.
+        for (body in listOf(
+            """{"a":[abc]}""",
+            """{"a":{"b":abc}}""",
+            """{"a":[1,{"b":NaN}]}""",
+            """{"a":01}""",
+            """{"a":-01}""",
+            """{"a":+1}""",
+            """{"a":.5}""",
+            """{"a":1.}""",
+            """{"a":1e}""",
+            """{"a":-}""",
+            """{"a":True}""",
+            """{"a":'x'}""",
+        )) {
+            assertNull(parseJsonObject(body), body)
+        }
+        // ...and takes every valid shape, padded with whitespace or nested.
+        val nested = assertNotNull(parseJsonObject("""{"a":[true,false,null,-1.5e+3,"s"],"b":{"c":0}}"""))
+        assertEquals(0, (nested["b"] as? JsonObject)?.wholeIntOrNull("c"))
+        assertEquals(1, parseJsonObject(" {\"a\":1}\n")?.wholeIntOrNull("a"))
     }
 
     @Test

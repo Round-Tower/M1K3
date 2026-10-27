@@ -17,6 +17,11 @@ import kotlin.test.assertTrue
  * Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.9 (bodies copied from
  * the server's encoders, reads checked against the Mac's BrainRefusal).
  * Prior: none (new file).
+ * Review: Kev + claude-opus-5.5, 2026-10-27 — the code-quality fold: a reply
+ * that isn't the stream is a failure on a 2xx too, as BrainConnection reads
+ * it; reason and seconds pinned apart, the 503 with a 429-shaped body, the
+ * band edges. Each new expectation printed by the Mac's BrainRefusal and a
+ * transcription of BrainConnection's mapping on macOS 27. Confidence 0.85.
  */
 class BrainLinkFailureTest {
     @Test
@@ -36,6 +41,9 @@ class BrainLinkFailureTest {
         assertEquals(refused(Reason.BUSY, 30), classify(429, "{}", "30"))
         assertEquals(refused(Reason.BUSY, 30), classify(429, "nope", "30"))
         assertEquals(refused(Reason.BUSY, 30), classify(429, null, " 30 "))
+        // The reason and the wait are read apart: a named reason without seconds still takes the header.
+        assertEquals(refused(Reason.COOLING, 120), classify(429, """{"error":"cooling"}""", "120"))
+        assertEquals(refused(Reason.WARMING, 15), classify(429, """{"error":"warming"}""", null))
     }
 
     @Test
@@ -77,6 +85,8 @@ class BrainLinkFailureTest {
         )
         assertEquals(BrainLinkFailure.Unavailable("unexpected reply"), classify(503, "junk", null))
         assertEquals(BrainLinkFailure.Unavailable("unexpected reply"), classify(503, null, null))
+        // A 429-shaped body on a 503 is still the 503.
+        assertEquals(BrainLinkFailure.Unavailable("busy"), classify(503, """{"error":"busy","retry_after_s":15}""", "15"))
     }
 
     @Test
@@ -85,13 +95,17 @@ class BrainLinkFailureTest {
         assertEquals(BrainLinkFailure.BadResponse(404, "no such route"), classify(404, """{"error":"no such route"}""", null))
         assertEquals(BrainLinkFailure.BadResponse(500, "unexpected reply"), classify(500, "", null))
         assertEquals(BrainLinkFailure.BadResponse(301, "unexpected reply"), classify(301, null, null))
+        assertEquals(BrainLinkFailure.BadResponse(199, "unexpected reply"), classify(199, null, null))
+        assertEquals(BrainLinkFailure.BadResponse(300, "unexpected reply"), classify(300, null, null))
     }
 
     @Test
-    fun `success is not a failure`() {
-        for (status in listOf(200, 204, 299)) {
-            assertNull(classify(status, """{"error":"busy"}""", "15"), "HTTP $status")
-        }
+    fun `a reply that is not the stream is a failure on a 2xx too`() {
+        // The Mac judges the Content-Type, not the status: a 2xx that isn't text/event-stream
+        // throws badResponse("HTTP 200: busy") there, so it is no success here either.
+        assertEquals(BrainLinkFailure.BadResponse(200, "busy"), classify(200, """{"error":"busy"}""", "15"))
+        assertEquals(BrainLinkFailure.BadResponse(204, "unexpected reply"), classify(204, null, null))
+        assertEquals(BrainLinkFailure.BadResponse(299, "unexpected reply"), classify(299, "", null))
     }
 
     @Test
@@ -105,7 +119,7 @@ class BrainLinkFailureTest {
         status: Int,
         body: String?,
         retryAfter: String?,
-    ): BrainLinkFailure? = BrainLinkFailure.classify(status, body, retryAfter)
+    ): BrainLinkFailure = BrainLinkFailure.classify(status, body, retryAfter)
 
     private fun refused(
         reason: Reason,

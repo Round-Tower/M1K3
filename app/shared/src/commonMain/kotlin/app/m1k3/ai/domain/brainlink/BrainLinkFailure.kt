@@ -13,6 +13,10 @@ package app.m1k3.ai.domain.brainlink
  * against the Mac's BrainRefusal and BrainConnection on the same bodies).
  * Prior: none (new file). Lineage: BrainLinkPolicies.swift and
  * BrainConnection.swift (Kev + claude-fable-5, 2026-08-24).
+ * Review: Kev + claude-opus-5.5, 2026-10-27 — the code-quality fold: classify
+ * no longer reads a 2xx as success. The Mac decides on the Content-Type alone
+ * and maps any reply that isn't the event stream, a 200 included, to a
+ * failure; the twin now does the same and always answers. Confidence 0.85.
  */
 data class BrainRefusal(
     val reason: Reason,
@@ -64,11 +68,12 @@ data class BrainRefusal(
 }
 
 /**
- * What a non-2xx reply from the Mac means, for the transport to raise and the
- * UI to show honestly (spec §2: a 429 while the brain warms, a 503 rather than
- * a persona-seeded stand-in). Transport failures (unreachable, timed out, a
- * stream cut short) belong to the transport and aren't modelled here. The twin
- * of BrainConnection's status mapping on the Mac.
+ * What a reply from the Mac that isn't the event stream means, for the
+ * transport to raise and the UI to show honestly (spec §2: a 429 while the
+ * brain warms, a 503 rather than a persona-seeded stand-in). Transport
+ * failures (unreachable, timed out, a stream cut short) belong to the
+ * transport and aren't modelled here. The twin of BrainConnection's status
+ * mapping on the Mac.
  */
 sealed class BrainLinkFailure {
     /** 429: the Mac asked the phone to wait. */
@@ -89,15 +94,16 @@ sealed class BrainLinkFailure {
 
     companion object {
         /**
-         * Null for a 2xx status. A 2xx that isn't the event stream the
-         * transport asked for is the transport's to judge, as on the Mac.
+         * Call it for a reply whose Content-Type isn't text/event-stream, and
+         * only then: the Mac's BrainConnection judges the Content-Type, not the
+         * status, so a 2xx that isn't the stream is a BadResponse there and
+         * here (a 200 with {"error":"busy"} reads as BadResponse(200, "busy")).
          */
         fun classify(
             status: Int,
             body: String?,
             retryAfterHeader: String?,
-        ): BrainLinkFailure? {
-            if (status in 200..299) return null
+        ): BrainLinkFailure {
             BrainRefusal.parse(status, body, retryAfterHeader)?.let { return Refused(it) }
             val message = parseJsonObject(body)?.stringOrNull("error") ?: "unexpected reply"
             return if (status == 503) Unavailable(message) else BadResponse(status, message)

@@ -15,6 +15,10 @@ import kotlin.test.assertEquals
  * Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.9 (frames read off the
  * Mac's encoder, skips off the Mac's parser).
  * Prior: none (new file).
+ * Review: Kev + claude-opus-5.5, 2026-10-27 — the code-quality fold: a chunk
+ * that completes one frame and ends inside the next keeps that tail (the
+ * Mac's SSEParser fed the same three chunks emits the same events).
+ * Confidence 0.85.
  */
 class SseFrameParserTest {
     @Test
@@ -128,6 +132,16 @@ class SseFrameParserTest {
     fun `a CRLF stream stays buffered as it does on the Mac`() {
         // The Mac frames with bare LF; its parser never splits a CRLF stream either.
         assertEquals(emptyList(), feed("event: done\r\ndata: {}\r\n\r\n"))
+    }
+
+    @Test
+    fun `a chunk that ends inside the next frame keeps that tail`() {
+        // A socket read rarely ends on a frame boundary.
+        val parser = SseFrameParser()
+        assertEquals(listOf(SseEvent.Token("a")), parser.feed("data: {\"token\":\"a\"}\n\ndata: {\"tok".encodeToByteArray()))
+        // The done frame is still open, and the buffer now ends on a lone LF.
+        assertEquals(listOf(SseEvent.Token("b")), parser.feed("en\":\"b\"}\n\nevent: done\ndata: {}\n".encodeToByteArray()))
+        assertEquals(listOf(SseEvent.Done), parser.feed("\n".encodeToByteArray()))
     }
 
     private fun feed(wire: String): List<SseEvent> = SseFrameParser().feed(wire.encodeToByteArray())

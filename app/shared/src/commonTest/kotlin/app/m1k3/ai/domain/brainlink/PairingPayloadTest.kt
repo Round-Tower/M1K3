@@ -16,13 +16,16 @@ import kotlin.test.assertTrue
  * composed() on macOS 27 (2026-10-27) with the fixture of its own
  * PairingPayloadTests: key = bytes 0..31, the UUID identity, pairing port
  * 52113, serve port 4243, "Kev’s Mac Studio". Every accept and reject below
- * was checked against the Mac's parse the same way. The five shapes in the
- * stricter-than-the-Mac test are the deliberate exceptions: the Mac takes
+ * was checked against the Mac's parse the same way. The shapes in the two
+ * stricter-than-the-Mac tests are the deliberate exceptions: the Mac takes
  * them, the twin refuses them.
  *
  * Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.9 (literals read off
  * the Mac's own compose and parse, not retyped from the spec).
  * Prior: none (new file).
+ * Review: Kev + claude-opus-5.5, 2026-10-27 — the code-quality fold: truncated
+ * and malformed escapes pinned as refused (the Mac's takes printed on macOS
+ * 27), and equality pinned clause by clause. Confidence 0.85.
  */
 class PairingPayloadTest {
     private val key = ByteArray(32) { it.toByte() }
@@ -175,6 +178,16 @@ class PairingPayloadTest {
     }
 
     @Test
+    fun `a truncated or malformed escape is refused not thrown`() {
+        // macOS 27 takes all four and keeps the escape as typed (name "a%", "a%4", "%4" with
+        // hosts [x], "%4G"); its composer never writes one. The twin refuses them, as it does
+        // a%ZZb, and never reads past the end of the text.
+        for (extra in listOf("&name=a%", "&name=a%4", "&name=%4&hosts=x", "&name=%4G")) {
+            assertNull(PairingPayload.parse(BASE + extra), extra)
+        }
+    }
+
+    @Test
     fun `the secret never reaches toString`() {
         val text = assertNotNull(PairingPayload.parse(COMPOSED)).toString()
         assertFalse(KEY in text, text)
@@ -192,6 +205,23 @@ class PairingPayloadTest {
         assertEquals(first.hashCode(), second.hashCode())
         val otherKey = key.copyOf().also { it[31] = 99 }
         assertNotEquals(first, PairingPayload(otherKey, IDENTITY, 52113, 4243, MAC_NAME, listOf("192.168.1.24")))
+    }
+
+    @Test
+    fun `equality reads every field`() {
+        val base = PairingPayload(key, IDENTITY, 52113, 4243, MAC_NAME, listOf("192.168.1.24"))
+        assertEquals(assertNotNull(PairingPayload.parse(COMPOSED)), base)
+        for (variant in listOf(
+            PairingPayload(key, "ABC", 52113, 4243, MAC_NAME, listOf("192.168.1.24")),
+            PairingPayload(key, IDENTITY, 52114, 4243, MAC_NAME, listOf("192.168.1.24")),
+            PairingPayload(key, IDENTITY, 52113, 4244, MAC_NAME, listOf("192.168.1.24")),
+            PairingPayload(key, IDENTITY, 52113, 4243, "M1K3", listOf("192.168.1.24")),
+            PairingPayload(key, IDENTITY, 52113, 4243, MAC_NAME, listOf("192.168.1.25")),
+        )) {
+            assertNotEquals(base, variant, variant.toString())
+        }
+        assertFalse(base.equals(null))
+        assertFalse(base.equals("x"))
     }
 
     @Test
