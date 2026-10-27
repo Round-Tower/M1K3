@@ -862,3 +862,23 @@ PCC wiring behind the FM27 gate) was challenger-tested; two findings flipped the
 
 <!-- Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.8 — the fold's logic is pinned in swift test;
      the same two evals and the click-through stay owed. Prior: none (new block). -->
+
+## Update — 2026-10-27: #699 MEMSTAT measured — most style corrections stay below the bar
+
+- **Run:** MEMSTAT on a Release build of `5ac4dfd3`, with EmbeddingGemma 2 and its 0.95 dedupe bar, on the
+  isolated screengrab root (M1 Max, AC). Transcript: `docs/evals/2026-10-27-memstat-style.txt`.
+- **Raw cosine:** the 8 style corrections score min 0.861, median 0.901, max 0.982. 1 of 8 reaches 0.95.
+- **Production ingest path:** 0 of 8 eaten, 1 of 8 superseded, 7 of 8 leave both rows live. The one
+  supersede is the order swap ("code before the explanation" ↔ "explanation before the code", 0.982).
+- **What it means:** a real correction such as "short" → "long, detailed" keeps both rows, so the style
+  line carries both, newest first: "The user prefers long, detailed answers. The user prefers short
+  answers." Phase 1 then relies on the brain reading the first sentence as the current ask. An
+  axis-scoped supersede is owed (a new style fact retires the live style row on the same axis), or the
+  renderer keeps the newest fact per axis. Kev's call. The paired style chateval arm is still owed; it
+  would show whether a brain honours the newest sentence.
+- **Side finding:** restatements now read 5 of 5 superseded. The 10-10 probe's "0/5 restatements eaten"
+  was the Tier 2 supersede, which the old probe counted as survived.
+
+<!-- Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.75 — 8 hand-curated pairs phrased the way
+     the distiller is told to write style facts; real distiller wording may land elsewhere. Prior: none
+     (new block). -->

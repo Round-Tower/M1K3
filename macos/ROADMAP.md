@@ -319,7 +319,9 @@ stays a possible later companion.
   Three more from its review: iOS stores style rows but does not apply them yet (wire it, or
   keep Phase 1 Mac-only); forgetting an edited fact also deletes the wording it replaced; a
   later fact of another kind at the twin bar still supersedes a live style row.
-  Owed evals: MEMSTAT's style-correction class and the paired style chateval arm.
+  MEMSTAT measured 10-27: 7 of 8 style corrections stay below Gemma's 0.95 bar and leave both rows
+  live (1 of 8 superseded, 0 eaten), so an axis-scoped supersede is owed, or newest-per-axis
+  rendering. Still owed: the paired style chateval arm.
 
 - **LinkedIn + the first Teams customer** — the 90-day founder move (#369).
   One post a week; the product demos itself; the DyslexiaAI story is the
@@ -456,3 +458,5 @@ stays a possible later companion.
      (the PR stays open for them). Confidence 0.85. -->
 <!-- Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — three more #699 calls from the review:
      the iOS gap, the forget walk, the cross-kind supersede. Confidence 0.85. -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-27 — #699's MEMSTAT result replaces its "owed" line: 7 of 8
+     style corrections leave both rows live, so the axis-scoped supersede joins the calls. Confidence 0.8. -->
