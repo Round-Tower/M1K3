@@ -16,6 +16,14 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-07-01, Confidence 0.85 (pure metrics +
 //  reporter TDD'd; the MLX report call + UI badge are verify-by-launch). Prior: Unknown.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (#696) — `prefilledTokens` (Optional, init default nil, so every
+//  existing call site is unchanged): the tokens THIS generation prefilled. `promptTokens` stays the true context
+//  (the readout's window pressure) and over-counts compute when the persona-prefix KV is warm; the energy
+//  ledger prices `prefilledTokens ?? promptTokens`. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (#696 pre-push review fold) — `modelID` (Optional, init default nil): the
+//  model that generated. The ledger bills by it, not by the picker: a deep dive serves Big while Lil stays selected.
+//  A model id is not message text, and `ChatMessage.metrics` is transient, so nothing new is persisted.
+//  Confidence 0.85.
 
 import Synchronization
 
@@ -26,11 +34,26 @@ public struct GenerationMetrics: Sendable, Equatable, Codable {
     public let promptTokens: Int
     public let generationTokens: Int
     public let tokensPerSecond: Double
+    /// The tokens THIS generation prefilled — the suffix past a warm persona-prefix
+    /// KV cache, or the whole prompt when nothing was reused. Compute, not context:
+    /// the energy ledger prices this. `nil` when the reporter does not know it
+    /// (and in JSON written before the field existed).
+    public let prefilledTokens: Int?
+    /// The model that ran this generation (the provider's model id). The energy
+    /// ledger attributes the tier by it, because the brain the picker shows is not
+    /// always the one generating (a deep dive re-points the MLX slot at Big).
+    /// `nil` when the reporter does not know it (and in JSON written before it existed).
+    public let modelID: String?
 
-    public init(promptTokens: Int, generationTokens: Int, tokensPerSecond: Double) {
+    public init(
+        promptTokens: Int, generationTokens: Int, tokensPerSecond: Double, prefilledTokens: Int? = nil,
+        modelID: String? = nil
+    ) {
         self.promptTokens = promptTokens
         self.generationTokens = generationTokens
         self.tokensPerSecond = tokensPerSecond
+        self.prefilledTokens = prefilledTokens
+        self.modelID = modelID
     }
 
     /// Fraction of a context window the prompt consumed, clamped to 0…1. `nil`

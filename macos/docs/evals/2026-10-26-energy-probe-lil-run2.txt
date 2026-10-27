@@ -1,0 +1,23 @@
+# energy probe run 2 (#696, M1K3_SELFTEST_ENERGY=1, Lil) — Release build of ca4e434e (1.3.0), built 2026-10-26 into m1k3-infer-dd, run 21:59; M1K3App/M1K3-MAS.entitlements (app-sandbox true) signed Apple Development; M1 Max 64 GB, macOS 27.0 26A428, AC Power, powermode 2.
+# Headless direct exec under caffeinate -dis from a scratch cwd, no live M1K3, nothing else on the MLX slot: M1K3_SELFTEST=1 M1K3_SELFTEST_ENERGY=1 M1K3_SELFTEST_OUT=- M1K3_SELFTEST_MODEL=mlx-community/Qwen3.5-4B-MLX-4bit <app>/Contents/MacOS/M1K3
+=== M1K3 SELF-TEST (inside .app bundle) ===
+✓ store+ingest: 1 chunk, 1 embedding(s)
+• AFM available: true
+✓ AFM RAG answer: The hydraulic seal on the conveyor failed under load [Plant Notes §3.2 Seals].
+  grounded in 1 source(s)
+• loading the MLX embedder (EmbeddingGemma 2; downloads on first use)…
+✓ MLX embed (mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v1): dim=512 ‖v‖=1.000
+embedwarm: cold=1850ms warm=9ms delta=1840ms (delta = first-turn TTFT tax without the launch warm)
+• loading MLX generation model mlx-community/Qwen3.5-4B-MLX-4bit…
+✓ MLX generate: <think>Thinking about the user's request: "In one short sentence, what is a hydraulic seal?"
+
+I need to define a hydraulic seal in a single, concise sentence. A hydraulic seal prev
+• energy: the RUSAGE_INFO_V6 read inside the app, then one generation…
+✓ energy: V6 read inside the app (sandboxed: true) energy_nj=15150773844 billed=3963861986
+• energy: loading mlx-community/Qwen3.5-4B-MLX-4bit…
+• energy: warm-up outside the window (persona seed + one throwaway generation): 3.43 s
+energy gen [mlx-community/Qwen3.5-4B-MLX-4bit]: 1.70 s, context=1762 prefilled=26 decode=135 tok @ 85 tok/s, 709 chars
+energy cpu (measured, CPU only): 3.459 J over the window (2.04 W), P-cores 3.459 J, billed Δ 18999
+energy estimate (lil, uncalibrated, rate measured on Apple M1 Max, 64 GB): 60.2 J = 26 × 0.0601 + 135 × 0.4343; the CPU counter saw 5.7 % of it
+✓ energy: done — the CPU joules are measured; the estimate is not (docs/ENERGY_MEASUREMENT.md)
+=== END SELF-TEST ===
