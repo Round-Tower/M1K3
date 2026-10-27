@@ -94,6 +94,16 @@
 //  aren't).
 //  Review: Kev + claude-opus-5-5, 2026-10-26, Confidence 0.75 — the `grounded-long` kind (six fixtures over
 //  six-section documents, `ChatEvalFixtures+GroundedLong.swift`), last in `all` so no earlier run order moves.
+//  Review: Kev + claude-fable-5.1, 2026-10-26, Confidence 0.75 — the `format` kind (#716, eight fixtures in
+//  `ChatEvalFixtures+Format.swift`, last in `all`): shape follows content UNPROMPTED — a compare wants a table, a
+//  how-to numbered steps, banter no markup at all, and two voice-path fixtures carry `spokenNoMarkup`, the one new
+//  expectation flag: the stage hands the scorer SpeechTextPolish's text and it must carry no markup.
+//  Review: same day (pre-push review fold) — `follow-no-bullets` forbids bullet SHAPES ("\n- ", "\n1. "), not bare
+//  "\n-"/"\n*": under the scorer's new first-line read the bare star found itself inside a bold-led one-liner, the
+//  very shape the persona now asks for. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.85 — the `mechanic` kind (#697 Phase 1): six fixtures
+//  whose send runs on a set `MachineScenario` (`ChatEvalFixtures+Mechanic.swift`), and the fixture's Optional
+//  `machine`; last in `all` so no earlier run order moves.
 //  Review: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.8 — `mustNotCallTools` and two #680 fixtures
 //  (`world-dublin-history`, `world-cork-history`, #713): stable history voice mode web-searched on 2026-10-25; each
 //  avoids the three web reads, so a chateval shows whether the search head flips them to no-search. World-knowledge
@@ -212,6 +222,18 @@ public enum TaskKind: String, Sendable, CaseIterable, Equatable, Codable {
     /// decides what the brain reads (grounded-Q's one-line docs never reach it). The budget arm's
     /// kind: `-groundingBudget N` (2026-10-26, `ChatEvalFixtures+GroundedLong.swift`).
     case groundedLong = "grounded-long"
+    /// Shape follows content, unprompted (#716, 2026-10-26, `ChatEvalFixtures+Format.swift`): a comparison
+    /// across a few points wants a table, a how-to with ordered actions numbered steps, small talk no markdown
+    /// at all — none of the prompts name a shape, which is what separates this from `document`. The voice-path
+    /// fixtures (`spokenNoMarkup`) score what the speech lane would say. Last, so older reports' row order holds.
+    case format
+    /// Cool Head's line (#697 Phase 1): each send runs on a set machine (`MachineScenario`: heat,
+    /// Low Power Mode, a battery or none), through the app's own Cool Head fold, and the turn's
+    /// `.note` activity is scored for honesty: one note when the send eases effort and none when
+    /// it doesn't, no number it never read, no fan, battery, charger or chip it can't see. The
+    /// answer beside it must still answer. Phase 1 measures the note on the activity channel, not
+    /// a spoken "how's the machine?" answer (Phase 2's tool).
+    case mechanic
 
     public var label: String {
         rawValue
@@ -271,6 +293,11 @@ public struct EvalExpectation: Sendable, Equatable {
     /// ("4", "7", "36", "apr") that a confabulating answer hits by accident
     /// ("€46.08", "17", "approximately") — the 2026-10-06 pre-push review.
     public let wholeWordFacts: Bool
+    /// What the speech lane would say — `EvalObservation.spokenText`, SpeechTextPolish's output, handed in by
+    /// the live stage — must carry no markup (a pipe, bold, a fence, a heading, a dash run). Skipped, never
+    /// failed, where no spoken text was handed in (the bare arm, `swift test`). The voice-path half of the
+    /// `format` kind (#716).
+    public let spokenNoMarkup: Bool
 
     public init(
         mustContainAny: [String] = [],
@@ -286,7 +313,8 @@ public struct EvalExpectation: Sendable, Equatable {
         minChars: Int? = nil,
         maxChars: Int? = nil,
         lengthIsHard: Bool = false,
-        wholeWordFacts: Bool = false
+        wholeWordFacts: Bool = false,
+        spokenNoMarkup: Bool = false
     ) {
         // The scorer renders these as opposing checks off the same
         // RefusalHeuristic call — a fixture setting both can never pass (109
@@ -306,6 +334,7 @@ public struct EvalExpectation: Sendable, Equatable {
         self.maxChars = maxChars
         self.lengthIsHard = lengthIsHard
         self.wholeWordFacts = wholeWordFacts
+        self.spokenNoMarkup = spokenNoMarkup
     }
 }
 
@@ -320,6 +349,10 @@ public struct ChatEvalFixture: Sendable, Equatable, Identifiable {
     /// `Resources/VisionFixtures` — resolve with `VisionFixtureAssets.url(for:)`.
     /// Only `vision` fixtures carry any; empty everywhere else.
     public let images: [String]
+    /// The machine the turn's send runs on (the `mechanic` kind only; nil everywhere else, so
+    /// every other turn runs exactly as before): the readings Cool Head takes per send, set by
+    /// the fixture instead of read off the eval Mac.
+    public let machine: MachineScenario?
     public let expectation: EvalExpectation
 
     public init(
@@ -328,6 +361,7 @@ public struct ChatEvalFixture: Sendable, Equatable, Identifiable {
         prompt: String,
         seedDoc: String? = nil,
         images: [String] = [],
+        machine: MachineScenario? = nil,
         expectation: EvalExpectation
     ) {
         self.id = id
@@ -335,6 +369,7 @@ public struct ChatEvalFixture: Sendable, Equatable, Identifiable {
         self.prompt = prompt
         self.seedDoc = seedDoc
         self.images = images
+        self.machine = machine
         self.expectation = expectation
     }
 }
@@ -1489,10 +1524,12 @@ public enum ChatEvalFixtures {
         .init(
             id: "follow-no-bullets", kind: .instructionFollowing,
             prompt: "Explain gravity in one plain sentence. Do not use bullet points or lists.",
-            // Newline-anchored so a mid-sentence hyphen or a "1970s" can't
-            // false-fail; only real list scaffolding trips it.
+            // Newline-anchored, marker AND its space, so a mid-sentence hyphen, a "1970s" or a bold-led
+            // one-liner ("**Gravity** pulls…" — a bare "\n*" sat inside "\n**") can't false-fail; only real
+            // list scaffolding trips it, a list that OPENS the answer included (the scorer's first-line
+            // read, #716). Re-pinned on the fixture itself in ChatEvalScorerTests.
             expectation: .init(
-                mustNotContain: ["\n-", "\n*", "\n1.", "\n2.", "•"],
+                mustNotContain: ["\n- ", "\n* ", "\n1. ", "\n2. ", "•"],
                 mustComply: true, minChars: 10, maxChars: 400, lengthIsHard: true
             )
         ),
@@ -1617,7 +1654,7 @@ public enum ChatEvalFixtures {
 
     public static let all: [ChatEvalFixture] =
         openChat + groundedQ + reasoning + codeGen + toolUse + refusal + security + worldKnowledge
-            + humour + interview + instructionFollowing + document + sycophancy + vision + groundedLong
+            + humour + interview + instructionFollowing + document + sycophancy + vision + groundedLong + format + mechanic
 
     /// Fixtures for one kind (the report groups by these).
     public static func fixtures(for kind: TaskKind) -> [ChatEvalFixture] {

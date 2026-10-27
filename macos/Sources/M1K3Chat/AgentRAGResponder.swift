@@ -221,6 +221,10 @@
 //  imported `.conversation` (another assistant's old answer, on the document lane since #711) no longer counts as the
 //  user's own document for `documentCorrected`, so an import can't silently turn world-fact lookups into plain turns.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `turnNoteProvider` (#697): Cool Head's line for the send that eased
+//  effort, read once per turn after the defer, availability and image gates and sent as `.note` on the activity
+//  channel. It never reaches `turnClauses()` or a prompt builder: every prompt byte is unchanged, pinned by test.
+//  Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — the search head's veto (#713) after `documentCorrected`: when the
 //  route carries `staysLocal` and the pick reads the web, a local verdict takes the web reads out
 //  (`searchCorrected`); a pick left empty answers on the plain route with the turn's chunks and history. Logged
@@ -291,6 +295,11 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// `() -> Bool` for the same dependency-direction reason as `maxIterationsProvider`:
     /// the CoolHeadLevel enum lives in M1K3LanguageModel, which this module doesn't link.
     private let defersHeavyGenerationProvider: (@Sendable () -> Bool)?
+    /// Cool Head's line for this turn (#697): non-nil only on the send whose pressure just eased
+    /// effort. Read ONCE per turn, after the gates (a turn that never runs takes no line), and sent
+    /// as `.note` on the activity channel, never into a prompt: the line is the app's fixed copy,
+    /// not context, so the brain never reads it and every prompt byte is unchanged. `nil` → no read.
+    private let turnNoteProvider: (@Sendable () -> String?)?
     /// The grounding token ceiling, read FRESH each turn like the other
     /// providers so a brain hot-swap re-sizes it immediately.
     /// `GroundingBudget.defaultTokenBudget` was DERIVED from Big's 3000-token
@@ -344,6 +353,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         historyBudgetProvider: @escaping @Sendable () -> HistoryWindow.Budget = { .default },
         maxIterationsProvider: (@Sendable () -> Int)? = nil,
         defersHeavyGenerationProvider: (@Sendable () -> Bool)? = nil,
+        turnNoteProvider: (@Sendable () -> String?)? = nil,
         groundingBudgetProvider: @escaping @Sendable () -> Int = { GroundingBudget.defaultTokenBudget },
         ageClauseProvider: @escaping @Sendable () -> String? = { nil },
         egressClauseProvider: @escaping @Sendable () -> String? = { nil },
@@ -376,6 +386,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         self.browserContextProvider = browserContextProvider
         self.todoContextProvider = todoContextProvider
         self.defersHeavyGenerationProvider = defersHeavyGenerationProvider
+        self.turnNoteProvider = turnNoteProvider
         self.groundingBudgetProvider = groundingBudgetProvider
         self.plainRouteProvider = plainRouteProvider
         self.excludedKinds = excludedKinds
@@ -478,6 +489,13 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 continuation.finish()
             }
             return (sources: [], stream: stream)
+        }
+
+        // Cool Head's line (#697), on the activity channel and nowhere else. After the three gates
+        // above, so a deferred, unavailable or declined turn leaves the line unread (the next send
+        // overwrites it); before the phase timeline, so the caption is up before retrieval.
+        if let note = turnNoteProvider?(), !note.isEmpty {
+            onActivity(.note(note))
         }
 
         // Pre-generation phase instrument: the 2026-08-10 eval found 177s of

@@ -13,6 +13,11 @@
 //  both are pinned here.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #697: Cool Head's `.note` lands on the answer as `turnNote`
+//  (persisted, Optional), never in its text, its activity label or the replayed history. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #697 pre-push review fold: both note tests send through one gated,
+//  note-only turn and judge it mid-flight, so a note that strays into the activity label fails, and the replay
+//  check runs with the note demonstrably on the answer. Confidence 0.9.
 
 import Foundation
 @testable import M1K3Chat
@@ -126,6 +131,42 @@ private final class FailOnceThenRecordResponder: RAGResponding, @unchecked Senda
             continuation.yield("recovered")
             continuation.finish()
         })
+    }
+}
+
+/// Reports Cool Head's line on the activity channel and nothing else, then holds the answer until
+/// `finish()` (#697): the app's chat responder reports the line on the send that eased effort. With no
+/// later activity to overwrite the label, a note that strayed into `activityLabel` shows mid-flight,
+/// and a test sees the note land before it judges anything (the GatedLeakingToolResponder idiom).
+/// The stream exists before the note is reported, so `release` is set before any hop can land.
+/// `@unchecked Sendable`: `release` is only read from the @MainActor test body after that.
+private final class GatedNotingResponder: RAGResponding, @unchecked Sendable {
+    static let line = "This machine's running warm, so I'm going easy on the heavy lifting."
+    private var release: (() -> Void)?
+
+    func answerStreaming(
+        _ question: String
+    ) async throws -> (sources: [ChunkHit], stream: AsyncStream<String>) {
+        try await answerStreaming(question, history: [], onActivity: { _ in })
+    }
+
+    func answerStreaming(
+        _: String,
+        history _: [ChatTurn],
+        onActivity: @escaping @Sendable (ResponderActivity) -> Void
+    ) async throws -> (sources: [ChunkHit], stream: AsyncStream<String>) {
+        let stream = AsyncStream<String> { continuation in
+            release = {
+                continuation.yield("ok")
+                continuation.finish()
+            }
+        }
+        onActivity(.note(Self.line))
+        return ([], stream)
+    }
+
+    func finish() {
+        release?()
     }
 }
 
@@ -317,5 +358,69 @@ struct ChatSessionTests {
         #expect(assistant?.text.contains("ICH-Q7") == true) // grounded citation kept
         #expect(assistant?.text.contains("FAKE") == false) // invented citation stripped
         #expect(assistant?.citations == [Citation(source: "ICH-Q7", heading: "5.2 Cleaning")])
+    }
+
+    // MARK: - Cool Head's line (#697)
+
+    /// Sends "hello" through `responder`'s gated, note-only turn and waits mid-flight until the note lands.
+    private func sendUntilTheNoteLands(
+        _ responder: GatedNotingResponder
+    ) async throws -> (ChatSession, Task<Void, Never>) {
+        let session = ChatSession(responder: responder)
+        let sendTask = Task { await session.send("hello") }
+        // The activity hops ride Task { @MainActor }: wait for this one (the ToolTraceTests idiom).
+        for _ in 0 ..< 200 where session.messages.last?.turnNote == nil {
+            try await Task.sleep(for: .milliseconds(5))
+        }
+        return (session, sendTask)
+    }
+
+    @Test("Cool Head's note lands on the answer message, not in its text or its activity label")
+    func noteLandsOnTheAnswerMessage() async throws {
+        let responder = GatedNotingResponder()
+        let (session, sendTask) = try await sendUntilTheNoteLands(responder)
+        // Mid-flight, with nothing else reported: the note is the caption and never the status text.
+        let streaming = try #require(session.messages.last)
+        #expect(streaming.status == .streaming)
+        #expect(streaming.turnNote == GatedNotingResponder.line)
+        #expect(streaming.activityLabel == nil, "the note must not stand in as the activity label")
+
+        responder.finish()
+        await sendTask.value
+        let answer = try #require(session.messages.last)
+        #expect(answer.role == .assistant)
+        #expect(answer.turnNote == GatedNotingResponder.line)
+        #expect(answer.text == "ok")
+        #expect(answer.activityLabel == nil)
+        #expect(answer.status == .complete)
+        #expect(session.messages.count == 2, "the note is a field on the answer, never a bubble of its own")
+    }
+
+    @Test("Cool Head's note is never replayed as history")
+    func noteIsNotReplayedAsHistory() async throws {
+        let responder = GatedNotingResponder()
+        let (session, sendTask) = try await sendUntilTheNoteLands(responder)
+        responder.finish()
+        await sendTask.value
+        // The note is demonstrably on the answer, so the replay below is judged with it present.
+        try #require(session.messages.last?.turnNote == GatedNotingResponder.line)
+        let replayed = ChatSession.replayableHistory(session.messages).map(\.text)
+        #expect(replayed == ["hello", "ok"])
+        #expect(!replayed.joined().contains(GatedNotingResponder.line))
+    }
+
+    @Test("turnNote persists, and decodes to nil on a transcript that predates it")
+    func turnNoteDecodesToNilOnAPreNoteTranscript() throws {
+        var message = ChatMessage(role: .assistant, text: "answer", status: .complete)
+        message.turnNote = GatedNotingResponder.line
+        let roundTrip = try JSONDecoder().decode(ChatMessage.self, from: JSONEncoder().encode(message))
+        #expect(roundTrip.turnNote == GatedNotingResponder.line)
+        // Drop the key the way every saved transcript before #697 lacks it: no keyNotFound, no wiped history.
+        var object = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(message)) as? [String: Any])
+        #expect(object["turnNote"] as? String == GatedNotingResponder.line)
+        object.removeValue(forKey: "turnNote")
+        let decoded = try JSONDecoder().decode(ChatMessage.self, from: JSONSerialization.data(withJSONObject: object))
+        #expect(decoded.turnNote == nil)
+        #expect(decoded.text == "answer")
     }
 }

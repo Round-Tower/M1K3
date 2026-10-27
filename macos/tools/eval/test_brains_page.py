@@ -426,3 +426,11 @@ def test_a_not_applicable_score_leaves_every_count():
     assert lil["passed"] == 1 and lil["total"] == 1
     assert "vision" not in lil["byKind"]
     assert lil["medianLatencyMS"] == 40
+
+
+def test_kind_sort_places_format_last():
+    # #716: the page's row order is the report's (TaskKind.allCases) — format after grounded-long, after vision —
+    # never alphabetical among the kinds it knows; a kind it doesn't know still sorts alphabetically after them.
+    assert bp._kind_sort({"format", "grounded-long", "vision", "open-chat"}) == ["open-chat", "vision", "grounded-long", "format"]
+    assert bp._kind_sort(["format", "open-chat"]) == ["open-chat", "format"]
+    assert bp._kind_sort(["zzz-new", "format", "aaa-new"]) == ["format", "aaa-new", "zzz-new"]

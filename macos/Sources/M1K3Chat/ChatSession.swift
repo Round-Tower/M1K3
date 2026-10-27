@@ -81,6 +81,9 @@
 //  Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-10-17 (pre-push review fold) — `skipCaptureOffTurns` also after a background
 //  answer, logs a failed write, and the distill task never moves the watermark backwards. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `ChatMessage.turnNote` (#697): a `.note` activity (Cool Head's
+//  line) lands on the streaming answer as a persisted Optional field, not in the transient label; every reader
+//  of `.text` (replay, distillation, the leak guard, speech, share) never sees it. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -259,6 +262,13 @@ public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
     /// label, including after a reload). nil means local, the only value any
     /// transcript before 2026-09-14 has. OPTIONAL for the keyNotFound reason above.
     public var answerOrigin: AnswerOrigin?
+    /// A line about this turn itself, shown as a caption over the answer: today only Cool Head's,
+    /// on the send whose heat or Low Power Mode eased the effort (#697). A field on the answer, not
+    /// a bubble of its own, because speech and the send epilogue read the first assistant message
+    /// after the question as the answer. Never part of `text`, so the replay, distillation, the leak
+    /// guard, speech and share never see it. Persisted so a reload still says why that answer was
+    /// lighter; OPTIONAL for the keyNotFound reason above, so every earlier transcript decodes nil.
+    public var turnNote: String?
     public var status: Status
 
     /// An off-device producer of an answer. One case, deliberately: a new rung
@@ -269,7 +279,7 @@ public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
 
     enum CodingKeys: String, CodingKey {
         case id, role, text, sources, status, reasoning, attachments, toolsUsed, brain, contextExcluded, interrupted
-        case answerOrigin
+        case answerOrigin, turnNote
     }
 
     public init(
@@ -618,6 +628,11 @@ public final class ChatSession {
                             // trace the leak guard just stripped (and mutate a
                             // message already written to disk).
                             guard case .streaming = $0.status else { return }
+                            // Cool Head's line stays on the answer; the label is for what's running now.
+                            if case let .note(line) = activity {
+                                $0.turnNote = line
+                                return
+                            }
                             $0.activityLabel = ActivityLabeler.label(for: activity)
                             // Tool dispatches also land in the persisted trace —
                             // the label is transient, the provenance is not.
