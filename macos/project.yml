@@ -38,6 +38,8 @@
 # Review: Kev + claude-opus-5-5, 2026-10-14 — M1K3iOS registers the `m1k3` URL scheme: App Store Connect won't add an
 # in-app event for review without a deep link, and Halloween's (m1k3://event/halloween) opens the app through it
 # (check_store_targets.py pins it). Confidence 0.85; the open is verify-by-launch on a device.
+# Review: Kev + claude-opus-5.5, 2026-10-27 — the M1K3 target and the MobileShell template link M1K3AnswerBlocks:
+# ReadingText.swift (compiled into all three shells) renders typed answer blocks (#717). Confidence 0.85.
 # Review: Kev + claude-opus-5-5, 2026-10-19 — MARKETING_VERSION 1.1.0 → 1.1.1 (chore(release): v1.1.1): App Store Connect
 # refused build 537 at 1.1.0 (approved 2026-10-15, train closed). Fixes only since, so PATCH (VERSIONING.md).
 # Review: Kev + claude-opus-5-5, 2026-10-21 — MARKETING_VERSION 1.1.1 → 1.2.0 (chore(release): v1.2.0), Kev's call: Mac
@@ -164,6 +166,9 @@ targetTemplates:
       # M1K3Preview links transitively via M1K3AgentTools.
       - package: M1K3
         product: M1K3Chat
+      # Typed answer blocks (#717): the parser + cards ReadingText renders.
+      - package: M1K3
+        product: M1K3AnswerBlocks
       - package: M1K3
         product: M1K3Knowledge
       - package: M1K3
@@ -248,6 +253,9 @@ targets:
     dependencies:
       - package: M1K3
         product: M1K3Chat
+      # Typed answer blocks (#717): the parser + cards ReadingText renders.
+      - package: M1K3
+        product: M1K3AnswerBlocks
       - package: M1K3
         product: M1K3Knowledge
       - package: M1K3

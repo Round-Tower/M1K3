@@ -231,6 +231,86 @@ struct SpeechTextPolishTests {
         #expect(polished.contains("More prose follows."))
         #expect(!polished.contains("`"))
     }
+
+    // MARK: - Typed answer blocks (#717)
+
+    @Test("a steps block speaks as sentences, never as JSON")
+    func typedStepsSpeakAsSentences() {
+        let text = "Here's how:\n```m1k3-steps\n{\"steps\": [\"Loosen the **nut**\", \"Lift the cover.\"]}\n```\nThat's it."
+        let polished = SpeechTextPolish.polish(text)
+        #expect(polished == "Here's how:\nStep 1: Loosen the nut. Step 2: Lift the cover.\nThat's it.")
+        #expect(!polished.contains("{"))
+        #expect(!polished.contains("steps\""))
+        #expect(SpeechTextPolish.polish(polished) == polished)
+    }
+
+    @Test("a lone closed typed fence (what the sentence folder emits) speaks its sentences")
+    func typedFenceSentenceSpeaks() {
+        let chunk = "```m1k3-choices\n{\"prompt\": \"Which engine?\", \"options\": [\"Lil\", \"Big\", \"Mini\"]}\n```"
+        #expect(SpeechTextPolish.spokenSentence(chunk) == "Which engine? Options: Lil, Big, or Mini.")
+    }
+
+    @Test("a malformed or unclosed typed fence says it's on screen, on every lane, never its JSON")
+    func malformedTypedFenceSaysOnScreen() {
+        // Voice mode speaks each folded chunk through speak(), which reads the RAW
+        // chunk when polish returns "" — so a lone bad fence must polish to words.
+        let lone = "```m1k3-steps\n{\"steps\": [1, 2]}\n```"
+        #expect(SpeechTextPolish.polish(lone) == "I've put that on screen.")
+        #expect(SpeechTextPolish.spokenSentence(lone) == "I've put that on screen.")
+        #expect(SpeechTextPolish.spokenSentence("```m1k3-steps\n{\"steps\": [\"Lo") == "I've put that on screen.")
+        let answer = "Try this.\n```m1k3-choices\n{\"prompt\": \"Pick\"}\n```"
+        #expect(SpeechTextPolish.polish(answer) == "Try this.\nI've put that on screen.")
+    }
+
+    @Test("a choices block before a FOLLOWUPS trailer speaks the options and not the trailer")
+    func typedChoicesBeforeFollowUps() {
+        let text = "Pick one:\n```m1k3-choices\n{\"prompt\": \"Tea or coffee?\", \"options\": [\"Tea\", \"Coffee\"]}\n```\n"
+            + "FOLLOWUPS: [\"How strong?\"]"
+        #expect(SpeechTextPolish.polish(text) == "Pick one:\nTea or coffee? Options: Tea or Coffee.")
+    }
+
+    @Test("an ordinary fence that merely mentions a typed tag is still read verbatim")
+    func ordinaryFenceWithTypedTagVerbatim() {
+        let text = "The format:\n````\n```m1k3-steps\n{\"steps\": [\"One\"]}\n```\n````\nDone."
+        let polished = SpeechTextPolish.polish(text)
+        #expect(polished.contains("{\"steps\": [\"One\"]}"))
+    }
+
+    // Review: Kev + claude-opus-5.5, 2026-10-27 (code-quality review fold) — the typed blocks beside an
+    // ordinary fence (where the segmenter's fence rules and fencedCodeRanges must agree), a block's words
+    // through the later passes (URL, emoji, the name), and the fixed point on every typed output.
+    @Test("typed blocks around an ordinary fence: both spoken, the code between them verbatim")
+    func typedBlocksAroundOrdinaryFence() {
+        let text = "First:\n```m1k3-steps\n{\"steps\": [\"Boil\"]}\n```\nCode:\n```swift\nlet p = *ptr*\n```\n"
+            + "Then:\n```m1k3-choices\n{\"prompt\": \"Milk?\", \"options\": [\"Yes\", \"No\"]}\n```"
+        let polished = SpeechTextPolish.polish(text)
+        #expect(polished.contains("```swift\nlet p = *ptr*\n```"))
+        #expect(polished.hasPrefix("First:\nStep 1: Boil.\n"))
+        #expect(polished.hasSuffix("Then:\nMilk? Options: Yes or No."))
+        #expect(!polished.contains("m1k3-"))
+        #expect(SpeechTextPolish.polish(polished) == polished)
+    }
+
+    @Test("a block's words take the later passes like prose: a URL to its host, no emoji, the name as Mike")
+    func typedBlockWordsArePolished() {
+        let text = "```m1k3-steps\n"
+            + "{\"steps\": [\"Open https://www.example.org/setup 🎉\", \"Ask **M1K3** to help.\"]}\n```"
+        let polished = SpeechTextPolish.polish(text)
+        #expect(polished == "Step 1: Open example.org. Step 2: Ask Mike to help.")
+        #expect(SpeechTextPolish.polish(polished) == polished)
+    }
+
+    @Test("one pass is a fixed point for every typed output: sentences and the on-screen line")
+    func typedOutputsAreFixedPoints() {
+        for text in [
+            "```m1k3-choices\n{\"prompt\": \"Which engine?\", \"options\": [\"Lil\", \"Big\"]}\n```",
+            "```m1k3-steps\n{\"steps\": [1]}\n```",
+            "Before.\n```m1k3-steps\n{\"steps\": [\"Lo",
+        ] {
+            let once = SpeechTextPolish.polish(text)
+            #expect(SpeechTextPolish.polish(once) == once, "\(text.debugDescription)")
+        }
+    }
 }
 
 // Review: Kev + claude-fable-5.1, 2026-09-12 — narration read a "Sources:" list and a

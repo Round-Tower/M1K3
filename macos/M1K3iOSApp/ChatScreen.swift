@@ -100,6 +100,9 @@
 //  image names the answering brain. Confidence 0.75 (verify on the phone).
 //  Review: Kev + claude-sonnet-5.5, 2026-10-22 — Offline AI Flight Club: the costume line also appears in Flight
 //  Club's window while offline (`NetworkPathWatch.shared.isOffline`). Confidence 0.8 (verify on a device in Airplane Mode).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — typed answer blocks (#717): a choices card is live on the newest
+//  message only, while no turn responds (`acceptsChoices`), as on the Mac; an earlier or reloaded card stays
+//  readable and never sends a stale option. Confidence 0.75 (verify on the phone).
 
 import M1K3Avatar
 import M1K3Chat
@@ -494,7 +497,8 @@ struct ChatScreen: View {
                                 // over the streaming text).
                                 guard brainReady else { return }
                                 Task { await core.send(question) }
-                            }
+                            },
+                            acceptsChoices: message.id == core.chat.messages.last?.id && !core.chat.isResponding
                         )
                         .id(message.id)
                     }

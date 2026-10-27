@@ -13,6 +13,8 @@
 //  must update them here, and each anchor is asserted to exist first). Prior: none (new file).
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — #697 pre-push review fold: `send` itself is pinned to fold Cool Head
 //  before its chat turn starts. Without that order the turn reads an empty slot. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #733's master merge: the answer's ReadingText now opts into typed
+//  answer blocks, so the caption pin finds the call by its prefix, not its whole argument list. Confidence 0.9.
 //
 
 import Foundation
@@ -106,7 +108,8 @@ struct CoolHeadNoteCallSiteTests {
         let view = try Self.source("M1K3App/MessageView.swift")
         let body = try Self.block(from: "private var assistantBody: some View {", closing: "\n    }\n", in: view)
         let note = try #require(body.range(of: "if let note = message.turnNote"), "the bubble never shows the note")
-        let text = try #require(body.range(of: "ReadingText(message.text)"))
+        // The answer's ReadingText, whatever it opts into (#717 adds `answerBlocks:` and `streaming:`).
+        let text = try #require(body.range(of: "ReadingText(message.text"))
         #expect(note.lowerBound < text.lowerBound, "the note sits above the answer")
         #expect(!view.contains("onSpeak(message.turnNote"))
     }
