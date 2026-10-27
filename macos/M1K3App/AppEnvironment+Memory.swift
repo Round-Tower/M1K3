@@ -15,11 +15,18 @@
 //  Signed: Kev + claude-opus-4-8, 2026-07-20, Confidence 0.82 (view wiring;
 //  verify-owed = on-device click-through). Prior: MemoriesView flat list over
 //  documents(kind: .memory).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699 Phase 1: `refreshUserStyle` reads the live `.style`
+//  rows newest first into the persona (launch, after a distillation that wrote, after forget and edit),
+//  and `editMemory` makes a fact editable as a SUPERSEDE (source "user:edit", lineage kept), graph first
+//  and corpus twin second with the revive ledger recorded, the coordinator's own order. Confidence 0.8 (verify-by-launch owed: state a
+//  style, leave the chat, see the row, relaunch, read the next prompt).
 
 import Foundation
 import M1K3Chat
+import M1K3Inference
 import M1K3Knowledge
 import M1K3Memory
+import os
 
 extension AppEnvironment {
     /// Live memory-graph facts, newest first — the explorable Memories surface.
@@ -89,6 +96,75 @@ extension AppEnvironment {
             _ = try? store.deleteItem(id: twinID)
             Task { await spotlightDeindex(id: twinID) }
         }
+        refreshUserStyle()
+        refreshCounts()
+        return true
+    }
+
+    // MARK: - Stated style (#699)
+
+    private nonisolated static let memoryEditLog = Logger(subsystem: "app.m1k3", category: "memory-graph")
+
+    /// Re-read the user's stated answer style into the persona: every live `.style`
+    /// row, newest first. Cheap when nothing is stored (one grouped count), and a
+    /// re-read that finds the same rows leaves the system prompt as it was.
+    func refreshUserStyle() {
+        Self.refreshUserStyle(from: memoryStore)
+    }
+
+    /// The same read for the distillation coordinator's `didWrite` hook, which fires
+    /// off the main actor: the persona's box is a Mutex and the store a GRDB queue.
+    /// A failed read keeps the style the persona already has rather than clearing it.
+    nonisolated static func refreshUserStyle(from memoryStore: MemoryStore?) {
+        guard let memoryStore, let texts = try? memoryStore.liveStyleTexts() else { return }
+        M1K3Persona.setUserStyle(texts)
+    }
+
+    /// Edit a fact from the Memories list. An edit is a SUPERSEDE, never a rewrite
+    /// in place: the graph gets a new node (source "user:edit", which reads as "you
+    /// told me") that supersedes the old one, so "How I learned this" shows the
+    /// change. Then the corpus twin follows in the coordinator's own order (graph
+    /// first, corpus second): the old twin leaves retrieval as `.memorySuperseded`
+    /// and the new text joins it under its own content-identity `source_ref`.
+    /// False, with nothing changed, for empty or unchanged text, a corrected row,
+    /// or a failed embed or graph write.
+    @discardableResult
+    func editMemory(_ memory: Memory, text: String) async -> Bool {
+        let newText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let memoryStore, memory.supersededBy == nil, !newText.isEmpty, newText != memory.text else {
+            return false
+        }
+        let edited = Memory(kind: memory.kind, text: newText, source: "user:edit")
+        do {
+            let vector = try await embedder.embed(edited.embeddingText)
+            try memoryStore.rememberConnected(edited, embedding: vector, supersedes: memory.id)
+        } catch {
+            Self.memoryEditLog.error(
+                "memory edit failed (nothing changed): \(error.localizedDescription, privacy: .public)"
+            )
+            return false
+        }
+        let oldRef = MemoryDistillationCoordinator.factSourceRef(memory.text)
+        let oldTwinID = try? store.itemID(forSourceRef: oldRef)
+        if let oldTwinID {
+            _ = try? store.setKind(id: oldTwinID, newKind: .memorySuperseded)
+        }
+        let newTwin = try? await ingester.ingest(
+            title: MemoryDistillationCoordinator.title(for: newText),
+            text: newText,
+            sourceRef: MemoryDistillationCoordinator.factSourceRef(newText),
+            kind: .memory,
+            source: .user
+        )
+        // The coordinator's revive ledger: re-stating the old wording later restores it
+        // AND demotes this edit, never leaving both live in retrieval.
+        if let oldTwinID, let newTwin {
+            try? store.setMeta(
+                key: MemoryDistillationCoordinator.supersededLinkKey(oldTwinID),
+                value: newTwin.itemID.uuidString
+            )
+        }
+        refreshUserStyle()
         refreshCounts()
         return true
     }

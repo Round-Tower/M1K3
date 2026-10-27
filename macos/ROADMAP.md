@@ -313,6 +313,11 @@ stays a possible later companion.
 
 ## Needs Kev — open calls, gathered in one place
 
+- **#699 stated style (Phase 1, PR open):** four calls before it lands. The style line's own
+  160-char budget, or the issue's shared 400 with About-you; style kept out of the catalogued
+  kinds, so MCP can't write it; an edit as a supersede; the StyleAskFence cue list, a heuristic.
+  Owed evals: MEMSTAT's style-correction class and the paired style chateval arm.
+
 - **LinkedIn + the first Teams customer** — the 90-day founder move (#369).
   One post a week; the product demos itself; the DyslexiaAI story is the
   unfair advantage.
@@ -444,3 +449,5 @@ stays a possible later companion.
      process) off #616–#691 and the 10-26 session block. § v1.1.0 marked shipped. Monetization, the 1.0.1
      verify-owed list and the standing 1.0.x items are carried unchanged: not re-verified this sweep.
      Confidence 0.8. -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-27 — #699 Phase 1's four open calls joined "Needs Kev"
+     (the PR stays open for them). Confidence 0.85. -->

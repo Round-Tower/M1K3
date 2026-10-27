@@ -37,6 +37,8 @@
 //  (one user turn that anchors it reads as a request), because a stored style rides every system prompt;
 //  the drops get their own `.info` count. `didWrite` (the `auditSink` closure shape) fires once with the
 //  count when a slice wrote anything, so the app re-reads the style rows into the persona. Confidence 0.85.
+//  Review: same day — `title(for:)` and `supersededLinkKey(_:)` are public, so the Memories editor's supersede
+//  titles the new row and records the revive ledger exactly as `supersede` does. Confidence 0.85.
 
 import CryptoKit
 import Foundation
@@ -263,7 +265,8 @@ public struct MemoryDistillationCoordinator: Sendable {
     /// and a repair that depends on it would leave two contradicting live
     /// rows exactly in the degraded state that needs the repair most
     /// (PR #87 review finding 1).
-    static func supersededLinkKey(_ itemID: UUID) -> String {
+    /// Public so the Memories editor records its supersede in the same ledger (#699).
+    public static func supersededLinkKey(_ itemID: UUID) -> String {
         "memory.superseded-by:\(itemID.uuidString)"
     }
 
@@ -364,8 +367,9 @@ public struct MemoryDistillationCoordinator: Sendable {
         return "memory-fact:\(hex)"
     }
 
-    /// Short facts ARE their titles; long ones cut at a word boundary.
-    static func title(for fact: String) -> String {
+    /// Short facts ARE their titles; long ones cut at a word boundary. Public so
+    /// the Memories editor titles an edited fact by the same rule (#699).
+    public static func title(for fact: String) -> String {
         guard fact.count > maxTitleLength else { return fact }
         let prefix = fact.prefix(maxTitleLength)
         let cut = prefix.lastIndex(of: " ").map { prefix[..<$0] } ?? prefix

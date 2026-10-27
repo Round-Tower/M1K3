@@ -812,3 +812,25 @@ PCC wiring behind the FM27 gate) was challenger-tested; two findings flipped the
      "easily opt-in-able" preserved via the calm-surface shape. Unproven: PCC executor scope is
      estimated from the SDK surface, not built; GM drift risk named not sized. Prior: Kev +
      claude-opus-4-8 (this file, Edge A analysis 2026-06-14). -->
+
+## Update — 2026-10-27: #699 Phase 1 — stated style, never inferred (PR left open for Kev)
+
+- **What:** a `style` memory kind for how the user asked to be answered (length, format, tone). It is
+  uncatalogued (`MemoryStyleKind.swift`), so MCP `remember` and App Intents cannot write it. The
+  distiller files `FACT(style)` phrased "The user prefers/wants…", and the coordinator keeps one only
+  when a single user turn both anchors it and reads as a request (`StyleAskFence.swift`). The graph
+  stores it like any fact, and `M1K3Persona.compose` renders the live rows newest first on their own
+  line, "How the user wants answers: …", inside 160 chars (`UserStyleBlock.swift`).
+- **Lifecycle:** restored at launch beside the profile, re-read when a distillation writes, and after
+  a forget or an edit. An edit in the Memories detail is a supersede (source "user:edit", lineage
+  kept). The PCC prompt never carries it, and with no style every render is byte-identical.
+- **Gates:** swift test pins newest first, survival across a store reopen, and a correction at the
+  hashing twin bar superseding the old ask (`StyleMemoryScenarioTests.swift`). Owed on device: the
+  MEMSTAT style-correction class (do real corrections reach Gemma's 0.95 bar, or do both rows stay
+  live?) and the paired open-chat arm with `M1K3_SELFTEST_CHATEVAL_STYLE` set.
+- **Kev's calls:** the style line's own 160-char budget vs the issue's shared 400; style kept out of
+  the catalogued vocabulary; edit as supersede; the fence's cue list (a heuristic).
+
+<!-- Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.8 — Phase 1 is pinned in swift test; whether
+     a brain honours the line and whether real corrections supersede are the two evals named above.
+     Prior: none (new block). -->

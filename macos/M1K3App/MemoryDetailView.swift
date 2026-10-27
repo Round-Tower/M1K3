@@ -13,6 +13,10 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-07-20, Confidence 0.8 (verify-owed =
 //  on-device click-through with real seeded memories).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: a live fact is editable (Edit → a draft field →
+//  Save), and an edit is a SUPERSEDE (`AppEnvironment.editMemory`): the old wording stays in "How I
+//  learned this". A style row says it rides every conversation. `onChange` lets the list reload after
+//  an edit or a forget. Verify-by-launch owed (click-through). Confidence 0.75.
 
 import M1K3Memory
 import SwiftUI
@@ -22,9 +26,14 @@ struct MemoryDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     let memory: Memory
+    /// Called after an edit or a forget lands, so the list behind this screen reloads.
+    var onChange: () -> Void = {}
 
     @State private var related: [Memory] = []
     @State private var history: [Memory] = []
+    /// The edit draft (#699); nil when not editing.
+    @State private var draft: String?
+    @State private var saving = false
 
     private var provenance: MemoryProvenance {
         MemoryProvenance(source: memory.source)
@@ -48,9 +57,23 @@ struct MemoryDetailView: View {
             // revives whatever the row superseded — deleting mid-chain would
             // resurrect a STALE fact as live beside the true head.)
             if memory.supersededBy == nil {
+                // Edit is a supersede, so the same rule hides it on a corrected row.
+                if draft == nil {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            draft = memory.text
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
+                        .help("Edit this — the old wording is kept in its history")
+                    }
+                }
                 ToolbarItem(placement: .destructiveAction) {
                     Button(role: .destructive) {
-                        if env.forgetMemory(memory) { dismiss() }
+                        if env.forgetMemory(memory) {
+                            onChange()
+                            dismiss()
+                        }
                     } label: {
                         Label("Forget", systemImage: "trash")
                     }
@@ -67,8 +90,12 @@ struct MemoryDetailView: View {
                 if let title = memory.title, !title.isEmpty, title != memory.text {
                     Text(title).font(.headline)
                 }
-                Text(memory.text)
-                    .textSelection(.enabled)
+                if let draft {
+                    editor(draft)
+                } else {
+                    Text(memory.text)
+                        .textSelection(.enabled)
+                }
                 HStack(spacing: 8) {
                     Text(memory.kind.rawValue.capitalized)
                         .font(.caption.weight(.medium))
@@ -80,6 +107,43 @@ struct MemoryDetailView: View {
                 }
             }
             .padding(.vertical, 4)
+        } footer: {
+            if memory.kind == .style {
+                Text("How you asked M1K3 to answer you. It rides every conversation, newest first.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// The edit field, the About-you idiom (Settings → You): a draft, Save, Cancel.
+    @ViewBuilder
+    private func editor(_ text: String) -> some View {
+        let binding = Binding(get: { draft ?? text }, set: { draft = $0 })
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        TextField("What M1K3 should remember", text: binding, axis: .vertical)
+            .lineLimit(2 ... 5)
+            .onSubmit(save)
+        HStack {
+            Button("Save", action: save)
+                .buttonStyle(.glass)
+                .disabled(saving || trimmed.isEmpty || trimmed == memory.text)
+            Button("Cancel") { draft = nil }
+                .buttonStyle(.glass)
+                .disabled(saving)
+        }
+    }
+
+    private func save() {
+        guard let text = draft, !saving else { return }
+        saving = true
+        Task {
+            let saved = await env.editMemory(memory, text: text)
+            saving = false
+            if saved {
+                onChange()
+                dismiss()
+            }
         }
     }
 

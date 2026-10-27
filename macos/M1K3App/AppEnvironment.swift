@@ -139,6 +139,9 @@
 //  in a dive was priced at Lil's rate, and an audition at the stock model's. The sink now hands the ledger the metrics
 //  alone, and the ledger bills by `metrics.modelID` (the model that ran). Pinned by a source scan in
 //  EnergyLedgerTests. Verify-by-launch still owed. Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (#699) — the stated style reaches the persona: restored at launch
+//  beside the profile (`refreshUserStyle`), and re-read by the distillation coordinator's `didWrite` hook when a
+//  slice wrote facts. Verify-by-launch owed (state a style, leave the chat, relaunch). Confidence 0.8.
 
 import AppKit
 import Foundation
@@ -1151,7 +1154,10 @@ final class AppEnvironment {
                 fallback: runtimeProvider,
                 // Wire the graph seam so distilled facts ALSO populate the temporal
                 // memory graph (was corpus-only — the empty-graph root cause).
-                graph: memoryStore.map { DistilledFactGraphAdapter(store: $0) as any DistilledFactGraphWriting }
+                graph: memoryStore.map { DistilledFactGraphAdapter(store: $0) as any DistilledFactGraphWriting },
+                // #699: a slice that wrote facts may have changed the user's stated style;
+                // the next system prompt carries the re-read.
+                didWrite: { [memoryStore] _ in Self.refreshUserStyle(from: memoryStore) }
             ),
             autoCaptureEnabled: { Self.memoryAutoCaptureEnabled() },
             // The rolling distillation trigger follows the replay window in effect (#629).
@@ -2337,6 +2343,8 @@ extension AppEnvironment {
             showBrainUpgradeNotice(notice)
         }
         M1K3Persona.setUserProfile(try? store.meta(key: Self.userProfileMetaKey))
+        // #699: the stated answer style survives a relaunch the same way.
+        refreshUserStyle()
         // Lift any pre-Keychain script approvals into the Keychain once, then
         // drop the tamperable plist copy (Finding 3).
         KeychainScriptApprovalStore().migrateFromUserDefaultsIfNeeded()

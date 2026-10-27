@@ -44,6 +44,8 @@
 //  budget-forcing arm (`-thinkBudgetTokens`) closes the thought; nil (the responder's 4,000) otherwise. Confidence 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — that stand-aside moves into the responder, which asks the brain each
 //  turn (`ThinkBudgetForcing`, forwarded by RuntimeInferenceProvider): the shell passes no budget now, like iOS.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (#699) — `makeMemoryDistillation(…, didWrite:)` threads the
+//  coordinator's write hook through (defaulted, so the eval stages keep compiling). Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -183,7 +185,8 @@ extension AppEnvironment {
         embedder: any EmbeddingService,
         ingester: DocumentIngester,
         fallback: any InferenceProvider,
-        graph: (any DistilledFactGraphWriting)? = nil
+        graph: (any DistilledFactGraphWriting)? = nil,
+        didWrite: (@Sendable (Int) -> Void)? = nil
     ) -> MemoryDistillationCoordinator {
         MemoryDistillationCoordinator(
             distiller: ProviderMemoryDistiller(
@@ -195,7 +198,8 @@ extension AppEnvironment {
             ingester: ingester,
             store: store,
             embedder: embedder,
-            graph: graph
+            graph: graph,
+            didWrite: didWrite
         )
     }
 
