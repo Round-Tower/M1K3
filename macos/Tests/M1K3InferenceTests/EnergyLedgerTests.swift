@@ -112,7 +112,7 @@ struct EnergyLedgerTests {
         #expect(TurnEnergy.estimate(tier: .lil, prefillTokens: -5, decodeTokens: -9, rate: rate).joules == 0)
     }
 
-    @Test("the shipped table: Lil and Big calibrated at the doc's rates, each bound to its model; Mini and pocket unpriced")
+    @Test("the shipped table: Lil and Big calibrated at the doc's rates, bound to their models; Mini, pocket unpriced")
     func shippedTable() throws {
         let lil = try #require(EnergyCoefficients.rate(for: .lil))
         let big = try #require(EnergyCoefficients.rate(for: .big))
@@ -151,7 +151,8 @@ struct EnergyLedgerTests {
             let rate = try #require(EnergyCoefficients.rate(for: tier))
             var prefillJoules = 0.0, decodeJoules = 0.0, prefillTokens = 0, decodeTokens = 0
             for run in 1 ... 2 {
-                let url = try Self.packageRoot().appending(path: "docs/evals/2026-10-27-power-rates-\(name)-run\(run).json")
+                let file = "docs/evals/2026-10-27-power-rates-\(name)-run\(run).json"
+                let url = try Self.packageRoot().appending(path: file)
                 let receipt = try decoder.decode(PhaseReceipt.self, from: Data(contentsOf: url))
                 #expect(receipt.model == rate.modelID, "\(name) run \(run) measured another model")
                 prefillJoules += receipt.prefillJoules
@@ -246,12 +247,18 @@ struct EnergyLedgerTests {
         // No `rate:` argument: exactly how AppEnvironment builds it.
         let ledger = EnergyLedger(storage: MemoryStorage(), now: { clock.now }, calendar: utc)
         let lil = try #require(ledger.record(metrics: metrics(prompt: 2444, decode: 10, prefilled: 100)))
-        #expect(lil == TurnEnergy.estimate(tier: .lil, prefillTokens: 100, decodeTokens: 10, rate: EnergyCoefficients.lil))
+        let lilEstimate = TurnEnergy.estimate(
+            tier: .lil, prefillTokens: 100, decodeTokens: 10, rate: EnergyCoefficients.lil
+        )
+        #expect(lil == lilEstimate)
         let big = try #require(ledger.record(metrics: metrics(
             prompt: 2444, decode: 10, prefilled: 100, model: BrainTier.big.mlxModelID
         )))
         // A deep dive's Big generation costs Big's rate, not Lil's.
-        #expect(big == TurnEnergy.estimate(tier: .big, prefillTokens: 100, decodeTokens: 10, rate: EnergyCoefficients.big))
+        let bigEstimate = TurnEnergy.estimate(
+            tier: .big, prefillTokens: 100, decodeTokens: 10, rate: EnergyCoefficients.big
+        )
+        #expect(big == bigEstimate)
         #expect(big.joules > lil.joules)
         for model in [BrainTier.pocket.mlxModelID, nil] {
             #expect(ledger.record(metrics: metrics(prompt: 100, decode: 10, prefilled: 100, model: model)) == nil)
