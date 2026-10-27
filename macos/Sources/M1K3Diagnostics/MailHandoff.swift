@@ -11,6 +11,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.85 (pure, every outcome row pinned;
 //  the live hand-off is verify-by-launch, UNVERIFIED this run). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold) — comment only: `.opened` is Launch Services
+//  accepting the link, so the sheet stays open on it rather than this copying on every send. Confidence 0.85.
 //
 
 import Foundation
@@ -29,7 +31,9 @@ public protocol MailOpening {
 
 public enum MailHandoff {
     public enum Outcome: Equatable, Sendable {
-        /// The mail app opened with the whole message filled in. Nothing was copied.
+        /// A mail app accepted the whole link. Nothing was copied. Accepted is not a compose
+        /// window (a Mail with no account opens its setup), so the sheet stays open with the
+        /// text on screen rather than putting every send on the clipboard.
         case opened
         /// The link was over the cap: the mail app opened with the start of the body, and the
         /// full text is on the clipboard.

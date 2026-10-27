@@ -20,6 +20,10 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — the sentence says what Round Tower does
 //  with it (reads it to fix what went wrong, may rewrite it as a made-up test case, deletes it on request:
 //  the wording is Kev's to rule on); the outcomes are `MailHandoff.Outcome`. Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold) — Send no longer closes the sheet on `.opened`:
+//  that is Launch Services accepting the link, and a Mail with no account opens its setup instead of a compose
+//  window, which lost the edited text. The sheet stays open with a caption until Done (nothing put on the
+//  clipboard unasked). Copy and Send are off while the editor is blank. Confidence 0.7 (verify-by-launch).
 //
 
 import M1K3Diagnostics
@@ -30,8 +34,13 @@ struct FieldReportSheet: View {
     let onDone: () -> Void
 
     @State private var text: String
-    /// What happened after Copy or Send, when the sheet stays open to say so.
+    /// What happened after Copy or Send. The sheet stays open after either, to say so.
     @State private var caption: String?
+
+    /// Nothing to copy or send: an emptied editor would clear the clipboard or mail a blank message.
+    private var isBlank: Bool {
+        text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     init(draft: FieldReportDraft, onDone: @escaping () -> Void) {
         self.draft = draft
@@ -74,10 +83,16 @@ struct FieldReportSheet: View {
                     FieldReporter.copy(text)
                     caption = "Copied. Nothing was sent — paste it wherever you like."
                 }
+                .disabled(isBlank)
                 Button("Send by email") {
                     switch FieldReporter.send(subject: draft.subject, body: text) {
                     case .opened:
-                        onDone()
+                        // Accepted is not a compose window (a Mail with no account opens its
+                        // setup), so the text stays here until the user is done with it.
+                        caption = """
+                        Your mail app should now show it, addressed and filled in; it goes when you send it \
+                        there. If no message appeared, Copy instead still has the text.
+                        """
                     case .copiedTruncated:
                         caption = """
                         Your mail app opened with the start of it. The message was too long for one link, \
@@ -95,6 +110,7 @@ struct FieldReportSheet: View {
                         """
                     }
                 }
+                .disabled(isBlank)
                 .keyboardShortcut(.defaultAction)
                 .buttonStyle(.glassProminent)
             }

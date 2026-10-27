@@ -12,6 +12,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — a file turn leaves its attached text and
 //  name behind (the stored turn holds every file's text); an answer with no user turn before it, and a
 //  second answer behind one question, are pinned; the persistence poll is a 30 s valve. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold) — display-only text has no exchange: a script's
+//  output (the real landing pad) and a PCC fallback notice are not M1K3's answer to the turn before them, and the
+//  shell offers the button by the same `isExchangeAnswer` rule; the local rating still records. Confidence 0.85.
 //
 
 import Foundation
@@ -173,7 +176,8 @@ struct AnswerExchangeTests {
 
     @Test("pairing is positional: an answer with no user turn before it gets none; a second answer shares the question")
     func answersWithoutTheirOwnQuestion() throws {
-        // A background answer, a script's output or a PCC notice can land with no user turn of its own.
+        // A background answer can land with no user turn of its own. (A script's output and a PCC
+        // notice are display-only and have no exchange at all: displayOnlyTextHasNoExchange.)
         let orphan = ChatMessage(role: .assistant, text: "Your script printed 42.", status: .complete)
         let user = ChatMessage(role: .user, text: "Summarise my week", status: .complete)
         let answerA = ChatMessage(role: .assistant, text: "A busy one.", status: .complete)
@@ -183,5 +187,33 @@ struct AnswerExchangeTests {
         #expect(session.exchange(for: answerA.id)?.question == user.text)
         #expect(session.exchange(for: answerB.id)?.question == user.text)
         #expect(session.exchange(for: answerB.id)?.answer == answerB.text)
+    }
+
+    @Test("display-only text is not an answer to send: a script's output and a PCC notice have no exchange")
+    func displayOnlyTextHasNoExchange() async throws {
+        let user = ChatMessage(role: .user, text: "Back up my notes, then tell me how it went", status: .complete)
+        // The PCC fallback notice's shape (ChatSession.sendPrivateCloud): display-only, said once.
+        var notice = ChatMessage(
+            role: .assistant, text: "Private Cloud Compute didn't answer, so Lil will.", status: .complete
+        )
+        notice.contextExcluded = true
+        let answer = ChatMessage(role: .assistant, text: "Your notes are backed up.", status: .complete)
+        let (session, _) = try Self.session(resuming: [user, notice, answer])
+        // The real landing pad, so the flag under test is the one it sets.
+        await session.deliverScriptOutput(scriptName: "backup.sh", output: "copied 42 files", succeeded: true)
+        let script = try #require(session.messages.last)
+        #expect(script.contextExcluded == true, "the script landing pad marks its output display-only")
+
+        #expect(session.exchange(for: script.id) == nil, "script stdout is never offered as M1K3's answer")
+        #expect(session.exchange(for: notice.id) == nil, "a fallback notice is not an answer")
+        #expect(session.exchange(for: answer.id)?.question == user.text, "the answer beside them still pairs")
+        // The shell offers the button by the same rule the seam answers by.
+        #expect(!script.isExchangeAnswer)
+        #expect(!notice.isExchangeAnswer)
+        #expect(!user.isExchangeAnswer)
+        #expect(answer.isExchangeAnswer)
+        // Rating display-only text stays a local act: the verdict still records.
+        session.recordFeedback(messageID: script.id, verdict: .bad, comment: nil, brain: "Lil")
+        #expect(session.feedbackVerdicts[script.id] == .bad)
     }
 }

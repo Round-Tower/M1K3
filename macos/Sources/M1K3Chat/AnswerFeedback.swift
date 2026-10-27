@@ -26,6 +26,9 @@
 //  "Send this exchange to Round Tower…" sheet is built from (question, answer, the brain stamp — never tools,
 //  sources, reasoning or another turn). It leaves ONLY through the user's own mail app, after a sheet that
 //  shows the exact body; the feedback row itself is unchanged and still never leaves. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold) — `ChatMessage.isExchangeAnswer`: display-only text
+//  (a script's output, a PCC fallback notice) is not M1K3's answer to the turn before it, so it has no exchange and
+//  the shell offers no button for it. Confidence 0.85 (AnswerExchangeTests.displayOnlyTextHasNoExchange).
 //
 
 import Foundation
@@ -111,6 +114,17 @@ public struct AnswerExchange: Sendable, Equatable {
         self.question = question
         self.answer = answer
         self.brain = brain
+    }
+}
+
+public extension ChatMessage {
+    /// Whether this message is an answer `ChatSession.exchange(for:)` pairs, and so one the Mac
+    /// may offer to send (#708): an assistant turn that is not display-only. A script's output
+    /// and a Private Cloud fallback notice are `contextExcluded`. Neither is M1K3's answer to the
+    /// turn before it, and script stdout is text the app keeps out of M1K3's own context, so
+    /// neither is offered as "M1K3's answer".
+    var isExchangeAnswer: Bool {
+        role == .assistant && contextExcluded != true
     }
 }
 

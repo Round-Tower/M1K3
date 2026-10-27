@@ -24,6 +24,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — the scrub order and the send outcomes left
 //  this TDD_SKIP glue for tested seams (`redactedBody`, `MailHandoff`); a link that could not be built is now
 //  a could-not-open, not "no mail app". What stays here is inputs and OS calls. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold) — comment only: `redactedBody` now redacts the
+//  user's fields and leaves M1K3's own lines alone. Confidence 0.8.
 //
 
 import AppKit
@@ -47,10 +49,10 @@ enum FieldReporter {
 
     /// The redacted draft for one exchange. The brain is the answer's stamp, or the resident
     /// brain for a pre-trace turn. The scrub is `FieldReportFormatter.redactedBody`, unit-pinned
-    /// in M1K3Diagnostics: the whole body, the user's own question included, then the canary
-    /// pass on the redacted text. This supplies its inputs: this Mac's home path, the display
-    /// name from onboarding (what M1K3 greets the user by, the key `saveFirstRunName` writes),
-    /// and the local honeypot list.
+    /// in M1K3Diagnostics: every field the user or the model wrote, the user's own question
+    /// included (M1K3's own lines are left alone), then the canary pass over the redacted body.
+    /// This supplies its inputs: this Mac's home path, the display name from onboarding (what
+    /// M1K3 greets the user by, the key `saveFirstRunName` writes), and the local honeypot list.
     static func draft(exchange: AnswerExchange, note: String?, fallbackBrain: String) -> FieldReportDraft {
         let report = FieldReport(
             question: exchange.question,

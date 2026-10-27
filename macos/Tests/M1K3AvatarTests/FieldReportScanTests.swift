@@ -17,6 +17,9 @@
 //  inside the Send button, no lifecycle hook in the sheet; no other shell file builds a mail link); the
 //  button is gated on the age band; the reporter hands its scrub and its send to the pure seams
 //  (`redactedBody`, `MailHandoff`), which are unit-tested where they live. Confidence 0.6.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold) — the offer is wired only for an answer M1K3 wrote
+//  (`message.isExchangeAnswer`: no script output, no PCC notice); Send never closes the sheet, because "opened"
+//  is only Launch Services accepting the link; a blank editor can be neither copied nor sent. Confidence 0.6.
 //
 
 import Foundation
@@ -96,16 +99,40 @@ struct FieldReportScanTests {
         #expect(linkBuilders == ["M1K3App/FieldReporter.swift"])
     }
 
-    @Test("the offer is withheld in code from the age bands the web tools are withheld from")
+    @Test("the offer is withheld from the age bands the web tools are withheld from, and from display-only text")
     func offerIsGatedOnTheAgeBand() throws {
         let content = try Self.code("M1K3App/ContentView.swift")
         #expect(content.contains("AgeAppropriateness.fieldReportAllowed(for:"), "the shell asks the policy")
-        #expect(content.contains("onSendExchange: fieldReportAllowed ?"), "no offer is wired when the band says no")
+        // Whitespace-collapsed, so the formatter may wrap the ternary.
+        let flat = content.replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression)
+        let wiring = "onSendExchange: fieldReportAllowed && message.isExchangeAnswer ?"
+        #expect(
+            flat.contains(wiring + " sendExchange(for: message.id) : nil"),
+            "no offer is wired when the band says no, or for a script's output or a PCC notice"
+        )
         let message = try Self.code("M1K3App/MessageView.swift")
         let gate = try #require(message.range(of: "if onSendExchange != nil {"), "the button only exists when wired")
         let button = try #require(message.range(of: "Button(\"Send this exchange…\")"))
         #expect(gate.upperBound < button.lowerBound)
         #expect(message.contains("var onSendExchange: ((String?) -> Void)?"), "unwired means hidden: nil by default")
+    }
+
+    @Test("Send never closes the sheet, and a blank editor can be neither copied nor sent")
+    func sendKeepsTheTextOnScreen() throws {
+        let sheet = try Self.code("M1K3App/FieldReportSheet.swift")
+        let send = try #require(sheet.range(of: "Button(\"Send by email\")"), "the Send button moved")
+        let afterSend = sheet[send.upperBound...]
+        // `.opened` is Launch Services accepting the link, not a compose window appearing (a Mail
+        // with no account opens its setup): the edited text stays on screen until the user's Done.
+        #expect(afterSend.contains("case .opened:"))
+        #expect(!afterSend.contains("onDone"), "no outcome of Send closes the sheet")
+        for label in ["Button(\"Copy instead\")", "Button(\"Send by email\")"] {
+            let button = try #require(sheet.range(of: label), "\(label) moved")
+            let rest = sheet[button.upperBound...]
+            let next = rest.range(of: "Button(")?.lowerBound ?? rest.endIndex
+            #expect(rest[..<next].contains(".disabled(isBlank)"), "\(label) is off while the editor is blank")
+        }
+        #expect(sheet.contains("text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty"), "blank means trimmed")
     }
 
     @Test("the reporter builds its link through MailtoURL, scrubs the body, and keeps the clipboard fallback")

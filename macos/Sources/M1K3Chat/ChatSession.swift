@@ -89,6 +89,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — `exchange(for:)` is the outward view: a file
 //  turn's question keeps the typed words and drops every attached file's text and name
 //  (`FileAttachment.omittingContextBlocks`); the local feedback row still pairs the whole turn. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold) — `exchange(for:)` is nil for display-only text
+//  (`ChatMessage.isExchangeAnswer`): a script's output or a PCC notice was offered as "M1K3's answer", paired with
+//  an unrelated earlier turn. Rating it locally still records. Confidence 0.85 (AnswerExchangeTests).
 
 import Foundation
 import M1K3Inference
@@ -1006,10 +1009,10 @@ public final class ChatSession {
     /// on it (nil for a pre-trace turn). Paired by the same rule as `recordFeedback`, with one
     /// difference: the stored user turn carries every attached file's extracted text, and here
     /// that text and the files' names are left behind for a marker, so a document never rides
-    /// along unseen. The local feedback row keeps the whole turn. nil for an unknown id or a
-    /// user message.
+    /// along unseen. The local feedback row keeps the whole turn. nil for an unknown id, a user
+    /// message, or display-only text (`isExchangeAnswer`: a script's output, a PCC notice).
     public func exchange(for messageID: UUID) -> AnswerExchange? {
-        guard let paired = pairing(for: messageID)?.exchange else { return nil }
+        guard let (index, paired) = pairing(for: messageID), messages[index].isExchangeAnswer else { return nil }
         return AnswerExchange(
             messageID: paired.messageID,
             conversationID: paired.conversationID,

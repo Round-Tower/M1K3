@@ -16,6 +16,10 @@
 //  `redactedBody` (format, then DiagnosticRedactor over the whole body, then the injected honeypot scrub on
 //  the REDACTED text) across question, answer and note; the mailto link keeps its two keys against an
 //  injected body, normalises a pasted CRLF, and stays under the encoded cap on a head-dense body. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold) — the redactor runs over the user's fields only
+//  (question, answer, note), then the body is formatted: a display name that is one of M1K3's own words
+//  ("Lil", "May", "Read", "Your") left "Brain: [name]" and a mangled preamble when the whole body was
+//  redacted. Confidence 0.85.
 //
 
 import Foundation
@@ -75,8 +79,8 @@ struct FieldReportTests {
         brain: "Big", appVersion: "1.2.1", build: "540", note: "Kev asked aoife@example.ie"
     )
 
-    @Test("format, redact, scrub: paths, emails and the name go from question, answer AND note; the rest survives")
-    func formatThenRedactScrubsEveryField() {
+    @Test("redact each field, format, scrub: paths, emails and the name leave question, answer AND note")
+    func redactScrubsEveryUserField() {
         let body = FieldReportFormatter.redactedBody(Self.leaky, homeDirectory: "/Users/kev", userName: "Kev")
         #expect(!body.contains("/Users/kev"))
         #expect(body.contains("~/Documents/plan.md"), "this Mac's home path collapses to ~")
@@ -87,10 +91,29 @@ struct FieldReportTests {
         #expect(body.contains("[name] wrote it that way"))
         #expect(body.contains("What was off: [name] asked [email]"))
         #expect(body.contains("the plan is in Documents"))
-        #expect(body.contains("may quote what M1K3 read"), "the preamble rides the same pass and survives it")
+        #expect(body.contains("may quote what M1K3 read"), "the preamble is M1K3's own copy and is never redacted")
         // The subject is built apart from the body and never carries the user's words.
         let subject = FieldReportFormatter.subject(Self.leaky)
         #expect(subject == "M1K3 field report: Big 1.2.1 (540)")
+    }
+
+    @Test("a display name that is one of M1K3's own words leaves M1K3's copy alone: only the user's fields lose it")
+    func nameScrubLeavesM1K3sOwnCopyAlone() {
+        // Each name is a word in the preamble, a label or the Brain/App line. Redacting the whole
+        // formatted body turned "Brain: Lil" into "Brain: [name]" for a user called Lil.
+        for name in ["Lil", "May", "Read", "Your", "What", "App", "Brain"] {
+            let named = FieldReport(
+                question: "I'm \(name).", answer: "Hello \(name)!", brain: "Lil",
+                appVersion: "1.2.1", build: "540", note: "\(name) here"
+            )
+            let body = FieldReportFormatter.redactedBody(named, homeDirectory: "/Users/kev", userName: name)
+            // Exactly the plain format of the scrubbed fields: every line M1K3 wrote is untouched.
+            let expected = FieldReportFormatter.body(FieldReport(
+                question: "I'm [name].", answer: "Hello [name]!", brain: "Lil",
+                appVersion: "1.2.1", build: "540", note: "[name] here"
+            ))
+            #expect(body == expected, "the name \(name) reached M1K3's own copy")
+        }
     }
 
     @Test("no display name, or a blank one, removes no word")

@@ -103,6 +103,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — the offer is wired only when
 //  `AgeAppropriateness.fieldReportAllowed` says the band may see it (not under 13, not 13–15), read per render
 //  like the web tools' gate; otherwise MessageView gets nil and shows no button. Confidence 0.75 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold) — and only for `message.isExchangeAnswer`: a script's
+//  output or a PCC notice has no exchange, so it gets no button rather than one that silently does nothing.
+//  Confidence 0.75 (verify-by-launch).
 
 import M1K3Avatar
 import M1K3Chat
@@ -740,7 +743,8 @@ struct ContentView: View {
                                         askForRatingIfEarned()
                                     }
                                 },
-                                onSendExchange: fieldReportAllowed ? sendExchange(for: message.id) : nil,
+                                onSendExchange: fieldReportAllowed && message.isExchangeAnswer
+                                    ? sendExchange(for: message.id) : nil,
                                 onSpeak: { text in Task { await env.speak(text) } },
                                 onOpenLink: { url in env.review.open(url: url) },
                                 onSendFollowUp: { text in Task { await env.send(text) } },
