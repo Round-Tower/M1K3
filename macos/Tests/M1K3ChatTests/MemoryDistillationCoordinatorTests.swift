@@ -14,6 +14,8 @@
 //  the DistillationAttribution fence, so `someTurns` carries real anchoring content for every
 //  fact this file's mechanics tests use; two new tests pin the fence itself (the trivial-slice
 //  skip and the selective anchored/unanchored drop) against the live witness turns.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #711: the propose/store split (propose writes nothing; store writes
+//  what distillAndStore would), the injected corpus source, and forgetCorpus restoring a superseded twin. Confidence 0.85.
 
 import Foundation
 @testable import M1K3Chat
@@ -318,5 +320,108 @@ struct MemoryDistillationCoordinatorTests {
         #expect(memories.count == 1)
         #expect(memories.first?.title.contains("Ardmore") == true)
         #expect(try store.searchFTS(query: "honey").isEmpty)
+    }
+
+    // MARK: - #711: the import's seams
+
+    @Test("propose returns the anchored facts and writes nothing; store writes what distillAndStore would")
+    func proposeDoesNotWriteAndStoreWritesIt() async throws {
+        let facts: Result<[String], Error> = .success([
+            "Aoife lives in Cork", "The honey in Egyptian tombs never spoils",
+        ])
+        let graph = FakeGraphWriter()
+        let (coordinator, store) = try makeFixture(facts: facts, graph: graph)
+
+        let proposed = try await coordinator.propose(turns: someTurns)
+
+        #expect(proposed.map(\.text) == ["Aoife lives in Cork"])
+        #expect(try store.itemCount() == 0)
+        #expect(await graph.texts().isEmpty)
+
+        let written = try await coordinator.store(proposed)
+        let (twin, twinStore) = try makeFixture(facts: facts)
+        let viaDistill = try await twin.distillAndStore(turns: someTurns)
+        #expect(written == 1)
+        #expect(written == viaDistill)
+        #expect(try store.itemCount() == twinStore.itemCount())
+        #expect(await graph.texts() == ["Aoife lives in Cork"])
+    }
+
+    @Test("a trivial slice proposes nothing")
+    func proposeSkipsATrivialSlice() async throws {
+        let (coordinator, _) = try makeFixture(facts: .success(["Aoife lives in Cork"]))
+        let proposed = try await coordinator.propose(turns: [
+            ChatTurn(role: .user, text: "thanks"), ChatTurn(role: .assistant, text: "Any time."),
+        ])
+        #expect(proposed.isEmpty)
+    }
+
+    @Test("an injected corpus source tags every row the coordinator writes; the default stays distilled")
+    func corpusSourceIsInjectable() async throws {
+        let tag = KnowledgeSource(rawValue: "import/claude/2026-10-26")
+        let store = try KnowledgeStore()
+        let embedder = HashingEmbeddingService()
+        let tagged = MemoryDistillationCoordinator(
+            distiller: FakeDistiller(result: .success(["Aoife lives in Cork"])),
+            ingester: DocumentIngester(store: store, embedder: embedder),
+            store: store,
+            embedder: embedder,
+            corpusSource: tag,
+            selfNames: .none
+        )
+        try await tagged.distillAndStore(turns: someTurns)
+        #expect(try store.allItems(kind: .memory).map(\.source) == [tag])
+
+        let (plain, plainStore) = try makeFixture(facts: .success(["Aoife lives in Cork"]))
+        try await plain.distillAndStore(turns: someTurns)
+        #expect(try plainStore.allItems(kind: .memory).map(\.source) == [.distilled])
+    }
+
+    @Test("forgetCorpus deletes the tagged rows and restores the twin one of them superseded")
+    func forgetCorpusRestoresSupersededTwin() async throws {
+        // Hashing cosines are k/n of shared tokens: 19 of 20 = 0.95, over every floor's dedupe bar.
+        let filler = "alpha beta gamma delta epsilon zeta eta theta iota kappa "
+            + "lambda mu nu xi omicron rho sigma tau upsilon"
+        let turns = [ChatTurn(role: .user, text: "\(filler) dublin ardmore")]
+        let tag = KnowledgeSource(rawValue: "import/chatgpt/2026-10-26")
+        let store = try KnowledgeStore()
+        let embedder = HashingEmbeddingService()
+        func coordinator(_ fact: String, source: KnowledgeSource) -> MemoryDistillationCoordinator {
+            MemoryDistillationCoordinator(
+                distiller: FakeDistiller(result: .success([fact])),
+                ingester: DocumentIngester(store: store, embedder: embedder),
+                store: store,
+                embedder: embedder,
+                corpusSource: source,
+                selfNames: .none
+            )
+        }
+        try await coordinator("\(filler) dublin", source: .distilled).distillAndStore(turns: turns)
+        try await coordinator("\(filler) ardmore", source: tag).distillAndStore(turns: turns)
+        let twin = try #require(try store.allItems(kind: .memorySuperseded).first)
+        let ledgerKey = MemoryDistillationCoordinator.supersededLinkKey(twin.id)
+        #expect(try store.meta(key: ledgerKey) != nil)
+
+        let removed = try MemoryDistillationCoordinator.forgetCorpus(source: tag, in: store)
+
+        #expect(removed == 1)
+        #expect(try store.item(id: twin.id)?.kind == .memory)
+        #expect(try store.meta(key: ledgerKey) == nil)
+        #expect(try store.itemIDs(source: tag).isEmpty)
+        #expect(try store.allItems(kind: .memory).map(\.id) == [twin.id])
+    }
+
+    @Test("forgetCorpus leaves another writer's rows, and kinds it never writes, alone")
+    func forgetCorpusTouchesOnlyItsOwnMemories() async throws {
+        let tag = KnowledgeSource(rawValue: "import/chatgpt/2026-10-26")
+        let store = try KnowledgeStore()
+        let ingester = DocumentIngester(store: store, embedder: HashingEmbeddingService())
+        try await ingester.ingest(title: "Kev keeps bees", text: "Kev keeps bees", kind: .memory, source: tag)
+        try await ingester.ingest(title: "Kev drinks tea", text: "Kev drinks tea", kind: .memory, source: .distilled)
+        try await ingester.ingest(title: "Hives", text: "User: hives? Assistant: south-east.", kind: .note, source: tag)
+
+        #expect(try MemoryDistillationCoordinator.forgetCorpus(source: tag, in: store) == 1)
+        #expect(try store.itemCount() == 2)
+        #expect(try store.itemIDs(source: tag).count == 1)
     }
 }

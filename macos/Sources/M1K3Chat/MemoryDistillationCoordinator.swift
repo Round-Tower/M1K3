@@ -33,6 +33,11 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11 (review 10 fold on #288) — `selfNames` is injected
 //  like every other collaborator (default: the account's names); tests pass `.none` and stop
 //  depending on the machine's user name.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #711 (memory import): `distillAndStore` is now `store(propose(turns:))`,
+//  byte-identical in behaviour, so an import can show the fenced proposals for review before anything is written and
+//  then write the accepted ones through the SAME exact + semantic dedupe/supersede path (bar unchanged:
+//  `semanticDedupeThreshold(for:)`). `corpusSource` (default `.distilled`) tags the rows; `forgetCorpus(source:in:)`
+//  deletes one source's memory rows and restores every twin its ledger says they superseded. Confidence 0.85.
 
 import CryptoKit
 import Foundation
@@ -107,6 +112,10 @@ public struct MemoryDistillationCoordinator: Sendable {
     /// app, `.none` in tests, so a suite never depends on who runs it
     /// (review 10 on #288: a tester surnamed Corkery would have lost "cork").
     private let selfNames: DistillationAttribution.UserNames
+    /// Who every corpus row this coordinator writes says wrote it: `.distilled` for live
+    /// distillation, an import's `import/<provider>/<date>` tag for #711, so one action can find
+    /// (and forget) exactly what that import added.
+    private let corpusSource: KnowledgeSource
 
     public init(
         distiller: any MemoryDistilling,
@@ -116,6 +125,7 @@ public struct MemoryDistillationCoordinator: Sendable {
         graph: (any DistilledFactGraphWriting)? = nil,
         rekind: (@Sendable (UUID, KnowledgeKind) throws -> Bool)? = nil,
         auditSink: (@Sendable (String) -> Void)? = nil,
+        corpusSource: KnowledgeSource = .distilled,
         selfNames: DistillationAttribution.UserNames = DistillationAttribution.systemUserNames
     ) {
         self.distiller = distiller
@@ -126,36 +136,59 @@ public struct MemoryDistillationCoordinator: Sendable {
         self.rekind = rekind
         self.auditSink = auditSink
         self.selfNames = selfNames
+        self.corpusSource = corpusSource
     }
 
     /// Distill the slice and store what's new. Returns the number of facts
     /// actually written (dedupe skips don't count). Rethrows distiller
     /// failure so the caller withholds the watermark and retries the slice.
+    /// Exactly `store(propose(turns:))`.
+    @discardableResult
+    public func distillAndStore(turns: [ChatTurn]) async throws -> Int {
+        try await store(propose(turns: turns))
+    }
+
+    /// Distill the slice and return the facts that survive the fence, writing
+    /// NOTHING — the review half of a memory import (#711), where the user
+    /// ticks what to keep before `store` runs. Rethrows distiller failure.
     ///
     /// #284 attribution fence, applied AFTER MemoryFactParser's own validator +
     /// durability filters: a trivial user turn (a bare greeting) never even
     /// reaches the distiller — nothing the user said could anchor anything —
     /// and any surviving fact that shares no real content with something the
     /// user actually said is dropped fail-closed.
-    @discardableResult
-    public func distillAndStore(turns: [ChatTurn]) async throws -> Int {
+    public func propose(turns: [ChatTurn]) async throws -> [DistilledFact] {
         guard !DistillationAttribution.userContributionIsTrivial(turns: turns) else {
             Self.log.info("distillation skipped: user contribution trivial (\(turns.count) turn(s))")
-            return 0
+            return []
         }
         let facts = try await distiller.distill(turns: turns)
         guard !facts.isEmpty else {
             Self.log.info("distilled 0 facts from \(turns.count) turn(s)")
-            return 0
+            return []
         }
         let userTurns = turns.filter { $0.role == .user }.map(\.text)
-        var droppedUnanchored = 0
+        let anchored = facts.filter {
+            DistillationAttribution.isAnchored(fact: $0.text, userTurns: userTurns, selfNames: selfNames)
+        }
+        let droppedUnanchored = facts.count - anchored.count
+        if droppedUnanchored > 0 {
+            Self.log.info("distillation dropped \(droppedUnanchored) unanchored fact(s)")
+        }
+        return anchored
+    }
+
+    /// Write `facts` through the one memory write path: exact dedupe on the
+    /// normalized-text sourceRef, semantic supersede at the embedder's own bar,
+    /// revive on an exact re-assertion of a superseded fact, and the graph
+    /// dual-write. Returns the number of facts written (dedupe skips don't
+    /// count). The caller owns attribution: pass `propose`'s output, or facts
+    /// the user stated outright (an OKF import from another M1K3).
+    @discardableResult
+    public func store(_ facts: [DistilledFact]) async throws -> Int {
+        guard !facts.isEmpty else { return 0 }
         var written = 0
         for fact in facts {
-            guard DistillationAttribution.isAnchored(fact: fact.text, userTurns: userTurns, selfNames: selfNames) else {
-                droppedUnanchored += 1
-                continue
-            }
             // Embed ONCE: the same vector finds the semantic twin AND seeds
             // the graph node, so the repair costs no extra embed.
             let vector = await embed(fact.text)
@@ -173,7 +206,7 @@ public struct MemoryDistillationCoordinator: Sendable {
                 text: fact.text,
                 sourceRef: Self.factSourceRef(fact.text),
                 kind: .memory,
-                source: .distilled
+                source: corpusSource
             )
             if result.wasDeduped {
                 // Exact re-assertion. If the existing row was re-kinded out of
@@ -195,11 +228,43 @@ public struct MemoryDistillationCoordinator: Sendable {
                 await dualWriteToGraph(fact, vector: vector)
             }
         }
-        if droppedUnanchored > 0 {
-            Self.log.info("distillation dropped \(droppedUnanchored) unanchored fact(s)")
-        }
         Self.log.info("distillation wrote \(written)/\(facts.count) fact(s)")
         return written
+    }
+
+    // MARK: - Forgetting one source (#711)
+
+    /// Forget every corpus MEMORY row `source` wrote (an import's
+    /// `import/<provider>/<date>` tag) and put back what those rows corrected:
+    /// each `.memorySuperseded` twin whose ledger entry names a forgotten row
+    /// returns to `.memory` and loses the entry — the corpus mirror of
+    /// `MemoryStore.forget(id:)` un-superseding in the graph. Restores run
+    /// BEFORE the deletes because the ledger names the corrector by id. Other
+    /// kinds carrying the tag (an import's `.conversation` items) are the
+    /// caller's to delete. Returns the number of rows removed.
+    @discardableResult
+    public static func forgetCorpus(source: KnowledgeSource, in store: KnowledgeStore) throws -> Int {
+        let doomed = try Set(store.itemIDs(source: source, kinds: [.memory, .memorySuperseded]))
+        guard !doomed.isEmpty else { return 0 }
+        var restored = 0
+        for twin in try store.allItems(kind: .memorySuperseded, limit: Int.max) where !doomed.contains(twin.id) {
+            guard let corrector = supersededLink(for: twin.id, in: store), doomed.contains(corrector) else {
+                continue
+            }
+            if try store.setKind(id: twin.id, newKind: .memory) {
+                try store.deleteMeta(key: supersededLinkKey(twin.id))
+                restored += 1
+            }
+        }
+        var removed = 0
+        for id in doomed {
+            if try store.deleteItem(id: id) {
+                removed += 1
+            }
+            try store.deleteMeta(key: supersededLinkKey(id))
+        }
+        log.notice("corpus source forgotten: \(removed) memory row(s) removed, \(restored) restored")
+        return removed
     }
 
     // MARK: - Tier 2: write-time repair
@@ -250,7 +315,11 @@ public struct MemoryDistillationCoordinator: Sendable {
     }
 
     private func supersededLink(for itemID: UUID) -> UUID? {
-        (try? store.meta(key: Self.supersededLinkKey(itemID))).flatMap { $0 }.flatMap(UUID.init(uuidString:))
+        Self.supersededLink(for: itemID, in: store)
+    }
+
+    private static func supersededLink(for itemID: UUID, in store: KnowledgeStore) -> UUID? {
+        (try? store.meta(key: supersededLinkKey(itemID))).flatMap { $0 }.flatMap(UUID.init(uuidString:))
     }
 
     /// Exact re-assertion of a superseded fact: the graph writes a fresh node
