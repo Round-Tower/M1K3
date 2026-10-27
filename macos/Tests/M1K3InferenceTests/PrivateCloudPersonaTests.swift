@@ -10,6 +10,8 @@
 //  the wire.
 //
 //  Signed: Kev + claude-opus-5, 2026-09-14, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: the stated-style line rides the same door as the
+//  profile (`compose`), so `noProfileSlot` also pins that no style line reaches the PCC prompt. Confidence 0.9.
 //
 
 import Foundation
@@ -57,6 +59,8 @@ struct PrivateCloudPersonaTests {
             + M1K3Persona.currentDateLine(now)
         #expect(M1K3Persona.privateCloudPrompt(now: now) == expected)
         #expect(!M1K3Persona.privateCloudPrompt(now: now).contains("About the user"))
+        // #699: the stated style shares that one door, so it never rides to PCC either.
+        #expect(!M1K3Persona.privateCloudPrompt(now: now).contains("How the user wants answers"))
     }
 
     @Test("carries the month and year, like every other path")

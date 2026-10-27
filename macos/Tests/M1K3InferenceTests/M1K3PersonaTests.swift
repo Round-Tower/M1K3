@@ -33,6 +33,10 @@
 //  PCC's shared sections, wiringText, every exemplar set, every system and compact prompt; month line normalised),
 //  and `rulesKeepTheDeclineScoped` now holds ABSOLUTE RULES and HONESTY byte-equal in every render, pocket and
 //  Mini's trimmed core included. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699 Phase 1: the stated-style line composes after the About
+//  block with its own cap (`styleComposesAfterTheAboutBlock`, `styleHasItsOwnBudget`); with no style every
+//  render is byte-identical (the pins also require an empty style now). Mini's bound re-pinned from the
+//  measured cap-length profile + cap-length style render. Confidence 0.85.
 //
 
 import CryptoKit
@@ -469,6 +473,31 @@ struct M1K3PersonaTests {
         #expect(composed.contains("…"))
     }
 
+    @Test("#699: the stated style composes after the About block, on its own line")
+    func styleComposesAfterTheAboutBlock() {
+        let style = ["The user prefers short answers."]
+        #expect(M1K3Persona.compose(core: "CORE", profile: "Kev", style: style)
+            == "CORE\nAbout the user: Kev\nHow the user wants answers: The user prefers short answers.")
+        // No About-you, still a style line.
+        #expect(M1K3Persona.compose(core: "CORE", profile: nil, style: style)
+            == "CORE\nHow the user wants answers: The user prefers short answers.")
+        // No style: byte-identical to the profile-only composition every pin was taken on.
+        #expect(M1K3Persona.compose(core: "CORE", profile: "Kev", style: [])
+            == M1K3Persona.compose(core: "CORE", profile: "Kev"))
+        #expect(M1K3Persona.compose(core: "CORE", profile: nil, style: ["  "]) == "CORE")
+    }
+
+    @Test("#699: the style line has its own cap, so a full About-you never starves it and it never trims About-you")
+    func styleHasItsOwnBudget() throws {
+        let profile = String(repeating: "x", count: M1K3Persona.profileCharacterCap)
+        let style = (0 ..< 12).map { "The user prefers answer style number \($0)." }
+        let composed = M1K3Persona.compose(core: "CORE", profile: profile, style: style)
+        #expect(composed.contains("\nAbout the user: " + profile + "\n"))
+        let line = try #require(composed.components(separatedBy: "\nHow the user wants answers: ").last)
+        #expect(line.hasPrefix("The user prefers answer style number 0."))
+        #expect(line.count <= M1K3Persona.styleCharacterCap)
+    }
+
     @Test("talking about yourself is conversation: the decline is scoped to the instructions' TEXT (standard core only)")
     func selfTalkIsConversation() {
         // Kev 2026-09-23: Lil "a little too terse, a little boring". The capture run's
@@ -525,19 +554,24 @@ struct M1K3PersonaTests {
         #expect(!M1K3Persona.corePrompt.contains("# MAKING"))
     }
 
-    @Test("with a cap-length profile, Mini's persona stays under the one-third line")
+    @Test("with a cap-length profile and a cap-length style, Mini's persona stays under the one-third line")
     func miniPersonaWithAFullProfileFits() {
         // MiniPromptBudgetTests pins run with no profile, and Mini's live prompt carries
         // one: at ≈1,255 estimated tokens a cap-length profile put it past their one-third
         // line (1,365 tokens) with nothing failing. The profile here is exactly the cap
-        // `compose` keeps (profileCharacterCap). ≈1,065 tokens of persona ≈ 4,710 chars;
-        // with the capped profile ≈ 5,130. 5,300 chars ≈ 1,205 tokens at the app's 4.4.
+        // `compose` keeps (profileCharacterCap). 5,300 chars ≈ 1,205 tokens at the app's 4.4.
+        // #699 adds the style line at its own cap (styleCharacterCap) on top. Measured
+        // 2026-10-27 on this render: core + date 4,626 chars, + the capped profile 5,043,
+        // + a cap-length style 5,232 (+189, ≈ 1,189 tokens). The bound holds unchanged,
+        // with 68 chars left before a deliberate re-pin; the one-third line is ≈ 6,006.
         let profile = String(repeating: "x", count: M1K3Persona.profileCharacterCap)
+        let style = [String(repeating: "y", count: M1K3Persona.styleCharacterCap - 1) + "."]
         let prompt = M1K3Persona.compose(
             core: M1K3Persona.miniCorePrompt + "\n" + M1K3Persona.currentDateLine(Date()),
-            profile: profile
+            profile: profile,
+            style: style
         )
-        #expect(prompt.count < 5300, "Mini's persona with a full profile is \(prompt.count) chars")
+        #expect(prompt.count < 5300, "Mini's persona with a full profile and style is \(prompt.count) chars")
     }
 
     @Test("the rules keep the decline tied to its trigger: ABSOLUTE RULES and HONESTY are byte-equal in every render")
@@ -635,6 +669,7 @@ struct M1K3PersonaTests {
     @Test("every render is byte-identical to its pin (#698: the seam moved no byte)")
     func everyRenderMatchesItsPin() {
         #expect(M1K3Persona.userProfile == nil) // the pins are the profile-free render
+        #expect(M1K3Persona.userStyle.isEmpty) // and the style-free one (#699)
         let renders = Self.renders
         #expect(Set(renders.keys) == Set(Self.renderPins.keys)) // no render goes unpinned
         for (name, text) in renders.sorted(by: { $0.key < $1.key }) {

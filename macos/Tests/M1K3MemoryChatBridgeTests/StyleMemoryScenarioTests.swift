@@ -6,7 +6,7 @@
 //  coordinator (a fake distiller, the hashing embedder) writes through the real
 //  DistilledFactGraphAdapter into a real MemoryStore, and the app's read
 //  (`liveStyleTexts`) is what the persona's style line renders from. Pinned here:
-//  an asked-for style lands and reads newest first, an unasked one never lands,
+//  an asked-for style lands and renders newest first, an unasked one never lands,
 //  a correction at the embedder's twin bar (`EmbedderFloors.hashing.dedupe`)
 //  supersedes the old ask with its lineage kept, and all of it survives the store
 //  being reopened at the same path (a relaunch).
@@ -17,10 +17,13 @@
 //  the MEMSTAT style-correction class.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85, Prior: none (new file)
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — the stored rows also render through the real
+//  UserStyleBlock, so the scenario ends at the text the persona carries. Confidence 0.85.
 //
 
 import Foundation
 @testable import M1K3Chat
+import M1K3Inference
 @testable import M1K3Knowledge
 import M1K3Memory
 @testable import M1K3MemoryChatBridge
@@ -79,6 +82,10 @@ struct StyleMemoryScenarioTests {
             "The user wants no bullet lists.",
             "The user prefers short answers.",
         ])
+        // …and that is the order the persona's style line reads them in.
+        #expect(try UserStyleBlock.render(
+            newestFirst: harness.graph.liveStyleTexts(), cap: M1K3Persona.styleCharacterCap
+        ) == "The user wants no bullet lists. The user prefers short answers.")
     }
 
     @Test("a correction at the hashing twin bar supersedes the old ask, keeps its lineage, and survives a reopen")
