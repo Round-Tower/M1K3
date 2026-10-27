@@ -33,6 +33,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-11 (review 10 fold on #288) — `selfNames` is injected
 //  like every other collaborator (default: the account's names); tests pass `.none` and stop
 //  depending on the machine's user name.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699 Phase 1: a `.style` fact must ALSO pass StyleAskFence
+//  (one user turn that anchors it reads as a request), because a stored style rides every system prompt;
+//  the drops get their own `.info` count. `didWrite` (the `auditSink` closure shape) fires once with the
+//  count when a slice wrote anything, so the app re-reads the style rows into the persona. Confidence 0.85.
 
 import CryptoKit
 import Foundation
@@ -103,6 +107,11 @@ public struct MemoryDistillationCoordinator: Sendable {
     /// never fact text) — the M2 typed-audit hook. The same line always
     /// goes to the security-relevant `.error` log regardless.
     private let auditSink: (@Sendable (String) -> Void)?
+    /// Fired once, off the main actor, at the end of a `distillAndStore` that wrote at least
+    /// one fact, with the count (#699): the app's hook to re-read the style rows into the
+    /// persona. Any write may change them (a cross-kind supersede included), and a re-read
+    /// that finds the same rows leaves the system prompt, and so the prefix cache, as it was.
+    private let didWrite: (@Sendable (Int) -> Void)?
     /// The user's own names for the attribution fence — the account's in the
     /// app, `.none` in tests, so a suite never depends on who runs it
     /// (review 10 on #288: a tester surnamed Corkery would have lost "cork").
@@ -116,6 +125,7 @@ public struct MemoryDistillationCoordinator: Sendable {
         graph: (any DistilledFactGraphWriting)? = nil,
         rekind: (@Sendable (UUID, KnowledgeKind) throws -> Bool)? = nil,
         auditSink: (@Sendable (String) -> Void)? = nil,
+        didWrite: (@Sendable (Int) -> Void)? = nil,
         selfNames: DistillationAttribution.UserNames = DistillationAttribution.systemUserNames
     ) {
         self.distiller = distiller
@@ -125,6 +135,7 @@ public struct MemoryDistillationCoordinator: Sendable {
         self.graph = graph
         self.rekind = rekind
         self.auditSink = auditSink
+        self.didWrite = didWrite
         self.selfNames = selfNames
     }
 
@@ -137,6 +148,10 @@ public struct MemoryDistillationCoordinator: Sendable {
     /// reaches the distiller — nothing the user said could anchor anything —
     /// and any surviving fact that shares no real content with something the
     /// user actually said is dropped fail-closed.
+    ///
+    /// #699: a `.style` fact also needs an explicit ask (`StyleAskFence`): it
+    /// renders into every system prompt, so it must come from a request the
+    /// user made, never from how they behave.
     @discardableResult
     public func distillAndStore(turns: [ChatTurn]) async throws -> Int {
         guard !DistillationAttribution.userContributionIsTrivial(turns: turns) else {
@@ -150,10 +165,17 @@ public struct MemoryDistillationCoordinator: Sendable {
         }
         let userTurns = turns.filter { $0.role == .user }.map(\.text)
         var droppedUnanchored = 0
+        var droppedUnasked = 0
         var written = 0
         for fact in facts {
             guard DistillationAttribution.isAnchored(fact: fact.text, userTurns: userTurns, selfNames: selfNames) else {
                 droppedUnanchored += 1
+                continue
+            }
+            if fact.kind == .style,
+               !StyleAskFence.isExplicitAsk(fact: fact.text, userTurns: userTurns, selfNames: selfNames)
+            {
+                droppedUnasked += 1
                 continue
             }
             // Embed ONCE: the same vector finds the semantic twin AND seeds
@@ -198,7 +220,11 @@ public struct MemoryDistillationCoordinator: Sendable {
         if droppedUnanchored > 0 {
             Self.log.info("distillation dropped \(droppedUnanchored) unanchored fact(s)")
         }
+        if droppedUnasked > 0 {
+            Self.log.info("distillation dropped \(droppedUnasked) style fact(s) the user never asked for")
+        }
         Self.log.info("distillation wrote \(written)/\(facts.count) fact(s)")
+        if written > 0 { didWrite?(written) }
         return written
     }
 
