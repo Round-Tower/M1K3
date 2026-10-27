@@ -13,6 +13,12 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — caption memory: adds `.image` (Photo), `.captioned`,
 //  `allStaticKinds`, `launchSweepKinds`, `withheldFromMCP`, `displayLabel`; string-backed, no migration.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #711: `.conversation`, an imported ChatGPT / Claude chat filed as
+//  cited knowledge (document lane, both launch sweeps, not donated to Spotlight); string-backed, no migration.
+//  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold on #711) — `.conversation` joins
+//  `withheldFromMCP`: a whole imported chat is more private than a Photo caption, so MCP visibility fails closed
+//  until Kev opens it (a one-line change plus a consent decision). Confidence 0.9.
 
 import Foundation
 import GRDB
@@ -55,22 +61,33 @@ public struct KnowledgeKind: RawRepresentable, Hashable, Sendable, Codable {
     /// Spotlight and withheld from MCP clients (`withheldFromMCP`).
     public static let image = KnowledgeKind(rawValue: "image")
 
+    /// A conversation the user had with another assistant, brought home from
+    /// that provider's data export (#711). Searched and cited like a document,
+    /// never a memory: a fact from it reaches the memory graph only when the
+    /// user accepts it on import. `sourceRef` names the provider's conversation
+    /// id; `source` is the import's `import/<provider>/<date>` tag, so one
+    /// action forgets the whole import. Withheld from MCP clients
+    /// (`withheldFromMCP`) and never donated to Spotlight.
+    public static let conversation = KnowledgeKind(rawValue: "conversation")
+
     /// Every kind declared above. ONE list, so the launch sweeps can be pinned
     /// against it: a new kind that is retrievable but missing from
     /// `launchSweepKinds` fails `ImageCaptionIngesterTests` instead of silently
     /// escaping the model-thinking / self-wiring sweeps.
     public static let allStaticKinds: [KnowledgeKind] = [
-        .document, .call, .note, .memory, .image, .quarantined, .memorySuperseded,
+        .document, .call, .note, .memory, .image, .conversation, .quarantined, .memorySuperseded,
     ]
 
     /// The kinds both launch sweeps (ModelThinkingQuarantine, SelfWiringQuarantine)
     /// walk: every retrievable kind, because every one can hold model-written text.
-    public static let launchSweepKinds: [KnowledgeKind] = [.document, .call, .note, .memory, .image]
+    public static let launchSweepKinds: [KnowledgeKind] = [.document, .call, .note, .memory, .image, .conversation]
 
     /// Kinds the MCP surface (list / search / get by id) never shows. A Photo
-    /// caption describes a private image; Claude Code and Brain-at-Home peers
-    /// are outside "nothing leaves this machine".
-    public static let withheldFromMCP: Set<KnowledgeKind> = [.image]
+    /// caption describes a private image, and an imported conversation (#711) is
+    /// a whole chat with another assistant; Claude Code and Brain-at-Home peers
+    /// are outside "nothing leaves this machine". Withholding is query-side, so
+    /// opening a kind later is one line here (and a consent decision).
+    public static let withheldFromMCP: Set<KnowledgeKind> = [.image, .conversation]
 
     /// The user-facing name of the kind, for list rows on both shells.
     public var displayLabel: String {
@@ -80,6 +97,7 @@ public struct KnowledgeKind: RawRepresentable, Hashable, Sendable, Codable {
         case .note: String(localized: "Note")
         case .memory: String(localized: "Memory")
         case .image: String(localized: "Photo")
+        case .conversation: String(localized: "Conversation")
         case .quarantined: String(localized: "internal")
         default: rawValue
         }
