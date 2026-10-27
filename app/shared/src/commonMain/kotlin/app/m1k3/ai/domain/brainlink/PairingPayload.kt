@@ -84,8 +84,9 @@ class PairingPayload(
          * secret, an identity and a pairing port. Never guesses at a secret;
          * happily defaults the presentation fields.
          *
-         * Stricter than the Mac's URLComponents on shapes its composer never
-         * writes: the query must be valid RFC 3986 and follow v1 directly.
+         * Stricter than the Mac on shapes its composer never writes: the query
+         * must be valid RFC 3986 and follow v1 directly, and a base64 tail whose
+         * unused low bits aren't zero is refused (Kotlin's decoder insists).
          */
         fun parse(string: String): PairingPayload? {
             val url = string.substringBefore('#')

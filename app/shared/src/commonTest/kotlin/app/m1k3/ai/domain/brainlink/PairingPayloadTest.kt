@@ -16,8 +16,9 @@ import kotlin.test.assertTrue
  * composed() on macOS 27 (2026-10-27) with the fixture of its own
  * PairingPayloadTests: key = bytes 0..31, the UUID identity, pairing port
  * 52113, serve port 4243, "Kev’s Mac Studio". Every accept and reject below
- * was checked against the Mac's parse the same way, except the four shapes
- * in the last group, where the Kotlin is deliberately stricter.
+ * was checked against the Mac's parse the same way. The five shapes in the
+ * stricter-than-the-Mac test are the deliberate exceptions: the Mac takes
+ * them, the twin refuses them.
  *
  * Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.9 (literals read off
  * the Mac's own compose and parse, not retyped from the spec).
@@ -161,11 +162,11 @@ class PairingPayloadTest {
 
     @Test
     fun `stricter than the Mac on shapes it never composes`() {
-        // macOS 27 accepts all four. For a query that isn't valid RFC 3986 it then
-        // leaves EVERY value undecoded (a raw space in the name left hosts=%25en0
-        // encoded), and Foundation before macOS 14 refused such a string outright;
-        // the Mac's own composer writes none of these. A path after v1 and a base64
-        // tail with stray low bits are refused for the same reason.
+        // macOS 27 accepts all five. The middle three are queries that aren't valid
+        // RFC 3986, and for those it leaves EVERY value undecoded (a raw space in the
+        // name left hosts=%25en0 encoded): leniency that came with Foundation's
+        // RFC 3986 parser in macOS 14, per Apple's URL docs (not re-run here). The
+        // contract is what the Mac's composer writes, and it writes none of the five.
         assertNull(PairingPayload.parse(COMPOSED.replace("://v1?", "://v1/?")))
         assertNull(PairingPayload.parse("$BASE&name=a%ZZb"))
         assertNull(PairingPayload.parse("$BASE&name=a b"))
