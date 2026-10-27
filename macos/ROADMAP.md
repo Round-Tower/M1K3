@@ -47,8 +47,8 @@ this sweep.
 - `SearchRouter` reads whether a turn needs the web, over the router's one sentence vector, and only
   vetoes a web read the picker named (`ToolDispatch.searchCorrected`): it never adds a search, and an
   explicit web ask or a question about now never reaches it. From #680 ("tell me the history of
-  Dublin" web-searched, 30.8 s to the first chunk). Off on both shells (`toolSearchHead`;
-  `-toolSearchHead YES` on the Mac) and shipped as an untrained stub that never vetoes.
+  Dublin" web-searched, 30.8 s to the first chunk). On for the Mac (`toolSearchHead`, `whenUnset: true`;
+  `-toolSearchHead NO` is the off arm), off on iOS, and shipped as an untrained stub that never vetoes.
 - Measured 2026-10-26 (`docs/evals/2026-10-26-search-head.md`):
   - The teacher pass ran on the plan's fallback labeller (gemini-4-argon; Clef-flash's loader was
     refused) and confirmed 820 labels.
@@ -492,3 +492,6 @@ stays a possible later companion.
 <!-- Review: Kev + claude-opus-5.5, 2026-10-27 — the search head bullet carries the eval stage's numbers:
      the teacher pass on the fallback labeller, the gate missed, the stub kept, the threshold ruling owed.
      Confidence 0.85. -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-27 (merge review fold) — the search head bullet says what ships: on for
+     the Mac (`whenUnset: true`, off arm `-toolSearchHead NO`), off on iOS. It still said off on both shells.
+     Confidence 0.9. -->

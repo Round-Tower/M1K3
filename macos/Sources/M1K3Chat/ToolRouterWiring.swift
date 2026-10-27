@@ -52,6 +52,9 @@
 //  YES` for the A/B): the dispatch route carries the search head (`staysLocal`) over the turn's one vector, and a
 //  veto is a `search-veto` stage for the eval. `compose` takes the embedder so the one-vector pin can count embeds.
 //  Confidence 0.8 (pinned; the head ships untrained until the teacher pass and its paired arm).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (merge review fold) — `searchHeadKey`'s doc says what ships: ON on
+//  the Mac (`whenUnset: true`, off arm `-toolSearchHead NO`), OFF on iOS. It still said off on both shells.
+//  Confidence 0.9.
 //
 
 import Foundation
@@ -125,8 +128,9 @@ public enum ToolRouterWiring {
     }
 
     /// The search head (#713) as a veto on a web read the picker named: "tell me the history of Dublin"
-    /// went to web_search on 2026-10-25 (#680). Absent = OFF on both shells until a teacher-labelled head
-    /// and its paired arm (`M1K3 -toolSearchHead YES` for Kev's A/B). It never adds a web call.
+    /// went to web_search on 2026-10-25 (#680). Absent = the shell's default: ON on the Mac (Kev, 2026-10-27;
+    /// `M1K3 -toolSearchHead NO` is the off arm), OFF on iOS. It ships as an untrained stub that never vetoes,
+    /// and it never adds a web call.
     public static let searchHeadKey = "toolSearchHead"
 
     public static func searchHeadEnabled(_ defaults: UserDefaults = .standard, whenUnset: Bool = false) -> Bool {
