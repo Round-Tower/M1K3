@@ -111,6 +111,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold) — and only for `message.isExchangeAnswer`: a script's
 //  output or a PCC notice has no exchange, so it gets no button rather than one that silently does nothing.
 //  Confidence 0.75 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — voice mode fades the split view to opacity 0 under the hero: the
+//  10-09 glass-only cover (VoiceModeView's Open) let the transcript, its streaming answer and the sidebar show
+//  through on 541. Confidence 0.7 (verify-by-launch, UNVERIFIED this run; Kev also saw a second avatar, unexplained).
 
 import M1K3Avatar
 import M1K3Chat
@@ -385,10 +388,10 @@ struct ContentView: View {
         // active (the chat answer still lands in the transcript underneath). This
         // replaced the 06-21 bottom dock — Kev wanted the face full screen, not a
         // 92pt corner card. Mounted as an overlay (not a body-swap) so the toolbar
-        // chrome stays reachable and the transition is a clean fade. VoiceModeView
-        // covers the chat with the window glass itself (`.glassBackdrop()`); if a
-        // launch shows the transcript or sidebar ghosting through, fade the split
-        // view here instead (`.opacity(0)` while voice is active, under this overlay).
+        // chrome stays reachable and the transition is a clean fade. The hero's glass
+        // alone did not cover the chat: on 541 the transcript, its streaming answer
+        // and the sidebar showed through (Kev, 2026-10-27). So the split view fades
+        // out under the overlay while voice is active, riding the hero's spring.
         // Disabled underneath the hero: the covered transcript, input and sidebar
         // leave the key-view loop, so Tab from the hero cannot land typing in a
         // text field nobody can see (and Space stays the barge-in). The overlay
@@ -396,6 +399,7 @@ struct ContentView: View {
         // from VoiceOver for the same reason: `.disabled` leaves the covered
         // transcript and sidebar in the accessibility tree, so the cursor could
         // still land on rows nobody can see.
+        .opacity(env.isVoiceModeActive ? 0 : 1)
         .disabled(env.isVoiceModeActive)
         .accessibilityHidden(env.isVoiceModeActive)
         .overlay {
