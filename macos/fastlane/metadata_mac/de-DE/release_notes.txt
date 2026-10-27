@@ -1,17 +1,9 @@
-NEU IN 1.2.1
+NEU IN 1.3
 
-• Machst du Pause, mache ich auch eine. Lass mich etwa 90 Sekunden in Ruhe, mit leerem Eingabefeld und ohne dass gerade etwas läuft, und der Begleiter hinter deinem Chat blendet sich aus und wird nicht mehr gerendert. Fahr mit dem Zeiger darüber, klick, tipp oder scroll, oder lass mich zuhören, nachdenken oder sprechen, und ich bin wieder da. Gemessen auf einem M1 Max mit dem Chatfenster im Vordergrund: Die CPU-Last im Leerlauf fiel von etwa 46 % auf nahezu null. Akku und Lüfter dürften es merken. Genauso in der Menüleiste und in der Hirn-Auswahl; mit „Bewegung reduzieren“ entfällt das Ausblenden.
-
-FALLS DU 1.2 VERPASST HAST
-
-• Flüssigeres Denken. Lil hält sein Denken in einem festen Budget und antwortet gleich danach, damit eine schwere Frage nie ausufert. Der Gedanke, der live mitläuft, erscheint flüssig, während er wächst.
-• Eine leichtere Constellation. Das Gedächtnisfeld hinter deinem Chat besteht aus ein paar Formen statt aus tausend und braucht etwa ein Drittel der CPU von vorher.
-• Lil ist schnell wach. Wenn du das Hirn wechselst, wärmt sich das alte nicht mehr im Hintergrund auf, und der Fortschritt bleibt nie auf 0 % stehen.
-• Schnellere Stimme mit Big. Big hält deine letzten Wortwechsel griffbereit, ist so pro gesprochenem Beitrag etwa vier Sekunden schneller und erinnert sich trotzdem an das, was du früher gesagt hast.
-• Ich verstehe Namen besser. Im Sprachmodus gleiche ich einen falsch verstandenen Namen mit den Menschen und Orten ab, die schon in meinem Gedächtnis sind.
-• Bessere Antworten aus dem Gedächtnis. Frag, was du entschieden oder mir erzählt hast, und ich schaue zuerst in dein Wissen, nicht ins Web.
-• Gedächtnis-Aufnahme aus heißt jetzt: nie. Was du mit ausgeschalteter Aufnahme schickst, wird nie behalten, auch nicht nach einem Neustart der App.
-• Eine ehrliche Antwort zur Privatsphäre. Frag, was deinen Mac verlässt, und du hörst zuerst die Wahrheit: Manches kann ihn verlassen, wenn die Websuche oder die Private Cloud an ist.
+• Fall mir ins Wort. Sprich im Sprachmodus einfach los, während ich noch antworte: Ich verstumme und höre dir zu. Die Echounterdrückung ist jetzt standardmäßig aktiviert, damit ich dich höre und nicht mich selbst. Das klappt mit dem eingebauten Mikrofon deines Macs oder einem USB-Mikrofon; bei Bluetooth-Headsets bleibt alles wie bisher.
+• Antworten statt Links. Wenn ich eine Antwort laut vorlese, höre ich bei den Quellen auf, statt jede Webadresse mitzulesen.
+• Schneller in langen Chats. Ich mache da weiter, wo die letzte Nachricht endete, statt das ganze Gespräch noch einmal zu lesen. Gemessen auf einem M1 Max, nach der zehnten Nachricht: Big kommt etwa sechs Sekunden früher zur Antwort, Lil fast eine Sekunde.
+• Deine Dokumente zuerst. Frag nach einer Zahl oder einem Namen aus einem Handbuch oder Bericht, den du hinzugefügt hast, etwa nach einem Drehmoment, einem Datum oder danach, wer etwas abgezeichnet hat. Dann antworte ich aus deinem Dokument, auf deinem Mac, statt online nachzuschlagen.
 
 NEU BEI M1K3? DAS MACHE ICH
 
