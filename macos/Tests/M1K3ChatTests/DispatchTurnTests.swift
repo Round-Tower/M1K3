@@ -20,6 +20,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — cancelled-chain pin (#512).
 //  Review: Kev + claude-opus-5-5, 2026-10-26 — `lookupOnTheUsersDocumentIsPlain`: a seeded manual turns a
 //  lookup_fact pick into a plain turn over its chunk; an empty store still looks it up.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (#711 review fold) — `lookupOverAnImportedConversationStands`: the same
+//  manual text filed as an imported `.conversation` is not the user's document, so the lookup still runs; and
+//  `keptUserDocument`'s table. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -336,6 +339,44 @@ struct DispatchTurnTests {
         )
         #expect(calls.log.withLock { $0 }.count == 1)
         #expect(unseeded.prompts.first?.contains("WHAT lookup_fact RETURNED JUST NOW") == true)
+    }
+
+    /// #711: an imported chat shares the document lane, but it is another assistant's old answer,
+    /// not the user's reference — a chat history covers world-fact topics broadly, so counting it
+    /// would quietly turn ordinary lookups into plain turns after an import.
+    @Test("a lookup_fact pick whose only kept chunk is an imported conversation still looks it up")
+    func lookupOverAnImportedConversationStands() async throws {
+        let question = "What torque do the hub nuts on the trailer axle take?"
+        let store = try KnowledgeStore()
+        try await DocumentIngester(store: store, embedder: HashingEmbeddingService()).ingest(
+            title: "Trailer chat",
+            pages: [DocumentPage(
+                pageNumber: 1,
+                text: "User: What torque do the hub nuts on the trailer axle take?\n"
+                    + "Assistant: The hub nuts on the trailer axle take 145 Nm of torque."
+            )],
+            kind: .conversation
+        )
+        let calls = Calls()
+        let provider = Scripted(["About 120–140 lb-ft."])
+        _ = try await run(
+            provider, tools: [Recording(name: "lookup_fact", output: "Typically 120–140 lb-ft.", calls: calls)],
+            pick: ToolPick(tool: "lookup_fact", query: "hub nut torque"), question: question, store: store
+        )
+        #expect(calls.log.withLock { $0 }.count == 1, "the lookup ran")
+        #expect(provider.prompts.first?.contains("WHAT lookup_fact RETURNED JUST NOW") == true)
+    }
+
+    @Test("keptUserDocument: any kept document-lane chunk but an imported conversation counts")
+    func keptUserDocumentTable() {
+        func hit(_ kind: KnowledgeKind) -> ChunkHit {
+            ChunkHit(chunkID: UUID(), itemID: UUID(), itemTitle: "t", kind: kind, heading: nil, content: "c")
+        }
+        #expect(!AgentRAGResponder.keptUserDocument([]))
+        #expect(!AgentRAGResponder.keptUserDocument([hit(.conversation), hit(.conversation)]))
+        for kind in [KnowledgeKind.document, .note, .call, .image] {
+            #expect(AgentRAGResponder.keptUserDocument([hit(.conversation), hit(kind)]), "\(kind.rawValue)")
+        }
     }
 
     /// The picker sends some well-known facts to a search ("Who wrote Ulysses?" →

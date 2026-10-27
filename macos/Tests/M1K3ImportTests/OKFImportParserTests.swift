@@ -9,6 +9,10 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85.
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — the trust boundary (oversize, persona-conflation
+//  and markup bodies skipped, a long title clamped), a task list under a Relations heading kept, every fact kind round
+//  trips, file order is by name, and an unterminated frontmatter, a garbage timestamp and a README in a subfolder are
+//  pinned. Confidence 0.85.
 
 import Foundation
 import M1K3Chat
@@ -75,5 +79,67 @@ struct OKFImportParserTests {
         let content = "---\ntype: note\n---\n\nAgenda\n\n## Relations\nwith the neighbours is good\n"
         let facts = OKFImportParser.parse(files: [OKFExport.File(name: "a.md", content: content)]).facts
         #expect(facts.first?.text == "Agenda\n\n## Relations\nwith the neighbours is good")
+    }
+
+    // MARK: - Review fold
+
+    @Test("every fact kind round-trips through the real serializer")
+    func everyKindRoundTrips() {
+        let memories = DistilledFactKind.allCases.map { kind in
+            Memory(kind: MemoryKind(rawValue: kind.rawValue), text: "Kev's \(kind.rawValue) fact", source: "distilled")
+        }
+
+        let files = OKFExport.files(memories: memories, edges: [], exportedAt: Date())
+        let facts = OKFImportParser.parse(files: files).facts
+
+        for kind in DistilledFactKind.allCases {
+            #expect(facts.first { $0.text == "Kev's \(kind.rawValue) fact" }?.kind == kind, "\(kind)")
+        }
+    }
+
+    @Test("facts come back in file-name order, whatever order the folder listed them in")
+    func orderIsByName() {
+        let names = ["c.md", "a.md", "b.md"]
+        let files = names.map { OKFExport.File(name: $0, content: "---\ntype: note\n---\n\nFact \($0)\n") }
+        #expect(OKFImportParser.parse(files: files).facts.map(\.text) == ["Fact a.md", "Fact b.md", "Fact c.md"])
+    }
+
+    @Test("an unterminated frontmatter is skipped; a garbage timestamp is no date; a README anywhere is skipped")
+    func oddFiles() {
+        let files = [
+            OKFExport.File(name: "open.md", content: "---\ntype: note\ntitle: \"x\"\n\nno closing fence\n"),
+            OKFExport.File(name: "when.md", content: "---\ntype: note\ntimestamp: yesterday\n---\n\nKev keeps bees\n"),
+            OKFExport.File(name: "sub/README.md", content: "---\ntype: note\n---\n\nnot a fact\n"),
+        ]
+        let facts = OKFImportParser.parse(files: files).facts
+        #expect(facts.map(\.text) == ["Kev keeps bees"])
+        #expect(facts.first?.createdAt == nil)
+    }
+
+    @Test("a body over the cap, a persona conflation or markup is skipped; a long title is clamped")
+    func trustBoundary() {
+        func file(_ name: String, _ body: String, title: String? = nil) -> OKFExport.File {
+            let titleLine = title.map { "title: \"\($0)\"\n" } ?? ""
+            return OKFExport.File(name: name, content: "---\ntype: profile\n\(titleLine)---\n\n\(body)\n")
+        }
+        let files = [
+            file("huge.md", String(repeating: "a", count: OKFImportParser.maxFactLength + 1)),
+            file("persona.md", "The user is M1K3"),
+            file("svg.md", "<svg xmlns=\"http://www.w3.org/2000/svg\"><rect/></svg>"),
+            file("ok.md", "Kev keeps bees in Kinsale", title: String(repeating: "t", count: 300)),
+            file("edge.md", String(repeating: "b", count: OKFImportParser.maxFactLength)),
+        ]
+
+        let facts = OKFImportParser.parse(files: files).facts
+
+        #expect(facts.map(\.text.count) == [OKFImportParser.maxFactLength, 25])
+        #expect(facts.last?.title?.count == OKFImportParser.maxTitleLength)
+    }
+
+    @Test("a task list under a Relations heading is the fact's own text, not the exporter's links")
+    func taskListUnderRelationsIsKept() {
+        let content = "---\ntype: note\n---\n\nTodo\n\n## Relations\n- [ ] call Aoife\n"
+        let facts = OKFImportParser.parse(files: [OKFExport.File(name: "a.md", content: content)]).facts
+        #expect(facts.first?.text == "Todo\n\n## Relations\n- [ ] call Aoife")
     }
 }

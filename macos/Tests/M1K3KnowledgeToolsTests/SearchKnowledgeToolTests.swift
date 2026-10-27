@@ -8,6 +8,8 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.85, Prior: Unknown
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (code-quality fold) — excludedKinds pin (caption memory).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (#711 review fold) — the same pin for an imported `.conversation`.
+//  Confidence 0.9.
 
 import Foundation
 import M1K3Agent
@@ -87,6 +89,24 @@ struct SearchKnowledgeToolExclusionTests {
         #expect(withheld.output.contains("conveyor"))
         let local = try await SearchKnowledgeTool(store: store).execute(input: ["query": "hydraulic"])
         #expect(local.output.contains("pricing tiers"))
+    }
+
+    @Test("excludedKinds keeps an imported conversation out of the observation; the default still finds it")
+    func excludedKindsHideConversations() async throws {
+        let store = try storeWithNotes()
+        try await DocumentIngester(store: store, embedder: nil).ingest(
+            title: "Hydraulic chat",
+            pages: [DocumentPage(
+                pageNumber: 1, text: "User: is the hydraulic press safe\nAssistant: wear the mesh guard"
+            )],
+            kind: .conversation
+        )
+        let withheld = try await SearchKnowledgeTool(store: store, excludedKinds: KnowledgeKind.withheldFromMCP)
+            .execute(input: ["query": "hydraulic"])
+        #expect(!withheld.output.contains("mesh guard"))
+        #expect(withheld.output.contains("conveyor"))
+        let local = try await SearchKnowledgeTool(store: store).execute(input: ["query": "hydraulic"])
+        #expect(local.output.contains("mesh guard"))
     }
 }
 

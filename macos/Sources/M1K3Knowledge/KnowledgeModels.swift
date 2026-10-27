@@ -16,6 +16,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — #711: `.conversation`, an imported ChatGPT / Claude chat filed as
 //  cited knowledge (document lane, both launch sweeps, not donated to Spotlight); string-backed, no migration.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold on #711) — `.conversation` joins
+//  `withheldFromMCP`: a whole imported chat is more private than a Photo caption, so MCP visibility fails closed
+//  until Kev opens it (a one-line change plus a consent decision). Confidence 0.9.
 
 import Foundation
 import GRDB
@@ -63,7 +66,8 @@ public struct KnowledgeKind: RawRepresentable, Hashable, Sendable, Codable {
     /// never a memory: a fact from it reaches the memory graph only when the
     /// user accepts it on import. `sourceRef` names the provider's conversation
     /// id; `source` is the import's `import/<provider>/<date>` tag, so one
-    /// action forgets the whole import.
+    /// action forgets the whole import. Withheld from MCP clients
+    /// (`withheldFromMCP`) and never donated to Spotlight.
     public static let conversation = KnowledgeKind(rawValue: "conversation")
 
     /// Every kind declared above. ONE list, so the launch sweeps can be pinned
@@ -79,9 +83,11 @@ public struct KnowledgeKind: RawRepresentable, Hashable, Sendable, Codable {
     public static let launchSweepKinds: [KnowledgeKind] = [.document, .call, .note, .memory, .image, .conversation]
 
     /// Kinds the MCP surface (list / search / get by id) never shows. A Photo
-    /// caption describes a private image; Claude Code and Brain-at-Home peers
-    /// are outside "nothing leaves this machine".
-    public static let withheldFromMCP: Set<KnowledgeKind> = [.image]
+    /// caption describes a private image, and an imported conversation (#711) is
+    /// a whole chat with another assistant; Claude Code and Brain-at-Home peers
+    /// are outside "nothing leaves this machine". Withholding is query-side, so
+    /// opening a kind later is one line here (and a consent decision).
+    public static let withheldFromMCP: Set<KnowledgeKind> = [.image, .conversation]
 
     /// The user-facing name of the kind, for list rows on both shells.
     public var displayLabel: String {

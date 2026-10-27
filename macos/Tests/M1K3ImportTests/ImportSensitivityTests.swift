@@ -10,6 +10,9 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.8 (a policy table; the word list is a
 //  starting point, owed Kev's read).
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — the matcher's contract is pinned: plurals and
+//  "e-mail" flag, an email address is contact (not location), the earlier class wins, matches are whole tokens and
+//  whole runs ("Gayle" is not "gay"), and case and punctuation don't matter. Confidence 0.8.
 
 import Foundation
 @testable import M1K3Import
@@ -47,5 +50,49 @@ struct ImportSensitivityTests {
         ] {
             #expect(!ImportSensitivity.looksSensitive(text), "\(text)")
         }
+    }
+
+    // MARK: - Review fold: the matcher
+
+    @Test("plurals flag like their singular, and e-mail reads as email")
+    func pluralsAndEmail() {
+        let flagged: [(String, ImportSensitivity.Category)] = [
+            ("Kev takes medications daily", .health),
+            ("Kev has two prescriptions", .health),
+            ("Kev has allergies to cats", .health),
+            ("Kev sees doctors in Cork", .health),
+            ("Kev had two diagnoses this year", .health),
+            ("Kev had surgeries on his knee", .health),
+            ("Kev sees two therapists", .health),
+            ("Kev is repaying his loans", .finance),
+            ("Kev holds two mortgages", .finance),
+            ("Kev has three credit cards", .finance),
+            ("Kev has two bank accounts", .finance),
+            ("Kev's passwords live in a notebook", .credentials),
+            ("Kev visits churches on holiday", .beliefs),
+            ("Kev's friends are Muslims", .beliefs),
+            ("Kev's e-mail address is on the form", .contact),
+            ("Kev's email address is kev@example.com", .contact),
+        ]
+        for (text, category) in flagged {
+            #expect(ImportSensitivity.category(of: text) == category, "\(text)")
+        }
+    }
+
+    @Test("whole tokens and whole runs only: a word inside another word never flags")
+    func wholeTokensOnly() {
+        for text in [
+            "Kev likes Gayle's cooking", "Kev flew Hindustan Aeronautics", "Kev lives atop a hill",
+            "Kev's mailbox is green", "Kev's address book is full",
+        ] {
+            #expect(ImportSensitivity.category(of: text) == nil, "\(text)")
+        }
+    }
+
+    @Test("the earlier class in the table wins; case and punctuation don't matter")
+    func orderCaseAndPunctuation() {
+        #expect(ImportSensitivity.category(of: "Kev's doctor's phone number is in his wallet") == .health)
+        #expect(ImportSensitivity.category(of: "PASSWORD: hunter2") == .credentials)
+        #expect(ImportSensitivity.category(of: "Kev... voted!") == .beliefs)
     }
 }

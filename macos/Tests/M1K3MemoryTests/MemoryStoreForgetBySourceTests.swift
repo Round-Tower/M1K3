@@ -10,6 +10,9 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85 (pure GRDB, in-memory store; the
 //  cascade is forget(id:)'s, pinned again here through the tag).
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — the tag matches EXACTLY (the same provider's
+//  import on another day survives), and a chain inside one import (Y ← X ← Z, X and Z tagged) leaves Y live whatever
+//  the delete order. Confidence 0.85.
 
 import Foundation
 @testable import M1K3Knowledge
@@ -37,22 +40,41 @@ struct MemoryStoreForgetBySourceTests {
         let first = try await remember("Kev drinks his coffee black", source: importTag, in: store)
         _ = try await remember("Kev plays the fiddle", source: importTag, in: store)
         _ = try await remember("Kev lives in Ardmore", source: importTag, in: store, supersedes: oldCity.id)
+        let sibling = try await remember("Kev rows on the Lee", source: "import/chatgpt/2026-10-25", in: store)
         try store.link(MemoryEdge(fromID: first.id, toID: keep.id, relation: "related"))
 
         #expect(try store.memories(source: importTag).count == 3)
+        #expect(try !store.recallFTS(query: "fiddle", limit: 5).isEmpty)
         #expect(try store.memory(id: oldCity.id)?.supersededBy != nil)
 
         let forgotten = try store.forget(source: importTag)
 
         #expect(forgotten == 3)
         #expect(try store.memories(source: importTag).isEmpty)
-        #expect(try store.totalCount() == 2)
-        #expect(try store.embeddingCount() == 2)
+        #expect(try store.totalCount() == 3)
+        #expect(try store.embeddingCount() == 3)
+        let survivor = try #require(try store.memory(id: sibling.id))
+        #expect(survivor.text == sibling.text)
+        #expect(survivor.source == "import/chatgpt/2026-10-25")
         #expect(try store.allEdges().isEmpty)
         #expect(try store.recallFTS(query: "fiddle", limit: 5).isEmpty)
         #expect(try store.memory(id: oldCity.id)?.supersededBy == nil)
         let kept = try #require(try store.memory(id: keep.id))
         #expect(kept.text == keep.text && kept.source == "distilled" && kept.supersededBy == nil)
+    }
+
+    @Test("a chain inside one import (Y <- X <- Z, X and Z tagged) leaves Y live")
+    func chainInsideOneImport() async throws {
+        let store = try MemoryStore()
+        let y = try await remember("Kev lives in Dublin", source: "distilled", in: store)
+        let x = try await remember("Kev lives in Cork", source: importTag, in: store, supersedes: y.id)
+        _ = try await remember("Kev lives in Ardmore", source: importTag, in: store, supersedes: x.id)
+
+        #expect(try store.forget(source: importTag) == 2)
+
+        #expect(try store.totalCount() == 1)
+        #expect(try store.memory(id: y.id)?.supersededBy == nil)
+        #expect(try store.liveCount() == 1)
     }
 
     @Test("memories(source:) lists the tag's rows newest first, superseded ones included")

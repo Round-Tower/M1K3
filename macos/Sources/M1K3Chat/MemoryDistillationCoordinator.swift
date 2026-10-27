@@ -38,6 +38,11 @@
 //  then write the accepted ones through the SAME exact + semantic dedupe/supersede path (bar unchanged:
 //  `semanticDedupeThreshold(for:)`). `corpusSource` (default `.distilled`) tags the rows; `forgetCorpus(source:in:)`
 //  deletes one source's memory rows and restores every twin its ledger says they superseded. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold on #711) — `revivesSupersededFacts` (default
+//  true, so live distillation is unchanged): an import passes false, because an old chat exactly restating a fact the
+//  user has since corrected is history, not a repair, and its revive left no tag for Forget to undo (the graph and
+//  corpus then disagreed). `forgetCorpus` deletes in one transaction (`deleteItems(ids:)` + `deleteMeta(keys:)`).
+//  Confidence 0.85.
 
 import CryptoKit
 import Foundation
@@ -116,6 +121,11 @@ public struct MemoryDistillationCoordinator: Sendable {
     /// distillation, an import's `import/<provider>/<date>` tag for #711, so one action can find
     /// (and forget) exactly what that import added.
     private let corpusSource: KnowledgeSource
+    /// Whether an exact re-assertion of a superseded fact revives it (spec finding #8). Live
+    /// chat: yes, the user repeating a fact they had corrected IS the repair. A memory import
+    /// (#711): no — an old conversation is history, and reviving from it would undo a newer
+    /// correction without a tag "forget this import" could find.
+    private let revivesSupersededFacts: Bool
 
     public init(
         distiller: any MemoryDistilling,
@@ -126,6 +136,7 @@ public struct MemoryDistillationCoordinator: Sendable {
         rekind: (@Sendable (UUID, KnowledgeKind) throws -> Bool)? = nil,
         auditSink: (@Sendable (String) -> Void)? = nil,
         corpusSource: KnowledgeSource = .distilled,
+        revivesSupersededFacts: Bool = true,
         selfNames: DistillationAttribution.UserNames = DistillationAttribution.systemUserNames
     ) {
         self.distiller = distiller
@@ -137,6 +148,7 @@ public struct MemoryDistillationCoordinator: Sendable {
         self.auditSink = auditSink
         self.selfNames = selfNames
         self.corpusSource = corpusSource
+        self.revivesSupersededFacts = revivesSupersededFacts
     }
 
     /// Distill the slice and store what's new. Returns the number of facts
@@ -213,6 +225,10 @@ public struct MemoryDistillationCoordinator: Sendable {
                 // retrieval by an earlier supersede, this is the user REPAIR —
                 // revive it (spec finding #8). A live row is a true duplicate.
                 if try store.item(id: result.itemID)?.kind == .memorySuperseded {
+                    guard revivesSupersededFacts else {
+                        Self.log.debug("skip (exact dup of a superseded fact; this writer never revives)")
+                        continue
+                    }
                     try await revive(fact, itemID: result.itemID, vector: vector)
                     written += 1
                 } else {
@@ -241,7 +257,8 @@ public struct MemoryDistillationCoordinator: Sendable {
     /// `MemoryStore.forget(id:)` un-superseding in the graph. Restores run
     /// BEFORE the deletes because the ledger names the corrector by id. Other
     /// kinds carrying the tag (an import's `.conversation` items) are the
-    /// caller's to delete. Returns the number of rows removed.
+    /// caller's to delete. The rows and their ledger entries go in one
+    /// transaction each. Returns the number of rows removed.
     @discardableResult
     public static func forgetCorpus(source: KnowledgeSource, in store: KnowledgeStore) throws -> Int {
         let doomed = try Set(store.itemIDs(source: source, kinds: [.memory, .memorySuperseded]))
@@ -256,13 +273,8 @@ public struct MemoryDistillationCoordinator: Sendable {
                 restored += 1
             }
         }
-        var removed = 0
-        for id in doomed {
-            if try store.deleteItem(id: id) {
-                removed += 1
-            }
-            try store.deleteMeta(key: supersededLinkKey(id))
-        }
+        let removed = try store.deleteItems(ids: Array(doomed))
+        try store.deleteMeta(keys: doomed.map(supersededLinkKey))
         log.notice("corpus source forgotten: \(removed) memory row(s) removed, \(restored) restored")
         return removed
     }

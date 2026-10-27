@@ -14,19 +14,29 @@
 //  2. `commit` writes the accepted facts through `MemoryDistillationCoordinator.store` — the one
 //     write path, so an exact duplicate is a no-op and a restatement supersedes its live twin at
 //     the embedder's own bar (`semanticDedupeThreshold(for:)`, never restated here) — tagged
-//     `import/<provider>/<day>` in both stores. Then each conversation is filed once as a
-//     `.conversation` knowledge item: searched and cited like a document, never a memory.
+//     `import/<provider>/<day>` in both stores, all of them BEFORE any transcript is filed (each
+//     fact's twin search then scans the corpus as it stood, not one the import keeps growing).
+//     An import never revives a superseded fact: an old chat restating what the user has since
+//     corrected is history, not a repair. Then each conversation the caller chose (`filing`: the
+//     review screen's decision, separate from the facts) is filed once as a `.conversation`
+//     knowledge item: searched and cited like a document, never a memory.
 //
-//  Both steps are async, cooperative about cancellation and report progress per conversation;
-//  "never blocks the UI" is structural — the import UI runs them in a detached utility task, the
-//  way MemoryExporter runs. Cancelling a commit returns what it finished (`wasCancelled`); the
-//  next commit of the same bundle completes the rest without doubling anything (fact hashes and
-//  conversation sourceRefs both dedupe). Nothing here touches the network.
+//  Both steps are async, cooperative about cancellation and report progress per step; "never
+//  blocks the UI" is structural — the import UI runs them in a detached utility task, the way
+//  MemoryExporter runs. Cancelling a commit returns what it finished (`wasCancelled`), wherever the
+//  cancel lands; a fact or a conversation that fails is counted and skipped. The next commit of
+//  the same bundle completes the rest without doubling anything (fact hashes and conversation
+//  sourceRefs both dedupe). Nothing here touches the network.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.8 (mechanics pinned with scripted
 //  distillers and the hashing embedder; the real distiller's judgement on imported chats is owed
 //  as a SelfTest arm).
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — propose dedupes LAST-wins (a fact keeps its
+//  first slot but moves to the newest conversation that said it, `statedIn` lists all of them), so A, B, A ends with A
+//  live; commit takes an explicit `filing` (no default: unticking a sensitive fact meant nothing while its transcript
+//  was filed anyway), writes every fact before any transcript, catches per fact (`factsFailed`; a cancel inside a
+//  write returns the partial receipt), and builds its coordinator with `revivesSupersededFacts: false`. Confidence 0.8.
 
 import Foundation
 import M1K3Chat
@@ -41,8 +51,12 @@ public struct ImportProposal: Sendable, Equatable, Identifiable {
     /// Position in the proposal list: stable for one `propose` run.
     public let id: Int
     public let fact: DistilledFact
-    /// The provider conversation it came from; nil for an OKF fact.
+    /// The newest provider conversation that stated it (the slot commit writes it in, so the
+    /// latest statement wins); nil for an OKF fact.
     public let conversationID: String?
+    /// Every conversation that stated it, oldest first (`conversationID` is the last). What the
+    /// review screen needs to keep a sensitive fact's transcripts unfiled too.
+    public let statedIn: [String]
     /// The conversation's title, or the OKF fact's own title.
     public let sourceTitle: String?
     /// Why the review screen leaves it unticked, if it does.
@@ -50,13 +64,14 @@ public struct ImportProposal: Sendable, Equatable, Identifiable {
 
     public init(
         id: Int, fact: DistilledFact, conversationID: String?, sourceTitle: String?,
-        sensitivity: ImportSensitivity.Category?
+        sensitivity: ImportSensitivity.Category?, statedIn: [String]? = nil
     ) {
         self.id = id
         self.fact = fact
         self.conversationID = conversationID
         self.sourceTitle = sourceTitle
         self.sensitivity = sensitivity
+        self.statedIn = statedIn ?? conversationID.map { [$0] } ?? []
     }
 
     /// The review screen's default tick: everything except a sensitive class.
@@ -85,9 +100,30 @@ public struct ImportProgress: Sendable, Equatable {
     }
 }
 
+/// Which conversations `commit` files as cited `.conversation` knowledge. Filing is separate from
+/// accepting facts: a transcript holds every sentence, including the ones the user unticked, so the
+/// review screen decides (and the copy says transcripts are filed).
+public enum ConversationFiling: Sendable, Equatable {
+    case all
+    /// Memories only: no transcript is filed.
+    case none
+    /// Only these conversation ids.
+    case only(Set<String>)
+
+    func includes(_ id: String) -> Bool {
+        switch self {
+        case .all: true
+        case .none: false
+        case let .only(ids): ids.contains(id)
+        }
+    }
+}
+
 public struct ImportReceipt: Sendable, Equatable {
     /// Facts newly written (exact duplicates of what was already known don't count).
     public var factsWritten: Int
+    /// Accepted facts whose write failed (an embedder or store error); skipped, the rest go on.
+    public var factsFailed: Int
     public var conversationsFiled: Int
     /// Conversations an earlier import (or an interrupted commit) had already filed.
     public var conversationsAlreadyFiled: Int
@@ -97,10 +133,11 @@ public struct ImportReceipt: Sendable, Equatable {
     public var wasCancelled: Bool
 
     public init(
-        factsWritten: Int = 0, conversationsFiled: Int = 0, conversationsAlreadyFiled: Int = 0,
+        factsWritten: Int = 0, factsFailed: Int = 0, conversationsFiled: Int = 0, conversationsAlreadyFiled: Int = 0,
         conversationsFailed: Int = 0, wasCancelled: Bool = false
     ) {
         self.factsWritten = factsWritten
+        self.factsFailed = factsFailed
         self.conversationsFiled = conversationsFiled
         self.conversationsAlreadyFiled = conversationsAlreadyFiled
         self.conversationsFailed = conversationsFailed
@@ -111,15 +148,16 @@ public struct ImportReceipt: Sendable, Equatable {
 public struct ConversationImportPipeline: Sendable {
     /// Counts and error text only, never fact or conversation text.
     private static let log = M1K3Log.logger(.memoryDistill)
-    /// OKF facts commit in batches of this many, so a large folder still reports progress and
-    /// notices cancellation.
+    /// Accepted facts commit in batches of this many, one progress step each, so a large import
+    /// still reports progress and notices cancellation.
     static let factBatchSize = 50
 
     public let tag: ImportSourceTag
     private let coordinator: MemoryDistillationCoordinator
     private let ingester: DocumentIngester
 
-    /// One coordinator, wired like the app's live distillation but writing `tag` into both stores.
+    /// One coordinator, wired like the app's live distillation but writing `tag` into both stores
+    /// and never reviving a superseded fact.
     public init(
         tag: ImportSourceTag,
         knowledgeStore: KnowledgeStore,
@@ -137,6 +175,7 @@ public struct ConversationImportPipeline: Sendable {
             embedder: embedder,
             graph: DistilledFactGraphAdapter(store: memoryStore, source: tag.graphSource),
             corpusSource: tag.knowledgeSource,
+            revivesSupersededFacts: false,
             selfNames: selfNames
         )
     }
@@ -151,11 +190,23 @@ public struct ConversationImportPipeline: Sendable {
         progress: @Sendable (ImportProgress) -> Void = { _ in }
     ) async throws -> [ImportProposal] {
         var proposals: [ImportProposal] = []
-        var seen: Set<String> = []
+        var slot: [String: Int] = [:]
         func offer(_ fact: DistilledFact, conversationID: String?, title: String?) {
             // The same fact said in two conversations is one proposal (the same identity the
-            // write path dedupes on).
-            guard seen.insert(MemoryDistillationCoordinator.factSourceRef(fact.text)).inserted else { return }
+            // write path dedupes on). LAST wins: it keeps its first slot in the list, but moves to
+            // the newest conversation that said it, so commit writes it where the user said it
+            // last (A, B, A ends with A live, not B).
+            let key = MemoryDistillationCoordinator.factSourceRef(fact.text)
+            if let index = slot[key] {
+                let earlier = proposals[index]
+                proposals[index] = ImportProposal(
+                    id: earlier.id, fact: earlier.fact, conversationID: conversationID ?? earlier.conversationID,
+                    sourceTitle: title ?? earlier.sourceTitle, sensitivity: earlier.sensitivity,
+                    statedIn: earlier.statedIn + (conversationID.map { [$0] } ?? [])
+                )
+                return
+            }
+            slot[key] = proposals.count
             proposals.append(ImportProposal(
                 id: proposals.count, fact: fact, conversationID: conversationID, sourceTitle: title,
                 sensitivity: ImportSensitivity.category(of: fact.text)
@@ -212,24 +263,34 @@ public struct ConversationImportPipeline: Sendable {
 
     // MARK: - Commit
 
-    /// Write `accepted` and file every conversation in `bundle`, oldest first, so a later
-    /// restatement supersedes an earlier one. One progress step per OKF fact batch and per
-    /// conversation. Cancellation stops between steps and returns the partial receipt.
+    /// Write `accepted`, then file the conversations `filing` names, both oldest first, so a later
+    /// restatement supersedes an earlier one. Facts whose conversation isn't in `bundle` (an OKF
+    /// fact, a memories-only import) go first. One progress step per batch of facts and per filed
+    /// conversation. A cancel — between steps or inside a write — returns the partial receipt; a
+    /// fact or conversation that fails is counted and skipped.
     public func commit(
         _ accepted: [ImportProposal],
         from bundle: ImportBundle,
+        filing: ConversationFiling,
         progress: @Sendable (ImportProgress) -> Void = { _ in }
     ) async throws -> ImportReceipt {
         let conversations = bundle.chronologicalConversations
-        let ids = Set(conversations.map(\.id))
-        let byConversation = Dictionary(grouping: accepted.filter { $0.conversationID.map(ids.contains) == true }) {
-            $0.conversationID ?? ""
+        var position: [String: Int] = [:]
+        for (index, conversation) in conversations.enumerated() where position[conversation.id] == nil {
+            position[conversation.id] = index
         }
-        let loose = accepted.filter { $0.conversationID.map(ids.contains) != true }
-        let batches = stride(from: 0, to: loose.count, by: Self.factBatchSize).map {
-            Array(loose[$0 ..< min($0 + Self.factBatchSize, loose.count)])
+        let facts = accepted.enumerated()
+            .sorted { lhs, rhs in
+                let left = lhs.element.conversationID.flatMap { position[$0] } ?? -1
+                let right = rhs.element.conversationID.flatMap { position[$0] } ?? -1
+                return left == right ? lhs.offset < rhs.offset : left < right
+            }
+            .map(\.element.fact)
+        let batches = stride(from: 0, to: facts.count, by: Self.factBatchSize).map {
+            Array(facts[$0 ..< min($0 + Self.factBatchSize, facts.count)])
         }
-        let total = batches.count + conversations.count
+        let toFile = conversations.filter { filing.includes($0.id) }
+        let total = batches.count + toFile.count
         var receipt = ImportReceipt()
         var completed = 0
         func step() {
@@ -237,16 +298,25 @@ public struct ConversationImportPipeline: Sendable {
             progress(ImportProgress(phase: .committing, completed: completed, total: total))
         }
 
+        // Every fact before any transcript: each twin search scans the corpus as it stood, not one
+        // this import keeps growing with thousands of transcript chunks.
         for batch in batches {
             guard !Task.isCancelled else { return cancelled(receipt) }
-            receipt.factsWritten += try await coordinator.store(batch.map(\.fact))
+            for fact in batch {
+                do {
+                    receipt.factsWritten += try await coordinator.store([fact])
+                } catch is CancellationError {
+                    return cancelled(receipt)
+                } catch {
+                    receipt.factsFailed += 1
+                    let kind = String(describing: type(of: error))
+                    Self.log.notice("import: writing one fact failed: \(kind, privacy: .public)")
+                }
+            }
             step()
         }
-        for conversation in conversations {
+        for conversation in toFile {
             guard !Task.isCancelled else { return cancelled(receipt) }
-            if let facts = byConversation[conversation.id] {
-                receipt.factsWritten += try await coordinator.store(facts.map(\.fact))
-            }
             do {
                 let filed = try await ingester.ingest(
                     title: conversation.title,
@@ -268,16 +338,20 @@ public struct ConversationImportPipeline: Sendable {
             }
             step()
         }
-        Self.log.notice(
-            "import committed \(receipt.factsWritten) fact(s), filed \(receipt.conversationsFiled) conversation(s)"
-        )
+        Self.log.notice("""
+        import committed \(receipt.factsWritten) fact(s) (\(receipt.factsFailed) failed), \
+        filed \(receipt.conversationsFiled) conversation(s)
+        """)
         return receipt
     }
 
     private func cancelled(_ receipt: ImportReceipt) -> ImportReceipt {
         var partial = receipt
         partial.wasCancelled = true
-        Self.log.notice("import commit cancelled after \(partial.conversationsFiled) conversation(s)")
+        Self.log.notice("""
+        import commit cancelled after \(partial.factsWritten) fact(s), \
+        \(partial.conversationsFiled) conversation(s)
+        """)
         return partial
     }
 }

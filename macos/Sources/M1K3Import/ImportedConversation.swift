@@ -11,7 +11,12 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85.
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — a conversation with no id gets one DERIVED from
+//  what it says (`ImportJSON.derivedID`), never from its position in the file: the id is the filed conversation's
+//  dedupe key across exports, and `index-3` named a different chat in the next export. An untitled conversation
+//  takes its first user line as the title, and a repeated id keeps its first conversation. Confidence 0.85.
 
+import CryptoKit
 import Foundation
 import M1K3Chat
 import M1K3Knowledge
@@ -51,7 +56,8 @@ public struct ImportedMessage: Sendable, Equatable {
 }
 
 public struct ImportedConversation: Sendable, Equatable, Identifiable {
-    /// The provider's own conversation id: the dedupe key of the filed knowledge item.
+    /// The provider's own conversation id, or one derived from the conversation's content when the
+    /// export carries none (`ImportJSON.derivedID`): the dedupe key of the filed knowledge item.
     public let id: String
     public let title: String
     public let createdAt: Date?
@@ -147,6 +153,37 @@ enum ImportJSON {
             return nil
         }
         return trimmed
+    }
+
+    /// A stable id for a conversation whose export names none: a hash of its title, date and first
+    /// message, never its position in the file. The id is the filed conversation's dedupe key across
+    /// exports (`ImportSourceTag.conversationSourceRef`), so a positional id would make a later
+    /// export's different chat at the same index read as "already filed".
+    static func derivedID(title: String?, createdAt: Date?, messages: [ImportedMessage]) -> String {
+        let seed = [
+            title ?? "", createdAt.map { String($0.timeIntervalSince1970) } ?? "", messages.first?.text ?? "",
+        ].joined(separator: "\u{1F}")
+        let digest = SHA256.hash(data: Data(seed.utf8))
+        return "derived-" + digest.prefix(8).map { String(format: "%02x", $0) }.joined()
+    }
+
+    /// The title an untitled conversation shows: its first user line (or first line), cut at a word
+    /// boundary — never a raw id, which the cited-knowledge UI would show and every chunk would embed.
+    static func titleExcerpt(of messages: [ImportedMessage]) -> String {
+        let text = (messages.first { $0.role == .user } ?? messages.first)?.text ?? ""
+        let line = text.split(separator: "\n").first.map(String.init) ?? text
+        guard line.count > maxTitleLength else { return line }
+        let prefix = line.prefix(maxTitleLength)
+        let cut = prefix.lastIndex(of: " ").map { prefix[..<$0] } ?? prefix
+        return String(cut) + "…"
+    }
+
+    static let maxTitleLength = 60
+
+    /// The first conversation for each id, in export order: a repeated id names one conversation.
+    static func uniqueByID(_ conversations: [ImportedConversation]) -> [ImportedConversation] {
+        var seen: Set<String> = []
+        return conversations.filter { seen.insert($0.id).inserted }
     }
 }
 

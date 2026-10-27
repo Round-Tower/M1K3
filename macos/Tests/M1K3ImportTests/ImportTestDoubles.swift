@@ -8,6 +8,9 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85.
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — failure doubles: `FailingEmbedder` (a plain error
+//  or a CancellationError on a marker word) and `CancellingDistiller`; the harness takes an embedder, and `pipeline`
+//  can swap it for a retry over the same stores. Confidence 0.85.
 
 import Foundation
 import M1K3Chat
@@ -55,6 +58,72 @@ struct FlakyDistiller: MemoryDistilling {
     }
 }
 
+/// Throws `CancellationError` for every slice: a cancel that lands inside the distiller.
+struct CancellingDistiller: MemoryDistilling {
+    func distill(turns _: [ChatTurn]) async throws -> [DistilledFact] {
+        throw CancellationError()
+    }
+}
+
+/// The hashing embedder, except that any text containing `marker` throws: a plain error, or a
+/// `CancellationError` (a cancel landing inside an embed, mid-write).
+struct FailingEmbedder: EmbeddingService {
+    struct Failure: Error {}
+
+    let marker: String
+    var cancels = false
+    private let base = HashingEmbeddingService()
+
+    init(marker: String, cancels: Bool = false) {
+        self.marker = marker
+        self.cancels = cancels
+    }
+
+    var dimension: Int {
+        base.dimension
+    }
+
+    var fingerprint: String {
+        base.fingerprint
+    }
+
+    func embed(_ text: String) async throws -> [Float] {
+        guard !text.contains(marker) else {
+            if cancels { throw CancellationError() }
+            throw Failure()
+        }
+        return try await base.embed(text)
+    }
+
+    func isAvailable() async -> Bool {
+        true
+    }
+}
+
+/// `count` words that belong to `index` alone, for facts that must NOT be semantic twins under the
+/// hashing embedder. A varying part with a shared suffix (`t12x0` … `t12x5`) is not enough: the
+/// embedder's bucket is FNV-1a mod 256, whose low 8 bits only ever read their own low 8 bits, so two
+/// indexes that reach the same state after `t12` collide on every token at once (1,200 facts over
+/// 256 states superseded each other). Each word here is an independent pseudo-random string.
+func distinctWords(_ index: Int, count: Int = 6) -> String {
+    func mix(_ value: UInt64) -> UInt64 {
+        var mixed = value
+        mixed = (mixed ^ (mixed >> 30)) &* 0xBF58_476D_1CE4_E5B9
+        mixed = (mixed ^ (mixed >> 27)) &* 0x94D0_49BB_1331_11EB
+        return mixed ^ (mixed >> 31)
+    }
+    // Seeded THROUGH the mixer: a seed of index × step would make index i's stream index i+1's,
+    // shifted by one word.
+    var state = mix(UInt64(truncatingIfNeeded: index) &+ 0x2545_F491_4F6C_DD1D)
+    func next() -> UInt64 {
+        state &+= 0x9E37_79B9_7F4A_7C15
+        return mix(state)
+    }
+    return (0 ..< count).map { _ in
+        String((0 ..< 7).map { _ in Character(UnicodeScalar(UInt8(97 + next() % 26))) })
+    }.joined(separator: " ")
+}
+
 /// 20 shared filler tokens so a one-word swap stays at cosine 0.95 under the hashing embedder.
 let filler = "alpha beta gamma delta epsilon zeta eta theta iota kappa "
     + "lambda mu nu xi omicron rho sigma tau upsilon"
@@ -62,21 +131,27 @@ let filler = "alpha beta gamma delta epsilon zeta eta theta iota kappa "
 struct ImportHarness {
     let knowledge: KnowledgeStore
     let memory: MemoryStore
-    let embedder = HashingEmbeddingService()
+    let embedder: any EmbeddingService
     let tag: ImportSourceTag
 
-    init(tag: ImportSourceTag = ImportSourceTag(provider: .chatgpt, date: utcDate(2026, 10, 26))) throws {
+    init(
+        tag: ImportSourceTag = ImportSourceTag(provider: .chatgpt, date: utcDate(2026, 10, 26)),
+        embedder: any EmbeddingService = HashingEmbeddingService()
+    ) throws {
         knowledge = try KnowledgeStore()
         memory = try MemoryStore()
         self.tag = tag
+        self.embedder = embedder
     }
 
-    func pipeline(_ distiller: any MemoryDistilling, tag: ImportSourceTag? = nil) -> ConversationImportPipeline {
+    func pipeline(
+        _ distiller: any MemoryDistilling, tag: ImportSourceTag? = nil, embedder: (any EmbeddingService)? = nil
+    ) -> ConversationImportPipeline {
         ConversationImportPipeline(
             tag: tag ?? self.tag,
             knowledgeStore: knowledge,
             memoryStore: memory,
-            embedder: embedder,
+            embedder: embedder ?? self.embedder,
             distiller: distiller,
             selfNames: .none
         )

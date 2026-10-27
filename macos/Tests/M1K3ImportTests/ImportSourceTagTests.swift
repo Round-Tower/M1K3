@@ -8,6 +8,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.9.
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — one spelling per day: signed fields refused,
+//  single-digit months and days zero-padded, leap days checked both ways. Confidence 0.9.
 
 import Foundation
 @testable import M1K3Import
@@ -36,7 +38,8 @@ struct ImportSourceTagTests {
         for raw in [
             "distilled", "mcp:remember", "import/bard/2026-10-26", "import/chatgpt/26-10-2026",
             "import/chatgpt/2026-10-26/extra", "import/chatgpt/2026-13-40", "import/chatgpt/2026-02-31",
-            "import/chatgpt",
+            "import/chatgpt", "import/chatgpt/2026-+1-+5", "import/chatgpt/+202-10-26", "import/chatgpt/2027-02-29",
+            "import/chatgpt/２０２６-10-26",
         ] {
             #expect(ImportSourceTag(rawValue: raw) == nil, "\(raw)")
         }
@@ -53,5 +56,13 @@ struct ImportSourceTagTests {
             ImportSourceTag(provider: .claude, date: utcDate(2026, 10, 26)).conversationSourceRef(id: "abc-123")
                 != monday.conversationSourceRef(id: "abc-123")
         )
+    }
+
+    @Test("single-digit months and days print zero-padded and parse back; a real leap day parses")
+    func paddingAndLeapDays() {
+        let january = ImportSourceTag(provider: .chatgpt, date: utcDate(2026, 1, 5))
+        #expect(january.rawValue == "import/chatgpt/2026-01-05")
+        #expect(ImportSourceTag(rawValue: january.rawValue) == january)
+        #expect(ImportSourceTag(rawValue: "import/claude/2028-02-29")?.day == "2028-02-29")
     }
 }

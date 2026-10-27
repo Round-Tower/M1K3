@@ -14,6 +14,10 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85.
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — pins what the review found unpinned: last-wins
+//  attribution (A, B, A ends with A live), chronological commit whatever the export order, the caller's `filing`
+//  choice, OKF facts committed in batches with their kinds, loose facts, a failing fact or transcript counted and
+//  retried, a cancel inside a write or inside the distiller. Confidence 0.85.
 
 import Foundation
 import M1K3Chat
@@ -94,7 +98,9 @@ struct ConversationImportPipelineTests {
         let proposals = try await harness.pipeline(FlakyDistiller()).propose(bundle)
 
         #expect(proposals.map(\.fact.text) == ["Kev keeps bees in Kinsale", "Kev takes medication for asthma"])
-        #expect(proposals.map(\.conversationID) == ["c1", "c3"])
+        // Last wins: the bees fact moves to c2, the newer conversation that said it.
+        #expect(proposals.map(\.conversationID) == ["c2", "c3"])
+        #expect(proposals.first?.statedIn == ["c1", "c2"])
         #expect(proposals.map(\.acceptedByDefault) == [true, false])
         #expect(proposals.last?.sensitivity == .health)
         #expect(Set(proposals.map(\.id)).count == proposals.count)
@@ -146,7 +152,7 @@ struct ConversationImportPipelineTests {
         let proposals = try await pipeline.propose(bundle)
         let accepted = proposals.filter { $0.fact.text.contains("bees") }
 
-        let receipt = try await pipeline.commit(accepted, from: bundle)
+        let receipt = try await pipeline.commit(accepted, from: bundle, filing: .all)
 
         #expect(receipt.factsWritten == 1)
         let item = try #require(try harness.corpusItem(titled: "Kev keeps bees"))
@@ -167,14 +173,14 @@ struct ConversationImportPipelineTests {
 
         let same = ImportBundle(provider: .chatgpt, conversations: [conversation("c1", [(.user, "\(filler) dublin")])])
         let samePipeline = harness.pipeline(ScriptedDistiller(["\(filler) dublin"]))
-        let sameReceipt = try await samePipeline.commit(samePipeline.propose(same), from: same)
+        let sameReceipt = try await samePipeline.commit(samePipeline.propose(same), from: same, filing: .all)
         #expect(sameReceipt.factsWritten == 0)
         #expect(try harness.memory.liveCount() == 1)
         #expect(try harness.knowledge.allItems(kind: .memory).count == 1)
 
         let moved = ImportBundle(provider: .chatgpt, conversations: [conversation("c2", [(.user, "\(filler) ardmore")])])
         let movedPipeline = harness.pipeline(ScriptedDistiller(["\(filler) ardmore"]))
-        let movedReceipt = try await movedPipeline.commit(movedPipeline.propose(moved), from: moved)
+        let movedReceipt = try await movedPipeline.commit(movedPipeline.propose(moved), from: moved, filing: .all)
 
         #expect(movedReceipt.factsWritten == 1)
         #expect(try harness.memory.liveCount() == 1)
@@ -195,7 +201,7 @@ struct ConversationImportPipelineTests {
         ])
         let pipeline = harness.pipeline(ScriptedDistiller([]))
 
-        let receipt = try await pipeline.commit([], from: bundle)
+        let receipt = try await pipeline.commit([], from: bundle, filing: .all)
 
         #expect(receipt == ImportReceipt(factsWritten: 0, conversationsFiled: 2, conversationsAlreadyFiled: 0))
         let items = try harness.knowledge.allItems(kind: .conversation)
@@ -214,12 +220,12 @@ struct ConversationImportPipelineTests {
         #expect(knowledge.first?.itemTitle == "Conversation c1")
         #expect(memories.isEmpty)
 
-        let again = try await pipeline.commit([], from: bundle)
+        let again = try await pipeline.commit([], from: bundle, filing: .all)
         #expect(again == ImportReceipt(factsWritten: 0, conversationsFiled: 0, conversationsAlreadyFiled: 2))
         #expect(try harness.knowledge.allItems(kind: .conversation).count == 2)
     }
 
-    @Test("commit reports one progress step per conversation and OKF batch, in order")
+    @Test("commit with no accepted facts reports one progress step per filed conversation")
     func commitProgress() async throws {
         let harness = try ImportHarness()
         let log = ProgressLog()
@@ -228,11 +234,197 @@ struct ConversationImportPipelineTests {
             conversations: [conversation("c1", at: 2, [(.user, "a b")]), conversation("c2", at: 1, [(.user, "c d")])]
         )
 
-        _ = try await harness.pipeline(ScriptedDistiller([])).commit([], from: bundle) { log.record($0) }
+        _ = try await harness.pipeline(ScriptedDistiller([])).commit([], from: bundle, filing: .all) { log.record($0) }
 
         #expect(log.all().map(\.completed) == [1, 2])
         #expect(log.all().allSatisfy { $0.phase == .committing && $0.total == 2 })
         let filed = try harness.knowledge.allItems(kind: .conversation)
         #expect(filed.count == 2)
+    }
+
+    // MARK: - Review fold: attribution and order
+
+    @Test("the same fact said again later moves to the later conversation: A, B, A ends with A live")
+    func lastStatementWins() async throws {
+        let harness = try ImportHarness()
+        let bundle = ImportBundle(provider: .chatgpt, conversations: [
+            conversation("c1", at: 1, [(.user, "\(filler) dublin")]),
+            conversation("c2", at: 2, [(.user, "\(filler) ardmore")]),
+            conversation("c3", at: 3, [(.user, "\(filler) dublin")]),
+        ])
+        let pipeline = harness.pipeline(FlakyDistiller())
+
+        let proposals = try await pipeline.propose(bundle)
+
+        #expect(proposals.map(\.fact.text) == ["\(filler) dublin", "\(filler) ardmore"])
+        #expect(proposals.map(\.id) == [0, 1])
+        #expect(proposals.map(\.conversationID) == ["c3", "c2"])
+        #expect(proposals.map(\.statedIn) == [["c1", "c3"], ["c2"]])
+        #expect(proposals.first?.sourceTitle == "Conversation c3")
+
+        _ = try await pipeline.commit(proposals, from: bundle, filing: .none)
+
+        let dublin = try #require(try harness.graphRow("\(filler) dublin"))
+        let ardmore = try #require(try harness.graphRow("\(filler) ardmore"))
+        #expect(ardmore.supersededBy == dublin.id)
+        #expect(dublin.supersededBy == nil)
+        #expect(try harness.memory.liveCount() == 1)
+        #expect(try harness.corpusItem(forFact: "\(filler) dublin")?.kind == .memory)
+        #expect(try harness.corpusItem(forFact: "\(filler) ardmore")?.kind == .memorySuperseded)
+    }
+
+    @Test("propose and commit run oldest first whatever the export's order, so the newer statement wins")
+    func commitIsChronological() async throws {
+        let harness = try ImportHarness()
+        let bundle = ImportBundle(provider: .chatgpt, conversations: [
+            conversation("newer", at: 20, [(.user, "\(filler) ardmore")]),
+            conversation("older", at: 10, [(.user, "\(filler) dublin")]),
+        ])
+        let pipeline = harness.pipeline(FlakyDistiller())
+
+        let proposals = try await pipeline.propose(bundle)
+        #expect(proposals.map(\.fact.text) == ["\(filler) dublin", "\(filler) ardmore"])
+        _ = try await pipeline.commit(proposals, from: bundle, filing: .all)
+
+        let dublin = try #require(try harness.graphRow("\(filler) dublin"))
+        let ardmore = try #require(try harness.graphRow("\(filler) ardmore"))
+        #expect(dublin.supersededBy == ardmore.id)
+        #expect(ardmore.supersededBy == nil)
+        #expect(try harness.corpusItem(forFact: "\(filler) dublin")?.kind == .memorySuperseded)
+    }
+
+    // MARK: - Review fold: what is filed
+
+    @Test("filing is the caller's choice: none files no transcript, only files exactly the named ones")
+    func filingIsTheCallersChoice() async throws {
+        let bundle = ImportBundle(provider: .chatgpt, conversations: [
+            conversation("c1", at: 1, [(.user, "Kev keeps bees in Kinsale")]),
+            conversation("c2", at: 2, [(.user, "Kev takes medication for asthma")]),
+        ])
+
+        let memoriesOnly = try ImportHarness()
+        let first = memoriesOnly.pipeline(FlakyDistiller())
+        let receipt = try await first.commit(first.propose(bundle), from: bundle, filing: .none)
+        #expect(receipt == ImportReceipt(factsWritten: 2))
+        #expect(try memoriesOnly.knowledge.allItems(kind: .conversation).isEmpty)
+        #expect(try memoriesOnly.knowledge.itemCount() == 2)
+        #expect(try memoriesOnly.knowledge.searchFTS(query: "asthma").allSatisfy { $0.kind == .memory })
+
+        let chosen = try ImportHarness()
+        let second = chosen.pipeline(FlakyDistiller())
+        let proposals = try await second.propose(bundle)
+        // Every fact unticked, one transcript chosen: that one is filed, the other is not.
+        let filed = try await second.commit([], from: bundle, filing: .only(["c1"]))
+        #expect(filed == ImportReceipt(conversationsFiled: 1))
+        #expect(try chosen.knowledge.allItems(kind: .conversation).compactMap(\.sourceRef)
+            == [chosen.tag.conversationSourceRef(id: "c1")])
+        #expect(try chosen.knowledge.searchFTS(query: "asthma").isEmpty)
+        #expect(proposals.last?.acceptedByDefault == false)
+    }
+
+    @Test("facts whose conversation is not in the bundle are written; nothing is filed for them")
+    func looseFactsWriteWithoutTheirConversation() async throws {
+        let harness = try ImportHarness()
+        let bundle = ImportBundle(
+            provider: .chatgpt, conversations: [conversation("c1", [(.user, "Kev keeps bees in Kinsale")])]
+        )
+        let pipeline = harness.pipeline(FlakyDistiller())
+        let proposals = try await pipeline.propose(bundle)
+
+        let receipt = try await pipeline.commit(
+            proposals, from: ImportBundle(provider: .chatgpt), filing: .all
+        )
+
+        #expect(receipt == ImportReceipt(factsWritten: 1))
+        #expect(try harness.graphRow("Kev keeps bees in Kinsale")?.source == harness.tag.graphSource)
+        #expect(try harness.knowledge.allItems(kind: .conversation).isEmpty)
+    }
+
+    @Test("OKF facts commit in batches of fifty, one step each, tagged m1k3 with their kinds")
+    func okfFactsCommitInBatches() async throws {
+        let tag = ImportSourceTag(provider: .m1k3, date: utcDate(2026, 10, 26))
+        let harness = try ImportHarness(tag: tag)
+        let kinds: [DistilledFactKind] = [.profile, .preference, .note]
+        let facts = (0 ..< 120).map { index in
+            ImportedFact(
+                kind: kinds[index % kinds.count], text: "Kev noted \(distinctWords(index))",
+                title: nil, createdAt: nil, originalSource: "distilled"
+            )
+        }
+        let bundle = ImportBundle(provider: .m1k3, facts: facts)
+        let pipeline = harness.pipeline(SpyDistiller())
+        let log = ProgressLog()
+
+        let receipt = try await pipeline.commit(pipeline.propose(bundle), from: bundle, filing: .all) { log.record($0) }
+
+        #expect(receipt == ImportReceipt(factsWritten: 120))
+        #expect(log.all().map(\.completed) == [1, 2, 3])
+        #expect(log.all().allSatisfy { $0.phase == .committing && $0.total == 3 })
+        #expect(try harness.memory.memories(source: tag.graphSource).count == 120)
+        #expect(try harness.memory.liveCount() == 120)
+        #expect(try harness.knowledge.itemIDs(source: tag.knowledgeSource).count == 120)
+        #expect(try harness.graphRow(facts[0].text)?.kind == .profile)
+        #expect(try harness.graphRow(facts[1].text)?.kind == .preference)
+        #expect(try harness.graphRow(facts[2].text)?.kind == .note)
+    }
+
+    // MARK: - Review fold: failure and cancellation
+
+    @Test("a failing fact or transcript is counted and skipped; the next commit writes and files it")
+    func failuresAreCountedAndRetried() async throws {
+        let harness = try ImportHarness(embedder: FailingEmbedder(marker: "zap"))
+        let bundle = ImportBundle(provider: .chatgpt, conversations: [
+            conversation("c1", at: 1, [(.user, "Kev keeps bees in Kinsale")]),
+            conversation("c2", at: 2, [(.user, "Kev owns a zap gun from 1985")]),
+            conversation("c3", at: 3, [(.user, "Kev plays the fiddle in Cobh")]),
+        ])
+        let pipeline = harness.pipeline(FlakyDistiller())
+        let proposals = try await pipeline.propose(bundle)
+        let log = ProgressLog()
+
+        let receipt = try await pipeline.commit(proposals, from: bundle, filing: .all) { log.record($0) }
+
+        #expect(receipt == ImportReceipt(
+            factsWritten: 2, factsFailed: 1, conversationsFiled: 2, conversationsFailed: 1
+        ))
+        #expect(log.all().map(\.completed) == [1, 2, 3, 4])
+        #expect(try harness.graphRow("Kev owns a zap gun from 1985") == nil)
+
+        let healthy = harness.pipeline(FlakyDistiller(), embedder: HashingEmbeddingService())
+        let retry = try await healthy.commit(proposals, from: bundle, filing: .all)
+
+        #expect(retry == ImportReceipt(factsWritten: 1, conversationsFiled: 1, conversationsAlreadyFiled: 2))
+        #expect(try harness.memory.totalCount() == 3)
+        #expect(try harness.knowledge.allItems(kind: .conversation).count == 3)
+    }
+
+    @Test("a cancel inside a fact write returns the partial receipt, not a throw")
+    func cancelInsideAWriteReturnsThePartialReceipt() async throws {
+        let harness = try ImportHarness(embedder: FailingEmbedder(marker: "zap", cancels: true))
+        let bundle = ImportBundle(provider: .chatgpt, conversations: [
+            conversation("c1", at: 1, [(.user, "Kev keeps bees in Kinsale")]),
+            conversation("c2", at: 2, [(.user, "Kev owns a zap gun from 1985")]),
+            conversation("c3", at: 3, [(.user, "Kev plays the fiddle in Cobh")]),
+        ])
+        let pipeline = harness.pipeline(FlakyDistiller())
+
+        let receipt = try await pipeline.commit(pipeline.propose(bundle), from: bundle, filing: .all)
+
+        #expect(receipt == ImportReceipt(factsWritten: 1, wasCancelled: true))
+        #expect(try harness.knowledge.allItems(kind: .conversation).isEmpty)
+    }
+
+    @Test("a distiller that throws CancellationError cancels propose; it is not counted as a failure")
+    func cancelInsideTheDistillerPropagates() async throws {
+        let harness = try ImportHarness()
+        let log = ProgressLog()
+        let bundle = ImportBundle(
+            provider: .chatgpt, conversations: [conversation("c1", [(.user, "Kev keeps bees in Kinsale")])]
+        )
+
+        await #expect(throws: CancellationError.self) {
+            try await harness.pipeline(CancellingDistiller()).propose(bundle) { log.record($0) }
+        }
+        #expect(log.all().isEmpty)
     }
 }

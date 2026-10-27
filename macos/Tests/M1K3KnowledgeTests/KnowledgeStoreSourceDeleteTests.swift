@@ -8,6 +8,10 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85 (in-memory GRDB + the hashing
 //  embedder; the cascade is deleteItem's).
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — `kinds:` pinned (empty set, a hidden kind matched
+//  by name, a multi-kind list), positive controls before the delete, and the new bulk `deleteItems(ids:)` and
+//  `deleteMeta(keys:)`. The FTS check reads through the item join, so the title no longer claims FTS rows.
+//  Confidence 0.85.
 
 import Foundation
 @testable import M1K3Knowledge
@@ -39,12 +43,23 @@ struct KnowledgeStoreSourceDeleteTests {
         #expect(try Set(store.itemIDs(source: tag)) == imported)
         #expect(try store.itemIDs(source: tag, kinds: [.conversation]).count == 1)
         #expect(try store.itemIDs(source: KnowledgeSource(rawValue: "import/chatgpt/2026-10-26")).isEmpty)
+        #expect(try store.itemIDs(source: tag, kinds: []).isEmpty)
+        #expect(try Set(store.itemIDs(source: tag, kinds: [.memory, .conversation])) == imported)
+
+        // A kind hidden from retrieval is still matched when named: forget's inventory, not a search.
+        let fact = try #require(try store.itemIDs(source: tag, kinds: [.memory]).first)
+        #expect(try store.setKind(id: fact, newKind: .memorySuperseded))
+        #expect(try store.itemIDs(source: tag, kinds: [.memorySuperseded]) == [fact])
+        #expect(try store.itemIDs(source: tag, kinds: [.memory]).isEmpty)
+        #expect(try Set(store.itemIDs(source: tag)) == imported)
     }
 
-    @Test("deleteItems(source:) removes the items, chunks, FTS rows and vectors, and nothing else")
+    @Test("deleteItems(source:) removes the items, their chunks and vectors, and nothing else")
     func itemsBySourceCascade() async throws {
         let (store, _) = try await seeded()
         #expect(try store.itemCount() == 4)
+        #expect(try !store.searchFTS(query: "hives").isEmpty)
+        #expect(try !store.searchFTS(query: "Kinsale").isEmpty)
 
         let removed = try store.deleteItems(source: tag)
 
@@ -57,5 +72,25 @@ struct KnowledgeStoreSourceDeleteTests {
         #expect(try !store.searchFTS(query: "torque").isEmpty)
         #expect(try store.allItems(kind: .memory).map(\.source) == [.distilled])
         #expect(try store.deleteItems(source: tag) == 0)
+    }
+
+    @Test("deleteItems(ids:) removes exactly those items in one call; deleteMeta(keys:) exactly those keys")
+    func bulkDeletes() async throws {
+        let (store, imported) = try await seeded()
+        try store.setMeta(key: "a", value: "1")
+        try store.setMeta(key: "b", value: "2")
+        try store.setMeta(key: "c", value: "3")
+
+        #expect(try store.deleteItems(ids: Array(imported) + [UUID()]) == 2)
+        #expect(try store.deleteItems(ids: []) == 0)
+        try store.deleteMeta(keys: ["a", "c", "missing"])
+        try store.deleteMeta(keys: [])
+
+        #expect(try store.itemCount() == 2)
+        #expect(try store.chunkCount() == 2)
+        #expect(try store.embeddingCount() == 2)
+        #expect(try store.meta(key: "a") == nil)
+        #expect(try store.meta(key: "b") == "2")
+        #expect(try store.meta(key: "c") == nil)
     }
 }

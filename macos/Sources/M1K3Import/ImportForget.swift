@@ -10,6 +10,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85.
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — documented as blocking (each store's half is
+//  now one transaction; the three halves are separate, and idempotent, so a retry converges). Confidence 0.85.
 
 import Foundation
 import M1K3Chat
@@ -30,7 +32,9 @@ public struct ImportForgetReceipt: Sendable, Equatable {
 
 public enum ImportForget {
     /// Remove every row `tag` wrote from both stores and revive what those rows superseded.
-    /// Rows other writers wrote, and other imports' rows, are untouched.
+    /// Rows other writers wrote, and other imports' rows, are untouched. Blocking (one write
+    /// transaction per store half): run it off the main actor, as propose and commit are.
+    /// Idempotent: a second call finds nothing and returns zeros.
     public static func forget(
         tag: ImportSourceTag, knowledgeStore: KnowledgeStore, memoryStore: MemoryStore
     ) throws -> ImportForgetReceipt {

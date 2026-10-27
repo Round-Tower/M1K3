@@ -91,6 +91,10 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — #711: `memories(source:)` and `forget(source:)`, the memory
 //  import's one-action undo. `forget(source:)` is `forget(id:)` per tagged row, so the consent cascade and the
 //  un-supersede are the same code. No migration: `source` is a v1 column. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold on #711) — the consent cascade is ONE private
+//  definition (`cascadeForget`), used by `forget(id:)` (same effect, exists-check kept) and by `forget(source:)`, which
+//  now runs in one transaction: atomic on the consent action, and the FTS mirror (`id UNINDEXED`) is scanned once per
+//  500 ids instead of once per row. Confidence 0.85.
 
 import Foundation
 import GRDB
@@ -494,37 +498,52 @@ public final class MemoryStore: @unchecked Sendable {
                 db, sql: "SELECT 1 FROM memories WHERE id = ?", arguments: [mid]
             ) != nil
             guard exists else { return false }
-            try db.execute(sql: "DELETE FROM memory_fts WHERE id = ?", arguments: [mid])
-            try db.execute(sql: "DELETE FROM memory_embeddings WHERE memory_id = ?", arguments: [mid])
-            try db.execute(
-                sql: "DELETE FROM memory_edges WHERE from_id = ? OR to_id = ?",
-                arguments: [mid, mid]
-            )
-            // Anything this row superseded becomes live again (undo semantics).
-            try db.execute(
-                sql: "UPDATE memories SET superseded_by = NULL WHERE superseded_by = ?",
-                arguments: [mid]
-            )
-            try db.execute(sql: "DELETE FROM memories WHERE id = ?", arguments: [mid])
+            _ = try Self.cascadeForget(db, ids: [mid])
             return true
         }
     }
 
-    /// Hard-delete every row whose `source` is exactly `source` — an import's
-    /// `import/<provider>/<date>` tag, so "forget everything from this import"
-    /// is one action (#711). Each row goes through `forget(id:)`: the same
-    /// cascade, and anything a tagged row superseded is live again. Returns the
-    /// number of rows removed.
-    @discardableResult
-    public func forget(source: String) throws -> Int {
-        let ids = try dbQueue.read { db in
-            try String.fetchAll(db, sql: "SELECT id FROM memories WHERE source = ?", arguments: [source])
-        }
+    /// Ids bound per statement, well under SQLite's variable limit.
+    private static let maxBoundIDs = 500
+
+    /// THE consent cascade for every id in `ids`, inside the caller's
+    /// transaction: the FTS mirror, the vector, every edge touching the row,
+    /// the un-supersede of anything it superseded (undo semantics), then the
+    /// row. Returns the rows removed.
+    private static func cascadeForget(_ db: Database, ids: [String]) throws -> Int {
         var removed = 0
-        for id in ids.compactMap(UUID.init(uuidString:)) where try forget(id: id) {
-            removed += 1
+        for start in stride(from: 0, to: ids.count, by: maxBoundIDs) {
+            let batch = Array(ids[start ..< min(start + maxBoundIDs, ids.count)])
+            let list = Array(repeating: "?", count: batch.count).joined(separator: ", ")
+            let arguments = StatementArguments(batch)
+            try db.execute(sql: "DELETE FROM memory_fts WHERE id IN (\(list))", arguments: arguments)
+            try db.execute(sql: "DELETE FROM memory_embeddings WHERE memory_id IN (\(list))", arguments: arguments)
+            try db.execute(
+                sql: "DELETE FROM memory_edges WHERE from_id IN (\(list)) OR to_id IN (\(list))",
+                arguments: StatementArguments(batch + batch)
+            )
+            // Anything these rows superseded becomes live again (undo semantics).
+            try db.execute(
+                sql: "UPDATE memories SET superseded_by = NULL WHERE superseded_by IN (\(list))",
+                arguments: arguments
+            )
+            try db.execute(sql: "DELETE FROM memories WHERE id IN (\(list))", arguments: arguments)
+            removed += db.changesCount
         }
         return removed
+    }
+
+    /// Hard-delete every row whose `source` is exactly `source` — an import's
+    /// `import/<provider>/<date>` tag, so "forget everything from this import"
+    /// is one action (#711). `forget(id:)`'s cascade, in ONE transaction: all or
+    /// nothing, and anything a tagged row superseded is live again. Returns the
+    /// number of rows removed. Blocking: never call it on the main actor.
+    @discardableResult
+    public func forget(source: String) throws -> Int {
+        try dbQueue.write { db in
+            let ids = try String.fetchAll(db, sql: "SELECT id FROM memories WHERE source = ?", arguments: [source])
+            return try Self.cascadeForget(db, ids: ids)
+        }
     }
 
     // MARK: - Recall (the retrieval-with-cutoff query)

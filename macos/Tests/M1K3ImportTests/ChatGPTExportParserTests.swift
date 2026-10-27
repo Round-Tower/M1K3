@@ -11,6 +11,10 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.75 (synthetic fixtures; owed a hand
 //  check against a real export).
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — the walk's guards are pinned (a parent cycle, a
+//  self-parent, a dangling parent, a null current_node, no leaf at all), the id chain (conversation_id → id → a
+//  content-derived id, stable across positions), the first-user-line title, first-wins duplicate ids, the skipped
+//  custom-instructions node, and create_time that is a bool or a string. Confidence 0.8.
 
 import Foundation
 @testable import M1K3Import
@@ -111,7 +115,7 @@ struct ChatGPTExportParserTests {
         #expect(try ChatGPTExportParser.parse(data: Data("[]".utf8)).conversations.isEmpty)
     }
 
-    @Test("a missing current_node falls back to the newest leaf; no title falls back to the id")
+    @Test("a missing current_node falls back to the newest leaf; no title falls back to the first user line")
     func fallbacks() throws {
         typealias Node = ChatGPTFixture.Node
         let conversation = ChatGPTFixture.conversation(
@@ -131,12 +135,166 @@ struct ChatGPTExportParserTests {
         )
 
         #expect(parsed.messages.map(\.text) == ["Edited question", "New answer"])
-        #expect(parsed.title == "c4")
+        #expect(parsed.title == "Edited question")
     }
 
     @Test("a conversation with nothing but system text is dropped")
     func emptyConversationsDrop() throws {
         let onlySystem = ChatGPTFixture.linear(id: "c5", title: "Empty", createTime: 1, messages: [])
         #expect(try ChatGPTExportParser.parse(data: ChatGPTFixture.data([onlySystem])).conversations.isEmpty)
+    }
+
+    // MARK: - Review fold: the walk's guards
+
+    typealias Node = ChatGPTFixture.Node
+
+    @Test("a parent cycle or a self-parent ends the walk instead of hanging it", .timeLimit(.minutes(1)))
+    func cyclesEndTheWalk() throws {
+        let loop = ChatGPTFixture.conversation(
+            id: "loop", title: "Loop",
+            nodes: [
+                Node(id: "a", parent: "b", role: "user", parts: ["I keep bees"]),
+                Node(id: "b", parent: "a", role: "assistant", parts: ["Lovely."]),
+            ],
+            current: "a"
+        )
+        let selfParent = ChatGPTFixture.conversation(
+            id: "self", title: "Self",
+            nodes: [Node(id: "s", parent: "s", role: "user", parts: ["I play the fiddle"])],
+            current: "s"
+        )
+
+        let bundle = try ChatGPTExportParser.parse(data: ChatGPTFixture.data([loop, selfParent]))
+
+        #expect(bundle.conversations.map(\.id) == ["loop", "self"])
+        #expect(bundle.conversations.first?.messages.map(\.text) == ["Lovely.", "I keep bees"])
+        #expect(bundle.conversations.last?.messages.map(\.text) == ["I play the fiddle"])
+    }
+
+    @Test("a dangling parent keeps the messages up to the break; no leaf and no current_node drops it")
+    func danglingParentAndNoLeaf() throws {
+        let dangling = ChatGPTFixture.conversation(
+            id: "dangling", title: "Dangling",
+            nodes: [
+                Node(id: "u1", parent: "gone", role: "user", parts: ["I row on the Lee"]),
+                Node(id: "a1", parent: "u1", role: "assistant", parts: ["Nice."]),
+            ],
+            current: "a1"
+        )
+        // Every node names a child, so there is no leaf to fall back to.
+        var noLeaf = ChatGPTFixture.conversation(
+            id: "no-leaf", title: "No leaf",
+            nodes: [
+                Node(id: "x", parent: "y", role: "user", parts: ["Hello there friend"]),
+                Node(id: "y", parent: "x", role: "assistant", parts: ["Hi."]),
+            ],
+            current: nil
+        )
+        noLeaf["current_node"] = nil
+
+        let bundle = try ChatGPTExportParser.parse(data: ChatGPTFixture.data([dangling, noLeaf]))
+
+        #expect(bundle.conversations.map(\.id) == ["dangling"])
+        #expect(bundle.conversations.first?.messages.map(\.text) == ["I row on the Lee", "Nice."])
+    }
+
+    @Test("a null current_node falls back to the newest leaf, like a missing one")
+    func nullCurrentNode() throws {
+        let conversation = ChatGPTFixture.conversation(
+            id: "c6", title: "Null",
+            nodes: [
+                Node(id: "root", parent: nil, role: nil),
+                Node(id: "u1", parent: "root", role: "user", parts: ["Old question"], createTime: 10),
+                Node(id: "u2", parent: "root", role: "user", parts: ["Edited question"], createTime: 20),
+            ],
+            current: nil
+        )
+        #expect(conversation["current_node"] is NSNull)
+
+        let bundle = try ChatGPTExportParser.parse(data: ChatGPTFixture.data([conversation]))
+        let parsed = try #require(bundle.conversations.first)
+
+        #expect(parsed.messages.map(\.text) == ["Edited question"])
+    }
+
+    @Test("custom instructions (user_editable_context) never become a user turn")
+    func customInstructionsAreSkipped() throws {
+        let conversation = ChatGPTFixture.conversation(
+            id: "c7", title: "Instructions",
+            nodes: [
+                Node(id: "root", parent: nil, role: nil),
+                Node(id: "ctx", parent: "root", role: "user", parts: [], contentType: "user_editable_context"),
+                Node(id: "u1", parent: "ctx", role: "user", parts: ["I keep bees"]),
+            ],
+            current: "u1"
+        )
+        var mapping = try #require(conversation["mapping"] as? [String: Any])
+        var context = try #require(mapping["ctx"] as? [String: Any])
+        var message = try #require(context["message"] as? [String: Any])
+        message["content"] = [
+            "content_type": "user_editable_context",
+            "user_profile": "I am a beekeeper in Kinsale",
+            "user_instructions": "Answer briefly",
+        ]
+        context["message"] = message
+        mapping["ctx"] = context
+        var edited = conversation
+        edited["mapping"] = mapping
+
+        let bundle = try ChatGPTExportParser.parse(data: ChatGPTFixture.data([edited]))
+        let parsed = try #require(bundle.conversations.first)
+
+        #expect(parsed.messages.map(\.text) == ["I keep bees"])
+    }
+
+    // MARK: - Review fold: ids
+
+    @Test("the id is conversation_id, then id, then derived from the content — never the file position")
+    func idFallbacks() throws {
+        let linear = { (id: String, text: String) in
+            ChatGPTFixture.linear(id: id, title: "T", createTime: 1, messages: [("user", text)])
+        }
+        var idOnly = linear("only-id", "I keep bees")
+        idOnly["conversation_id"] = nil
+        var anonymous = linear("x", "I play the fiddle")
+        anonymous["conversation_id"] = nil
+        anonymous["id"] = nil
+        var other = linear("y", "I row on the Lee")
+        other["conversation_id"] = nil
+        other["id"] = nil
+
+        let first = try ChatGPTExportParser.parse(data: ChatGPTFixture.data([idOnly, anonymous]))
+        let moved = try ChatGPTExportParser.parse(data: ChatGPTFixture.data([other, idOnly, anonymous]))
+
+        #expect(first.conversations.first?.id == "only-id")
+        let derived = try #require(first.conversations.last?.id)
+        #expect(derived.hasPrefix("derived-"))
+        #expect(moved.conversations.last?.id == derived, "the same chat at another position keeps its id")
+        #expect(moved.conversations.first?.id != derived, "a different chat at its old position gets another")
+        #expect(moved.conversations.first?.id.hasPrefix("derived-") == true)
+    }
+
+    @Test("a repeated conversation id keeps the first conversation")
+    func duplicateIDsKeepTheFirst() throws {
+        let first = ChatGPTFixture.linear(id: "dup", title: "First", createTime: 1, messages: [("user", "I keep bees")])
+        let second = ChatGPTFixture.linear(id: "dup", title: "Second", createTime: 2, messages: [("user", "I row")])
+
+        let bundle = try ChatGPTExportParser.parse(data: ChatGPTFixture.data([first, second]))
+
+        #expect(bundle.conversations.map(\.title) == ["First"])
+    }
+
+    @Test("a create_time that is a bool or a string is no date")
+    func nonNumericCreateTime() throws {
+        let said = [(role: "user", text: "I keep bees")]
+        var asBool = ChatGPTFixture.linear(id: "b", title: "Bool", createTime: 1, messages: said)
+        asBool["create_time"] = true
+        var asString = ChatGPTFixture.linear(id: "s", title: "String", createTime: 1, messages: said)
+        asString["create_time"] = "123"
+
+        let bundle = try ChatGPTExportParser.parse(data: ChatGPTFixture.data([asBool, asString]))
+
+        #expect(bundle.conversations.count == 2)
+        #expect(bundle.conversations.allSatisfy { $0.createdAt == nil })
     }
 }

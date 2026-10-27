@@ -31,6 +31,10 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — #711: `itemIDs(source:kinds:)` and `deleteItems(source:)`, the
 //  corpus half of forgetting one import by its tag (deleteItem's cascade per row); `.conversation` joins
 //  groundingDocumentKinds so an imported chat is retrieved and cited like a document. No migration. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold on #711) — one definition of the item cascade
+//  (`cascadeDelete`), used by `deleteItem(id:)` and by the new bulk `deleteItems(ids:)` / `deleteItems(source:)`, which
+//  now run in ONE transaction (a forget is atomic, and the FTS mirror is scanned once per 500 ids, not once per row);
+//  `deleteMeta(keys:)` likewise. `deleteItem(id:)`'s SQL is unchanged in effect. Confidence 0.85.
 
 import Foundation
 import GRDB
@@ -123,6 +127,19 @@ public final class KnowledgeStore: @unchecked Sendable {
     public func deleteMeta(key: String) throws {
         try dbQueue.write { db in
             try db.execute(sql: "DELETE FROM knowledge_meta WHERE key = ?", arguments: [key])
+        }
+    }
+
+    /// Delete every key in `keys`, in one transaction.
+    public func deleteMeta(keys: [String]) throws {
+        guard !keys.isEmpty else { return }
+        try dbQueue.write { db in
+            for batch in Self.batches(of: keys) {
+                try db.execute(
+                    sql: "DELETE FROM knowledge_meta WHERE key IN (\(Self.holes(batch.count)))",
+                    arguments: StatementArguments(batch)
+                )
+            }
         }
     }
 
@@ -290,15 +307,59 @@ public final class KnowledgeStore: @unchecked Sendable {
         }
     }
 
-    /// Hard-delete every item tagged `source`, each through `deleteItem(id:)`
-    /// (chunks, FTS mirror, vectors). Returns the number removed. Callers that
-    /// must restore what a tagged memory superseded run that first
-    /// (`MemoryDistillationCoordinator.forgetCorpus(source:in:)`).
+    /// Hard-delete every item tagged `source` with `deleteItem(id:)`'s cascade
+    /// (chunks, FTS mirror, vectors), in one transaction. Returns the number
+    /// removed. Callers that must restore what a tagged memory superseded run
+    /// that first (`MemoryDistillationCoordinator.forgetCorpus(source:in:)`).
+    /// Blocking: never call it on the main actor.
     @discardableResult
     public func deleteItems(source: KnowledgeSource) throws -> Int {
+        try dbQueue.write { db in
+            let ids = try String.fetchAll(
+                db, sql: "SELECT id FROM knowledge_items WHERE source = ?", arguments: [source.rawValue]
+            )
+            return try Self.cascadeDelete(db, itemIDs: ids)
+        }
+    }
+
+    /// Hard-delete every item in `ids` with `deleteItem(id:)`'s cascade, in one
+    /// transaction. Unknown ids are skipped. Returns the number removed.
+    @discardableResult
+    public func deleteItems(ids: [UUID]) throws -> Int {
+        guard !ids.isEmpty else { return 0 }
+        return try dbQueue.write { db in
+            try Self.cascadeDelete(db, itemIDs: ids.map(\.uuidString))
+        }
+    }
+
+    /// Ids bound per statement, well under SQLite's variable limit.
+    private static let maxBoundIDs = 500
+
+    private static func batches(of values: [String]) -> [[String]] {
+        stride(from: 0, to: values.count, by: maxBoundIDs).map {
+            Array(values[$0 ..< min($0 + maxBoundIDs, values.count)])
+        }
+    }
+
+    private static func holes(_ count: Int) -> String {
+        Array(repeating: "?", count: count).joined(separator: ", ")
+    }
+
+    /// THE item cascade — chunks, FTS mirror, embeddings, then the item — for
+    /// every id in `itemIDs`, inside the caller's transaction. Manual because
+    /// FTS5 doesn't honour ON DELETE CASCADE. Returns the items removed.
+    private static func cascadeDelete(_ db: Database, itemIDs: [String]) throws -> Int {
         var removed = 0
-        for id in try itemIDs(source: source) where try deleteItem(id: id) {
-            removed += 1
+        for batch in batches(of: itemIDs) {
+            let list = holes(batch.count)
+            let arguments = StatementArguments(batch)
+            try db.execute(sql: "DELETE FROM knowledge_chunk_fts WHERE item_id IN (\(list))", arguments: arguments)
+            try db.execute(
+                sql: "DELETE FROM knowledge_chunk_embeddings WHERE item_id IN (\(list))", arguments: arguments
+            )
+            try db.execute(sql: "DELETE FROM knowledge_chunks WHERE item_id IN (\(list))", arguments: arguments)
+            try db.execute(sql: "DELETE FROM knowledge_items WHERE id IN (\(list))", arguments: arguments)
+            removed += db.changesCount
         }
         return removed
     }
@@ -349,10 +410,7 @@ public final class KnowledgeStore: @unchecked Sendable {
                 db, sql: "SELECT 1 FROM knowledge_items WHERE id = ?", arguments: [iid]
             ) != nil
             guard exists else { return false }
-            try db.execute(sql: "DELETE FROM knowledge_chunk_fts WHERE item_id = ?", arguments: [iid])
-            try db.execute(sql: "DELETE FROM knowledge_chunk_embeddings WHERE item_id = ?", arguments: [iid])
-            try db.execute(sql: "DELETE FROM knowledge_chunks WHERE item_id = ?", arguments: [iid])
-            try db.execute(sql: "DELETE FROM knowledge_items WHERE id = ?", arguments: [iid])
+            _ = try Self.cascadeDelete(db, itemIDs: [iid])
             return true
         }
     }

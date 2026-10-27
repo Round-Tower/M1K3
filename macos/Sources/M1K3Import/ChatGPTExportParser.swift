@@ -15,6 +15,9 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.75.
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — no positional `index-N` id: a conversation with
+//  neither `conversation_id` nor `id` gets a content-derived one; an untitled one takes its first user line; a
+//  repeated id keeps its first conversation. Cycle, dangling-parent and no-leaf walks are now pinned. Confidence 0.8.
 
 import Foundation
 
@@ -25,24 +28,24 @@ public enum ChatGPTExportParser {
 
     static func parse(root: Any) throws -> ImportBundle {
         guard let array = root as? [Any] else { throw ImportParseError.unexpectedShape }
-        let conversations = array.enumerated().compactMap { index, element in
-            (element as? [String: Any]).flatMap { conversation(from: $0, index: index) }
-        }
-        return ImportBundle(provider: .chatgpt, conversations: conversations)
+        let conversations = array.compactMap { ($0 as? [String: Any]).flatMap(conversation(from:)) }
+        return ImportBundle(provider: .chatgpt, conversations: ImportJSON.uniqueByID(conversations))
     }
 
-    private static func conversation(from object: [String: Any], index: Int) -> ImportedConversation? {
+    private static func conversation(from object: [String: Any]) -> ImportedConversation? {
         guard let mapping = object["mapping"] as? [String: Any] else { return nil }
         let nodes = mapping.compactMapValues { $0 as? [String: Any] }
         let messages = mainBranch(of: nodes, from: object["current_node"] as? String).compactMap(message(from:))
         guard !messages.isEmpty else { return nil }
+        let title = ImportJSON.nonEmpty(object["title"] as? String)
+        let createdAt = ImportDates.epoch(object["create_time"])
         let id = ImportJSON.nonEmpty(object["conversation_id"] as? String)
             ?? ImportJSON.nonEmpty(object["id"] as? String)
-            ?? "index-\(index)"
+            ?? ImportJSON.derivedID(title: title, createdAt: createdAt, messages: messages)
         return ImportedConversation(
             id: id,
-            title: ImportJSON.nonEmpty(object["title"] as? String) ?? id,
-            createdAt: ImportDates.epoch(object["create_time"]),
+            title: title ?? ImportJSON.titleExcerpt(of: messages),
+            createdAt: createdAt,
             messages: messages
         )
     }
