@@ -28,6 +28,10 @@
 //  where they land against the live bar: at or over it the correction supersedes at write time; below
 //  it both rows stay live and the persona's newest-first order is what the model reads. The report gains
 //  that one line only when the class is measured. Confidence 0.8 (hand-curated; extend from real rows).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699 MEMSTAT rewire: `styleCompatibles`, asks on DIFFERENT axes (and
+//  one scoped ask) that must both stay live under the axis supersede, so the on-device probe can show the fix
+//  retires corrections without eating neighbours; the report counts the ones the twin bar would retire.
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -106,6 +110,25 @@ public enum ContradictionEvalFixtures {
         .init(prior: "The user prefers answers that skip the preamble.",
               revision: "The user prefers answers that set the scene first."),
     ]
+
+    /// #699: two stated asks on DIFFERENT axes (one of them scoped to a case), both true
+    /// together. The style axis supersede (StyleAxis) must leave both live, either way
+    /// round; StyleAxisSupersedeTests pins that and MEMSTAT reads it with the real embedder.
+    public static let styleCompatibles: [Pair] = [
+        .init(prior: "The user prefers short answers.", revision: "The user wants no emoji in answers."),
+        .init(prior: "The user prefers a casual tone.", revision: "The user wants no bullet lists."),
+        .init(prior: "The user prefers plain words without jargon.",
+              revision: "The user wants the code before the explanation."),
+        .init(prior: "The user prefers answers that skip the preamble.", revision: "The user prefers a formal tone."),
+        .init(prior: "The user wants no tables.", revision: "The user wants headings in long answers."),
+        .init(prior: "The user wants no jokes.", revision: "The user prefers a casual tone."),
+        .init(prior: "The user wants a list of sources at the end.", revision: "The user wants no bullet lists."),
+        .init(prior: "The user wants to be asked before the assistant searches the web.",
+              revision: "The user wants the code before the explanation."),
+        .init(prior: "The user wants answers in plain text.", revision: "The user prefers plain words without jargon."),
+        .init(prior: "The user prefers concise answers.", revision: "The user wants the answer first."),
+        .init(prior: "The user wants a detailed answer for code reviews.", revision: "The user prefers short answers."),
+    ]
 }
 
 /// Pure formatter for the measured cosines — band placement per class against
@@ -117,6 +140,7 @@ public enum ContradictionEvalReport {
         compatibles: [Float],
         restatements: [Float],
         styleCorrections: [Float] = [],
+        styleCompatibles: [Float] = [],
         dedupeBar: Float
     ) -> String {
         let classes: [(label: String, verb: String, scores: [Float])] = [
@@ -125,6 +149,8 @@ public enum ContradictionEvalReport {
             ("restatements", "correctly eaten", restatements),
             // #699: since Tier 2 a ≥ bar twin is superseded, which is what a style correction wants.
             ("style corrections", "superseded at write time", styleCorrections),
+            // Asks on different axes: at the bar the kind-blind twin path would retire one.
+            ("style compatibles", "wrongly retired at the twin bar", styleCompatibles),
         ]
         guard classes.contains(where: { !$0.scores.isEmpty }) else {
             return "contradiction eval: no pairs measured"

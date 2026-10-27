@@ -40,12 +40,20 @@
 //  from two live rows by reading the prior's corpus twin (since Tier 2, "survived" covered both). For style,
 //  superseded is the right outcome; both live means the persona's newest-first order is all that holds the
 //  correction. Verify-by-launch owed (MEMSTAT on the built app). Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (#699 axis fix) — the style classes leave the untyped ingest probe:
+//  it wrote `.note` facts with no graph through `distillAndStore`, so it could never see the axis supersede, which
+//  runs only for a `.style` fact with a graph wired (and `propose` would fence a scripted ask out). They now go
+//  through `StyleIngestProbe` (the live writer's `store` path, an in-memory MemoryStore behind the graph adapter),
+//  each pair reported with its raw cosine, its axes, the outcome off both stores and the style line it leaves. A
+//  `style-compatible` class (asks on different axes, which must stay both live) joins them. The contradiction,
+//  compatible and restatement classes run exactly as before, so their numbers stay comparable. Confidence 0.8.
 //
 
 import Foundation
 import M1K3Chat
 import M1K3Knowledge
 import M1K3Memory
+import M1K3MemoryChatBridge
 import M1K3MLX
 
 enum MemStatStage {
@@ -131,7 +139,12 @@ enum MemStatStage {
         ("compatible", ContradictionEvalFixtures.compatibles),
         ("restatement", ContradictionEvalFixtures.restatements),
         ("style-correction", ContradictionEvalFixtures.styleCorrections),
+        ("style-compatible", ContradictionEvalFixtures.styleCompatibles),
     ]
+
+    /// #699: the classes that go through the live writer's style path (`StyleIngestProbe`)
+    /// instead of the untyped ingest probe.
+    private static let styleLabels: Set<String> = ["style-correction", "style-compatible"]
 
     private static func probePairs(emit: (String) -> Void) async {
         do {
@@ -162,11 +175,12 @@ enum MemStatStage {
                 compatibles: scoresByLabel["compatible"] ?? [],
                 restatements: scoresByLabel["restatement"] ?? [],
                 styleCorrections: scoresByLabel["style-correction"] ?? [],
+                styleCompatibles: scoresByLabel["style-compatible"] ?? [],
                 dedupeBar: bar
             ))
 
             // Pass 3: the end-to-end ingest probe through the real coordinator.
-            for cls in probeClasses {
+            for cls in probeClasses where !styleLabels.contains(cls.label) {
                 var eaten = 0
                 var superseded = 0
                 var seedFailures = 0
@@ -190,9 +204,43 @@ enum MemStatStage {
                 if seedFailures > 0 { summary += " (\(seedFailures) seed failure(s))" }
                 emit(summary)
             }
+
+            // Pass 3, style (#699): each pair as two stated styles through the live writer's path.
+            for cls in probeClasses where styleLabels.contains(cls.label) {
+                try await probeStyle(cls.label, cls.pairs, cosines: scoresByLabel[cls.label] ?? [],
+                                     embedder: embedder, emit: emit)
+            }
         } catch {
             emit("✗ memstat probes: \(error)")
         }
+    }
+
+    /// One line per pair (raw cosine, outcome, full text, axes, the style line it leaves) and
+    /// a tally. Fact text renders only into the SelfTest OUT file, like every line here.
+    private static func probeStyle(
+        _ label: String, _ pairs: [ContradictionEvalFixtures.Pair], cosines: [Float],
+        embedder: MLXEmbeddingService, emit: (String) -> Void
+    ) async throws {
+        var tally: [StyleIngestProbe.Outcome: Int] = [:]
+        for (index, pair) in pairs.enumerated() {
+            let result = try await StyleIngestProbe.run(pair, embedder: embedder)
+            tally[result.outcome, default: 0] += 1
+            let cosine = index < cosines.count ? String(format: "%.3f", cosines[index]) : "—"
+            emit("memstat style-ingest \(label) \(cosine) \(result.outcome.rawValue) "
+                + "[\(pair.prior) → \(pair.revision)]")
+            emit("  axes \(axesLabel(pair.prior)) → \(axesLabel(pair.revision)) · "
+                + "style line: \(result.styleLine.map { "\"\($0)\"" } ?? "(none)")")
+        }
+        let order: [StyleIngestProbe.Outcome] = [.superseded, .bothLive, .eaten, .divergent, .seedFailed]
+        emit("memstat style-ingest \(label): "
+            + order.map { "\(tally[$0] ?? 0)/\(pairs.count) \($0.rawValue)" }.joined(separator: ", "))
+    }
+
+    /// A fact's StyleAxis set ("length+tone"), or why it has none ("unknown", "scoped").
+    private static func axesLabel(_ fact: String) -> String {
+        let axes = StyleAxis.axes(of: fact).map(\.rawValue).sorted()
+        guard axes.isEmpty else { return axes.joined(separator: "+") }
+        return StyleAxis.unplaced(fact) == .scoped ? "scoped" : "unknown"
     }
 
     private enum IngestOutcome {
@@ -236,7 +284,8 @@ enum MemStatStage {
         // Since Tier 2 a ≥ bar twin is superseded rather than eaten, so "written"
         // alone can't tell a correction that replaced its prior from two live rows.
         // The probe's facts are untyped (.note): the kind never enters the dedupe,
-        // and the style fence is swift test's to pin (StyleAskFenceTests).
+        // and the style fence is swift test's to pin (StyleAskFenceTests). The style
+        // classes take `StyleIngestProbe` instead (#699: the axis rule needs .style + a graph).
         let priorRef = MemoryDistillationCoordinator.factSourceRef(pair.prior)
         let priorKind = try store.itemID(forSourceRef: priorRef).flatMap { try store.item(id: $0)?.kind }
         return priorKind == .memorySuperseded ? .superseded : .survived

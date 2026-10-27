@@ -19,6 +19,9 @@
 //  `liveNode`, `corpusLive` and `editor`) so StyleAxisChainTests shares it; pinned here: the import writer
 //  (`retiresLiveStyle: false`) leaves a live style twin at the bar live, and a note twin still supersedes.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — the compatible pairs moved to
+//  `ContradictionEvalFixtures.styleCompatibles` (same eleven, same order), so MEMSTAT's style probe and this
+//  pin read one list. Confidence 0.9.
 //
 
 import Foundation
@@ -149,21 +152,11 @@ private let correctionsBothWays: [(String, String)] = ContradictionEvalFixtures.
     [($0.prior, $0.revision), ($0.revision, $0.prior)]
 }
 
-/// Asks on different axes (and one scoped ask): both stay live, in either order.
-private let compatibles: [(String, String)] = [
-    ("The user prefers short answers.", "The user wants no emoji in answers."),
-    ("The user prefers a casual tone.", "The user wants no bullet lists."),
-    ("The user prefers plain words without jargon.", "The user wants the code before the explanation."),
-    ("The user prefers answers that skip the preamble.", "The user prefers a formal tone."),
-    ("The user wants no tables.", "The user wants headings in long answers."),
-    ("The user wants no jokes.", "The user prefers a casual tone."),
-    ("The user wants a list of sources at the end.", "The user wants no bullet lists."),
-    ("The user wants to be asked before the assistant searches the web.",
-     "The user wants the code before the explanation."),
-    ("The user wants answers in plain text.", "The user prefers plain words without jargon."),
-    ("The user prefers concise answers.", "The user wants the answer first."),
-    ("The user wants a detailed answer for code reviews.", "The user prefers short answers."),
-]
+/// Asks on different axes (and one scoped ask): both stay live, in either order. The MEMSTAT
+/// style-compatible class, so the on-device probe reads the same pairs.
+private let compatibles: [(String, String)] = ContradictionEvalFixtures.styleCompatibles.map {
+    ($0.prior, $0.revision)
+}
 
 struct StyleAxisSupersedeTests {
     // MARK: - The bug: a style correction retires the ask it corrects

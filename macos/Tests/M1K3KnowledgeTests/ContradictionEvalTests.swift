@@ -13,6 +13,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: the style-correction class (a stated answer style
 //  flipped on one axis) is well-formed and reports how many corrections the bar supersedes at write time.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699 MEMSTAT rewire: the style-compatible class (asks on different
+//  axes, which must both stay live) is well-formed, and the report counts the ones the twin bar would retire.
+//  Confidence 0.85.
 //
 
 @testable import M1K3Knowledge
@@ -50,6 +53,19 @@ struct ContradictionEvalFixtureTests {
         let otherPairs = Set(others.map { $0.prior + "→" + $0.revision })
         #expect(pairs.allSatisfy { !otherPairs.contains($0.prior + "→" + $0.revision) })
         #expect(Set(pairs.map(\.prior)).count == pairs.count)
+    }
+
+    @Test("#699: style compatibles are stated asks on different axes, none a style correction")
+    func styleCompatiblesAreWellFormed() {
+        let pairs = ContradictionEvalFixtures.styleCompatibles
+        // The MEMSTAT set the axis rule must leave alone, the scoped ask among them.
+        #expect(pairs.count >= 11)
+        for text in pairs.flatMap({ [$0.prior, $0.revision] }) {
+            #expect(text.hasPrefix("The user prefers ") || text.hasPrefix("The user wants "), "\(text)")
+        }
+        let corrections = Set(ContradictionEvalFixtures.styleCorrections.map { $0.prior + "→" + $0.revision })
+        #expect(pairs.allSatisfy { $0.prior != $0.revision && !corrections.contains($0.prior + "→" + $0.revision) })
+        #expect(pairs.contains { $0.prior == "The user prefers short answers." && $0.revision.contains("emoji") })
     }
 }
 
@@ -108,6 +124,25 @@ struct ContradictionEvalReportTests {
             contradictions: [0.80], compatibles: [0.50], restatements: [0.95], dedupeBar: 0.95
         )
         #expect(!without.contains("style corrections"))
+    }
+
+    @Test("#699: style compatibles report how many the twin bar would wrongly retire")
+    func styleCompatiblePlacement() {
+        let text = ContradictionEvalReport.render(
+            contradictions: [0.80],
+            compatibles: [0.50],
+            restatements: [0.95],
+            styleCorrections: [0.90],
+            styleCompatibles: [0.96, 0.80],
+            dedupeBar: 0.95
+        )
+        #expect(text.contains("style compatibles ≥ 0.95 (wrongly retired at the twin bar): 1/2"))
+        #expect(text.contains("style compatibles: min 0.800 median 0.960 max 0.960"))
+        let without = ContradictionEvalReport.render(
+            contradictions: [0.80], compatibles: [0.50], restatements: [0.95], styleCorrections: [0.90],
+            dedupeBar: 0.95
+        )
+        #expect(!without.contains("style compatibles"))
     }
 
     @Test("empty classes render as unmeasured, not crash")
