@@ -37,6 +37,9 @@
 //  live; commit takes an explicit `filing` (no default: unticking a sensitive fact meant nothing while its transcript
 //  was filed anyway), writes every fact before any transcript, catches per fact (`factsFailed`; a cancel inside a
 //  write returns the partial receipt), and builds its coordinator with `revivesSupersededFacts: false`. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold, #732) — `statedIn` names each conversation once (two
+//  slices of one long chat, or one slice that says a fact twice, listed it twice; the newest stays last), and every log
+//  line carries an error's type, never its text (a distiller or embedder error can echo the prompt). Confidence 0.8.
 
 import Foundation
 import M1K3Chat
@@ -54,8 +57,8 @@ public struct ImportProposal: Sendable, Equatable, Identifiable {
     /// The newest provider conversation that stated it (the slot commit writes it in, so the
     /// latest statement wins); nil for an OKF fact.
     public let conversationID: String?
-    /// Every conversation that stated it, oldest first (`conversationID` is the last). What the
-    /// review screen needs to keep a sensitive fact's transcripts unfiled too.
+    /// Every conversation that stated it, once each, oldest first (`conversationID` is the last).
+    /// What the review screen needs to keep a sensitive fact's transcripts unfiled too.
     public let statedIn: [String]
     /// The conversation's title, or the OKF fact's own title.
     public let sourceTitle: String?
@@ -146,7 +149,8 @@ public struct ImportReceipt: Sendable, Equatable {
 }
 
 public struct ConversationImportPipeline: Sendable {
-    /// Counts and error text only, never fact or conversation text.
+    /// Counts and error type names only, never fact, conversation or error text (an error from the
+    /// distiller or the embedder can echo the prompt it was given).
     private static let log = M1K3Log.logger(.memoryDistill)
     /// Accepted facts commit in batches of this many, one progress step each, so a large import
     /// still reports progress and notices cancellation.
@@ -199,10 +203,17 @@ public struct ConversationImportPipeline: Sendable {
             let key = MemoryDistillationCoordinator.factSourceRef(fact.text)
             if let index = slot[key] {
                 let earlier = proposals[index]
+                // One entry per conversation: two slices of one long chat (or one slice that says
+                // it twice) still name that conversation once, and the newest stays last.
+                var statedIn = earlier.statedIn
+                if let conversationID {
+                    statedIn.removeAll { $0 == conversationID }
+                    statedIn.append(conversationID)
+                }
                 proposals[index] = ImportProposal(
                     id: earlier.id, fact: earlier.fact, conversationID: conversationID ?? earlier.conversationID,
                     sourceTitle: title ?? earlier.sourceTitle, sensitivity: earlier.sensitivity,
-                    statedIn: earlier.statedIn + (conversationID.map { [$0] } ?? [])
+                    statedIn: statedIn
                 )
                 return
             }
@@ -227,7 +238,7 @@ public struct ConversationImportPipeline: Sendable {
                 throw CancellationError()
             } catch {
                 failed += 1
-                Self.log.notice("import: distiller failed on one conversation: \(error.localizedDescription, privacy: .public)")
+                Self.log.notice("import: distiller failed on one conversation: \(Self.kind(of: error), privacy: .public)")
             }
             progress(ImportProgress(phase: .proposing, completed: index + 1, total: conversations.count, failed: failed))
         }
@@ -309,8 +320,7 @@ public struct ConversationImportPipeline: Sendable {
                     return cancelled(receipt)
                 } catch {
                     receipt.factsFailed += 1
-                    let kind = String(describing: type(of: error))
-                    Self.log.notice("import: writing one fact failed: \(kind, privacy: .public)")
+                    Self.log.notice("import: writing one fact failed: \(Self.kind(of: error), privacy: .public)")
                 }
             }
             step()
@@ -334,7 +344,7 @@ public struct ConversationImportPipeline: Sendable {
                 return cancelled(receipt)
             } catch {
                 receipt.conversationsFailed += 1
-                Self.log.notice("import: filing one conversation failed: \(error.localizedDescription, privacy: .public)")
+                Self.log.notice("import: filing one conversation failed: \(Self.kind(of: error), privacy: .public)")
             }
             step()
         }
@@ -343,6 +353,11 @@ public struct ConversationImportPipeline: Sendable {
         filed \(receipt.conversationsFiled) conversation(s)
         """)
         return receipt
+    }
+
+    /// What a failure log may say about `error`: its type's name, never its text.
+    private static func kind(of error: any Error) -> String {
+        String(describing: type(of: error))
     }
 
     private func cancelled(_ receipt: ImportReceipt) -> ImportReceipt {

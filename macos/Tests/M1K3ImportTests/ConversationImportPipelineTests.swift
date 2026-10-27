@@ -18,6 +18,9 @@
 //  attribution (A, B, A ends with A live), chronological commit whatever the export order, the caller's `filing`
 //  choice, OKF facts committed in batches with their kinds, loose facts, a failing fact or transcript counted and
 //  retried, a cancel inside a write or inside the distiller. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold, #732) — `statedIn` lists each conversation once (a fact
+//  said twice in one slice, or across two slices of one long chat, was listed twice), and a source scan pins that the
+//  module logs an error's type, never its text. Confidence 0.85.
 
 import Foundation
 import M1K3Chat
@@ -426,5 +429,47 @@ struct ConversationImportPipelineTests {
             try await harness.pipeline(CancellingDistiller()).propose(bundle) { log.record($0) }
         }
         #expect(log.all().isEmpty)
+    }
+
+    // MARK: - Bot review fold (#732)
+
+    @Test("statedIn lists each conversation once: a fact said twice in one slice, or across two slices of one chat")
+    func statedInListsEachConversationOnce() async throws {
+        let harness = try ImportHarness()
+        let fact = "Kev keeps bees in Kinsale"
+        var long: [(ImportedRole, String)] = [(.user, fact)]
+        for index in 0 ..< 20 {
+            long.append((.assistant, "Answer \(index): " + String(repeating: "long reply ", count: 60)))
+        }
+        long.append((.user, fact))
+        let bundle = ImportBundle(provider: .chatgpt, conversations: [
+            conversation("c1", at: 1, [(.user, fact), (.assistant, "Lovely."), (.user, fact)]),
+            conversation("c2", at: 2, long),
+        ])
+        #expect(ConversationImportPipeline.slices(of: bundle.conversations[1].chatTurns).count > 1)
+
+        let proposals = try await harness.pipeline(FlakyDistiller()).propose(bundle)
+
+        #expect(proposals.map(\.fact.text) == [fact])
+        #expect(proposals.first?.conversationID == "c2")
+        #expect(proposals.first?.statedIn == ["c1", "c2"])
+    }
+
+    @Test("the import logs an error's type, never its text: a distiller or embedder error can echo the chat")
+    func logsCarryErrorTypesNeverErrorText() throws {
+        let module = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Sources/M1K3Import")
+        let sources = try FileManager.default.contentsOfDirectory(at: module, includingPropertiesForKeys: nil)
+            .filter { $0.pathExtension == "swift" }
+        #expect(sources.count > 5, "the scan found no sources: M1K3Import moved")
+        for source in sources {
+            let code = try String(contentsOf: source, encoding: .utf8)
+                .split(separator: "\n")
+                .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+            for line in code where line.contains("localizedDescription") || line.contains("\\(error") {
+                Issue.record("\(source.lastPathComponent) formats error text: \(line)")
+            }
+        }
     }
 }
