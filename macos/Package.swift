@@ -31,6 +31,8 @@
 //  deadlock + a leak, 0.32.3 the < 26.4 launch crash). Owed: the gemma-4 tool smoke + the voice launch check.
 //  Review: Kev + claude-fable-5.1, 2026-10-10 — M1K3MLX declares MLXFast (already a transitive mlx-swift
 //  product); no pin moves.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #711: new leaf M1K3Import (ChatGPT / Claude / OKF memory import over
+//  the bridge + the three stores) and M1K3ImportTests; no new package dependency, no pin moves. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — M1K3AnswerBlocks target + tests (#717: typed answer blocks,
 //  a Foundation + SwiftUI leaf). No package dependency moves. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — M1K3Voice depends on the M1K3AnswerBlocks leaf, so
@@ -65,6 +67,11 @@ let package = Package(
         // temporal graph WITHOUT Chat↔Memory depending on each other. Shared by
         // both the macOS app and the iOS/visionOS shell.
         .library(name: "M1K3MemoryChatBridge", targets: ["M1K3MemoryChatBridge"]),
+        // Memory import (#711): ChatGPT / Claude data exports and another M1K3's OKF
+        // folder → proposals through the distiller's fence → accepted facts on the one
+        // memory write path, conversations as cited knowledge, one-action forget by the
+        // import's source tag. No shell links it yet (the drop target is its UI PR).
+        .library(name: "M1K3Import", targets: ["M1K3Import"]),
         .library(name: "M1K3Voice", targets: ["M1K3Voice"]),
         .library(name: "M1K3MLX", targets: ["M1K3MLX"]),
         .library(name: "M1K3WhisperKit", targets: ["M1K3WhisperKit"]),
@@ -420,8 +427,9 @@ let package = Package(
         ),
         // Leaf bridge (Chat + Memory only): DistilledFactGraphAdapter, the
         // Chat→graph dual-write. Nothing depends back on it but the two app
-        // shells, so it adds no cycle and leaks no heavy deps (both closures are
-        // Foundation + GRDB). Relocated out of M1K3App so iOS/visionOS reuse it.
+        // shells and the M1K3Import leaf, so it adds no cycle and leaks no heavy
+        // deps (both closures are Foundation + GRDB). Relocated out of M1K3App so
+        // iOS/visionOS reuse it.
         .target(
             name: "M1K3MemoryChatBridge",
             dependencies: ["M1K3Chat", "M1K3Memory"],
@@ -431,6 +439,20 @@ let package = Package(
             name: "M1K3MemoryChatBridgeTests",
             dependencies: ["M1K3MemoryChatBridge"],
             path: "Tests/M1K3MemoryChatBridgeTests"
+        ),
+        // Memory import (#711): the export parsers (pure, lenient) and the pipeline
+        // that runs a parsed export through MemoryDistillationCoordinator's propose /
+        // store split with the import's source tag. A leaf over the bridge and the
+        // three stores; nothing depends back on it, and it links no MLX.
+        .target(
+            name: "M1K3Import",
+            dependencies: ["M1K3MemoryChatBridge", "M1K3Chat", "M1K3Memory", "M1K3Knowledge", "M1K3LogCore"],
+            path: "Sources/M1K3Import"
+        ),
+        .testTarget(
+            name: "M1K3ImportTests",
+            dependencies: ["M1K3Import", "M1K3MemoryChatBridge", "M1K3Chat", "M1K3Memory", "M1K3Knowledge"],
+            path: "Tests/M1K3ImportTests"
         ),
         // Voice. TTS now (AVSpeech behind SpeechProvider; Kokoro later);
         // transcription (WhisperKit) joins this module in the heavy-dep session.

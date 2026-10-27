@@ -14,6 +14,12 @@
 //  the DistillationAttribution fence, so `someTurns` carries real anchoring content for every
 //  fact this file's mechanics tests use; two new tests pin the fence itself (the trivial-slice
 //  skip and the selective anchored/unanchored drop) against the live witness turns.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #711: the propose/store split (propose writes nothing; store writes
+//  what distillAndStore would), the injected corpus source, and forgetCorpus restoring a superseded twin. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold on #711) — forgetCorpus's other branches (a chain
+//  inside one source, a tagged twin a non-tagged row corrected, an unknown tag, a `.conversation` left to the caller,
+//  the one-step undo of A ← I ← N) and `revivesSupersededFacts: false` (an exact re-assertion of a corrected fact
+//  writes nothing, in either store). Confidence 0.85.
 
 import Foundation
 @testable import M1K3Chat
@@ -318,5 +324,244 @@ struct MemoryDistillationCoordinatorTests {
         #expect(memories.count == 1)
         #expect(memories.first?.title.contains("Ardmore") == true)
         #expect(try store.searchFTS(query: "honey").isEmpty)
+    }
+
+    // MARK: - #711: the import's seams
+
+    @Test("propose returns the anchored facts and writes nothing; store writes what distillAndStore would")
+    func proposeDoesNotWriteAndStoreWritesIt() async throws {
+        let facts: Result<[String], Error> = .success([
+            "Aoife lives in Cork", "The honey in Egyptian tombs never spoils",
+        ])
+        let graph = FakeGraphWriter()
+        let (coordinator, store) = try makeFixture(facts: facts, graph: graph)
+
+        let proposed = try await coordinator.propose(turns: someTurns)
+
+        #expect(proposed.map(\.text) == ["Aoife lives in Cork"])
+        #expect(try store.itemCount() == 0)
+        #expect(await graph.texts().isEmpty)
+
+        let written = try await coordinator.store(proposed)
+        let (twin, twinStore) = try makeFixture(facts: facts)
+        let viaDistill = try await twin.distillAndStore(turns: someTurns)
+        #expect(written == 1)
+        #expect(written == viaDistill)
+        #expect(try store.itemCount() == twinStore.itemCount())
+        #expect(await graph.texts() == ["Aoife lives in Cork"])
+    }
+
+    @Test("a trivial slice proposes nothing")
+    func proposeSkipsATrivialSlice() async throws {
+        let (coordinator, _) = try makeFixture(facts: .success(["Aoife lives in Cork"]))
+        let proposed = try await coordinator.propose(turns: [
+            ChatTurn(role: .user, text: "thanks"), ChatTurn(role: .assistant, text: "Any time."),
+        ])
+        #expect(proposed.isEmpty)
+    }
+
+    @Test("an injected corpus source tags every row the coordinator writes; the default stays distilled")
+    func corpusSourceIsInjectable() async throws {
+        let tag = KnowledgeSource(rawValue: "import/claude/2026-10-26")
+        let store = try KnowledgeStore()
+        let embedder = HashingEmbeddingService()
+        let tagged = MemoryDistillationCoordinator(
+            distiller: FakeDistiller(result: .success(["Aoife lives in Cork"])),
+            ingester: DocumentIngester(store: store, embedder: embedder),
+            store: store,
+            embedder: embedder,
+            corpusSource: tag,
+            selfNames: .none
+        )
+        try await tagged.distillAndStore(turns: someTurns)
+        #expect(try store.allItems(kind: .memory).map(\.source) == [tag])
+
+        let (plain, plainStore) = try makeFixture(facts: .success(["Aoife lives in Cork"]))
+        try await plain.distillAndStore(turns: someTurns)
+        #expect(try plainStore.allItems(kind: .memory).map(\.source) == [.distilled])
+    }
+
+    @Test("forgetCorpus deletes the tagged rows and restores the twin one of them superseded")
+    func forgetCorpusRestoresSupersededTwin() async throws {
+        // Hashing cosines are k/n of shared tokens: 19 of 20 = 0.95, over every floor's dedupe bar.
+        let filler = "alpha beta gamma delta epsilon zeta eta theta iota kappa "
+            + "lambda mu nu xi omicron rho sigma tau upsilon"
+        let turns = [ChatTurn(role: .user, text: "\(filler) dublin ardmore")]
+        let tag = KnowledgeSource(rawValue: "import/chatgpt/2026-10-26")
+        let store = try KnowledgeStore()
+        let embedder = HashingEmbeddingService()
+        func coordinator(_ fact: String, source: KnowledgeSource) -> MemoryDistillationCoordinator {
+            MemoryDistillationCoordinator(
+                distiller: FakeDistiller(result: .success([fact])),
+                ingester: DocumentIngester(store: store, embedder: embedder),
+                store: store,
+                embedder: embedder,
+                corpusSource: source,
+                selfNames: .none
+            )
+        }
+        try await coordinator("\(filler) dublin", source: .distilled).distillAndStore(turns: turns)
+        try await coordinator("\(filler) ardmore", source: tag).distillAndStore(turns: turns)
+        let twin = try #require(try store.allItems(kind: .memorySuperseded).first)
+        let ledgerKey = MemoryDistillationCoordinator.supersededLinkKey(twin.id)
+        #expect(try store.meta(key: ledgerKey) != nil)
+
+        let removed = try MemoryDistillationCoordinator.forgetCorpus(source: tag, in: store)
+
+        #expect(removed == 1)
+        #expect(try store.item(id: twin.id)?.kind == .memory)
+        #expect(try store.meta(key: ledgerKey) == nil)
+        #expect(try store.itemIDs(source: tag).isEmpty)
+        #expect(try store.allItems(kind: .memory).map(\.id) == [twin.id])
+    }
+
+    @Test("forgetCorpus leaves another writer's rows, and kinds it never writes, alone")
+    func forgetCorpusTouchesOnlyItsOwnMemories() async throws {
+        let tag = KnowledgeSource(rawValue: "import/chatgpt/2026-10-26")
+        let store = try KnowledgeStore()
+        let ingester = DocumentIngester(store: store, embedder: HashingEmbeddingService())
+        try await ingester.ingest(title: "Kev keeps bees", text: "Kev keeps bees", kind: .memory, source: tag)
+        try await ingester.ingest(title: "Kev drinks tea", text: "Kev drinks tea", kind: .memory, source: .distilled)
+        try await ingester.ingest(
+            title: "Hives", text: "User: hives? Assistant: south-east.", kind: .conversation, source: tag
+        )
+
+        #expect(try MemoryDistillationCoordinator.forgetCorpus(source: tag, in: store) == 1)
+        #expect(try store.itemCount() == 2)
+        #expect(try store.itemIDs(source: tag, kinds: [.conversation]).count == 1)
+        #expect(try store.allItems(kind: .memory).map(\.title) == ["Kev drinks tea"])
+    }
+
+    // MARK: - #711 review fold: forgetCorpus's other branches, and the no-revive flag
+
+    /// Hashing cosines are k/n of shared tokens: 19 of 20 = 0.95, over the hashing floor's 0.90.
+    private static let filler = "alpha beta gamma delta epsilon zeta eta theta iota kappa "
+        + "lambda mu nu xi omicron rho sigma tau upsilon"
+    private static let chainTurns = [ChatTurn(role: .user, text: "\(filler) dublin cork ardmore")]
+
+    private func coordinator(
+        _ fact: String, source: KnowledgeSource, in store: KnowledgeStore,
+        graph: (any DistilledFactGraphWriting)? = nil, revives: Bool = true
+    ) -> MemoryDistillationCoordinator {
+        let embedder = HashingEmbeddingService()
+        return MemoryDistillationCoordinator(
+            distiller: FakeDistiller(result: .success([fact])),
+            ingester: DocumentIngester(store: store, embedder: embedder),
+            store: store,
+            embedder: embedder,
+            graph: graph,
+            corpusSource: source,
+            revivesSupersededFacts: revives,
+            selfNames: .none
+        )
+    }
+
+    private func item(_ text: String, in store: KnowledgeStore) throws -> KnowledgeItem? {
+        try store.itemID(forSourceRef: MemoryDistillationCoordinator.factSourceRef(text))
+            .flatMap { try store.item(id: $0) }
+    }
+
+    @Test("a chain inside one source is forgotten whole: both rows and both ledger keys go")
+    func forgetCorpusTakesAChainInsideOneSource() async throws {
+        let tag = KnowledgeSource(rawValue: "import/chatgpt/2026-10-26")
+        let store = try KnowledgeStore()
+        try await coordinator("\(Self.filler) dublin", source: tag, in: store)
+            .distillAndStore(turns: Self.chainTurns)
+        try await coordinator("\(Self.filler) cork", source: tag, in: store)
+            .distillAndStore(turns: Self.chainTurns)
+        let old = try #require(try item("\(Self.filler) dublin", in: store))
+        #expect(old.kind == .memorySuperseded)
+
+        #expect(try MemoryDistillationCoordinator.forgetCorpus(source: tag, in: store) == 2)
+
+        #expect(try store.itemIDs(source: tag).isEmpty)
+        #expect(try store.meta(key: MemoryDistillationCoordinator.supersededLinkKey(old.id)) == nil)
+        #expect(try store.allItems(kind: .memorySuperseded).isEmpty)
+        #expect(try store.itemCount() == 0)
+    }
+
+    @Test("a tagged row another writer corrected goes; the corrector stays live and untouched")
+    func forgetCorpusLeavesAnotherWritersCorrector() async throws {
+        let tag = KnowledgeSource(rawValue: "import/chatgpt/2026-10-26")
+        let store = try KnowledgeStore()
+        try await coordinator("\(Self.filler) dublin", source: tag, in: store)
+            .distillAndStore(turns: Self.chainTurns)
+        try await coordinator("\(Self.filler) cork", source: .distilled, in: store)
+            .distillAndStore(turns: Self.chainTurns)
+        let twin = try #require(try item("\(Self.filler) dublin", in: store))
+        let corrector = try #require(try item("\(Self.filler) cork", in: store))
+        #expect(twin.kind == .memorySuperseded)
+
+        #expect(try MemoryDistillationCoordinator.forgetCorpus(source: tag, in: store) == 1)
+
+        #expect(try store.item(id: twin.id) == nil)
+        #expect(try store.meta(key: MemoryDistillationCoordinator.supersededLinkKey(twin.id)) == nil)
+        let kept = try #require(try store.item(id: corrector.id))
+        #expect(kept.kind == .memory)
+        #expect(kept.source == .distilled)
+    }
+
+    @Test("an unknown source forgets nothing and touches nothing")
+    func forgetCorpusUnknownSource() async throws {
+        let store = try KnowledgeStore()
+        try await coordinator("\(Self.filler) dublin", source: .distilled, in: store)
+            .distillAndStore(turns: Self.chainTurns)
+        let unknown = KnowledgeSource(rawValue: "import/claude/2026-01-05")
+
+        #expect(try MemoryDistillationCoordinator.forgetCorpus(source: unknown, in: store) == 0)
+        #expect(try store.allItems(kind: .memory).count == 1)
+    }
+
+    @Test("A <- I <- N: forgetting the import's I restores A beside N, the documented one-step undo")
+    func forgetCorpusMidChain() async throws {
+        let tag = KnowledgeSource(rawValue: "import/chatgpt/2026-10-26")
+        let store = try KnowledgeStore()
+        try await coordinator("\(Self.filler) dublin", source: .distilled, in: store)
+            .distillAndStore(turns: Self.chainTurns)
+        try await coordinator("\(Self.filler) cork", source: tag, in: store)
+            .distillAndStore(turns: Self.chainTurns)
+        try await coordinator("\(Self.filler) ardmore", source: .distilled, in: store)
+            .distillAndStore(turns: Self.chainTurns)
+        let first = try #require(try item("\(Self.filler) dublin", in: store))
+        let last = try #require(try item("\(Self.filler) ardmore", in: store))
+        #expect(first.kind == .memorySuperseded)
+
+        #expect(try MemoryDistillationCoordinator.forgetCorpus(source: tag, in: store) == 1)
+
+        #expect(try item("\(Self.filler) cork", in: store) == nil)
+        #expect(try store.item(id: first.id)?.kind == .memory)
+        #expect(try store.item(id: last.id)?.kind == .memory)
+        #expect(try store.meta(key: MemoryDistillationCoordinator.supersededLinkKey(first.id)) == nil)
+    }
+
+    @Test("a writer that never revives treats an exact re-assertion of a corrected fact as a duplicate")
+    func noReviveWritesNothing() async throws {
+        let tag = KnowledgeSource(rawValue: "import/chatgpt/2026-10-26")
+        let store = try KnowledgeStore()
+        try await coordinator("\(Self.filler) dublin", source: .distilled, in: store)
+            .distillAndStore(turns: Self.chainTurns)
+        try await coordinator("\(Self.filler) ardmore", source: .distilled, in: store)
+            .distillAndStore(turns: Self.chainTurns)
+        let old = try #require(try item("\(Self.filler) dublin", in: store))
+        let new = try #require(try item("\(Self.filler) ardmore", in: store))
+        #expect(old.kind == .memorySuperseded)
+        let graph = FakeGraphWriter()
+
+        let written = try await coordinator(
+            "\(Self.filler) dublin", source: tag, in: store, graph: graph, revives: false
+        ).distillAndStore(turns: Self.chainTurns)
+
+        #expect(written == 0)
+        #expect(try store.item(id: old.id)?.kind == .memorySuperseded)
+        #expect(try store.item(id: new.id)?.kind == .memory)
+        #expect(try store.meta(key: MemoryDistillationCoordinator.supersededLinkKey(old.id)) == new.id.uuidString)
+        #expect(await graph.texts().isEmpty)
+        #expect(try MemoryDistillationCoordinator.forgetCorpus(source: tag, in: store) == 0)
+
+        // The control: the live writer (revives by default) does revive it.
+        let revived = try await coordinator("\(Self.filler) dublin", source: .distilled, in: store)
+            .distillAndStore(turns: Self.chainTurns)
+        #expect(revived == 1)
+        #expect(try store.item(id: old.id)?.kind == .memory)
     }
 }

@@ -99,6 +99,7 @@ app/
 │       │   ├── voice/       # VoiceLoopMachine, SilenceEndpointer
 │       │   ├── memory/      # Memory domain entities
 │       │   ├── rag/         # Intent, IntentClassifier
+│       │   ├── brainlink/   # Brain at Home wire: pairing QR, SSE stream, 429/503
 │       │   └── passages/    # Personal-knowledge domain
 │       └── commonTest/
 ├── composeApp/
