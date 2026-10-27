@@ -32,8 +32,12 @@
 //  the pre-2026-09-12 core, so `wiringText` carries both cores and a sentence only pocket's core holds is a leak.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — `privacyLinesAreRepeatable`: the opening's privacy lines are the right
 //  answer to "does anything leave?", so none may be a guard span (the old search line was exactly 60).
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — `shapeLinesAreRepeatable` (#716): the VOICE's shape bullet and the
+//  shape move teach a SHAPE a compare answer may legitimately echo, so none of their sentences is a span; the
+//  fingerprint itself is byte-identical (the move is outside `voiceExemplars`). Confidence 0.85.
 //
 
+import Foundation
 @testable import M1K3Chat
 import M1K3Inference
 import Testing
@@ -275,5 +279,27 @@ struct PersonaLeakGuardTests {
         let answer = "All quiet here, honestly — nothing needs you this minute. Want a fact, or the quiet?"
         #expect(!PersonaLeakGuard.leaks(answer))
         #expect(PersonaLeakGuard.guarded(answer) == answer)
+    }
+
+    /// #716 (2026-10-26): the shape bullet (VOICE, so in `wiringText`) and the shape move teach a SHAPE. A compare
+    /// answer that reuses their words ("a small table, then one line on which I'd pick") is the wanted behaviour,
+    /// never a leak — so every sentence of both sits under the 60-character floor or outside the fingerprint.
+    @Test("the shape bullet and the shape move are repeatable: no sentence of either is a guard span")
+    func shapeLinesAreRepeatable() {
+        let bullet = M1K3Persona.shapeBullet
+        let moveReply = M1K3Persona.exemplarReplies(of: M1K3Persona.shapeMove)
+        #expect(M1K3Persona.wiringText.contains(bullet))
+        #expect(!PersonaLeakGuard.leaks(bullet))
+        #expect(PersonaLeakGuard.guarded(bullet) == bullet)
+        #expect(!PersonaLeakGuard.leaks(moveReply))
+        let joined: String = bullet + "\n" + moveReply
+        let sentences = joined.components(separatedBy: CharacterSet(charactersIn: ".\n"))
+        for sentence in sentences where !sentence.trimmingCharacters(in: .whitespaces).isEmpty {
+            #expect(!PersonaLeakGuard.leaks(sentence), "a guard span: \(sentence)")
+        }
+        // The compare answer in M1K3's own words, whole.
+        let answer = "A small table, one row each, then my pick: coffee, because the ritual is the point. "
+            + "The take is mine; the table is only the facts lined up."
+        #expect(!PersonaLeakGuard.leaks(answer))
     }
 }
