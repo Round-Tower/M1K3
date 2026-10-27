@@ -42,6 +42,8 @@
 //  document chunk is a plain turn over it (grounded-long: the manual's torque lost to lookup_fact 6/6 on Lil and
 //  Big). Web reads and chains untouched. Confidence 0.75 (pinned; paired run on Lil/Big: torque 0/6 → 6/6,
 //  the cross arm 17/18, its one miss Lil's own wrong river; Mini unmeasured).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (#711 review fold) — `documentCorrected`'s doc names the exclusion: an
+//  imported `.conversation` chunk is not one of the user's documents (the caller filters it). Comment only.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — `searchCorrected` (#713): when the search head reads a turn as local,
 //  every web read leaves the pick; a local link still runs, nothing left is a plain turn. It never adds a web read.
 //  Confidence 0.8 (pinned; the head ships untrained and flagged off until its teacher pass and paired arm).
@@ -287,7 +289,8 @@ public enum ToolDispatch {
     /// gate had kept the manual's chunk, and the dispatched prompt (the result only, the 09-27 ruling)
     /// answered with a generic spec, never the manual's 145 Nm. `documentsKept`: the turn kept a
     /// chunk from the document lane (`KnowledgeStore.groundingDocumentKinds`: a document, note, call
-    /// or photo, all the user's own), past `EmbedderFloors`, or on the hashing arm only, the
+    /// or photo, all the user's own; an imported conversation shares the lane but is another
+    /// assistant's old answer, so the caller leaves it out), past `EmbedderFloors`, or on the hashing arm only, the
     /// strict-AND `HashingKeywordLane`. Memories don't count: "I live in Cork" must not steer Cork's
     /// founding year. The plain turn carries those chunks, budgeted, with its rules, which let a
     /// well-known fact stand; no lookup leaves the device.

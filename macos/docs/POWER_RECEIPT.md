@@ -87,4 +87,10 @@ band and into the store copy, and one clause returns to the persona behind an A/
      Review: Kev + claude-fable-5.1, 2026-09-15 (22:40): the #357 review caught "GPU ~35 W"
      standing in for package power — the receipt now carries the CPU / GPU split per turn
      (mean_cpu_watts / mean_gpu_watts + summary medians) and the prose quotes the fields:
-     package 37 W median, GPU 34 W, CPU 3 W. Confidence 0.85. -->
+     package 37 W median, GPU 34 W, CPU 3 W. Confidence 0.85.
+     Review: Kev + claude-opus-5.5, 2026-10-26 (#696): a fifth counter, RUSAGE_INFO_V6
+     ri_energy_nj, reads without root and inside an App Sandbox but is CPU-only like task_energy
+     (a Metal burn that kept the GPU busy ~1.95 s of 2 s moved it under 0.05 J); ri_billed_energy
+     again never tracked the work. The
+     table above is left as measured; the new row, the per-tier coefficients the app ships and
+     the receipts still owed are in docs/ENERGY_MEASUREMENT.md. Confidence 0.85. -->

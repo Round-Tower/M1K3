@@ -35,6 +35,10 @@ kotlin {
             implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
             // DateTime for domain layer timestamp handling
             implementation(libs.kotlinx.datetime)
+            // JSON reads for the Brain at Home wire (domain/brainlink). Runtime
+            // only: parseToJsonElement needs no compiler plugin, and composeApp
+            // already depends on this artifact at the same catalog version.
+            implementation(libs.kotlinx.serialization.json)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
