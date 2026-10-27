@@ -56,8 +56,9 @@
 //  lane skips a sentence that polishes to nothing instead of reading it raw (a streamed Source trailer's URLs).
 //  Confidence 0.9.
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — typed answer blocks (#717): the FIRST pass swaps every
-//  `m1k3-steps` / `m1k3-choices` fence for its sentences (AnswerBlockSpeech), and drops one that didn't parse
-//  or never closed. The later passes keep fences verbatim, so without it a block was read out as JSON on both
+//  `m1k3-steps` / `m1k3-choices` fence for its sentences (AnswerBlockSpeech), and one that didn't parse
+//  or never closed for "I've put that on screen." (never "": the shells' raw fallback would read the
+//  JSON). The later passes keep fences verbatim, so without it a block was read out as JSON on both
 //  lanes. M1K3Voice now imports the M1K3AnswerBlocks leaf (a taste call for Kev, see Package.swift).
 //  Confidence 0.85.
 //

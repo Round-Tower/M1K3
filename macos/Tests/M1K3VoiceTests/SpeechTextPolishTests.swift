@@ -250,12 +250,16 @@ struct SpeechTextPolishTests {
         #expect(SpeechTextPolish.spokenSentence(chunk) == "Which engine? Options: Lil, Big, or Mini.")
     }
 
-    @Test("a malformed or unclosed typed fence is skipped by the sentence lane, not read raw")
-    func malformedTypedFenceIsSilent() {
-        #expect(SpeechTextPolish.spokenSentence("```m1k3-steps\n{\"steps\": [1, 2]}\n```") == nil)
-        #expect(SpeechTextPolish.spokenSentence("```m1k3-steps\n{\"steps\": [\"Lo") == nil)
+    @Test("a malformed or unclosed typed fence says it's on screen, on every lane, never its JSON")
+    func malformedTypedFenceSaysOnScreen() {
+        // Voice mode speaks each folded chunk through speak(), which reads the RAW
+        // chunk when polish returns "" — so a lone bad fence must polish to words.
+        let lone = "```m1k3-steps\n{\"steps\": [1, 2]}\n```"
+        #expect(SpeechTextPolish.polish(lone) == "I've put that on screen.")
+        #expect(SpeechTextPolish.spokenSentence(lone) == "I've put that on screen.")
+        #expect(SpeechTextPolish.spokenSentence("```m1k3-steps\n{\"steps\": [\"Lo") == "I've put that on screen.")
         let answer = "Try this.\n```m1k3-choices\n{\"prompt\": \"Pick\"}\n```"
-        #expect(SpeechTextPolish.polish(answer) == "Try this.")
+        #expect(SpeechTextPolish.polish(answer) == "Try this.\nI've put that on screen.")
     }
 
     @Test("a choices block before a FOLLOWUPS trailer speaks the options and not the trailer")

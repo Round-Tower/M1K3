@@ -10,20 +10,28 @@
 //  whole-answer and the per-sentence lane (SentenceStreamFolder hands a closed
 //  fence over as one chunk).
 //
-//  A fence that didn't parse, or never closed, is dropped from speech: the screen
-//  shows it as a code card, but reading raw JSON aloud is the one thing this
-//  lane must never do.
+//  A fence that didn't parse, or never closed, speaks as "I've put that on
+//  screen." (the issue's chart precedent): the screen shows it as a code card,
+//  and reading raw JSON aloud is the one thing this lane must never do. Not "":
+//  every shell's speak() reads the RAW text when polish comes back empty, and
+//  the sentence folders hand a fence over as a chunk of its own, so silence
+//  would have voiced the JSON in voice mode.
 //
 //  The wording is English on purpose: every rule in SpeechTextPolish is, and so
 //  are the voices it feeds.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85 (pure; the wording
 //  is a taste call, pinned in AnswerBlockSpeechTests). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (self-review fold) — a malformed or unclosed fence says it is
+//  on screen instead of vanishing: "" tripped the shells' raw fallback in voice mode. Confidence 0.85.
 //
 
 import Foundation
 
 public enum AnswerBlockSpeech {
+    /// What a typed fence that didn't parse, or never closed, says aloud.
+    public static let onScreen = "I've put that on screen."
+
     /// The block as sentences, on one line. Items lose their backticks and line
     /// breaks, so the sentences can never open or close a fence downstream.
     public static func spoken(_ block: AnswerBlock) -> String {
@@ -40,7 +48,7 @@ public enum AnswerBlockSpeech {
     }
 
     /// The text with every typed fence replaced in place: a parsed one by its
-    /// sentences, a malformed or still-open one by nothing. Everything else,
+    /// sentences, a malformed or still-open one by `onScreen`. Everything else,
     /// ordinary fences included, is untouched.
     public static func replacingTypedFences(in text: String) -> String {
         let regions = AnswerBlockSegmenter.typedRegions(in: text)
@@ -49,9 +57,7 @@ public enum AnswerBlockSpeech {
         var cursor = text.startIndex
         for region in regions {
             result += text[cursor ..< region.range.lowerBound]
-            if let block = region.block {
-                result += spoken(block)
-            }
+            result += region.block.map(spoken) ?? onScreen
             cursor = region.range.upperBound
         }
         result += text[cursor...]

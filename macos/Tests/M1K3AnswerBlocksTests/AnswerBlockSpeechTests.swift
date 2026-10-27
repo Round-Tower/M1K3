@@ -54,12 +54,15 @@ struct AnswerBlockSpeechTests {
         )
     }
 
-    @Test("a malformed typed fence and an open one are silent: no JSON aloud")
-    func malformedAndPendingVanish() {
+    @Test("a malformed or unclosed typed fence says it's on screen: no JSON aloud, and never an empty utterance")
+    func malformedAndUnclosedSayOnScreen() {
+        // Not "": every shell's speak() reads the RAW text when polish comes back
+        // empty, and the sentence folders hand a fence over as its own chunk.
         let malformed = "Before.\n```m1k3-choices\n{\"prompt\": \"Pick\", \"options\": [1, 2]}\n```\nAfter."
-        #expect(AnswerBlockSpeech.replacingTypedFences(in: malformed) == "Before.\n\nAfter.")
+        #expect(AnswerBlockSpeech.replacingTypedFences(in: malformed) == "Before.\nI've put that on screen.\nAfter.")
         let open = "Before.\n```m1k3-steps\n{\"steps\": [\"Lo"
-        #expect(AnswerBlockSpeech.replacingTypedFences(in: open) == "Before.\n")
+        #expect(AnswerBlockSpeech.replacingTypedFences(in: open) == "Before.\nI've put that on screen.")
+        #expect(AnswerBlockSpeech.onScreen == "I've put that on screen.")
     }
 
     @Test("an ordinary fence, and text with no typed fence, pass through byte for byte")
