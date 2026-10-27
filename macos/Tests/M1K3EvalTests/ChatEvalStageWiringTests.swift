@@ -18,6 +18,10 @@
 //  both arms are pinned, `spokenText(of:)` to auto-speak's seams (and never the whole-answer polish), format to the
 //  live arm, and the stop matcher to the one `AppEnvironment+AutoSpeak` uses. Red against a mutated stage (bare arm
 //  without the argument, a whole-answer polish), restored byte for byte. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — the `mechanic` arm (#697) wires like the app: the scenario runs
+//  through `CoolHeadPolicy.advance` into a `CoolHeadNoteSlot` the responder takes from, and `.note` is captured.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — #697 pre-push review fold: `runEmbeds` keeps its `mechanic` clause,
+//  so a mechanic-only run warms the embedder before fixture 1. Confidence 0.85.
 //
 
 import Foundation
@@ -100,5 +104,33 @@ struct ChatEvalStageWiringTests {
         let stop = "SpokenAnswerEnd.start(in: $0, followUps: FollowUpSplit.trailerStart(in:))"
         #expect(text.contains(stop))
         #expect(try Self.code(Self.appSource("M1K3App/AppEnvironment+AutoSpeak.swift")).contains(stop))
+    }
+
+    @Test("the mechanic arm takes the live path and folds its scenario through the app's own Cool Head step")
+    func mechanicWiresLikeTheApp() throws {
+        let text = try Self.code(Self.stageSource())
+        let live = try Self.body(of: "private static func livePathObservation(", in: text)
+        #expect(live.contains("CoolHeadPolicy.advance("), "the scenario must run the app's fold, not a copy of it")
+        #expect(live.contains("CoolHeadNoteSlot()"), "the note must come out of the app's slot")
+        #expect(live.contains("minRecoveryTurns: AppEnvironment.coolHeadMinRecoveryTurns"))
+        #expect(live.contains("deviceNoun: HostPlatform.noun"))
+        #expect(live.contains("turnNoteProvider: turnNote"))
+        #expect(live.contains("case let .note(line)"), "the turn's notes must be captured")
+        #expect(live.contains("turnNotes:"), "the captured notes must reach the observation")
+        #expect(
+            !live.contains("ProcessInfo.processInfo.thermalState"), "the eval Mac's own heat must never reach a fixture"
+        )
+        let run = try Self.body(of: "private static func runFixture(", in: text)
+        let arm = try #require(run.range(of: "case .mechanic:"), "no mechanic arm in runFixture")
+        let next = try #require(run[arm.upperBound...].range(of: "case "))
+        #expect(run[arm.upperBound ..< next.lowerBound].contains("livePathObservation("))
+    }
+
+    @Test("a mechanic-only run still warms the embedder outside every fixture's clock")
+    func mechanicRunWarmsTheEmbedder() throws {
+        // `--kinds mechanic` sets no LIVE_PATH, so without its own clause the first mechanic fixture would pay
+        // the embedder load and the Hugging Face file-list fetch inside its timed window (#643 follow-up 1).
+        let embeds = try Self.body(of: "private static func runEmbeds(", in: Self.code(Self.stageSource()))
+        #expect(embeds.contains("kinds.contains(.mechanic)"), "a mechanic-only run must still warm the embedder")
     }
 }
