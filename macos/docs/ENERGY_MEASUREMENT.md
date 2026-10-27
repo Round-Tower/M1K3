@@ -19,8 +19,8 @@ Sandbox. It does not see the GPU: a Metal burn that kept the GPU busy 1.94–1.9
 
 So M1K3 does what the issue's fallback describes. `powermetrics` (root, run by hand) stays the
 receipt. The app ships a per-tier coefficient (joules per prefilled token, joules per decoded
-token) derived from receipts taken on one Mac, an M1 Max, and prices each generation's own token
-counts. A tier with no receipt is unpriced.
+token) calibrated from receipts taken on one Mac, an M1 Max, and prices each generation's own token
+counts. A tier with no per-token receipt is unpriced.
 
 ## The counters (M1 Max 64 GB, macOS 27.0)
 
@@ -103,50 +103,133 @@ What that shows:
 
 ## The per-tier coefficients
 
-Method: J per token = package watts above idle while the brain generates ÷ its tokens per second,
-both measured on one Mac, an M1 Max 64 GB. On any other chip the rate is still that M1 Max's
-figure, not the user's: every rate names its Mac (`measuredOn`) and its model (`modelID`), and no
-surface may print it as the user's cost without saying whose it is. The table lives in code in one
-place, `EnergyCoefficients` in `Sources/M1K3Inference/EnergyLedger.swift`. A test binds Lil's rate
-to Lil's model id, so a model swap fails the suite and forces a re-derivation.
+Method: J per token = one phase's energy above idle ÷ the tokens it processed, prefill and decode
+apart. The watts and the tokens come from one build on one Mac: the 1.3.0 (541) app on an M1 Max
+64 GB, on AC, 2026-10-27, two runs per tier. A run (`tools/eval/power_run.zsh`, below) idles 30 s,
+then asks the ten built-in questions through the app's own `m1k3 ask` while `powermetrics` samples
+package power every 500 ms. `tools/eval/power_receipt.py rates` then times every generation's
+prefill and decode by the app's ttft line and fits each phase's watts across the samples. On any
+other chip the rate is still that M1 Max's figure, not the user's: every rate names its Mac
+(`measuredOn`) and its model (`modelID`), and no surface may print it as the user's cost without
+saying whose it is. The table lives in code in one place, `EnergyCoefficients` in
+`Sources/M1K3Inference/EnergyLedger.swift`. A test holds each rate to within 1 % of its tier's two
+committed receipts pooled (`docs/evals/2026-10-27-power-rates-<tier>-run<N>.json`) and binds it to
+its tier's model id, so a model swap fails the suite and forces a new receipt.
 
 | Tier | Model | J / prefilled token | J / decoded token | Calibrated | Band | Provenance |
 |---|---|---|---|---|---|---|
-| Lil | Qwen3.5-4B 4-bit | **0.060** | **0.434** | **no** (derived) | ±50 % | watts: run 1 (2026-09-15, Qwen3-4B DWQ, the 1.0.0 build-362 app; median 37.14 W during an answer − 1.09 W idle = 36.05 W). Throughput: the 2026-10-25 Release baseline, decode 83 tok/s and prefill ~600 tok/s past the persona seed (`docs/LONG_CONTEXT_AND_SPEED_DESIGN.md` §3). |
-| Mini | Apple Foundation Models | — | — | — | unpriced | no watts measured; it reports no token counts to the ledger either |
-| pocket | LFM2.5-1.2B | — | — | — | unpriced | no watts measured on this Mac |
-| Big | gemma-4-12B 4-bit | — | — | — | unpriced | no watts measured. Its throughput is known (decode 31, prefill ~210 tok/s) but a rate needs both |
+| Lil | Qwen3.5-4B 4-bit | **0.0738** | **0.422** | **yes** | ±10 % at these prompt sizes | 2 runs, 20 generations, 665–1,007-token prompts; runs 0.0741 / 0.0736 and 0.4214 / 0.4223 |
+| Big | gemma-4-12B 4-bit | **0.213** | **1.17** | **yes** | ±10 % at these prompt sizes | 2 runs, 20 generations, 666–1,016-token prompts; runs 0.2142 / 0.2116 and 1.1739 / 1.1659 |
+| Mini | Apple Foundation Models | — | — | — | unpriced | measured per answer (below), but it reports no tokens, so a per-token rate would price nothing |
+| pocket | LFM2.5-1.2B | — | — | — | unpriced | no receipt: this Mac offers Mini in that slot |
 
-**Why Lil is "derived", not "calibrated".** The watts and the throughput come from two runs, two
-models and two builds. Run 1 is Qwen3-4B DWQ on the September app; the receipt does not record that
-build's configuration. The throughput is Qwen3.5-4B on the October Release build. The rate also
-assumes prefill draws the same watts as decode. Prefill is compute-bound and probably draws more,
-so the prefill rate is the less certain of the two.
+Each rate is the pooled figure (both runs' phase joules over both runs' tokens), to three figures.
+Big has been priced only since this calibration; before it, its generations were counted and left
+unpriced. A test holds the table's bold figures to the shipped constants.
 
-**The band is a judgment, not a confidence interval.** The inputs' own spread is roughly
-±15–20 %: per-answer package power was 35–43 W in run 1, and tokens per second varies with the
-length of the chat. The pairing across models and builds could add more. ±50 % covers both.
+**The raw evidence is committed**, in `docs/evals/2026-10-27-power-raw/`: each run's `powermetrics`
+log (gzipped), its ttft lines, and its windows (the idle window and each turn's start, end,
+question and answer length, never the answer's text). Running `report` and `rates` on them gives
+every receipt in `docs/evals/` again, byte for byte.
 
-**One cross-check, from run 1's own answers, and it settles little.** Run 1 recorded characters,
-not tokens. A least-squares fit of its ten answers (fitted 2026-10-26 from
-`docs/evals/2026-09-15-power-receipt-lil-run1.json`) gives joules above idle ≈ 163 J + 0.080 J per
-character (n = 10, R² 0.36). The slope's 95 % interval is −0.007 to +0.167 J per character. At an
-assumed ~4 characters per token (an assumption, not a measurement) that is −0.03 to +0.67 J per
-output token, centred on 0.32. It is consistent with the derived 0.43, and just as consistent with
-a rate a third of that or half again, and it does not rule out zero. The marginal speed comes from
-a second fit, seconds ≈ 4.1 s + 0.00272 s per character (R² 0.55): 367 characters a second, so
-~92 tok/s at the same 4 characters per token (95 % interval about 53–350 tok/s). The two slopes
-together imply ~29 W of marginal power, below the 36 W the rate uses.
+### How the split was made
 
-The intercept, 163 J (95 % interval 103–223 J, so 49–107 % of the median answer's 209 J), is the
-part of an answer that did not scale with its length; a 91-character answer still cost 176 J. What
-it holds is open. A cold persona prefill alone is the same order: at the derived 0.060 J per token,
-today's ~2,444-token Lil seed is about 147 J, and the ledger does price a cold prefill. Whether run
-1's answers paid one is not in the receipt (its build's seed size and cache state are not
-recorded). The rest of the `m1k3 ask` window (embedding, retrieval, Apple's tool picker on the ANE)
-the ledger never sees. Only a same-build receipt with the ttft token counts separates the two.
-**What holds by construction: the ledger prices generation only, so its figure is a floor for
-generation, not a whole answer's cost.**
+**Placing the samples.** `powermetrics` stamps each sample to the whole second, and a Lil prefill
+lasts about 1.2 s, so the samples are placed on the clock first. They are laid end to end by their
+own `(NNNms elapsed)` headers, at the one offset every whole-second stamp allows. The headers'
+jitter (500–530 ms) pins that offset to ±1–6 ms in every run. If the sampling loop slips (a
+gap no header covers), the next sample starts a new stretch with its own offset, and the gap stays
+unsampled. All six of these logs place as one stretch. September's two each split once, after
+their answers.
+
+**Timing the phases.** The ttft line is logged when decode ends. A generation's decode is its
+`decode` tokens ÷ (its tok/s + 0.5) before that stamp, because the line truncates the rate. Its
+prefill is the `prefill` ms before that.
+
+**Fitting the watts.** For every sample that touches a turn, its energy above idle is modelled as
+prefill watts × the prefill seconds it holds, plus decode watts × the decode seconds, plus a third
+term for the rest of the turn. The three are fitted by least squares over the run. Prorating
+alone, giving each sample's average power to every phase it overlaps, reads low: a sample that
+straddles a generation's edge spreads the generation's power over its idle half too. That gave
+0.0675–0.069 / 0.401–0.404 J (Lil) and 0.205–0.208 / 1.155–1.156 J (Big). Each `rates` file keeps it as
+`cross_check_prorated`.
+
+**Checking it twice.** The data check the placement. Refitting with the ttft clock shifted across
+±1 s in 0.05 s steps, the fit's error is smallest at 0.00 s in three runs. In the fourth (Big run 1)
+0.00 and +0.05 s tie (3.55 W). Half a sample off, ±0.5 s, the error is 3–10 times larger (Lil 1.2–1.3 W
+against 12.2 W, Big 2.9–3.6 W against 9.5–10.3 W). So the placement is right to within the 0.05 s step,
+and the split is not off by a sample. An independent re-derivation was written blind to these numbers,
+with its own parser, placement and an eight-phase fit. It agreed to 0.1 %, and it found the
+prorating bias, the power-line glitch and the old receipt's binning error described below. Its
+table is on the PR; its script is not committed.
+
+| Run | Prefill W above idle | Decode W above idle | J / prefilled token | J / decoded token | Turn energy inside the generations |
+|---|---|---|---|---|---|
+| Lil 1 | 47.2 | 35.1 | 0.0741 | 0.4214 | 98 % |
+| Lil 2 | 47.3 | 35.1 | 0.0736 | 0.4223 | 98 % |
+| Big 1 | 47.7 | 37.2 | 0.2142 | 1.1739 | 100 % |
+| Big 2 | 47.7 | 37.1 | 0.2116 | 1.1659 | 99 % |
+
+What the runs show:
+
+1. **The two runs agree within 1.3 %** (Big's prefill rate; the other three within 0.7 %). The band
+   is wider, ±10 %, and is a judgment. In a scan of the committed logs (the scan itself is not
+   committed), moving the alignment ±0.05 s moved Lil's pooled rates by up to 3 % (decode
+   0.409–0.432), and ±0.1 s by up to 5 %. Big moved about 1 % either way. Big
+   run 1 idled at 1.98 W against run 2's 0.31 W, on a busier Mac 80 minutes earlier, and its rates
+   still agree. The blind check put the choice of its baseline at about ±4 %.
+2. **Prefill draws more than decode**: about 47 W above idle against 35–37 W. The derived rate this
+   replaces assumed one figure for both.
+3. **The derived Lil rate held within its ±50 % band.** It was 0.060 / 0.434 J (September's watts
+   paired with October's throughput). The calibration gives 0.0738 / 0.422, +23 % and −3 %.
+4. **On this path the ledger's floor is nearly the whole answer.** In questions 1–9, 99–100 % of a
+   turn's energy above idle falls inside its generation. The rest is a 0.1–0.3 s lead before
+   prefill and a short tail. The exception is question 10 ("List four uses for a Raspberry Pi").
+   On every tier it went to the web. On Lil its turn ran 10.2 and 12.4 s against 1.8–4.3 s for
+   the other nine (the windows) and its prompt grew to 983 and 1,007 tokens against 665–869 (the
+   ttft lines); Mini's answer cites a link (the answer text, not committed). On Lil and Big that
+   left 5.9–6.6 s before its generation, which cost 11–24 J above idle that the ledger does not see. The question list calls
+   itself "no web", so the built-in ten under-test the tool path.
+5. **A decoded token is not a visible one.** The ledger prices decoded tokens, and so do these
+   rates. A Lil answer of 137 characters decoded 23 tokens in one run and 43 in the other.
+6. **What it does not cover.** These prompts were 665–1,016 tokens, the `m1k3 ask` path. A chat
+   turn carries the persona seed (1,736 tokens on Lil, measured below), and a long conversation
+   more. Attention cost grows with context, so a long chat's tokens probably cost more than these
+   (not measured). One Mac, on AC.
+
+**The power line.** `powermetrics` prints `GPU Power` twice per sample. The processor summary's
+copy, which its `Combined` line is built from, now and then reads near 0 W for one sample and about
+double the next: one to three times in each of today's Lil and Big logs, 10–13 times in each Mini
+log, and 19 times in September's run 1.
+The GPU section's own line holds steady, and the two sum to the same total over a run. The tool
+reads the GPU section's line, because once a window is shorter than a second, which half-second
+the energy lands in matters.
+
+### Mini, per answer: a floor
+
+Mini reports no token counts, so its receipt prices an answer. **Its idle was not quiet**: 4.08 and
+3.82 W (CPU 2.79 and 2.51 W, GPU 1.28 and 1.32 W, Neural Engine 0: the receipts' `idle_*_watts`),
+against 0.28–0.31 W in three of the four MLX runs. Nothing recorded what drew it (the run sampled
+power, not tasks); a window still drawing would look like this. In run 1 the GPU part held through
+every answer (`mean_gpu_watts` 1.12–1.17 W in all ten), so subtracting it was fair, if the CPU part
+held too. In run 2 it stopped after the fourth answer (1.12–1.29 W, then 0.02–0.24 W), so answers
+5–10 were billed against a baseline at least 1.1 W too high, about 9 J an answer.
+
+With that said, an answer cost 21.8 J above idle in run 1 and 16.8 J in run 2 (means; medians 20.6
+and 16.2 J). On the same ten questions Lil's cost 108 and 111 J and Big's 305 and 323 J. Mini's
+answers were shorter, 325–371 characters on average against 491–585. Run 1 is the fairer figure;
+both stay floors until a run on a quiet idle repeats them.
+
+### The receipt, re-run
+
+The six receipts in `docs/evals/2026-10-27-power-receipt-*` come from the tool as it is now. The
+version that ran on the night assigned whole samples to a turn by their whole-second stamp, and
+clipped every sample at zero. That read Lil's ten answers 5–7 % low in total and one of them 28 %
+low, and Mini's 5–9 % high. Its idle maximum could also catch the first answer's first sample:
+Lil run 2's "28.86 W" idle peak was a prefill sample. A receipt now counts each placed sample for
+the part of it a turn holds, unclipped, and the idle is the samples wholly inside its window.
+September's receipts in `docs/evals/` are as that night's tool wrote them. Re-run today, run 1
+reads 0.0596 Wh a median answer against the 0.0581 it recorded.
 
 ## What the ledger records (Phase 2)
 
@@ -158,14 +241,14 @@ generation, not a whole answer's cost.**
   as unattributed and never priced. An audition imported under the stock repo's own name carries
   that name, so it is billed as that tier.
 - **The prefill it prices** is `prefilledTokens`, what this generation actually prefilled past a
-  warm persona-prefix cache. `promptTokens` is the true context and would bill the cached
-  ~2,444-token Lil persona again on every turn. It falls back to `promptTokens` only when the
+  warm persona-prefix cache. `promptTokens` is the true context and would bill the cached Lil
+  persona (1,736 tokens bare, more with tools) again on every turn. It falls back to `promptTokens` only when the
   reporter does not know.
 - **Kept: token counts, never joules.** A daily rollup per calendar day (per tier: generations,
   prefilled tokens and decoded tokens; plus a count of unattributed generations) for 30 days, as
   one JSON blob under the UserDefaults key `energy.days`. Joules are priced on read, at the table
-  the running build ships. So Kev's ruling on the derived Lil rate, or a calibration, re-prices the
-  history, and a tier that loses its rate shows nothing. The stored fields are numbers, dates and
+  the running build ships. So a calibration re-prices the history (this one will, the moment a
+  build carries it, Big's kept days included), and a tier that loses its rate shows nothing. The stored fields are numbers, dates and
   tier names only, never message text. A test pins the JSON keys, every leaf, and the types, with a
   positive control (`Tests/M1K3InferenceTests/EnergyLedgerTests.swift`). Under the screengrab
   harness it records nothing.
@@ -182,7 +265,8 @@ generation, not a whole answer's cost.**
   iPhone and iPad shells (they install no sink). Brain at Home is recorded on the Mac that serves
   it: a paired device's turn runs on this Mac's MLX and reports here, which is right, because the
   energy is this Mac's.
-- **Known under-counts**: the fixed per-answer work above. Also a checkpoint-mode tool send
+- **Known under-counts**: the per-answer work outside the generation. On an `m1k3 ask` answer that
+  is 0–1 %, and a web search before the generation adds 11–24 J (above). Also a checkpoint-mode tool send
   reports a one-token prefill. Its real prefill is on the reuse line's `extend` figure, so those
   sends are under-billed.
 - **Nothing shows it yet.** The answer footer, the pulse line and a site page are Phase 3. Their
@@ -216,7 +300,8 @@ M1 Max 64 GB, macOS 27.0 26A428, AC, powermode 2. A Release build of ca4e434e (1
 default entitlements, `M1K3App/M1K3-MAS.entitlements` (`app-sandbox` true), signed with an Apple
 Development certificate. Run as the command above, directly exec'd under `caffeinate -dis`, with no
 live M1K3 and nothing else on the MLX slot. The transcripts, whole, are
-`docs/evals/2026-10-26-energy-probe-lil-run1.txt` and `-run2.txt`. Run 1's stage lines:
+`docs/evals/2026-10-26-energy-probe-lil-run1.txt` and `-run2.txt`. The estimate lines price at the
+derived rate that build shipped; 2026-10-27's calibration replaced it. Run 1's stage lines:
 
     ✓ energy: V6 read inside the app (sandboxed: true) energy_nj=16251553132 billed=34081944145
     • energy: warm-up outside the window (persona seed + one throwaway generation): 3.35 s
@@ -248,7 +333,8 @@ What the two runs show, and what they do not:
   energy, while the estimate is package watts above idle. So the ratio gives an order of magnitude,
   not a split. It agrees in order with run 1's receipt (CPU 3.0 W of 36.05 W above idle, about 8 %).
   It does not check the estimate: the rest is the GPU, which no in-app counter sees, and the Lil
-  rate is still derived.
+  rate was still derived then. At the rate calibrated on 2026-10-27 the same windows estimate
+  50.5 and 58.9 J, so the CPU share is 6.0 and 5.9 %.
 - **The P-core figure equals the total to the millijoule** in both windows, as in the probe's burns.
   By the counter's own account, no energy in the window was billed to the efficiency cores.
 - **`ri_billed_energy` moved 1,216 and 18,999 units**, and its opening values differed tenfold
@@ -256,27 +342,29 @@ What the two runs show, and what they do not:
 - **The warm-up outside the window took 3.35 and 3.43 s.** It is printed, not hidden, and the
   window holds only the warm generation the ledger prices.
 
-## Owed: the receipts that would price the other tiers
+## Taking a receipt
 
-Each needs Kev's sudo in a real Terminal (the agent's prompt has no tty and there is no sudoers
-entry), a quiet Mac (no builds, M1K3's windows hidden, AC), the brain picked in Settings, and **two
-runs per tier** (the issue's reproducibility gate). For each of `lil`, `big` and `mini` (and `pocket`
-where it is offered):
+Each run needs a real Terminal for sudo (the agent's prompt has no tty and there is no sudoers
+entry), a quiet Mac (no builds, M1K3 hidden, AC) and the brain picked in Settings. Two runs per
+tier are the reproducibility gate:
 
-    mkdir -p ~/.cache/m1k3-power
-    sudo -b powermetrics --samplers cpu_power,gpu_power -i 500 -n 1200 -o ~/.cache/m1k3-power/<brain>-<date>-run<N>.log
-    python3 macos/tools/eval/power_receipt.py drive --brain <brain> --out ~/.cache/m1k3-power/<brain>-<date>-run<N>-turns.json
-    /usr/bin/log show --style compact --last 15m --predicate 'subsystem == "app.m1k3" AND category == "ttft"' > ~/.cache/m1k3-power/<brain>-<date>-run<N>-ttft.log
-    python3 macos/tools/eval/power_receipt.py report --log ~/.cache/m1k3-power/<brain>-<date>-run<N>.log \
-      --turns ~/.cache/m1k3-power/<brain>-<date>-run<N>-turns.json \
-      --out macos/docs/evals/<date>-power-receipt-<brain>-run<N>.json \
-      --provenance '{"machine":"Apple M1 Max, 64 GB","power_source":"ac","app":"<version (build)>"}'
+    zsh macos/tools/eval/power_run.zsh <lil|big|mini> <run number>
 
-The ttft log gives each answer's prefill and decode token counts (the receipt records only
-characters). Joined to the receipt by time, a run yields watts and tokens from one build. That is
-what `calibrated: true` means. The receipt reads powermetrics' combined CPU + GPU + ANE line, so
-Mini's Neural Engine work is in it. But Mini reports no tokens to the ledger, so its receipt prices
-an answer, not a token.
+It refuses to start on battery, during a build, with M1K3 not answering, with another brain picked
+or with that run's log already on disk. Then it asks for the password once, before the clock
+starts. It records the idle, drives the ten questions and fails if any answer comes back empty. It
+stops `powermetrics` once the log holds a sample past the last answer, pulls the ttft lines and
+writes the receipt, plus the phase rates for an MLX tier. The raw logs stay in `~/.cache/m1k3-power`.
+Copy the receipts into `docs/evals/`.
+
+## Still owed
+
+- **Mini on a quiet idle**, with `powermetrics`' `tasks` sampler on, to name what drew 4 W at idle
+  in both of 2026-10-27's Mini runs.
+- **A long-context receipt**: a chat turn with the persona seed, and a conversation at about 4k and
+  8k tokens, to see how far the rates rise with context.
+- **pocket**, on a device that offers it.
+- **The Developer ID lane's in-app read** (not built).
 
 <!-- Signed: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.8. The counter table's new row and the
      probe output were measured this session on this Mac (two runs of the probe in the tree). The Lil
@@ -300,4 +388,17 @@ an answer, not a token.
      CPU 3.041 and 3.459 J over 1.46 and 1.70 s, 5.9 and 5.7 % of the derived estimate. This retires the
      signature's Open on the in-app read for the Mac App Store lane. The Developer ID lane stays
      unverified (not built), and every tier's same-build receipt still needs sudo. The verify section's
-     "~2.4k-token" seed became the measured 1,736 (the bare key, no tools). Confidence 0.85. -->
+     "~2.4k-token" seed became the measured 1,736 (the bare key, no tools). Confidence 0.85.
+     Review: Kev + claude-opus-5.5, 2026-10-27 — the receipts. Kev ran two powermetrics runs per tier
+     (Lil, Big, Mini) on the 1.3.0 (541) app. `power_receipt.py rates` places the whole-second samples on
+     the clock, times each generation by its ttft line and fits each phase's watts. Lil is now calibrated
+     at 0.0738 / 0.422 J and Big is priced at 0.213 / 1.17 J, the runs agreeing within 1.2 % and a blind
+     re-derivation within 0.1 % (it caught the prorating bias, the power-line glitch and the receipt's
+     whole-second binning, all folded). Mini is measured per answer, but its idle was not quiet, so that
+     figure is a floor. This narrows the Open on same-build receipts to pocket. The run-1
+     cross-check and its intercept discussion, which only argued about the derived rate, give way to the
+     measured split (git history keeps them). The raw logs, ttft lines and answer-free windows are
+     committed, and re-running the tool on them reproduces every receipt. Confidence 0.85: two runs a
+     tier, one Mac, one prompt shape.
+     Open: pocket's receipt; Mini on a quiet idle with the tasks sampler; a long-context receipt (the
+     persona seed, 4k and 8k-token chats); the Developer ID lane's in-app read. -->
