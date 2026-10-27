@@ -53,6 +53,11 @@
 //  withheld).
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — forget_memory passes the live
 //  embedder's suggestion bar to ForgetResolver.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (#699 pre-push review fold) — forget_memory's corpus half is
+//  `MemoryDistillationCoordinator.forgetCorpusTwins`, the Memories forget's own: it deletes the twin AND restores the
+//  twin the forgotten row had superseded, as the graph's forget does. The style axis made a forgotten correction the
+//  normal case, and the bare delete left the revived ask out of retrieval (a restatement then wrote a second live
+//  row). The "NOT deleted" audit line stands. Confidence 0.85.
 
 import Foundation
 import M1K3AgentTools // OpenLinkTool.gather + PageBrief — the same brief the in-app agent gets
@@ -530,17 +535,18 @@ final class MCPHostController {
                     // (this is the consent promise, and the canary's leak surface).
                     // Indexed `source_ref` lookup, NOT a capped scan — the "no residue"
                     // claim must hold regardless of how many facts are stored.
-                    // (A superseded predecessor revived by memoryStore.forget keeps its
-                    // own corpus twin — correct: it's live again.)
+                    // memoryStore.forget un-superseded whatever this row corrected, and
+                    // forgetCorpusTwins (the Memories forget's own corpus half, #699) puts
+                    // that row's twin back in retrieval too: a bare delete left it
+                    // `.memorySuperseded`, so the next restatement revived it a second time.
                     let ref = MemoryDistillationCoordinator.factSourceRef(memory.text)
-                    if let twinID = try? knowledgeStore.itemID(forSourceRef: ref) {
+                    let hadTwin = (try? knowledgeStore.itemID(forSourceRef: ref)) != nil
+                    let gone = MemoryDistillationCoordinator.forgetCorpusTwins(of: [memory.text], in: knowledgeStore)
+                    if hadTwin, gone.isEmpty {
                         // Graph delete already committed; if the corpus twin survives a
                         // write hiccup, log it so "no residue" stays auditable rather
                         // than a silent half-truth (mirrors the dual-write error channel).
-                        let deleted = (try? knowledgeStore.deleteItem(id: twinID)) ?? false
-                        if !deleted {
-                            Self.securityLog.error("forget_memory: corpus twin NOT deleted (graph delete stood)")
-                        }
+                        Self.securityLog.error("forget_memory: corpus twin NOT deleted (graph delete stood)")
                     }
                     await MainActor.run { environment.refreshCounts() }
                     return .forgotten(text: memory.text)

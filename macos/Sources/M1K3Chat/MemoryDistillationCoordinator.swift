@@ -69,8 +69,16 @@
 //  true) gates it; the seam gains `liveStyleTexts()` (default []), since the corpus has no kind. Confidence 0.85.
 //  Review: same day — `distillAndStore` stores a slice's style facts in the order the user said them
 //  (`StyleAxis.inSaidOrder`), so "short… later, actually long" in one exit-path slice ends with long live.
+//  Confidence 0.8.
 //  Review: same day — a count-only `.notice` line ("style rows on no axis: N unknown, M scoped") per write that
 //  stored a style fact the axis rule cannot place: the field signal for the cue table's recall. No text.
+//  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — three holes closed. `revive` demotes the
+//  ledger chain's LIVE head (`ledgerHead`), not the one-hop corrector: short, long, brief, short left brief live in
+//  the corpus, swallowed the next "brief" as a duplicate and broke a later forget. The flag is `retiresLiveStyle`
+//  (was `supersedesStyleByAxis`): an import also leaves a live style twin at the bar live (`retirableTwin`), since
+//  filing its asks as preferences turned the kind-blind twin path into a silent demotion of the user's live ask.
+//  The said-order sort moves only facts an ask places. Confidence 0.85.
 
 import CryptoKit
 import Foundation
@@ -179,10 +187,12 @@ public struct MemoryDistillationCoordinator: Sendable {
     /// (#711): no — an old conversation is history, and reviving from it would undo a newer
     /// correction without a tag "forget this import" could find.
     private let revivesSupersededFacts: Bool
-    /// #699: whether a new `.style` fact retires the newest live style it covers on its axis
-    /// (`StyleAxis`). Live chat: yes, the user correcting how they want answers. A memory import:
-    /// no — an old conversation's ask is history, and it files as a preference anyway.
-    let supersedesStyleByAxis: Bool
+    /// #699: whether this writer may retire a live `.style` row. Live chat: yes, the user correcting
+    /// how they want answers; a new style fact also retires the newest live style it covers on its axis
+    /// (`StyleAxis`). A memory import: no, Kev's ruling — an old conversation's ask is history. It files
+    /// as a preference, retires nothing on an axis, and a twin at the bar that is a live style row is
+    /// left live beside it (`retirableTwin`), so an import never takes an ask out of the style line.
+    let retiresLiveStyle: Bool
 
     public init(
         distiller: any MemoryDistilling,
@@ -195,7 +205,7 @@ public struct MemoryDistillationCoordinator: Sendable {
         didWrite: (@Sendable (Int) -> Void)? = nil,
         corpusSource: KnowledgeSource = .distilled,
         revivesSupersededFacts: Bool = true,
-        supersedesStyleByAxis: Bool = true,
+        retiresLiveStyle: Bool = true,
         selfNames: DistillationAttribution.UserNames = DistillationAttribution.systemUserNames
     ) {
         self.distiller = distiller
@@ -209,7 +219,7 @@ public struct MemoryDistillationCoordinator: Sendable {
         self.selfNames = selfNames
         self.corpusSource = corpusSource
         self.revivesSupersededFacts = revivesSupersededFacts
-        self.supersedesStyleByAxis = supersedesStyleByAxis
+        self.retiresLiveStyle = retiresLiveStyle
     }
 
     /// Distill the slice and store what's new. Returns the number of facts
@@ -305,10 +315,10 @@ public struct MemoryDistillationCoordinator: Sendable {
                 continue
             }
             written += 1
-            if supersedesStyleByAxis, fact.kind == .style, let why = StyleAxis.unplaced(fact.text) {
+            if retiresLiveStyle, fact.kind == .style, let why = StyleAxis.unplaced(fact.text) {
                 unplaced[why, default: 0] += 1
             }
-            if let twin {
+            if let twin = await retirableTwin(twin) {
                 await supersede(
                     corpusItemID: twin.itemID, graphText: twin.content, with: fact, newItemID: result.itemID,
                     vector: vector, reason: .twin
@@ -448,13 +458,11 @@ public struct MemoryDistillationCoordinator: Sendable {
         Self.recordSupersededLink(from: oldItemID, to: newItemID, store: store)
     }
 
-    private func supersededLink(for itemID: UUID) -> UUID? {
-        Self.supersededLink(for: itemID, in: store)
-    }
-
     /// Exact re-assertion of a superseded fact: the graph writes a fresh node
     /// over the chain's live head, the existing corpus row returns to
-    /// retrieval, and the supplanted head's own corpus twin leaves it.
+    /// retrieval, and the supplanted head's own corpus twin leaves it. The
+    /// corpus finds that head by walking the ledger (`ledgerHead`), as the graph
+    /// walks its chain; the entries the walk passes through stay as they are.
     private func revive(_ fact: DistilledFact, itemID: UUID, vector: [Float]?) async throws {
         if let graph, let vector {
             do {
@@ -467,10 +475,10 @@ public struct MemoryDistillationCoordinator: Sendable {
             }
         }
         transitionCorpusTwin(itemID: itemID, to: .memory, context: "revive-restore")
-        if let correctorID = supersededLink(for: itemID) {
-            transitionCorpusTwin(itemID: correctorID, context: "revive-supplant")
-            // Flip the ledger: the demoted corrector can itself be revived.
-            recordSupersededLink(from: correctorID, to: itemID)
+        if let headID = Self.ledgerHead(correcting: itemID, in: store) {
+            transitionCorpusTwin(itemID: headID, context: "revive-supplant")
+            // Flip the ledger: the demoted head can itself be revived.
+            recordSupersededLink(from: headID, to: itemID)
             try? store.deleteMeta(key: Self.supersededLinkKey(itemID))
         }
         Self.log.notice("memory revived: 1 superseded fact restored by re-assertion")

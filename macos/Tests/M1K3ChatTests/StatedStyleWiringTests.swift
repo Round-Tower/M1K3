@@ -14,6 +14,9 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.8 (a text scan: a rename of the
 //  functions or calls must update the anchors here, and each anchor is asserted to exist
 //  first), Prior: none (new file)
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — MCP forget_memory's `.forget` branch is
+//  pinned to `forgetCorpusTwins`: its bare twin delete left the row a forgotten correction had retired out of
+//  retrieval while the graph brought it back, so the next restatement wrote a second live row. Confidence 0.8.
 //
 
 import Foundation
@@ -95,6 +98,19 @@ struct StatedStyleWiringTests {
         #expect(try Self.body(of: "func forgetMemory(", in: source).contains("editor.forget(memory.id)"))
         #expect(source.contains("MemoryEditor(graph:"))
         #expect(try Self.body(of: "func memories(", in: source).contains("reviewableMemories("))
+    }
+
+    @Test("MCP forget_memory's corpus half is the tested forgetCorpusTwins, so a forgotten correction's ask returns")
+    func mcpForgetRestoresTheCorpusTwin() throws {
+        let source = try Self.appSource("MCPHostController.swift")
+        let start = try #require(source.range(of: "case let .forget(memory):"))
+        let end = try #require(source[start.upperBound...].range(of: "case let .notConfident("))
+        let branch = source[start.upperBound ..< end.lowerBound]
+        #expect(branch.contains("try memoryStore.forget(id: memory.id)"))
+        let corpusHalf = "MemoryDistillationCoordinator.forgetCorpusTwins(of: [memory.text], in: knowledgeStore)"
+        #expect(branch.contains(corpusHalf))
+        // The bare delete it replaced left the row the forgotten one corrected out of retrieval.
+        #expect(!branch.contains("deleteItem("))
     }
 
     @Test("the PCC eval column checks the stated style before it sends anything")

@@ -895,24 +895,38 @@ PCC wiring behind the FM27 gate) was challenger-tested; two findings flipped the
   reviews") takes no part. The twin path still wins when both apply (the 0.982 order pair supersedes once).
   `MemoryStore.swift` is untouched: no migration.
 - **Imports (Kev's ruling):** an imported style ask files as a PREFERENCE, listed in Memories, never in the
-  prompt, never retiring a live ask (the OKF style→note rule, kept as it is).
+  prompt, never retiring a live ask (the OKF style→note rule, kept as it is): the import's coordinator
+  (`retiresLiveStyle: false`) does no axis supersede, and a twin at the bar that is a live style row stays live
+  beside it (the twin path is kind-blind, so an imported near-restatement had demoted the live ask).
 - **One slice, said order:** exit-path distillation sends a whole chat as one slice, so a slice's style facts
-  are stored in the order the user said them (the last user turn with a distinctive word of each).
-- **Forget undoes in both stores:** a Memories forget now restores the corpus twin its row superseded, as the
-  graph's forget does. Without it, "short, long, forget long, short" left two live "short" rows.
+  are stored in the order the user asked for them (the last ASK, by StyleAskFence's own sentence and request
+  test, with a distinctive word of each). Only placed facts move: a paraphrase no ask places keeps its slot.
+- **Forget undoes in both stores:** a forget, from Memories or MCP `forget_memory`, restores the corpus twin its
+  row superseded (`forgetCorpusTwins`), as the graph's forget does. Without it, "short, long, forget long,
+  short" left two live "short" rows.
+- **A revive walks the chain:** re-stating a retired ask demotes the corpus ledger chain's LIVE head
+  (`ledgerHead`), as the graph revives over its chain head. One hop left short, long, brief, short with "brief"
+  live in retrieval, swallowed the next "brief" as a duplicate, and broke a later forget.
 - **Field signal:** a count-only `.notice` per write, "style rows on no axis: N unknown, M scoped".
 - **Unchanged, as the PR ships them:** the other open calls ((a)–(e) in the PR), Phase 1 Mac-only, the
   forget walk, and the cross-kind supersede.
 - **Residue, pinned or named:** a narrower correction leaves a wider ask live ("formal tone" after "short,
   casual answers"); two true asks on one axis retire each other ("short answers", then "short sentences");
   "headings in long answers" has no scope word, so it retires "short answers"; a tie inside one turn ("not
-  short, long") keeps the distiller's order; the corpus revive is one hop, so short, long, brief, short leaves
-  "brief" live in retrieval (the graph and the style line are right); a re-filed pre-#699 preference row
-  retires nothing; MEMSTAT's probe has no graph, so it still measures the twin path alone.
-- **Gates:** `StyleAxisTests` (the table: 8 corrections both ways, the compatibles, every cue family),
-  `StyleAxisSupersedeTests` (real stores: all 16 correction directions superseded in the graph AND the corpus,
-  the 11 compatibles live both ways, the MEMSTAT `.note` classes at their twin-bar outcome, flip-back, forget,
-  no graph, slice order), `ImportedStyleTests`.
+  short, long") keeps the distiller's order; a re-filed preference row retires nothing on its axis (a pre-#699
+  row, or now an imported ask the user later restates word for word: that leaves "long" live beside it, owed a
+  follow-up, since `remember(supersedes:)` names one row); MEMSTAT's probe has no graph, so it still measures
+  the twin path alone.
+- **Gates:** `StyleAxisTests` (the table: 8 corrections both ways, the compatibles, every cue family, said
+  order), `StyleAxisSupersedeTests` (real stores: all 16 correction directions superseded in the graph AND the
+  corpus, the 11 compatibles live both ways, the MEMSTAT `.note` classes at their twin-bar outcome, flip-back,
+  forget, no graph, slice order, the import gate at the twin bar), `StyleAxisChainTests` (revive and forget
+  over a chain), `MemoryCorpusEditTests` (`forgetCorpusTwins`), `StatedStyleWiringTests` (MCP forget's corpus
+  half), `ImportedStyleTests`.
 
 <!-- Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.8 — pinned in swift test; the cue table's recall on
      real distiller wording is unmeasured, which the no-axis count watches. Prior: none (new block). -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — four holes closed: MCP forget_memory's
+     corpus half, the one-hop revive (residue line retired), an import's twin at the bar of a live ask, and the
+     said-order sort (unplaced facts sorted first; any turn re-dated a fact). Named instead: the re-filed
+     preference residue. Confidence 0.8. -->

@@ -14,6 +14,9 @@
 //  Memories forget, now mirrors the graph's undo (a twin the forgotten row superseded returns to retrieval), with
 //  `restoreTwins` shared with `forgetCorpus` and the ledger read moved here beside its key. The style axis made a
 //  forgotten correction common; without the restore the next restatement left two live rows. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — `ledgerHead`: a revive demotes the LIVE head
+//  of the ledger chain, not the one-hop corrector, so short, long, brief, short leaves only short in retrieval (it
+//  left brief live too, which swallowed the next "brief" as a duplicate and broke a later forget). Confidence 0.85.
 //
 
 import Foundation
@@ -124,6 +127,25 @@ extension MemoryDistillationCoordinator {
     /// The row that superseded `itemID`, from the ledger; nil when none is recorded.
     static func supersededLink(for itemID: UUID, in store: KnowledgeStore) -> UUID? {
         (try? store.meta(key: supersededLinkKey(itemID))).flatMap { $0 }.flatMap(UUID.init(uuidString:))
+    }
+
+    /// The row a revive of `itemID` must demote: the LIVE head of the ledger chain that starts at the row
+    /// which corrected it. Short, long, brief makes the ledger short → long → brief; re-stating short must
+    /// demote brief, the one still in retrieval, not long, which already left it. Walks forward while the
+    /// row is `.memorySuperseded` and names its own corrector, cycle-guarded and capped at 64 hops (the
+    /// graph's own chain walk, `liveSuccessor`); it stops at the first `.memory` row, or wherever the chain
+    /// breaks. Graph-less on purpose (PR #87 finding 1). Nil when nothing corrected `itemID`.
+    static func ledgerHead(correcting itemID: UUID, in store: KnowledgeStore) -> UUID? {
+        guard var current = supersededLink(for: itemID, in: store) else { return nil }
+        var seen: Set<UUID> = [itemID, current]
+        for _ in 0 ..< 64 {
+            guard (try? store.item(id: current))?.kind == .memorySuperseded,
+                  let next = supersededLink(for: current, in: store),
+                  seen.insert(next).inserted
+            else { return current }
+            current = next
+        }
+        return current
     }
 
     /// Every `.memorySuperseded` twin whose ledger names one of `correctors` (and is not itself one)

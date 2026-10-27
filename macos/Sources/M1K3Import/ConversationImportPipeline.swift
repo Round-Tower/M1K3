@@ -43,6 +43,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — #699, Kev's ruling: an imported style ask files as a PREFERENCE
 //  (`filed`, applied to the review's proposals and again at commit), and the coordinator is built with
 //  `supersedesStyleByAxis: false`, so an import never retires a live ask on its axis. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — the flag is `retiresLiveStyle: false` and now
+//  also covers the twin path: an imported preference at the bar of a live style row leaves it live (it superseded
+//  it, kind-blind, and the ask left the style line). Pinned in ImportedStyleTests. Confidence 0.85.
 
 import Foundation
 import M1K3Chat
@@ -183,14 +186,15 @@ public struct ConversationImportPipeline: Sendable {
             graph: DistilledFactGraphAdapter(store: memoryStore, source: tag.graphSource),
             corpusSource: tag.knowledgeSource,
             revivesSupersededFacts: false,
-            supersedesStyleByAxis: false,
+            retiresLiveStyle: false,
             selfNames: selfNames
         )
     }
 
     /// #699, Kev's ruling (2026-10-27): a style ask found in an import files as a PREFERENCE, listed in
-    /// Memories but never riding the system prompt and never retiring a live ask. An old chat's
-    /// "shorter, please" is history, not what the user wants now (OKF's style→note is the same rule).
+    /// Memories but never riding the system prompt and never retiring a live ask (the coordinator's
+    /// `retiresLiveStyle: false`: no axis supersede, and a live style twin at the bar stays live). An old
+    /// chat's "shorter, please" is history, not what the user wants now (OKF's style→note is the same rule).
     static func filed(_ fact: DistilledFact) -> DistilledFact {
         fact.kind == .style ? DistilledFact(text: fact.text, kind: .preference) : fact
     }

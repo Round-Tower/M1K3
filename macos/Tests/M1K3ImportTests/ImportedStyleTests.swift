@@ -9,6 +9,9 @@
 //  review shows a preference, and a commit writes one, whatever the proposal says.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85, Prior: none (new file)
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — "never retires a live ask" held only for the
+//  axis rule: an imported near-restatement at the twin bar superseded the live style row with a preference (the
+//  twin path is kind-blind). Pinned at the bar, with the cosine asserted: both rows stay live. Confidence 0.85.
 //
 
 import Foundation
@@ -49,24 +52,9 @@ struct ImportedStyleTests {
     @Test("an import stating 'short' while 'long' is live leaves 'long' live, and files 'short' as a preference")
     func importNeverRetiresALiveAsk() async throws {
         let harness = try ImportHarness()
-        // The user's live ask, written the way live distillation writes it.
-        try await MemoryDistillationCoordinator(
-            distiller: TypedDistiller(facts: []),
-            ingester: DocumentIngester(store: harness.knowledge, embedder: harness.embedder),
-            store: harness.knowledge,
-            embedder: harness.embedder,
-            graph: DistilledFactGraphAdapter(store: harness.memory),
-            selfNames: .none
-        ).store([DistilledFact(text: long, kind: .style)])
-        let bundle = ImportBundle(provider: .chatgpt, conversations: [])
-        // A proposal still typed .style (built by hand): commit files it as a preference anyway.
-        let proposal = ImportProposal(
-            id: 0, fact: DistilledFact(text: short, kind: .style), conversationID: nil, sourceTitle: nil,
-            sensitivity: nil
-        )
+        try await seedLiveStyle(long, in: harness)
 
-        let receipt = try await harness.pipeline(TypedDistiller(facts: []))
-            .commit([proposal], from: bundle, filing: .none)
+        let receipt = try await commitStyle(short, in: harness)
 
         #expect(receipt.factsWritten == 1)
         #expect(try harness.memory.liveStyleTexts() == [long])
@@ -75,5 +63,55 @@ struct ImportedStyleTests {
         #expect(try harness.graphRow(long)?.supersededBy == nil)
         #expect(try harness.corpusItem(forFact: long)?.kind == .memory)
         #expect(try harness.corpusItem(forFact: short)?.kind == .memory)
+    }
+
+    @Test(
+        "an imported ask at the twin bar of a live one retires nothing: both rows stay live",
+        arguments: [
+            // The MEMSTAT order pair (0.982 under Gemma; one bag of words under hashing).
+            ("The user wants the code before the explanation.", "The user wants the explanation before the code."),
+            // A near-restatement: five shared tokens of six.
+            ("The user prefers short answers.", "The user prefers short answers always."),
+        ]
+    )
+    func importAtTheTwinBarRetiresNothing(live: String, imported: String) async throws {
+        let harness = try ImportHarness()
+        let cosine = try await VectorMath.cosineSimilarity(
+            harness.embedder.embed(live), harness.embedder.embed(imported)
+        )
+        #expect(cosine >= MemoryDistillationCoordinator.semanticDedupeThreshold(for: harness.embedder))
+        try await seedLiveStyle(live, in: harness)
+
+        let receipt = try await commitStyle(imported, in: harness)
+
+        #expect(receipt.factsWritten == 1)
+        #expect(try harness.memory.liveStyleTexts() == [live])
+        #expect(try harness.graphRow(live)?.supersededBy == nil)
+        #expect(try harness.graphRow(imported)?.kind == .preference)
+        #expect(try harness.graphRow(imported)?.supersededBy == nil)
+        #expect(try harness.corpusItem(forFact: live)?.kind == .memory)
+        #expect(try harness.corpusItem(forFact: imported)?.kind == .memory)
+    }
+
+    /// The user's live ask, written the way live distillation writes it.
+    private func seedLiveStyle(_ text: String, in harness: ImportHarness) async throws {
+        try await MemoryDistillationCoordinator(
+            distiller: TypedDistiller(facts: []),
+            ingester: DocumentIngester(store: harness.knowledge, embedder: harness.embedder),
+            store: harness.knowledge,
+            embedder: harness.embedder,
+            graph: DistilledFactGraphAdapter(store: harness.memory),
+            selfNames: .none
+        ).store([DistilledFact(text: text, kind: .style)])
+    }
+
+    /// Commit one proposal still typed .style (built by hand): commit files it as a preference anyway.
+    private func commitStyle(_ text: String, in harness: ImportHarness) async throws -> ImportReceipt {
+        let proposal = ImportProposal(
+            id: 0, fact: DistilledFact(text: text, kind: .style), conversationID: nil, sourceTitle: nil,
+            sensitivity: nil
+        )
+        return try await harness.pipeline(TypedDistiller(facts: []))
+            .commit([proposal], from: ImportBundle(provider: .chatgpt, conversations: []), filing: .none)
     }
 }

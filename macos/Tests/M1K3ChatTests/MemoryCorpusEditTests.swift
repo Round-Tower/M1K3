@@ -10,6 +10,9 @@
 //  retired wording restores it; and re-stating the old wording revives it over the edit.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85, Prior: none (new file)
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — `forgetCorpusTwins`, the corpus half of
+//  the Memories forget and now MCP forget_memory's too, is pinned directly: the restore, the delete, the ledger
+//  cleanup, and two wordings sharing one twin. Confidence 0.85.
 //
 
 import Foundation
@@ -137,5 +140,41 @@ struct MemoryCorpusEditTests {
         #expect(written == 1)
         #expect(try store.item(id: shortID)?.kind == .memory)
         #expect(try store.item(id: longID)?.kind == .memorySuperseded)
+    }
+
+    // MARK: - forgetCorpusTwins: the corpus half of every forget (Memories and MCP forget_memory)
+
+    @Test("a forget deletes the twin, restores the row it corrected, and clears both ledger entries")
+    func forgetRestoresWhatTheTwinCorrected() async throws {
+        let (store, ingester) = try corpus()
+        let shortID = try await seed(Self.short, into: ingester)
+        _ = await MemoryDistillationCoordinator.applyEdit(
+            from: Self.short, to: Self.long, store: store, ingester: ingester
+        )
+        let longID = try #require(try twin(Self.long, in: store)?.id)
+        let bystanderID = try await seed("The user lives in Cork.", into: ingester)
+
+        let deleted = MemoryDistillationCoordinator.forgetCorpusTwins(of: [Self.long], in: store)
+
+        #expect(deleted == [longID])
+        #expect(try store.item(id: longID) == nil)
+        #expect(try store.item(id: shortID)?.kind == .memory)
+        #expect(try store.item(id: bystanderID)?.kind == .memory)
+        #expect(try store.meta(key: MemoryDistillationCoordinator.supersededLinkKey(shortID)) == nil)
+        #expect(try store.meta(key: MemoryDistillationCoordinator.supersededLinkKey(longID)) == nil)
+    }
+
+    @Test("two wordings with one identity share one twin: it is deleted once and reported once")
+    func oneTwinForTwoWordings() async throws {
+        let (store, ingester) = try corpus()
+        let shortID = try await seed(Self.short, into: ingester)
+
+        let deleted = MemoryDistillationCoordinator.forgetCorpusTwins(
+            of: [Self.short, "the user prefers SHORT answers", "The user has no twin."], in: store
+        )
+
+        #expect(deleted == [shortID])
+        #expect(try store.item(id: shortID) == nil)
+        #expect(MemoryDistillationCoordinator.forgetCorpusTwins(of: [Self.short], in: store).isEmpty)
     }
 }

@@ -15,6 +15,10 @@
 //  twin path itself is the subject (the 0.982 order pair, the MEMSTAT .note classes).
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85, Prior: none (new file)
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — the rig is internal (`StyleAxisRig`, with
+//  `liveNode`, `corpusLive` and `editor`) so StyleAxisChainTests shares it; pinned here: the import writer
+//  (`retiresLiveStyle: false`) leaves a live style twin at the bar live, and a note twin still supersedes.
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -27,7 +31,7 @@ import Testing
 
 /// Every distinct text gets its own pseudo-random direction (128 dims, so two facts sit near
 /// cosine 0): nothing is ever a semantic twin, and only the axis rule can supersede.
-private struct ApartEmbedder: EmbeddingService {
+struct ApartEmbedder: EmbeddingService {
     let dimension = 128
     let fingerprint = "test/apart"
 
@@ -61,12 +65,13 @@ private struct Scripted: MemoryDistilling {
 }
 
 /// The corpus, the graph and one coordinator per write, wired like the app's live distillation.
-private struct Rig {
+/// Shared with StyleAxisChainTests.
+struct StyleAxisRig {
     let corpus: KnowledgeStore
     let graph: MemoryStore
     let embedder: any EmbeddingService
     var wiresGraph = true
-    var supersedesStyleByAxis = true
+    var retiresLiveStyle = true
 
     init(embedder: any EmbeddingService = ApartEmbedder()) throws {
         corpus = try KnowledgeStore()
@@ -81,7 +86,7 @@ private struct Rig {
             store: corpus,
             embedder: embedder,
             graph: wiresGraph ? DistilledFactGraphAdapter(store: graph) : nil,
-            supersedesStyleByAxis: supersedesStyleByAxis,
+            retiresLiveStyle: retiresLiveStyle,
             selfNames: .none
         )
     }
@@ -98,6 +103,21 @@ private struct Rig {
 
     func node(_ text: String) throws -> Memory? {
         try graph.allMemories(includeSuperseded: true, limit: 1000).first { $0.text == text }
+    }
+
+    /// The live graph node carrying `text` (a revived fact also has a retired node with the same words).
+    func liveNode(_ text: String) throws -> Memory? {
+        try graph.allMemories(limit: 1000).first { $0.text == text }
+    }
+
+    /// The facts the corpus serves to retrieval (each title is its fact: these are all under the title cap).
+    func corpusLive() throws -> Set<String> {
+        try Set(corpus.allItems(kind: .memory, limit: 1000).map(\.title))
+    }
+
+    func editor() -> MemoryEditor {
+        MemoryEditor(graph: graph, corpus: corpus, ingester: DocumentIngester(store: corpus, embedder: embedder),
+                     embedder: embedder)
     }
 
     func corpusKind(_ text: String) throws -> KnowledgeKind? {
@@ -151,7 +171,7 @@ struct StyleAxisSupersedeTests {
     @Test("each MEMSTAT style correction supersedes its prior, either way round, in the graph AND the corpus",
           arguments: correctionsBothWays)
     func correctionsSupersede(old: String, new: String) async throws {
-        let rig = try Rig()
+        let rig = try StyleAxisRig()
         #expect(try await rig.say(old) == 1)
         #expect(try await rig.say(new) == 1)
 
@@ -164,7 +184,7 @@ struct StyleAxisSupersedeTests {
     @Test("asks on different axes never supersede each other, in either order", arguments: compatibles)
     func compatiblesStayLive(first: String, second: String) async throws {
         for (old, new) in [(first, second), (second, first)] {
-            let rig = try Rig()
+            let rig = try StyleAxisRig()
             try await rig.say(old)
             try await rig.say(new)
             try rig.expectLive([old, new])
@@ -176,7 +196,7 @@ struct StyleAxisSupersedeTests {
 
     @Test("a preference on the same axis survives a style ask, and a note never retires a style row")
     func styleOnlyRetiresStyle() async throws {
-        let rig = try Rig()
+        let rig = try StyleAxisRig()
         try await rig.say("The user prefers short emails.", .preference)
         try await rig.say("The user prefers long, detailed answers.")
         try rig.expectLive(["The user prefers short emails.", "The user prefers long, detailed answers."])
@@ -192,7 +212,7 @@ struct StyleAxisSupersedeTests {
         arguments: ContradictionEvalFixtures.contradictions + ContradictionEvalFixtures.compatibles
     )
     func notesKeepTheirOutcome(pair: ContradictionEvalFixtures.Pair) async throws {
-        let rig = try Rig(embedder: HashingEmbeddingService())
+        let rig = try StyleAxisRig(embedder: HashingEmbeddingService())
         let bar = MemoryDistillationCoordinator.semanticDedupeThreshold(for: rig.embedder)
         let cosine = try await VectorMath.cosineSimilarity(
             rig.embedder.embed(pair.prior), rig.embedder.embed(pair.revision)
@@ -212,17 +232,17 @@ struct StyleAxisSupersedeTests {
         let shortCasual = "The user prefers short, casual answers."
         let formal = "The user prefers a formal tone."
 
-        let narrower = try Rig()
+        let narrower = try StyleAxisRig()
         try await narrower.say(shortCasual)
         try await narrower.say(formal)
         try narrower.expectLive([shortCasual, formal]) // residue: "formal" corrects half of it
 
-        let wider = try Rig()
+        let wider = try StyleAxisRig()
         try await wider.say(formal)
         try await wider.say(shortCasual)
         try wider.expectRetired(formal, by: shortCasual)
 
-        let both = try Rig()
+        let both = try StyleAxisRig()
         try await both.say(shortCasual)
         try await both.say("The user prefers long, formal answers.")
         try both.expectRetired(shortCasual, by: "The user prefers long, formal answers.")
@@ -230,7 +250,7 @@ struct StyleAxisSupersedeTests {
 
     @Test("two live victims: only the NEWEST goes, one per write (pinned residue)")
     func oneVictimPerWrite() async throws {
-        let rig = try Rig()
+        let rig = try StyleAxisRig()
         try await rig.say("The user prefers short answers.")
         try await rig.say("The user prefers a casual tone.")
         try await rig.say("The user prefers long, formal answers.")
@@ -251,7 +271,7 @@ struct StyleAxisSupersedeTests {
         ]
     )
     func unknownNeverTakesPart(unknown: String) async throws {
-        let rig = try Rig()
+        let rig = try StyleAxisRig()
         try await rig.say("The user prefers short answers.")
         try await rig.say(unknown)
         try await rig.say("The user prefers long, detailed answers.")
@@ -264,7 +284,7 @@ struct StyleAxisSupersedeTests {
 
     @Test("flip back: short, long, short (the same words) ends with short live and long retired")
     func flipBack() async throws {
-        let rig = try Rig()
+        let rig = try StyleAxisRig()
         let short = "The user prefers short answers."
         let long = "The user prefers long, detailed answers."
         try await rig.say(short)
@@ -278,17 +298,13 @@ struct StyleAxisSupersedeTests {
 
     @Test("forgetting the correction in Memories brings the ask it retired back, in both stores")
     func forgetUndoes() async throws {
-        let rig = try Rig()
+        let rig = try StyleAxisRig()
         let short = "The user prefers short answers."
         let long = "The user prefers long, detailed answers."
         try await rig.say(short)
         try await rig.say(long)
 
-        let editor = MemoryEditor(
-            graph: rig.graph, corpus: rig.corpus,
-            ingester: DocumentIngester(store: rig.corpus, embedder: rig.embedder), embedder: rig.embedder
-        )
-        _ = try editor.forget(#require(try rig.node(long)).id)
+        _ = try rig.editor().forget(#require(try rig.node(long)).id)
 
         #expect(try rig.liveStyles() == [short])
         #expect(try rig.corpusKind(short) == .memory)
@@ -301,7 +317,7 @@ struct StyleAxisSupersedeTests {
 
     @Test("the order pair (the 0.982 MEMSTAT twin) supersedes once, through the twin path")
     func orderPairSupersedesOnce() async throws {
-        let rig = try Rig(embedder: HashingEmbeddingService())
+        let rig = try StyleAxisRig(embedder: HashingEmbeddingService())
         let old = "The user wants the code before the explanation."
         let new = "The user wants the explanation before the code."
         let cosine = try await VectorMath.cosineSimilarity(rig.embedder.embed(old), rig.embedder.embed(new))
@@ -317,7 +333,7 @@ struct StyleAxisSupersedeTests {
 
     @Test("one slice that says short and later long ends with long live, whatever order the distiller emits")
     func sliceOrderFollowsTheUser() async throws {
-        let rig = try Rig()
+        let rig = try StyleAxisRig()
         let short = DistilledFact(text: "The user prefers short answers.", kind: .style)
         let long = DistilledFact(text: "The user prefers long, detailed answers.", kind: .style)
         // Exit-path distillation sends the whole chat as one slice.
@@ -335,7 +351,7 @@ struct StyleAxisSupersedeTests {
 
     @Test("a coordinator with no graph does no axis work and does not fail")
     func noGraphNoAxisWork() async throws {
-        var rig = try Rig()
+        var rig = try StyleAxisRig()
         rig.wiresGraph = false
         #expect(try await rig.say("The user prefers short answers.") == 1)
         #expect(try await rig.say("The user prefers long, detailed answers.") == 1)
@@ -344,13 +360,30 @@ struct StyleAxisSupersedeTests {
         #expect(try rig.corpusKind("The user prefers long, detailed answers.") == .memory)
     }
 
-    @Test("a writer built with supersedesStyleByAxis false (an import) never supersedes by axis")
+    @Test("a writer built with retiresLiveStyle false (an import) never supersedes by axis")
     func gatedOffForOtherWriters() async throws {
-        var rig = try Rig()
-        rig.supersedesStyleByAxis = false
+        var rig = try StyleAxisRig()
+        rig.retiresLiveStyle = false
         try await rig.say("The user prefers short answers.")
         try await rig.say("The user prefers long, detailed answers.")
 
         try rig.expectLive(["The user prefers short answers.", "The user prefers long, detailed answers."])
+    }
+
+    @Test("for that writer a live style twin at the bar retires nothing either; a twin of another kind still does")
+    func gatedOffAtTheTwinBar() async throws {
+        let code = "The user wants the code before the explanation."
+        let explanation = "The user wants the explanation before the code."
+        var rig = try StyleAxisRig(embedder: HashingEmbeddingService())
+        try await rig.say(code)
+        rig.retiresLiveStyle = false
+        try await rig.say(explanation, .preference)
+        try rig.expectLive([code, explanation])
+
+        var notes = try StyleAxisRig(embedder: HashingEmbeddingService())
+        notes.retiresLiveStyle = false
+        try await notes.say(code, .note)
+        try await notes.say(explanation, .note)
+        try notes.expectRetired(code, by: explanation)
     }
 }

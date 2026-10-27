@@ -33,7 +33,12 @@
 //  "newest" means said last (exit-path distillation sends a whole chat as one slice). A tie keeps the distiller's
 //  order: "not short, long" in one turn cannot be placed by words alone. Confidence 0.8.
 //  Review: same day — `unplaced` says why a style fact has no axis (scoped, or unknown to the table), for the
-//  coordinator's count-only `.notice` line: the field signal for the cue table's recall.
+//  coordinator's count-only `.notice` line: the field signal for the cue table's recall. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — `inSaidOrder` acts only on the signal it has:
+//  a fact no turn placed sorted FIRST, so a paraphrased correction was written before the ask it corrected and lost;
+//  now only placed facts move, among their own slots. And only an ASK places a fact (StyleAskFence's segments and
+//  request test), so a later "that short story was lovely" no longer re-dates "short answers". `retires` and
+//  `newestRetired` share one `covers` rule, so the tests of one guard the other. Confidence 0.8.
 //
 
 import Foundation
@@ -87,8 +92,12 @@ public enum StyleAxis: String, CaseIterable, Sendable {
     /// Whether a new style ask `new` retires the live ask `old`: `old` is on at least one
     /// known axis, and `new` covers every one of them.
     public static func retires(_ old: String, for new: String) -> Bool {
-        let oldAxes = axes(of: old)
-        return !oldAxes.isEmpty && oldAxes.isSubset(of: axes(of: new))
+        covers(axes(of: old), by: axes(of: new))
+    }
+
+    /// The one rule `retires` and `newestRetired` share: `old` is on a known axis, and `new` covers all of them.
+    private static func covers(_ old: Set<StyleAxis>, by new: Set<StyleAxis>) -> Bool {
+        !old.isEmpty && old.isSubset(of: new)
     }
 
     /// The live style `new` retires: the first of `live` (newest first) that it covers and that is
@@ -98,9 +107,7 @@ public enum StyleAxis: String, CaseIterable, Sendable {
         let newAxes = axes(of: new)
         guard !newAxes.isEmpty else { return nil }
         return live.first { old in
-            guard MemoryFactNormalizer.normalize(old) != identity else { return false }
-            let oldAxes = axes(of: old)
-            return !oldAxes.isEmpty && oldAxes.isSubset(of: newAxes)
+            MemoryFactNormalizer.normalize(old) != identity && covers(axes(of: old), by: newAxes)
         }
     }
 
@@ -123,32 +130,38 @@ public enum StyleAxis: String, CaseIterable, Sendable {
     /// Words every style fact is about, so they place nothing: "answers" is in most asks.
     static let formWords: Set<String> = ["answer", "answers", "response", "responses", "reply", "replies"]
 
-    /// `facts` with its style facts reordered by when the user SAID them: the last user turn holding
-    /// a distinctive word of each (its content tokens, minus StyleAskFence's scaffold and `formWords`).
-    /// Exit-path distillation sends a whole chat as one slice, so "short… later, actually long" comes
-    /// back together, in whatever order the distiller wrote it, and the store treats the later write
-    /// as the newer ask. Only the style slots move; a tie, or a fact no turn places (it goes first),
-    /// keeps the distiller's order.
+    /// `facts` with its style facts reordered by when the user ASKED for them: the last user turn with a
+    /// request segment (`StyleAskFence`'s own sentence split and request test) holding a distinctive word
+    /// of each (its content tokens, minus StyleAskFence's scaffold and `formWords`). Exit-path distillation
+    /// sends a whole chat as one slice, so "short… later, actually long" comes back together, in whatever
+    /// order the distiller wrote it, and the store treats the later write as the newer ask. A turn that
+    /// only mentions a word ("that short story was lovely") places nothing. Only PLACED style facts move,
+    /// among their own slots: a fact no ask places (a paraphrase, "detailed" for "in depth") keeps its
+    /// slot, and a tie keeps the distiller's order. When in doubt, the distiller's order stands.
     public static func inSaidOrder(
         _ facts: [DistilledFact],
         userTurns: [String],
         selfNames: DistillationAttribution.UserNames = .none
     ) -> [DistilledFact] {
-        let slots = facts.indices.filter { facts[$0].kind == .style }
-        guard slots.count > 1 else { return facts }
-        let turnTokens = userTurns.map { DistillationAttribution.contentTokens(in: $0, selfNames: selfNames) }
-        func saidAt(_ fact: DistilledFact) -> Int {
+        let styleSlots = facts.indices.filter { facts[$0].kind == .style }
+        guard styleSlots.count > 1 else { return facts }
+        let askTokens = userTurns.map { turn in
+            StyleAskFence.segments(turn).filter(StyleAskFence.isRequest).reduce(into: Set<String>()) {
+                $0.formUnion(DistillationAttribution.contentTokens(in: $1, selfNames: selfNames))
+            }
+        }
+        func saidAt(_ fact: DistilledFact) -> Int? {
             let distinctive = DistillationAttribution.contentTokens(in: fact.text, selfNames: selfNames)
                 .subtracting(StyleAskFence.scaffoldTokens)
                 .subtracting(formWords)
-            return turnTokens.lastIndex { !$0.isDisjoint(with: distinctive) } ?? -1
+            return askTokens.lastIndex { !$0.isDisjoint(with: distinctive) }
         }
-        let ordered = slots.enumerated()
-            .map { (offset: $0.offset, fact: facts[$0.element], said: saidAt(facts[$0.element])) }
-            .sorted { ($0.said, $0.offset) < ($1.said, $1.offset) }
+        let placed = styleSlots.compactMap { slot in saidAt(facts[slot]).map { (slot: slot, said: $0) } }
+        guard placed.count > 1 else { return facts }
+        let ordered = placed.sorted { ($0.said, $0.slot) < ($1.said, $1.slot) }
         var result = facts
-        for (slot, entry) in zip(slots, ordered) {
-            result[slot] = entry.fact
+        for (target, source) in zip(placed, ordered) {
+            result[target.slot] = facts[source.slot]
         }
         return result
     }

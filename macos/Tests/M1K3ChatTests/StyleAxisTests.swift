@@ -13,6 +13,9 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85 (pure and pinned; the cue table
 //  is the challenger's prototype, its recall on live asks unmeasured). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — said order: a fact no ask places keeps its
+//  slot in either emit order, a later non-ask turn re-dates nothing, and placed facts move around an unplaced one.
+//  The emoji case's last turn now asks ("…, please"), since only an ask places a fact. Confidence 0.85.
 //
 
 import Foundation
@@ -245,8 +248,46 @@ struct StyleAxisTests {
         #expect(StyleAxis.inSaidOrder([long, short], userTurns: ["not short, long please"]) == [long, short])
         // "answers" is form, not a distinctive word: only "emoji" places that fact.
         #expect(StyleAxis.inSaidOrder(
-            [emoji, short], userTurns: ["no emoji please", "short answers please", "answers without emoji"]
+            [emoji, short], userTurns: ["no emoji please", "short answers please", "answers without emoji, please"]
         ) == [short, emoji])
+    }
+
+    @Test(
+        "a fact no ask places keeps its slot: a paraphrased correction stays last, in either emit order",
+        arguments: [true, false]
+    )
+    func unplacedFactKeepsItsSlot(correctionLast: Bool) {
+        let short = DistilledFact(text: "The user prefers short answers.", kind: .style)
+        // The distiller's paraphrase: "detailed" is in no turn, so no turn places it.
+        let detailed = DistilledFact(text: "The user prefers detailed answers.", kind: .style)
+        let turns = ["keep your answers short", "no, answers in depth please"]
+        let emitted = correctionLast ? [short, detailed] : [detailed, short]
+
+        #expect(StyleAxis.inSaidOrder(emitted, userTurns: turns) == emitted)
+    }
+
+    @Test("only an ASK places a fact: a later turn that merely mentions its word does not re-date it")
+    func onlyAnAskPlacesAFact() {
+        let short = DistilledFact(text: "The user prefers short answers.", kind: .style)
+        let long = DistilledFact(text: "The user prefers long, detailed answers.", kind: .style)
+        let turns = [
+            "keep your answers short",
+            "actually, make them long and detailed please",
+            "that short story you wrote was lovely",
+        ]
+
+        #expect(StyleAxis.inSaidOrder([short, long], userTurns: turns) == [short, long])
+        #expect(StyleAxis.inSaidOrder([long, short], userTurns: turns) == [short, long])
+    }
+
+    @Test("placed facts reorder among their own slots; an unplaced one between them stays put")
+    func placedFactsMoveAroundAnUnplacedOne() {
+        let short = DistilledFact(text: "The user prefers short answers.", kind: .style)
+        let detailed = DistilledFact(text: "The user prefers detailed answers.", kind: .style)
+        let long = DistilledFact(text: "The user prefers long answers.", kind: .style)
+        let turns = ["keep your answers short", "no, answers in depth please", "long answers please"]
+
+        #expect(StyleAxis.inSaidOrder([long, detailed, short], userTurns: turns) == [short, detailed, long])
     }
 
     @Test("a live row with the new ask's own identity is never its victim")
