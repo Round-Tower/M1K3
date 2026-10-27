@@ -23,6 +23,11 @@
 //  Signed: Kev + claude-fable-5, 2026-07-30, Confidence 0.85 (pair set is
 //  hand-curated to the spec's shapes — extend as real eaten-corrections
 //  surface). Prior: MemoryEvalFixtures (Kev + claude-fable-5).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: `styleCorrections`, a stated answer style flipped on
+//  one axis (length, format, tone, order), phrased as the distiller writes style facts. MEMSTAT reads
+//  where they land against the live bar: at or over it the correction supersedes at write time; below
+//  it both rows stay live and the persona's newest-first order is what the model reads. The report gains
+//  that one line only when the class is measured. Confidence 0.8 (hand-curated; extend from real rows).
 //
 
 import Foundation
@@ -82,6 +87,25 @@ public enum ContradictionEvalFixtures {
         .init(prior: "The user's dog is a collie named Bran.", revision: "Bran, the user's dog, is a collie."),
         .init(prior: "Kev drinks his coffee black.", revision: "Kev takes his coffee black."),
     ]
+
+    /// #699: a stated answer style the user later CORRECTS on one axis. A supersede
+    /// is the right outcome; below the bar both rows stay live and the persona's
+    /// newest-first style line is all that keeps the correction on top. Phrased the
+    /// way the distiller prompt asks for a style fact ("prefers"/"wants").
+    public static let styleCorrections: [Pair] = [
+        .init(prior: "The user prefers short answers.", revision: "The user prefers long, detailed answers."),
+        .init(prior: "The user wants no bullet lists.", revision: "The user wants answers as bullet lists."),
+        .init(prior: "The user prefers answers under three sentences.",
+              revision: "The user prefers answers of a full paragraph."),
+        .init(prior: "The user prefers a casual tone.", revision: "The user prefers a formal tone."),
+        .init(prior: "The user wants the code before the explanation.",
+              revision: "The user wants the explanation before the code."),
+        .init(prior: "The user prefers plain words without jargon.",
+              revision: "The user prefers precise technical terms."),
+        .init(prior: "The user wants no emoji in answers.", revision: "The user wants emoji in answers."),
+        .init(prior: "The user prefers answers that skip the preamble.",
+              revision: "The user prefers answers that set the scene first."),
+    ]
 }
 
 /// Pure formatter for the measured cosines — band placement per class against
@@ -92,12 +116,15 @@ public enum ContradictionEvalReport {
         contradictions: [Float],
         compatibles: [Float],
         restatements: [Float],
+        styleCorrections: [Float] = [],
         dedupeBar: Float
     ) -> String {
         let classes: [(label: String, verb: String, scores: [Float])] = [
             ("contradictions", "eaten as duplicates", contradictions),
             ("compatibles", "would be wrongly eaten", compatibles),
             ("restatements", "correctly eaten", restatements),
+            // #699: since Tier 2 a ≥ bar twin is superseded, which is what a style correction wants.
+            ("style corrections", "superseded at write time", styleCorrections),
         ]
         guard classes.contains(where: { !$0.scores.isEmpty }) else {
             return "contradiction eval: no pairs measured"

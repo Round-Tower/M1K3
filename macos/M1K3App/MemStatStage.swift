@@ -35,6 +35,11 @@
 //  MemGraphEvalStage (Kev + claude-opus-4-8).
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (one embedder: EmbeddingGemma 2) — the dedupe bar is
 //  `semanticDedupeThreshold(for:)` of the embedder in use; `M1K3_SELFTEST_EMBEDDER` picks the embedder (the A/B).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (#699) — a `style-correction` probe class (a stated answer style
+//  flipped on one axis): its cosines join the report, and the ingest pass now tells a write-time SUPERSEDE
+//  from two live rows by reading the prior's corpus twin (since Tier 2, "survived" covered both). For style,
+//  superseded is the right outcome; both live means the persona's newest-first order is all that holds the
+//  correction. Verify-by-launch owed (MEMSTAT on the built app). Confidence 0.75.
 //
 
 import Foundation
@@ -125,6 +130,7 @@ enum MemStatStage {
         ("contradiction", ContradictionEvalFixtures.contradictions),
         ("compatible", ContradictionEvalFixtures.compatibles),
         ("restatement", ContradictionEvalFixtures.restatements),
+        ("style-correction", ContradictionEvalFixtures.styleCorrections),
     ]
 
     private static func probePairs(emit: (String) -> Void) async {
@@ -155,18 +161,23 @@ enum MemStatStage {
                 contradictions: scoresByLabel["contradiction"] ?? [],
                 compatibles: scoresByLabel["compatible"] ?? [],
                 restatements: scoresByLabel["restatement"] ?? [],
+                styleCorrections: scoresByLabel["style-correction"] ?? [],
                 dedupeBar: bar
             ))
 
             // Pass 3: the end-to-end ingest probe through the real coordinator.
             for cls in probeClasses {
                 var eaten = 0
+                var superseded = 0
                 var seedFailures = 0
                 for pair in cls.pairs {
                     switch try await ingestOutcome(pair, embedder: embedder) {
                     case .eaten:
                         eaten += 1
                         emit("memstat ingest \(cls.label): EATEN [\(pair.revision.prefix(36))]")
+                    case .superseded:
+                        superseded += 1
+                        emit("memstat ingest \(cls.label): superseded [\(pair.revision.prefix(36))]")
                     case .survived:
                         emit("memstat ingest \(cls.label): survived [\(pair.revision.prefix(36))]")
                     case .seedFailed:
@@ -174,7 +185,8 @@ enum MemStatStage {
                         emit("✗ memstat ingest \(cls.label): SEED FAILED [\(pair.prior.prefix(36))]")
                     }
                 }
-                var summary = "memstat ingest \(cls.label): \(eaten)/\(cls.pairs.count) eaten"
+                var summary = "memstat ingest \(cls.label): \(eaten)/\(cls.pairs.count) eaten, "
+                    + "\(superseded)/\(cls.pairs.count) superseded"
                 if seedFailures > 0 { summary += " (\(seedFailures) seed failure(s))" }
                 emit(summary)
             }
@@ -184,7 +196,11 @@ enum MemStatStage {
     }
 
     private enum IngestOutcome {
-        case survived, eaten, seedFailed
+        /// Written beside the prior: both rows live.
+        case survived
+        /// Written, and the prior's corpus twin left retrieval: a write-time supersede.
+        case superseded
+        case eaten, seedFailed
     }
 
     /// Seed the prior fact through the REAL distillation path (fresh in-memory
@@ -216,7 +232,14 @@ enum MemStatStage {
         }
         let written = try await coordinator(pair.revision)
             .distillAndStore(turns: [ChatTurn(role: .user, text: pair.revision)])
-        return written == 1 ? .survived : .eaten
+        guard written == 1 else { return .eaten }
+        // Since Tier 2 a ≥ bar twin is superseded rather than eaten, so "written"
+        // alone can't tell a correction that replaced its prior from two live rows.
+        // The probe's facts are untyped (.note): the kind never enters the dedupe,
+        // and the style fence is swift test's to pin (StyleAskFenceTests).
+        let priorRef = MemoryDistillationCoordinator.factSourceRef(pair.prior)
+        let priorKind = try store.itemID(forSourceRef: priorRef).flatMap { try store.item(id: $0)?.kind }
+        return priorKind == .memorySuperseded ? .superseded : .survived
     }
 }
 

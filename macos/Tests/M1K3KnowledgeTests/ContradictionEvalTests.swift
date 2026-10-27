@@ -10,6 +10,9 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-07-30, Confidence 0.9. Prior:
 //  MemoryEvalFixtures (Kev + claude-fable-5).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: the style-correction class (a stated answer style
+//  flipped on one axis) is well-formed and reports how many corrections the bar supersedes at write time.
+//  Confidence 0.85.
 //
 
 @testable import M1K3Knowledge
@@ -28,7 +31,25 @@ struct ContradictionEvalFixtureTests {
         let all = ContradictionEvalFixtures.contradictions
             + ContradictionEvalFixtures.compatibles
             + ContradictionEvalFixtures.restatements
+            + ContradictionEvalFixtures.styleCorrections
         #expect(all.allSatisfy { $0.prior != $0.revision })
+    }
+
+    @Test("#699: style corrections are stated preferences the distiller would write, none borrowed from another class")
+    func styleCorrectionsAreWellFormed() {
+        let pairs = ContradictionEvalFixtures.styleCorrections
+        #expect(pairs.count >= 8)
+        // Phrased the way the distiller prompt asks for a style fact ("prefers"/"wants").
+        for text in pairs.flatMap({ [$0.prior, $0.revision] }) {
+            #expect(text.hasPrefix("The user prefers ") || text.hasPrefix("The user wants "), "\(text)")
+            #expect(!text.lowercased().contains("assistant"), "\(text)")
+        }
+        let others = ContradictionEvalFixtures.contradictions
+            + ContradictionEvalFixtures.compatibles
+            + ContradictionEvalFixtures.restatements
+        let otherPairs = Set(others.map { $0.prior + "→" + $0.revision })
+        #expect(pairs.allSatisfy { !otherPairs.contains($0.prior + "→" + $0.revision) })
+        #expect(Set(pairs.map(\.prior)).count == pairs.count)
     }
 }
 
@@ -69,6 +90,24 @@ struct ContradictionEvalReportTests {
         )
         #expect(text.contains("contradictions: min 0.600 median 0.800 max 0.900"))
         #expect(text.contains("compatibles: min 0.500 median 0.500 max 0.500"))
+    }
+
+    @Test("#699: style corrections report how many the bar supersedes at write time")
+    func styleCorrectionPlacement() {
+        let text = ContradictionEvalReport.render(
+            contradictions: [0.80],
+            compatibles: [0.50],
+            restatements: [0.95],
+            styleCorrections: [0.96, 0.88, 0.70],
+            dedupeBar: 0.95
+        )
+        #expect(text.contains("style corrections ≥ 0.95 (superseded at write time): 1/3"))
+        #expect(text.contains("style corrections: min 0.700 median 0.880 max 0.960"))
+        // No style class measured: the report reads exactly as it did before #699.
+        let without = ContradictionEvalReport.render(
+            contradictions: [0.80], compatibles: [0.50], restatements: [0.95], dedupeBar: 0.95
+        )
+        #expect(!without.contains("style corrections"))
     }
 
     @Test("empty classes render as unmeasured, not crash")

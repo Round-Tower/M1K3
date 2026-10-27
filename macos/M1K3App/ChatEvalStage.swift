@@ -105,6 +105,10 @@
 //  grounding budget through `-groundingBudget` (unset: 1,100, as before). The budget arm; verify-by-eval.
 //  A seeded turn gets the app's three corpus tools over its store in place of the search_knowledge stub,
 //  and its score names the tools it ran (a dispatched turn answers from the tool, not the grounding).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (#699) — `M1K3_SELFTEST_CHATEVAL_STYLE=<line>` sets the persona's
+//  stated-style line (`M1K3Persona.setUserStyle`) for every local brain, so the paired style-on/style-off
+//  open-chat arm runs on one build; the PCC column skips while a style is set, like a profile (nothing about
+//  the user reaches Apple's server from an eval). Verify-by-eval owed. Confidence 0.75.
 //
 
 import Foundation
@@ -512,6 +516,11 @@ enum ChatEvalStage {
     /// Run the requested brains across the requested fixtures, emit per-fixture
     /// detail live, then the headline matrix.
     static func run(emit: @escaping (String) -> Void) async {
+        if let style = styleLine {
+            // A SelfTest launch never builds AppEnvironment, so nothing else sets it.
+            M1K3Persona.setUserStyle([style])
+            emit("• chateval style: \"\(style)\" rides every local brain's persona (M1K3_SELFTEST_CHATEVAL_STYLE)")
+        }
         let kinds = selectedKinds()
         let fixtureCount = ChatEvalFixtures.all.count(where: { kinds?.contains($0.kind) ?? true })
         emit("• chateval: \(fixtureCount) fixture(s) × \(selectedBrains().count + (pccRequested ? 1 : 0)) brain(s)"
@@ -599,6 +608,15 @@ enum ChatEvalStage {
         }
     }
 
+    /// `M1K3_SELFTEST_CHATEVAL_STYLE=<line>` (#699): the persona's stated-style line for
+    /// this run, e.g. "The user prefers answers of three sentences or fewer." The paired
+    /// arm runs the same kinds with and without it. Unset or blank: no style, as before.
+    private static var styleLine: String? {
+        let line = SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_STYLE")?
+            .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return line.isEmpty ? nil : line
+    }
+
     /// `M1K3_SELFTEST_CHATEVAL_PCC=1` — Apple's server model (Private Cloud
     /// Compute) through the same fixtures, as a fifth column. Only a process that
     /// holds the entitlement on macOS 27 has a backend; every other build skips
@@ -626,6 +644,11 @@ enum ChatEvalStage {
         // user reaches Apple's server from an eval.
         guard M1K3Persona.userProfile == nil else {
             emit("  – pcc: a user profile is set in this process; the standard persona would carry it (skipped)")
+            return nil
+        }
+        // #699: the stated-style line rides the same door (compose), so the same promise holds.
+        guard M1K3Persona.userStyle.isEmpty else {
+            emit("  – pcc: a stated style is set in this process; the standard persona would carry it (skipped)")
             return nil
         }
         emit("  pcc quota: \(status.quota)")
