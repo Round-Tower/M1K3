@@ -22,6 +22,8 @@ Review: Kev + claude-opus-5.5, 2026-10-26 — `--router-search` (#713): off unle
 never without dispatch, and threaded from main to the trigger.
 Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — a --bare run with --router-search is flagged (its avoids
 checks skip there).
+Review: Kev + claude-opus-5.5, 2026-10-27 — the search head defaults on under dispatch (Kev flipped the Mac to
+`whenUnset: true`); --no-router-search is the off arm.
 """
 
 import json
@@ -578,9 +580,10 @@ def test_main_threads_no_router_head_and_chain_to_the_trigger(tmp_path, monkeypa
     assert head_key not in chain_cell and chain_key in chain_cell
 
 
-def test_router_search_is_off_unless_asked_even_under_dispatch():
-    # #713: the Mac app ships the search head off (`whenUnset: false`), so a bare dispatch run wires like it.
-    assert "M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH" not in _trig(router="dispatch")
+def test_router_search_follows_the_mac_default_under_dispatch():
+    # #713, Kev 2026-10-27: the Mac app ships the search head on (`whenUnset: true`), so a dispatch run wires like
+    # it unless --no-router-search says otherwise, the same rule as --router-head and --router-chain.
+    assert _trig(router="dispatch")["M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH"] == "1"
     assert "M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH" not in _trig(router="dispatch", router_search=False)
     assert _trig(router="dispatch", router_search=True)["M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH"] == "1"
 
@@ -603,9 +606,9 @@ def test_main_threads_router_search_to_the_trigger(tmp_path, monkeypatch, capsys
     base = ["--name", "x", "--brains", "big", "--app", str(app), "--dry-run", "--router", "dispatch"]
     key = '"M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH"'
     assert rc.main(base) == 0
-    assert key not in capsys.readouterr().out
-    assert rc.main([*base, "--router-search"]) == 0
     assert f'{key}: "1"' in capsys.readouterr().out
+    assert rc.main([*base, "--no-router-search"]) == 0
+    assert key not in capsys.readouterr().out
 
 
 def test_unknown_router_mode_is_refused():

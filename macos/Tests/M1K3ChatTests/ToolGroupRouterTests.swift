@@ -23,6 +23,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — both #713 pins can fail now: each route is required
 //  before its `staysLocal` is read, and the head is asked before the gate, so its embed proves it reads the turn's
 //  embedder and the gate's missing one proves the share. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — `macShipsTheSearchHeadOn`: Kev flipped the Mac to `whenUnset: true`;
+//  the bare default (iOS) stays off. Confidence 0.85.
 
 import Foundation
 @testable import M1K3Chat
@@ -334,6 +336,26 @@ struct ToolPickCascadeTests {
         #expect(!ToolRouterWiring.allTiersEnabled(defaults, whenUnset: true))
         #expect(!ToolRouterWiring.chainEnabled(defaults, whenUnset: true))
         #expect(!ToolRouterWiring.searchHeadEnabled(defaults, whenUnset: true))
+    }
+
+    /// Kev, 2026-10-27: the Mac ships the search head ON. The head itself ships as the untrained stub, which never
+    /// vetoes, so nothing changes for a user until trained weights pass the gate; then they are live with no flag move.
+    @Test("the Mac shell ships the search head on (whenUnset: true); the function's own default stays off for iOS")
+    func macShipsTheSearchHeadOn() throws {
+        var root = URL(filePath: #filePath).deletingLastPathComponent()
+        while !FileManager.default.fileExists(atPath: root.appending(path: "Package.swift").path) {
+            root = root.deletingLastPathComponent()
+            try #require(root.path != "/", "no Package.swift above \(#filePath)")
+        }
+        let shell = try String(
+            contentsOf: root.appending(path: "M1K3App/AppEnvironment+ChatHistory.swift"), encoding: .utf8
+        )
+        #expect(shell.contains("searchHead: ToolRouterWiring.searchHeadEnabled(whenUnset: true)"))
+        #expect(!shell.contains("searchHeadEnabled(whenUnset: false)"))
+        let suite = "ToolPickCascadeTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        #expect(!ToolRouterWiring.searchHeadEnabled(defaults), "iOS calls the bare default: still off there")
     }
 
     /// Each route is required first: a nil route also has a nil `staysLocal`, which would pass the off cases.

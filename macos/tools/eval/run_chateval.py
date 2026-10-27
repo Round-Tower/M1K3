@@ -103,6 +103,9 @@ Review: Kev + claude-opus-5.5, 2026-10-26 — `--router-search` (#713): the sear
 refused without dispatch, like head and chain. Confidence 0.85.
 Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — `route_warning` flags --router-search with --bare: world
 knowledge runs bare generate there, so the #680 fixtures' avoids checks skip. Confidence 0.85.
+Review: Kev + claude-opus-5.5, 2026-10-27 — Kev flipped the search head on for the Mac (`whenUnset: true`), so
+`--router-search` now defaults on under dispatch like head and chain; `--no-router-search` is the off arm. The
+shipped head is still the untrained stub, which never vetoes. Confidence 0.85.
 """
 
 from __future__ import annotations
@@ -264,7 +267,7 @@ class RunOptions:
     router: str | None = None  # "dispatch": the app's own tool route, every tier on (the router arm)
     router_head: bool | None = None  # the group head (toolGroupRouter); None → on under dispatch, like the Mac app
     router_chain: bool | None = None  # two-tool chains (toolChain); None → on under dispatch, like the Mac app
-    router_search: bool | None = None  # the search head's veto (toolSearchHead, #713); None → off, like the Mac app
+    router_search: bool | None = None  # the search head's veto (toolSearchHead, #713); None → on, like the Mac app
 
 
 def route_warning(opts: RunOptions) -> str | None:
@@ -409,8 +412,8 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
             trig["M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD"] = "1"
         if opts.router == "dispatch" and opts.router_chain is not False:
             trig["M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN"] = "1"
-        # The search head ships OFF (`whenUnset: false`): only an explicit --router-search turns it on.
-        if opts.router == "dispatch" and opts.router_search:
+        # The search head ships ON on the Mac too (Kev, 2026-10-27; `whenUnset: true`), as its untrained stub.
+        if opts.router == "dispatch" and opts.router_search is not False:
             trig["M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH"] = "1"
     if powermode is not None:
         trig["M1K3_SELFTEST_POWERMODE"] = str(powermode)
@@ -843,7 +846,7 @@ def main(argv: list[str] | None = None) -> int:
                     help="with --router dispatch: let a pick run two read-only tools (default on, as the Mac app)")
     ap.add_argument("--router-search", action=argparse.BooleanOptionalAction, default=None,
                     help="with --router dispatch: the search head vetoes a web read on a turn it reads as local "
-                         "(toolSearchHead, #713; default off, as the Mac app)")
+                         "(toolSearchHead, #713; default on, as the Mac app)")
     ap.add_argument("--notes", help="free-text provenance note")
     ap.add_argument("--dump-prompt", action="store_true", help="dump no-call turns' exact prompts")
     ap.add_argument("--app", default=LIVE_APP, help="the M1K3.app bundle to run (default: installed)")

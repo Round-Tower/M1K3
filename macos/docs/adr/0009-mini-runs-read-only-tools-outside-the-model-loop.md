@@ -133,3 +133,6 @@ notes, not their calendar. Which tool is a finer decision than whether a tool is
      named (`ToolDispatch.searchCorrected`); a pick left empty is a plain turn over the turn's chunks and history.
      The head never names a web tool and never adds a call, so this ADR's egress line stands: a wrong web pick is
      egress, a vetoed one is at worst a stale answer. A native web_search inside the agent turn is outside it. -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85 — Kev flipped `toolSearchHead` on for the Mac
+     (`whenUnset: true`; iOS stays off). The head ships as its untrained stub, which never vetoes, so no turn's tools
+     change until trained weights pass the #713 gate; the eval driver's `--router-search` follows (on under dispatch). -->
