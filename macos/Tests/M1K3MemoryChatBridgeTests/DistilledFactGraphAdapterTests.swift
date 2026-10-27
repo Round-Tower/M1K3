@@ -14,6 +14,8 @@
 //  Review (2026-07-08, Kev + claude-fable-5): kind now flows through the seam —
 //  each DistilledFactKind must land as the matching MemoryKind (the rawValues
 //  align by construction; this pins that they stay aligned).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: `.style` maps onto `MemoryKind.style` (the
+//  uncatalogued kind in M1K3Memory/MemoryStyleKind.swift). Confidence 0.85.
 //
 
 import M1K3Chat
@@ -45,6 +47,7 @@ struct DistilledFactGraphAdapterTests {
         let expected: [DistilledFactKind: MemoryKind] = [
             .profile: .profile, .preference: .preference,
             .decision: .decision, .episode: .episode, .note: .note,
+            .style: .style,
         ]
         for kind in DistilledFactKind.allCases {
             try await adapter.writeDistilledFact(

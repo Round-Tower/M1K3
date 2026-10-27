@@ -12,6 +12,9 @@
 //
 //  Signed: Kev + claude-opus-5, 2026-08-09, Confidence 0.9 (fixtures are
 //  transcribed from the live audit, not invented). Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: pins why the distiller prompt mandates
+//  "prefers"/"wants" for style facts: those survive, "asked for" and "the assistant" do not.
+//  Confidence 0.85.
 //
 
 @testable import M1K3Chat
@@ -154,6 +157,17 @@ struct FactDurabilityTests {
                 "near-miss must survive: \(fact)"
             )
         }
+    }
+
+    // MARK: - #699 style phrasing
+
+    @Test("a style fact phrased as a standing preference survives; the same ask as a speech act or naming the assistant does not")
+    func stylePhrasingSurvives() {
+        #expect(FactDurabilityPolicy.isDurable("The user prefers short answers."))
+        #expect(FactDurabilityPolicy.isDurable("The user wants no bullet lists."))
+        #expect(FactDurabilityPolicy.isDurable("The user prefers answers under three sentences."))
+        #expect(!FactDurabilityPolicy.isDurable("The user asked for shorter answers."))
+        #expect(!FactDurabilityPolicy.isDurable("The user wants the assistant to keep answers short."))
     }
 
     // MARK: - Wiring
