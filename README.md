@@ -63,7 +63,10 @@ is on by default so answers can be current, with one switch in Settings to turn
 it off. The Mac App Store build also carries an opt-in Private Cloud Compute
 brain — off by default, picked by you, consent asked once, every PCC answer
 labelled. The Developer ID DMG has no cloud path at all — see
-[SECURITY.md](./SECURITY.md).
+[SECURITY.md](./SECURITY.md). One more path is yours rather than M1K3's: a
+thumbs-down on an answer in the Mac app can offer to email that one exchange to
+Round Tower — the exact text is shown and editable first, your own mail app
+sends it, and nothing goes without you pressing Send.
 
 | Surface | Where | Stack | Status |
 |---|---|---|---|
@@ -272,7 +275,10 @@ human-and-AI collaboration on the record.
      with TestFlight as the early channel, and the header's TestFlight link reads "TestFlight beta".
      Confidence 0.85.
      Review: Kev + claude-opus-5.5, 2026-10-22 — the H1 follows the site to "Your AI. Your devices. Private by
-     design." (Kev's 2026-10-20 ruling, live with iOS 1.2.0); readme-hero.png re-rendered. Confidence 0.85. -->
+     design." (Kev's 2026-10-20 ruling, live with iOS 1.2.0); readme-hero.png re-rendered. Confidence 0.85.
+     Review: Kev + claude-opus-5.5, 2026-10-26 — #708: the network paragraph names a fourth path, the user's
+     own rather than M1K3's: one exchange emailed from a thumbs-down in the Mac app, through their mail app,
+     after a sheet shows the exact text (the iPhone and iPad shells have no such button). Confidence 0.85. -->
 <!-- Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 (the v1.1.0 pass: the two
      "1.0 build has no cloud path" sentences now describe PCC as the opt-in third crossing,
      consent per conversation per ADR 0007; the MCP count of 18 was re-read off

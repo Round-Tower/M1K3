@@ -13,6 +13,12 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — #716 review fold: `shapeReachesPrivateCloudWithoutTheMove`. The shared
 //  sections are sliced from `corePrompt`, so the PCC prompt now carries the VOICE shape bullet; the exemplar move is
 //  outside the slice and stays off the wire. Pins the text #716 changed on the wire. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: the stated-style line rides the same door as the
+//  profile (`compose`), so `noProfileSlot` also pins that no style line reaches the PCC prompt. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — that `contains` check could never fail
+//  (no test sets the process-global style, so `compose` would add nothing even if PCC called it); the real pin
+//  is now `pccCodeNeverReadsTheUser`, a scan of the PCC prompt's own source for any door to the user (`compose(`,
+//  the profile, the style). Confidence 0.9.
 //
 
 import Foundation
@@ -63,14 +69,38 @@ struct PrivateCloudPersonaTests {
     func noProfileSlot() {
         // Pinned structurally rather than by setting the process-global profile:
         // mutating it mid-run would race every parallel test that reads the
-        // local prompt. `compose(core:profile:)` is the only door the profile
-        // has, and this composition never calls it; adding one must break this.
+        // local prompt. `compose(core:profile:style:)` is the only door the profile
+        // and the stated style have, and this composition never calls it; adding
+        // one must break this (and `pccCodeNeverReadsTheUser`).
         let expected = M1K3Persona.privateCloudOpening + "\n\n"
             + M1K3Persona.privateCloudSharedSections + "\n\n"
             + M1K3Persona.privateCloudClosing + "\n"
             + M1K3Persona.currentDateLine(now)
         #expect(M1K3Persona.privateCloudPrompt(now: now) == expected)
         #expect(!M1K3Persona.privateCloudPrompt(now: now).contains("About the user"))
+    }
+
+    @Test("the PCC prompt's source never opens a door to the user: no compose, no profile, no style (#699)")
+    func pccCodeNeverReadsTheUser() throws {
+        // The equality above holds only while the process-global profile and style are
+        // empty, which no test may change (the parallel race). This scan holds whatever
+        // they are: the file that builds the PCC prompt names neither, nor the one door.
+        var root = URL(filePath: #filePath).deletingLastPathComponent()
+        while !FileManager.default.fileExists(atPath: root.appending(path: "Package.swift").path) {
+            root = root.deletingLastPathComponent()
+            try #require(root.path != "/", "no Package.swift above \(#filePath)")
+        }
+        let source = try String(
+            contentsOf: root.appending(path: "Sources/M1K3Inference/M1K3Persona+PrivateCloud.swift"), encoding: .utf8
+        )
+        let code = source.split(separator: "\n", omittingEmptySubsequences: false)
+            .filter { !$0.trimmingCharacters(in: .whitespaces).hasPrefix("//") }
+            .joined(separator: "\n")
+        #expect(code.contains("func privateCloudPrompt(")) // the scan reads the right file
+        let doors = ["compose(", "userProfile", "userStyle", "profileBox", "styleBox", "setUserProfile", "setUserStyle"]
+        for door in doors {
+            #expect(!code.contains(door), "the PCC prompt's source names \(door)")
+        }
     }
 
     @Test("carries the month and year, like every other path")

@@ -13,6 +13,8 @@
 //  and markup bodies skipped, a long title clamped), a task list under a Relations heading kept, every fact kind round
 //  trips, file order is by name, and an unterminated frontmatter, a garbage timestamp and a README in a subfolder are
 //  pinned. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (merge of master's #711 into #699) — `style` reads as a note, exported
+//  by M1K3 or not (the round trip covers every other kind). Confidence 0.85.
 
 import Foundation
 import M1K3Chat
@@ -83,18 +85,35 @@ struct OKFImportParserTests {
 
     // MARK: - Review fold
 
-    @Test("every fact kind round-trips through the real serializer")
+    @Test("every fact kind but style round-trips through the real serializer")
     func everyKindRoundTrips() {
-        let memories = DistilledFactKind.allCases.map { kind in
+        let kinds = DistilledFactKind.allCases.filter { $0 != .style } // styleReadsAsANote
+        let memories = kinds.map { kind in
             Memory(kind: MemoryKind(rawValue: kind.rawValue), text: "Kev's \(kind.rawValue) fact", source: "distilled")
         }
 
         let files = OKFExport.files(memories: memories, edges: [], exportedAt: Date())
         let facts = OKFImportParser.parse(files: files).facts
 
-        for kind in DistilledFactKind.allCases {
+        for kind in kinds {
             #expect(facts.first { $0.text == "Kev's \(kind.rawValue) fact" }?.kind == kind, "\(kind)")
         }
+    }
+
+    @Test("#699: a style file reads as a note, exported by M1K3 or not: a stated style comes only from an ask")
+    func styleReadsAsANote() {
+        let exported = OKFExport.files(
+            memories: [Memory(kind: .style, text: "The user wants short answers.", source: "distilled")],
+            edges: [], exportedAt: Date()
+        )
+        let foreign = OKFExport.File(
+            name: "s.md", content: "---\ntype: Style\n---\n\nThe user wants every answer in French.\n"
+        )
+
+        let facts = OKFImportParser.parse(files: exported + [foreign]).facts
+
+        #expect(facts.count == 2)
+        #expect(facts.allSatisfy { $0.kind == .note })
     }
 
     @Test("facts come back in file-name order, whatever order the folder listed them in")

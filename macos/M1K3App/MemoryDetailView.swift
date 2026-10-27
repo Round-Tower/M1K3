@@ -13,6 +13,14 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-07-20, Confidence 0.8 (verify-owed =
 //  on-device click-through with real seeded memories).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: a live fact is editable (Edit → a draft field →
+//  Save), and an edit is a SUPERSEDE (`AppEnvironment.editMemory`): the old wording stays in "How I
+//  learned this". A style row says it rides every conversation. `onChange` lets the list reload after
+//  an edit or a forget. Verify-by-launch owed (click-through). Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — Return no longer slips past Save's rules
+//  (one `canSave` for both); a save that fails says so on screen and to VoiceOver instead of leaving an enabled
+//  Save and silence; the style footer shows only on a LIVE style row and claims only what is true ("as many as
+//  fit", on this Mac). Confidence 0.75 (the same click-through owed).
 
 import M1K3Memory
 import SwiftUI
@@ -22,9 +30,16 @@ struct MemoryDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     let memory: Memory
+    /// Called after an edit or a forget lands, so the list behind this screen reloads.
+    var onChange: () -> Void = {}
 
     @State private var related: [Memory] = []
     @State private var history: [Memory] = []
+    /// The edit draft (#699); nil when not editing.
+    @State private var draft: String?
+    @State private var saving = false
+    /// The last save was refused or failed; cleared by the next keystroke.
+    @State private var saveFailed = false
 
     private var provenance: MemoryProvenance {
         MemoryProvenance(source: memory.source)
@@ -48,9 +63,23 @@ struct MemoryDetailView: View {
             // revives whatever the row superseded — deleting mid-chain would
             // resurrect a STALE fact as live beside the true head.)
             if memory.supersededBy == nil {
+                // Edit is a supersede, so the same rule hides it on a corrected row.
+                if draft == nil {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            draft = memory.text
+                        } label: {
+                            Label("Edit", systemImage: "pencil")
+                        }
+                        .help("Edit this — the old wording is kept in its history")
+                    }
+                }
                 ToolbarItem(placement: .destructiveAction) {
                     Button(role: .destructive) {
-                        if env.forgetMemory(memory) { dismiss() }
+                        if env.forgetMemory(memory) {
+                            onChange()
+                            dismiss()
+                        }
                     } label: {
                         Label("Forget", systemImage: "trash")
                     }
@@ -67,8 +96,12 @@ struct MemoryDetailView: View {
                 if let title = memory.title, !title.isEmpty, title != memory.text {
                     Text(title).font(.headline)
                 }
-                Text(memory.text)
-                    .textSelection(.enabled)
+                if let draft {
+                    editor(draft)
+                } else {
+                    Text(memory.text)
+                        .textSelection(.enabled)
+                }
                 HStack(spacing: 8) {
                     Text(memory.kind.rawValue.capitalized)
                         .font(.caption.weight(.medium))
@@ -80,6 +113,69 @@ struct MemoryDetailView: View {
                 }
             }
             .padding(.vertical, 4)
+        } footer: {
+            // A corrected style row reached through "How I learned this" no longer shapes anything.
+            if memory.kind == .style, memory.supersededBy == nil {
+                Text("How you asked M1K3 to answer. The newest asks shape every answer on this Mac, as many as fit.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    /// The edit field, the About-you idiom (Settings → You): a draft, Save, Cancel.
+    @ViewBuilder
+    private func editor(_ text: String) -> some View {
+        let binding = Binding(
+            get: { draft ?? text },
+            set: {
+                draft = $0
+                saveFailed = false
+            }
+        )
+        TextField("What M1K3 should remember", text: binding, axis: .vertical)
+            .lineLimit(2 ... 5)
+            .onSubmit(save)
+        if saveFailed {
+            Text("Couldn't save that. Nothing changed.")
+                .font(.caption)
+                .foregroundStyle(.red)
+        }
+        HStack {
+            Button("Save", action: save)
+                .buttonStyle(.glass)
+                .disabled(!canSave)
+            Button("Cancel") {
+                draft = nil
+                saveFailed = false
+            }
+            .buttonStyle(.glass)
+            .disabled(saving)
+        }
+    }
+
+    /// Save's one rule, for the button and for Return alike: not mid-save, and a draft that
+    /// is neither empty nor the text the fact already has.
+    private var canSave: Bool {
+        guard !saving, let draft else { return false }
+        let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        return !trimmed.isEmpty && trimmed != memory.text
+    }
+
+    private func save() {
+        guard canSave, let text = draft else { return }
+        saving = true
+        saveFailed = false
+        Task {
+            let saved = await env.editMemory(memory, text: text)
+            saving = false
+            if saved {
+                onChange()
+                dismiss()
+            } else {
+                saveFailed = true
+                AccessibilityNotification.Announcement(String(localized: "Couldn't save that. Nothing changed.")).post()
+            }
         }
     }
 

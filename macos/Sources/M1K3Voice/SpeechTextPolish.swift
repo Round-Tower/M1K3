@@ -73,15 +73,25 @@
 //  `\s` reached across a blank line and ate the paragraph break before every list. A line that CLOSES with a pipe is
 //  a row too: auto-speak's sentence fold cuts a row at a full stop inside a cell, and the tail kept its pipe. Each
 //  pinned. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — typed answer blocks (#717): the FIRST pass swaps every
+//  `m1k3-steps` / `m1k3-choices` fence for its sentences (AnswerBlockSpeech), and one that didn't parse
+//  or never closed for "I've put that on screen." (never "": the shells' raw fallback would read the
+//  JSON). The later passes keep fences verbatim, so without it a block was read out as JSON on both
+//  lanes. M1K3Voice now imports the M1K3AnswerBlocks leaf (a taste call for Kev, see Package.swift).
+//  Confidence 0.85.
 //
 
 import Foundation
+import M1K3AnswerBlocks
 
 public enum SpeechTextPolish {
     /// One pass is a fixed point: every rule only removes or normalizes,
-    /// never produces new strippable material.
+    /// never produces new strippable material. Typed answer blocks go first:
+    /// their sentences are one line with no backticks, so they can't open a
+    /// fence, and the passes after them flatten their markdown like any prose.
     public static func polish(_ text: String) -> String {
         var result = text
+        result = AnswerBlockSpeech.replacingTypedFences(in: result)
         result = stripFollowUpTrailer(result)
         // Both trailing source blocks go BEFORE the flatten (#716): the model's
         // "Sources:" block is recognised by the "- " markers the flatten now
@@ -226,8 +236,8 @@ public enum SpeechTextPolish {
     }
 
     /// Deliberately DUPLICATED from `MessageTextPolish.fencedCodeRanges`
-    /// (M1K3Chat) rather than imported — M1K3Voice is dependency-free by
-    /// design (the VoiceTier precedent: a Voice→Chat edge to dedupe one
+    /// (M1K3Chat) rather than imported — M1K3Voice depends on leaves only
+    /// (the VoiceTier precedent: a Voice→Chat edge to dedupe one
     /// scanner is worse layering than duplication). Keep the two in
     /// lock-step; every rule here was earned by a pinned test over there:
     /// `\.isNewline` (CRLF is ONE grapheme), the closing run-length match,
@@ -404,8 +414,8 @@ public enum SpeechTextPolish {
     /// The follow-ups trailer in ANY spelling ("FOLLOWUPS:", "Follow-ups:",
     /// "**Follow-ups:**") and everything after it: the chat lane strips it for
     /// the bubble; the speech lane must never voice it. Mirrors
-    /// `FollowUpSplit.trailerStart` (M1K3Inference — not importable here by
-    /// the module's dependency-free rule): exact sentinel anywhere, variants
+    /// `FollowUpSplit.trailerStart` (M1K3Inference — not importable here:
+    /// M1K3Voice depends on leaves only): exact sentinel anywhere, variants
     /// at a line start only, plural, colon.
     private static func stripFollowUpTrailer(_ text: String) -> String {
         if let exact = text.range(of: "FOLLOWUPS:") {

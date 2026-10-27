@@ -8,6 +8,8 @@
 //  mapping is test-pinned and the iOS shell can share it.
 //
 //  Signed: Kev + claude-fable-5.1, 2026-09-12, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: `.style` (uncatalogued, MemoryStyleKind.swift)
+//  wears a speech bubble, so a style row reads as how you asked to be answered. Confidence 0.85.
 //
 
 public extension MemoryKind {
@@ -19,6 +21,7 @@ public extension MemoryKind {
         case .decision: "checkmark.seal"
         case .episode: "clock"
         case .note: "note.text"
+        case .style: "text.bubble"
         default: "brain"
         }
     }

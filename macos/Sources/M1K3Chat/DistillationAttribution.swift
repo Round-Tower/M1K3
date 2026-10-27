@@ -45,6 +45,8 @@
 //  for every other user. Review 7 fold: only the GIVEN name matches by leading fragment (Kev for
 //  Kevin); surnames match exactly — "fit" for Fitzgerald is a word, not a name. Review 9 fold: the
 //  login name is dropped from the set (on iOS it is the generic "mobile"; nobody is addressed by it).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: `contentTokens` is internal (was private) so
+//  StyleAskFence anchors a style fact by exactly this rule. No behaviour change. Confidence 0.9.
 //
 
 import Foundation
@@ -145,7 +147,8 @@ public enum DistillationAttribution {
     /// stopwords and the user's own name — function words and the subject's
     /// own name are too common to count as evidence of anchoring. Three, not
     /// four: "dog", "Rex", "car", "son" are most of what a short fact is made of.
-    private static func contentTokens(in text: String, selfNames: UserNames) -> Set<String> {
+    /// Internal, not private: StyleAskFence anchors by the same rule (#699).
+    static func contentTokens(in text: String, selfNames: UserNames) -> Set<String> {
         Set(
             text.lowercased()
                 .components(separatedBy: CharacterSet.alphanumerics.inverted)

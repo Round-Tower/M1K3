@@ -23,6 +23,13 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — the gate now measures what it claimed: the old
 //  fixture accepted no facts, so the twin search never ran. Facts are written and a forget leg runs; the cancel test
 //  has a facts variant that lands in each phase. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — the 1,200-conversation footprint gate is opt-in now
+//  (`M1K3_IMPORT_SCALE=1 swift test --filter LargeExportImportTests`, like the MLX and audio integration suites). In
+//  CI's parallel run it held the 3-core runner for 45–55 s, and after #732 landed 4 of 6 PR runs went red on
+//  load-sensitive server and timeout tests outside every diff (#711 comment). Run it before an import change and
+//  quote its IMPORT FOOTPRINT line; the cancel-and-resume tests still run everywhere. The facts variant drops from
+//  300 facts to 150 (three batches, a cancel in each phase): alone it took 22–25 s, since every fact write scans
+//  the store. Confidence 0.8.
 
 import Darwin
 import Foundation
@@ -91,7 +98,12 @@ private struct NotedFactDistiller: MemoryDistilling {
 }
 
 struct LargeExportImportTests {
-    @Test("1,200 conversations parse, propose, commit 400 facts and forget, at a measured, bounded peak")
+    /// Opt-in: a whole-process footprint over 1,200 conversations is a measurement, not a unit test, and it starves
+    /// the parallel run's timing-sensitive tests on CI's three cores.
+    @Test(
+        "1,200 conversations parse, propose, commit 400 facts and forget, at a measured, bounded peak",
+        .enabled(if: ProcessInfo.processInfo.environment["M1K3_IMPORT_SCALE"] == "1")
+    )
     func largeExportFootprint() async throws {
         let baseline = physicalFootprintBytes()
         let peak = PeakFootprint()
@@ -166,12 +178,14 @@ struct LargeExportImportTests {
         #expect(try harness.knowledge.allItems(kind: .conversation, limit: 10000).count == 300)
     }
 
-    /// 300 facts are six batches (steps 1-6), then 300 transcripts (steps 7-306): a cancel at step
-    /// 3 lands among the facts, one at step 120 among the transcripts.
+    /// 150 facts are three batches (steps 1-3), then 150 transcripts (steps 4-153): a cancel at step
+    /// 2 lands among the facts, one at step 60 among the transcripts. Every fact write scans the whole store,
+    /// so the cost grows with facts squared: 300 facts held the test at about 24 s alone, 150 keeps both phases
+    /// and a mid-phase cancel in each.
     @Test("with facts, a cancel in either phase resumes to the same end: every fact once, every transcript once",
-          arguments: [3, 120])
+          arguments: [2, 60])
     func cancelledCommitWithFactsResumes(cancelAt: Int) async throws {
-        let bundle = try ImportFormatDetector.parse(data: syntheticExport(count: 300, messages: 4))
+        let bundle = try ImportFormatDetector.parse(data: syntheticExport(count: 150, messages: 4))
         let harness = try ImportHarness()
         let pipeline = harness.pipeline(NotedFactDistiller())
         let proposals = try await pipeline.propose(bundle)
@@ -185,17 +199,17 @@ struct LargeExportImportTests {
         }.value
         let resumed = try await pipeline.commit(proposals, from: bundle, filing: .all)
 
-        let factsFirst = min(cancelAt, 6) * 50
-        let filedFirst = max(cancelAt - 6, 0)
+        let factsFirst = min(cancelAt, 3) * 50
+        let filedFirst = max(cancelAt - 3, 0)
         #expect(interrupted == ImportReceipt(
             factsWritten: factsFirst, conversationsFiled: filedFirst, wasCancelled: true
         ))
         #expect(resumed == ImportReceipt(
-            factsWritten: 300 - factsFirst, conversationsFiled: 300 - filedFirst, conversationsAlreadyFiled: filedFirst
+            factsWritten: 150 - factsFirst, conversationsFiled: 150 - filedFirst, conversationsAlreadyFiled: filedFirst
         ))
-        #expect(try harness.memory.totalCount() == 300)
-        #expect(try harness.memory.liveCount() == 300)
-        #expect(try harness.knowledge.allItems(kind: .conversation, limit: 10000).count == 300)
+        #expect(try harness.memory.totalCount() == 150)
+        #expect(try harness.memory.liveCount() == 150)
+        #expect(try harness.knowledge.allItems(kind: .conversation, limit: 10000).count == 150)
     }
 
     @Test("a cancelled propose throws CancellationError")

@@ -165,6 +165,17 @@
 //  leak guard's fingerprint (`voiceExemplars`), so folding the move in would move both. Every render is
 //  byte-identical to the pre-merge branch (9c55b264), fifteen SHA-256 probes before and after the merge; ten of
 //  `everyRenderMatchesItsPin`'s pins move with #716, five (pocket's three, the fingerprint two) hold. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699 Phase 1: the user's stated answer style. `setUserStyle` holds
+//  the `.style` memories newest first (the app sets them at launch and whenever they change) and `compose` appends
+//  "How the user wants answers: …" after the About block, rendered by `UserStyleBlock` inside its OWN cap
+//  (`styleCharacterCap` = 160), so a full About-you never starves it and a memory never trims what the user typed
+//  about themselves (the issue says "within its 400-char budget": a shared budget is a two-line change, Kev's call).
+//  Outside the PersonaPack slot, so it layers on any voice; the PCC prompt never calls compose. With no style every
+//  render is byte-identical (`everyRenderMatchesItsPin`). Confidence 0.8 (whether a brain honours the line is the
+//  chateval style arm's to say).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — `compose(core:profile:style:)` has no
+//  default `style:`: a call site that forgot it compiled and silently dropped the line, and no test may set the
+//  global to notice (the parallel race). Now it is a compile error. Confidence 0.9.
 
 import Foundation
 import Synchronization
@@ -205,16 +216,45 @@ public enum M1K3Persona {
         profileBox.withLock { $0 }
     }
 
-    /// Pure composition: core + the capped About-the-user block.
-    static func compose(core: String, profile: String?) -> String {
-        guard var profileText = profile?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !profileText.isEmpty
-        else { return core }
-        if profileText.count > profileCharacterCap {
-            profileText = profileText.prefix(profileCharacterCap)
-                .trimmingCharacters(in: .whitespaces) + "…"
+    /// How the user asked to be answered (#699): their `.style` memories, newest first.
+    /// Process-global like the profile and set the same way (at launch, and by the app
+    /// whenever a distillation, an edit or a forget changes them). Setting the same rows
+    /// again leaves `systemPrompt`, and so the persona prefix cache, untouched.
+    private static let styleBox = Mutex<[String]>([])
+
+    /// The style line's own cap, apart from the About block's: a full About-you must not
+    /// starve it, and a memory must never trim what the user wrote about themselves.
+    /// About 40 tokens of TTFT at most.
+    public static let styleCharacterCap = 160
+
+    /// The style line's lead-in. Names the user outright: the line may stand without an
+    /// About block above it.
+    static let styleLead = "How the user wants answers: "
+
+    public static func setUserStyle(_ newestFirst: [String]) {
+        styleBox.withLock { $0 = newestFirst }
+    }
+
+    public static var userStyle: [String] {
+        styleBox.withLock { $0 }
+    }
+
+    /// Pure composition: core + the capped About-the-user block + the capped style line.
+    /// The one door either has into a prompt; the PCC prompt never opens it.
+    /// No default for `style`: a call site that forgets it must not compile.
+    static func compose(core: String, profile: String?, style: [String]) -> String {
+        var prompt = core
+        if var profileText = profile?.trimmingCharacters(in: .whitespacesAndNewlines), !profileText.isEmpty {
+            if profileText.count > profileCharacterCap {
+                profileText = profileText.prefix(profileCharacterCap)
+                    .trimmingCharacters(in: .whitespaces) + "…"
+            }
+            prompt += "\nAbout the user: " + profileText
         }
-        return core + "\nAbout the user: " + profileText
+        if let styleText = UserStyleBlock.render(newestFirst: style, cap: styleCharacterCap) {
+            prompt += "\n" + styleLead + styleText
+        }
+        return prompt
     }
 
     public static var systemPrompt: String {
@@ -228,7 +268,7 @@ public enum M1K3Persona {
     /// convenience the MLX tiers (32K+ windows) can afford and Mini cannot.
     /// Every token saved here goes directly to conversation replay depth.
     public static var miniSystemPrompt: String {
-        compose(core: miniCorePrompt + "\n" + currentDateLine(Date()), profile: userProfile)
+        compose(core: miniCorePrompt + "\n" + currentDateLine(Date()), profile: userProfile, style: userStyle)
     }
 
     /// The standard core with the FOLLOW-UPS, BEING YOURSELF and TOOLS sections removed,
@@ -305,7 +345,7 @@ public enum M1K3Persona {
     /// The compact prompt a path gets when nothing is cached (AFM every turn; an
     /// MLX turn whose persona seed could not be built).
     public static func compactPrompt(for variant: PersonaVariant) -> String {
-        compose(core: corePrompt(for: variant) + "\n" + currentDateLine(Date()), profile: userProfile)
+        compose(core: corePrompt(for: variant) + "\n" + currentDateLine(Date()), profile: userProfile, style: userStyle)
     }
 
     /// The core a variant renders.

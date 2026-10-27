@@ -330,6 +330,19 @@ stays a possible later companion.
 
 ## Needs Kev — open calls, gathered in one place
 
+- **#699 stated style (Phase 1, PR open):** four calls before it lands. The style line's own
+  160-char budget, or the issue's shared 400 with About-you; style kept out of the catalogued
+  kinds, so MCP can't write it; an edit as a supersede; the StyleAskFence cue list, a heuristic.
+  Three more from its review: iOS stores style rows but does not apply them yet (wire it, or
+  keep Phase 1 Mac-only); forgetting an edited fact also deletes the wording it replaced; a
+  later fact of another kind at the twin bar still supersedes a live style row.
+  MEMSTAT measured 10-27: 7 of 8 style corrections stay below Gemma's 0.95 bar and leave both rows
+  live (1 of 8 superseded, 0 eaten). Fixed 10-27 on the branch (Kev: fix first): a style correction
+  retires the newest live style on its axis (`StyleAxis`), and an imported style ask files as a
+  preference. MEMSTAT on the fix (Release build, 10-27): 8 of 8 corrections superseded, 11 of 11
+  different-axis asks kept both live. The other calls ship as the PR's defaults. Still owed: the
+  paired style chateval arm.
+
 - **LinkedIn + the first Teams customer** — the 90-day founder move (#369).
   One post a week; the product demos itself; the DyslexiaAI story is the
   unfair advantage.
@@ -461,6 +474,17 @@ stays a possible later companion.
      process) off #616–#691 and the 10-26 session block. § v1.1.0 marked shipped. Monetization, the 1.0.1
      verify-owed list and the standing 1.0.x items are carried unchanged: not re-verified this sweep.
      Confidence 0.8. -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-27 — #699 Phase 1's four open calls joined "Needs Kev"
+     (the PR stays open for them). Confidence 0.85. -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — three more #699 calls from the review:
+     the iOS gap, the forget walk, the cross-kind supersede. Confidence 0.85. -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-27 — #699's MEMSTAT result replaces its "owed" line: 7 of 8
+     style corrections leave both rows live, so the axis-scoped supersede joins the calls. Confidence 0.8. -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-27 — #699's contradiction is fixed on the branch (axis supersede,
+     imports as preferences); the line says so and keeps the chateval arm owed. Confidence 0.8. -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-27 — MEMSTAT measured the #699 fix on a Release build: 8/8 style
+     corrections superseded, 11/11 compatibles both live (docs/evals/2026-10-27-memstat-style-axis.txt).
+     Confidence 0.85. -->
 <!-- Review: Kev + claude-opus-5.5, 2026-10-26 — the search head (#713) joins Now, flagged off, its teacher pass,
      paired arm and threshold ruling owed. -->
 <!-- Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — the search head bullet counts 827 candidates (8 lexical

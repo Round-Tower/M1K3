@@ -813,3 +813,144 @@ PCC wiring behind the FM27 gate) was challenger-tested; two findings flipped the
      "easily opt-in-able" preserved via the calm-surface shape. Unproven: PCC executor scope is
      estimated from the SDK surface, not built; GM drift risk named not sized. Prior: Kev +
      claude-opus-4-8 (this file, Edge A analysis 2026-06-14). -->
+
+## Update — 2026-10-27: #699 Phase 1 — stated style, never inferred (PR left open for Kev)
+
+- **What:** a `style` memory kind for how the user asked to be answered (length, format, tone). It is
+  uncatalogued (`MemoryStyleKind.swift`), so MCP `remember` and App Intents cannot write it. The
+  distiller files `FACT(style)` phrased "The user prefers/wants…", and the coordinator keeps one only
+  when a single user turn both anchors it and reads as a request (`StyleAskFence.swift`). The graph
+  stores it like any fact, and `M1K3Persona.compose` renders the live rows newest first on their own
+  line, "How the user wants answers: …", inside 160 chars (`UserStyleBlock.swift`).
+- **Lifecycle:** restored at launch beside the profile, re-read when a distillation writes, and after
+  a forget or an edit. An edit in the Memories detail is a supersede (source "user:edit", lineage
+  kept). The PCC prompt never carries it, and with no style every render is byte-identical.
+- **Gates:** swift test pins newest first, survival across a store reopen, and a correction at the
+  hashing twin bar superseding the old ask (`StyleMemoryScenarioTests.swift`). Owed on device: the
+  MEMSTAT style-correction class (do real corrections reach Gemma's 0.95 bar, or do both rows stay
+  live?) and the paired open-chat arm with `M1K3_SELFTEST_CHATEVAL_STYLE` set.
+- **Kev's calls:** the style line's own 160-char budget vs the issue's shared 400; style kept out of
+  the catalogued vocabulary; edit as supersede; the fence's cue list (a heuristic).
+
+<!-- Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.8 — Phase 1 is pinned in swift test; whether
+     a brain honours the line and whether real corrections supersede are the two evals named above.
+     Prior: none (new block). -->
+
+## Update — 2026-10-27: #699 pre-push review fold
+
+- **Edit and forget, now tested:** both live in `MemoryEditor.swift` (M1K3MemoryChatBridge), over real
+  stores. An edit re-reads the row first, so a row corrected since its screen loaded is refused. It also
+  refuses wording another live fact already says, and it keeps the row's title. The corpus half is
+  `MemoryDistillationCoordinator.applyEdit`: the new wording is ingested before the old twin leaves, an
+  edit that changes only case or punctuation moves nothing, an edit back to a retired wording restores
+  it, and failures are audited by ids. Forgetting an edited fact also forgets the wording it replaced.
+- **Consent:** the style re-read moved to `refreshCounts()`, which MCP forget_memory already calls. The
+  Memories list now shows every live style row, even past its 500-row window.
+- **The fence, narrowed (fail-closed):** the anchor and the ask must sit in one sentence or line, and
+  "prefers"/"wants" never anchor. Every cue and lead is pinned one by one.
+- **Kind-blind dedupe:** when the user asks, a pre-#699 preference row with the same words is re-filed
+  as style. Before, the ask vanished as a duplicate.
+- **Kev's calls added:**
+  - **iOS and visionOS:** the shared distiller files style rows there too, but the iOS shell never calls
+    `setUserStyle`. On iPhone a style row is stored and listed, and it changes nothing yet. Either wire
+    it (two hooks in `AppCore.swift`, a mobile CI run, Mini's on-device window re-measured) or keep
+    Phase 1 Mac-only. This fold left the shell untouched.
+  - **The forget walk:** forgetting an edited fact deletes the wording it replaced, back to the first
+    row that is not an edit, where the store's forget would revive it. The alternative is to keep undo
+    and say so in the Forget confirmation.
+  - **Cross-kind supersede:** a later fact of another kind at the twin bar still supersedes a live
+    style row, so the line loses that ask (pinned in `StyleMemoryScenarioTests.swift`).
+
+<!-- Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.8 — the fold's logic is pinned in swift test;
+     the same two evals and the click-through stay owed. Prior: none (new block). -->
+
+## Update — 2026-10-27: #699 MEMSTAT measured — most style corrections stay below the bar
+
+- **Run:** MEMSTAT on a Release build of `5ac4dfd3`, with EmbeddingGemma 2 and its 0.95 dedupe bar, on the
+  isolated screengrab root (M1 Max, AC). Transcript: `docs/evals/2026-10-27-memstat-style.txt`.
+- **Raw cosine:** the 8 style corrections score min 0.861, median 0.901, max 0.982. 1 of 8 reaches 0.95.
+- **Production ingest path:** 0 of 8 eaten, 1 of 8 superseded, 7 of 8 leave both rows live. The one
+  supersede is the order swap ("code before the explanation" ↔ "explanation before the code", 0.982).
+- **What it means:** a real correction such as "short" → "long, detailed" keeps both rows, so the style
+  line carries both, newest first: "The user prefers long, detailed answers. The user prefers short
+  answers." Phase 1 then relies on the brain reading the first sentence as the current ask. An
+  axis-scoped supersede is owed (a new style fact retires the live style row on the same axis), or the
+  renderer keeps the newest fact per axis. Kev's call. The paired style chateval arm is still owed; it
+  would show whether a brain honours the newest sentence.
+- **Side finding:** restatements now read 5 of 5 superseded. The 10-10 probe's "0/5 restatements eaten"
+  was the Tier 2 supersede, which the old probe counted as survived.
+
+<!-- Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.75 — 8 hand-curated pairs phrased the way
+     the distiller is told to write style facts; real distiller wording may land elsewhere. Prior: none
+     (new block). -->
+
+## Update — 2026-10-27: #699 the style contradiction, fixed — a correction retires its ask on its axis
+
+- **Kev's ruling:** "Fix this first before shipping." The MEMSTAT block above showed 7 of 8 style corrections
+  leaving both rows live under Gemma's 0.95 bar, which must never drop.
+- **The fix:** `StyleAxis` (M1K3Chat) reads which axis a distilled style fact is about: length, lists, tables,
+  markup, emoji, tone, humour, technicality, opening, order. Polarity is ignored, so "no emoji" and "emoji" share
+  one. With no twin, a `.style` fact from the live writer retires the NEWEST live style row whose axes it covers,
+  through the same Tier-2 supersede a twin takes: lineage kept, a restatement revives (short, long, short ends
+  with short live), one victim per write, style only retires style. An unknown or scoped ask ("…for code
+  reviews") takes no part. The twin path still wins when both apply (the 0.982 order pair supersedes once).
+  `MemoryStore.swift` is untouched: no migration.
+- **Imports (Kev's ruling):** an imported style ask files as a PREFERENCE, listed in Memories, never in the
+  prompt, never retiring a live ask (the OKF style→note rule, kept as it is): the import's coordinator
+  (`retiresLiveStyle: false`) does no axis supersede, and a twin at the bar that is a live style row stays live
+  beside it (the twin path is kind-blind, so an imported near-restatement had demoted the live ask).
+- **One slice, said order:** exit-path distillation sends a whole chat as one slice, so a slice's style facts
+  are stored in the order the user asked for them (the last ASK, by StyleAskFence's own sentence and request
+  test, with a distinctive word of each). Only placed facts move: a paraphrase no ask places keeps its slot.
+- **Forget undoes in both stores:** a forget, from Memories or MCP `forget_memory`, restores the corpus twin its
+  row superseded (`forgetCorpusTwins`), as the graph's forget does. Without it, "short, long, forget long,
+  short" left two live "short" rows.
+- **A revive walks the chain:** re-stating a retired ask demotes the corpus ledger chain's LIVE head
+  (`ledgerHead`), as the graph revives over its chain head. One hop left short, long, brief, short with "brief"
+  live in retrieval, swallowed the next "brief" as a duplicate, and broke a later forget.
+- **Field signal:** a count-only `.notice` per write, "style rows on no axis: N unknown, M scoped".
+- **Unchanged, as the PR ships them:** the other open calls ((a)–(e) in the PR), Phase 1 Mac-only, the
+  forget walk, and the cross-kind supersede.
+- **Residue, pinned or named:** a narrower correction leaves a wider ask live ("formal tone" after "short,
+  casual answers"); two true asks on one axis retire each other ("short answers", then "short sentences");
+  "headings in long answers" has no scope word, so it retires "short answers"; a tie inside one turn ("not
+  short, long") keeps the distiller's order; a re-filed preference row retires nothing on its axis (a pre-#699
+  row, or now an imported ask the user later restates word for word: that leaves "long" live beside it, owed a
+  follow-up, since `remember(supersedes:)` names one row); MEMSTAT's probe has no graph, so it still measures
+  the twin path alone.
+- **Gates:** `StyleAxisTests` (the table: 8 corrections both ways, the compatibles, every cue family, said
+  order), `StyleAxisSupersedeTests` (real stores: all 16 correction directions superseded in the graph AND the
+  corpus, the 11 compatibles live both ways, the MEMSTAT `.note` classes at their twin-bar outcome, flip-back,
+  forget, no graph, slice order, the import gate at the twin bar), `StyleAxisChainTests` (revive and forget
+  over a chain), `MemoryCorpusEditTests` (`forgetCorpusTwins`), `StatedStyleWiringTests` (MCP forget's corpus
+  half), `ImportedStyleTests`.
+
+<!-- Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.8 — pinned in swift test; the cue table's recall on
+     real distiller wording is unmeasured, which the no-axis count watches. Prior: none (new block). -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — four holes closed: MCP forget_memory's
+     corpus half, the one-hop revive (residue line retired), an import's twin at the bar of a live ask, and the
+     said-order sort (unplaced facts sorted first; any turn re-dated a fact). Named instead: the re-filed
+     preference residue. Confidence 0.8. -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-27 — the residue line "MEMSTAT's probe has no graph" is retired: the
+     style classes now go through StyleIngestProbe, measured in the block below. Confidence 0.85. -->
+
+## Update — 2026-10-27: #699 MEMSTAT on the fix — 8 of 8 style corrections superseded, 11 of 11 compatibles kept
+
+- **The rewire first:** the old ingest probe wrote untyped `.note` facts with no graph through `distillAndStore`,
+  so it could not see the axis rule (a `.style` fact with a graph wired), and `propose` would fence a scripted
+  ask out. `StyleIngestProbe` (M1K3MemoryChatBridge) stores each pair as two `.style` facts with
+  `coordinator.store`, over an in-memory corpus and `MemoryStore()` behind the graph adapter, and reads the
+  prior's fate off BOTH stores plus the style line the persona would carry. A style-compatible class (the
+  eleven asks `StyleAxisSupersedeTests` pins, now one shared fixture) joins it. Contradiction, compatible and
+  restatement run exactly as before; their lines match the morning's transcript.
+- **Result** (Release build of `10589552`, EmbeddingGemma 2 at its 0.95 bar, M1 Max, AC;
+  `docs/evals/2026-10-27-memstat-style-axis.txt`): style corrections **8/8 superseded** (was 1/8), 0 both live,
+  0 eaten, 0 divergent. Seven retire by axis under the bar (0.861–0.912); the 0.982 order pair goes through the
+  twin path, once. Every style line after a correction carries the correction alone ("The user prefers long,
+  detailed answers."). Style compatibles **11/11 both live** (0.729–0.865, none at the bar), newest first.
+- **Still owed:** the paired style chateval arm (does a brain honour the line), and the cue table's recall on
+  real distiller wording, which the no-axis count watches in the field.
+
+<!-- Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85 — the probe is the live writer's store path with
+     the production embedder; the pairs are hand-curated and phrased as the distiller writes style facts, so real
+     wording may place differently. Prior: none (new block). -->

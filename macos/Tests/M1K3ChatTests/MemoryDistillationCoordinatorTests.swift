@@ -20,6 +20,12 @@
 //  inside one source, a tagged twin a non-tagged row corrected, an unknown tag, a `.conversation` left to the caller,
 //  the one-step undo of A ← I ← N) and `revivesSupersededFacts: false` (an exact re-assertion of a corrected fact
 //  writes nothing, in either store). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: a `.style` fact also needs StyleAskFence's explicit
+//  ask (anchored-but-unasked is dropped, other kinds untouched), and `didWrite` fires once with the count
+//  when facts land, never when nothing did. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — the #699 tests moved, with their own
+//  fixtures, to MemoryDistillationCoordinatorStyleTests (this file had grown past its lint bounds); the corpus
+//  half of a Memories edit is pinned in MemoryCorpusEditTests. Confidence 0.85.
 
 import Foundation
 @testable import M1K3Chat

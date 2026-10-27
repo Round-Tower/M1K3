@@ -29,6 +29,16 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — #711: `source` is injectable (default `distilled`, so both shells
 //  are unchanged) and tags plain and revived nodes alike; a memory import passes its `import/<provider>/<date>` tag
 //  so `MemoryStore.forget(source:)` can undo it. The seam protocol is untouched. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (#699 pre-push review fold) — `refileDistilledFact`: an asked-for
+//  style fact whose text the corpus already holds (a pre-#699 preference row with the same words) re-files the
+//  live node as style, superseding it so the lineage stays, joined by the corpus's normalised identity. A node
+//  already of that kind is left alone. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (merge of master's #711 into #699) — a re-filed node carries the
+//  injected `source` like every other node this adapter writes, so `MemoryStore.forget(source:)` undoes an
+//  import's re-file (it was hard-coded `distilled`). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699 contradiction fix: `liveStyleTexts()` hands the coordinator the
+//  graph's live style rows, newest first, so a style correction under the twin bar can retire the ask it corrects
+//  on its axis (the corpus has no kind). Confidence 0.85.
 //
 
 import M1K3Chat
@@ -80,5 +90,24 @@ public struct DistilledFactGraphAdapter: DistilledFactGraphWriting {
         }
         try store.rememberConnected(memory, embedding: embedding, supersedes: head.id)
         return head.text
+    }
+
+    public func refileDistilledFact(
+        _ text: String, as kind: DistilledFactKind, embedding: [Float]
+    ) async throws -> Bool {
+        let target = MemoryKind(rawValue: kind.rawValue)
+        // The corpus dedupe that sent us here matches the NORMALISED text, so this join must too.
+        let identity = MemoryFactNormalizer.normalize(text)
+        guard let live = try store.liveMemory(where: { MemoryFactNormalizer.normalize($0) == identity }),
+              live.kind != target
+        else { return false }
+        // The live node's own text, not the fact's: text is the join key the corpus twin shares.
+        let refiled = Memory(kind: target, text: live.text, source: source)
+        try store.rememberConnected(refiled, embedding: embedding, supersedes: live.id)
+        return true
+    }
+
+    public func liveStyleTexts() async throws -> [String] {
+        try store.liveStyleTexts()
     }
 }

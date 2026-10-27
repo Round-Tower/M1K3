@@ -84,6 +84,17 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — `ChatMessage.turnNote` (#697): a `.note` activity (Cool Head's
 //  line) lands on the streaming answer as a persisted Optional field, not in the transient label; every reader
 //  of `.text` (replay, distillation, the leak guard, speech, share) never sees it. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — #708: `exchange(for:)` is the one pairing rule (the user turn before
+//  an answer, the answer, the brain stamp), extracted from `recordFeedback`, which now pairs through it; the Mac's
+//  "Send this exchange" sheet reads the same value. No new persisted field. Confidence 0.85 (AnswerExchangeTests).
+//  Review: Kev + claude-fable-5.1, 2026-10-26 (pre-push review fold) — one transcript scan per rate tap: a private
+//  `pairing(for:)` returns the index with the exchange, and both callers read it. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — `exchange(for:)` is the outward view: a file
+//  turn's question keeps the typed words and drops every attached file's text and name
+//  (`FileAttachment.omittingContextBlocks`); the local feedback row still pairs the whole turn. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold) — `exchange(for:)` is nil for display-only text
+//  (`ChatMessage.isExchangeAnswer`): a script's output or a PCC notice was offered as "M1K3's answer", paired with
+//  an unrelated earlier turn. Rating it locally still records. Confidence 0.85 (AnswerExchangeTests).
 
 import Foundation
 import M1K3Inference
@@ -1008,30 +1019,63 @@ public final class ChatSession {
         historyRevision += 1
     }
 
+    /// The one exchange an assistant answer belongs to, as it may leave the Mac (#708's "Send
+    /// this exchange" sheet): the user turn before it, the answer's text, and the brain stamped
+    /// on it (nil for a pre-trace turn). Paired by the same rule as `recordFeedback`, with one
+    /// difference: the stored user turn carries every attached file's extracted text, and here
+    /// that text and the files' names are left behind for a marker, so a document never rides
+    /// along unseen. The local feedback row keeps the whole turn. nil for an unknown id, a user
+    /// message, or display-only text (`isExchangeAnswer`: a script's output, a PCC notice).
+    public func exchange(for messageID: UUID) -> AnswerExchange? {
+        guard let (index, paired) = pairing(for: messageID), messages[index].isExchangeAnswer else { return nil }
+        return AnswerExchange(
+            messageID: paired.messageID,
+            conversationID: paired.conversationID,
+            question: FileAttachment.omittingContextBlocks(from: paired.question),
+            answer: paired.answer,
+            brain: paired.brain
+        )
+    }
+
+    /// The pairing rule itself, with the answer's index so a caller that needs more of the
+    /// message (recordFeedback reads its tools) does not scan the transcript twice.
+    private func pairing(for messageID: UUID) -> (index: Int, exchange: AnswerExchange)? {
+        guard let index = messages.firstIndex(where: { $0.id == messageID }),
+              messages[index].role == .assistant
+        else { return nil }
+        let answer = messages[index]
+        let question = messages[..<index].last { $0.role == .user }?.text ?? ""
+        let exchange = AnswerExchange(
+            messageID: messageID,
+            conversationID: activeConversationID,
+            question: question,
+            answer: answer.text,
+            brain: answer.brain
+        )
+        return (index, exchange)
+    }
+
     /// Record Kev's judgement on one assistant answer. Captures the paired
     /// question + the answer's tools/text at rate-time so the row is a
     /// self-contained curation datum, persists it (replacing any prior verdict
     /// on that answer), and updates the observable map so the thumb fills. The
-    /// resident `brain` is passed in (ChatMessage carries no per-turn brain).
+    /// resident `brain` is passed in as the fallback for an unstamped answer.
     /// Silently no-ops for an unknown id or a user message.
     public func recordFeedback(messageID: UUID, verdict: FeedbackVerdict, comment: String?, brain: String) {
-        guard let index = messages.firstIndex(where: { $0.id == messageID }),
-              messages[index].role == .assistant
-        else { return }
-        let answer = messages[index]
-        let question = messages[..<index].last { $0.role == .user }?.text ?? ""
+        guard let (index, exchange) = pairing(for: messageID) else { return }
+        let toolsUsed = messages[index].toolsUsed ?? []
         let record = AnswerFeedback(
             messageID: messageID,
-            conversationID: activeConversationID,
+            conversationID: exchange.conversationID,
             verdict: verdict,
             comment: comment,
-            question: question,
-            answer: answer.text,
-            toolsUsed: answer.toolsUsed ?? [],
+            question: exchange.question,
+            answer: exchange.answer,
+            toolsUsed: toolsUsed,
             // The brain STAMPED on the answer wins — it's who actually rendered
             // it; the caller's current selection is only the fallback for a
             // pre-traceability turn that carries no stamp.
-            brain: answer.brain ?? brain,
+            brain: exchange.brain ?? brain,
             createdAt: Date()
         )
         feedbackVerdicts[messageID] = verdict

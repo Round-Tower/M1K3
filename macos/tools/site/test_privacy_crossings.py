@@ -6,6 +6,8 @@ on the privacy page, the Kokoro line no longer says ONNX, and the short answer m
 
 Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.8 (text tripwires over copy). Prior: none (new file).
 Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — C2/C3/C4: no page says "nothing to download" unqualified; en-GB mirrors en-US. Confidence 0.8.
+Review: Kev + claude-opus-5.5, 2026-10-27 — #708: the page names "Send this exchange", its recipient and its
+purpose, while NetworkCrossings carries `.fieldReport` (Kev chose Shape A, the bug-report voice). Confidence 0.8.
 """
 import json
 import re
@@ -108,3 +110,15 @@ def test_en_gb_descriptions_mirror_the_en_us_privacy_and_mini_lines():
         for line in us.splitlines():
             if any(k in line for k in ("Beyond the models", "apart from the models", "I use the network", "Three brain tiers")):
                 assert line in gb, f"{platform}: en-GB lacks: {line[:60]}"
+
+
+def test_the_privacy_page_names_the_field_report_its_recipient_and_its_purpose():
+    # #708: the one thing Round Tower can ever receive from the app, sent by the user's own mail app after they
+    # see the exact text. The in-app list carries it as `.fieldReport`; the page must say the same, and the
+    # policy's Email item must not claim a narrower use than the sheet does.
+    assert "case fieldReport" in CROSSINGS
+    page = _visible(PRIVACY)
+    assert "Send this exchange to Round Tower" in page
+    assert "your own mail app sends it to hello@round-tower.ie" in page
+    assert "the only thing we can ever receive is an exchange you choose to email us" in page
+    assert "We use them only to reply and do not add you to any list." not in page

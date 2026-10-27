@@ -48,6 +48,8 @@
 //  `CoolHeadPolicy.advance` and posts its line (or nil) to `coolHeadNote` on every send; the factory threads a
 //  `turnNoteProvider`, which only the interactive chat responder passes. `-coolHeadForce heat|lowPower|eased`
 //  holds a reading in Debug builds so the line can be seen on a cool Mac. Confidence 0.8 (verify-by-launch owed).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (#699) — `makeMemoryDistillation(…, didWrite:)` threads the
+//  coordinator's write hook through (defaulted, so the eval stages keep compiling). Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — the route reads `toolSearchHead` (#713) with `whenUnset: false`: off
 //  as shipped, `M1K3 -toolSearchHead YES` turns the search head's veto on for the A/B. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — Kev flipped the search head on (`whenUnset: true`; `-toolSearchHead NO`
@@ -192,7 +194,8 @@ extension AppEnvironment {
         embedder: any EmbeddingService,
         ingester: DocumentIngester,
         fallback: any InferenceProvider,
-        graph: (any DistilledFactGraphWriting)? = nil
+        graph: (any DistilledFactGraphWriting)? = nil,
+        didWrite: (@Sendable (Int) -> Void)? = nil
     ) -> MemoryDistillationCoordinator {
         MemoryDistillationCoordinator(
             distiller: ProviderMemoryDistiller(
@@ -204,7 +207,8 @@ extension AppEnvironment {
             ingester: ingester,
             store: store,
             embedder: embedder,
-            graph: graph
+            graph: graph,
+            didWrite: didWrite
         )
     }
 

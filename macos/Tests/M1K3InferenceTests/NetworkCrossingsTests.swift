@@ -9,6 +9,9 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.85 (pure; the site and store copy are
 //  hand-written and checked by tools/site). Prior: none (new file).
+//  Review: Kev + claude-fable-5.1, 2026-10-26 — #708: both lanes end with `.fieldReport`, the opt-in
+//  "Send this exchange" email the USER's mail app makes (madeByApp false), so Hello's App-Review line is
+//  unchanged by construction. Confidence 0.85.
 
 @testable import M1K3Inference
 import Testing
@@ -18,10 +21,24 @@ struct NetworkCrossingsTests {
     func laneAwareList() {
         let dmg = NetworkCrossings.crossings(for: .developerID).map(\.kind)
         let store = NetworkCrossings.crossings(for: .appStore).map(\.kind)
-        #expect(dmg == [.modelDownloads, .webTools, .updates])
-        #expect(store == [.modelDownloads, .webTools, .updates, .privateCloud])
+        #expect(dmg == [.modelDownloads, .webTools, .updates, .fieldReport])
+        #expect(store == [.modelDownloads, .webTools, .updates, .privateCloud, .fieldReport])
         let pcc = NetworkCrossings.crossings(for: .appStore).first { $0.kind == .privateCloud }
         #expect(pcc?.optIn == true)
+    }
+
+    @Test("the field report is opt-in per message and the user's mail app makes the connection, so the Hello line never names it")
+    func fieldReportIsOptInAndNotMadeByTheApp() throws {
+        for lane in [NetworkCrossings.Lane.developerID, .appStore] {
+            let crossing = try #require(NetworkCrossings.crossings(for: lane).first { $0.kind == .fieldReport })
+            #expect(crossing.optIn)
+            #expect(!crossing.madeByApp, "the user's mail client sends it, like an update rides the store")
+            #expect(!crossing.hasSettingsSwitch, "per-message opt-in is the control; there is nothing to leave on")
+            #expect(crossing.phrase.contains("Round Tower"))
+            #expect(crossing.phrase.contains("one exchange"))
+            let hello = NetworkCrossings.helloPrivacyLine(for: lane)
+            #expect(!hello.contains("Round Tower") && !hello.contains("email"), "App Review's line is unchanged")
+        }
     }
 
     @Test("the lane follows whether the build carries a Private Cloud Compute backend")

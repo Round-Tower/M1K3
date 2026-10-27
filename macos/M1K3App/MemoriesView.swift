@@ -32,6 +32,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — the title drops its brain icon and each
 //  row wears its KIND's symbol (`MemoryKind.symbolName`) instead of one brain for every
 //  memory (launch snag list). Confidence now 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: the detail screen reloads this list after an edit or a
+//  forget (`onChange`), so a superseded or forgotten row never lingers when you come back. Confidence 0.8.
 
 import M1K3Memory
 import SwiftUI
@@ -79,7 +81,7 @@ struct MemoriesView: View {
                 content
             }
             .navigationDestination(for: Memory.self) { memory in
-                MemoryDetailView(memory: memory)
+                MemoryDetailView(memory: memory, onChange: reload)
             }
         }
         .onAppear { reload() }
