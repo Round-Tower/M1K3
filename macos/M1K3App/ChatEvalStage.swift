@@ -123,6 +123,8 @@
 //  Confidence 0.8 (the arm runs in the eval stage; this file compiles only under xcodebuild).
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — the bare-generate observation says no tool was offered,
 //  so the #680 fixtures' `avoids X` skip there instead of passing by construction. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — the Mac now ships the search head on (`whenUnset: true`), and the
+//  driver sets `_ROUTER_SEARCH=1` under dispatch unless `--no-router-search`: the eval wires like the app. Confidence 0.85.
 //
 
 import Foundation

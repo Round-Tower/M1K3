@@ -8,6 +8,9 @@ Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — main()'s refusals (a
 labels, a candidates look over the shipped weights) and --untrained; the teacher bars at their own values; one
 lexical near-copy bar; the positional vision fixtures; the guard read from the Swift and the head's own population;
 the shipped weights are the stub or a confirmed fit. Confidence 0.85.
+Review: Kev + claude-opus-5.5, 2026-10-27 — the Mac ships `toolSearchHead` on, so every render says that regenerating
+the file ships the veto to every Mac (the #728 second pass); the stub's threshold comment no longer claims a fit.
+Confidence 0.85.
 """
 import json
 
@@ -153,6 +156,22 @@ def test_the_untrained_stub_has_no_weights_and_says_so():
     assert "static let weights: [Double] = []" in source
     assert "UNTRAINED" in source
     assert max(len(line) for line in source.splitlines()) <= 120
+
+
+def test_every_render_warns_that_regenerating_ships_the_veto():
+    # #728 second pass: with the Mac flag on, this file is the only gate between a retrain and every Mac.
+    for source in (t.render_untrained(), t.render_swift(np.zeros(512), bias=0, threshold=0.5, count=3, cv_note="n")):
+        assert "ships the veto to every Mac" in source
+        assert "--kinds security" in source
+        assert max(len(line) for line in source.splitlines()) <= 120
+
+
+def test_the_stub_claims_no_fit_and_a_fit_names_its_recall():
+    stub = t.render_untrained()
+    assert "Picked to keep" not in stub
+    assert "unused while there are no weights" in stub
+    fit = t.render_swift(np.zeros(512), bias=0, threshold=0.5, count=3, cv_note="n")
+    assert "Picked to keep 97%" in fit
 
 
 def test_candidate_labels_are_stamped_in_the_header():
