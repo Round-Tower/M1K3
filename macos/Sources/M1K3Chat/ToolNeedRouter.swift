@@ -42,6 +42,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — `thinkingPastBudget`: open reasoning over the thinking cap;
 //  closed reasoning never counts, so an answer on its way is never cut. Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — the 10-17 entry's Confidence line back under it (comment only).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `PlainTurnRoute.staysLocal` (#713): the search head's reading of the
+//  turn, asked only when a pick reads the web; nil (the default) changes nothing. Confidence 0.85.
 //
 
 import Foundation
@@ -172,15 +174,21 @@ public struct PlainTurnRoute: Sendable {
     /// which the app then runs itself (ToolDispatch). nil, or a nil pick, keeps the
     /// agent turn.
     public let pick: (@Sendable (String, String) async -> ToolPick?)?
+    /// The search head (#713, `toolSearchHead`): does this turn need the web? Asked only when the
+    /// pick reads the web; `.local` takes the web reads back out (`ToolDispatch.searchCorrected`).
+    /// nil keeps every pick as the picker named it.
+    public let staysLocal: (@Sendable (String) -> SearchRouter.Decision)?
 
     public init(
         decide: @escaping @Sendable (String) -> ToolNeedRouter.Decision,
         instructions: String?,
-        pick: (@Sendable (String, String) async -> ToolPick?)? = nil
+        pick: (@Sendable (String, String) async -> ToolPick?)? = nil,
+        staysLocal: (@Sendable (String) -> SearchRouter.Decision)? = nil
     ) {
         self.decide = decide
         self.instructions = instructions
         self.pick = pick
+        self.staysLocal = staysLocal
     }
 }
 

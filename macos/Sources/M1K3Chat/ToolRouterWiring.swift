@@ -48,6 +48,13 @@
 //  half the trials took it, and the pick was the unlogged suspect. Confidence 0.85. Same day: the timed pick
 //  read 3.0 s (a cold session per turn), so `-pickerPrewarm YES` serves the fallback picker a session prewarmed
 //  for the menu (`PrewarmedToolPicker`); off until its paired eval.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `toolSearchHead` (#713, absent = OFF on both shells; `-toolSearchHead
+//  YES` for the A/B): the dispatch route carries the search head (`staysLocal`) over the turn's one vector, and a
+//  veto is a `search-veto` stage for the eval. `compose` takes the embedder so the one-vector pin can count embeds.
+//  Confidence 0.8 (pinned; the head ships untrained until the teacher pass and its paired arm).
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (merge review fold) — `searchHeadKey`'s doc says what ships: ON on
+//  the Mac (`whenUnset: true`, off arm `-toolSearchHead NO`), OFF on iOS. It still said off on both shells.
+//  Confidence 0.9.
 //
 
 import Foundation
@@ -120,6 +127,16 @@ public enum ToolRouterWiring {
         flag(pickerPrewarmPrefixKey, defaults, whenUnset: whenUnset)
     }
 
+    /// The search head (#713) as a veto on a web read the picker named: "tell me the history of Dublin"
+    /// went to web_search on 2026-10-25 (#680). Absent = the shell's default: ON on the Mac (Kev, 2026-10-27;
+    /// `M1K3 -toolSearchHead NO` is the off arm), OFF on iOS. It ships as an untrained stub that never vetoes,
+    /// and it never adds a web call.
+    public static let searchHeadKey = "toolSearchHead"
+
+    public static func searchHeadEnabled(_ defaults: UserDefaults = .standard, whenUnset: Bool = false) -> Bool {
+        flag(searchHeadKey, defaults, whenUnset: whenUnset)
+    }
+
     /// An explicit setting wins; absent, the shell's default (`whenUnset`). The shells choose:
     /// the Mac turns the router flags on (the 2026-10-10 arm), iOS keeps them off until a phone
     /// smoke (Lil + Apple's picker on an 8 GB iPhone is unmeasured).
@@ -130,7 +147,7 @@ public enum ToolRouterWiring {
     /// Loaded once: the embedding asset is read-only and shared across turns.
     private static let embedder = NLSentenceEmbedder()
 
-    /// The gate (ToolNeedRouter) and the group head embed the same turn text: one vector for both.
+    /// The gate (ToolNeedRouter), the group head and the search head embed the same turn text: one vector for all.
     private static let turnEmbedder = OneTurnEmbedder(embedder.vector)
 
     private static let log = M1K3Log.logger(.route)
@@ -150,9 +167,23 @@ public enum ToolRouterWiring {
     /// own 0 of 100, and it's faster. Mini's synthesised tool answers always used this one.
     /// `allTiers` gives a brain that isn't Mini the route too: measured 2026-10-10 (Lil 38/48 → 48/48
     /// tool-use at half the latency, Big 42.6 s → 14.7 s), on for the Mac, off on iOS.
+    /// `searchHead` (#713) puts the search head on the dispatch route as a veto on web reads.
     public static func route(
         provider: any InferenceProvider, enabled: Bool, dispatch: Bool = false,
-        groupRouter: Bool = false, allTiers: Bool = false, chain: Bool = false
+        groupRouter: Bool = false, allTiers: Bool = false, chain: Bool = false, searchHead: Bool = false
+    ) -> PlainTurnRoute? {
+        compose(
+            provider: provider, enabled: enabled, dispatch: dispatch, groupRouter: groupRouter,
+            allTiers: allTiers, chain: chain, searchHead: searchHead, embedder: turnEmbedder
+        )
+    }
+
+    /// `route` over a given one-turn embedder: every reader of the turn (gate, group head, search
+    /// head) asks it, so a turn is embedded once (#512).
+    static func compose(
+        provider: any InferenceProvider, enabled: Bool, dispatch: Bool = false,
+        groupRouter: Bool = false, allTiers: Bool = false, chain: Bool = false, searchHead: Bool = false,
+        embedder: OneTurnEmbedder
     ) -> PlainTurnRoute? {
         guard enabled else { return nil }
         let mini = servedMini(provider)
@@ -164,17 +195,23 @@ public enum ToolRouterWiring {
             // type checker once (ChatEvalStage's header).
             var classify: (@Sendable (String) -> ToolPick?)?
             if groupRouter {
-                classify = { ToolGroupRouter.pick(for: $0, embed: turnEmbedder.vector, chain: chain) }
+                classify = { ToolGroupRouter.pick(for: $0, embed: embedder.vector, chain: chain) }
             }
             // `[classify]`: a captured var can't be read from a @Sendable closure (Swift 6).
             picker = { [classify] question, menu in
                 await cascade(question: question, menu: menu, classify: classify, fallback: fallback, chain: chain)
             }
         }
+        // The search head only vetoes a pick, so it rides only where there is one.
+        var staysLocal: (@Sendable (String) -> SearchRouter.Decision)?
+        if dispatch, searchHead {
+            staysLocal = { SearchRouter.decide(for: $0, embed: embedder.vector) }
+        }
         return PlainTurnRoute(
-            decide: { ToolNeedRouter.decide(for: $0, embed: turnEmbedder.vector) },
+            decide: { ToolNeedRouter.decide(for: $0, embed: embedder.vector) },
             instructions: nil,
-            pick: picker
+            pick: picker,
+            staysLocal: staysLocal
         )
     }
 
@@ -272,11 +309,13 @@ final class OneTurnEmbedder: Sendable {
 
 /// Which stage named a tool turn's pick: the group head, Apple's picker, or neither (the
 /// agent turn). The router arm of 2026-10-09 couldn't tell: the head's notice went to os_log,
-/// so a head that never fired read as a head that won.
+/// so a head that never fired read as a head that won. `searchVeto` follows a pick when the
+/// search head took its web reads back out (#713), so the eval sees the veto fire.
 public enum PickStage: String, Sendable, Codable {
     case head
     case picker
     case agent
+    case searchVeto = "search-veto"
 }
 
 /// An eval's ear on the cascade: the stages this task's tool turns took, in order.

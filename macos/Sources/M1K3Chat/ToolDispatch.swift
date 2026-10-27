@@ -44,6 +44,17 @@
 //  the cross arm 17/18, its one miss Lil's own wrong river; Mini unmeasured).
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (#711 review fold) — `documentCorrected`'s doc names the exclusion: an
 //  imported `.conversation` chunk is not one of the user's documents (the caller filters it). Comment only.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `searchCorrected` (#713): when the search head reads a turn as local,
+//  every web read leaves the pick; a local link still runs, nothing left is a plain turn. It never adds a web read.
+//  Confidence 0.8 (pinned; the head ships untrained and flagged off until its teacher pass and paired arm).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (2) — `vetoable`: an explicit web ask or a question about now is never
+//  vetoed (`asksForTheWeb`): a head
+//  trained on candidate labels read "Fetch the web site m1k3.app…" as local at p=0.014. The domain pattern is
+//  shared with `asksToOpenWebPage` (`namesWebAddress`).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — the guard's holes: "lookup", Wikipedia, a wiki, Bing,
+//  DuckDuckGo and headlines join `webAskCues`, and the guard reads more domain suffixes (`guardSuffixes`: .ai, .gov,
+//  .edu, .info …) than the open ask, whose list (`openSuffixes`) is unchanged. A missed guard lets a lossy head veto
+//  an explicit ask; an over-read one only keeps a search. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -203,12 +214,24 @@ public enum ToolDispatch {
         let words = ToolGroupRouter.words(question).drop { openLeads.contains(String($0)) }
         guard let verb = words.first.map(String.init) else { return false }
         let opens = ["open", "launch", "visit"].contains(verb) || (verb == "go" && words.dropFirst().first == "to")
-        let domain = question.range(
-            of: #"(https?://|\b[a-z0-9-]+\.(com|ie|org|net|io|dev|app|co|uk|eu)\b)"#,
+        return opens && (namesWebAddress(question) || ToolGroupRouter.mentions(question, any: webThings))
+    }
+
+    /// A URL or a bare domain ("m1k3.app", "rte.ie") under one of `suffixes`.
+    static func namesWebAddress(_ text: String, suffixes: [String] = openSuffixes) -> Bool {
+        text.range(
+            of: #"(https?://|\b[a-z0-9-]+\.("# + suffixes.joined(separator: "|") + #")\b)"#,
             options: [.regularExpression, .caseInsensitive]
         ) != nil
-        return opens && (domain || ToolGroupRouter.mentions(question, any: webThings))
     }
+
+    /// The domains an "open …" ask names (#622).
+    static let openSuffixes = ["com", "ie", "org", "net", "io", "dev", "app", "co", "uk", "eu"]
+
+    /// The search head's guard reads more of the web's names (#713 review): a domain it misses lets a lossy
+    /// head veto a page the user named, while one it over-reads only keeps a search. The open ask keeps
+    /// its own list (`openSuffixes`).
+    static let guardSuffixes = openSuffixes + ["ai", "gov", "edu", "de", "fr", "info", "tv", "me"]
 
     private static let openLeads: Set<String> = [
         "please", "can", "could", "would", "will", "you", "hey", "mike", "m1k3", "just", "ok", "okay",
@@ -281,6 +304,48 @@ public enum ToolDispatch {
         guard documentsKept, pick.tool == "lookup_fact", pick.then.isEmpty else { return pick }
         return ToolPick(tool: ToolPick.noTool, query: pick.query)
     }
+
+    /// The search head's veto (#713): a turn it reads as local loses every web read in the pick. On
+    /// 2026-10-25 voice mode on Big sent "tell me the history of Dublin" to web_search (#680): 30.8 s to
+    /// the first chunk for stable history, though the picker's own rules say history needs no tool. A
+    /// local link of a chain still runs ("the weather and my calendar" keeps the calendar), first in
+    /// line; a pick left with nothing is a plain turn, with the head's query kept. A web verdict, or a
+    /// pick that reads nothing from the web, is returned as is. It never adds a web read: a wrong web
+    /// pick is egress (ADR 0009), and the head only ever takes one away.
+    public static func searchCorrected(_ pick: ToolPick, staysLocal: Bool) -> ToolPick {
+        guard staysLocal, readsTheWeb(pick) else { return pick }
+        let kept = ([pick] + pick.then).filter { !webSourced.contains($0.tool) }
+        guard let head = kept.first else { return ToolPick(tool: ToolPick.noTool, query: pick.query) }
+        return ToolPick(tool: head.tool, query: head.query, then: Array(kept.dropFirst()))
+    }
+
+    /// Any link of the pick reads the web.
+    public static func readsTheWeb(_ pick: ToolPick) -> Bool {
+        ([pick] + pick.then).contains { webSourced.contains($0.tool) }
+    }
+
+    /// The only picks the search head is asked about: one that reads the web, on a question that doesn't
+    /// ask for the web in its own words (`asksForTheWeb`).
+    public static func vetoable(_ pick: ToolPick, question: String) -> Bool {
+        readsTheWeb(pick) && !asksForTheWeb(question)
+    }
+
+    /// The user asked for the web, or about now: search, look up, online, a site or a URL, or the gate's
+    /// now-words (this year, latest, today, the weather, prices, scores, the news). Never vetoed, whatever a
+    /// head reads: a sentence vector alone put "Fetch the web site m1k3.app…" at p=0.014 (a head on candidate
+    /// labels, 2026-10-26). Accepted lookalikes stay searched, as before the head: "why is Napoleon still
+    /// important today?" (the `nowCues` note), "the link between diet and heart disease".
+    public static func asksForTheWeb(_ question: String) -> Bool {
+        namesWebAddress(question, suffixes: guardSuffixes)
+            || ToolGroupRouter.mentions(question, any: webAskCues + ToolNeedRouter.nowCues)
+    }
+
+    /// The words of an explicit web ask, the named sources ("Wikipedia", "Bing") among them.
+    static let webAskCues = [
+        "search", "searching", "google", "googling", "look up", "look it up", "looking up", "lookup", "online",
+        "internet", "the web", "website", "web site", "webpage", "web page", "url", "link", "fetch", "browse",
+        "wikipedia", "wiki", "bing", "duckduckgo", "headlines",
+    ]
 
     /// A web read on a question about what the user decided or said goes to their knowledge
     /// instead. Apple's pick sent "What did Kev decide about which brain fronts by default?" to

@@ -18,6 +18,12 @@ and run_direct's glue on a stand-in app that execs /bin/sleep (timeout → 6, Ct
 binary: the child is gone and the live app reopened every time).
 Review: Kev + claude-opus-5-5, 2026-10-19 — the relaunch retries once and says UNVERIFIED; a Ctrl-C in the cool-down
 reopens the live app (`quit_for_run`); an abbreviated flag is refused.
+Review: Kev + claude-opus-5.5, 2026-10-26 — `--router-search` (#713): off unless asked (the Mac ships the search head off),
+never without dispatch, and threaded from main to the trigger.
+Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — a --bare run with --router-search is flagged (its avoids
+checks skip there).
+Review: Kev + claude-opus-5.5, 2026-10-27 — the search head defaults on under dispatch (Kev flipped the Mac to
+`whenUnset: true`); --no-router-search is the off arm.
 """
 
 import json
@@ -141,6 +147,15 @@ def test_live_path_can_be_turned_off_for_bare_generation():
 def test_a_live_run_without_a_route_is_flagged(live_path, router, warns):
     # The plain turn (cut, retry, forced budget, NoWait) is reached only through a route, as in the app.
     assert (rc.route_warning(base_opts(live_path=live_path, router=router)) is not None) == warns
+
+
+def test_a_bare_run_with_the_search_head_is_flagged():
+    # #713 review: --bare runs world knowledge as bare generate, no tool on offer, so the #680 fixtures' avoids
+    # checks skip there and the arm measures nothing of the head.
+    warning = rc.route_warning(base_opts(live_path=False, router="dispatch", router_search=True))
+    assert warning is not None and "--router-search" in warning
+    assert rc.route_warning(base_opts(live_path=True, router="dispatch", router_search=True)) is None
+    assert rc.route_warning(base_opts(live_path=False, router="dispatch", router_search=False)) is None
 
 
 def test_dump_prompt_goes_inside_the_container():
@@ -563,6 +578,37 @@ def test_main_threads_no_router_head_and_chain_to_the_trigger(tmp_path, monkeypa
     assert rc.main([*base, "--no-router-head", "--router-chain"]) == 0
     chain_cell = capsys.readouterr().out
     assert head_key not in chain_cell and chain_key in chain_cell
+
+
+def test_router_search_follows_the_mac_default_under_dispatch():
+    # #713, Kev 2026-10-27: the Mac app ships the search head on (`whenUnset: true`), so a dispatch run wires like
+    # it unless --no-router-search says otherwise, the same rule as --router-head and --router-chain.
+    assert _trig(router="dispatch")["M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH"] == "1"
+    assert "M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH" not in _trig(router="dispatch", router_search=False)
+    assert _trig(router="dispatch", router_search=True)["M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH"] == "1"
+
+
+def test_router_search_without_dispatch_is_refused():
+    # The app reads it only on the dispatch route: a silent no-op arm would read as "the head changes nothing".
+    for router in (None, "off", "1"):
+        with pytest.raises(ValueError):
+            _trig(router=router, router_search=True)
+    assert "M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH" not in _trig(router="off", router_search=False)
+
+
+def test_main_threads_router_search_to_the_trigger(tmp_path, monkeypatch, capsys):
+    app = tmp_path / "M1K3.app"
+    (app / "Contents").mkdir(parents=True)
+    with open(app / "Contents/Info.plist", "wb") as handle:
+        plistlib.dump({"CFBundleIdentifier": rc.BUNDLE_ID}, handle)
+    monkeypatch.setattr(rc, "sh", lambda *cmd: BATT_AC if cmd[-1] == "batt" else PMSET_G)
+    monkeypatch.setattr(rc, "running_instances", list)
+    base = ["--name", "x", "--brains", "big", "--app", str(app), "--dry-run", "--router", "dispatch"]
+    key = '"M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH"'
+    assert rc.main(base) == 0
+    assert f'{key}: "1"' in capsys.readouterr().out
+    assert rc.main([*base, "--no-router-search"]) == 0
+    assert key not in capsys.readouterr().out
 
 
 def test_unknown_router_mode_is_refused():

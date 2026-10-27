@@ -50,6 +50,11 @@
 //  holds a reading in Debug builds so the line can be seen on a cool Mac. Confidence 0.8 (verify-by-launch owed).
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (#699) — `makeMemoryDistillation(…, didWrite:)` threads the
 //  coordinator's write hook through (defaulted, so the eval stages keep compiling). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — the route reads `toolSearchHead` (#713) with `whenUnset: false`: off
+//  as shipped, `M1K3 -toolSearchHead YES` turns the search head's veto on for the A/B. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — Kev flipped the search head on (`whenUnset: true`; `-toolSearchHead NO`
+//  turns it off). It ships as its untrained stub, which never vetoes, so no turn changes until trained weights pass
+//  the gate; then they are live with no flag move. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -569,7 +574,9 @@ extension AppEnvironment {
             // the read-only tool(s). Every tier, the head and chains are ON on the Mac since the
             // 2026-10-10 router arm (Lil 38/48 → 48/48 at half the latency, Big 3× faster, Mini's
             // head 0.6 s faster; docs/adr/0009); an explicit setting still wins. iOS keeps them
-            // off until a phone smoke (AppCore). Read per turn.
+            // off until a phone smoke (AppCore). Read per turn. The search head (#713) is ON (Kev,
+            // 2026-10-27) as its untrained stub, which never vetoes: trained weights that pass the
+            // gate go live with no flag move. `-toolSearchHead NO` is the off arm.
             plainRouteProvider: {
                 ToolRouterWiring.route(
                     provider: provider,
@@ -577,7 +584,8 @@ extension AppEnvironment {
                     dispatch: ToolRouterWiring.dispatchEnabled(),
                     groupRouter: ToolRouterWiring.groupRouterEnabled(whenUnset: true),
                     allTiers: ToolRouterWiring.allTiersEnabled(whenUnset: true),
-                    chain: ToolRouterWiring.chainEnabled(whenUnset: true)
+                    chain: ToolRouterWiring.chainEnabled(whenUnset: true),
+                    searchHead: ToolRouterWiring.searchHeadEnabled(whenUnset: true)
                 )
             },
             excludedKinds: excludedKinds

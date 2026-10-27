@@ -104,6 +104,13 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.85 — the `mechanic` kind (#697 Phase 1): six fixtures
 //  whose send runs on a set `MachineScenario` (`ChatEvalFixtures+Mechanic.swift`), and the fixture's Optional
 //  `machine`; last in `all` so no earlier run order moves.
+//  Review: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.8 — `mustNotCallTools` and two #680 fixtures
+//  (`world-dublin-history`, `world-cork-history`, #713): stable history voice mode web-searched on 2026-10-25; each
+//  avoids the three web reads, so a chateval shows whether the search head flips them to no-search. World-knowledge
+//  cells grow from 8 to 10 fixtures and don't compare across this change.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold), Confidence 0.8 — four `tool-web-unguarded-*` fixtures
+//  at the end of tool-use: web reads with no web or now words, the only ones the search head's guard leaves to the
+//  head, so a paired arm can see a false veto. Tool-use cells grow by four and don't compare across this change.
 
 import Foundation
 
@@ -259,6 +266,10 @@ public struct EvalExpectation: Sendable, Equatable {
     /// stops after the first fails the second check instead of banking a pass. Order is
     /// not pinned — the two reads are independent.
     public let alsoCallTools: [String]
+    /// Tools the brain must NOT invoke (#713): stable knowledge answered from a web search costs a tool
+    /// round and seconds of wait (#680, "tell me the history of Dublin"). Each scores its own
+    /// "avoids X" check, so a run shows which turns still searched.
+    public let mustNotCallTools: [String]
     /// The answer must carry at least one citation that validates against the
     /// retrieved corpus (grounded-Q fixtures).
     public let mustCite: Bool
@@ -296,6 +307,7 @@ public struct EvalExpectation: Sendable, Equatable {
         mustComply: Bool = false,
         mustCallTool: String? = nil,
         alsoCallTools: [String] = [],
+        mustNotCallTools: [String] = [],
         mustCite: Bool = false,
         mustNotCite: Bool = false,
         minChars: Int? = nil,
@@ -315,6 +327,7 @@ public struct EvalExpectation: Sendable, Equatable {
         self.mustComply = mustComply
         self.mustCallTool = mustCallTool
         self.alsoCallTools = alsoCallTools
+        self.mustNotCallTools = mustNotCallTools
         self.mustCite = mustCite
         self.mustNotCite = mustNotCite
         self.minChars = minChars
@@ -1140,6 +1153,32 @@ public enum ChatEvalFixtures {
                 + "of the city of Cork from a reference source.",
             expectation: .init(mustCallTool: "datetime", alsoCallTools: ["lookup_fact"])
         ),
+        // 2026-10-26 (#713 review): web reads with no web or now words in them, so the search head's guard
+        // leaves them to the head. Every other web-read fixture asks in words and can never be vetoed, so
+        // without these a paired `--router-search` arm could not see a false veto (the veto's cost side).
+        // A release, a price, a local service, a changing fact that sounds settled. Each reads tools at the
+        // gate (p 0.90, 0.96, 0.95, 0.84 at commit time) and the group head abstains; none is in the search
+        // head's training data, near-copies included (tools/router/train_search_head.py refuses them).
+        .init(
+            id: "tool-web-unguarded-release", kind: .toolUse,
+            prompt: "Has the new iPhone come out?",
+            expectation: .init(mustCallTool: "web_search")
+        ),
+        .init(
+            id: "tool-web-unguarded-rate", kind: .toolUse,
+            prompt: "What's the euro to dollar exchange rate?",
+            expectation: .init(mustCallTool: "web_search")
+        ),
+        .init(
+            id: "tool-web-unguarded-tram", kind: .toolUse,
+            prompt: "Is the Luas running on time?",
+            expectation: .init(mustCallTool: "web_search")
+        ),
+        .init(
+            id: "tool-web-unguarded-record", kind: .toolUse,
+            prompt: "Who holds the marathon world record?",
+            expectation: .init(mustCallTool: "web_search")
+        ),
     ]
 
     /// Refusal/safety — a local-first assistant should decline or redirect the
@@ -1302,7 +1341,32 @@ public enum ChatEvalFixtures {
             prompt: "Who wrote the play Waiting for Godot?",
             expectation: .init(mustContainAny: ["Beckett"], mustComply: true, minChars: 1, maxChars: 800)
         ),
+        // #680 (2026-10-25, voice, Big): both were web-searched, 30.8 s and 12.7 s to the first chunk, for
+        // history any brain here knows. The search head (#713) is gated on these turning to no-search. Cork's
+        // line is standalone: the live turn was a follow-up ("what about Cork?") the fixture can't replay.
+        // Never in the search head's training data (the fixtures are its test set). The avoids checks bite
+        // only on the live path with `--router dispatch`: world knowledge runs bare generate otherwise, with
+        // no tool on offer, and there they skip (`EvalObservation.toolsOffered`).
+        .init(
+            id: "world-dublin-history", kind: .worldKnowledge,
+            prompt: "Tell me the history of Dublin.",
+            expectation: .init(
+                mustContainAny: ["Viking", "Norse", "Liffey", "Dubh Linn", "Easter Rising"],
+                mustComply: true, mustNotCallTools: Self.webReads, minChars: 40
+            )
+        ),
+        .init(
+            id: "world-cork-history", kind: .worldKnowledge,
+            prompt: "Tell me the history of Cork.",
+            expectation: .init(
+                mustContainAny: ["Viking", "Norse", "Finbarr", "Fin Barre", "River Lee", "Rebel"],
+                mustComply: true, mustNotCallTools: Self.webReads, minChars: 40
+            )
+        ),
     ]
+
+    /// The tools that read the web (`ToolDispatch.webSourced`, which this module can't import).
+    static let webReads = ["web_search", "lookup_fact", "fetch_page"]
 
     /// The AI-cliché non-answer, in the phrasings that actually show up. Shared
     /// by `humour` and `interview` — both kinds fail the same way, by retreating

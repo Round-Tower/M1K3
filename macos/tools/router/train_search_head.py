@@ -1,0 +1,296 @@
+# /// script
+# requires-python = ">=3.11"
+# dependencies = ["numpy>=1.26", "scikit-learn>=1.5"]
+# ///
+"""Train M1K3's search head (#713) and write its Swift weights.
+
+    uv run tools/router/train_search_head.py                 # from macos/: teacher-confirmed labels only
+    uv run tools/router/train_search_head.py --labels candidates --out /tmp/look.swift   # a look, not a ship
+    uv run tools/router/train_search_head.py --untrained     # the stub that never vetoes
+
+Its own entry point on purpose: train_tool_router.py rewrites the gate AND the group head on every
+run (the 10-17 rule, #631), so a search retrain must never go through it.
+
+One logistic layer over the router's NLEmbedding sentence vector (embed.swift, the same vector the
+app reads): P(the turn needs the web). SearchRouter reads it only as a VETO on a web read the picker
+named, so the threshold is picked by 5-fold cross-validation to keep RECALL of the must-search items:
+a veto on a turn that needed the web is a stale answer, a missed veto is only a slower one.
+
+The threshold is picked on the turns that REACH the head. ToolDispatch.vetoable never asks it about a
+turn that asks for the web in words or about now (`asksForTheWeb`, read here from the Swift), and those
+are the easy must-search items, so counting them would overstate the recall the head really has. The
+folds are grouped by router group or generated category, so a fold never trains on its own paraphrases:
+the CV reads a new phrasing, the side that lowers the threshold, which is the safe side for a veto.
+
+Labels (data/search_head_train.json): each item's `search` is a CANDIDATE (the router group it was
+seeded from, or the class it was generated for, kept only where a cold relabel agreed). It trains
+only once confirmed: a `hand` check overrides everything, else a `teacher` (the dev-only decision
+model pass, {model, p}) must agree with p at or beyond CONFIDENT. `--labels candidates` trains on
+the candidates anyway and stamps the header so; it is for a look before the teacher pass, not a ship.
+
+Held out (refused if present): every chateval fixture prompt (the test set, the positional vision
+fixtures included), the voice-rig lines, the two #680 lines, and lexical near-copies of any of them
+(#631): token Jaccard 0.5 or more after folding case and punctuation, at any length. Lexical only: a
+paraphrase in other words can still sit near a held-out line in vector space.
+
+Signed: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.8 (the gate's recipe, its own entry point;
+the labels wait on the teacher pass, the threshold on Kev). Prior: none (new file).
+Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — the threshold reads only the turns that reach the head
+(the guard ported from the Swift), over folds grouped by category; one lexical near-copy bar (0.5) at every length;
+the positional vision fixtures held out; the local teacher bar is its own constant (1 - 0.8 is 0.19999999999999996
+in floats); a candidates look is never written over the shipped weights. Confidence 0.8.
+Review: Kev + claude-opus-5.5, 2026-10-26 (eval stage) — the teacher pass ran on the plan's fallback labeller,
+gemini-4-argon (Clef-flash's loader was refused by the session's permission check): 820 confirmed labels,
+threshold 0.165 at 97% grouped-CV recall (90/93 kept, 308/551 local turns read local). Held out, 3/12 stable
+lines read local and the #680 Dublin line reads web, so the stub stays shipped and Kev rules on the threshold
+(docs/evals/2026-10-26-search-head-heldout.json). Confidence 0.8.
+Review: Kev + claude-opus-5.5, 2026-10-27 — the Mac ships `toolSearchHead` on, so the header says regenerating with
+weights ships the veto to every Mac and names the arm to run first; the stub's threshold comment says it is unused
+rather than claiming a fit (the #728 second pass). Confidence 0.85.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+import textwrap
+from pathlib import Path
+
+import numpy as np
+
+HERE = Path(__file__).resolve().parent
+MACOS = HERE.parents[1]
+DATA = HERE / "data" / "search_head_train.json"
+OUT = MACOS / "Sources" / "M1K3Chat" / "SearchRouterWeights.swift"
+FIXTURE_SOURCES = sorted((MACOS / "Sources" / "M1K3Eval").glob("ChatEvalFixture*.swift"))
+DISPATCH_SWIFT = MACOS / "Sources" / "M1K3Chat" / "ToolDispatch.swift"
+GATE_SWIFT = MACOS / "Sources" / "M1K3Chat" / "ToolNeedRouter.swift"
+RIG_LINES = [MACOS / "tools" / "eval" / "voice_rig_turns.txt", MACOS / "tools" / "eval" / "voice_rig_history.txt"]
+# #680 (2026-10-25, voice, Big): both web-searched stable history.
+ISSUE_680 = ["tell me the history of Dublin", "what about Cork?"]
+RECALL = 0.97
+C = 4.0
+CONFIDENT = 0.8  # a teacher p at or above confirms a must-search candidate
+LOCAL_CONFIDENT = 0.2  # at or below confirms a local one (its own constant: 1 - 0.8 misses a recorded 0.2)
+# Token Jaccard at or above: a lexical near-copy, at any length. A one-word swap on a line of n distinct
+# words scores (n - 1) / (n + 1), so from three words up a swap is caught ("the history of Galway").
+NEAR = 0.5
+
+HEADER = """//
+//  SearchRouterWeights.swift
+//  M1K3Chat
+//
+//  GENERATED by tools/router/train_search_head.py; do not edit by hand.
+//  A logistic layer over NLEmbedding's English sentence vector (L2-normalised):
+//  P(this turn needs the web), read only as a veto on a web pick (SearchRouter, #713).
+//  The Mac ships `toolSearchHead` ON, so regenerating this file with weights ships the veto to every Mac: run
+//  the paired chateval arm first (world-knowledge, open-chat, tool-use and `--kinds security`, `--router dispatch`)
+//  and the gate pins in SearchRouterTests.
+"""
+
+
+def label(item: dict) -> bool | None:
+    """The item's training label, or None while it is unconfirmed."""
+    if isinstance(item.get("hand"), bool):
+        return item["hand"]
+    teacher = item.get("teacher") or {}
+    p = teacher.get("p")
+    if p is None:
+        return None
+    if item["search"] and p >= CONFIDENT:
+        return True
+    if not item["search"] and p <= LOCAL_CONFIDENT:
+        return False
+    return None
+
+
+def training_labels(items: list[dict], candidates: bool = False) -> tuple[list[dict], np.ndarray]:
+    """The items that train and their labels: confirmed ones, or with `candidates` every item
+    (a confirmed label still wins over its candidate)."""
+    kept, y = [], []
+    for item in items:
+        confirmed = label(item)
+        if confirmed is None and not candidates:
+            continue
+        kept.append(item)
+        y.append(item["search"] if confirmed is None else confirmed)
+    return kept, np.array(y, dtype=bool)
+
+
+def fold(text: str) -> str:
+    return " ".join(re.findall(r"[a-z0-9]+", text.lower().replace("’", "'").replace("'", "")))
+
+
+def near_copy(a: str, b: str) -> bool:
+    x, y = set(fold(a).split()), set(fold(b).split())
+    if not x or not y:
+        return False
+    return len(x & y) / len(x | y) >= NEAR
+
+
+def parse_fixture_prompts(swift: str) -> list[str]:
+    """Every `prompt:` string in Swift fixture source, joined `"a" + "b"` literals included, and the
+    prompt the vision helper takes third and unlabelled (`visionFixture(id, image, prompt, …)`)."""
+    literal = r'"((?:[^"\\]|\\.)*)"'
+    prompts = []
+    for match in re.finditer(rf"prompt:\s*{literal}((?:\s*\+\s*{literal})*)", swift):
+        parts = [match[1]] + re.findall(literal, match[2] or "")
+        prompts.append("".join(parts).replace('\\"', '"'))
+    for match in re.finditer(rf"visionFixture\(\s*{literal},\s*{literal},\s*{literal}", swift):
+        prompts.append(match[3].replace('\\"', '"'))
+    return prompts
+
+
+def fixture_prompts() -> list[str]:
+    return [prompt for path in FIXTURE_SOURCES for prompt in parse_fixture_prompts(path.read_text())]
+
+
+def held_out_lines() -> list[str]:
+    lines = [line.strip() for path in RIG_LINES for line in path.read_text().splitlines()]
+    return [line for line in lines if line and not line.startswith("#")] + ISSUE_680
+
+
+def held_out_violations(prompts: list[str], held_out: list[str]) -> list[tuple[str, str]]:
+    return [(prompt, line) for prompt in prompts for line in held_out if near_copy(prompt, line)]
+
+
+def _swift_strings(swift: str, name: str) -> list[str]:
+    """The string literals of `static let <name> = [<a list> +] [ … ]`: the bracket after the `=`."""
+    match = re.search(rf"static let {name}\s*=\s*(?:[\w.]+\s*\+\s*)?\[(.*?)\]", swift, re.DOTALL)
+    if match is None:
+        raise ValueError(f"no `static let {name}` list in the Swift")
+    return re.findall(r'"([^"]*)"', match[1])
+
+
+def web_guard() -> tuple[list[str], list[str]]:
+    """The search head's guard as the app reads it (ToolDispatch.asksForTheWeb): its cue words (webAskCues,
+    ToolNeedRouter.nowCues, which is ToolDispatch.nowCues plus its own) and its domain suffixes
+    (openSuffixes plus guardSuffixes' own). Read from the Swift, so the two never drift."""
+    dispatch = DISPATCH_SWIFT.read_text(encoding="utf-8")
+    gate = GATE_SWIFT.read_text(encoding="utf-8")
+    cues = _swift_strings(dispatch, "webAskCues") + _swift_strings(dispatch, "nowCues") + _swift_strings(gate, "nowCues")
+    suffixes = _swift_strings(dispatch, "openSuffixes") + _swift_strings(dispatch, "guardSuffixes")
+    return cues, suffixes
+
+
+def asks_for_the_web(question: str, guard: tuple[list[str], list[str]] | None = None) -> bool:
+    """ToolDispatch.asksForTheWeb: a cue among the turn's words (ToolGroupRouter.mentions: lower-cased
+    letters and digits, joined by single spaces), or a URL or domain under a guard suffix."""
+    cues, suffixes = guard or web_guard()
+    joined = " " + " ".join(re.findall(r"[^\W_]+", question.lower())) + " "
+    if any(f" {cue} " in joined for cue in cues):
+        return True
+    address = rf"(https?://|\b[a-z0-9-]+\.({'|'.join(suffixes)})\b)"
+    return re.search(address, question, re.IGNORECASE) is not None
+
+
+def reaches_the_head(prompts: list[str]) -> np.ndarray:
+    """Where SearchRouter would be asked about a web pick: the turn doesn't ask for the web in words."""
+    guard = web_guard()
+    return np.array([not asks_for_the_web(prompt, guard) for prompt in prompts], dtype=bool)
+
+
+def fold_group(item: dict) -> str:
+    """The CV group: a router item's group, a generated item's category."""
+    return f"{item['source']}:{item.get('group') or item.get('category')}"
+
+
+def cv_note(cv: np.ndarray, y: np.ndarray, reach: np.ndarray, threshold: float) -> str:
+    asked, local = y & reach, ~y & reach
+    return (
+        f"{int(asked.sum())} of {int(y.sum())} must-search items reach the head (the rest ask in words). "
+        f"Grouped CV at the threshold: {int((cv[asked] >= threshold).sum())}/{int(asked.sum())} of those kept, "
+        f"{int((cv[local] < threshold).sum())}/{int(local.sum())} local turns that reach it read local."
+    )
+
+
+def _render(threshold: float, bias: float, weights: str, trained: str, cv_note: str, fitted: bool = True) -> str:
+    note = "\n".join(f"//  {line}" for line in textwrap.wrap(cv_note, width=112))
+    picked = (
+        f"Picked to keep {RECALL:.0%} of the\n    /// must-search items that reach the head (no web or now words), in grouped cross-validation."
+        if fitted
+        else "The threshold is\n    /// unused while there are no weights: the probability is nil, the verdict web, and nothing is vetoed."
+    )
+    return f"""{HEADER}//  {trained}
+{note}
+//
+
+enum SearchRouterWeights {{
+    /// At or above: a web read the picker named runs; below, it is vetoed. {picked}
+    static let threshold: Double = {threshold:.9g}
+    static let bias: Double = {bias:.9g}
+    static let weights: [Double] = {weights}
+}}
+"""
+
+
+def render_swift(
+    weights: np.ndarray, bias: float, threshold: float, count: int, cv_note: str, candidates: bool = False
+) -> str:
+    rows = [", ".join(f"{w:.9g}" for w in weights[i : i + 8]) for i in range(0, len(weights), 8)]
+    body = "[\n        " + ",\n        ".join(rows) + ",\n    ]"
+    source = "candidate labels (no teacher pass: a look, not a ship)" if candidates else "teacher-confirmed labels"
+    trained = f"Trained on {count} prompts, {source}; the eval fixtures are its test set."
+    return _render(threshold, bias, body, trained, cv_note)
+
+
+def render_untrained() -> str:
+    return _render(
+        1.0, 0.0, "[]",
+        "UNTRAINED: no weights, so the head never vetoes. A teacher pass confirms the labels, then this runs.",
+        "No cross-validation yet.",
+        fitted=False,
+    )
+
+
+def main(argv: list[str]) -> int:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--labels", choices=["teacher", "candidates"], default="teacher")
+    ap.add_argument("--untrained", action="store_true", help="write the stub that never vetoes")
+    ap.add_argument("--out", type=Path, default=OUT)
+    args = ap.parse_args(argv)
+    if args.labels == "candidates" and args.out.resolve() == OUT.resolve():
+        print("refused: a look on candidate labels is never written over the shipped weights; pass --out <a scratch "
+              "path>", file=sys.stderr)
+        return 2
+    if args.untrained:
+        args.out.write_text(render_untrained())
+        print(f"wrote {args.out}: UNTRAINED")
+        return 0
+
+    data = json.loads(DATA.read_text())["items"]
+    violations = held_out_violations([item["prompt"] for item in data], held_out_lines() + fixture_prompts())
+    if violations:
+        print(f"refused: {len(violations)} held-out line(s) in the data, e.g. {violations[0]}", file=sys.stderr)
+        return 2
+    candidates = args.labels == "candidates"
+    items, y = training_labels(data, candidates=candidates)
+    if y.sum() < 10 or (~y).sum() < 10:
+        print(f"refused: {int(y.sum())} search / {int((~y).sum())} local confirmed labels; run the teacher pass "
+              "first (or --labels candidates for a look)", file=sys.stderr)
+        return 2
+
+    import train_tool_router  # embed.swift, normalise, recall_threshold: the gate's recipe
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.model_selection import StratifiedGroupKFold, cross_val_predict
+
+    prompts = [item["prompt"] for item in items]
+    x = train_tool_router.normalise(train_tool_router.embed(prompts))
+    model = LogisticRegression(C=C, max_iter=5000, class_weight="balanced")
+    folds = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=0)
+    groups = [fold_group(item) for item in items]
+    cv = cross_val_predict(model, x, y, groups=groups, cv=folds, method="predict_proba")[:, 1]
+    reach = reaches_the_head(prompts)
+    threshold = train_tool_router.recall_threshold(cv[reach], y[reach], recall=RECALL)
+    note = cv_note(cv, y, reach, threshold)
+    model.fit(x, y)
+    args.out.write_text(
+        render_swift(model.coef_[0], float(model.intercept_[0]), threshold, len(items), note, candidates=candidates)
+    )
+    print(f"wrote {args.out}: threshold {threshold:.3f}; {note}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))

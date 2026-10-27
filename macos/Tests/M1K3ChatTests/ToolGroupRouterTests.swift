@@ -17,6 +17,14 @@
 //  dispatch, each to its own tool (real NLEmbedding).
 //  Review: Kev + claude-fable-5.1, 2026-10-25 — `pickerPrewarm` joins the flags-default-off pin (the prewarmed
 //  picker arm).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `toolSearchHead` (#713) joins the flags-default-off pins; the route
+//  carries the search head only with dispatch and the flag; gate and search head share the turn's one vector.
+//  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — both #713 pins can fail now: each route is required
+//  before its `staysLocal` is read, and the head is asked before the gate, so its embed proves it reads the turn's
+//  embedder and the gate's missing one proves the share. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — `macShipsTheSearchHeadOn`: Kev flipped the Mac to `whenUnset: true`;
+//  the bare default (iOS) stays off. Confidence 0.85.
 
 import Foundation
 @testable import M1K3Chat
@@ -296,16 +304,19 @@ struct ToolPickCascadeTests {
         #expect(!ToolRouterWiring.chainEnabled(defaults))
         #expect(!ToolRouterWiring.pickerPrewarmEnabled(defaults), "the prewarmed picker is an arm until its eval")
         #expect(!ToolRouterWiring.pickerPrewarmPrefixEnabled(defaults))
+        #expect(!ToolRouterWiring.searchHeadEnabled(defaults), "an arm until its teacher pass and eval")
         defaults.set(true, forKey: ToolRouterWiring.groupRouterKey)
         defaults.set(true, forKey: ToolRouterWiring.allTiersKey)
         defaults.set(true, forKey: ToolRouterWiring.chainKey)
         defaults.set(true, forKey: ToolRouterWiring.pickerPrewarmKey)
         defaults.set(true, forKey: ToolRouterWiring.pickerPrewarmPrefixKey)
+        defaults.set(true, forKey: ToolRouterWiring.searchHeadKey)
         #expect(ToolRouterWiring.groupRouterEnabled(defaults))
         #expect(ToolRouterWiring.allTiersEnabled(defaults))
         #expect(ToolRouterWiring.chainEnabled(defaults))
         #expect(ToolRouterWiring.pickerPrewarmEnabled(defaults))
         #expect(ToolRouterWiring.pickerPrewarmPrefixEnabled(defaults))
+        #expect(ToolRouterWiring.searchHeadEnabled(defaults))
     }
 
     @Test("a shell picks the unset default (the Mac: on, after the 10-10 arm); an explicit setting still wins")
@@ -316,12 +327,75 @@ struct ToolPickCascadeTests {
         #expect(ToolRouterWiring.groupRouterEnabled(defaults, whenUnset: true))
         #expect(ToolRouterWiring.allTiersEnabled(defaults, whenUnset: true))
         #expect(ToolRouterWiring.chainEnabled(defaults, whenUnset: true))
+        #expect(ToolRouterWiring.searchHeadEnabled(defaults, whenUnset: true))
         defaults.set(false, forKey: ToolRouterWiring.groupRouterKey)
         defaults.set(false, forKey: ToolRouterWiring.allTiersKey)
         defaults.set(false, forKey: ToolRouterWiring.chainKey)
+        defaults.set(false, forKey: ToolRouterWiring.searchHeadKey)
         #expect(!ToolRouterWiring.groupRouterEnabled(defaults, whenUnset: true))
         #expect(!ToolRouterWiring.allTiersEnabled(defaults, whenUnset: true))
         #expect(!ToolRouterWiring.chainEnabled(defaults, whenUnset: true))
+        #expect(!ToolRouterWiring.searchHeadEnabled(defaults, whenUnset: true))
+    }
+
+    /// Kev, 2026-10-27: the Mac ships the search head ON. The head itself ships as the untrained stub, which never
+    /// vetoes, so nothing changes for a user until trained weights pass the gate; then they are live with no flag move.
+    @Test("the Mac shell ships the search head on (whenUnset: true); the function's own default stays off for iOS")
+    func macShipsTheSearchHeadOn() throws {
+        var root = URL(filePath: #filePath).deletingLastPathComponent()
+        while !FileManager.default.fileExists(atPath: root.appending(path: "Package.swift").path) {
+            root = root.deletingLastPathComponent()
+            try #require(root.path != "/", "no Package.swift above \(#filePath)")
+        }
+        let shell = try String(
+            contentsOf: root.appending(path: "M1K3App/AppEnvironment+ChatHistory.swift"), encoding: .utf8
+        )
+        #expect(shell.contains("searchHead: ToolRouterWiring.searchHeadEnabled(whenUnset: true)"))
+        #expect(!shell.contains("searchHeadEnabled(whenUnset: false)"))
+        let suite = "ToolPickCascadeTests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+        #expect(!ToolRouterWiring.searchHeadEnabled(defaults), "iOS calls the bare default: still off there")
+    }
+
+    /// Each route is required first: a nil route also has a nil `staysLocal`, which would pass the off cases.
+    @Test("the route carries the search head only with dispatch and the flag: there is no veto point without a pick")
+    func searchHeadRidesTheDispatchRoute() throws {
+        let off = try #require(
+            ToolRouterWiring.route(provider: OtherBrain(), enabled: true, dispatch: true, allTiers: true)
+        )
+        #expect(off.staysLocal == nil)
+        let on = try #require(ToolRouterWiring.route(
+            provider: OtherBrain(), enabled: true, dispatch: true, allTiers: true, searchHead: true
+        ))
+        #expect(on.staysLocal != nil)
+        let pickless = try #require(
+            ToolRouterWiring.route(provider: OtherBrain(), enabled: true, allTiers: true, searchHead: true)
+        )
+        #expect(pickless.staysLocal == nil)
+    }
+
+    /// The head is asked FIRST on each turn, so the embed it causes proves it reads the injected one-turn
+    /// embedder; the gate after it then embeds nothing, which proves the two share the vector.
+    @Test("the search head reads the turn's one vector, and the gate reuses it: one embed per turn (#512)")
+    func searchHeadSharesTheTurnVector() throws {
+        let calls = Mutex<[String]>([])
+        let embedder = OneTurnEmbedder { text in
+            calls.withLock { $0.append(text) }
+            return [Double](repeating: 0.1, count: 512)
+        }
+        let route = try #require(ToolRouterWiring.compose(
+            provider: OtherBrain(), enabled: true, dispatch: true, allTiers: true, searchHead: true, embedder: embedder
+        ))
+        let staysLocal = try #require(route.staysLocal)
+        var expected: [String] = []
+        for text in ["tell me the history of Dublin", "what about Cork?"] {
+            _ = staysLocal(text)
+            expected.append(text)
+            #expect(calls.withLock { $0 } == expected, "the head embedded through the turn's embedder")
+            _ = route.decide(text)
+            #expect(calls.withLock { $0 } == expected, "the gate embedded the turn a second time")
+        }
     }
 }
 

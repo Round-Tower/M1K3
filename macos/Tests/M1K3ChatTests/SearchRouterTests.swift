@@ -1,0 +1,192 @@
+//
+//  SearchRouterTests.swift
+//  M1K3ChatTests
+//
+//  The search head (#713): its logistic reading over a synthetic head, the ways it fails toward
+//  NO veto (no vector, a wrong-sized one, a zero vector, a non-finite score, no weights), and the
+//  shipped weights over the real embedder on fixtures they never trained on. Until a teacher pass
+//  trains it, the shipped head is an UNTRAINED stub that never vetoes: the web-read pin holds
+//  either way, and the stable-knowledge pin arms itself the day trained weights land.
+//
+//  Signed: Kev + claude-opus-5.5, 2026-10-26, Confidence 0.8 (math and fail-open pinned; the
+//  fixture pins wait on trained weights). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — every web-read fixture asks for the web in words (`asksForTheWeb`),
+//  so no head can veto it; the #680 lines and world-knowledge fixtures carry no such words and stay the head's.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (2) — no fixture prompt is in tools/router/data/search_head_train.json
+//  (exact folded matches; near-copies and the rig lines are the python pin's). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — the eval's web reads are pinned to `webSourced`; the
+//  never-vetoed pin filtered to an empty set and could not fail, so four unguarded web-read fixtures (no web or now
+//  words) replace it: they are the only web reads the guard leaves to the head, and a trained head must read them
+//  web. Confidence 0.85.
+//
+
+import Foundation
+@testable import M1K3Chat
+@testable import M1K3Eval
+import NaturalLanguage
+import Testing
+
+struct SearchRouterTests {
+    /// Four dimensions, the first axis "needs the web".
+    private let head = SearchRouter.Head(threshold: 0.6, bias: -0.5, weights: [2, 0, 0, -1])
+
+    @Test("fails toward no veto: no vector, a wrong-sized one, a zero vector or a non-finite score reads web")
+    func failsTowardNoVeto() {
+        #expect(SearchRouter.decide(for: "q", embed: { _ in nil }, head: head).verdict == .web)
+        #expect(SearchRouter.decide(for: "q", embed: { _ in [1, 0] }, head: head).verdict == .web)
+        #expect(SearchRouter.probability([0, 0, 0, 0], head: head) == nil)
+        #expect(SearchRouter.probability([.nan, 0, 0, 0], head: head) == nil)
+        #expect(SearchRouter.verdict(probability: nil, head: head) == .web)
+        #expect(SearchRouter.verdict(probability: .nan, head: head) == .web)
+        #expect(SearchRouter.verdict(probability: .infinity, head: head) == .web)
+    }
+
+    @Test("the threshold splits the verdict: at or above reads web, below stays local")
+    func threshold() {
+        #expect(SearchRouter.verdict(probability: 0.6, head: head) == .web)
+        #expect(SearchRouter.verdict(probability: 0.599, head: head) == .local)
+        #expect(SearchRouter.verdict(probability: 1, head: head) == .web)
+        #expect(SearchRouter.verdict(probability: 0, head: head) == .local)
+    }
+
+    @Test("probability is the logistic of the L2-normalised dot product, whatever the vector's scale")
+    func probabilityMath() throws {
+        let p1 = try #require(SearchRouter.probability([1, 0, 0, 0], head: head))
+        let p7 = try #require(SearchRouter.probability([7, 0, 0, 0], head: head))
+        #expect(abs(p1 - p7) < 1e-12)
+        #expect(abs(p1 - 1 / (1 + exp(-(2 - 0.5)))) < 1e-12)
+        // The fourth axis pulls toward local: normalised [0, 0, 0, 1] → z = -1 - 0.5.
+        let local = try #require(SearchRouter.probability([0, 0, 0, 3], head: head))
+        #expect(abs(local - 1 / (1 + exp(1.5))) < 1e-12)
+        let decision = SearchRouter.decide(for: "q", embed: { _ in [0, 0, 0, 3] }, head: head)
+        #expect(decision.verdict == .local)
+        #expect(decision.probability.map { abs($0 - local) < 1e-12 } == true)
+    }
+
+    @Test("an untrained head (no weights) scores nothing and never vetoes")
+    func untrainedNeverVetoes() {
+        let untrained = SearchRouter.Head(threshold: 1, bias: 0, weights: [])
+        #expect(!untrained.isTrained)
+        #expect(head.isTrained)
+        #expect(SearchRouter.probability([], head: untrained) == nil)
+        let decision = SearchRouter.decide(
+            for: "tell me the history of Dublin", embed: { _ in [1, 0, 0, 0] }, head: untrained
+        )
+        #expect(decision == SearchRouter.Decision(verdict: .web, probability: nil))
+    }
+
+    @Test("the shipped head is the untrained stub, or 512 finite weights with a threshold inside (0, 1)")
+    func shippingShape() {
+        let shipping = SearchRouter.Head.shipping
+        guard shipping.isTrained else {
+            #expect(shipping.weights.isEmpty)
+            return
+        }
+        #expect(shipping.weights.count == 512)
+        let finite = shipping.weights.allSatisfy { $0.isFinite }
+        #expect(finite)
+        #expect(shipping.bias.isFinite)
+        #expect(shipping.threshold > 0 && shipping.threshold < 1)
+    }
+
+    /// M1K3Eval can't import M1K3Chat, so the fixtures keep their own list of web reads. A web tool added to
+    /// `webSourced` and not there would leave the #680 fixtures' `avoids` checks blind to it.
+    @Test("the eval's web reads are exactly the dispatcher's web-sourced tools")
+    func evalWebReadsMirrorTheDispatcher() {
+        #expect(Set(ChatEvalFixtures.webReads) == ToolDispatch.webSourced)
+        #expect(ChatEvalFixtures.webReads.count == ToolDispatch.webSourced.count, "a web read is listed twice")
+    }
+}
+
+/// The shipped search head over the real embedder, scored on the eval fixtures and the #680 lines
+/// it was NOT trained on. Needs Apple's English sentence embedding.
+@Suite(.enabled(if: NLEmbedding.sentenceEmbedding(for: .english) != nil))
+struct SearchRouterFixtureTests {
+    private let embedder = NLSentenceEmbedder()
+
+    /// #680, live on 2026-10-25 (voice, Big): both turns web-searched a stable history.
+    static let issue680Lines = ["tell me the history of Dublin", "what about Cork?"]
+
+    /// The fixtures that must read the web, and the ones the head exists for.
+    static var webReadFixtures: [ChatEvalFixture] {
+        ChatEvalFixtures.toolUse.filter { fixture in
+            let required = (fixture.expectation.mustCallTool.map { [$0] } ?? []) + fixture.expectation.alsoCallTools
+            return required.contains { ToolDispatch.webSourced.contains($0) }
+        }
+    }
+
+    /// The web reads with no web or now words in them (#713 review): the head alone decides them, so they
+    /// are the veto's cost side. A paired arm reads a false veto as a missed `calls web_search`.
+    static let unguardedWebReadIDs: Set<String> = [
+        "tool-web-unguarded-release", "tool-web-unguarded-rate", "tool-web-unguarded-tram",
+        "tool-web-unguarded-record",
+    ]
+
+    @Test("every web-read fixture asks for the web in words, save the unguarded ones kept for the head")
+    func webReadFixturesAreGuarded() {
+        let webReads = Self.webReadFixtures
+        #expect(
+            webReads.count >= 6 + Self.unguardedWebReadIDs.count,
+            "the web-read fixtures went missing: \(webReads.map(\.id))"
+        )
+        let unguarded = Set(webReads.filter { !ToolDispatch.asksForTheWeb($0.prompt) }.map(\.id))
+        #expect(unguarded == Self.unguardedWebReadIDs, "left to the head: \(unguarded.sorted())")
+    }
+
+    @Test(
+        "the unguarded web reads read web: a veto would hide the read they need",
+        .enabled(if: SearchRouter.Head.shipping.isTrained)
+    )
+    func unguardedWebReadsReadWeb() {
+        let unguarded = Self.webReadFixtures.filter { Self.unguardedWebReadIDs.contains($0.id) }
+        #expect(unguarded.count == Self.unguardedWebReadIDs.count)
+        let vetoed = unguarded.filter { SearchRouter.decide(for: $0.prompt, embed: embedder.vector).verdict == .local }
+        #expect(vetoed.isEmpty, "vetoed: \(vetoed.map(\.id))")
+    }
+
+    @Test("the #680 lines and the world-knowledge fixtures are the head's to decide: no web words guard them")
+    func stableKnowledgeIsLeftToTheHead() {
+        let stable = ChatEvalFixtures.worldKnowledge.map(\.prompt) + Self.issue680Lines
+        let guarded = stable.filter(ToolDispatch.asksForTheWeb)
+        #expect(guarded.isEmpty, "guarded, so the head never sees them: \(guarded)")
+    }
+
+    @Test("stable knowledge and the #680 lines stay local", .enabled(if: SearchRouter.Head.shipping.isTrained))
+    func stableKnowledgeStaysLocal() {
+        let prompts = ChatEvalFixtures.worldKnowledge.map(\.prompt) + Self.issue680Lines
+        let searched = prompts.filter { SearchRouter.decide(for: $0, embed: embedder.vector).verdict == .web }
+        #expect(searched.isEmpty, "still searching: \(searched)")
+    }
+
+    /// The fixtures are the head's test set (#631): not one may train it. Exact folded matches here;
+    /// near-copies, the rig lines and the #680 lines are pinned by tools/router/test_train_search_head.py.
+    @Test("no fixture prompt is in the search head's training data")
+    func noFixturePromptIsInTheTrainingData() throws {
+        var root = URL(filePath: #filePath).deletingLastPathComponent()
+        while !FileManager.default.fileExists(atPath: root.appending(path: "Package.swift").path) {
+            root = root.deletingLastPathComponent()
+            try #require(root.path != "/", "no Package.swift above \(#filePath)")
+        }
+        let data = try Data(contentsOf: root.appending(path: "tools/router/data/search_head_train.json"))
+        let items = try #require(
+            (JSONSerialization.jsonObject(with: data) as? [String: Any])?["items"] as? [[String: Any]]
+        )
+        let trained = Set(items.compactMap { ($0["prompt"] as? String).map(Self.fold) })
+        #expect(trained.count > 400)
+        let leaked = ChatEvalFixtures.all.filter { trained.contains(Self.fold($0.prompt)) }
+        #expect(leaked.isEmpty, "fixtures in the training data: \(leaked.map(\.id))")
+    }
+
+    /// Lowercased words, apostrophes dropped: train_search_head.fold's reading, accented letters kept.
+    static func fold(_ text: String) -> String {
+        text.lowercased().replacingOccurrences(of: "'", with: "").replacingOccurrences(of: "’", with: "")
+            .split { !$0.isLetter && !$0.isNumber }.joined(separator: " ")
+    }
+
+    @Test("most open chat and humour stays local", .enabled(if: SearchRouter.Head.shipping.isTrained))
+    func chatMostlyStaysLocal() {
+        let chat = ChatEvalFixtures.openChat + ChatEvalFixtures.humour
+        let local = chat.filter { SearchRouter.decide(for: $0.prompt, embed: embedder.vector).verdict == .local }
+        #expect(local.count * 2 >= chat.count, "only \(local.count)/\(chat.count) chat fixtures stayed local")
+    }
+}

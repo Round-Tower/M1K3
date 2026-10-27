@@ -122,6 +122,14 @@
 //  stated-style line (`M1K3Persona.setUserStyle`) for every local brain, so the paired style-on/style-off
 //  open-chat arm runs on one build; the PCC column skips while a style is set, like a profile (nothing about
 //  the user reaches Apple's server from an eval). Verify-by-eval owed. Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `_ROUTER_SEARCH=1` puts the search head (#713, `toolSearchHead`) on
+//  the dispatch route, as `-toolSearchHead YES` does in the app; a veto shows as a `search-veto` route stage.
+//  Confidence 0.8 (the arm runs in the eval stage; this file compiles only under xcodebuild).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — the bare-generate observation says no tool was offered,
+//  so the #680 fixtures' `avoids X` skip there instead of passing by construction. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — the Mac now ships the search head on (`whenUnset: true`), and the
+//  driver sets `_ROUTER_SEARCH=1` under dispatch unless `--no-router-search`: the eval wires like the app.
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -391,7 +399,8 @@ enum ChatEvalStage {
         // dispatch on: a tool turn is picked (Apple's model) and run by the app, so a
         // Lil/Big cell measures `toolRouterAllTiers`. `_ROUTER_HEAD=1` puts the group
         // head in front of the pick (`toolGroupRouter`); `_ROUTER_CHAIN=1` lets a pick run
-        // two read-only tools (`toolChain`).
+        // two read-only tools (`toolChain`); `_ROUTER_SEARCH=1` lets the search head veto a web
+        // read on a turn it reads as local (`toolSearchHead`, #713).
         let stubs: [any AgentTool] = SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_TOOLS") == "none" ? [] : toolPalette
         // A seeded turn reads its document with the app's own corpus tools (the palette's three store
         // readers, AppEnvironment+ChatHistory): a dispatched search_knowledge answers from the tool's
@@ -414,10 +423,12 @@ enum ChatEvalStage {
             let route = PlainTurnRoute(decide: { ToolNeedRouter.decide(for: $0, embed: embedder.vector) }, instructions: nil)
             plainRoute = { route }
         case "dispatch":
+            let searchHead: Bool = SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH") == "1"
             let route = ToolRouterWiring.route(
                 provider: provider, enabled: true, dispatch: true,
                 groupRouter: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD") == "1", allTiers: true,
-                chain: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN") == "1"
+                chain: SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN") == "1",
+                searchHead: searchHead
             )
             plainRoute = { route }
         default:
@@ -1015,9 +1026,12 @@ enum ChatEvalStage {
                     try await provider.generate(prompt: fixture.prompt)
                 }
                 let ms = milliseconds(clock.now - start)
+                // No tool is on offer here, so an avoid list skips instead of passing (#713 review).
                 return ChatEvalScorer.score(
                     fixture: fixture,
-                    observation: EvalObservation(rawText: raw, latencyMS: ms, spokenText: spokenText(of: raw)),
+                    observation: EvalObservation(
+                        rawText: raw, latencyMS: ms, spokenText: spokenText(of: raw), toolsOffered: false
+                    ),
                     latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
             }

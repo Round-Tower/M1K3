@@ -18,6 +18,13 @@
 //  3.8 s picker-route first token had no line to attribute it to).
 //  Review: Kev + claude-opus-5-5, 2026-10-26 — `DocumentCorrectedTests`: a lone lookup_fact with a kept document is
 //  plain; no document, web reads, chains and a lookup about now stay put.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `SearchCorrectedTests` (#713): a turn the search head reads as local
+//  loses every web read; a local link still runs, nothing left is a plain turn, a web verdict changes nothing.
+//  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (2) — `asksForTheWeb`: an explicit web ask (search, look up, online, a
+//  URL or domain) or a question about now is never vetoed; the #680 lines and stable facts are left to the head.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — the guard's holes as rows: "lookup", Wikipedia, a wiki,
+//  Bing, DuckDuckGo, headlines, and .gov/.ai/.info domains. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -442,5 +449,100 @@ struct DocumentCorrectedTests {
         let question = "Who won the hurling final this year?"
         let corrected = ToolDispatch.corrected(pick, palette: palette, question: question)
         #expect(ToolDispatch.documentCorrected(corrected, documentsKept: true).tool == "web_search")
+    }
+}
+
+/// The search head's veto (#713): on 2026-10-25 voice mode on Big sent "tell me the history of Dublin" to
+/// web_search (30.8 s to the first chunk). When the head reads a turn as local, every web read leaves the
+/// pick; it never adds one.
+struct SearchCorrectedTests {
+    @Test("a lone web read on a turn read as local is a plain turn, its query kept",
+          arguments: ["web_search", "lookup_fact", "fetch_page"])
+    func webReadIsVetoed(tool: String) {
+        let pick = ToolPick(tool: tool, query: "history of Dublin")
+        #expect(ToolDispatch.searchCorrected(pick, staysLocal: true)
+            == ToolPick(tool: ToolPick.noTool, query: "history of Dublin"))
+    }
+
+    @Test("a turn read as web keeps its pick exactly, chain and all")
+    func webVerdictChangesNothing() {
+        let chain = ToolPick(tool: "web_search", query: "weather", then: [ToolPick(tool: "calendar_peek", query: "")])
+        #expect(ToolDispatch.searchCorrected(chain, staysLocal: false) == chain)
+        let lone = ToolPick(tool: "lookup_fact", query: "Cork founding year")
+        #expect(ToolDispatch.searchCorrected(lone, staysLocal: false) == lone)
+    }
+
+    @Test("local reads, actions and none are never touched",
+          arguments: [
+              "datetime", "search_knowledge", "recent_activity", "calendar_peek", ToolPick.action, ToolPick.noTool,
+          ])
+    func localPicksStay(tool: String) {
+        let pick = ToolPick(tool: tool, query: "q")
+        #expect(ToolDispatch.searchCorrected(pick, staysLocal: true) == pick)
+    }
+
+    @Test("in a chain only the web links leave: a local read still runs, first in line")
+    func chainKeepsLocalLinks() {
+        let webTail = ToolPick(
+            tool: "datetime", query: "", then: [ToolPick(tool: "web_search", query: "Cork founding")]
+        )
+        #expect(ToolDispatch.searchCorrected(webTail, staysLocal: true) == ToolPick(tool: "datetime", query: ""))
+        let webHead = ToolPick(
+            tool: "web_search", query: "weather", then: [ToolPick(tool: "calendar_peek", query: "tomorrow")]
+        )
+        #expect(ToolDispatch.searchCorrected(webHead, staysLocal: true)
+            == ToolPick(tool: "calendar_peek", query: "tomorrow"))
+        let allWeb = ToolPick(tool: "web_search", query: "a", then: [ToolPick(tool: "lookup_fact", query: "b")])
+        #expect(ToolDispatch.searchCorrected(allWeb, staysLocal: true) == ToolPick(tool: ToolPick.noTool, query: "a"))
+    }
+
+    @Test("readsTheWeb: any link of the pick is a web read")
+    func readsTheWeb() {
+        #expect(ToolDispatch.readsTheWeb(ToolPick(tool: "fetch_page", query: "https://m1k3.app")))
+        #expect(ToolDispatch.readsTheWeb(
+            ToolPick(tool: "datetime", query: "", then: [ToolPick(tool: "lookup_fact", query: "x")])
+        ))
+        #expect(!ToolDispatch.readsTheWeb(ToolPick(tool: "search_knowledge", query: "seal")))
+        #expect(!ToolDispatch.readsTheWeb(ToolPick(tool: ToolPick.noTool, query: "")))
+    }
+
+    /// A head trained on candidate labels (2026-10-26, uncommitted look) read "Fetch the web site m1k3.app…" as
+    /// local at p=0.014: a sentence vector alone can veto an explicit ask. The user's own words win.
+    @Test("an explicit web ask or a question about now is never vetoable", arguments: [
+        "Search the web for the latest news headlines about Apple Silicon today.",
+        "Look up the factual founding year of the city of Cork from a reference source.",
+        "Fetch the web site m1k3.app and give me your read on how we're aligning.",
+        "Can you google the train times to Galway?",
+        "What does https://example.com/about say?",
+        "Who won the All-Ireland hurling final this year?",
+        "What's the newest Claude model?",
+        "What's the weather in Cork tomorrow?",
+        "Read me the news.",
+        // The review's holes (2026-10-26): the one-word verb, named sources, and domains past the open list.
+        "Please lookup the founding year of Cork.",
+        "What does Wikipedia say about Cork?",
+        "Check the wiki for the Spire's height.",
+        "Ask Bing who designed the Spire.",
+        "Try DuckDuckGo for vegan places in Galway.",
+        "Give me the headlines.",
+        "What is on nasa.gov about the rover?",
+        "What does anthropic.ai say about its models?",
+        "Is the form on citizensinformation.info?",
+    ])
+    func explicitAsksAreNeverVetoable(question: String) {
+        #expect(ToolDispatch.asksForTheWeb(question))
+        #expect(!ToolDispatch.vetoable(ToolPick(tool: "web_search", query: "q"), question: question))
+    }
+
+    @Test("a stable question with no web words is left to the head", arguments: [
+        "tell me the history of Dublin", "what about Cork?", "Who painted Guernica?",
+        "Which river flows through Dublin?",
+        "Why did the Titanic sink so fast?",
+    ])
+    func stableQuestionsAreLeftToTheHead(question: String) {
+        #expect(!ToolDispatch.asksForTheWeb(question))
+        #expect(ToolDispatch.vetoable(ToolPick(tool: "web_search", query: "q"), question: question))
+        let local = ToolPick(tool: "datetime", query: "")
+        #expect(!ToolDispatch.vetoable(local, question: question), "no web read, no veto")
     }
 }

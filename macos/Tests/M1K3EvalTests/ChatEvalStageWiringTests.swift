@@ -22,6 +22,8 @@
 //  through `CoolHeadPolicy.advance` into a `CoolHeadNoteSlot` the responder takes from, and `.note` is captured.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — #697 pre-push review fold: `runEmbeds` keeps its `mechanic` clause,
 //  so a mechanic-only run warms the embedder before fixture 1. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #728's master merge: the bare arm hands in the spoken text AND says no
+//  tool was offered (`toolsOffered: false`, #713), so its pin names both. Confidence 0.85.
 //
 
 import Foundation
@@ -90,8 +92,8 @@ struct ChatEvalStageWiringTests {
         #expect(text.components(separatedBy: "spokenText: spokenText(of: raw)").count - 1 == 2)
         let live = try Self.body(of: "private static func livePathObservation(", in: text)
         #expect(live.contains("spokenText: spokenText(of: raw)"), "the live arm drops the spoken text")
-        #expect(text.contains("EvalObservation(rawText: raw, latencyMS: ms, spokenText: spokenText(of: raw))"),
-                "the bare arm drops the spoken text")
+        #expect(text.contains("rawText: raw, latencyMS: ms, spokenText: spokenText(of: raw), toolsOffered: false"),
+                "the bare arm drops the spoken text, or says it offers tools (#713: an avoid list skips there)")
         let spoken = try Self.body(of: "private static func spokenText(of ", in: text)
         let seams = ["ThinkStripper.strip(", "StreamedAnswerFolder(", "SpokenAnswerEnd.start(in:",
                      "FollowUpSplit.trailerStart", "SpeechTextPolish.spokenSentence"]

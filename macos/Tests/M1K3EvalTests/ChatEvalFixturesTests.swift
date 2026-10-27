@@ -26,6 +26,8 @@
 //  passes what-leaves.
 //  Review: same day (pre-push review fold) — the row uses the Mac's own device noun, "this machine".
 //  Review: same day — the row follows the clause's verdict-first wording ("Yes, some of it can.").
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — the #680 fixtures (#713): world knowledge that must avoid every web
+//  read, each avoided tool one the stub palette offers, and no fixture both requires and avoids a tool.
 
 import Foundation
 @testable import M1K3Eval
@@ -353,6 +355,29 @@ struct ChatEvalFixturesTests {
             #expect(Set(tools).count == tools.count, "\(fixture.id) repeats a tool")
             #expect(tools.allSatisfy(names.contains), "\(fixture.id) names a tool no stub offers: \(tools)")
             #expect(fixture.id.hasPrefix("tool-chain-"), "\(fixture.id) should be named tool-chain-*")
+        }
+    }
+
+    /// #680 (2026-10-25): voice mode on Big web-searched "tell me the history of Dublin", then "what about
+    /// Cork?". The search head (#713) is gated on these flipping to no-search with the web fixtures still
+    /// searching, which only an `avoids` check can show.
+    @Test("the #680 fixtures are world knowledge that must avoid every web read the stub palette offers")
+    func issue680FixturesAvoidTheWeb() throws {
+        let names = Set(ChatEvalStubPalette.names)
+        for id in ["world-dublin-history", "world-cork-history"] {
+            let fixture = try #require(ChatEvalFixtures.worldKnowledge.first { $0.id == id }, "\(id) is missing")
+            let avoided = Set(fixture.expectation.mustNotCallTools)
+            #expect(avoided == ["web_search", "lookup_fact", "fetch_page"], "\(id) avoids \(avoided.sorted())")
+            #expect(avoided.isSubset(of: names), "\(id) avoids a tool no stub offers: it could never fail")
+        }
+    }
+
+    @Test("no fixture both requires and avoids the same tool")
+    func noFixtureRequiresAndAvoids() {
+        for fixture in ChatEvalFixtures.all {
+            let exp = fixture.expectation
+            let required = Set((exp.mustCallTool.map { [$0] } ?? []) + exp.alsoCallTools)
+            #expect(required.isDisjoint(with: exp.mustNotCallTools), "\(fixture.id) contradicts itself")
         }
     }
 

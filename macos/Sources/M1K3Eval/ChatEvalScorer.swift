@@ -115,6 +115,10 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — #697 pre-push review fold: the hardware list now enforces what the line
 //  above claims. Chip, silicon, temperature, thermal and a spelled-out percent joined it, with the plural forms
 //  cpus, gpus and chargers. Every entry is exercised by a table test. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — `avoids X` (#713): one check per `mustNotCallTools` entry, failing on
+//  a call and naming every call, so a chateval shows the #680 fixtures searching or not. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — `EvalObservation.toolsOffered` (default true): a path
+//  that offers no tool (bare generate) makes `avoids X` skip, not pass by construction. Confidence 0.9.
 
 import Foundation
 import M1K3Inference
@@ -173,6 +177,9 @@ public struct EvalObservation: Sendable, Equatable {
     /// The `.note` lines the turn reported on its activity channel (Cool Head's, #697), in order.
     /// Only the `mechanic` kind scores them.
     public let turnNotes: [String]
+    /// False on a path that offers the brain no tool at all (bare generate): there an `avoids X` check
+    /// would pass by construction, so it skips (#713 review).
+    public let toolsOffered: Bool
 
     public init(
         rawText: String,
@@ -183,7 +190,8 @@ public struct EvalObservation: Sendable, Equatable {
         thinkMS: Int? = nil,
         generation: GenerationFigures? = nil,
         spokenText: String? = nil,
-        turnNotes: [String] = []
+        turnNotes: [String] = [],
+        toolsOffered: Bool = true
     ) {
         self.rawText = rawText
         self.toolCalls = toolCalls
@@ -194,6 +202,7 @@ public struct EvalObservation: Sendable, Equatable {
         self.generation = generation
         self.spokenText = spokenText
         self.turnNotes = turnNotes
+        self.toolsOffered = toolsOffered
     }
 }
 
@@ -948,6 +957,20 @@ public enum ChatEvalScorer {
                 name: "calls \(tool)",
                 outcome: called ? .pass : .fail,
                 detail: called ? "" : "called \(actuallyCalled)"
+            ))
+        }
+        // #713: a tool the turn must not reach (stable knowledge answered from a web search, #680). With no
+        // tool on offer (bare generate) nothing could be called, so the check skips rather than pass.
+        for tool in exp.mustNotCallTools {
+            guard observation.toolsOffered else {
+                checks.append(EvalCheck(name: "avoids \(tool)", outcome: .skip, detail: "no tools offered (bare arm)"))
+                continue
+            }
+            let called = observation.toolCalls.contains(tool)
+            checks.append(EvalCheck(
+                name: "avoids \(tool)",
+                outcome: called ? .fail : .pass,
+                detail: called ? "called \(observation.toolCalls.joined(separator: ","))" : ""
             ))
         }
 

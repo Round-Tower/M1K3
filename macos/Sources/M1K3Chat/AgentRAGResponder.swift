@@ -225,6 +225,15 @@
 //  effort, read once per turn after the defer, availability and image gates and sent as `.note` on the activity
 //  channel. It never reaches `turnClauses()` or a prompt builder: every prompt byte is unchanged, pinned by test.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 — the search head's veto (#713) after `documentCorrected`: when the
+//  route carries `staysLocal` and the pick reads the web, a local verdict takes the web reads out
+//  (`searchCorrected`); a pick left empty answers on the plain route with the turn's chunks and history. Logged
+//  (`search head:`) and recorded as a `search-veto` stage for the eval. Chat verdicts and native agent calls are
+//  untouched. Confidence 0.8 (pinned; flagged off, the head untrained until its teacher pass and paired arm).
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (2) — the head is asked only on a `ToolDispatch.vetoable` pick: an
+//  explicit web ask or a question about now never reaches it. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-26 (3) — the veto's log names the web reads it dropped (a chain's web link
+//  can be its tail, where the head tool was named). Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -692,7 +701,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 var agentTools = tools
                 if let picker { // a tools verdict: never after a plain turn
                     let outcome = await runDispatchedTurn(
-                        question: question, picker: picker, tools: tools, chunks: turnChunks,
+                        question: question, picker: picker, staysLocal: plainRoute?.staysLocal,
+                        tools: tools, chunks: turnChunks,
                         memories: cappedMemories, history: history, instructions: routeInstructions,
                         onActivity: onActivity, continuation: continuation
                     )
@@ -984,6 +994,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     private func runDispatchedTurn(
         question: String,
         picker: @Sendable (String, String) async -> ToolPick?,
+        staysLocal: (@Sendable (String) -> SearchRouter.Decision)?,
         tools: [any AgentTool],
         chunks: [ChunkHit],
         memories: [ChunkHit],
@@ -1008,10 +1019,30 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // A question about what the user decided went to Wikipedia (2026-10-20): it goes to their knowledge.
         let corrected = ToolDispatch.corrected(picked, palette: tools, question: question)
         // A reference lookup the user's own documents answer reads them instead (2026-10-26).
-        let pick = ToolDispatch.documentCorrected(corrected, documentsKept: Self.keptUserDocument(chunks))
+        var pick = ToolDispatch.documentCorrected(corrected, documentsKept: Self.keptUserDocument(chunks))
         if pick != corrected {
             Self.log.notice("tool dispatch: lookup_fact, but kept chunks answer — a plain turn reads them")
             return await plain()
+        }
+        // The search head (#713, `toolSearchHead`): asked only when the pick reads the web and the user
+        // didn't ask for the web in words, so it never adds a call and never overrides an explicit ask.
+        // A local verdict takes the web reads out; nothing left falls to the none branch.
+        if let staysLocal, ToolDispatch.vetoable(pick, question: question) {
+            let decision = staysLocal(question)
+            let score = decision.probability.map { String(format: "%.3f", $0) } ?? "none"
+            let vetoed = ToolDispatch.searchCorrected(pick, staysLocal: decision.verdict == .local)
+            if vetoed != pick {
+                // Name the web reads that left, not the head: a chain's web link can be its tail.
+                let dropped = ([pick] + pick.then).map(\.tool).filter(ToolDispatch.webSourced.contains)
+                    .joined(separator: ",")
+                Self.log.notice(
+                    "search head: local p=\(score, privacy: .public) — \(dropped, privacy: .public) vetoed"
+                )
+                ToolRouterWiring.pickRecorder?.record(.searchVeto)
+                pick = vetoed
+            } else {
+                Self.log.notice("search head: web p=\(score, privacy: .public)")
+            }
         }
         if pick.tool == ToolPick.noTool {
             Self.log.notice("tool dispatch: none — a plain turn answers")
