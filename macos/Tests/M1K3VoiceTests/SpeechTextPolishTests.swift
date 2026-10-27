@@ -231,6 +231,46 @@ struct SpeechTextPolishTests {
         #expect(polished.contains("More prose follows."))
         #expect(!polished.contains("`"))
     }
+
+    // MARK: - Typed answer blocks (#717)
+
+    @Test("a steps block speaks as sentences, never as JSON")
+    func typedStepsSpeakAsSentences() {
+        let text = "Here's how:\n```m1k3-steps\n{\"steps\": [\"Loosen the **nut**\", \"Lift the cover.\"]}\n```\nThat's it."
+        let polished = SpeechTextPolish.polish(text)
+        #expect(polished == "Here's how:\nStep 1: Loosen the nut. Step 2: Lift the cover.\nThat's it.")
+        #expect(!polished.contains("{"))
+        #expect(!polished.contains("steps\""))
+        #expect(SpeechTextPolish.polish(polished) == polished)
+    }
+
+    @Test("a lone closed typed fence (what the sentence folder emits) speaks its sentences")
+    func typedFenceSentenceSpeaks() {
+        let chunk = "```m1k3-choices\n{\"prompt\": \"Which engine?\", \"options\": [\"Lil\", \"Big\", \"Mini\"]}\n```"
+        #expect(SpeechTextPolish.spokenSentence(chunk) == "Which engine? Options: Lil, Big, or Mini.")
+    }
+
+    @Test("a malformed or unclosed typed fence is skipped by the sentence lane, not read raw")
+    func malformedTypedFenceIsSilent() {
+        #expect(SpeechTextPolish.spokenSentence("```m1k3-steps\n{\"steps\": [1, 2]}\n```") == nil)
+        #expect(SpeechTextPolish.spokenSentence("```m1k3-steps\n{\"steps\": [\"Lo") == nil)
+        let answer = "Try this.\n```m1k3-choices\n{\"prompt\": \"Pick\"}\n```"
+        #expect(SpeechTextPolish.polish(answer) == "Try this.")
+    }
+
+    @Test("a choices block before a FOLLOWUPS trailer speaks the options and not the trailer")
+    func typedChoicesBeforeFollowUps() {
+        let text = "Pick one:\n```m1k3-choices\n{\"prompt\": \"Tea or coffee?\", \"options\": [\"Tea\", \"Coffee\"]}\n```\n"
+            + "FOLLOWUPS: [\"How strong?\"]"
+        #expect(SpeechTextPolish.polish(text) == "Pick one:\nTea or coffee? Options: Tea or Coffee.")
+    }
+
+    @Test("an ordinary fence that merely mentions a typed tag is still read verbatim")
+    func ordinaryFenceWithTypedTagVerbatim() {
+        let text = "The format:\n````\n```m1k3-steps\n{\"steps\": [\"One\"]}\n```\n````\nDone."
+        let polished = SpeechTextPolish.polish(text)
+        #expect(polished.contains("{\"steps\": [\"One\"]}"))
+    }
 }
 
 // Review: Kev + claude-fable-5.1, 2026-09-12 — narration read a "Sources:" list and a

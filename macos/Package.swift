@@ -33,6 +33,9 @@
 //  product); no pin moves.
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — M1K3AnswerBlocks target + tests (#717: typed answer blocks,
 //  a Foundation + SwiftUI leaf). No package dependency moves. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — M1K3Voice depends on the M1K3AnswerBlocks leaf, so
+//  SpeechTextPolish speaks typed blocks as sentences instead of reading their JSON. Kev's taste call (a Voice →
+//  leaf edge, the M1K3LogCore precedent; the fallback is a duplicated scanner). Confidence 0.8.
 
 import Foundation
 import PackageDescription
@@ -433,9 +436,11 @@ let package = Package(
         // AVFoundation is a system framework — no third-party dep.
         .target(
             name: "M1K3Voice",
-            // M1K3LogCore only (dependency-free): the voice logger comes from the
-            // shared catalogue instead of a hand-built Logger(subsystem:category:).
-            dependencies: ["M1K3LogCore"],
+            // Leaves only: the voice logger comes from the shared catalogue
+            // (M1K3LogCore) instead of a hand-built Logger(subsystem:category:), and
+            // SpeechTextPolish speaks typed answer blocks as sentences through
+            // M1K3AnswerBlocks (#717) — never M1K3Chat or M1K3Inference.
+            dependencies: ["M1K3LogCore", "M1K3AnswerBlocks"],
             path: "Sources/M1K3Voice"
         ),
         .testTarget(

@@ -146,6 +146,29 @@ struct AnswerBlockFuzzTests {
         #expect(malformed > 100)
     }
 
+    @Test("speech never voices a typed fence's JSON, and its output holds no typed fence")
+    func speechNeverReadsJSON() {
+        for text in AnswerBlockFuzz.cases() {
+            let spoken = AnswerBlockSpeech.replacingTypedFences(in: text)
+            // Every typed region is gone: re-segmenting finds no block or skeleton.
+            let again = AnswerBlockSegmenter.segments(in: spoken)
+            #expect(!again.contains { if case .markdown = $0 { false } else { true } }, "\(text.debugDescription)")
+            #expect(AnswerBlockSpeech.replacingTypedFences(in: spoken) == spoken)
+            // A JSON key reaches speech only from text outside the typed regions
+            // (a mutation that broke an opener makes ordinary code, read as today).
+            var outside = ""
+            var cursor = text.startIndex
+            for region in AnswerBlockSegmenter.typedRegions(in: text) {
+                outside += text[cursor ..< region.range.lowerBound]
+                cursor = region.range.upperBound
+            }
+            outside += text[cursor...]
+            for key in ["\"steps\"", "\"options\"", "\"prompt\""] where spoken.contains(key) {
+                #expect(outside.contains(key), "\(key) voiced from a typed fence: \(text.debugDescription)")
+            }
+        }
+    }
+
     @Test("the parser never traps on a mutated body, and anything it returns is well formed")
     func parserHoldsItsInvariants() {
         var parsed = 0
