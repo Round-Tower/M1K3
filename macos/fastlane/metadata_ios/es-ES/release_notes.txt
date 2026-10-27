@@ -1,16 +1,7 @@
-NOVEDADES DE LA 1.2.1
+NOVEDADES DE LA 1.3
 
-• Una actualización tranquila. Pequeños cambios por dentro, nada nuevo que aprender. Lo gordo llegó con la 1.2, justo aquí debajo.
-
-POR SI TE PERDISTE LA 1.2
-
-• Descargas que no se detienen. La descarga de un cerebro continúa cuando sales de la app, con su progreso en la pantalla de bloqueo y en la Isla Dinámica. La barra nunca se queda congelada en el 0 %, y si se atasca, te lo digo.
-• Escucha mis respuestas. Activa "Speak answers" y leo cada respuesta en voz alta según llega, con la voz que elegiste. Unos sonidos pequeños marcan las respuestas y el modo de voz; "Sound effects" los apaga.
-• Un pensamiento más fluido. Lil mantiene su razonamiento dentro de un presupuesto fijo y responde justo después, así que una pregunta difícil nunca se desboca.
-• Oigo mejor los nombres. En el modo de voz corrijo un nombre que he oído mal fijándome en las personas y los lugares que ya están en mi memoria.
-• Mejores respuestas de memoria. Pregúntame qué decidiste o qué me contaste y miro primero en tu conocimiento, no en la web.
-• Captura de memoria desactivada ahora significa nunca. Los mensajes que envías con ella apagada no se guardan jamás, ni siquiera al volver a abrir la app.
-• Una respuesta clara sobre privacidad. Pregúntame qué sale de tu dispositivo y empiezo por la verdad, y yo decido cuándo buscar.
+• Respuestas, no enlaces. Cuando leo una respuesta en voz alta, en el modo de voz o con "Speak answers" activado, me detengo al llegar a las fuentes en lugar de recitarte cada dirección web.
+• Pequeños cambios por dentro. Nada nuevo que aprender.
 
 ¿NUEVO EN M1K3? ESTO ES LO QUE HAGO
 

@@ -1,17 +1,9 @@
-NOUVEAU DANS LA 1.2.1
+NOUVEAU DANS LA 1.3
 
-• Je me repose quand tu te reposes. Laisse-moi tranquille environ 90 secondes, rien dans la zone de saisie et rien en cours, et le compagnon derrière ta conversation s'efface et n'est plus dessiné. Survole, clique, tape ou fais défiler, ou laisse-moi commencer à écouter, réfléchir ou parler, et je reviens. Mesuré sur un M1 Max, fenêtre de conversation au premier plan : la charge CPU au repos est passée d'environ 46 % à presque zéro. Ta batterie et tes ventilateurs devraient le sentir. Pareil dans la barre des menus et le sélecteur de cerveau ; avec Réduire les animations, pas de fondu.
-
-SI TU AS RATÉ LA 1.2
-
-• Une réflexion plus fluide. Lil garde sa réflexion dans un budget fixe et répond juste après, si bien qu'une question difficile ne part jamais à la dérive. La pensée en direct défile avec fluidité à mesure qu'elle grandit.
-• Une Constellation plus légère. Le champ de mémoire derrière ta conversation se dessine avec quelques formes au lieu de mille, pour environ un tiers du CPU d'avant.
-• Lil se réveille vite. Changer de cerveau ne laisse plus l'ancien chauffer en arrière-plan, et la progression ne reste jamais figée à 0 %.
-• Une voix plus rapide avec Big. Big garde tes derniers échanges à portée de main, environ quatre secondes de moins par tour parlé, et se souvient toujours de ce que tu as dit plus tôt.
-• J'entends mieux les noms. En mode vocal, je corrige un nom mal entendu vers les personnes et les lieux déjà dans ma mémoire.
-• De meilleures réponses de mémoire. Demande-moi ce que tu as décidé ou ce que tu m'as dit, et je cherche d'abord dans tes connaissances, pas sur le web.
-• Capture de mémoire désactivée veut maintenant dire jamais. Les tours que tu envoies avec elle coupée ne sont jamais gardés, même après un redémarrage.
-• Une réponse franche sur la confidentialité. Demande-moi ce qui quitte ton Mac et je commence par la vérité : une partie peut partir, quand la recherche web ou le cloud privé est activé.
+• Coupe-moi la parole. En mode vocal, commence à parler pendant que je réponds : je m'arrête et je t'écoute. L'annulation d'écho est maintenant activée par défaut, pour que je t'entende, toi, et pas moi. Ça marche avec le micro intégré de ton Mac ou un micro USB ; avec un casque Bluetooth, rien ne change.
+• Des réponses, pas des liens. Quand je lis une réponse à voix haute, je m'arrête aux sources au lieu d'égrener chaque adresse web.
+• Plus rapide dans les longues conversations. Je reprends là où s'est arrêté le dernier message au lieu de tout relire depuis le début. Mesuré sur un M1 Max, après le dixième message : Big répond environ six secondes plus tôt, Lil près d'une seconde plus tôt.
+• Tes documents d'abord. Demande un chiffre ou un nom qui figure dans un manuel ou un rapport que tu as ajouté, comme un couple de serrage, une date ou la personne qui a validé, et je réponds d'après ton document, sur ton Mac, au lieu de chercher en ligne.
 
 NOUVEAU SUR M1K3 ? VOICI CE QUE JE FAIS
 

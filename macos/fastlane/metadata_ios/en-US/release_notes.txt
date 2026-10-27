@@ -1,16 +1,7 @@
-NEW IN 1.2.1
+NEW IN 1.3
 
-• A quiet one. Small changes under the hood, nothing new to learn. The big stuff landed in 1.2, just below.
-
-IN CASE YOU MISSED 1.2
-
-• Downloads that keep going. A brain download carries on when you leave the app, with its progress on the Lock Screen and in the Dynamic Island. The bar never freezes at 0%, and a stall is named.
-• Hear my answers. Turn on Speak answers and I read each reply aloud as it arrives, in the voice you chose. Small sounds mark answers and voice mode; Sound effects turns them off.
-• Smoother thinking. Lil keeps its thinking to a set budget and answers straight after, so a hard question never runs away.
-• I hear names better. In voice mode I fix a misheard name toward the people and places already in my memory.
-• Better memory answers. Ask what you decided or told me and I look in your knowledge first, not the web.
-• Memory capture off now means never. Turns you send with it off are never kept, even after a relaunch.
-• A straight answer about privacy. Ask what leaves your device and I lead with the truth, and I decide when to search.
+• Answers, not links. When I speak a reply aloud, in voice mode or with Speak answers on, I stop at the sources instead of reading out every web address.
+• Small changes under the hood. Nothing new to learn.
 
 NEW TO M1K3? HERE'S WHAT I DO
 
