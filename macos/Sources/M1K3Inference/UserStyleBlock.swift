@@ -9,15 +9,18 @@
 //
 //  Whole facts, newest first, joined as sentences, inside the cap. The block ends at
 //  the first fact that would cross it: an older ask never leapfrogs a newer one that
-//  did not fit, because the older is often exactly what the newer corrected (when a
-//  correction lands below the embedder's twin bar both rows stay live, and the order
-//  is what the model reads). The newest fact is never lost: alone over the cap it is
-//  cut at a word boundary with an ellipsis, the About block's own rule.
+//  did not fit, because the older is often exactly what the newer corrected (a
+//  correction under the embedder's twin bar retires its ask only on an axis StyleAxis
+//  can place; otherwise both rows stay live, and the order is what the model reads).
+//  The newest fact is never lost: alone over the cap it is cut at a word boundary with
+//  an ellipsis, the About block's own rule.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.85, Prior: none (new file)
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — a cut that lands exactly on a word end
 //  keeps that word ("aaa bbb ccc" at 8 was "aaa…", now "aaa bbb…"); the boundaries are pinned exactly.
 //  Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — comment only: since the axis supersede (StyleAxis), a same-axis
+//  correction retires its ask, so both rows stay live only off the axes the table places. Confidence 0.9.
 //
 
 import Foundation

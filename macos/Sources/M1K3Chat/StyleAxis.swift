@@ -22,7 +22,8 @@
 //
 //  Known, accepted residue (pinned in StyleAxisTests): a narrower correction leaves a wider
 //  ask live ("formal tone" after "short, casual answers"); two asks on one axis that are both
-//  true ("short answers" and "short sentences") retire each other.
+//  true ("short answers" and "short sentences") retire each other, and so does a qualifier with
+//  no scope word ("headings in long answers" retires "short answers").
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.8 (pure and pinned; the cue table is
 //  the challenger's 2026-10-27 prototype, verified on the 8 MEMSTAT corrections and 11

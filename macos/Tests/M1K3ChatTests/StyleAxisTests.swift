@@ -87,6 +87,13 @@ struct StyleAxisTests {
         #expect(retires("The user wants no emoji in answers.", "The user wants answers in plain text without emoji."))
     }
 
+    @Test("known residue, pinned: two true asks on one axis, or an unscoped qualifier, still retire")
+    func sameAxisResidue() {
+        #expect(retires("The user prefers short answers.", "The user wants short sentences."))
+        // "in long answers" qualifies, but carries no scope word, so it reads as a length ask.
+        #expect(retires("The user prefers short answers.", "The user wants headings in long answers."))
+    }
+
     // MARK: - Unknown and scoped: the empty set, which never takes part
 
     @Test(

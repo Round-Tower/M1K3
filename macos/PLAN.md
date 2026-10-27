@@ -882,3 +882,37 @@ PCC wiring behind the FM27 gate) was challenger-tested; two findings flipped the
 <!-- Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.75 — 8 hand-curated pairs phrased the way
      the distiller is told to write style facts; real distiller wording may land elsewhere. Prior: none
      (new block). -->
+
+## Update — 2026-10-27: #699 the style contradiction, fixed — a correction retires its ask on its axis
+
+- **Kev's ruling:** "Fix this first before shipping." The MEMSTAT block above showed 7 of 8 style corrections
+  leaving both rows live under Gemma's 0.95 bar, which must never drop.
+- **The fix:** `StyleAxis` (M1K3Chat) reads which axis a distilled style fact is about: length, lists, tables,
+  markup, emoji, tone, humour, technicality, opening, order. Polarity is ignored, so "no emoji" and "emoji" share
+  one. With no twin, a `.style` fact from the live writer retires the NEWEST live style row whose axes it covers,
+  through the same Tier-2 supersede a twin takes: lineage kept, a restatement revives (short, long, short ends
+  with short live), one victim per write, style only retires style. An unknown or scoped ask ("…for code
+  reviews") takes no part. The twin path still wins when both apply (the 0.982 order pair supersedes once).
+  `MemoryStore.swift` is untouched: no migration.
+- **Imports (Kev's ruling):** an imported style ask files as a PREFERENCE, listed in Memories, never in the
+  prompt, never retiring a live ask (the OKF style→note rule, kept as it is).
+- **One slice, said order:** exit-path distillation sends a whole chat as one slice, so a slice's style facts
+  are stored in the order the user said them (the last user turn with a distinctive word of each).
+- **Forget undoes in both stores:** a Memories forget now restores the corpus twin its row superseded, as the
+  graph's forget does. Without it, "short, long, forget long, short" left two live "short" rows.
+- **Field signal:** a count-only `.notice` per write, "style rows on no axis: N unknown, M scoped".
+- **Unchanged, as the PR ships them:** the other open calls ((a)–(e) in the PR), Phase 1 Mac-only, the
+  forget walk, and the cross-kind supersede.
+- **Residue, pinned or named:** a narrower correction leaves a wider ask live ("formal tone" after "short,
+  casual answers"); two true asks on one axis retire each other ("short answers", then "short sentences");
+  "headings in long answers" has no scope word, so it retires "short answers"; a tie inside one turn ("not
+  short, long") keeps the distiller's order; the corpus revive is one hop, so short, long, brief, short leaves
+  "brief" live in retrieval (the graph and the style line are right); a re-filed pre-#699 preference row
+  retires nothing; MEMSTAT's probe has no graph, so it still measures the twin path alone.
+- **Gates:** `StyleAxisTests` (the table: 8 corrections both ways, the compatibles, every cue family),
+  `StyleAxisSupersedeTests` (real stores: all 16 correction directions superseded in the graph AND the corpus,
+  the 11 compatibles live both ways, the MEMSTAT `.note` classes at their twin-bar outcome, flip-back, forget,
+  no graph, slice order), `ImportedStyleTests`.
+
+<!-- Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.8 — pinned in swift test; the cue table's recall on
+     real distiller wording is unmeasured, which the no-axis count watches. Prior: none (new block). -->
