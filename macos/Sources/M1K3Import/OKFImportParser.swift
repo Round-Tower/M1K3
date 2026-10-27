@@ -22,6 +22,10 @@
 //  markup checks, title clamped to 200; `looksExported` (the exporter's `timestamp` + `source`) is what the detector
 //  reads, so a foreign notes folder is refused; the Relations cut needs the exporter's exact link shape, so a task
 //  list under such a heading is kept. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (merge of master's #711 into #699) — `style`, the #699 kind, reads as a
+//  note: it rides every system prompt, so it comes only from the user's own ask in chat, the rule
+//  `MemoryKind(catalogued:)` keeps for MCP. Without this the merge would have let a folder from anywhere write one.
+//  Confidence 0.85.
 
 import Foundation
 import M1K3Chat
@@ -62,13 +66,20 @@ public enum OKFImportParser {
               !MarkupGuard.looksLikeMarkup(text)
         else { return nil }
         let fact = ImportedFact(
-            kind: DistilledFactKind(rawValue: type.lowercased()) ?? .note,
+            kind: kind(forType: type),
             text: text,
             title: ImportJSON.nonEmpty(front["title"]).map { String($0.prefix(maxTitleLength)) },
             createdAt: ImportDates.iso8601(front["timestamp"]),
             originalSource: ImportJSON.nonEmpty(front["source"]) ?? "okf"
         )
         return (front, fact)
+    }
+
+    /// OKF's `type` as a fact kind. Unknown reads as a note (the distiller's own fallback), and so does
+    /// `style` (#699): a stated style rides every system prompt, so only the user's own ask may write one.
+    static func kind(forType type: String) -> DistilledFactKind {
+        let kind = DistilledFactKind(rawValue: type.lowercased()) ?? .note
+        return kind == .style ? .note : kind
     }
 
     /// Frontmatter fields and the body after the closing `---`, or nil without frontmatter.

@@ -8,6 +8,8 @@
 //  provider orchestration with fakes.
 //
 //  Signed: Kev + claude-fable-5, 2026-06-12, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: `FACT(style)` parses to `.style`, and the prompt
+//  scopes style to what the user explicitly asked, phrased as a standing preference. Confidence 0.85.
 
 import Foundation
 @testable import M1K3Chat
@@ -71,6 +73,20 @@ struct MemoryDistillationPromptTests {
         #expect(prompt.contains("never something the assistant offered"))
     }
 
+    @Test("#699: style is only what the user explicitly asked, phrased as a standing preference")
+    func promptScopesStyleToExplicitAsks() {
+        let prompt = MemoryDistillationPrompt.build(turns: [])
+        #expect(prompt.contains("style (how the user explicitly asked to be answered"))
+        #expect(prompt.contains("only when they asked in so many words"))
+        // FactDurabilityPolicy drops "the user asked for…" as a speech act and "the assistant"
+        // as meta, so the prose must steer the model to "prefers"/"wants" phrasing. No example
+        // fact: a small model parrots one, and a parroted "short answers" would anchor on any
+        // polite turn that mentions answers.
+        #expect(prompt.contains("starting \"The user prefers\" or \"The user wants\""))
+        #expect(prompt.contains("never \"asked for\""))
+        #expect(!prompt.contains("The user prefers short answers."))
+    }
+
     @Test("per-turn text is capped")
     func perTurnCap() {
         let long = String(repeating: "x", count: 2000)
@@ -119,6 +135,19 @@ struct MemoryFactParserTests {
             DistilledFact(text: "The user prefers metric units.", kind: .preference),
             DistilledFact(text: "Kev chose RRF over learned fusion.", kind: .decision),
             DistilledFact(text: "Kev shipped the companion on Friday.", kind: .episode),
+        ])
+    }
+
+    @Test("#699: FACT(style) parses to .style; a speech-act phrasing of the same ask is dropped")
+    func parsesStyle() {
+        let raw = """
+        FACT(style): The user prefers answers under three sentences.
+        FACT(style): The user asked for shorter answers.
+        FACT(Style): The user wants no bullet lists.
+        """
+        #expect(MemoryFactParser.parse(raw) == [
+            DistilledFact(text: "The user prefers answers under three sentences.", kind: .style),
+            DistilledFact(text: "The user wants no bullet lists.", kind: .style),
         ])
     }
 

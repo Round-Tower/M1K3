@@ -34,6 +34,11 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — #711: `line(for:)` is the one rendering of a transcript line (`build`
 //  uses it, bytes unchanged) and `maxTotalChars` is public, so a memory import slices long conversations to what one
 //  prompt holds instead of letting the total cap drop their early turns. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699 Phase 1: `DistilledFactKind.style`, how the user
+//  explicitly asked to be answered, and one prompt clause for it: only asks in so many words, phrased
+//  "The user prefers/wants…" (FactDurabilityPolicy drops "asked for" and "the assistant"), with no
+//  example fact to parrot. The coordinator's StyleAskFence is the deterministic backstop. Style is the
+//  one kind NOT in `MemoryKind.catalogued` (MCP may not write it). Confidence 0.8.
 
 import Foundation
 import M1K3Inference
@@ -53,8 +58,14 @@ import os
 /// description prose (M1K3MCPKit/IntelligenceMCPTools.swift), and the expected
 /// map in DistilledFactGraphAdapterTests. The derived halves (schema enum,
 /// bridge mapping) follow automatically; the prose halves are pinned by tests.
+///
+/// The one deliberate exception is `style` (#699): how the user asked to be
+/// answered. It maps onto the uncatalogued `MemoryKind.style`
+/// (M1K3Memory/MemoryStyleKind.swift) and stays out of the MCP prose, because
+/// it renders into the persona and only the user's own asks may write it
+/// (the coordinator's StyleAskFence).
 public enum DistilledFactKind: String, Sendable, Codable, CaseIterable {
-    case profile, preference, decision, episode, note
+    case profile, preference, decision, episode, note, style
 }
 
 /// One distilled fact: the sentence plus the distiller's own classification.
@@ -132,7 +143,11 @@ public enum MemoryDistillationPrompt {
         Reply with one line per fact, each starting with exactly \
         "FACT(<kind>): " where <kind> is one of: profile (a stable fact about \
         the user), preference (a standing preference), decision (a decision \
-        the user made and why), episode (something that happened), or note \
+        the user made and why), episode (something that happened), style (how \
+        the user explicitly asked to be answered: length, format or tone, \
+        only when they asked in so many words, never guessed from how they \
+        write; phrase it as a standing preference in their words, starting \
+        "The user prefers" or "The user wants", never "asked for"), or note \
         (anything else durable). Each fact must be one short standalone \
         sentence about the user. \
         If there is nothing durable, reply with exactly "NONE".

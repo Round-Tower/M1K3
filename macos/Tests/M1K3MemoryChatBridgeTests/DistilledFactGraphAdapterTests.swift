@@ -16,6 +16,13 @@
 //  align by construction; this pins that they stay aligned).
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — #711: an injected `source` tags plain and revived writes; the
 //  one-argument init still writes `distilled`. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: `.style` maps onto `MemoryKind.style` (the
+//  uncatalogued kind in M1K3Memory/MemoryStyleKind.swift). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (#699 pre-push review fold) — `refileDistilledFact` re-files a live
+//  node of another kind as style by the corpus's normalised identity, lineage kept, and declines a node that is
+//  already style or a text nothing carries. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-27 (merge of master's #711 into #699) — an injected source also tags
+//  a re-filed node. Confidence 0.85.
 //
 
 import M1K3Chat
@@ -47,6 +54,7 @@ struct DistilledFactGraphAdapterTests {
         let expected: [DistilledFactKind: MemoryKind] = [
             .profile: .profile, .preference: .preference,
             .decision: .decision, .episode: .episode, .note: .note,
+            .style: .style,
         ]
         for kind in DistilledFactKind.allCases {
             try await adapter.writeDistilledFact(
@@ -72,5 +80,59 @@ struct DistilledFactGraphAdapterTests {
         #expect(all.first { $0.text == "Kev keeps bees" }?.source == "import/chatgpt/2026-10-26")
         #expect(all.first { $0.text == "Kev keeps hens" }?.source == "import/chatgpt/2026-10-26")
         #expect(DistilledFactGraphAdapter(store: store).source == "distilled")
+    }
+
+    @Test("#699: a live node of another kind re-files as style by normalised text, its lineage kept")
+    func refileMakesALiveNodeStyle() async throws {
+        let store = try MemoryStore(path: nil)
+        let adapter: any DistilledFactGraphWriting = DistilledFactGraphAdapter(store: store)
+        try await adapter.writeDistilledFact("The user prefers short answers.", kind: .preference, embedding: [1, 0, 0])
+
+        // The corpus dedupes on the normalised text, so the join here must too.
+        let refiled = try await adapter.refileDistilledFact(
+            "the user prefers short answers", as: .style, embedding: [1, 0, 0]
+        )
+        #expect(refiled)
+
+        #expect(try store.liveStyleTexts() == ["The user prefers short answers."])
+        #expect(try store.allMemories().count == 1)
+        let all = try store.allMemories(includeSuperseded: true)
+        let head = try #require(all.first { $0.supersededBy == nil })
+        #expect(SupersessionChain.history(endingAt: head, in: all).map(\.kind) == [.preference, .style])
+    }
+
+    @Test("#699: a node that is already style, or a text no live node carries, is not re-filed")
+    func refileDeclines() async throws {
+        let store = try MemoryStore(path: nil)
+        let adapter: any DistilledFactGraphWriting = DistilledFactGraphAdapter(store: store)
+        try await adapter.writeDistilledFact("The user wants no bullet lists.", kind: .style, embedding: [1, 0, 0])
+
+        let alreadyStyle = try await adapter.refileDistilledFact(
+            "The user wants no bullet lists.", as: .style, embedding: [1, 0, 0]
+        )
+        let nothingCarriesIt = try await adapter.refileDistilledFact(
+            "The user prefers metric.", as: .style, embedding: [0, 1, 0]
+        )
+        #expect(!alreadyStyle)
+        #expect(!nothingCarriesIt)
+        #expect(try store.allMemories(includeSuperseded: true).count == 1)
+    }
+
+    @Test("an injected source also tags a re-filed node, so forgetting the import puts the old kind back")
+    func refileCarriesTheInjectedSource() async throws {
+        let store = try MemoryStore(path: nil)
+        try await DistilledFactGraphAdapter(store: store)
+            .writeDistilledFact("The user prefers short answers.", kind: .preference, embedding: [1, 0, 0])
+        let tag = "import/claude/2026-10-27"
+
+        let refiled = try await DistilledFactGraphAdapter(store: store, source: tag)
+            .refileDistilledFact("The user prefers short answers.", as: .style, embedding: [1, 0, 0])
+
+        #expect(refiled)
+        let head = try #require(try store.allMemories().first)
+        #expect(head.kind == .style)
+        #expect(head.source == tag)
+        #expect(try store.forget(source: tag) == 1)
+        #expect(try store.allMemories().map(\.kind) == [.preference])
     }
 }

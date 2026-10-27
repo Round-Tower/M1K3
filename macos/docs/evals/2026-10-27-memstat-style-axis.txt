@@ -1,0 +1,171 @@
+# MEMSTAT, #699 style classes through the live writer (StyleIngestProbe) after the StyleAxis supersede — embedder: EmbeddingGemma 2 (production default), dedupe bar 0.95 unchanged
+# 2026-10-27 12:35, Release build of feat/i699-stated-style @ 10589552 (stamp verified: GitCommitSHA 10589552, BUILD SUCCEEDED, 0 " error: " lines), Apple M1 Max 64 GB, macOS 27.0 (26A428), AC power, battery 100% charged. Built with tools/eval/build_eval_app.py --configuration Release; the live /Applications app was quit for the run (one MLX process).
+# Command (direct exec from a scratch cwd, under caffeinate -i): M1K3_SELFTEST=1 M1K3_SELFTEST_MEMSTAT=1 M1K3_SCREENGRAB=1 M1K3_SCREENGRAB_RUN=style-axis-2026-10-27 M1K3_SELFTEST_MODEL=mlx-community/Qwen3.5-4B-MLX-4bit M1K3_SELFTEST_OUT=- <M1K3.app>/Contents/MacOS/M1K3 (M1K3_SELFTEST_EMBEDDER unset)
+#   M1K3_SCREENGRAB=1 points storeURL() at the M1K3-screengrab sibling root, so the census counts that root's demo-persona seed (39 graph rows, 0 corpus items), NOT the live graph.
+#   M1K3_SELFTEST_MODEL only picks the core generate smoke's model (Lil, already cached); MEMSTAT never reads it.
+# Wiring change from 2026-10-27-memstat-style.txt: the style classes no longer go through the untyped ingest probe (.note facts, no graph, distillAndStore), which could not see the axis rule.
+#   They go through StyleIngestProbe: each pair stored as two .style facts with coordinator.store, over an in-memory corpus and MemoryStore() behind DistilledFactGraphAdapter (the live writer's defaults),
+#   the prior's fate read off BOTH stores, and the style line the persona would carry (UserStyleBlock at the 160-char cap). A style-compatible class (11 asks on different axes, one scoped) joins it.
+#   Contradiction, compatible and restatement run exactly as before: their numbers match the earlier transcript (0/10, 0/10 superseded; 5/5 restatements superseded).
+# Read: style corrections 8/8 superseded (was 1/8; 7 by the axis rule under the bar, the 0.982 order pair by the twin path), 0 both live, 0 eaten, 0 divergent; each style line carries the correction alone.
+#   Style compatibles 11/11 both live (cosines 0.729–0.865, none at the bar), the newest first on the line. Raw cosines unchanged from the earlier run.
+=== M1K3 SELF-TEST (inside .app bundle) ===
+✓ store+ingest: 1 chunk, 1 embedding(s)
+• AFM available: true
+✓ AFM RAG answer: The hydraulic seal on the conveyor failed under load [Plant Notes §3.2 Seals].
+  grounded in 1 source(s)
+• loading the MLX embedder (EmbeddingGemma 2; downloads on first use)…
+✓ MLX embed (mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v1): dim=512 ‖v‖=1.000
+embedwarm: cold=1999ms warm=11ms delta=1987ms (delta = first-turn TTFT tax without the launch warm)
+• loading MLX generation model mlx-community/Qwen3.5-4B-MLX-4bit…
+✓ MLX generate: <think>Thinking about the request: The user wants a single-sentence definition of "hydraulic seal". This is straightforward factual information.
+
+1.  **Analyze constraints:** I nee
+• memstat: Tier-0 dream-cycle census (scratch/dream-cycle/SPEC.md)…
+memstat graph: 39 live, 0 superseded, 45 edge(s)
+memstat kind decision: 4
+memstat kind episode: 8
+memstat kind note: 8
+memstat kind preference: 9
+memstat kind profile: 10
+memstat census: 39 vector(s), 741 pair(s)
+  pairs ≥ 0.90: 0 (dedupe band — should be structurally empty)
+  pairs in [0.75, 0.90): 13 (mineable band)
+  [+0.55, +0.60): 5
+  [+0.60, +0.65): 153
+  [+0.65, +0.70): 403
+  [+0.70, +0.75): 167
+  [+0.75, +0.80): 12
+  [+0.80, +0.85): 1
+memstat corpus: 0 memory item(s), 0 quarantined, graph/corpus divergence -39
+memstat durability: 0 durable, 0 transient (0% — floor) 
+memstat embedder: mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v1 · dedupe bar 0.95
+memstat contradiction 0.944 [Kev lives in Dublin. → Kev lives in Ardmore.]
+memstat contradiction 0.925 [The user's favourite editor is Vim. → The user's favourite editor is Zed.]
+memstat contradiction 0.938 [Kev's dog is called Bran. → Kev's dog is called Rex.]
+memstat contradiction 0.890 [The user works at Round Tower. → The user works at Lighthouse Labs.]
+memstat contradiction 0.931 [Kev drinks his coffee black. → Kev drinks his coffee with oat milk.]
+memstat contradiction 0.929 [The user's next release ships in Mar → The user's next release ships in Sep]
+memstat contradiction 0.917 [Kev's sister lives in Galway. → Kev's sister lives in Lisbon.]
+memstat contradiction 0.916 [The user prefers dark mode. → The user prefers light mode.]
+memstat contradiction 0.927 [Kev drives a Toyota. → Kev drives a Volvo.]
+memstat contradiction 0.910 [The user's standing desk is set to 1 → The user's standing desk is set to 9]
+memstat compatible 0.896 [Kev lives in Ardmore. → Kev grew up in Waterford.]
+memstat compatible 0.875 [The user's dog is a collie. → The user's dog is called Bran.]
+memstat compatible 0.803 [Kev works on a Mac Studio. → Kev tests on an iPhone 17 Pro.]
+memstat compatible 0.849 [The user prefers metric units. → The user prefers Celsius for weather]
+memstat compatible 0.881 [Kev's sister is called Aoife. → Kev's sister works as a nurse.]
+memstat compatible 0.896 [The user drinks coffee in the mornin → The user drinks tea in the evening.]
+memstat compatible 0.814 [Kev is dyslexic. → Kev prefers audio summaries.]
+memstat compatible 0.854 [The user plays the guitar. → The user is learning the piano.]
+memstat compatible 0.842 [Kev runs on Saturday mornings. → Kev swims on Wednesday evenings.]
+memstat compatible 0.818 [The user's favourite colour is green → The user's favourite band is Fontain]
+memstat restatement 0.955 [Kev's sister is called Aoife. → Aoife is Kev's sister.]
+memstat restatement 0.962 [The user prefers metric units. → Metric units are the user's preferen]
+memstat restatement 0.973 [Kev lives in Ardmore. → Kev's home is in Ardmore.]
+memstat restatement 0.973 [The user's dog is a collie named Bra → Bran, the user's dog, is a collie.]
+memstat restatement 0.975 [Kev drinks his coffee black. → Kev takes his coffee black.]
+memstat style-correction 0.892 [The user prefers short answers. → The user prefers long, detailed answ]
+memstat style-correction 0.871 [The user wants no bullet lists. → The user wants answers as bullet lis]
+memstat style-correction 0.901 [The user prefers answers under three → The user prefers answers of a full p]
+memstat style-correction 0.912 [The user prefers a casual tone. → The user prefers a formal tone.]
+memstat style-correction 0.982 [The user wants the code before the e → The user wants the explanation befor]
+memstat style-correction 0.879 [The user prefers plain words without → The user prefers precise technical t]
+memstat style-correction 0.904 [The user wants no emoji in answers. → The user wants emoji in answers.]
+memstat style-correction 0.861 [The user prefers answers that skip t → The user prefers answers that set th]
+memstat style-compatible 0.815 [The user prefers short answers. → The user wants no emoji in answers.]
+memstat style-compatible 0.742 [The user prefers a casual tone. → The user wants no bullet lists.]
+memstat style-compatible 0.795 [The user prefers plain words without → The user wants the code before the e]
+memstat style-compatible 0.831 [The user prefers answers that skip t → The user prefers a formal tone.]
+memstat style-compatible 0.729 [The user wants no tables. → The user wants headings in long answ]
+memstat style-compatible 0.787 [The user wants no jokes. → The user prefers a casual tone.]
+memstat style-compatible 0.774 [The user wants a list of sources at  → The user wants no bullet lists.]
+memstat style-compatible 0.831 [The user wants to be asked before th → The user wants the code before the e]
+memstat style-compatible 0.842 [The user wants answers in plain text → The user prefers plain words without]
+memstat style-compatible 0.865 [The user prefers concise answers. → The user wants the answer first.]
+memstat style-compatible 0.770 [The user wants a detailed answer for → The user prefers short answers.]
+contradictions: min 0.890 median 0.927 max 0.944
+  contradictions ≥ 0.95 (eaten as duplicates): 0/10
+  contradictions in [0.75, 0.95): 10/10
+compatibles: min 0.803 median 0.854 max 0.896
+  compatibles ≥ 0.95 (would be wrongly eaten): 0/10
+  compatibles in [0.75, 0.95): 10/10
+restatements: min 0.955 median 0.973 max 0.975
+  restatements ≥ 0.95 (correctly eaten): 5/5
+  restatements in [0.75, 0.95): 0/5
+style corrections: min 0.861 median 0.901 max 0.982
+  style corrections ≥ 0.95 (superseded at write time): 1/8
+  style corrections in [0.75, 0.95): 7/8
+style compatibles: min 0.729 median 0.795 max 0.865
+  style compatibles ≥ 0.95 (wrongly retired at the twin bar): 0/11
+  style compatibles in [0.75, 0.95): 9/11
+memstat ingest contradiction: survived [Kev lives in Ardmore.]
+memstat ingest contradiction: survived [The user's favourite editor is Zed.]
+memstat ingest contradiction: survived [Kev's dog is called Rex.]
+memstat ingest contradiction: survived [The user works at Lighthouse Labs.]
+memstat ingest contradiction: survived [Kev drinks his coffee with oat milk.]
+memstat ingest contradiction: survived [The user's next release ships in Sep]
+memstat ingest contradiction: survived [Kev's sister lives in Lisbon.]
+memstat ingest contradiction: survived [The user prefers light mode.]
+memstat ingest contradiction: survived [Kev drives a Volvo.]
+memstat ingest contradiction: survived [The user's standing desk is set to 9]
+memstat ingest contradiction: 0/10 eaten, 0/10 superseded
+memstat ingest compatible: survived [Kev grew up in Waterford.]
+memstat ingest compatible: survived [The user's dog is called Bran.]
+memstat ingest compatible: survived [Kev tests on an iPhone 17 Pro.]
+memstat ingest compatible: survived [The user prefers Celsius for weather]
+memstat ingest compatible: survived [Kev's sister works as a nurse.]
+memstat ingest compatible: survived [The user drinks tea in the evening.]
+memstat ingest compatible: survived [Kev prefers audio summaries.]
+memstat ingest compatible: survived [The user is learning the piano.]
+memstat ingest compatible: survived [Kev swims on Wednesday evenings.]
+memstat ingest compatible: survived [The user's favourite band is Fontain]
+memstat ingest compatible: 0/10 eaten, 0/10 superseded
+memstat ingest restatement: superseded [Aoife is Kev's sister.]
+memstat ingest restatement: superseded [Metric units are the user's preferen]
+memstat ingest restatement: superseded [Kev's home is in Ardmore.]
+memstat ingest restatement: superseded [Bran, the user's dog, is a collie.]
+memstat ingest restatement: superseded [Kev takes his coffee black.]
+memstat ingest restatement: 0/5 eaten, 5/5 superseded
+memstat style-ingest style-correction 0.892 superseded [The user prefers short answers. → The user prefers long, detailed answers.]
+  axes length → length · style line: "The user prefers long, detailed answers."
+memstat style-ingest style-correction 0.871 superseded [The user wants no bullet lists. → The user wants answers as bullet lists.]
+  axes lists → lists · style line: "The user wants answers as bullet lists."
+memstat style-ingest style-correction 0.901 superseded [The user prefers answers under three sentences. → The user prefers answers of a full paragraph.]
+  axes length → length · style line: "The user prefers answers of a full paragraph."
+memstat style-ingest style-correction 0.912 superseded [The user prefers a casual tone. → The user prefers a formal tone.]
+  axes tone → tone · style line: "The user prefers a formal tone."
+memstat style-ingest style-correction 0.982 superseded [The user wants the code before the explanation. → The user wants the explanation before the code.]
+  axes order → order · style line: "The user wants the explanation before the code."
+memstat style-ingest style-correction 0.879 superseded [The user prefers plain words without jargon. → The user prefers precise technical terms.]
+  axes technicality → technicality · style line: "The user prefers precise technical terms."
+memstat style-ingest style-correction 0.904 superseded [The user wants no emoji in answers. → The user wants emoji in answers.]
+  axes emoji → emoji · style line: "The user wants emoji in answers."
+memstat style-ingest style-correction 0.861 superseded [The user prefers answers that skip the preamble. → The user prefers answers that set the scene first.]
+  axes opening → opening · style line: "The user prefers answers that set the scene first."
+memstat style-ingest style-correction: 8/8 superseded, 0/8 both live, 0/8 eaten, 0/8 divergent, 0/8 seed failed
+memstat style-ingest style-compatible 0.815 both live [The user prefers short answers. → The user wants no emoji in answers.]
+  axes length → emoji · style line: "The user wants no emoji in answers. The user prefers short answers."
+memstat style-ingest style-compatible 0.742 both live [The user prefers a casual tone. → The user wants no bullet lists.]
+  axes tone → lists · style line: "The user wants no bullet lists. The user prefers a casual tone."
+memstat style-ingest style-compatible 0.795 both live [The user prefers plain words without jargon. → The user wants the code before the explanation.]
+  axes technicality → order · style line: "The user wants the code before the explanation. The user prefers plain words without jargon."
+memstat style-ingest style-compatible 0.831 both live [The user prefers answers that skip the preamble. → The user prefers a formal tone.]
+  axes opening → tone · style line: "The user prefers a formal tone. The user prefers answers that skip the preamble."
+memstat style-ingest style-compatible 0.729 both live [The user wants no tables. → The user wants headings in long answers.]
+  axes tables → length+markup · style line: "The user wants headings in long answers. The user wants no tables."
+memstat style-ingest style-compatible 0.787 both live [The user wants no jokes. → The user prefers a casual tone.]
+  axes humour → tone · style line: "The user prefers a casual tone. The user wants no jokes."
+memstat style-ingest style-compatible 0.774 both live [The user wants a list of sources at the end. → The user wants no bullet lists.]
+  axes unknown → lists · style line: "The user wants no bullet lists. The user wants a list of sources at the end."
+memstat style-ingest style-compatible 0.831 both live [The user wants to be asked before the assistant searches the web. → The user wants the code before the explanation.]
+  axes unknown → order · style line: "The user wants the code before the explanation. The user wants to be asked before the assistant searches the web."
+memstat style-ingest style-compatible 0.842 both live [The user wants answers in plain text. → The user prefers plain words without jargon.]
+  axes markup → technicality · style line: "The user prefers plain words without jargon. The user wants answers in plain text."
+memstat style-ingest style-compatible 0.865 both live [The user prefers concise answers. → The user wants the answer first.]
+  axes length → opening · style line: "The user wants the answer first. The user prefers concise answers."
+memstat style-ingest style-compatible 0.770 both live [The user wants a detailed answer for code reviews. → The user prefers short answers.]
+  axes scoped → length · style line: "The user prefers short answers. The user wants a detailed answer for code reviews."
+memstat style-ingest style-compatible: 0/11 superseded, 11/11 both live, 0/11 eaten, 0/11 divergent, 0/11 seed failed
+✓ memstat: done
+=== END SELF-TEST ===

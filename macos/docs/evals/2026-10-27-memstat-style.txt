@@ -1,0 +1,123 @@
+# MEMSTAT with the #699 style-correction class (a stated answer style flipped on one axis, ContradictionEvalFixtures.styleCorrections) — embedder: EmbeddingGemma 2 (production default)
+# 2026-10-27 01:19, Release build of feat/i699-stated-style @ 5ac4dfd3 (stamp verified), Apple M1 Max 64 GB, macOS 27.0, AC power. Built with tools/eval/build_eval_app.py --configuration Release.
+# Command: M1K3_SELFTEST=1 M1K3_SELFTEST_MEMSTAT=1 M1K3_SCREENGRAB=1 M1K3_SCREENGRAB_RUN=style-2026-10-27 M1K3_SELFTEST_MODEL=mlx-community/Qwen3.5-4B-MLX-4bit M1K3_SELFTEST_OUT=- <M1K3.app>/Contents/MacOS/M1K3
+#   M1K3_SCREENGRAB=1 points storeURL() at the M1K3-screengrab sibling root, so the census below counts that root's demo-persona seed (39 graph rows, 0 corpus items), NOT the live graph.
+#   M1K3_SELFTEST_MODEL only picks the core generate smoke's model (Lil, already cached) so the run downloads nothing; MEMSTAT never reads it.
+# Read: style corrections reach the 0.95 bar 1/8 by raw cosine; the production ingest path supersedes 1/8 and leaves 7/8 with BOTH rows live (0/8 eaten).
+#   The one supersede is the order swap (code before explanation ↔ explanation before code, 0.982): the same words in a new order.
+#   Restatements now read 5/5 superseded: the 10-10 "eats 0/5 restatements" follow-up is Tier 2 superseding them, which the old probe counted as survived.
+=== M1K3 SELF-TEST (inside .app bundle) ===
+✓ store+ingest: 1 chunk, 1 embedding(s)
+• AFM available: true
+✓ AFM RAG answer: The hydraulic seal on the conveyor failed under load [Plant Notes §3.2 Seals].
+  grounded in 1 source(s)
+• loading the MLX embedder (EmbeddingGemma 2; downloads on first use)…
+✓ MLX embed (mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v1): dim=512 ‖v‖=1.000
+embedwarm: cold=1918ms warm=9ms delta=1909ms (delta = first-turn TTFT tax without the launch warm)
+• loading MLX generation model mlx-community/Qwen3.5-4B-MLX-4bit…
+✓ MLX generate: <think>Thinking about the user's request: they want a single-sentence definition of "hydraulic seal."
+
+1.  **Analyze the Request:** The user wants to know the definition of a hydra
+• memstat: Tier-0 dream-cycle census (scratch/dream-cycle/SPEC.md)…
+memstat graph: 39 live, 0 superseded, 45 edge(s)
+memstat kind decision: 4
+memstat kind episode: 8
+memstat kind note: 8
+memstat kind preference: 9
+memstat kind profile: 10
+memstat census: 39 vector(s), 741 pair(s)
+  pairs ≥ 0.90: 0 (dedupe band — should be structurally empty)
+  pairs in [0.75, 0.90): 13 (mineable band)
+  [+0.55, +0.60): 5
+  [+0.60, +0.65): 153
+  [+0.65, +0.70): 403
+  [+0.70, +0.75): 167
+  [+0.75, +0.80): 12
+  [+0.80, +0.85): 1
+memstat corpus: 0 memory item(s), 0 quarantined, graph/corpus divergence -39
+memstat durability: 0 durable, 0 transient (0% — floor) 
+memstat embedder: mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v1 · dedupe bar 0.95
+memstat contradiction 0.944 [Kev lives in Dublin. → Kev lives in Ardmore.]
+memstat contradiction 0.925 [The user's favourite editor is Vim. → The user's favourite editor is Zed.]
+memstat contradiction 0.938 [Kev's dog is called Bran. → Kev's dog is called Rex.]
+memstat contradiction 0.890 [The user works at Round Tower. → The user works at Lighthouse Labs.]
+memstat contradiction 0.931 [Kev drinks his coffee black. → Kev drinks his coffee with oat milk.]
+memstat contradiction 0.929 [The user's next release ships in Mar → The user's next release ships in Sep]
+memstat contradiction 0.917 [Kev's sister lives in Galway. → Kev's sister lives in Lisbon.]
+memstat contradiction 0.916 [The user prefers dark mode. → The user prefers light mode.]
+memstat contradiction 0.927 [Kev drives a Toyota. → Kev drives a Volvo.]
+memstat contradiction 0.910 [The user's standing desk is set to 1 → The user's standing desk is set to 9]
+memstat compatible 0.896 [Kev lives in Ardmore. → Kev grew up in Waterford.]
+memstat compatible 0.875 [The user's dog is a collie. → The user's dog is called Bran.]
+memstat compatible 0.803 [Kev works on a Mac Studio. → Kev tests on an iPhone 17 Pro.]
+memstat compatible 0.849 [The user prefers metric units. → The user prefers Celsius for weather]
+memstat compatible 0.881 [Kev's sister is called Aoife. → Kev's sister works as a nurse.]
+memstat compatible 0.896 [The user drinks coffee in the mornin → The user drinks tea in the evening.]
+memstat compatible 0.814 [Kev is dyslexic. → Kev prefers audio summaries.]
+memstat compatible 0.854 [The user plays the guitar. → The user is learning the piano.]
+memstat compatible 0.842 [Kev runs on Saturday mornings. → Kev swims on Wednesday evenings.]
+memstat compatible 0.818 [The user's favourite colour is green → The user's favourite band is Fontain]
+memstat restatement 0.955 [Kev's sister is called Aoife. → Aoife is Kev's sister.]
+memstat restatement 0.962 [The user prefers metric units. → Metric units are the user's preferen]
+memstat restatement 0.973 [Kev lives in Ardmore. → Kev's home is in Ardmore.]
+memstat restatement 0.973 [The user's dog is a collie named Bra → Bran, the user's dog, is a collie.]
+memstat restatement 0.975 [Kev drinks his coffee black. → Kev takes his coffee black.]
+memstat style-correction 0.892 [The user prefers short answers. → The user prefers long, detailed answ]
+memstat style-correction 0.871 [The user wants no bullet lists. → The user wants answers as bullet lis]
+memstat style-correction 0.901 [The user prefers answers under three → The user prefers answers of a full p]
+memstat style-correction 0.912 [The user prefers a casual tone. → The user prefers a formal tone.]
+memstat style-correction 0.982 [The user wants the code before the e → The user wants the explanation befor]
+memstat style-correction 0.879 [The user prefers plain words without → The user prefers precise technical t]
+memstat style-correction 0.904 [The user wants no emoji in answers. → The user wants emoji in answers.]
+memstat style-correction 0.861 [The user prefers answers that skip t → The user prefers answers that set th]
+contradictions: min 0.890 median 0.927 max 0.944
+  contradictions ≥ 0.95 (eaten as duplicates): 0/10
+  contradictions in [0.75, 0.95): 10/10
+compatibles: min 0.803 median 0.854 max 0.896
+  compatibles ≥ 0.95 (would be wrongly eaten): 0/10
+  compatibles in [0.75, 0.95): 10/10
+restatements: min 0.955 median 0.973 max 0.975
+  restatements ≥ 0.95 (correctly eaten): 5/5
+  restatements in [0.75, 0.95): 0/5
+style corrections: min 0.861 median 0.901 max 0.982
+  style corrections ≥ 0.95 (superseded at write time): 1/8
+  style corrections in [0.75, 0.95): 7/8
+memstat ingest contradiction: survived [Kev lives in Ardmore.]
+memstat ingest contradiction: survived [The user's favourite editor is Zed.]
+memstat ingest contradiction: survived [Kev's dog is called Rex.]
+memstat ingest contradiction: survived [The user works at Lighthouse Labs.]
+memstat ingest contradiction: survived [Kev drinks his coffee with oat milk.]
+memstat ingest contradiction: survived [The user's next release ships in Sep]
+memstat ingest contradiction: survived [Kev's sister lives in Lisbon.]
+memstat ingest contradiction: survived [The user prefers light mode.]
+memstat ingest contradiction: survived [Kev drives a Volvo.]
+memstat ingest contradiction: survived [The user's standing desk is set to 9]
+memstat ingest contradiction: 0/10 eaten, 0/10 superseded
+memstat ingest compatible: survived [Kev grew up in Waterford.]
+memstat ingest compatible: survived [The user's dog is called Bran.]
+memstat ingest compatible: survived [Kev tests on an iPhone 17 Pro.]
+memstat ingest compatible: survived [The user prefers Celsius for weather]
+memstat ingest compatible: survived [Kev's sister works as a nurse.]
+memstat ingest compatible: survived [The user drinks tea in the evening.]
+memstat ingest compatible: survived [Kev prefers audio summaries.]
+memstat ingest compatible: survived [The user is learning the piano.]
+memstat ingest compatible: survived [Kev swims on Wednesday evenings.]
+memstat ingest compatible: survived [The user's favourite band is Fontain]
+memstat ingest compatible: 0/10 eaten, 0/10 superseded
+memstat ingest restatement: superseded [Aoife is Kev's sister.]
+memstat ingest restatement: superseded [Metric units are the user's preferen]
+memstat ingest restatement: superseded [Kev's home is in Ardmore.]
+memstat ingest restatement: superseded [Bran, the user's dog, is a collie.]
+memstat ingest restatement: superseded [Kev takes his coffee black.]
+memstat ingest restatement: 0/5 eaten, 5/5 superseded
+memstat ingest style-correction: survived [The user prefers long, detailed answ]
+memstat ingest style-correction: survived [The user wants answers as bullet lis]
+memstat ingest style-correction: survived [The user prefers answers of a full p]
+memstat ingest style-correction: survived [The user prefers a formal tone.]
+memstat ingest style-correction: superseded [The user wants the explanation befor]
+memstat ingest style-correction: survived [The user prefers precise technical t]
+memstat ingest style-correction: survived [The user wants emoji in answers.]
+memstat ingest style-correction: survived [The user prefers answers that set th]
+memstat ingest style-correction: 0/8 eaten, 1/8 superseded
+✓ memstat: done
+=== END SELF-TEST ===
