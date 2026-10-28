@@ -15,6 +15,8 @@
 #
 # Signed: Kev + claude-opus-5-5, 2026-10-13, Confidence 0.8 (timings are one
 # machine, warm). Prior: none (new file).
+# Review: Kev + claude-opus-5.5, 2026-10-28 — a filter matching exactly one test
+# read as "no tests matched" (singular "test"); the count now takes both. Confidence 0.85.
 
 set -euo pipefail
 
@@ -30,7 +32,8 @@ trap 'rm -f "$log"' EXIT
 # the run inside the bundle `swift build --target` just relinked.
 swift test --skip-build --disable-xctest --filter "^${target}\\..*${name}" 2>&1 | tee "$log"
 
-ran=$(grep -oE 'Test run with [0-9]+ tests' "$log" | awk '{ s += $4 } END { print s + 0 }')
+# "tests?": one match prints "Test run with 1 test", which the plural alone missed (#730).
+ran=$(grep -oE 'Test run with [0-9]+ tests?' "$log" | awk '{ s += $4 } END { print s + 0 }')
 if (( ran == 0 )); then
   print -u2 "tdd.sh: no tests matched ${target}${name:+ / $name} — a typo would otherwise pass silently"
   exit 1
