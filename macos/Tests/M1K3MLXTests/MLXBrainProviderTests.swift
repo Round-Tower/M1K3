@@ -29,6 +29,8 @@
 //  `promptTokens` the true context, `prefilledTokens` this call's own prefill (what the energy ledger prices; the
 //  whole cached persona billed again on every turn was the over-count it exists to avoid), and `modelID` the model
 //  that ran. Pure helper, no global reporter touched (GenerationMetricsTests owns that). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — `thinkTraitsByName` pins Qwen3.6 beside 3.8: the name-decided traits
+//  were the bug path (a `false` the template read can never correct). Confidence 0.9.
 
 import Foundation
 import M1K3Chat
@@ -258,6 +260,9 @@ struct MLXBrainProviderTests {
             == ChatTemplateTraits(preOpensThink: false, supportsThinkingToggle: false))
         // Qwen3.8 pre-opens like 3.5 (on-disk template, 2026-09-10) — the review's catch.
         #expect(MLXBrainProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/Qwen3.8-27B-4bit"))
+            == ChatTemplateTraits(preOpensThink: true, supportsThinkingToggle: true))
+        // Qwen3.6 too (qwen3_5_moe): the qwen3 name pin said false, and the thoughts streamed as the answer.
+        #expect(MLXBrainProvider.thinkTraitsByName(for: ModelConfiguration(id: "mlx-community/Qwen3.6-35B-A3B-4bit"))
             == ChatTemplateTraits(preOpensThink: true, supportsThinkingToggle: true))
         // No family word: nil, the template decides after the load.
         #expect(MLXBrainProvider.thinkTraitsByName(for: ModelConfiguration(id: "ornith-ai/Ornith-1.5-9B-MLX-4bit")) == nil)

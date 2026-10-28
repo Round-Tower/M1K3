@@ -1,7 +1,7 @@
 {
   "app": "~/eval-dd/moe-big/Build/Products/Debug/M1K3.app",
   "outDir": "../../../docs/evals/2026-10-24-moe-big",
-  "notes": "MoE Big audition round 2 (the deciders the ceiling hid): kinds reasoning,code-gen,instruction-following,sycophancy,document,vision, router dispatch, thinking tier, AC powermode 0 (auto), M1 Max 64 GB Harvested 2026-10-28 with the router offs that match what ran (head/chain defaulted on after #677, search after #728).",
+  "notes": "MoE Big audition round 2 (the deciders the ceiling hid): kinds reasoning,code-gen,instruction-following,sycophancy,document,vision, router dispatch, thinking tier, AC powermode 0 (auto), M1 Max 64 GB",
   "args": [
     "--brains",
     "big",

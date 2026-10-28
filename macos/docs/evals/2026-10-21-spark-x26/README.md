@@ -46,6 +46,11 @@ Plain kinds = [compact persona, prompt]; tool-use = [full persona, LocalAgent go
 
 ## In-app (the port's branch, `run_chateval.py --direct --router dispatch --thinking always`, forced close 1,024)
 
+**Caveat (2026-10-28):** this ran a bare `--router dispatch` (router head and chain off; the scorecard's
+driver env has `ROUTER=dispatch` only), before #677 made dispatch wire like the app. So the tool-chain misses
+and `tool-web-newest` reaching `search_knowledge` are harness evidence first: the same wiring held the shipping
+Big to 0/3 on tool chains (`../2026-10-24-moe-big/README.md`). Re-run wired like the app before blaming the model.
+
 Eval app built by `build_eval_app.py` from commit e6a07d6d; one repeat; live app closed; AC.
 
 | kind | Spark | Lil shipped |

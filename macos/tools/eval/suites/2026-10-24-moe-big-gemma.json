@@ -1,7 +1,7 @@
 {
   "app": "~/eval-dd/moe-big/Build/Products/Debug/M1K3.app",
   "outDir": "../../../docs/evals/2026-10-24-moe-big",
-  "notes": "MoE Big audition (Big must see): production shape, thinking tier, router dispatch, SHRUNK to tool-use,security,grounded-Q,world-knowledge,open-chat (battery can't hold all kinds), AC powermode 0 (auto), M1 Max 64 GB Harvested 2026-10-28 with the router offs that match what ran (head/chain defaulted on after #677, search after #728).",
+  "notes": "MoE Big audition (Big must see): production shape, thinking tier, router dispatch, SHRUNK to tool-use,security,grounded-Q,world-knowledge,open-chat (battery can't hold all kinds), AC powermode 0 (auto), M1 Max 64 GB",
   "args": [
     "--brains",
     "big",

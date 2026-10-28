@@ -74,7 +74,7 @@ this sweep.
   `release-local.sh` ships when the hours are spent (#660).
 - Review gates: delta re-review after an approval (#686), the claims check on paths and
   flags named in a diff (#685, `ci/claims-check`), `pr_watch` verdict fixes (#688, #689).
-- Open: #692 (root CLAUDE.md, docs-only). The claims check and delta re-review landed as #685 and #686.
+- #692 (root CLAUDE.md, docs-only) landed 10-28. The claims check and delta re-review landed as #685 and #686.
 
 ### Next picks
 
@@ -502,4 +502,5 @@ stays a possible later companion.
      Confidence 0.9. -->
 <!-- Review: Kev + claude-opus-5.5, 2026-10-28 — harvest: the local-branch bullet is retired (all four landed or were
      harvested), Qwen3.6-35B's finalist line and the delegation-brain line record MoE Big closed on M1 (Kev 10-25,
-     docs/evals/2026-10-24-moe-big/), and the 10-02 notify / push-to-talk spec is listed as a draft. Confidence 0.85. -->
+     docs/evals/2026-10-24-moe-big/), and the 10-02 notify / push-to-talk spec is listed as a draft; #692's "Open" line says it landed.
+     Confidence 0.85. -->

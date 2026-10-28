@@ -1,7 +1,7 @@
 {
   "app": "~/eval-dd/moe-big/Build/Products/Debug/M1K3.app",
   "outDir": "../../../docs/evals/2026-10-24-moe-big",
-  "notes": "MoE Big audition round 3: kinds reasoning,tool-use x3 repeats, WIRED LIKE THE APP (router dispatch + head + chain, as AppEnvironment+ChatHistory.swift:565), thinking tier, AC powermode 0, M1 Max 64 GB, faulty charger (battery floor 50%) Harvested 2026-10-28 with the router offs that match what ran (head/chain defaulted on after #677, search after #728).",
+  "notes": "MoE Big audition round 3: kinds reasoning,tool-use x3 repeats, WIRED LIKE THE APP (router dispatch + head + chain, as AppEnvironment+ChatHistory.swift:565), thinking tier, AC powermode 0, M1 Max 64 GB, faulty charger (battery floor 50%)",
   "args": [
     "--brains",
     "big",

@@ -2,7 +2,8 @@
 
 **Verdict (Kev, 2026-10-25): MoE Big is closed on M1.** "Squeezing more prefs & power from the current lil &
 big is the correct product approach." Neither sparse model beat the shipping dense `gemma-4-12B` on our
-workload: on M1-class hardware, quality tracks active parameters (A4B and A3B both lose to 12B dense).
+workload. Our read, not a measured mechanism: on M1-class hardware quality tracks active parameters (A4B and
+A3B both trailed 12B dense, by margins one more repeat could move).
 Revisit on M4+/M5 bandwidth, or for a new dense mid-size model that can see.
 
 **Why it ran:** Kev, 2026-10-24: "Big must see". Every Big candidate needs vision, so the audition ran the
@@ -11,7 +12,8 @@ shared MLP and router at 8-bit, experts at 4-bit) and `mlx-community/Qwen3.6-35B
 
 ## Setup
 
-- In-app chateval through `run_arms.py`, `--brains big --router dispatch --full-answers`, wired like the app.
+- In-app chateval through `run_arms.py`, `--brains big --router dispatch --full-answers`. Rounds 1 and 2 ran a
+  bare dispatch (router head and chain off); round 3 and the Qwen arm ran wired like the app (head and chain on).
 - App built from the spike branch (`appCommit` 34f4dae7; the Qwen arm from 7ec811a4). Those commits are not on
   master: they live in the branch backup `~/Development/m1k3-branch-backup-2026-10-26/all-local-branches.bundle`
   (`refs/heads/spike/moe-big-audition`) on Kev's Mac. mlx-swift-lm pin 3b339ad6.
@@ -19,7 +21,9 @@ shared MLP and router at 8-bit, experts at 4-bit) and `mlx-community/Qwen3.6-35B
   on battery (a faulty charger) and was stopped by hand.
 - The suites are in `tools/eval/suites/2026-10-24-moe-big-*.json`. They carry the router offs that match what
   ran: router head and chain defaulted on after #677 (rounds 1 and 2 ran before it) and the search veto after
-  #728, so a bare `--router dispatch` today measures something else.
+  #728, so a bare `--router dispatch` today measures something else. A re-run from the tree skips every arm
+  whose scorecard already sits in the suite's `outDir` (`run_arms` resumes), so only the Qwen arms would run;
+  their `--app-arg=-audition.big` named the imported checkpoint through the spike hook, which isn't on master.
 
 ## Results
 
@@ -27,16 +31,20 @@ shared MLP and router at 8-bit, experts at 4-bit) and `mlx-community/Qwen3.6-35B
 |---|---|---|---|---|
 | 1 | tool-use, security, grounded-Q, world-knowledge, open-chat (51) | 46/51 | 46/51 | one swap each way |
 | 2 | reasoning, code-gen, instruction-following, sycophancy, document, vision (70) | 63/70 | 68/70 | +6/−1, sign p .125 |
-| 3 | reasoning + tool-use, ×3 repeats (135) | **122/135** | 115/135 | +3/−8, p .23 |
+| 3 | reasoning + tool-use, ×3 repeats (135) | **122/135** | 115/135 | +3/−8 fixtures, p .23 |
 
 - Round 3, wired like the app with head and chain, settles it: reason-hard 48/60 vs 44/60 (the 26B gains
-  average-speed and bat-ball, loses clock, overlap, pipes, weekday and stairs with terse one-word wrong
-  answers), tool-use 56/57 vs 54/57, and the 26B's own repeats disagree 8/45 vs 3/45.
-- **Never call an audition on one trial:** round 2's +6/−1 was single-trial noise.
+  average-speed, bat-ball and digit-threes, loses clock, overlap, pipes, weekday, stairs and ages, mostly with
+  terse one-word wrong answers), tool-use 56/57 vs 54/57, and the 26B's own repeats disagree 8/45 vs 3/45. The
+  +3/−8 compares each fixture's pass count over the three repeats, ties dropped (per trial it is +6/−13).
+- **Never call an audition on one trial:** round 2's reasoning lead did not hold at three repeats; its other
+  kinds were not repeated.
 - Peak memory: 8.8 GB → 16.2–16.7 GB, and 14.5 GB → 22.2 GB with images (round 2).
 - Median turns (12B / 26B): 5.6 / 4.8 s, 6.9 / 6.6 s, 6.3 / 5.4 s. Round 1 is run-order confounded.
-- Round 1's four tool-use fails were the same in both arms (routing, not the model). The harness moved more
-  than any swap: wiring head + chain like the app took tool chains from 0/9 to 9/9 (#677).
+- Round 1's four tool-use fails were the same in both arms (routing, not the model): on a bare dispatch the
+  tool-chain fixtures went 0/3 in both. Wired like the app in round 3 they ran 8/9 (12B) and 6/9 (26B). The
+  diagnostic that found the gap (gemma-12B 0/9 bare against 9/9 wired, an unsaved run noted in
+  `run_chateval.py`'s header) became #677, which makes `--router dispatch` wire like the app by default.
 - **Open before any 26B pin:** on the picker route the 26B wrote a raw `search_knowledge(query=…) <tool_call>`
   into an answer (round 1, `tool-chain-notes-web`, in `2026-10-24-big-gemma26b-a4b-qat.json`). The dispatch-route
   stripper doesn't know that dialect.
@@ -101,5 +109,7 @@ Prior: the audition ran 2026-10-24/25 on spike/moe-big-audition (scorecards and 
   scorecards; the Qwen rows from the 2026-10-25 run's console output.
 Context: closes the record on MoE Big for M1. The scorecards sit in this subfolder so the public /brains page,
   which reads docs/evals/*.json flat, stays on shipping brains.
-Confidence: 0.85 — every number is reproducible from the JSONs except the Qwen partial, which has no scorecard.
+Confidence: 0.85 — every number is reproducible from the JSONs except the Qwen partial (rows copied from the run's
+  console output; its answer values, such as lily-pads 23, from the session ledger) and the SSD streaming
+  figures (a SwiftLM bench with no committed log).
 -->

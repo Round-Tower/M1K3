@@ -1,7 +1,7 @@
 {
   "app": "~/eval-dd/moe-big/Build/Products/Debug/M1K3.app",
   "outDir": "../../../docs/evals/2026-10-24-moe-big",
-  "notes": "MoE Big audition: Qwen3.6-35B-A3B 4-bit (vision_config, 20.4 GB) loaded from SwiftLM's copy imported as an audition (spike 7ec811a4); same kinds and router flags as the gemma r3/r2 arms so every fixture pairs; AC powermode 0, M1 Max 64 GB, faulty charger (50% floor) Harvested 2026-10-28 with the router offs that match what ran (head/chain defaulted on after #677, search after #728).",
+  "notes": "MoE Big audition: Qwen3.6-35B-A3B 4-bit (vision_config, 20.4 GB) loaded from SwiftLM's copy imported as an audition (spike 7ec811a4); same kinds and router flags as the gemma r3/r2 arms so every fixture pairs; AC powermode 0, M1 Max 64 GB, faulty charger (50% floor)",
   "args": [
     "--brains",
     "big",
