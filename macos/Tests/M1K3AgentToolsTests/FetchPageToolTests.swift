@@ -11,6 +11,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-28 — the tag pattern's rows: a quoted attribute holding `>` (Wikipedia's
 //  data-mw), a stray `<` in text, and the pre-push review's three: an unclosed tag at a page's end returns (a hang
 //  guard on its own thread), a 250K unquoted value is one tag, an open quote ends at the next tag. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 (later) — a megabyte of never-closed tags returns (the same hang guard),
+//  a `<` inside a tag ends it, and text past the HTML cap is never read. Confidence 0.85.
 
 import Foundation
 @testable import M1K3AgentTools
@@ -105,6 +107,32 @@ struct HTMLTextExtractorTests {
         #expect(HTMLTextExtractor.text(from: html) == "Before.\nAfter.")
     }
 
+    /// #740's second review: the unquoted run also ate `<`, so a page with no `>` at all (a megabyte of `<a `)
+    /// was rescanned to its end from every `<`. A tag now ends at the next `<`, so the scan is one pass. The
+    /// 30 s wait is a hang guard on its own thread, as above, not a speed pin.
+    @Test("a megabyte of tags that never close returns")
+    func neverClosedTagsReturn() {
+        final class Result: @unchecked Sendable {
+            let lock = NSLock()
+            var text: String?
+        }
+        let html = "<p>Kept.</p>" + String(repeating: "<a ", count: 350_000)
+        let result = Result()
+        let done = DispatchSemaphore(value: 0)
+        Thread.detachNewThread {
+            let text = HTMLTextExtractor.text(from: html)
+            result.lock.withLock { result.text = text }
+            done.signal()
+        }
+        #expect(done.wait(timeout: .now() + 30) == .success)
+        #expect(result.lock.withLock { result.text }?.hasPrefix("Kept.") == true)
+    }
+
+    @Test("a < inside a tag ends it, so malformed markup keeps its text instead of swallowing the next tag")
+    func angleInsideTagEndsIt() {
+        #expect(HTMLTextExtractor.text(from: "<p><a href=x<b>bold</b></p>") == "<a href=xbold")
+    }
+
     @Test("a quote left open after = ends at the next tag, not the next quote")
     func openQuoteStopsAtNextTag() {
         let html = "<p><a href=\"foo>bar</a></p><p>Next \"quoted\" text.</p>"
@@ -150,6 +178,18 @@ struct FetchPageToolTests {
         let request = try #require(fetcher.requests.first)
         #expect(request.url?.absoluteString == "https://weather.example/boston")
         #expect(request.value(forHTTPHeaderField: "User-Agent")?.contains("Safari") == true)
+    }
+
+    @Test("readable text past the HTML cap is never read, so a huge page costs one bounded pass")
+    func htmlPastTheCapIsDropped() async throws {
+        let filler = String(repeating: "<i></i>", count: HTMLTextExtractor.maxHTMLCharacters / 7 + 1)
+        let fetcher = ScriptedFetcher(body: "<body><p>Top.</p>\(filler)<p>Deep.</p></body>")
+        let tool = FetchPageTool(fetcher: fetcher, resolver: publicDNS)
+        let result = try await tool.execute(input: ["url": "https://big.example/page"])
+        #expect(result.output.contains("Top."))
+        #expect(!result.output.contains("Deep."))
+        #expect(HTMLTextExtractor.bounded("abc").count == 3)
+        #expect(HTMLTextExtractor.bounded(filler).count == HTMLTextExtractor.maxHTMLCharacters)
     }
 
     @Test("only http(s) urls are fetched")

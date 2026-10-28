@@ -34,6 +34,10 @@
 //  pre-push review found the first cut backtracked exponentially on an unclosed tag (a hang on a hostile
 //  page) and overflowed ICU's stack on a 250K unquoted value: the loop is now possessive over runs, and a
 //  quoted value stops at `<`. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 (later) — #740's second review: a page with no `>` (a megabyte of
+//  `<a `) was still rescanned from every `<`. No run inside a tag may be `<` now, so the scan is one pass, and
+//  both reads strip at most `maxHTMLCharacters` (the model reads the page's top), which bounds the other strip
+//  passes and the title read. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -50,8 +54,19 @@ enum HTMLTextExtractor {
     /// so a quote left open ends at the next tag rather than swallowing the page. The loop is possessive
     /// over runs: it never backtracks, so an unclosed tag at the end of a page costs one pass, not every
     /// way to split its quotes (the pre-push review's 40 attributes would have taken days), and a long
-    /// unquoted value is one step, not one stack frame a character.
-    static let tag = #"<[A-Za-z/!?](?:=\s*"[^"<]*"|=\s*'[^'<]*'|[^>"'=]+|["'=])*+>"#
+    /// unquoted value is one step, not one stack frame a character. Nothing in a tag may be `<`, so a
+    /// tag that never closes ends at the next one: a megabyte of `<a ` with no `>` is one pass, not a
+    /// rescan to the end from every `<` (#740's second review).
+    static let tag = #"<[A-Za-z/!?](?:=\s*"[^"<]*"|=\s*'[^'<]*'|[^>"'=<]+|["'=])*+>"#
+
+    /// The most HTML a page read strips. The text a model sees is the page's top (a few thousand
+    /// characters), so a megabyte reaches it on any real page, and the strip passes and the header's
+    /// title read stay bounded however big, or hostile, the body is.
+    static let maxHTMLCharacters = 1_000_000
+
+    static func bounded(_ html: String) -> String {
+        html.count > maxHTMLCharacters ? String(html.prefix(maxHTMLCharacters)) : html
+    }
 
     static func text(from html: String) -> String {
         var work = html
@@ -171,7 +186,7 @@ public struct FetchPageTool: AgentTool {
                     + "— try another result.")
             }
             let contentType = response.value(forHTTPHeaderField: "Content-Type")
-            let html = BodyDecoder.decode(data, contentType: contentType)
+            let html = HTMLTextExtractor.bounded(BodyDecoder.decode(data, contentType: contentType))
             let text = HTMLTextExtractor.text(from: html)
             Self.log.info("""
             fetched \(url.host() ?? "?", privacy: .public): HTTP \(response.statusCode), \
@@ -259,9 +274,9 @@ public struct FetchPageTool: AgentTool {
         do {
             let (data, response) = try await fetcher.fetch(Self.pageRequest(for: url))
             guard HTTPStatus.classify(response.statusCode) == .ok else { return nil }
-            let html = BodyDecoder.decode(
+            let html = HTMLTextExtractor.bounded(BodyDecoder.decode(
                 data, contentType: response.value(forHTTPHeaderField: "Content-Type")
-            )
+            ))
             let text = HTMLTextExtractor.text(from: html)
             guard !text.isEmpty else { return nil }
             // The same titled frame execute() gives — the search-deepen read is
