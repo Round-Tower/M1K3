@@ -458,16 +458,24 @@ struct DispatchTurnTests {
         #expect(provider.prompts.first?.contains("RETURNED JUST NOW") == false)
     }
 
+    /// The model reads the host (`ToolDispatch.promptText`); the footer still gets the whole URL from the trace.
     @Test("a dispatched web search keeps its deterministic sources tail")
     func webSourcesTail() async throws {
         let provider = Scripted(["Here's the latest."])
         let text = try await run(
             provider,
-            tools: [Recording(name: "web_search", output: "Apple news — https://example.com/apple", calls: Calls())],
+            tools: [
+                Recording(
+                    name: "web_search", output: "1. Apple news — https://example.com/apple\n   M5.", calls: Calls()
+                ),
+            ],
             pick: ToolPick(tool: "web_search", query: "apple news"), question: "latest Apple news?"
         )
         #expect(text.hasPrefix("Here's the latest."))
         #expect(text.contains("Web sources:\n• https://example.com/apple"))
+        let prompt = try #require(provider.prompts.first)
+        #expect(prompt.contains("1. Apple news (example.com)"))
+        #expect(!prompt.contains("https://example.com/apple"))
     }
 }
 

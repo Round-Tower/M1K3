@@ -226,6 +226,34 @@ struct WebSearchToolTests {
         #expect(fetcher.requests.compactMap(\.url?.host) == ["api.duckduckgo.com", "en.wikipedia.org"])
     }
 
+    /// 2026-10-27 web sample: the list ran 1,350–1,770 characters and cut the page read after it. With a page,
+    /// the top three stay (the Sources footer names three at most); without one, the snippets are all there is.
+    @Test("beside a page read the list keeps the top three; without one, all five")
+    func listShortensBesideAPage() async throws {
+        let five = "<html><body><table>" + (1 ... 5).map { index in
+            "<tr><td><a rel=\"nofollow\" href=\"https://site\(index).example/a\" class='result-link'>"
+                + "Hit \(index)</a></td></tr>"
+                + "<tr><td class='result-snippet'>Snippet \(index).</td></tr>"
+        }.joined() + "</table></body></html>"
+        func run(page: String) async throws -> String {
+            let fetcher = FakeHTTPFetcher { request in
+                switch request.url?.host {
+                case "api.duckduckgo.com": return Data(emptyIA.utf8)
+                case "lite.duckduckgo.com": return Data(five.utf8)
+                default: return Data(page.utf8)
+                }
+            }
+            let tool = WebSearchTool(fetcher: fetcher, deepReader: FetchPageTool(fetcher: fetcher, resolver: publicDNS))
+            return try await tool.execute(input: ["query": "anything"]).output
+        }
+        let read = try await run(page: "<html><body><p>The answer is on this page.</p></body></html>")
+        #expect(read.contains("3. Hit 3"))
+        #expect(!read.contains("4. Hit 4"))
+        #expect(read.contains("The answer is on this page."))
+        let unread = try await run(page: "<html><body><script>x()</script></body></html>")
+        #expect(unread.contains("5. Hit 5"))
+    }
+
     @Test("without a deep reader, behaviour is unchanged (snippets only)")
     func noDeepReaderUnchanged() async throws {
         let fetcher = FakeHTTPFetcher { request in
