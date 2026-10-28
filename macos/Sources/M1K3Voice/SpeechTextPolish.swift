@@ -79,6 +79,8 @@
 //  JSON). The later passes keep fences verbatim, so without it a block was read out as JSON on both
 //  lanes. M1K3Voice now imports the M1K3AnswerBlocks leaf (a taste call for Kev, see Package.swift).
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — the colonless site arm read any dotted run as a site, so
+//  "(from 3.5)" went silent on both platforms; a site's last label now starts with a letter. Confidence 0.9.
 //
 
 import Foundation
@@ -404,9 +406,10 @@ public enum SpeechTextPolish {
     /// parens AND either a colon after the key or nothing but a site after it:
     /// "(from the Latin salarium)", "(via Douglas)" and "(source code is on
     /// GitHub)" are prose and still speak, as does "(an open source project)".
+    /// A site's last label starts with a letter, so "(from 3.5)" is a version, not a site.
     private static func stripInlineSourceParens(_ text: String) -> String {
         text.replacing(
-            /(?i)\s*\((?:Source|Via|From)(?::\s*[^)]+|\s+(?:https?:\/\/)?[\w-]+(?:\.[\w-]+)+(?:\/[^\s)]*)?)\)/,
+            /(?i)\s*\((?:Source|Via|From)(?::\s*[^)]+|\s+(?:https?:\/\/)?[\w-]+(?:\.[\w-]+)*\.[a-z][\w-]*(?:\/[^\s)]*)?)\)/,
             with: ""
         )
     }
