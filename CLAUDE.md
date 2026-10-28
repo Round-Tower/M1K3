@@ -76,9 +76,16 @@ Anything a cold session needs on turn one belongs below, not there.
   reviewer's whole attention. At most two push-wait-fold rounds per PR (a
   round is a push plus its review, not a pass), then carry the rest to a
   follow-up issue. Claude pushes branches and lands via `land.sh` without
-  asking per action (never a direct push to master); land in a batch at the
-  end of a stretch, and report only when something is landable, blocked or
-  interesting. `challenger` before a PR that sets a threshold or heuristic.
+  asking per action (never a direct push to master), though the auto-mode
+  classifier still wants Kev's own "land" in the conversation; land in a batch
+  at the end of a stretch, and report only when something is landable, blocked
+  or interesting. `challenger` before a PR that sets a threshold or heuristic,
+  and score the heuristic on a blind set it wasn't tuned on (#713's word veto
+  passed its tuning lines and failed a blind set, 10-28).
+- **Try it on the device before the PR loop (Kev, #655).** For UI, voice or device work, iterate on the
+  branch with local builds on the Mac and phone first, and open the PR when it feels right: a review round
+  costs more than a rebuild. A device check a PR still owes when it lands goes into the next build's
+  TestFlight notes (`asc/testflight.py notes`), so it gets run, not forgotten (Kev, 2026-10-28).
 - **CI on a PR:** package-only diffs are gated by `swift test` (~4 min); the
   App-shell and iOS+visionOS xcodebuild jobs run only when their paths change
   (the `shell` / `mobile` filters in `ci.yml`). Every push to master or develop
@@ -96,6 +103,8 @@ Anything a cold session needs on turn one belongs below, not there.
 - Appending a test at a file's END can land it inside a trailing private helper class (the suite's
   `}` is not the file's last): anchor on the suite's closing brace and check which type the new `func`
   sits in. `tdd.sh` still runs it as an implicit suite, so only the bot pass sees it (#691, 2026-10-26).
+- Same-day PRs that clash only on MurphySig Review lines land one after another (order them with a
+  `git merge-tree` dry run) and each fixes its header conflict; don't fold them into one PR (Kev, 2026-10-28).
 - Merge stacked PRs bottom-up; never `--delete-branch` on a stack base;
   `git rebase --onto` over a squash-merged base. `land.sh` DOES delete the merged
   branch, so retarget dependants first (`gh pr edit <N> --base master`) or GitHub
@@ -177,13 +186,15 @@ Anything a cold session needs on turn one belongs below, not there.
   TestFlight build: the month's compute hours ran out by the 15th when every master push archived
   Mac + iOS. A build starts when `macos/tools/asc/release_tag.py cut --confirm` tags a green
   master commit; cutting one is Kev's call. A run CANCELED seconds after creation with no reason
-  means the hours are spent, not a broken workflow (still the case 10-21, runs 537–539). Then ship from
+  means the hours are spent, not a broken workflow (runs 537–541, through 10-26). Then ship from
   here: `macos/tools/release/release-local.sh <that run's number>` (Mac + iOS + smoke), Kev's
   `upload-local.zsh`, `asc/testflight.py notes --build N --confirm`. The nightly DMG still ships master's Mac app.
 - **Router retrains move both heads (2026-10-17, #631).** `tools/router/train_tool_router.py` rewrites the gate
   (`ToolNeedRouterWeights`) AND the group head (`ToolGroupRouterWeights`). A gate fix ships the gate alone: restore
   the group head from master unless the router chateval arm has run on the new one. Its floor drop dispatched in-chat
   look-backs to `recent_activity`. Score held-out lines first, and keep the rig's lines out of training.
+  The search head (`SearchRouterWeights`, #713) ships ON on the Mac as the untrained stub, which never vetoes;
+  trained weights replace it only after the chateval arm passes on them.
 - **An eval must wire like the app.** Chat-path chateval runs need `--router dispatch`: the Mac app routes
   every tier (`ToolRouterWiring.allTiersEnabled(whenUnset: true)`, ADR 0009's `toolRouterAllTiers`), and the
   default live arm has no router, so it never takes the plain route. When an eval disagrees
@@ -296,4 +307,8 @@ hits; and an appended test can land in a trailing helper type past the suite's c
 Review: Kev + claude-opus-5.5, 2026-10-28 — the header says what is live (both stores since 10-11 / 10-21), and the
 auditions line carries Kev's two standing audition rulings (vision for Lil and Big; MoE Big closed on M1), which
 lived only in session memory. Confidence 0.85.
+Review: Kev + claude-opus-5.5, 2026-10-28 (later) — Kev took the 10-28 audit's recommendations: try device work on
+the devices before the PR loop (#655) with owed device checks riding the TestFlight notes; same-day PRs that clash
+only on Review lines land in turn; score a heuristic on a blind set. Drift fixed: the classifier wants Kev's "land",
+runs 537–541, the search head ships on as the stub. Confidence 0.8.
 -->
