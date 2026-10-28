@@ -35,9 +35,9 @@
 //  page) and overflowed ICU's stack on a 250K unquoted value: the loop is now possessive over runs, and a
 //  quoted value stops at `<`. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-28 (later) — #740's second review: a page with no `>` (a megabyte of
-//  `<a `) was still rescanned from every `<`. No run inside a tag may be `<` now, so the scan is one pass, and
-//  both reads strip at most `maxHTMLCharacters` (the model reads the page's top), which bounds the other strip
-//  passes and the title read. Confidence 0.85.
+//  `<a `) was still rescanned from every `<`. No run inside a tag may be `<` now, so the scan is one pass. Pre-push
+//  review fold: every strip pass is one pass (dropped pairs are found by search, not a lazy regex; `<br` stops
+//  at `<`), and `maxHTMLBytes` caps every road in, open_link's brief included, in bytes. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -59,33 +59,47 @@ enum HTMLTextExtractor {
     /// rescan to the end from every `<` (#740's second review).
     static let tag = #"<[A-Za-z/!?](?:=\s*"[^"<]*"|=\s*'[^'<]*'|[^>"'=<]+|["'=])*+>"#
 
-    /// The most HTML a page read strips. The text a model sees is the page's top (a few thousand
-    /// characters), so a megabyte reaches it on any real page, and the strip passes and the header's
-    /// title read stay bounded however big, or hostile, the body is.
-    static let maxHTMLCharacters = 1_000_000
+    /// The most HTML any page read looks at, in UTF-8 bytes. The text a model sees is the page's top (a
+    /// few thousand characters), so a megabyte reaches it on any real page. Bytes, not Characters: one
+    /// grapheme cluster can carry any number of combining marks, and the regex passes count UTF-16 units,
+    /// which never outnumber the bytes. Applied inside `text(from:)` and `PageBrief`'s title and meta
+    /// reads, so every road in (fetch_page, the search deepen, open_link, MCP's open_link) is capped.
+    static let maxHTMLBytes = 1_000_000
 
     static func bounded(_ html: String) -> String {
-        html.count > maxHTMLCharacters ? String(html.prefix(maxHTMLCharacters)) : html
+        guard html.utf8.count > maxHTMLBytes else { return html }
+        // Lossy on purpose: the cut can split a character, which decodes to U+FFFD at the very end.
+        // swiftlint:disable:next optional_data_string_conversion
+        return String(decoding: html.utf8.prefix(maxHTMLBytes), as: UTF8.self)
     }
 
+    /// Elements dropped whole: an opener and its closer, both matched without regard to case. A `word`
+    /// opener must end at a word boundary, so `<head` never takes `<header>` (or `<script` a `<scripts>`).
+    struct DroppedPair {
+        let open: String
+        let close: String
+        var word = true
+    }
+
+    static let droppedPairs: [DroppedPair] = [
+        DroppedPair(open: "<script", close: "</script>"),
+        DroppedPair(open: "<style", close: "</style>"),
+        DroppedPair(open: "<head", close: "</head>"),
+        // Page chrome eats the output cap before content starts (seen live).
+        DroppedPair(open: "<nav", close: "</nav>"),
+        DroppedPair(open: "<header", close: "</header>"),
+        DroppedPair(open: "<footer", close: "</footer>"),
+        DroppedPair(open: "<!--", close: "-->", word: false),
+    ]
+
     static func text(from html: String) -> String {
-        var work = html
-        let removals = [
-            "(?is)<script\\b.*?</script>",
-            "(?is)<style\\b.*?</style>",
-            "(?is)<head\\b.*?</head>",
-            // Page chrome eats the output cap before content starts (seen live).
-            "(?is)<nav\\b.*?</nav>",
-            "(?is)<header\\b.*?</header>",
-            "(?is)<footer\\b.*?</footer>",
-            "(?s)<!--.*?-->",
-        ]
-        for pattern in removals {
-            work = work.replacingOccurrences(of: pattern, with: " ", options: .regularExpression)
+        var work = bounded(html)
+        for pair in droppedPairs {
+            work = droppingPairs(in: work, open: pair.open, close: pair.close, word: pair.word)
         }
         // Block boundaries → newlines; td/th too, so adjacent cells don't run together.
         work = work.replacingOccurrences(
-            of: "(?i)</(p|div|h[1-6]|li|tr|td|th|section|article|ul|ol|table)>|<br[^>]*>",
+            of: "(?i)</(p|div|h[1-6]|li|tr|td|th|section|article|ul|ol|table)>|<br[^<>]*>",
             with: "\n",
             options: .regularExpression
         )
@@ -99,6 +113,46 @@ enum HTMLTextExtractor {
             }
             .filter { !$0.isEmpty }
         return lines.joined(separator: "\n")
+    }
+
+    /// Each opener through its closer becomes one space, in one pass. The lazy regex this replaces
+    /// (`<script\\b.*?</script>`) rescanned to the end from every opener when the closer never came. Here
+    /// an opener with no closer ends the pass: no later opener could close either, so the rest stays
+    /// for the tag strip, exactly as the regex left it.
+    static func droppingPairs(in text: String, open: String, close: String, word: Bool) -> String {
+        let source = NSString(string: text)
+        let output = NSMutableString()
+        var cursor = 0
+        var searchFrom = 0
+        while searchFrom < source.length {
+            let opener = source.range(
+                of: open, options: .caseInsensitive,
+                range: NSRange(location: searchFrom, length: source.length - searchFrom)
+            )
+            guard opener.location != NSNotFound else { break }
+            let afterOpen = NSMaxRange(opener)
+            if word, afterOpen < source.length, isWordUnit(source.character(at: afterOpen)) {
+                searchFrom = afterOpen
+                continue
+            }
+            let closer = source.range(
+                of: close, options: .caseInsensitive,
+                range: NSRange(location: afterOpen, length: source.length - afterOpen)
+            )
+            guard closer.location != NSNotFound else { break }
+            output.append(source.substring(with: NSRange(location: cursor, length: opener.location - cursor)))
+            output.append(" ")
+            cursor = NSMaxRange(closer)
+            searchFrom = cursor
+        }
+        output.append(source.substring(from: cursor))
+        return output as String
+    }
+
+    /// `\\b`'s word side for one UTF-16 unit: a letter, digit or underscore.
+    private static func isWordUnit(_ unit: unichar) -> Bool {
+        guard let scalar = Unicode.Scalar(unit) else { return false }
+        return scalar == "_" || CharacterSet.alphanumerics.contains(scalar)
     }
 
     static func decodeEntities(_ text: String) -> String {
@@ -186,11 +240,11 @@ public struct FetchPageTool: AgentTool {
                     + "— try another result.")
             }
             let contentType = response.value(forHTTPHeaderField: "Content-Type")
-            let html = HTMLTextExtractor.bounded(BodyDecoder.decode(data, contentType: contentType))
+            let html = BodyDecoder.decode(data, contentType: contentType)
             let text = HTMLTextExtractor.text(from: html)
             Self.log.info("""
             fetched \(url.host() ?? "?", privacy: .public): HTTP \(response.statusCode), \
-            \(html.count) bytes → \(text.count) chars readable
+            \(html.utf8.count) bytes → \(text.count) chars readable
             """)
             guard !text.isEmpty else {
                 return ToolResult(output: "The page at \(url.host() ?? "that address") had "
@@ -274,9 +328,9 @@ public struct FetchPageTool: AgentTool {
         do {
             let (data, response) = try await fetcher.fetch(Self.pageRequest(for: url))
             guard HTTPStatus.classify(response.statusCode) == .ok else { return nil }
-            let html = HTMLTextExtractor.bounded(BodyDecoder.decode(
+            let html = BodyDecoder.decode(
                 data, contentType: response.value(forHTTPHeaderField: "Content-Type")
-            ))
+            )
             let text = HTMLTextExtractor.text(from: html)
             guard !text.isEmpty else { return nil }
             // The same titled frame execute() gives — the search-deepen read is

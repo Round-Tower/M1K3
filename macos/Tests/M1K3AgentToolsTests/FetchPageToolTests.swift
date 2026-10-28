@@ -12,7 +12,9 @@
 //  data-mw), a stray `<` in text, and the pre-push review's three: an unclosed tag at a page's end returns (a hang
 //  guard on its own thread), a 250K unquoted value is one tag, an open quote ends at the next tag. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-28 (later) — a megabyte of never-closed tags returns (the same hang guard),
-//  a `<` inside a tag ends it, and text past the HTML cap is never read. Confidence 0.85.
+//  a `<` inside a tag ends it, and text past the HTML cap is never read. Pre-push review fold: the hang guard covers
+//  every strip pass and the title/meta reads, the cap is in bytes and sits under open_link's brief too, and dropped
+//  pairs keep their meaning. Confidence 0.85.
 
 import Foundation
 @testable import M1K3AgentTools
@@ -107,25 +109,40 @@ struct HTMLTextExtractorTests {
         #expect(HTMLTextExtractor.text(from: html) == "Before.\nAfter.")
     }
 
-    /// #740's second review: the unquoted run also ate `<`, so a page with no `>` at all (a megabyte of `<a `)
-    /// was rescanned to its end from every `<`. A tag now ends at the next `<`, so the scan is one pass. The
-    /// 30 s wait is a hang guard on its own thread, as above, not a speed pin.
-    @Test("a megabyte of tags that never close returns")
-    func neverClosedTagsReturn() {
+    /// #740's second review, then this PR's pre-push review: every strip pass has to be one pass over a page
+    /// that never closes what it opens — a tag (`<a `, `<br `, `<meta `), a dropped pair (`<script>`, `<!--`) or
+    /// the title. Each case is a megabyte; the 30 s wait is a hang guard on its own thread, not a speed pin.
+    @Test("a megabyte of anything never closed returns, from the text strip and the title and meta reads")
+    func neverClosedMarkupReturns() {
         final class Result: @unchecked Sendable {
             let lock = NSLock()
-            var text: String?
+            var texts: [String] = []
         }
-        let html = "<p>Kept.</p>" + String(repeating: "<a ", count: 350_000)
+        let hostile = ["<a ", "<br ", "<meta ", "<title ", "<title>", "<script>", "<script ", "<style>", "<!--"]
         let result = Result()
         let done = DispatchSemaphore(value: 0)
         Thread.detachNewThread {
-            let text = HTMLTextExtractor.text(from: html)
-            result.lock.withLock { result.text = text }
+            for unit in hostile {
+                let html = "<p>Kept.</p>" + String(repeating: unit, count: 1_000_000 / unit.utf8.count)
+                let text = HTMLTextExtractor.text(from: html)
+                _ = PageBrief.title(from: html)
+                _ = PageBrief.metaDescription(from: html)
+                result.lock.withLock { result.texts.append(text) }
+            }
             done.signal()
         }
         #expect(done.wait(timeout: .now() + 30) == .success)
-        #expect(result.lock.withLock { result.text }?.hasPrefix("Kept.") == true)
+        let texts = result.lock.withLock { result.texts }
+        #expect(texts.count == hostile.count)
+        #expect(texts.allSatisfy { $0.hasPrefix("Kept.") })
+    }
+
+    @Test("dropped pairs still drop whole, in any case, and a word opener never eats a longer tag")
+    func droppedPairsKeepTheirMeaning() {
+        let html = "<HEAD><title>T</title></HEAD><header>Menu</header><p>One.</p><SCRIPT>x()</script>"
+            + "<!-- note --><p>Two.</p><scripts>Kept tag text</scripts><style>.a{}</style><p>Three.</p>"
+        #expect(HTMLTextExtractor.text(from: html) == "One.\nTwo.\nKept tag text Three.")
+        #expect(HTMLTextExtractor.text(from: "<p>Open.</p><script>never closed") == "Open.\nnever closed")
     }
 
     @Test("a < inside a tag ends it, so malformed markup keeps its text instead of swallowing the next tag")
@@ -180,16 +197,29 @@ struct FetchPageToolTests {
         #expect(request.value(forHTTPHeaderField: "User-Agent")?.contains("Safari") == true)
     }
 
-    @Test("readable text past the HTML cap is never read, so a huge page costs one bounded pass")
+    @Test("markup past the HTML cap is never read, on every road in: fetch, the text strip and open_link's brief")
     func htmlPastTheCapIsDropped() async throws {
-        let filler = String(repeating: "<i></i>", count: HTMLTextExtractor.maxHTMLCharacters / 7 + 1)
+        let filler = String(repeating: "<i></i>", count: HTMLTextExtractor.maxHTMLBytes / 7 + 1)
         let fetcher = ScriptedFetcher(body: "<body><p>Top.</p>\(filler)<p>Deep.</p></body>")
         let tool = FetchPageTool(fetcher: fetcher, resolver: publicDNS)
         let result = try await tool.execute(input: ["url": "https://big.example/page"])
         #expect(result.output.contains("Top."))
         #expect(!result.output.contains("Deep."))
-        #expect(HTMLTextExtractor.bounded("abc").count == 3)
-        #expect(HTMLTextExtractor.bounded(filler).count == HTMLTextExtractor.maxHTMLCharacters)
+        // A hard cut can leave the tail of a tag ("<") as text; what matters is that nothing past it is read.
+        let capped = HTMLTextExtractor.text(from: "<p>Top.</p>\(filler)<p>Deep.</p>")
+        #expect(capped.hasPrefix("Top."))
+        #expect(!capped.contains("Deep."))
+        #expect(PageBrief.title(from: filler + "<title>Late</title>") == nil)
+        #expect(PageBrief.metaDescription(from: filler + "<meta name=\"description\" content=\"Late\">") == nil)
+    }
+
+    /// One grapheme cluster can hold any number of combining marks, so a cap on Characters bounds nothing.
+    @Test("the cap counts UTF-8 bytes, so combining marks can't smuggle a huge page under it")
+    func capCountsBytes() {
+        #expect(HTMLTextExtractor.bounded("abc") == "abc")
+        let marks = "<br " + String(repeating: "\u{0301}", count: 2_000_000)
+        #expect(marks.count < 10) // a handful of Characters…
+        #expect(HTMLTextExtractor.bounded(marks).utf8.count <= HTMLTextExtractor.maxHTMLBytes) // …megabytes of bytes
     }
 
     @Test("only http(s) urls are fetched")

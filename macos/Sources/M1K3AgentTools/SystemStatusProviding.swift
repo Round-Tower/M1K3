@@ -13,7 +13,8 @@
 //  string→case mapping pinned. Confidence now 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-28 — RAM and CPU load join the seam: the tool menu promised "CPU,
 //  memory or disk" and the tool had neither. Mach VM stats (Activity Monitor's "Memory Used") and getloadavg;
-//  both nil when the kernel won't say, and fakes inherit nil. Confidence 0.8 (the live values are smoke only).
+//  both nil when the kernel won't say, and fakes inherit nil; one host port for both calls (pre-push review).
+//  Confidence 0.8 (the live values are smoke only).
 
 import Foundation
 
@@ -162,13 +163,14 @@ public struct LiveSystemStatusProvider: SystemStatusProviding {
     public func ramSnapshot() -> RAMSnapshot? {
         var stats = vm_statistics64()
         var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64_data_t>.size / MemoryLayout<integer_t>.size)
+        let host = mach_host_self()
         let result = withUnsafeMutablePointer(to: &stats) {
             $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
-                host_statistics64(mach_host_self(), HOST_VM_INFO64, $0, &count)
+                host_statistics64(host, HOST_VM_INFO64, $0, &count)
             }
         }
         var pageSize: vm_size_t = 0
-        guard result == KERN_SUCCESS, host_page_size(mach_host_self(), &pageSize) == KERN_SUCCESS else { return nil }
+        guard result == KERN_SUCCESS, host_page_size(host, &pageSize) == KERN_SUCCESS else { return nil }
         let anonymous = UInt64(stats.internal_page_count)
         let appPages = anonymous - min(UInt64(stats.purgeable_count), anonymous)
         let pages = appPages + UInt64(stats.wire_count) + UInt64(stats.compressor_page_count)

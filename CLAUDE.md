@@ -75,11 +75,10 @@ Anything a cold session needs on turn one belongs below, not there.
   release gate, an independent revert path, or a change that needs a
   reviewer's whole attention. At most two push-wait-fold rounds per PR (a
   round is a push plus its review, not a pass), then carry the rest to a
-  follow-up issue. Claude pushes branches and lands via `land.sh` without
-  asking per action (never a direct push to master), though the auto-mode
-  classifier still wants Kev's own "land" in the conversation; land in a batch
-  at the end of a stretch, and report only when something is landable, blocked
-  or interesting. `challenger` before a PR that sets a threshold or heuristic,
+  follow-up issue. Claude pushes branches and runs `land.sh` itself (never a
+  direct push to master); the auto-mode classifier wants one "land" from Kev in
+  the conversation per batch. Land in a batch at the end of a stretch, and
+  report only when something is landable, blocked or interesting. `challenger` before a PR that sets a threshold or heuristic,
   and score the heuristic on a blind set it wasn't tuned on (#713's word veto
   passed its tuning lines and failed a blind set, 10-28).
 - **Try it on the device before the PR loop (Kev, #655).** For UI, voice or device work, iterate on the
@@ -103,8 +102,8 @@ Anything a cold session needs on turn one belongs below, not there.
 - Appending a test at a file's END can land it inside a trailing private helper class (the suite's
   `}` is not the file's last): anchor on the suite's closing brace and check which type the new `func`
   sits in. `tdd.sh` still runs it as an implicit suite, so only the bot pass sees it (#691, 2026-10-26).
-- Same-day PRs that clash only on MurphySig Review lines land one after another (order them with a
-  `git merge-tree` dry run) and each fixes its header conflict; don't fold them into one PR (Kev, 2026-10-28).
+- When two same-day PRs already exist and clash only on MurphySig Review lines, land them one after another
+  (order them with a `git merge-tree` dry run), each fixing its own header conflict (Kev, 2026-10-28).
 - Merge stacked PRs bottom-up; never `--delete-branch` on a stack base;
   `git rebase --onto` over a squash-merged base. `land.sh` DOES delete the merged
   branch, so retarget dependants first (`gh pr edit <N> --base master`) or GitHub
@@ -309,6 +308,6 @@ auditions line carries Kev's two standing audition rulings (vision for Lil and B
 lived only in session memory. Confidence 0.85.
 Review: Kev + claude-opus-5.5, 2026-10-28 (later) — Kev took the 10-28 audit's recommendations: try device work on
 the devices before the PR loop (#655) with owed device checks riding the TestFlight notes; same-day PRs that clash
-only on Review lines land in turn; score a heuristic on a blind set. Drift fixed: the classifier wants Kev's "land",
-runs 537–541, the search head ships on as the stub. Confidence 0.8.
+only on Review lines land in turn; score a heuristic on a blind set. Drift fixed: the classifier wants one "land" from
+Kev per batch, runs 537–541, the search head ships on as the stub. Confidence 0.8.
 -->

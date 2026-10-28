@@ -8,8 +8,9 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-06-09, Confidence 0.85, Prior: Unknown
 //  Review: Kev + claude-opus-5.5, 2026-10-28 — memory use and CPU load lines: the tool menu (ToolDispatch.menuLines)
-//  promised "CPU, memory or disk" and a memory question got battery, disk and uptime. The menu bytes stay as
-//  they were, so routing doesn't move. Confidence 0.85.
+//  promised "CPU, memory or disk" and a memory question got battery, disk and uptime. The menu and the tool
+//  description stay byte for byte (the description is a prompt surface too), so neither routing nor the native
+//  tool palette moves. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -36,18 +37,20 @@ enum SystemStatusFormatter {
     }
 
     /// RAM in binary gigabytes, as the Mac sells and Activity Monitor shows it: used to one decimal.
+    /// `String(format:)` is never localised: the line is for a model, and "11,3 GB" reads as a list.
     static func describeRAM(_ ram: RAMSnapshot) -> String {
         let gib = Double(1 << 30)
-        let used = (Double(ram.usedBytes) / gib).formatted(.number.precision(.fractionLength(1)))
+        let used = String(format: "%.1f", Double(ram.usedBytes) / gib)
         return "Memory: \(used) GB used of \(Int((Double(ram.totalBytes) / gib).rounded())) GB."
     }
 
-    /// The load spread over the cores, capped at 100%: a load of 12 on 8 cores is fully busy, not 150%.
+    /// The one-minute load spread over the cores, capped at 100%: a load of 12 on 8 cores is fully busy,
+    /// not 150%. It says "over the last minute" so a model doesn't report an average as this instant.
     static func describeCPU(_ cpu: CPULoadSnapshot) -> String {
         let cores = max(cpu.cores, 1)
         let busy = min(Int((cpu.oneMinuteLoad / Double(cores) * 100).rounded()), 100)
-        let load = cpu.oneMinuteLoad.formatted(.number.precision(.fractionLength(1)))
-        return "CPU: \(busy)% busy (load \(load) on \(unit(cores, "core")))."
+        let load = String(format: "%.1f", cpu.oneMinuteLoad)
+        return "CPU: \(busy)% busy over the last minute (load \(load) on \(unit(cores, "core")))."
     }
 
     /// "2 days 3 hours" / "1 hour" / "1 minute" / "under a minute" — the two
@@ -79,8 +82,7 @@ enum SystemStatusFormatter {
 public struct SystemStatusTool: AgentTool {
     public let name = "system_status"
     public let description =
-        "Get \(HostPlatform.thisDevice)'s battery, memory use, CPU load, free disk space and uptime. "
-            + "Argument: optional, ignored."
+        "Get \(HostPlatform.thisDevice)'s battery, free disk space and uptime. Argument: optional, ignored."
     public let parameters = [
         ToolParameter(name: "query", description: "ignored"),
     ]

@@ -395,6 +395,7 @@ extension SpeechTextPolishTests {
             #expect(SpeechTextPolish.polish(text) == text, Comment(rawValue: text))
         }
         #expect(SpeechTextPolish.polish("Rain expected (via met.ie).") == "Rain expected.")
+        #expect(SpeechTextPolish.polish("Rain expected (via пример.рф).") == "Rain expected.") // a Unicode TLD
     }
 
     /// The trailing-block scan used to let every bullet or digit character open a new loop iteration, so a long
