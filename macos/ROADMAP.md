@@ -82,9 +82,6 @@ this sweep.
   an in-app eval gate before any prompt change.
 - **Mini's weak kinds on the scoreboard** (`site/brains.json`, 10-06): sycophancy 2/6,
   instruction-following 9/18, vision 1/16 — each wants an eval gate before a prompt change.
-- **Local-only branches** to push or retire (Kev's call): `fix/doc-question-skips-lookup`,
-  `spike/moe-big-audition` (4 commits), `feat/eval-harness`, `backup/face-reveal-5e8e8485`.
-  All are in `~/Development/m1k3-branch-backup-2026-10-26/all-local-branches.bundle`.
 
 ### Monetization — the 90-day plan (#369)
 
@@ -215,6 +212,11 @@ exchange). **Hardware-owed: the real ceremony** — QR scan, Approve, the Local
 Network dialog, a streamed answer, Tailscale-unreachable. Next: the Android
 client (Conscrypt PSKKeyManager or the cert-pin fallback); canary → Keychain
 migration; LAN-MCP client-name stamping; the N2/N3 escalation UI.
+**Draft v2, needs Kev:** `docs/NOTIFY_AND_PTT.md` — a narrow `notify` tool
+for paired devices and remote agents, quiet and presence inferred from the
+Mac's own signals, listen-after-announce as the reply, and the opt-in WAN
+mailbox (the one piece that touches the privacy story). Nothing is built; its
+five open calls are Kev's (drafted 2026-10-02, landed as a draft 2026-10-28).
 
 ### The screensaver — SHIPPED 2026-08-20
 
@@ -303,7 +305,8 @@ stays a possible later companion.
 - **Issue #46** — refusal-marker ledger: the scorer misses "Not going to do
   that one" / "Won't chase"; grows one entry per bake-off.
 - **Audition finalists on disk** (`~/.cache/m1k3-audition`, 26 GB after the
-  09-15 prune): Qwen3.6-35B (the craic pick), Ornith-9B (parked at parity,
+  09-15 prune): Qwen3.6-35B (the craic pick; lost in-app
+  2026-10-25, `docs/evals/2026-10-24-moe-big/`), Ornith-9B (parked at parity,
   7× slower), LFM2.5-2.6B, MiniCPM5-2B. Never into the app's model store
   (cache-poison rule). Delete when the next audition has a new list.
 
@@ -324,7 +327,9 @@ stays a possible later companion.
   mlx-community re-quantizes, re-check the pinned manifest hash.
 - **Qwen3.8-27B** as a future Big — root-caused to the 12 GB ceiling
   (`MLXMemoryBudget` per tier, #218); the MoE queue's answer was "delegation
-  brain, not front Big" (gemma-4-26B-A4B, 15 GB peak, 32 GB+ Macs).
+  brain, not front Big" (gemma-4-26B-A4B, 15 GB peak, 32 GB+ Macs). **MoE Big closed on M1
+  (Kev, 2026-10-25):** gemma-4-26B-A4B and Qwen3.6-35B-A3B both lost to gemma-4-12B in-app
+  (`docs/evals/2026-10-24-moe-big/`); revisit on M4+/M5 or for a dense mid-size model with vision.
 
 ---
 
@@ -495,3 +500,6 @@ stays a possible later companion.
 <!-- Review: Kev + claude-opus-5.5, 2026-10-27 (merge review fold) — the search head bullet says what ships: on for
      the Mac (`whenUnset: true`, off arm `-toolSearchHead NO`), off on iOS. It still said off on both shells.
      Confidence 0.9. -->
+<!-- Review: Kev + claude-opus-5.5, 2026-10-28 — harvest: the local-branch bullet is retired (all four landed or were
+     harvested), Qwen3.6-35B's finalist line and the delegation-brain line record MoE Big closed on M1 (Kev 10-25,
+     docs/evals/2026-10-24-moe-big/), and the 10-02 notify / push-to-talk spec is listed as a draft. Confidence 0.85. -->

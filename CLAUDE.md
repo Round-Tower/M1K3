@@ -2,8 +2,8 @@
 
 Privacy-focused, on-device AI: MLX inference, live voice, knowledge graph + RAG,
 and an MCP server. **The live product is the Mac-native SwiftUI app under
-`macos/`** (`M1K3App/`): 1.x on TestFlight and as the Developer ID DMG, submitted to the
-Mac App Store (check the store lookup before saying it is live). The same portable
+`macos/`** (`M1K3App/`): live on the Mac App Store and the iOS App Store (one purchase), plus
+TestFlight and the Developer ID DMG (read the store lookup before saying which version users have). The same portable
 `macos/Sources/` package graph drives the iOS + visionOS shell under
 `macos/M1K3iOSApp/`. The legacy Python surface lives only in git history before
 `7545b4a4` (`git checkout 7545b4a4 -- attic` resurrects it).
@@ -40,7 +40,9 @@ Anything a cold session needs on turn one belongs below, not there.
 - **Auditions are open again (Kev, 2026-10-18; lifts the 10-13 hold):** "I'm open to new auditions, always
   looking for the next shiny new things." A challenger runs the same chateval arms as the brain it would
   replace, wired like the app, and wins on paired per-question results, not an aggregate; never pre-seed
-  its weights with `hf download`.
+  its weights with `hf download`. **Every Lil and Big candidate must see** (Kev, 10-19 and 10-24): a text-only
+  brain is a record, not a swap. **MoE Big is closed on M1** (Kev, 10-25: both sparse models lost to dense
+  gemma-4-12B, `macos/docs/evals/2026-10-24-moe-big/`); reopen on M4+/M5 or for a dense mid-size model that sees.
 - **Landing a PR:** `macos/tools/ci/land.sh <PR> [--passes N]` gates on
   `pr_watch.py` (required CI green on the head sha, review passes read against
   that head, each owed pass ending `VERDICT: APPROVE @ <full 40-char head sha>`;
@@ -291,4 +293,7 @@ Review: Kev + claude-opus-5.5, 2026-10-21 — the same line names the local rout
 Review: Kev + claude-fable-5.1, 2026-10-26 — two carry-forwards from the perf stream (#690, #691): "wire like the app"
 now includes the responder's injected closures (the chat-curve ran `Budget.default` until #690) and how to count tail
 hits; and an appended test can land in a trailing helper type past the suite's closing brace.
+Review: Kev + claude-opus-5.5, 2026-10-28 — the header says what is live (both stores since 10-11 / 10-21), and the
+auditions line carries Kev's two standing audition rulings (vision for Lil and Big; MoE Big closed on M1), which
+lived only in session memory. Confidence 0.85.
 -->
