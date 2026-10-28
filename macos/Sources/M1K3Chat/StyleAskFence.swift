@@ -27,6 +27,7 @@
 //    the Memories list undoes a wrong row.
 //  - An ask split across sentences ("Too long. Shorter, please." anchors only in the
 //    second, which also asks, so it passes; "Your answers. Please." does not).
+//  - The cues and leads are English only, so "bitte kürzer" stores nothing (2026-10-28 ruling).
 //  - Kind-blind supersede: the coordinator's twin search ignores kind, so a later
 //    fact filed under another kind ("The user prefers shorter answers." as a
 //    preference) at or above the embedder's twin bar supersedes a live style row,
@@ -39,6 +40,8 @@
 //  anchor and the ask must share one sentence or line (a pasted paragraph carried a cue in one line and an
 //  anchor in another), and "prefers"/"wants", which the prompt puts in every style fact, no longer anchor.
 //  Every cue and lead is pinned one by one. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — Kev's ruling on the audit: "pls" and "plz" are politeness cues,
+//  and the English-only scope is said plainly and pinned. Confidence 0.8.
 //
 
 import Foundation
@@ -46,10 +49,11 @@ import Foundation
 public enum StyleAskFence {
     /// Phrases that make a turn a request wherever they sit: word-bounded, matched on
     /// the lowercased turn with curly apostrophes straightened. One family per line;
-    /// each family is pinned in StyleAskFenceTests.
+    /// each family is pinned in StyleAskFenceTests. English only: an ask in another
+    /// language fails closed (no style fact), an accepted cost.
     static let requestCues: [String] = [
         // Politeness and direct requests.
-        "please", "can you", "could you", "would you", "will you", "can we", "could we",
+        "please", "pls", "plz", "can you", "could you", "would you", "will you", "can we", "could we",
         "i need you to", "i want you to",
         // Negatives.
         "don't", "dont", "do not", "stop", "no more", "quit", "enough with",

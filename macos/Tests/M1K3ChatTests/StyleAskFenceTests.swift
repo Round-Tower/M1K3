@@ -47,6 +47,8 @@ struct StyleAskFenceTests {
         let fact = "The user prefers answers without bullet points."
         for turn in [
             "please drop the bullet points", // politeness
+            "pls drop the bullet points", // the texting spellings (2026-10-28 ruling)
+            "plz drop the bullet points",
             "don't use bullet points", // a negative
             "don’t use bullet points", // the curly apostrophe a keyboard sends
             "I'd rather you skipped bullet points", // a stated preference
@@ -160,7 +162,7 @@ struct StyleAskFenceTests {
 
     @Test("the lists are snapshotted, so an edit to either is a visible, reviewed diff")
     func listsAreSnapshotted() {
-        #expect(StyleAskFence.requestCues.count == 54)
+        #expect(StyleAskFence.requestCues.count == 56)
         #expect(Set(StyleAskFence.requestCues).count == StyleAskFence.requestCues.count) // no duplicates
         #expect(StyleAskFence.imperativeLeads == [
             "be", "keep", "skip", "stop", "use", "avoid", "drop", "ditch", "lose", "cut",
@@ -187,6 +189,12 @@ struct StyleAskFenceTests {
         #expect(!StyleAskFence.isRequest("they stopped by with answers"))
         #expect(!StyleAskFence.isRequest("regardless of the lists"))
         #expect(!StyleAskFence.isRequest("the shortest answers won"))
+    }
+
+    @Test("the cues are English only, so an ask in another language fails closed (accepted cost, 2026-10-28)")
+    func nonEnglishAskFailsClosed() {
+        #expect(!asks("The user prefers answers without bullet points.", ["bitte keine bullet points mehr"]))
+        #expect(!asks("The user prefers answers without bullet points.", ["sin bullet points, por favor"]))
     }
 
     @Test("a fact with no content tokens never passes")
