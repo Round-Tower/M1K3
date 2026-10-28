@@ -19,11 +19,19 @@
 //
 //  Candidates come from a JSON file (`M1K3_SEARCHPICK_VARIANTS`: [{name, instructions?, menuLines?}],
 //  each field replacing the shipped one); the shipped wording always runs, named "shipped". Rows go
-//  to `M1K3_SEARCHPICK_OUT` as JSON; a summary prints per variant and set.
+//  to `M1K3_SEARCHPICK_OUT` as JSON; a summary prints per variant and set. A guardrail refusal reads
+//  "agent", as the app routes it; any other throw reads "error:<AFMFailure>" and prints why, since an
+//  outage of Apple's model is not a pick. `M1K3_SEARCHPICK_PROMPTS` (a JSON array of prompts) runs only
+//  those lines, to retry them.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-27, Confidence 0.75 (temperature 0, one trial per line;
 //  it measures the route's pick, not the answer, and the dev labels are a teacher's). Prior: none
 //  (new file; MiniPersonalPickEvalTests' shape).
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — Apple's model went `modelNotReady` 26 minutes into a run and
+//  the last 93 lines read "agent" for every wording (a swallowed throw is not a pick): throws now read
+//  "error:<AFMFailure>" unless a guardrail refused, an unready model fails the run, and
+//  `M1K3_SEARCHPICK_PROMPTS` retries lines. Picks run one at a time and are timed (asking at once bought
+//  nothing: about 1.9 s a pick either way). Confidence 0.8.
 //
 
 #if canImport(FoundationModels)
@@ -80,6 +88,8 @@
             let stage: String
             /// Per variant: the corrected pick ("web_search", "lookup_fact+web_search", "none", "agent").
             let picks: [String: String]
+            /// Per variant, picker lines only: the pick's wall time in ms (a longer wording costs every pick).
+            let ms: [String: Int]
         }
 
         /// The power receipt's built-in questions (tools/eval/power_receipt.py), meant to need no web.
@@ -151,15 +161,42 @@
             label.split(separator: "+").contains { ToolDispatch.webSourced.contains(String($0)) }
         }
 
+        /// One variant's pick through the correctors. A refusal is a real outcome (the app's turn goes to the
+        /// agent); any other throw is the model failing to answer, which says nothing about the wording.
+        static func pick(_ prompt: String, variant: Variant, provider: AppleFoundationModelsProvider) async -> String {
+            let picked: [(tool: String, query: String)]
+            do {
+                picked = try await provider.pickTools(message: prompt, instructions: instructions(variant))
+            } catch {
+                let failure = AFMFailure.classify(error: error)
+                guard failure != .guardrailViolation else { return "agent" }
+                print("SEARCHPICK error · \(variant.name) · \(failure.rawValue) · \(error)")
+                return "error:\(failure.rawValue)"
+            }
+            let pick = picked.first.map { first in
+                ToolPick(
+                    tool: first.tool, query: first.query,
+                    then: picked.dropFirst().map { ToolPick(tool: $0.tool, query: $0.query) }
+                )
+            }
+            return label(pick.map { ToolDispatch.corrected($0, palette: palette, question: prompt) })
+        }
+
         @Test("which turns reach the web, by picker wording")
         func searchPicks() async throws {
             let env = ProcessInfo.processInfo.environment
             let provider = AppleFoundationModelsProvider()
-            guard provider.isAvailable else { return }
+            // Opted in, so an unready model fails the run rather than passing it empty (it goes
+            // `modelNotReady` while its assets update, for minutes at a time).
+            try #require(provider.isAvailable, "Apple Intelligence is not ready; rerun when it is")
             let set = env["M1K3_SEARCHPICK_SET"] ?? "test"
             var lines: [Line] = []
             if set == "dev" || set == "all" { lines += try Self.devLines() }
             if set == "test" || set == "all" { lines += Self.testLines() }
+            if let path = env["M1K3_SEARCHPICK_PROMPTS"] {
+                let keep = try Set(JSONDecoder().decode([String].self, from: Data(contentsOf: URL(filePath: path))))
+                lines = lines.filter { keep.contains($0.prompt) }
+            }
             var variants = [Variant(name: "shipped", instructions: nil, menuLines: nil)]
             if let path = env["M1K3_SEARCHPICK_VARIANTS"] {
                 variants += try JSONDecoder().decode([Variant].self, from: Data(contentsOf: URL(filePath: path)))
@@ -169,6 +206,7 @@
             for line in lines {
                 let gate = ToolNeedRouter.decide(for: line.prompt, embed: embedder.vector)
                 var picks: [String: String] = [:]
+                var ms: [String: Int] = [:]
                 var stage = "picker"
                 if gate.verdict == .chat {
                     stage = "plain"
@@ -182,32 +220,18 @@
                         picks[variant.name] = Self.label(corrected)
                     }
                 } else {
-                    // The variants ask at once: each pick is its own fresh session, so they don't interact.
-                    picks = await withTaskGroup(of: (String, String).self) { group in
-                        for variant in variants {
-                            let instructions = Self.instructions(variant)
-                            group.addTask {
-                                let picked = try? await provider.pickTools(message: line.prompt, instructions: instructions)
-                                let pick = picked?.first.map { first in
-                                    ToolPick(
-                                        tool: first.tool, query: first.query,
-                                        then: (picked ?? []).dropFirst().map { ToolPick(tool: $0.tool, query: $0.query) }
-                                    )
-                                }
-                                let fixed = pick.map { ToolDispatch.corrected($0, palette: Self.palette, question: line.prompt) }
-                                return (variant.name, Self.label(fixed))
-                            }
-                        }
-                        var named: [String: String] = [:]
-                        for await (name, label) in group {
-                            named[name] = label
-                        }
-                        return named
+                    // One pick at a time (Apple's model serves one anyway, so asking at once bought nothing and
+                    // blurred the timings); the order rotates per line so no wording always goes first.
+                    let offset = rows.count % variants.count
+                    for variant in variants[offset...] + variants[..<offset] {
+                        let clock = ContinuousClock.now
+                        picks[variant.name] = await Self.pick(line.prompt, variant: variant, provider: provider)
+                        ms[variant.name] = Int((ContinuousClock.now - clock) / .milliseconds(1))
                     }
                 }
                 rows.append(Row(
                     prompt: line.prompt, search: line.search, set: line.set, group: line.group,
-                    gateP: gate.probability, stage: stage, picks: picks
+                    gateP: gate.probability, stage: stage, picks: picks, ms: ms
                 ))
             }
             if let out = env["M1K3_SEARCHPICK_OUT"] {
@@ -215,7 +239,9 @@
                 encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
                 try encoder.encode(rows).write(to: URL(filePath: out))
             }
-            var summary = ["SEARCHPICK variant · set · searched when it shouldn't · kept local when it should search"]
+            var summary = [
+                "SEARCHPICK variant · set · searched when it shouldn't · missed a search it needed · median pick",
+            ]
             for variant in variants {
                 for name in Set(rows.map(\.set)).sorted() {
                     let mine = rows.filter { $0.set == name }
@@ -223,7 +249,10 @@
                     let web = mine.filter(\.search)
                     let wrongWeb = local.filter { Self.readsWeb($0.picks[variant.name] ?? "") }.count
                     let missed = web.filter { !Self.readsWeb($0.picks[variant.name] ?? "") }.count
-                    summary.append("\(variant.name) · \(name) · \(wrongWeb)/\(local.count) · \(missed)/\(web.count)")
+                    let times = mine.compactMap { $0.ms[variant.name] }.sorted()
+                    let median = times.isEmpty ? "-" : "\(times[times.count / 2]) ms"
+                    let counts = "\(wrongWeb)/\(local.count) · \(missed)/\(web.count)"
+                    summary.append("\(variant.name) · \(name) · \(counts) · pick \(median)")
                 }
             }
             print(summary.joined(separator: "\n"))
