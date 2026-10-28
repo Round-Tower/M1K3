@@ -206,6 +206,26 @@ struct WebSearchToolTests {
         #expect(result.output.contains("https://news.example/two"))
     }
 
+    /// 2026-10-27 web sample: an Instant Answer's related topics link to DuckDuckGo's own topic pages, and
+    /// the deepen read spent its second fetch on one. It reads the first two pages that aren't the engine's.
+    @Test("deep mode never reads the search engine's own topic pages")
+    func deepFetchSkipsEnginePages() async throws {
+        let instant = """
+        {"Answer":"","AbstractText":"The PM heads the government.","AbstractURL":"https://en.wikipedia.org/wiki/PM",
+         "Heading":"PM",
+         "RelatedTopics":[{"Text":"Rankings - surveys of PMs","FirstURL":"https://duckduckgo.com/Rankings"}]}
+        """
+        let fetcher = FakeHTTPFetcher { request in
+            request.url?.host == "api.duckduckgo.com"
+                ? Data(instant.utf8)
+                : Data("<html><body><p>Mark Carney is the prime minister.</p></body></html>".utf8)
+        }
+        let tool = WebSearchTool(fetcher: fetcher, deepReader: FetchPageTool(fetcher: fetcher, resolver: publicDNS))
+        let result = try await tool.execute(input: ["query": "who is the prime minister of canada"])
+        #expect(result.output.contains("Mark Carney is the prime minister."))
+        #expect(fetcher.requests.compactMap(\.url?.host) == ["api.duckduckgo.com", "en.wikipedia.org"])
+    }
+
     @Test("without a deep reader, behaviour is unchanged (snippets only)")
     func noDeepReaderUnchanged() async throws {
         let fetcher = FakeHTTPFetcher { request in

@@ -11,6 +11,8 @@
 //  named groups {Name, Topics: [...]}; the custom decode flattens both.
 //
 //  Signed: Kev + claude-fable-5, 2026-06-09, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — category links (`duckduckgo.com/c/…`) are dropped: their
+//  text is only their name (the 2026-10-27 web sample's "Government of Canada"). Confidence 0.85.
 
 import Foundation
 
@@ -77,7 +79,10 @@ enum DuckDuckGoInstantAnswerParser {
             if let nested = topic.topics {
                 return flatTopics(nested)
             }
-            guard let text = topic.text, let url = topic.firstURL, !text.isEmpty else {
+            // A category link ("duckduckgo.com/c/…") carries only its own name: a slot with nothing in it.
+            guard let text = topic.text, let url = topic.firstURL, !text.isEmpty,
+                  !url.contains("duckduckgo.com/c/")
+            else {
                 return []
             }
             // "Title - description" → title up to the first " - ".
