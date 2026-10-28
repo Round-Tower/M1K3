@@ -923,7 +923,7 @@ What you get back: your data stays home by construction, everything works offlin
 
 - Build from source (https://github.com/Round-Tower/M1K3) — the repo is public under the Functional Source License; build and run it for yourself.
 
-- iPhone and iPad — the TestFlight beta (https://testflight.apple.com/join/Fxp2F5Je).
+- iPhone and iPad on the App Store (https://apps.apple.com/app/id6780230835?pt=120784482&ct=site-alt-chatgpt-ios&mt=8) — the same purchase as the Mac app; the TestFlight beta (https://testflight.apple.com/join/Fxp2F5Je) gets builds first.
 
 Requires macOS 26 Tahoe on Apple Silicon. First run starts on an instant, nothing-to-download brain; bigger local brains are an opt-in download.
 
