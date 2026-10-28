@@ -8,6 +8,8 @@
 //  an honest "no results".
 //
 //  Signed: Kev + claude-fable-5, 2026-06-09, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — the deepen read skips the engine's own pages, and beside a page read the
+//  list keeps three results (the 2026-10-27 web sample). Confidence 0.85.
 
 import Foundation
 @testable import M1K3AgentTools

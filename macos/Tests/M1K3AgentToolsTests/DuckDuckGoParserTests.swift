@@ -9,6 +9,8 @@
 //    (captured live; the parser must return [] for it, never garbage)
 //
 //  Signed: Kev + claude-fable-5, 2026-06-09, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — category links are dropped: the captured fixture's 17 related topics
+//  hold 11, each only its name, so it now parses to 7 results. Confidence 0.85.
 
 import Foundation
 @testable import M1K3AgentTools
@@ -82,6 +84,13 @@ struct InstantAnswerParserTests {
         """
         let results = DuckDuckGoInstantAnswerParser.parse(Data(json.utf8))
         #expect(results.map(\.title) == ["Spouse of the PM"])
+        // Only category links: no results, so the tool falls through to the lite endpoint's real ones.
+        let onlyCategories = """
+        {"Answer":"","AbstractText":"","AbstractURL":"","Heading":"","RelatedTopics":[
+            {"Text":"Government of Canada","FirstURL":"https://duckduckgo.com/c/Government_of_Canada"}
+        ]}
+        """
+        #expect(DuckDuckGoInstantAnswerParser.parse(Data(onlyCategories.utf8)).isEmpty)
     }
 
     @Test("garbage data yields no results")

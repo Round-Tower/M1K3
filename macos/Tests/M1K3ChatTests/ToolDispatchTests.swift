@@ -25,6 +25,8 @@
 //  URL or domain) or a question about now is never vetoed; the #680 lines and stable facts are left to the head.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — the guard's holes as rows: "lookup", Wikipedia, a wiki,
 //  Bing, DuckDuckGo, headlines, and .gov/.ai/.info domains. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — `promptText`: a web search reads with hosts for URLs, and the budget
+//  cuts that text. Confidence 0.85.
 
 import Foundation
 import M1K3Agent

@@ -32,6 +32,8 @@
 //  (its "this year" never did) and pins the head reading the user's question once; vetoed chains through the
 //  responder (a web head or a web tail: the local link runs alone, one generation, `search-veto`); a veto whose
 //  plain answer is empty is the agent's turn, which may still search. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — the model reads a dispatched search's hosts while the footer keeps its
+//  URLs, and a chain's shares are measured on `ToolDispatch.promptText`. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -705,6 +707,29 @@ struct DispatchChainTests {
         let prompt = try #require(provider.prompts.first)
         let carried = prompt.filter { $0 == "ж" }.count
         #expect(carried == ToolDispatch.observationBudget)
+    }
+
+    /// Pre-push review: the shares are measured on what the model reads (`ToolDispatch.promptText`). A search whose
+    /// URLs make it long raw but short in the prompt leaves the rest of the budget to the other result; measured
+    /// raw, each got half.
+    @Test("a chain splits the budget by what each result costs the prompt")
+    func sharesOnPromptText() async throws {
+        let url = "https://example.com/" + String(repeating: "p", count: 200)
+        let web = (1 ... 10).map { "\($0). Result — \(url)\n   A snippet." }.joined(separator: "\n")
+        let long = String(repeating: "ж", count: 10000)
+        let provider = Scripted(["Done."])
+        _ = try await run(
+            provider,
+            tools: [
+                Recording(name: "web_search", output: web, calls: Calls()),
+                Recording(name: "lookup_fact", output: long, calls: Calls()),
+            ],
+            pick: ToolPick(tool: "web_search", query: "x", then: [ToolPick(tool: "lookup_fact", query: "y")])
+        )
+        let prompt = try #require(provider.prompts.first)
+        let read = ToolDispatch.promptText(tool: "web_search", output: web).count
+        #expect(web.count > ToolDispatch.observationBudget / 2)
+        #expect(prompt.filter { $0 == "ж" }.count == ToolDispatch.observationBudget - read)
     }
 
     @Test("a link that isn't on offer, isn't read-only or repeats a tool is skipped; the rest runs")

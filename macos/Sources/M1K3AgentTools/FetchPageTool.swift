@@ -30,8 +30,10 @@
 //  is refused on both execute() and the search-deepen read. Confidence now 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-28 — the tag pattern is quote-aware (`HTMLTextExtractor.tag`):
 //  Wikipedia's data-mw JSON leaves `>` unescaped in single quotes, and on the Prime Minister of Canada
-//  page `<[^>]+>` let 44 fragments of it into the text that the search deepen read hands the model.
-//  Confidence 0.85.
+//  page `<[^>]+>` let 44 fragments of it into the text that the search deepen read hands the model. The
+//  pre-push review found the first cut backtracked exponentially on an unclosed tag (a hang on a hostile
+//  page) and overflowed ICU's stack on a 250K unquoted value: the loop is now possessive over runs, and a
+//  quoted value stops at `<`. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -44,8 +46,12 @@ enum HTMLTextExtractor {
     /// One tag: `<` then a letter, `/`, `!` or `?` (so "3 < 4" is text), up to the first `>` outside a
     /// quoted value. Wikipedia's data-mw JSON sits in single quotes and leaves `>` unescaped; `<[^>]+>`
     /// ended the tag there and the JSON read as the page (2026-10-27). A value is quoted only after `=`,
-    /// tried first, so a stray apostrophe (`alt=Kev's`) is one character and can't swallow the page.
-    static let tag = #"<[A-Za-z/!?](?:=\s*"[^"]*"|=\s*'[^']*'|[^>"']|["'])*>"#
+    /// tried first, so a stray apostrophe (`alt=Kev's`) is one character, and a quoted value stops at `<`,
+    /// so a quote left open ends at the next tag rather than swallowing the page. The loop is possessive
+    /// over runs: it never backtracks, so an unclosed tag at the end of a page costs one pass, not every
+    /// way to split its quotes (the pre-push review's 40 attributes would have taken days), and a long
+    /// unquoted value is one step, not one stack frame a character.
+    static let tag = #"<[A-Za-z/!?](?:=\s*"[^"<]*"|=\s*'[^'<]*'|[^>"'=]+|["'=])*+>"#
 
     static func text(from html: String) -> String {
         var work = html

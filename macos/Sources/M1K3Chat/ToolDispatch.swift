@@ -130,7 +130,7 @@ public enum ToolDispatch {
 
     /// Each result's share of the budget: the shortest are carried whole, and what they
     /// leave goes to the rest ("the time" and "the news" give the news nearly all of it).
-    /// `lengths` are TRIMMED counts, as `observationBlock` trims before it cuts. The sort
+    /// `lengths` are `promptText` counts, the text `observationBlock` cuts (what the model reads). The sort
     /// isn't stable, but tied lengths get equal shares, so the order between them is moot.
     public static func shares(_ lengths: [Int], total: Int = observationBudget) -> [Int] {
         var out = Array(repeating: 0, count: lengths.count)
