@@ -56,6 +56,23 @@ struct HTMLTextExtractorTests {
         #expect(HTMLTextExtractor.text(from: html) == "one\ntwo\nthree")
     }
 
+    /// 2026-10-27 web sample: Wikipedia's data-mw attribute is JSON in single quotes that escapes `<` but
+    /// not `>`, so `<[^>]+>` ended the tag at `-->` and the rest of the JSON became the page's text.
+    @Test("a quoted attribute value holding > stays inside its tag")
+    func quotedAngleInAttribute() {
+        let html = """
+        <body><span data-mw='{"parts":[{"wt":"[[Gov]]&lt;!-- big-g -->&lt;br />[[PCO]]"}]}'></span>
+        <p>The prime minister is the head of government.</p>
+        <p><a title="a > b" href="/x">Mark Carney</a></p></body>
+        """
+        #expect(HTMLTextExtractor.text(from: html) == "The prime minister is the head of government.\nMark Carney")
+    }
+
+    @Test("a < in the text that opens no tag is kept")
+    func strayAngleKept() {
+        #expect(HTMLTextExtractor.text(from: "<p>3 < 4 and 5 > 2</p>") == "3 < 4 and 5 > 2")
+    }
+
     @Test("garbage in, empty out — never a crash")
     func garbage() {
         #expect(HTMLTextExtractor.text(from: "").isEmpty)

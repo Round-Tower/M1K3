@@ -28,6 +28,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-10 — #210: the host is RESOLVED before any fetch (injected
 //  `HostResolving`, system resolver in production); a public name answering with a private address
 //  is refused on both execute() and the search-deepen read. Confidence now 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — the tag pattern is quote-aware (`HTMLTextExtractor.tag`):
+//  Wikipedia's data-mw JSON leaves `>` unescaped in single quotes, and on the Prime Minister of Canada
+//  page `<[^>]+>` let 44 fragments of it into the text that the search deepen read hands the model.
+//  Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -37,6 +41,12 @@ import os
 /// Pure HTML → readable text: drop head/script/style/comments, turn block
 /// boundaries into line breaks, strip tags, decode entities, tidy whitespace.
 enum HTMLTextExtractor {
+    /// One tag: `<` then a letter, `/`, `!` or `?` (so "3 < 4" is text), up to the first `>` outside a
+    /// quoted value. Wikipedia's data-mw JSON sits in single quotes and leaves `>` unescaped; `<[^>]+>`
+    /// ended the tag there and the JSON read as the page (2026-10-27). A value is quoted only after `=`,
+    /// tried first, so a stray apostrophe (`alt=Kev's`) is one character and can't swallow the page.
+    static let tag = #"<[A-Za-z/!?](?:=\s*"[^"]*"|=\s*'[^']*'|[^>"']|["'])*>"#
+
     static func text(from html: String) -> String {
         var work = html
         let removals = [
@@ -58,7 +68,7 @@ enum HTMLTextExtractor {
             with: "\n",
             options: .regularExpression
         )
-        work = work.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression)
+        work = work.replacingOccurrences(of: tag, with: "", options: .regularExpression)
         work = decodeEntities(work)
         let lines = work
             .components(separatedBy: "\n")
