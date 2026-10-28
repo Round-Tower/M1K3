@@ -39,7 +39,7 @@ def test_build_lists_sources_and_includes_install_txt_verbatim(tmp_path: Path):
     (tmp_path / "install.html").write_text(PAGE)
     (tmp_path / "install.txt").write_text("# recipe\nbrew install --cask round-tower/tap/m1k3\n")
     out = llms_full.build(tmp_path)
-    assert out.startswith("# M1K3 for Mac — the full text\n")
+    assert out.startswith("# M1K3 — the full text\n")
     assert "## Source: https://m1k3.app/install\n" in out
     assert "## Source: https://m1k3.app/install.txt (verbatim)\n\n```\n# recipe\nbrew install --cask round-tower/tap/m1k3\n```" in out
     assert "## Source: https://m1k3.app/agents" not in out      # missing pages are skipped, not invented

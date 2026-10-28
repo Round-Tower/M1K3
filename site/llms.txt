@@ -1,4 +1,4 @@
-# M1K3 for Mac
+# M1K3
 
 > M1K3 is free for humans, source-available (FSL-1.1-ALv2), privacy-first AI for
 > macOS that runs entirely on-device. Local LLM inference (Gemma + Qwen via

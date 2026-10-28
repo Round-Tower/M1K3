@@ -35,6 +35,9 @@
 //  fewer turns right after a boundary (the trace, where a caller has one, carries their user lines). One is today's
 //  window byte for byte; the MLX tiers get `HistoryBudgetPolicy.defaultEvictionBlockTurns`. Open: the recall probe
 //  for a turn referenced just past a boundary, and whether the block should be exchanges rather than turns.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — retires the 10-17 Open on a horizon past ~8 user lines (#629):
+//  #634 made rolling distillation follow the live window, so a turn the replay drops reaches memory instead.
+//  No code change.
 //
 
 import Foundation
