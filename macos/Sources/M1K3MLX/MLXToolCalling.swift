@@ -100,6 +100,9 @@
 //  says which render won). The second render costs a template pass and a tokenise, milliseconds beside the prefill.
 //  Review: Kev + claude-fable-5.1, 2026-10-26 (review fold) — the stable render is `try?` and skipped on an image turn:
 //  a template that rejects the cut transcript (system-only on the lfm2 shape) would have failed the whole send.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — `resolveToolCallFormat` sends a `qwen3.6` name to `.qwen35` before
+//  config.json is on disk (it fell to the generic `.json` arm); harvested from the MoE Big audition (spike
+//  34f4dae7). Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -419,9 +422,10 @@ extension MLXBrainProvider: ToolCallingProvider {
         // dense Qwen3 and rides the .json arm below.
         // Qwen3.8 (Aug 2026) is the same qwen3_5 family under a new number —
         // config verified 2026-09-05. Listed by name for the pre-download case;
-        // once config.json is on disk the model_type arm above owns it.
+        // once config.json is on disk the model_type arm above owns it. Qwen3.6
+        // (qwen3_5_moe, config read 2026-10-24) likewise.
         if name.contains("qwen3.5") || name.contains("qwen3_5") || name.contains("qwen3-5")
-            || name.contains("qwen3.8") || name.contains("ternary-bonsai-27b")
+            || name.contains("qwen3.8") || name.contains("qwen3.6") || name.contains("ternary-bonsai-27b")
         {
             return .qwen35
         }

@@ -163,6 +163,10 @@
 //  `generationMetrics(for:model:totalContextTokens:)`, pinned in MLXBrainProviderTests (the context / prefill split
 //  had no test), and carry `modelID: model`, so the energy ledger bills the model that ran, not the picker's brain.
 //  `logGenerationInfo`'s signature and every call site are unchanged. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — `templatePreOpensThink` names `qwen3.6`: Qwen3.6 (qwen3_5_moe)
+//  opens `<think>\n` in its generation prompt like 3.5, and the qwen3 name pin otherwise streamed its thoughts as
+//  the answer. Harvested from the MoE Big audition (spike 34f4dae7; Qwen3.6-35B-A3B ran in-app 2026-10-25,
+//  docs/evals/2026-10-24-moe-big/). Confidence 0.85.
 
 import Foundation
 import Hub
@@ -1218,10 +1222,11 @@ extension MLXBrainProvider {
         // against the HF chat_template.jinja 2026-07-17). Exact size id, per
         // the #41 doctrine: the 8B is dense Qwen3 and must NOT match.
         // Qwen3.8 (Aug 2026) carries the same generation block — verified on
-        // the on-disk chat_template.jinja 2026-09-10 (#264 review).
+        // the on-disk chat_template.jinja 2026-09-10 (#264 review). Qwen3.6
+        // (qwen3_5_moe) too: its HF template opens `<think>\n` (read 2026-10-24).
         return modelName.contains("qwen3.5") || modelName.contains("qwen3_5")
             || modelName.contains("qwen3-5") || modelName.contains("qwen3.8")
-            || modelName.contains("ternary-bonsai-27b")
+            || modelName.contains("qwen3.6") || modelName.contains("ternary-bonsai-27b")
     }
 
     /// Whether the family's chat template understands the `enable_thinking` switch

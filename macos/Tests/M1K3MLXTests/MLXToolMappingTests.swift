@@ -22,6 +22,8 @@
 //  enum, so the image test matches `.url` on `.source`.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — `qwen35PreOpensThink` pins the shipped Lil id
 //  (Qwen3.5-4B-MLX-4bit, #517) against the pre-open rule.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — Qwen3.6-35B-A3B pins both name arms (pre-open `<think>`, `.qwen35`
+//  dialect), from the MoE Big audition.
 
 import Foundation
 import M1K3Inference
@@ -356,6 +358,8 @@ struct MLXToolFormatResolutionTests {
     func qwen38NameArm() {
         #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3.8-27B-4bit")) == .qwen35)
         #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "lmstudio-community/Qwen3.8-27B-MLX-6bit")) == .qwen35)
+        // Qwen3.6-35B-A3B is qwen3_5_moe with the same <function=…> template (config read 2026-10-24).
+        #expect(MLXBrainProvider.resolveToolCallFormat(for: .init(id: "mlx-community/Qwen3.6-35B-A3B-4bit")) == .qwen35)
     }
 
     @Test("an explicit configuration format wins over the family heuristic")
@@ -390,6 +394,9 @@ struct MLXThinkTemplateTests {
         #expect(MLXBrainProvider.templatePreOpensThink(
             for: .init(id: "prism-ml/Ternary-Bonsai-27B-mlx-2bit")
         ))
+        // Qwen3.6's chat_template.jinja opens `<think>\n` in the generation prompt
+        // (read off the HF file 2026-10-24) — the 3.5 quirk, same family.
+        #expect(MLXBrainProvider.templatePreOpensThink(for: .init(id: "mlx-community/Qwen3.6-35B-A3B-4bit")))
     }
 
     @Test("qwen3 and non-reasoning families do NOT pre-open think")
