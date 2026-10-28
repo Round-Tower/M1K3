@@ -224,7 +224,7 @@ Lil on merit or on our plumbing.
 - **Two-stage retrieval (MRL):** scan at 128-d, rerank top-K at full width. ~6× smaller scan; matters on iPhone as memory grows. Two floors → `challenger`.
 - **"What am I looking at?":** ScreenCaptureKit front-window capture → Mini/Big vision, as a hotkey and an MCP tool; opt-in per capture; optionally embedded into memory. Screen-recording permission = risk surface.
 - **One embedder for the router:** `ToolNeedRouter` (NLEmbedding, English-only) could share EmbeddingGemma 2's resident text core → multilingual routing. Only if routing latency holds.
-- **The Gemma ladder:** if E4B wins Lil, Lil and Big share the `gemma4` dialect + template → one persona LoRA for both (`docs/lora-vs-qlora-and-memory.md`). gemma-4-26B-A4B stays the parked delegation brain for ≥32 GB (ROADMAP L305-310).
+- **The Gemma ladder:** if E4B wins Lil, Lil and Big share the `gemma4` dialect + template → one persona LoRA for both (`docs/lora-vs-qlora-and-memory.md`). gemma-4-26B-A4B stays the parked delegation brain for ≥32 GB (ROADMAP L305-310); as a front Big it lost to gemma-4-12B in-app and MoE Big is closed on M1 (2026-10-25, `evals/2026-10-24-moe-big/`).
 - **Musician's sketchbook:** audio-encoder search over voice memos / loops ("find takes like this hum"). Two-hour spike first — unknown how well the encoder handles music vs speech.
 - **Mood-board search:** image-embedding search over a chosen Photos album ("warm, grainy, 70s"). Natural Vision Pro "senses" fit — visionOS main-camera access is enterprise-only, so photos/windows, not live camera.
 
@@ -878,3 +878,4 @@ What it says:
 Review: Kev + claude-fable-5.1, 2026-10-09 — Stream D's 1.1 slice (caption memory) written up above; the migration, the image embedder and the thumbnails wait for Stream C.
 Review: Kev + claude-fable-5.1, 2026-10-11 05:10 — Lil's think phase measured overnight (five arms, #553): auto barely thinks; forced thinking is bimodal with 6 cap-hit empties; every prompt steer loses. Decoder-side think budget proposed, challenger pending. Confidence 0.8 on the read (×1, Debug build; the ms column is only trusted on the chat path).
 Review: Kev + claude-opus-5.5, 2026-10-11 11:55 — #555 measured with the app's router on: 20/44 → 37/44, 11 empty answers → 0, median turn 133 s → 16 s. The overnight runaway was the plain route ignoring Auto, not Qwen3.5. Confidence 0.9 on the cause (paired arms, same machine state; ×1, Debug).
+Review: Kev + claude-opus-5.5, 2026-10-28 — the Gemma-ladder line records that gemma-4-26B-A4B lost to gemma-4-12B in-app and MoE Big is closed on M1 (2026-10-25). Confidence 0.9.

@@ -1,0 +1,33 @@
+{
+  "app": "~/eval-dd/moe-big/Build/Products/Debug/M1K3.app",
+  "outDir": "../../../docs/evals/2026-10-24-moe-big",
+  "notes": "MoE Big audition round 2 (the deciders the ceiling hid): kinds reasoning,code-gen,instruction-following,sycophancy,document,vision, router dispatch, thinking tier, AC powermode 0 (auto), M1 Max 64 GB",
+  "args": [
+    "--brains",
+    "big",
+    "--router",
+    "dispatch",
+    "--full-answers",
+    "--kinds",
+    "reasoning,code-gen,instruction-following,sycophancy,document,vision",
+    "--no-router-head",
+    "--no-router-chain",
+    "--no-router-search"
+  ],
+  "arms": [
+    {
+      "name": "2026-10-24-r2-big-gemma12b-baseline",
+      "timeoutMin": 150,
+      "notes": "shipping Big, mlx-community/gemma-4-12B-it-4bit"
+    },
+    {
+      "name": "2026-10-24-r2-big-gemma26b-a4b-qat",
+      "timeoutMin": 180,
+      "notes": "npario QAT 4-bit, shared MLP + router at 8-bit, experts 4-bit (15.6 GB)",
+      "args": [
+        "--model",
+        "big=npario/gemma-4-26B-A4B-it-QAT-MLX-4bit"
+      ]
+    }
+  ]
+}
