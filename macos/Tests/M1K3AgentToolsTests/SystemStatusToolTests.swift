@@ -8,6 +8,8 @@
 //  IOKit/volume values aren't deterministic on CI.
 //
 //  Signed: Kev + claude-fable-5, 2026-06-09, Confidence 0.9, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — memory and CPU load rows (the formatter's two new lines, the
+//  load cap, the live provider's smoke, and figures that ignore the locale). Confidence 0.85.
 
 import Foundation
 @testable import M1K3AgentTools
@@ -43,6 +45,39 @@ struct SystemStatusFormatterTests {
     func formatsMissingBattery() {
         let text = SystemStatusFormatter.format(battery: nil, disk: disk, uptime: 90)
         #expect(text == "Battery: none (desktop). Disk: 412 GB free of 994 GB. Uptime: 1 minute.")
+    }
+
+    /// The tool menu promises "CPU, memory or disk" (ToolDispatch.menuLines); until 2026-10-28 the tool
+    /// answered battery, disk and uptime only, so a memory question routed here got nothing to say.
+    @Test("memory and CPU load ride after the battery when the provider has them")
+    func formatsMemoryAndLoad() {
+        let gib: Int64 = 1 << 30
+        let text = SystemStatusFormatter.format(
+            battery: nil,
+            disk: disk,
+            uptime: 3600,
+            ram: RAMSnapshot(usedBytes: gib * 113 / 10, totalBytes: 16 * gib),
+            cpu: CPULoadSnapshot(oneMinuteLoad: 2.08, cores: 8)
+        )
+        #expect(text == "Battery: none (desktop). Memory: 11.3 GB used of 16 GB. "
+            + "CPU: 26% busy over the last minute (load 2.1 on 8 cores). Disk: 412 GB free of 994 GB. Uptime: 1 hour.")
+    }
+
+    @Test("a load above the core count reads as fully busy, never over 100%")
+    func cpuBusyIsCapped() {
+        #expect(SystemStatusFormatter.describeCPU(CPULoadSnapshot(oneMinuteLoad: 12.4, cores: 8))
+            == "CPU: 100% busy over the last minute (load 12.4 on 8 cores).")
+        #expect(SystemStatusFormatter.describeCPU(CPULoadSnapshot(oneMinuteLoad: 0, cores: 1))
+            == "CPU: 0% busy over the last minute (load 0.0 on 1 core).")
+    }
+
+    /// The line is for a model, not a person: a decimal comma ("11,3 GB") would read as a list.
+    @Test("figures use a decimal point whatever the user's locale")
+    func figuresIgnoreLocale() {
+        let gib: Int64 = 1 << 30
+        let ram = SystemStatusFormatter.describeRAM(RAMSnapshot(usedBytes: gib * 113 / 10, totalBytes: 16 * gib))
+        #expect(ram == "Memory: 11.3 GB used of 16 GB.")
+        #expect(!ram.contains(","))
     }
 
     @Test("uptime singular/plural and sub-minute floor")
@@ -92,6 +127,13 @@ struct SystemStatusToolTests {
         #expect(liveDisk.availableBytes > 0)
         #expect(liveDisk.availableBytes <= liveDisk.totalBytes)
         _ = live.batterySnapshot() // may be nil on a desktop — just must not crash
+        let ram = try #require(live.ramSnapshot())
+        #expect(ram.totalBytes == Int64(ProcessInfo.processInfo.physicalMemory))
+        #expect(ram.usedBytes > 0)
+        #expect(ram.usedBytes <= ram.totalBytes)
+        let cpu = try #require(live.cpuLoad())
+        #expect(cpu.cores == ProcessInfo.processInfo.activeProcessorCount)
+        #expect(cpu.oneMinuteLoad >= 0)
         _ = live.providingPowerSource() // nil off-line — just must not crash
     }
 }

@@ -384,6 +384,20 @@ extension SpeechTextPolishTests {
         #expect(SpeechTextPolish.polish("Fares rise in May (source https://nta.ie/fares).") == "Fares rise in May.")
     }
 
+    /// A version number is dotted like a site; only a name ending in letters is a site (2026-10-28 audit).
+    @Test("an aside naming a version number is spoken, not stripped as a site")
+    func versionAsidesSurvive() {
+        for text in [
+            "Qwen3.6 is faster (from 3.5) on long prompts.",
+            "The fix shipped (from 1.2.0) for everyone.",
+            "Upgrade the tool (via 2.1.4) first.",
+        ] {
+            #expect(SpeechTextPolish.polish(text) == text, Comment(rawValue: text))
+        }
+        #expect(SpeechTextPolish.polish("Rain expected (via met.ie).") == "Rain expected.")
+        #expect(SpeechTextPolish.polish("Rain expected (via пример.рф).") == "Rain expected.") // a Unicode TLD
+    }
+
     /// The trailing-block scan used to let every bullet or digit character open a new loop iteration, so a long
     /// run that turned out not to be the answer's tail backtracked exponentially: measured by the review at 0.5 s
     /// for 14 characters and 3.5 s for 16, about 2.5x per character, on the main actor, for every streamed

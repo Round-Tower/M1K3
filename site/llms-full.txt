@@ -1,4 +1,4 @@
-# M1K3 for Mac — the full text
+# M1K3 — the full text
 
 > The llmstxt.org companion to https://m1k3.app/llms.txt: every answer page on
 > m1k3.app as one file, generated from the pages themselves. M1K3 is free,

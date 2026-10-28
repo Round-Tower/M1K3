@@ -32,6 +32,9 @@
 //  still showed it, and VoiceOver never heard it); step rows take the touch-target minimum the choices had;
 //  the cards opt out of ReadingText's text selection, which on the Mac can eat a click on a button's words.
 //  Confidence 0.7 (the click and the look stay verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — the 10-28 audit's two #733 leftovers: a choice's border is the
+//  full accent (0.4 opacity read about 1.6:1 against the 3:1 non-text contrast bar), and options are keyed by
+//  position, not text. Confidence 0.7 (the look stays verify-by-launch).
 //
 
 import SwiftUI
@@ -170,7 +173,8 @@ private struct ChoicesCard: View {
             Text(AnswerBlockText.inline(prompt))
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
-            ForEach(options, id: \.self) { option in
+            // Keyed by position: the parser drops repeats, but a hand-built block may not.
+            ForEach(Array(options.enumerated()), id: \.offset) { _, option in
                 // What the button shows is what a tap sends, never the source.
                 let words = AnswerBlockText.sent(option)
                 let enabled = choose != nil && words != nil
@@ -211,7 +215,8 @@ private struct ChoiceChrome: ViewModifier {
             .padding(.vertical, 6)
             .frame(minHeight: answerBlockMinRowHeight, alignment: .leading)
             .background(Color.accentColor.opacity(isPressed ? 0.22 : 0.1), in: .rect(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.accentColor.opacity(0.4)))
+            // Full-strength accent: at 0.4 the edge read about 1.6:1, under the 3:1 a control's edge needs.
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.accentColor))
             .contentShape(.rect(cornerRadius: 8))
             .opacity(isEnabled ? 1 : 0.55)
     }

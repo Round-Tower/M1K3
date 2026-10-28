@@ -39,6 +39,8 @@
 //  SpeechTextPolish speaks typed blocks as sentences instead of reading their JSON. Confidence 0.8.
 //  Open: Kev's taste call, not yet made — a Voice → leaf edge (the M1K3LogCore precedent) vs a duplicated
 //  scanner in M1K3Voice with a cross-module equality pin. Retire this line when he rules.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — the Open above is retired: Kev ruled on 10-27 for the Voice → leaf
+//  edge (and one M1K3AnswerBlocks target, not a split UI target). No manifest change.
 
 import Foundation
 import PackageDescription

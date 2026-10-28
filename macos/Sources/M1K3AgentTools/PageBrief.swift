@@ -19,6 +19,9 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-04, Confidence 0.85 (the shapes are
 //  pinned by tests; whether a 4B brain stops narrating on "Do not describe the
 //  page" is a live A/B, not a proof). Prior: Unknown.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — open_link's brief (and MCP's) read raw HTML uncapped: the title
+//  and meta reads now take `HTMLTextExtractor.bounded`, the title is found by search instead of a lazy regex
+//  that rescanned to the end from every unclosed `<title>`, and a `<meta` run stops at `<`. Confidence 0.85.
 
 import Foundation
 
@@ -40,19 +43,32 @@ public enum PageBrief {
     static let openedPrefix = "Opened"
     static let doNotDescribe = "Do not describe the page"
 
-    /// `<title>` — entity-decoded, whitespace-collapsed; nil when absent/empty.
+    /// `<title>` — entity-decoded, whitespace-collapsed; nil when absent/empty. Found by search, not a lazy
+    /// regex: `<title[^>]*>(.*?)</title>` rescanned to the end from every opener on a page that never closed one.
     static func title(from html: String) -> String? {
-        firstMatch(in: html, pattern: "(?is)<title[^>]*>(.*?)</title>")
-            .map { collapse(HTMLTextExtractor.decodeEntities($0)) }
-            .flatMap { $0.isEmpty ? nil : $0 }
+        let source = NSString(string: HTMLTextExtractor.bounded(html))
+        let whole = NSRange(location: 0, length: source.length)
+        let opener = source.range(of: "<title", options: .caseInsensitive, range: whole)
+        guard opener.location != NSNotFound else { return nil }
+        let rest = NSRange(location: NSMaxRange(opener), length: source.length - NSMaxRange(opener))
+        let tagEnd = source.range(of: ">", range: rest)
+        guard tagEnd.location != NSNotFound else { return nil }
+        let body = NSRange(location: NSMaxRange(tagEnd), length: source.length - NSMaxRange(tagEnd))
+        let closer = source.range(of: "</title>", options: .caseInsensitive, range: body)
+        guard closer.location != NSNotFound else { return nil }
+        let raw = source.substring(with: NSRange(location: body.location, length: closer.location - body.location))
+        let text = collapse(HTMLTextExtractor.decodeEntities(raw))
+        return text.isEmpty ? nil : text
     }
 
     /// `<meta name="description" content="…">` in either attribute order.
     static func metaDescription(from html: String) -> String? {
+        // `[^<>]*`, not `[^>]*`: a `<meta` that never closes ends at the next `<`, so a page of them is one pass.
         let patterns = [
-            "(?is)<meta\\b[^>]*\\bname\\s*=\\s*[\"']description[\"'][^>]*\\bcontent\\s*=\\s*[\"']([^\"']*)[\"']",
-            "(?is)<meta\\b[^>]*\\bcontent\\s*=\\s*[\"']([^\"']*)[\"'][^>]*\\bname\\s*=\\s*[\"']description[\"']",
+            "(?is)<meta\\b[^<>]*\\bname\\s*=\\s*[\"']description[\"'][^<>]*\\bcontent\\s*=\\s*[\"']([^\"']*)[\"']",
+            "(?is)<meta\\b[^<>]*\\bcontent\\s*=\\s*[\"']([^\"']*)[\"'][^<>]*\\bname\\s*=\\s*[\"']description[\"']",
         ]
+        let html = HTMLTextExtractor.bounded(html)
         for pattern in patterns {
             if let raw = firstMatch(in: html, pattern: pattern) {
                 let text = collapse(HTMLTextExtractor.decodeEntities(raw))

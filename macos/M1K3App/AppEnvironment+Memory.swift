@@ -26,6 +26,9 @@
 //  edited fact takes the wording it replaced. The list carries every live style row past its window
 //  (`reviewableMemories`), and the style re-read moved to `refreshCounts()`, the seam MCP forget_memory
 //  also calls. Confidence 0.8 (the same verify-by-launch owed).
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — the style re-read goes through the persona's refresh gate: a
+//  forget's refresh and the distiller's didWrite could interleave, and a stale read landing last brought a
+//  forgotten ask back (#730 audit). Confidence 0.85.
 
 import Foundation
 import M1K3Chat
@@ -128,10 +131,11 @@ extension AppEnvironment {
 
     /// The same read for the distillation coordinator's `didWrite` hook, which fires
     /// off the main actor: the persona's box is a Mutex and the store a GRDB queue.
-    /// A failed read keeps the style the persona already has rather than clearing it.
+    /// A failed read keeps the style the persona already has rather than clearing it,
+    /// and a read that a later refresh overtook is dropped (`UserStyleRefreshGate`).
     nonisolated static func refreshUserStyle(from memoryStore: MemoryStore?) {
-        guard let memoryStore, let texts = try? memoryStore.liveStyleTexts() else { return }
-        M1K3Persona.setUserStyle(texts)
+        guard let memoryStore else { return }
+        M1K3Persona.refreshUserStyle { try memoryStore.liveStyleTexts() }
     }
 
     /// Edit a fact from the Memories list: a SUPERSEDE in the graph and then the corpus,

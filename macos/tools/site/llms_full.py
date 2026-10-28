@@ -16,6 +16,8 @@ Signed: Kev + claude-fable-5.1, 2026-09-15 (launch night), Confidence 0.8.
 A generator, not hand copy, so the full file cannot drift from the pages.
 The page list is explicit (PAGES) because the home page is a marketing
 surface with a THREE.js hero, not an answer. Prior: Unknown (new file).
+Review: Kev + claude-opus-5.5, 2026-10-28 — the title drops "for Mac" (the app is on iPhone and iPad too),
+as llms.txt, the manifest and the home page's JSON-LD name do. Confidence 0.9.
 """
 from __future__ import annotations
 
@@ -198,7 +200,7 @@ def page_text(source: str) -> str:
 
 def build(site_dir: Path) -> str:
     head = [
-        "# M1K3 for Mac — the full text",
+        "# M1K3 — the full text",
         "",
         "> The llmstxt.org companion to https://m1k3.app/llms.txt: every answer page on",
         "> m1k3.app as one file, generated from the pages themselves. M1K3 is free,",

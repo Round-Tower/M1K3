@@ -176,6 +176,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — `compose(core:profile:style:)` has no
 //  default `style:`: a call site that forgot it compiled and silently dropped the line, and no test may set the
 //  global to notice (the parallel race). Now it is a compile error. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — `refreshUserStyle(reading:)`: the app's read-then-set
+//  goes through `UserStyleRefreshGate`, so an overtaken read can't restore a forgotten ask. Confidence 0.85.
 
 import Foundation
 import Synchronization
@@ -233,6 +235,15 @@ public enum M1K3Persona {
 
     public static func setUserStyle(_ newestFirst: [String]) {
         styleBox.withLock { $0 = newestFirst }
+    }
+
+    private static let styleRefreshGate = UserStyleRefreshGate()
+
+    /// Re-read the stated style and set it, unless a refresh that started later has
+    /// already set one: a stale read landing last would bring back a forgotten ask
+    /// (`UserStyleRefreshGate`). A failed read keeps the style already in place.
+    public static func refreshUserStyle(reading read: () throws -> [String]) {
+        styleRefreshGate.refresh(read: read, apply: setUserStyle)
     }
 
     public static var userStyle: [String] {
