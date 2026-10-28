@@ -91,6 +91,9 @@ Anything a cold session needs on turn one belongs below, not there.
 - `swift package clean` before protocol/struct-shape changes (segfault, 3+ hits).
 - swiftformat's unused-parameter rename runs BETWEEN batched edits: change a
   signature and its call sites in ONE edit, re-read before the next.
+- Appending a test at a file's END can land it inside a trailing private helper class (the suite's
+  `}` is not the file's last): anchor on the suite's closing brace and check which type the new `func`
+  sits in. `tdd.sh` still runs it as an implicit suite, so only the bot pass sees it (#691, 2026-10-26).
 - Merge stacked PRs bottom-up; never `--delete-branch` on a stack base;
   `git rebase --onto` over a squash-merged base. `land.sh` DOES delete the merged
   branch, so retarget dependants first (`gh pr edit <N> --base master`) or GitHub
@@ -182,7 +185,11 @@ Anything a cold session needs on turn one belongs below, not there.
 - **An eval must wire like the app.** Chat-path chateval runs need `--router dispatch`: the Mac app routes
   every tier (`ToolRouterWiring.allTiersEnabled(whenUnset: true)`, ADR 0009's `toolRouterAllTiers`), and the
   default live arm has no router, so it never takes the plain route. When an eval disagrees
-  with a live report, diff the eval's flags, router and responder against the app's composition first.
+  with a live report, diff the eval's flags, router and responder against the app's composition first —
+  the responder's injected closures included: `ChatCurveStage` built its responder with `Budget.default`
+  until #690 (2026-10-26), so a history-window change never reached the curve while the app had it.
+  The curve's `reusedTokens` is the turn's LAST reuse line; count cross-turn tail hits from `seed=conversation`
+  above the persona length in the log, not from the sample (a tool turn's second send reads as a near-total hit).
 - Entitlements by lane: Declared Age Range in all three (`M1K3-MAS`, `M1K3iOS`
   and the Developer ID `M1K3.entitlements`; `check_store_targets.py` requires
   it), PCC in `M1K3-MAS.entitlements` only (the check forbids it in the
@@ -281,4 +288,7 @@ Review: Kev + claude-opus-5-5, 2026-10-17 — Xcode Cloud builds only `release*`
 the compute hours ran out on per-merge archives. Confidence 0.85.
 Review: Kev + claude-opus-5.5, 2026-10-21 — the same line names the local route (`release-local.sh`,
 `upload-local.zsh`, `testflight.py notes`): 537–539 each shipped from hand-typed scratch scripts. Confidence 0.8.
+Review: Kev + claude-fable-5.1, 2026-10-26 — two carry-forwards from the perf stream (#690, #691): "wire like the app"
+now includes the responder's injected closures (the chat-curve ran `Budget.default` until #690) and how to count tail
+hits; and an appended test can land in a trailing helper type past the suite's closing brace.
 -->
