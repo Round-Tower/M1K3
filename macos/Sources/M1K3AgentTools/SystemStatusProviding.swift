@@ -11,6 +11,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-10 — `providingPowerSource()` joins the seam (#217): the eval
 //  harness read IOKit's providing source as untested app-target glue; one IOKit power idiom now, the
 //  string→case mapping pinned. Confidence now 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — RAM and CPU load join the seam: the tool menu promised "CPU,
+//  memory or disk" and the tool had neither. Mach VM stats (Activity Monitor's "Memory Used") and getloadavg;
+//  both nil when the kernel won't say, and fakes inherit nil. Confidence 0.8 (the live values are smoke only).
 
 import Foundation
 
@@ -42,6 +45,29 @@ public struct DiskSnapshot: Sendable, Equatable {
     }
 }
 
+/// Physical memory in use, counted as Activity Monitor's "Memory Used": app memory
+/// (anonymous pages less purgeable ones), wired and compressed.
+public struct RAMSnapshot: Sendable, Equatable {
+    public let usedBytes: Int64
+    public let totalBytes: Int64
+
+    public init(usedBytes: Int64, totalBytes: Int64) {
+        self.usedBytes = usedBytes
+        self.totalBytes = totalBytes
+    }
+}
+
+/// The one-minute load average and the cores it is spread over.
+public struct CPULoadSnapshot: Sendable, Equatable {
+    public let oneMinuteLoad: Double
+    public let cores: Int
+
+    public init(oneMinuteLoad: Double, cores: Int) {
+        self.oneMinuteLoad = oneMinuteLoad
+        self.cores = cores
+    }
+}
+
 /// What is powering the machine right now — the field that catches a tok/s
 /// day measured on battery under Adaptive Power (2026-09-05: `pmset` said
 /// powermode 0, the decode doubled once plugged in). Raw values are the eval
@@ -68,11 +94,23 @@ public protocol SystemStatusProviding: Sendable {
     func uptime() -> TimeInterval
     /// nil when the provider cannot tell (no IOKit, off-line).
     func providingPowerSource() -> PowerSource?
+    /// nil when the kernel won't say.
+    func ramSnapshot() -> RAMSnapshot?
+    /// nil when the kernel won't say.
+    func cpuLoad() -> CPULoadSnapshot?
 }
 
 public extension SystemStatusProviding {
     /// Default unknown — a fake or a platform without the API stays honest.
     func providingPowerSource() -> PowerSource? {
+        nil
+    }
+
+    func ramSnapshot() -> RAMSnapshot? {
+        nil
+    }
+
+    func cpuLoad() -> CPULoadSnapshot? {
         nil
     }
 }
@@ -118,6 +156,30 @@ public struct LiveSystemStatusProvider: SystemStatusProviding {
 
     public func uptime() -> TimeInterval {
         ProcessInfo.processInfo.systemUptime
+    }
+
+    /// `host_statistics64`, which the sandbox allows on every platform.
+    public func ramSnapshot() -> RAMSnapshot? {
+        var stats = vm_statistics64()
+        var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64_data_t>.size / MemoryLayout<integer_t>.size)
+        let result = withUnsafeMutablePointer(to: &stats) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                host_statistics64(mach_host_self(), HOST_VM_INFO64, $0, &count)
+            }
+        }
+        var pageSize: vm_size_t = 0
+        guard result == KERN_SUCCESS, host_page_size(mach_host_self(), &pageSize) == KERN_SUCCESS else { return nil }
+        let anonymous = UInt64(stats.internal_page_count)
+        let appPages = anonymous - min(UInt64(stats.purgeable_count), anonymous)
+        let pages = appPages + UInt64(stats.wire_count) + UInt64(stats.compressor_page_count)
+        let total = Int64(ProcessInfo.processInfo.physicalMemory)
+        return RAMSnapshot(usedBytes: min(Int64(pages) * Int64(pageSize), total), totalBytes: total)
+    }
+
+    public func cpuLoad() -> CPULoadSnapshot? {
+        var load = [Double](repeating: 0, count: 3)
+        guard getloadavg(&load, 3) >= 1 else { return nil }
+        return CPULoadSnapshot(oneMinuteLoad: load[0], cores: ProcessInfo.processInfo.activeProcessorCount)
     }
 
     /// Copy-rule → takeRetained, Get-rule → takeUnretained (the over-release

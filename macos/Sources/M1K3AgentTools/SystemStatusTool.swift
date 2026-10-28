@@ -7,6 +7,9 @@
 //  capacity, ProcessInfo uptime) lives in SystemStatusProviding.swift.
 //
 //  Signed: Kev + claude-fable-5, 2026-06-09, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — memory use and CPU load lines: the tool menu (ToolDispatch.menuLines)
+//  promised "CPU, memory or disk" and a memory question got battery, disk and uptime. The menu bytes stay as
+//  they were, so routing doesn't move. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -14,14 +17,37 @@ import M1K3Inference
 
 /// Pure snapshot → sentence formatting, every branch deterministic.
 enum SystemStatusFormatter {
-    static func format(battery: BatterySnapshot?, disk: DiskSnapshot, uptime: TimeInterval) -> String {
+    static func format(
+        battery: BatterySnapshot?,
+        disk: DiskSnapshot,
+        uptime: TimeInterval,
+        ram: RAMSnapshot? = nil,
+        cpu: CPULoadSnapshot? = nil
+    ) -> String {
         let batteryText = if let battery {
             "Battery: \(battery.percentage)% (\(battery.isCharging ? "charging" : "on battery"))."
         } else {
             "Battery: none (desktop)."
         }
         let diskText = "Disk: \(gigabytes(disk.availableBytes)) GB free of \(gigabytes(disk.totalBytes)) GB."
-        return "\(batteryText) \(diskText) Uptime: \(describeUptime(uptime))."
+        let parts = [batteryText, ram.map(describeRAM), cpu.map(describeCPU), diskText,
+                     "Uptime: \(describeUptime(uptime))."]
+        return parts.compactMap(\.self).joined(separator: " ")
+    }
+
+    /// RAM in binary gigabytes, as the Mac sells and Activity Monitor shows it: used to one decimal.
+    static func describeRAM(_ ram: RAMSnapshot) -> String {
+        let gib = Double(1 << 30)
+        let used = (Double(ram.usedBytes) / gib).formatted(.number.precision(.fractionLength(1)))
+        return "Memory: \(used) GB used of \(Int((Double(ram.totalBytes) / gib).rounded())) GB."
+    }
+
+    /// The load spread over the cores, capped at 100%: a load of 12 on 8 cores is fully busy, not 150%.
+    static func describeCPU(_ cpu: CPULoadSnapshot) -> String {
+        let cores = max(cpu.cores, 1)
+        let busy = min(Int((cpu.oneMinuteLoad / Double(cores) * 100).rounded()), 100)
+        let load = cpu.oneMinuteLoad.formatted(.number.precision(.fractionLength(1)))
+        return "CPU: \(busy)% busy (load \(load) on \(unit(cores, "core")))."
     }
 
     /// "2 days 3 hours" / "1 hour" / "1 minute" / "under a minute" — the two
@@ -53,7 +79,8 @@ enum SystemStatusFormatter {
 public struct SystemStatusTool: AgentTool {
     public let name = "system_status"
     public let description =
-        "Get \(HostPlatform.thisDevice)'s battery, free disk space and uptime. Argument: optional, ignored."
+        "Get \(HostPlatform.thisDevice)'s battery, memory use, CPU load, free disk space and uptime. "
+            + "Argument: optional, ignored."
     public let parameters = [
         ToolParameter(name: "query", description: "ignored"),
     ]
@@ -69,7 +96,9 @@ public struct SystemStatusTool: AgentTool {
         let output = SystemStatusFormatter.format(
             battery: provider.batterySnapshot(),
             disk: disk,
-            uptime: provider.uptime()
+            uptime: provider.uptime(),
+            ram: provider.ramSnapshot(),
+            cpu: provider.cpuLoad()
         )
         return ToolResult(output: output)
     }
