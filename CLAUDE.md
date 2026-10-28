@@ -187,7 +187,7 @@ Anything a cold session needs on turn one belongs below, not there.
   default live arm has no router, so it never takes the plain route. When an eval disagrees
   with a live report, diff the eval's flags, router and responder against the app's composition first —
   the responder's injected closures included: `ChatCurveStage` built its responder with `Budget.default`
-  until 2d6a197d (2026-10-26), so a history-window change never reached the curve while the app had it.
+  until #690 (2026-10-26), so a history-window change never reached the curve while the app had it.
   The curve's `reusedTokens` is the turn's LAST reuse line; count cross-turn tail hits from `seed=conversation`
   above the persona length in the log, not from the sample (a tool turn's second send reads as a near-total hit).
 - Entitlements by lane: Declared Age Range in all three (`M1K3-MAS`, `M1K3iOS`
@@ -289,6 +289,6 @@ the compute hours ran out on per-merge archives. Confidence 0.85.
 Review: Kev + claude-opus-5.5, 2026-10-21 — the same line names the local route (`release-local.sh`,
 `upload-local.zsh`, `testflight.py notes`): 537–539 each shipped from hand-typed scratch scripts. Confidence 0.8.
 Review: Kev + claude-fable-5.1, 2026-10-26 — two carry-forwards from the perf stream (#690, #691): "wire like the app"
-now includes the responder's injected closures (the chat-curve ran `Budget.default` until 2d6a197d) and how to count tail
+now includes the responder's injected closures (the chat-curve ran `Budget.default` until #690) and how to count tail
 hits; and an appended test can land in a trailing helper type past the suite's closing brace.
 -->
