@@ -234,6 +234,9 @@
 //  explicit web ask or a question about now never reaches it. Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (3) — the veto's log names the web reads it dropped (a chain's web link
 //  can be its tail, where the head tool was named). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — a dispatched turn's shares are measured on
+//  `ToolDispatch.promptText`, the text the model reads (a web search's URLs as hosts), so a chain splits the
+//  budget by what each result costs the prompt. The trace keeps the raw output for the Sources footer. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -1118,8 +1121,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // One budget for the turn, shared across the results: the short ones whole, the
         // rest to the long one. A link that failed is named, so the answer doesn't invent
         // its half (a chain only: a lone failure went to the agent above).
-        // Trimmed counts, as `observationBlock` trims: the two must measure the same text.
-        let shares = ToolDispatch.shares(ran.map { $0.output.trimmingCharacters(in: .whitespacesAndNewlines).count })
+        // Measured on what the model reads (`promptText`), as `observationBlock` cuts it: the same text.
+        let shares = ToolDispatch.shares(ran.map {
+            ToolDispatch.promptText(tool: $0.plan.tool.name, output: $0.output).count
+        })
         let blocks = zip(ran, shares).map { result, share in
             ToolDispatch.observationBlock(tool: result.plan.tool.name, output: result.output, budget: share)
         }

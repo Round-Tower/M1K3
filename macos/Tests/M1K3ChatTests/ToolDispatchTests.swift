@@ -25,6 +25,8 @@
 //  URL or domain) or a question about now is never vetoed; the #680 lines and stable facts are left to the head.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — the guard's holes as rows: "lookup", Wikipedia, a wiki,
 //  Bing, DuckDuckGo, headlines, and .gov/.ai/.info domains. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — `promptText`: a web search reads with hosts for URLs, and the budget
+//  cuts that text. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -156,6 +158,40 @@ struct ToolDispatchPlanTests {
         #expect(short.contains("Saturday 26 September 2026, 20:14"))
         let long = ToolDispatch.observationBlock(tool: "web_search", output: String(repeating: "a", count: 10000))
         #expect(long.count < ToolDispatch.observationBudget + 200)
+    }
+
+    /// 2026-10-27 web sample: five results with full URLs took 1,350–1,770 of the 2,400 characters, and the page
+    /// read after them lost up to two thirds. The model reads hosts; the trace keeps the URLs (the Sources footer).
+    @Test("a web search reads with hosts, not URLs; other tools are untouched")
+    func webSearchPromptText() {
+        let output = """
+        1. Prime Minister of Canada — https://en.wikipedia.org/wiki/Prime_Minister_of_Canada
+           The prime minister of Canada is the head of government.
+        2. Carney sworn in — https://www.cbc.ca/news/politics/carney-1.7489
+
+        Page content from https://en.wikipedia.org/wiki/Prime_Minister_of_Canada:
+        Mark Carney is the prime minister.
+        """
+        #expect(ToolDispatch.promptText(tool: "web_search", output: output) == """
+        1. Prime Minister of Canada (en.wikipedia.org)
+           The prime minister of Canada is the head of government.
+        2. Carney sworn in (cbc.ca)
+
+        Page content from en.wikipedia.org:
+        Mark Carney is the prime minister.
+        """)
+        let page = "Page: A — https://example.com/x"
+        #expect(ToolDispatch.promptText(tool: "fetch_page", output: page) == page)
+    }
+
+    @Test("the budget cuts the text the model reads, after the URLs are gone")
+    func budgetAfterHosts() {
+        let url = "https://example.com/" + String(repeating: "p", count: 200)
+        let output = (1 ... 10).map { "\($0). Result — \(url)\n   A snippet." }.joined(separator: "\n")
+        #expect(output.count > ToolDispatch.observationBudget)
+        let block = ToolDispatch.observationBlock(tool: "web_search", output: output)
+        #expect(!block.hasSuffix(" …"))
+        #expect(block.contains("10. Result (example.com)"))
     }
 }
 

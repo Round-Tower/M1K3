@@ -9,6 +9,8 @@
 //    (captured live; the parser must return [] for it, never garbage)
 //
 //  Signed: Kev + claude-fable-5, 2026-06-09, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — category links are dropped: the captured fixture's 17 related topics
+//  hold 11, each only its name, so it now parses to 7 results. Confidence 0.85.
 
 import Foundation
 @testable import M1K3AgentTools
@@ -31,8 +33,8 @@ struct InstantAnswerParserTests {
         #expect(first.title == "Swift (programming language)")
         #expect(first.url == "https://en.wikipedia.org/wiki/Swift_(programming_language)")
         #expect(first.snippet.hasPrefix("Swift is a high-level general-purpose"))
-        // 1 abstract + 17 related topics in the captured fixture.
-        #expect(results.count == 18)
+        // 1 abstract + 17 related topics in the captured fixture, 11 of them category links (bare names).
+        #expect(results.count == 7)
         let second = try #require(results.dropFirst().first)
         #expect(second.title == "Objective-C")
         #expect(second.url == "https://duckduckgo.com/Objective-C")
@@ -68,6 +70,27 @@ struct InstantAnswerParserTests {
         #expect(results.count == 1)
         #expect(results.first?.title == "Inner Thing")
         #expect(results.first?.url == "https://example.com/inner")
+    }
+
+    /// 2026-10-27 web sample: "Government of Canada — https://duckduckgo.com/c/Government_of_Canada", its
+    /// snippet only its name, took a result slot. A topic with something to say stays.
+    @Test("a category link carries only its name, so it is dropped")
+    func categoryDropped() {
+        let json = """
+        {"Answer":"","AbstractText":"","AbstractURL":"","Heading":"","RelatedTopics":[
+            {"Text":"Spouse of the PM - Diana Fox Carney is his wife.","FirstURL":"https://duckduckgo.com/Spouse"},
+            {"Text":"Government of Canada","FirstURL":"https://duckduckgo.com/c/Government_of_Canada"}
+        ]}
+        """
+        let results = DuckDuckGoInstantAnswerParser.parse(Data(json.utf8))
+        #expect(results.map(\.title) == ["Spouse of the PM"])
+        // Only category links: no results, so the tool falls through to the lite endpoint's real ones.
+        let onlyCategories = """
+        {"Answer":"","AbstractText":"","AbstractURL":"","Heading":"","RelatedTopics":[
+            {"Text":"Government of Canada","FirstURL":"https://duckduckgo.com/c/Government_of_Canada"}
+        ]}
+        """
+        #expect(DuckDuckGoInstantAnswerParser.parse(Data(onlyCategories.utf8)).isEmpty)
     }
 
     @Test("garbage data yields no results")

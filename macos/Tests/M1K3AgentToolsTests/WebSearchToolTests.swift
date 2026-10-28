@@ -8,6 +8,8 @@
 //  an honest "no results".
 //
 //  Signed: Kev + claude-fable-5, 2026-06-09, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — the deepen read skips the engine's own pages, and beside a page read the
+//  list keeps three results (the 2026-10-27 web sample). Confidence 0.85.
 
 import Foundation
 @testable import M1K3AgentTools
@@ -204,6 +206,54 @@ struct WebSearchToolTests {
         let result = try await tool.execute(input: ["query": "summit outcome"])
         #expect(result.output.contains("The summit concluded with a signed accord."))
         #expect(result.output.contains("https://news.example/two"))
+    }
+
+    /// 2026-10-27 web sample: an Instant Answer's related topics link to DuckDuckGo's own topic pages, and
+    /// the deepen read spent its second fetch on one. It reads the first two pages that aren't the engine's.
+    @Test("deep mode never reads the search engine's own topic pages")
+    func deepFetchSkipsEnginePages() async throws {
+        let instant = """
+        {"Answer":"","AbstractText":"The PM heads the government.","AbstractURL":"https://en.wikipedia.org/wiki/PM",
+         "Heading":"PM",
+         "RelatedTopics":[{"Text":"Rankings - surveys of PMs","FirstURL":"https://duckduckgo.com/Rankings"}]}
+        """
+        let fetcher = FakeHTTPFetcher { request in
+            request.url?.host == "api.duckduckgo.com"
+                ? Data(instant.utf8)
+                : Data("<html><body><p>Mark Carney is the prime minister.</p></body></html>".utf8)
+        }
+        let tool = WebSearchTool(fetcher: fetcher, deepReader: FetchPageTool(fetcher: fetcher, resolver: publicDNS))
+        let result = try await tool.execute(input: ["query": "who is the prime minister of canada"])
+        #expect(result.output.contains("Mark Carney is the prime minister."))
+        #expect(fetcher.requests.compactMap(\.url?.host) == ["api.duckduckgo.com", "en.wikipedia.org"])
+    }
+
+    /// 2026-10-27 web sample: the list ran 1,350–1,770 characters and cut the page read after it. With a page,
+    /// the top three stay (the Sources footer names three at most); without one, the snippets are all there is.
+    @Test("beside a page read the list keeps the top three; without one, all five")
+    func listShortensBesideAPage() async throws {
+        let five = "<html><body><table>" + (1 ... 5).map { index in
+            "<tr><td><a rel=\"nofollow\" href=\"https://site\(index).example/a\" class='result-link'>"
+                + "Hit \(index)</a></td></tr>"
+                + "<tr><td class='result-snippet'>Snippet \(index).</td></tr>"
+        }.joined() + "</table></body></html>"
+        func run(page: String) async throws -> String {
+            let fetcher = FakeHTTPFetcher { request in
+                switch request.url?.host {
+                case "api.duckduckgo.com": return Data(emptyIA.utf8)
+                case "lite.duckduckgo.com": return Data(five.utf8)
+                default: return Data(page.utf8)
+                }
+            }
+            let tool = WebSearchTool(fetcher: fetcher, deepReader: FetchPageTool(fetcher: fetcher, resolver: publicDNS))
+            return try await tool.execute(input: ["query": "anything"]).output
+        }
+        let read = try await run(page: "<html><body><p>The answer is on this page.</p></body></html>")
+        #expect(read.contains("3. Hit 3"))
+        #expect(!read.contains("4. Hit 4"))
+        #expect(read.contains("The answer is on this page."))
+        let unread = try await run(page: "<html><body><script>x()</script></body></html>")
+        #expect(unread.contains("5. Hit 5"))
     }
 
     @Test("without a deep reader, behaviour is unchanged (snippets only)")

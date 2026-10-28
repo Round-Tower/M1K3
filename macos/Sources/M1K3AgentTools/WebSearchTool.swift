@@ -26,6 +26,12 @@
 //  `EgressFacts.searchProvider`, so swapping the backend fails CI instead of going stale in the clause.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (PR #527 fold) — the rate-limit log line reads `providerName`
 //  too; "DDG" was the last literal.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — the deepen read skips the engine's own pages (`isEnginePage`):
+//  in the 2026-10-27 web sample an Instant Answer's second result was a duckduckgo.com topic page, and the
+//  read spent its second fetch there. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-28 — beside a page read the list keeps three results
+//  (`listedBesideAPage`); with ToolDispatch's hosts-for-URLs, the page text reaching the model across the
+//  sample's nine answered searches went 6,388 → 11,996 characters. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -89,8 +95,7 @@ public struct WebSearchTool: AgentTool {
                 return ToolResult(output: "No web results for \"\(query)\".")
             case let .results(results):
                 Self.log.notice("\(results.count) result(s) for \"\(query, privacy: .public)\"")
-                let base = WebSearchFormatter.format(results, limit: maxResults)
-                return ToolResult(output: await deepened(base, results: results))
+                return ToolResult(output: await deepened(results))
             }
         } catch {
             Self.log.error("fetch failed for \"\(query, privacy: .public)\": \(error, privacy: .public)")
@@ -104,9 +109,11 @@ public struct WebSearchTool: AgentTool {
     /// to the SAME observation the model reliably triggers. Tries the first two
     /// results (the top hit is often a JS aggregator with no static text) and
     /// degrades to snippets-only when nothing is readable.
-    private func deepened(_ base: String, results: [WebSearchResult]) async -> String {
+    private func deepened(_ results: [WebSearchResult]) async -> String {
+        let base = WebSearchFormatter.format(results, limit: maxResults)
         guard let deepReader else { return base }
-        let candidates = Array(results.prefix(2))
+        // An Instant Answer's related topics link to DuckDuckGo's own topic pages: never the page to read.
+        let candidates = Array(results.filter { !Self.isEnginePage($0.url) }.prefix(2))
         guard !candidates.isEmpty else { return base }
         // Read the top candidates CONCURRENTLY (so total latency is one fetch, not
         // the sum) and take the highest-ranked one that yields text. The deep
@@ -124,10 +131,22 @@ public struct WebSearchTool: AgentTool {
         }
         for (index, result) in candidates.enumerated() {
             if let content = contents[index] {
-                return base + "\n\nPage content from \(result.url):\n\(content)"
+                let listed = WebSearchFormatter.format(results, limit: min(maxResults, Self.listedBesideAPage))
+                return listed + "\n\nPage content from \(result.url):\n\(content)"
             }
         }
         return base
+    }
+
+    /// Beside a page read, the list keeps the top three: the page is usually where the answer is, and five
+    /// results ran 1,350–1,770 of the dispatch budget's 2,400 characters (2026-10-27 web sample). The
+    /// Sources footer names three at most.
+    static let listedBesideAPage = 3
+
+    /// A page on the search engine itself (a topic or category page), not a result from the web.
+    static func isEnginePage(_ url: String) -> Bool {
+        guard let host = URL(string: url)?.host?.lowercased() else { return false }
+        return host == "duckduckgo.com" || host.hasSuffix(".duckduckgo.com")
     }
 
     private enum SearchOutcome {
