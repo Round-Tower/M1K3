@@ -148,6 +148,8 @@ bundletool-all-*.jar
 # them the .solidimagestack Contents.json point at nothing and the visionOS
 # target fails to build on a fresh clone. (Regenerate: macos/tools/icons/build_visionos_icon.py)
 !macos/M1K3visionOS/**/*.png
+# Explainer figures (Anatomy builds) and their stills are docs, not test artifacts.
+!macos/docs/figures/**/*.png
 # Launch site is self-contained (no CDN): its og card + favicons must travel.
 !site/**/*.png
 # Brand/icon assets (app-icon iconset + previews, labyrinth marks) must travel.
