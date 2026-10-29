@@ -23,9 +23,10 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-22 — comments only: the honeymoon is one day now
 //  (ReviewPromptPolicy), and daysSinceFirstUse counts whole elapsed days, not calendar dates —
 //  the old comment said the opposite of what the code does. Confidence 0.85.
-//  Review: Kev + claude-opus-5.5, 2026-10-29 — the crash stamp (#750): the shells record each crash
-//  diagnostic's own date; the newest wins, so an old payload delivered again never restarts the quiet,
-//  and a date past now is held at now. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — the crash stamp (#750): the shells record when the next launch
+//  noticed a session that didn't close cleanly (SessionGuard). The newest wins, a date past now is held at now,
+//  and a stored stamp past now (the clock was ahead, then fixed) is no crash on record and is replaced by the
+//  next one, so a bad clock never buys a year of silence. Confidence 0.8.
 
 import Foundation
 import Observation
@@ -98,18 +99,22 @@ public final class ReviewPromptLedger {
         storage.set(completedTurns, forKey: Self.turnsKey)
     }
 
-    /// A crash diagnostic, dated by the crash itself (MetricKit delivers it on
-    /// a later launch). Keeps the newest date, held at now.
+    /// A session that didn't close cleanly, dated when the next launch noticed it
+    /// (#750). Keeps the newest date, held at now; a stored stamp past now is
+    /// clock damage and is replaced.
     public func recordCrash(at date: Date) {
         guard !suppressed() else { return }
-        let stamp = min(date, now()).timeIntervalSince1970
-        if let stored = storage.object(forKey: Self.lastCrashKey) as? Double, stored >= stamp { return }
+        let current = now().timeIntervalSince1970
+        let stamp = min(date.timeIntervalSince1970, current)
+        if let stored = storage.object(forKey: Self.lastCrashKey) as? Double, stored >= stamp, stored <= current { return }
         storage.set(stamp, forKey: Self.lastCrashKey)
     }
 
-    /// Whole days since the newest recorded crash; nil when there is none.
+    /// Whole days since the newest recorded crash; nil when there is none, or
+    /// when the stamp is past now (the clock was ahead when it was written).
     public var daysSinceLastCrash: Int? {
-        guard let stamp = storage.object(forKey: Self.lastCrashKey) as? Double else { return nil }
+        guard let stamp = storage.object(forKey: Self.lastCrashKey) as? Double,
+              stamp <= now().timeIntervalSince1970 else { return nil }
         return calendar.dateComponents([.day], from: Date(timeIntervalSince1970: stamp), to: now()).day
     }
 

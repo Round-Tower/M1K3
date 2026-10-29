@@ -14,7 +14,10 @@
 //  SnagReport's, unit-pinned in M1K3Diagnostics; SnagNoteScanTests pins this wiring.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-29, Confidence 0.75 (verify-by-launch owed: a kill -9
-//  then a relaunch shows the banner; a ⌘Q then a relaunch does not). Prior: none (new file).
+//  then a relaunch shows the banner; a ⌘Q, or a log out or restart, then a relaunch does not).
+//  Prior: none (new file).
+//  Known gap (after the freeze): if AppEnvironment() throws at the launch that found the mark, the
+//  snag is consumed and never offered; the ledger and the banner both live on the environment.
 //
 
 import Foundation

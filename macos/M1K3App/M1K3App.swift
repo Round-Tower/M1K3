@@ -265,7 +265,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     private var notchHUD: NotchHUDController?
 
     /// Did the last session close cleanly? (#750) Marked on the UI launch path below, cleared
-    /// by a clean quit; a mark still standing at launch is a crash, a memory kill or a force-quit.
+    /// by a clean quit (a logout or restart quits cleanly too); a mark still standing at launch is a
+    /// crash, a memory kill, a force-quit, or a power cut or panic.
     private let sessionGuard = SessionGuard(storage: UserDefaults.standard, inert: AppEnvironment.sessionGuardInert)
 
     func applicationWillFinishLaunching(_: Notification) {

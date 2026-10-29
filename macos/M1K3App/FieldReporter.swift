@@ -55,7 +55,7 @@ struct FieldReportDraft: Identifiable {
 enum FieldReporter {
     /// Where a report goes: the contact address in SECURITY.md. The address is Kev's ruling
     /// (#708 stays open for it).
-    static let recipient = "hello@round-tower.ie"
+    static let recipient = RoundTowerReports.recipient
 
     /// The redacted draft for one exchange. The brain is the answer's stamp, or the resident
     /// brain for a pre-trace turn. The scrub is `FieldReportFormatter.redactedBody`, unit-pinned

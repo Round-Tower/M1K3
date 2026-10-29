@@ -16,6 +16,10 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-29, Confidence 0.7 (verify-by-launch owed: a crash
 //  from the foreground shows the card; a swipe-away from the app switcher does not).
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — the guard moved to the app struct
+//  (M1K3iOSHarnessApp), which marks before AppCore builds; this keeps the note, the ledger feed and the
+//  draft. A swipe-away from the switcher reaches .background first (a review agent's Simulator run on
+//  iOS 27), so it clears the mark. Confidence 0.75.
 //
 
 import Foundation
@@ -46,18 +50,9 @@ extension AppCore {
         #endif
     }
 
-    /// The scene is in front. The first call in this process reads the last session's mark.
-    func sessionBecameActive() {
-        if let openedAt = sessionGuard.begin() { noteUncleanExit(openedAt: openedAt) }
-    }
-
-    /// A trip to the background ends the session cleanly: what iOS does to the app from here
-    /// is not a snag.
-    func sessionWentToBackground() {
-        sessionGuard.end()
-    }
-
-    private func noteUncleanExit(openedAt: Date, now: Date = Date()) {
+    /// The previous session began at `openedAt` and never closed (the app struct's SessionGuard
+    /// says so): hold the rating ask, and raise the offer for the chat screen.
+    func noteUncleanExit(openedAt: Date, now: Date = Date()) {
         reviewLedger.recordCrash(at: now)
         snag = SnagNote(openedAt: openedAt, noticedAt: now)
         Logger(subsystem: "app.m1k3", category: "launch")

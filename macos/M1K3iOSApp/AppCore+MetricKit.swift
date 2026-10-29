@@ -85,8 +85,10 @@ final class MobileMetricKitCollector: NSObject, MXMetricManagerSubscriber, @unch
         existingFiles()
             .filter { $0.name.hasPrefix("diagnostic-") }
             .sorted { $0.date > $1.date }
+            .lazy // stop reading payloads once `limit` crash lines are in hand
             .compactMap { entry -> String? in
-                guard let data = try? Data(contentsOf: directory.appendingPathComponent(entry.name)) else { return nil }
+                let url = self.directory.appendingPathComponent(entry.name)
+                guard let data = try? Data(contentsOf: url) else { return nil }
                 let summary = MetricPayloadDigest.summarize(data)
                 return summary.kind == .crash ? summary.line : nil
             }

@@ -11,6 +11,9 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-29, Confidence 0.8 (pure; what counts as clean on
 //  each platform is the shells' to wire and is verify-by-launch). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — an end before the process's first begin
+//  keeps the mark (a self-test quit must not erase a real snag), and a mark dated after now is reported as now.
+//  Confidence 0.8.
 //
 
 import Foundation
@@ -95,5 +98,21 @@ struct SessionGuardTests {
         session.end()
         #expect(storage.object(forKey: SessionGuard.openKey) as? Double == epoch.timeIntervalSince1970,
                 "a Release session's mark survives a Debug run")
+    }
+
+    @Test("an end before this process's first begin keeps a standing mark for that begin to report")
+    func endBeforeBeginKeepsTheMark() {
+        let storage = MemoryStorage()
+        storage.set(epoch.timeIntervalSince1970, forKey: SessionGuard.openKey)
+        let session = guardian(storage, at: epoch.addingTimeInterval(60))
+        session.end() // a self-test quit, or a background before the first active
+        #expect(session.begin() == epoch)
+    }
+
+    @Test("a mark dated after now (a clock that ran ahead) is reported as now, never in the future")
+    func futureMarkIsHeldAtNow() {
+        let storage = MemoryStorage()
+        storage.set(epoch.addingTimeInterval(86400).timeIntervalSince1970, forKey: SessionGuard.openKey)
+        #expect(guardian(storage, at: epoch).begin() == epoch)
     }
 }

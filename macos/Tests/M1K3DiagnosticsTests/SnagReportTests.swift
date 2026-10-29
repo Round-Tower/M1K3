@@ -11,6 +11,8 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-29, Confidence 0.8 (pure; the sheet and the mail
 //  hand-off are verify-by-launch). Prior: none (new file).
 //  Review: Kev + claude-opus-5.5, 2026-10-29 — the recipient pin. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — "Brain now:" (it is the brain the next
+//  launch restored, not necessarily the one that crashed). Confidence 0.8.
 //
 
 import Foundation
@@ -42,7 +44,7 @@ struct SnagReportTests {
         #expect(body.contains("didn't close cleanly"))
         #expect(body.contains("2027-01-15T08:00:00Z"), "when the session began, in UTC")
         #expect(body.contains("2027-01-15T09:00:00Z"), "when the next launch noticed")
-        #expect(body.contains("Brain: Big · App: 1.3.0 (542) · macOS 27.0"))
+        #expect(body.contains("Brain now: Big · App: 1.3.0 (542) · macOS 27.0"), "the brain restored, not the one that crashed")
         for absent in ["anything you typed or said", "memories", "documents"] {
             #expect(body.contains(absent), "the preamble names \(absent) as left out")
         }
@@ -72,7 +74,7 @@ struct SnagReportTests {
         let body = SnagReportFormatter.redactedBody(leaky, homeDirectory: "/Users/kev", userName: "Big")
         #expect(!body.contains("/Users/aoife"))
         #expect(!body.contains("kev@example.com"))
-        #expect(body.contains("Brain: Big · App: 1.3.0 (542)"), "the user's name never mangles M1K3's lines")
+        #expect(body.contains("Brain now: Big · App: 1.3.0 (542)"), "the user's name never mangles M1K3's lines")
     }
 
     @Test("the extra scrub runs last, over the redacted body")

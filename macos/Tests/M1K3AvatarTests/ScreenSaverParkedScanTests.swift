@@ -7,7 +7,8 @@
 //  and `M1K3ScreensaverCore` stays linked because the Settings backdrop draws its `LifeField`.
 //  What leaves is the app's copy of the .saver and the Settings row that installs it. These
 //  tripwires keep both out until someone unparks it on purpose (restore the embed block in
-//  project.yml and the row in GeneralSettingsPane, then delete this file).
+//  project.yml and the row in GeneralSettingsPane, then delete this file). No CI job builds the
+//  parked .saver, so unparking starts with `xcodebuild -scheme M1K3Screensaver build`.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-29, Confidence 0.8 (coarse string tripwires over
 //  project.yml and the Settings pane). Prior: none (new file).

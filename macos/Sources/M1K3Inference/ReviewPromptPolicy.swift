@@ -19,8 +19,9 @@
 //  version, only wins count. Watch: ratings ÷ installs on 1.2.1 weekly per storefront (<2%
 //  after 3 weeks → the gate wasn't the bottleneck); early 1–2★ → days back to 2.
 //  Confidence 0.7.
-//  Review: Kev + claude-opus-5.5, 2026-10-29 — no ask within `crashQuietDays` of a crash (#750). Crashes
-//  only, not hangs (Kev's call: a Mac that logs hangs often would hold the ask for good). Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — no ask within `crashQuietDays` of a crash (#750). A crash here
+//  is a session that didn't close cleanly (SessionGuard: a crash, a memory kill or a force-quit), never a
+//  MetricKit hang report, which a Mac can log often enough to hold the ask for good (Kev's call). Confidence 0.8.
 
 import Foundation
 

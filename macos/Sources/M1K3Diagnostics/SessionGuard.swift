@@ -8,11 +8,15 @@
 //  session begins, cleared when it ends cleanly. The shells say what "clean" is: a normal quit on
 //  the Mac (applicationShouldTerminate), a trip to the background on iPhone and iPad (the system
 //  may then end the app without a crash). A mark still set at the next launch means the session
-//  ended in a crash, an out-of-memory kill or a force-quit. Kev ruled this the trigger
-//  ("Didn't close cleanly"), knowing it counts a force-quit, which is usually a hang given up on.
+//  ended in a crash, an out-of-memory kill or a force-quit, or, on a Mac, a power cut, a kernel
+//  panic or a held-power-button reboot. Kev ruled this the trigger ("Didn't close cleanly"),
+//  knowing it counts a force-quit, which is usually a hang given up on. If power-loss false
+//  positives show up after the freeze, store kern.boottime beside the mark.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-29, Confidence 0.8 (pure, every path pinned in
 //  SessionGuardTests; the shells' clean-exit wiring is verify-by-launch). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — end() before the first begin() keeps the
+//  mark, and a mark dated after now is reported as now. Confidence 0.8.
 //
 
 import Foundation
@@ -50,12 +54,15 @@ public final class SessionGuard {
         defer { storage.set(now().timeIntervalSince1970, forKey: Self.openKey) }
         guard !begun else { return nil }
         begun = true
-        return (storage.object(forKey: Self.openKey) as? Double).map(Date.init(timeIntervalSince1970:))
+        // A clock that ran ahead must not date the report after its own notice.
+        return (storage.object(forKey: Self.openKey) as? Double).map { min(Date(timeIntervalSince1970: $0), now()) }
     }
 
-    /// The session ended cleanly, or reached a state the system may end without a crash.
+    /// The session ended cleanly, or reached a state the system may end without a crash. Before this
+    /// process's first begin it does nothing: a standing mark belongs to that begin (a self-test run
+    /// quits without ever beginning, and must not erase a real snag).
     public func end() {
-        guard !inert else { return }
+        guard !inert, begun else { return }
         storage.set(nil, forKey: Self.openKey)
     }
 }

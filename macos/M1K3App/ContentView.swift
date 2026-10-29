@@ -1874,8 +1874,6 @@ private struct IntroductionOfferCard: View {
     }
 }
 
-/// The M1K3 Voice earned moment — one line, two honest actions, shown only
-/// after real spoken exchanges on the built-in voice (never mid-session).
 /// #750's one-time offer after a session that didn't close cleanly, in M1K3's voice.
 private struct SnagBanner: View {
     let onSee: () -> Void
@@ -1904,6 +1902,8 @@ private struct SnagBanner: View {
     }
 }
 
+/// The M1K3 Voice earned moment — one line, two honest actions, shown only
+/// after real spoken exchanges on the built-in voice (never mid-session).
 private struct VoiceUpgradeBanner: View {
     let onAccept: () -> Void
     let onDismiss: () -> Void

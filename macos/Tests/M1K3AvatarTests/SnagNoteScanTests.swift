@@ -11,6 +11,9 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-29, Confidence 0.6 (coarse tripwires over text; the
 //  banner, the sheet and a kill -9 relaunch are verify-by-launch). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — pins the Release branch (always marks), the
+//  iPhone app struct owning the mark (set before AppCore, cleared before the brain is shed), both drafts through
+//  the scrub and the canary pass, the Mac sheet's snag kind, and visionOS-safe glass. Confidence 0.65.
 //
 
 import Foundation
@@ -55,12 +58,7 @@ struct SnagNoteScanTests {
 
     @Test("Debug builds leave the live mark alone unless argv arms them; the screengrab harness never marks")
     func debugAndHarnessAreInert() throws {
-        let snag = try Self.code("M1K3App/AppEnvironment+Snag.swift")
-        let inert = try #require(snag.range(of: "static var sessionGuardInert"))
-        let after = snag[inert.upperBound...]
-        #expect(after.contains("ScreengrabHarness.current.isActive"))
-        let debug = try #require(after.range(of: "#if DEBUG"))
-        #expect(after[debug.upperBound...].contains("\"armSessionGuard\""))
+        try Self.expectInertOnlyWhenAsked(Self.code("M1K3App/AppEnvironment+Snag.swift"))
     }
 
     @Test("a snag holds the rating ask, whatever the age band")
@@ -86,23 +84,55 @@ struct SnagNoteScanTests {
         #expect(!content.contains("SnagReportFormatter"), "the reporter builds the body, not the view")
     }
 
-    @Test("iPhone: the mark follows the scene — set when active (and at boot if already active), cleared on background")
+    @Test("iPhone: the app owns the mark, sets it before AppCore builds, and clears it first on background")
     func iosMarksTheActiveScene() throws {
         let app = try Self.code("M1K3iOSApp/M1K3iOSHarnessApp.swift")
         let background = try #require(app.range(of: "case .background:"))
+        let afterBackground = app[background.upperBound...]
+        let end = try #require(afterBackground.range(of: "sessionGuard.end()"))
+        let shed = try #require(afterBackground.range(of: "exitVoiceMode()"))
+        #expect(end.lowerBound < shed.lowerBound, "cleared before the brain is shed, so a kill then is no snag")
         let active = try #require(app.range(of: "case .active:"))
-        let backgroundEnd = active.lowerBound > background.upperBound ? active.lowerBound : app.endIndex
-        let afterBackground = app[background.upperBound ..< backgroundEnd]
-        #expect(afterBackground.contains("sessionWentToBackground()"), "a trip to the background is a clean end")
-        #expect(app[active.upperBound...].prefix(200).contains("sessionBecameActive()"))
+        #expect(app[active.upperBound...].prefix(120).contains("markSessionActive()"))
         let boot = try Self.body(of: "boot", in: app)
-        #expect(boot.contains("scenePhase == .active"), "a background launch never marks a session")
-        #expect(boot.contains("sessionBecameActive()"))
+        let live = try #require(boot.range(of: "UIApplication.shared.applicationState == .active"))
+        let build = try #require(boot.range(of: "AppCore()"))
+        #expect(live.lowerBound < build.lowerBound, "marked before the heavy build; a background launch waits")
+        #expect(boot.contains("noteUncleanExit(openedAt:"), "a mark found before the core existed is handed over")
+        let mark = try Self.body(of: "markSessionActive", in: app)
+        #expect(mark.contains("sessionGuard.begin()"))
+        #expect(app.components(separatedBy: "sessionGuard.end()").count == 2, "nothing else clears the mark")
         let core = try Self.code("M1K3iOSApp/AppCore+Snag.swift")
-        let inert = try #require(core.range(of: "static var sessionGuardInert"))
-        #expect(core[inert.upperBound...].contains("ScreengrabHarness.current.isActive"))
-        #expect(core[inert.upperBound...].contains("\"armSessionGuard\""))
+        try Self.expectInertOnlyWhenAsked(core)
         #expect(core.contains("reviewLedger.recordCrash(at:"))
+    }
+
+    @Test("both shells build the snag draft through the unit-pinned scrub and the canary pass")
+    func snagDraftsAreRedacted() throws {
+        let mac = try Self.body(of: "snagDraft", in: Self.code("M1K3App/FieldReporter.swift"))
+        let ios = try Self.body(of: "snagDraft", in: Self.code("M1K3iOSApp/AppCore+Snag.swift"))
+        for draft in [mac, ios] {
+            #expect(draft.contains("SnagReportFormatter.redactedBody("))
+            #expect(draft.contains("CanaryGuard.fromLocalConfig()"))
+            #expect(!draft.contains("SnagReportFormatter.body("), "no unscrubbed body reaches a sheet")
+        }
+        #expect(mac.contains("FieldReportDraft(kind: .snag"), "the Mac sheet shows the snag wording, not the exchange's")
+        let sheet = try Self.code("M1K3App/FieldReportSheet.swift")
+        let snagCase = try #require(sheet.range(of: "case .snag:"))
+        #expect(sheet[snagCase.upperBound...].contains("Nothing you typed"))
+    }
+
+    /// The guard is inert under the harness and in Debug unless argv arms it, and LIVE in Release:
+    /// a stray `return true` would kill #750 in every shipped build and pass the other checks.
+    private static func expectInertOnlyWhenAsked(_ source: String) throws {
+        let inert = try #require(source.range(of: "static var sessionGuardInert"))
+        let after = source[inert.upperBound...]
+        #expect(after.contains("ScreengrabHarness.current.isActive"))
+        let debug = try #require(after.range(of: "#if DEBUG"))
+        let release = try #require(after.range(of: "#else"))
+        #expect(after[debug.upperBound ..< release.lowerBound].contains("\"armSessionGuard\""))
+        let releaseBranch = after[release.upperBound...].trimmingCharacters(in: .whitespacesAndNewlines)
+        #expect(releaseBranch.hasPrefix("return false"), "Release builds always mark")
     }
 
     @Test("iPhone: the card is age-gated and only the sheet's Send button mails, once")
@@ -117,6 +147,10 @@ struct SnagNoteScanTests {
         #expect(call.lowerBound > sendButton.upperBound, "the call sits inside the Send button")
         #expect(host.contains(".keyboardShortcut(sent ? nil : .defaultAction)") || !host.contains(".keyboardShortcut("))
         #expect(host.contains(".disabled(isBlank)"))
+        #expect(!host.contains(".glassEffect("), "visionOS has no glassEffect: GlassCompat's m1k3Glass")
+        let glassStyle = try #require(host.range(of: ".glassProminent"))
+        let visionGuard = try #require(host.range(of: "#if os(visionOS)", options: .backwards, range: host.startIndex ..< glassStyle.lowerBound))
+        #expect(host[visionGuard.upperBound ..< glassStyle.lowerBound].contains("#else"), "glass styles only off visionOS")
         let root = try Self.code("M1K3iOSApp/RootView.swift")
         #expect(root.contains(".modifier(SnagNoteHost())"), "the host hangs off the chat screen")
         for path in try Self.iosFiles() where path != "M1K3iOSApp/SnagMailer.swift" {

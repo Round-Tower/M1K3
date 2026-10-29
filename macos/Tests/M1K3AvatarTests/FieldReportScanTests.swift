@@ -22,6 +22,8 @@
 //  is only Launch Services accepting the link; a blank editor can be neither copied nor sent. Confidence 0.6.
 //  Review: Kev + claude-opus-5.5, 2026-10-29 — Return sends once: the sheet stays open after Send, so a second
 //  Return opened a second email (#708's 1.3.0 fix). Confidence 0.6.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — the reporter reads the one address every
+//  report uses, `RoundTowerReports.recipient`. Confidence 0.6.
 //
 
 import Foundation
@@ -150,7 +152,7 @@ struct FieldReportScanTests {
         #expect(!reporter.contains("M1K3Persona.userProfile"), "the About-you text is not a name; it never matched one")
         #expect(reporter.contains("urlForApplication(toOpen:"), "no mail handler is told apart from a link that would not open")
         #expect(reporter.contains("CanaryGuard.fromLocalConfig()"), "the honeypot pass runs on every outward surface")
-        #expect(reporter.contains("hello@round-tower.ie"))
+        #expect(reporter.contains("RoundTowerReports.recipient"), "one address for every report (SnagReportTests pins it)")
     }
 
     @Test("the thumbs-down editor commits the verdict and note, parks the note, and the sheet follows the popover's close")

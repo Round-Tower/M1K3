@@ -13,6 +13,10 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-29, Confidence 0.7 (verify-by-launch owed: the card,
 //  the sheet, Mail's compose window, VoiceOver on both). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — builds on visionOS: the card's glass goes
+//  through GlassCompat's m1k3Glass and the prominent buttons through snagProminent (visionOS has no glass
+//  styles); the captions are localized; "Not now" gets a 44 pt target and the buttons stack at large text.
+//  Confidence 0.75.
 //
 
 import M1K3Chat
@@ -48,6 +52,15 @@ private struct SnagNoteCard: View {
     let onSee: () -> Void
     let onDismiss: () -> Void
 
+    @ViewBuilder private var buttons: some View {
+        Button("See the report", action: onSee)
+            .snagProminent()
+        Button("Not now", action: onDismiss)
+            .foregroundStyle(.secondary)
+            .frame(minHeight: 44) // a full touch target for the quiet button
+            .contentShape(Rectangle())
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Label {
@@ -57,16 +70,15 @@ private struct SnagNoteCard: View {
             } icon: {
                 Image(systemName: "bandage").foregroundStyle(.tint)
             }
-            HStack(spacing: 12) {
-                Button("See the report", action: onSee)
-                    .buttonStyle(.glassProminent)
-                Button("Not now", action: onDismiss)
-                    .foregroundStyle(.secondary)
+            // Side by side when they fit; stacked at large Dynamic Type sizes.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) { buttons }
+                VStack(alignment: .leading, spacing: 8) { buttons }
             }
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .glassEffect(.regular, in: .rect(cornerRadius: 16))
+        .m1k3Glass(cornerRadius: 16)
         .padding(.horizontal, 16)
         .padding(.top, 8)
     }
@@ -122,29 +134,29 @@ private struct SnagReportSheet: View {
                     Button("Send by email") {
                         switch SnagMailer.send(subject: draft.subject, body: text) {
                         case .opened:
-                            caption = """
+                            caption = String(localized: """
                             Your mail app should now show it, addressed and filled in; it goes when you send it \
                             there. If no message appeared, Copy instead still has the text.
-                            """
+                            """)
                         case .copiedTruncated:
-                            caption = """
+                            caption = String(localized: """
                             Your mail app opened with the start of it. The message was too long for one link, \
                             so the full text is on your clipboard — paste it in before you send.
-                            """
+                            """)
                         case .copiedNoMailClient, .copiedCouldNotOpen:
-                            caption = """
+                            caption = String(localized: """
                             Your mail app didn't open it. The full text is on your clipboard — paste it into an \
                             email to \(RoundTowerReports.recipient).
-                            """
+                            """)
                         }
                     }
-                    .buttonStyle(.glassProminent)
+                    .snagProminent()
                     .frame(maxWidth: .infinity)
                     .disabled(isBlank)
 
                     Button("Copy instead") {
                         SnagMailer.copy(text)
-                        caption = "Copied. Nothing was sent — paste it wherever you like."
+                        caption = String(localized: "Copied. Nothing was sent — paste it wherever you like.")
                     }
                     .frame(maxWidth: .infinity)
                     .disabled(isBlank)
@@ -159,5 +171,18 @@ private struct SnagReportSheet: View {
                 }
             }
         }
+    }
+}
+
+private extension View {
+    /// The prominent button: Liquid Glass on iOS, a bordered fill on visionOS, where glass
+    /// button styles don't exist (GlassCompat's rule).
+    @ViewBuilder
+    func snagProminent() -> some View {
+        #if os(visionOS)
+            buttonStyle(.borderedProminent)
+        #else
+            buttonStyle(.glassProminent)
+        #endif
     }
 }

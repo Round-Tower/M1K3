@@ -22,15 +22,27 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — a true background ends a chat auto-speak session (no background audio mode).
 //  Review: Kev + claude-opus-5.5, 2026-10-29 — #750's session mark follows the scene: open when active (at boot too, if
 //  already active), closed on a true background, so a crash or memory kill in front is noticed by the next launch.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — the app owns the guard and marks before AppCore
+//  builds (a live applicationState read, not the task's scenePhase copy); a mark found first is held until the core
+//  exists; the background clear runs before the brain is shed. Confidence 0.75.
 
 import M1K3Avatar
+import M1K3Diagnostics
 import SwiftUI
+import UIKit
 
 @main
 struct M1K3iOSApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var core: AppCore?
     @State private var bootError: String?
+    /// Did the last session close cleanly? (#750) Owned here, like the Mac's delegate owns its
+    /// guard, so the mark is set before AppCore builds: a crash while building still leaves it.
+    @State private var sessionGuard = SessionGuard(
+        storage: UserDefaults.standard, inert: AppCore.sessionGuardInert
+    )
+    /// A standing mark found before AppCore existed, handed over once it does.
+    @State private var pendingUnclean: Date?
 
     init() {
         BundledFonts.register() // Silkscreen — the pixel wordmark face.
@@ -62,17 +74,18 @@ struct M1K3iOSApp: App {
                 // deliberately ignored so transient interruptions don't churn the model.
                 switch phase {
                 case .background:
+                    // What iOS does to a backgrounded app is no snag (#750). First, so a
+                    // memory kill while the brain is shed below is not one either.
+                    sessionGuard.end()
                     // Voice mode can't survive a true background (the mic engine
                     // and audio session are torn down by the OS) — leave cleanly
                     // BEFORE shedding the brain, so the loop never sees a dead mic.
                     core?.exitVoiceMode()
                     core?.cancelAutoSpeak() // no background audio: a half-read answer just stops
                     core?.releaseForBackground()
-                    // What iOS does to a backgrounded app is no snag (#750).
-                    core?.sessionWentToBackground()
                 case .active:
+                    markSessionActive()
                     core?.warmForForeground()
-                    core?.sessionBecameActive()
                 default: break
                 }
             }
@@ -81,14 +94,28 @@ struct M1K3iOSApp: App {
 
     @MainActor
     private func boot() {
+        // Launched into the foreground: this session is open (#750), marked before the heavy
+        // build. A live read, not `scenePhase` (the task's copy can be stale); a background
+        // launch waits for its first .active.
+        if UIApplication.shared.applicationState == .active { markSessionActive() }
         do {
-            core = try AppCore()
-            // Launched into the foreground: this session is open (#750). A background launch
-            // waits for its first .active.
-            if scenePhase == .active { core?.sessionBecameActive() }
+            let built = try AppCore()
+            core = built
+            if let pendingUnclean {
+                built.noteUncleanExit(openedAt: pendingUnclean)
+                self.pendingUnclean = nil
+            }
         } catch {
             bootError = error.localizedDescription
         }
+    }
+
+    /// Mark this session open. The process's first mark reports the last session if it never
+    /// closed: straight to AppCore, or held until boot has built one.
+    @MainActor
+    private func markSessionActive() {
+        guard let since = sessionGuard.begin() else { return }
+        if let core { core.noteUncleanExit(openedAt: since) } else { pendingUnclean = since }
     }
 
     private var bootLoadingView: some View {

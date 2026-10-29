@@ -141,8 +141,8 @@
 //  your Mini brain — running entirely on this iPhone"). Confidence 0.7 (verify on the phone).
 //  Review: same day (privacy wording, review fold) — the egress clause's "Private Cloud Compute is offered" follows
 //  the brain-list row (`PrivateCloudRung.pickerControl`), so the org policy switch hides it as the Mac's does.
-//  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: `sessionGuard` and `snag` beside the rating ledger
-//  (AppCore+Snag). Confidence unchanged.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: `snag` beside the rating ledger (AppCore+Snag); the
+//  SessionGuard itself lives in the app struct, which marks before this class builds. Confidence unchanged.
 
 import AVFoundation
 #if os(iOS)
@@ -215,10 +215,8 @@ final class AppCore {
         version: ReviewPromptLedger.marketingVersion(),
         suppressed: { ScreengrabHarness.current.isActive }
     )
-    /// Did the last session close cleanly? (#750) Marked while the scene is active, cleared on a
-    /// trip to the background (AppCore+Snag). Inert under the harness and in Debug unless asked.
-    let sessionGuard = SessionGuard(storage: UserDefaults.standard, inert: AppCore.sessionGuardInert)
-    /// The last session didn't close cleanly: the one-time offer on the chat screen (SnagNoteHost).
+    /// The last session didn't close cleanly (#750; the app struct's SessionGuard says so): the
+    /// one-time offer on the chat screen (SnagNoteHost).
     var snag: SnagNote?
 
     // MARK: - Voice-first mode (system providers; wiring in AppCore+Voice)

@@ -15,6 +15,8 @@
 //  the mail hand-off are verify-by-launch). Prior: none (new file; FieldReport's shape).
 //  Review: Kev + claude-opus-5.5, 2026-10-29 — `RoundTowerReports` and `SnagNote` live here so the Mac and phone
 //  shells share them. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — "Brain now:", since the brain is the one the
+//  next launch restored; the Mac reporter reads its recipient from `RoundTowerReports` too. Confidence 0.8.
 //
 
 import Foundation
@@ -82,7 +84,8 @@ public enum SnagReportFormatter {
             "",
             "What happened: M1K3 didn't close cleanly. That session began \(timestamp.string(from: report.openedAt)); "
                 + "the next launch noticed at \(timestamp.string(from: report.noticedAt)).",
-            "Brain: \(report.brain) · App: \(report.appVersion) (\(report.build)) · \(report.system)",
+            // The brain the next launch restored: the one that crashed is not recorded.
+            "Brain now: \(report.brain) · App: \(report.appVersion) (\(report.build)) · \(report.system)",
         ]
         if !report.crashLines.isEmpty {
             lines += ["", "Crash summaries this device kept:"] + report.crashLines

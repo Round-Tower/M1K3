@@ -16,6 +16,8 @@
 //  one liked answer is enough on day 1. Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-10-29 — the crash stamp (#750): the newest crash wins, a future date
 //  is held at now, and a held ask never marks the version. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — a stored stamp after now is no crash on
+//  record and the next crash replaces it; the day names match their offsets. Confidence 0.8.
 
 import Foundation
 @testable import M1K3Inference
@@ -129,15 +131,15 @@ struct ReviewPromptLedgerTests {
     func crashHoldsTheAsk() {
         let storage = MemoryStorage()
         _ = ledger(storage: storage)
-        let dayFive = ledger(storage: storage, now: epoch.addingTimeInterval(86400 * 5))
-        dayFive.recordDelight()
-        dayFive.recordCrash(at: epoch.addingTimeInterval(86400 * 4))
-        #expect(dayFive.daysSinceLastCrash == 1)
-        #expect(!dayFive.consumePromptIfDue())
+        let atDay5 = ledger(storage: storage, now: epoch.addingTimeInterval(86400 * 5))
+        atDay5.recordDelight()
+        atDay5.recordCrash(at: epoch.addingTimeInterval(86400 * 4))
+        #expect(atDay5.daysSinceLastCrash == 1)
+        #expect(!atDay5.consumePromptIfDue())
         #expect(storage.object(forKey: ReviewPromptLedger.promptedVersionKey) == nil)
-        let dayEight = ledger(storage: storage, now: epoch.addingTimeInterval(86400 * 7))
-        #expect(dayEight.daysSinceLastCrash == 3)
-        #expect(dayEight.consumePromptIfDue())
+        let atDay7 = ledger(storage: storage, now: epoch.addingTimeInterval(86400 * 7))
+        #expect(atDay7.daysSinceLastCrash == 3)
+        #expect(atDay7.consumePromptIfDue())
     }
 
     @Test("no crash on record reads as nil, not as day zero")
@@ -163,6 +165,16 @@ struct ReviewPromptLedgerTests {
         #expect(led.daysSinceLastCrash == 0)
         let later = ledger(storage: storage, now: epoch.addingTimeInterval(86400 * 3))
         #expect(later.daysSinceLastCrash == 3)
+    }
+
+    @Test("a stored stamp after now (the clock was ahead, then fixed) is no crash on record, and the next one replaces it")
+    func storedFutureStampIsDiscarded() {
+        let storage = MemoryStorage()
+        storage.set(epoch.addingTimeInterval(86400 * 365).timeIntervalSince1970, forKey: ReviewPromptLedger.lastCrashKey)
+        let led = ledger(storage: storage, now: epoch)
+        #expect(led.daysSinceLastCrash == nil, "a year of silence is not the price of a bad clock")
+        led.recordCrash(at: epoch.addingTimeInterval(-86400))
+        #expect(led.daysSinceLastCrash == 1)
     }
 
     @Test("suppressed (screengrab harness): a crash records nothing")
