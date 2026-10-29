@@ -62,6 +62,10 @@ devices. Private by design."). Confidence 0.9.
 Review: Kev + claude-fable-5.1, 2026-10-26 — #716: KIND_ORDER follows TaskKind.allCases through grounded-long
 and format, so the page's rows stop sorting the two newest kinds alphabetically (grounded-long was missing).
 Confidence 0.9.
+Review: Kev + claude-opus-5.5, 2026-10-29 — the PCC reference note said "the escalation rung of a later release";
+PCC ships as an opt-in brain in the App Store builds (ADR 0010), so the note says so. site/brains.html and
+site/brains.json carry the new note by hand, byte-identical to this generator's output, rather than a full
+regenerate, which would also fold three weeks of new runs into the page. Confidence 0.85.
 """
 
 from __future__ import annotations
@@ -99,7 +103,7 @@ TIERS = (
 # the ladder as a distance to compare against, never in the brains table (ADR 0004: the table
 # is what the binary pins).
 REFERENCE = {
-    "pcc": "Apple Private Cloud Compute — Apple's server model, the escalation rung of a later release; "
+    "pcc": "Apple Private Cloud Compute — Apple's server model, an opt-in brain you can pick in the App Store builds; "
            "measured through the same persona and floor, no tools of M1K3's.",
 }
 SHIPPED_ORDER = tuple(t["tier"] for t in TIERS)

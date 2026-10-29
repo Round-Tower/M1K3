@@ -86,7 +86,7 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "Does M1K3 send my data to a server?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Not by default. M1K3 runs on your Mac: inference, voice, embeddings, and storage are all on-device. Turn on Private Cloud Compute in Settings and a message you choose to send — nothing else — goes to Apple's Private Cloud Compute; every PCC reply is labelled in the chat, and Apple's own guarantees for that service are quoted on the M1K3 privacy page. Even the thumbs-up/down feedback you leave on answers stays local. Web search is on by default so answers can be current, with one switch in Settings to turn it off." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Not by default. M1K3 runs on your Mac: inference, voice, embeddings, and storage are all on-device. Turn on Private Cloud Compute in Settings and pick it as your brain, and what you type — plus the conversation so far, only if you tick it — goes to Apple's Private Cloud Compute; every PCC reply is labelled in the chat, and Apple's own guarantees for that service are quoted on the M1K3 privacy page. Even the thumbs-up/down feedback you leave on answers stays local. Web search is on by default so answers can be current, with one switch in Settings to turn it off." } },
     { "@type": "Question", "name": "What AI models does M1K3 run?",
       "acceptedAnswer": { "@type": "Answer", "text": "Three brains, all local: Mini for instant answers, Lil — the fast brain that fronts the conversation — and Big, delegated the deep work. Switch in Settings any time; the models behind each name, and their scores, live on /brains." } },
     { "@type": "Question", "name": "Which Macs does M1K3 support?",
@@ -500,8 +500,8 @@
 <section id="features">
   <div class="sec-head reveal">
     <span class="label">// capabilities</span>
-    <h2>A full AI stack.<br />No cloud attached.</h2>
-    <p>Everything below runs inside one sandboxed app on Apple Silicon. Pull the ethernet cable — M1K3 doesn't notice.</p>
+    <h2>A full AI stack.<br />No cloud required.</h2>
+    <p>Everything below runs inside one sandboxed app on Apple Silicon. Pull the ethernet cable — only the web tools notice.</p>
   </div>
   <div class="grid">
     <div class="cell reveal">
@@ -608,7 +608,7 @@ the action list?<br />
   <div class="faq-list">
     <details class="reveal">
       <summary>Does M1K3 send my data to a server?</summary>
-      <p>Not by default. M1K3 runs on your Mac — inference, voice, embeddings, and storage are all on-device. Turn on Private Cloud Compute in Settings and a message you choose to send — nothing else — goes to Apple's Private Cloud Compute; every PCC reply is labelled in the chat, and Apple's own guarantees for that service are quoted on our <a href="/privacy">privacy page</a>. Even the thumbs-up/down feedback you leave on answers stays local — it's yours, for tuning, and no visiting agent can read or write it. Web search is on by default so answers can be current, with one switch in Settings to turn it off.</p>
+      <p>Not by default. M1K3 runs on your Mac — inference, voice, embeddings, and storage are all on-device. Turn on Private Cloud Compute in Settings and pick it as your brain, and what you type — plus the conversation so far, only if you tick it — goes to Apple's Private Cloud Compute; every PCC reply is labelled in the chat, and Apple's own guarantees for that service are quoted on our <a href="/privacy">privacy page</a>. Even the thumbs-up/down feedback you leave on answers stays local — it's yours, for tuning, and no visiting agent can read or write it. Web search is on by default so answers can be current, with one switch in Settings to turn it off.</p>
     </details>
     <details class="reveal">
       <summary>What AI models does it run?</summary>
@@ -1145,6 +1145,12 @@ tick();
      og.png re-rendered (its button now reads "Get it on the App Store"). Confidence 0.85.
      Review: Kev + claude-opus-5.5, 2026-10-28 — the FAQ (visible and JSON-LD) still sent iPhone and iPad to TestFlight only;
      1.2.1 is live on the iOS App Store (store lookup 2026-10-28, iPhone and iPad), so it names the store, the same purchase, with TestFlight as the early
-     channel (ct=site-faq-ios). Confidence 0.9. -->
+     channel (ct=site-faq-ios). Confidence 0.9.
+     Review: Kev + claude-opus-5.5, 2026-10-29 — #529's site part: "No cloud attached." → "No cloud required." (the
+     App Store builds offer an opt-in PCC brain; nothing on this page needs it); "Pull the ethernet cable — M1K3
+     doesn't notice" → "only the web tools notice" (web search is on by default); the send-my-data FAQ (visible and
+     JSON-LD, identical) says what ADR 0010 ships: pick PCC as the brain and what you type goes, plus the
+     conversation only if ticked, not "a message you choose … nothing else". The terminal demo's "0 network calls"
+     stays: it logs one knowledge-graph turn, which makes none. dateModified NOT bumped. Confidence 0.8. -->
 </body>
 </html>

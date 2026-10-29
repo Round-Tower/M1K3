@@ -183,7 +183,7 @@
   <section class="page-cta">
     <span class="label">// own your ai</span>
     <h2>Private by design.</h2>
-    <p>M1K3 is free for humans, source-available, and runs on your Mac by default. Pull the ethernet cable — it doesn't notice, unless you've turned on Private Cloud Compute.</p>
+    <p>M1K3 is free for humans, source-available, and runs on your Mac by default. Pull the ethernet cable — only the web tools notice, unless you've picked Private Cloud Compute.</p>
     <div class="cta-row">
       <a class="btn btn-primary" href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=site-chatgpt-alt&amp;mt=12">Get it on the Mac App Store</a>
       <a class="btn btn-ghost" href="https://github.com/Round-Tower/M1K3">Build from source</a>
@@ -252,6 +252,10 @@
      Review: Kev + claude-opus-5.5, 2026-10-22 — the og:image alt follows the new tagline ("Your AI. Your
      devices. Private by design.", Kev's 2026-10-20 ruling, live with iOS 1.2.0). Confidence 0.9.
      Review: Kev + claude-opus-5.5, 2026-10-28 — the get-it list's iPhone and iPad line named only TestFlight; it now leads with
-     the App Store (ct=site-chatgpt-alt-ios), TestFlight as the early channel. Confidence 0.9. -->
+     the App Store (ct=site-chatgpt-alt-ios), TestFlight as the early channel. Confidence 0.9.
+     Review: Kev + claude-opus-5.5, 2026-10-29 — the CTA's ethernet line: "it doesn't notice, unless you've turned on
+     Private Cloud Compute" → "only the web tools notice, unless you've picked Private Cloud Compute" (web search is
+     on by default; PCC is a brain pick since ADR 0010; the #529 site pass). dateModified NOT bumped.
+     Confidence 0.85. -->
 </body>
 </html>

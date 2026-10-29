@@ -46,7 +46,7 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "Does anything leave our network with M1K3 for Teams?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Not your data. M1K3 for Teams runs on your organisation's own Apple Silicon hardware, on your own network, under your own domain. Inference, voice, embeddings, retrieval, and storage stay on machines you own. Round Tower does not host it, does not receive telemetry from it, and cannot see what it knows. The only network crossings are the ones the app already documents: a one-time model download you approve, and a web-search tool an administrator can switch off too." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Not your data. M1K3 for Teams runs on your organisation's own Apple Silicon hardware, on your own network, under your own domain. Inference, voice, embeddings, retrieval, and storage stay on machines you own. Round Tower does not host it, does not receive telemetry from it, and cannot see what it knows. The personal app's opt-in Private Cloud Compute switch — the one control that can send your messages to Apple's cloud — can be locked off by policy for your whole deployment, so the only network crossings left are the ones the app already documents: a one-time model download you approve, and a web-search tool each person can switch off in Settings." } },
     { "@type": "Question", "name": "Can we just use the free M1K3 app inside our organisation instead?",
       "acceptedAnswer": { "@type": "Answer", "text": "Yes. Internal use is a Permitted Purpose under M1K3's licence (FSL-1.1-ALv2), at no charge, on as many Macs as you like — each one on its own. M1K3 for Teams is for what a single Mac cannot do: a shared brain served to many devices over your network, an institutional memory your people can all draw on, a persona tuned to your organisation, and someone to call. It is also the licence for offering M1K3 to others, which the free licence withholds." } },
     { "@type": "Question", "name": "What hardware does M1K3 for Teams need?",
@@ -121,7 +121,7 @@
   <div class="faq-list">
     <details>
       <summary>Does anything leave our network?</summary>
-      <p>Not your data. M1K3 for Teams runs on your organisation's own Apple Silicon hardware, on your own network, under your own domain. Inference, voice, embeddings, retrieval, and storage stay on machines you own. Round Tower does not host it, does not receive telemetry from it, and cannot see what it knows. The personal app's opt-in Private Cloud Compute switch — the one control that can send a single message to Apple's cloud — can be locked off by policy for your whole deployment, so the only network crossings left are the ones the app already documents: a one-time model download you approve, and a web-search tool an administrator can switch off too.</p>
+      <p>Not your data. M1K3 for Teams runs on your organisation's own Apple Silicon hardware, on your own network, under your own domain. Inference, voice, embeddings, retrieval, and storage stay on machines you own. Round Tower does not host it, does not receive telemetry from it, and cannot see what it knows. The personal app's opt-in Private Cloud Compute switch — the one control that can send your messages to Apple's cloud — can be locked off by policy for your whole deployment, so the only network crossings left are the ones the app already documents: a one-time model download you approve, and a web-search tool each person can switch off in Settings.</p>
     </details>
     <details>
       <summary>Can we just use the free app inside our organisation instead?</summary>
@@ -210,6 +210,11 @@
      Review: Kev + claude-opus-5-5, 2026-10-13 — #572: the footer carries a GUIDES row linking all five guides
      (each guide marks itself aria-current); guides also gain a BreadcrumbList. Confidence 0.9.
      Review: Kev + claude-opus-5.5, 2026-10-22 — the og:image alt follows the new tagline ("Your AI. Your
-     devices. Private by design.", Kev's 2026-10-20 ruling, live with iOS 1.2.0). Confidence 0.9. -->
+     devices. Private by design.", Kev's 2026-10-20 ruling, live with iOS 1.2.0). Confidence 0.9.
+     Review: Kev + claude-opus-5.5, 2026-10-29 — #529's site part: no managed key exists for web search (the one
+     policy key is PCC's PrivateCloudComputeDisabledByPolicy), so "a web-search tool an administrator can switch
+     off too" → "each person can switch off in Settings"; PCC sends "your messages", not "a single message"
+     (ADR 0010: the pick holds). The FAQ's JSON-LD mirrors the visible answer again: it had lost the PCC
+     policy-lock sentence, so it named two crossings unconditionally. dateModified NOT bumped. Confidence 0.85. -->
 </body>
 </html>

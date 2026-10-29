@@ -8,6 +8,10 @@ Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.8 (text tripwires over c
 Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — C2/C3/C4: no page says "nothing to download" unqualified; en-GB mirrors en-US. Confidence 0.8.
 Review: Kev + claude-opus-5.5, 2026-10-27 — #708: the page names "Send this exchange", its recipient and its
 purpose, while NetworkCrossings carries `.fieldReport` (Kev chose Shape A, the bug-report voice). Confidence 0.8.
+Review: Kev + claude-opus-5.5, 2026-10-29 — #529's site part: no page may describe the retired per-message cloud
+button (ADR 0010 made PCC a brain-picker row whose pick holds), PCC as "a later release", an administrator switch
+for web search (the one managed key is PCC's), or "No cloud attached". Signature comments are history and are
+skipped. Confidence 0.8.
 """
 import json
 import re
@@ -122,3 +126,25 @@ def test_the_privacy_page_names_the_field_report_its_recipient_and_its_purpose()
     assert "your own mail app sends it to hello@round-tower.ie" in page
     assert "the only thing we can ever receive is an exchange you choose to email us" in page
     assert "We use them only to reply and do not add you to any list." not in page
+
+
+RETIRED_PCC_AND_EGRESS_CLAIMS = (
+    "cloud button",  # ADR 0010: PCC is a row in the brain picker; the composer's button is gone
+    "one message at a time",  # the pick holds until a brain on this Mac is chosen
+    "single message",
+    "escalation rung of a later release",  # PCC ships, opt-in, in the App Store builds
+    "administrator can switch off too",  # web search has no managed key
+    "No cloud attached",
+)
+
+
+def test_no_page_describes_the_retired_pcc_button_or_an_admin_web_search_switch():
+    # #529's site part. Signature comments record what a page used to say, so they are read out first.
+    pages = sorted((ROOT / "site").glob("*.html")) + [ROOT / "site" / "llms-full.txt", ROOT / "site" / "brains.json"]
+    for page in pages:
+        text = re.sub(r"<!--.*?-->", "", page.read_text(), flags=re.S)
+        for phrase in RETIRED_PCC_AND_EGRESS_CLAIMS:
+            assert phrase not in text, f"{page.name}: {phrase!r}"
+    # The one policy key the site may promise an administrator.
+    rung = (ROOT / "macos" / "Sources" / "M1K3LanguageModel" / "PrivateCloudRung.swift").read_text()
+    assert 'managedOffDefaultsKey = "PrivateCloudComputeDisabledByPolicy"' in rung
