@@ -53,7 +53,7 @@
   "applicationCategory": "ProductivityApplication",
   "applicationSubCategory": "Local AI assistant",
   "isAccessibleForFree": true,
-  "description": "Privacy-first AI that runs entirely on-device on Apple Silicon Macs: local LLM inference (MLX, Gemma 4, Qwen 3, Apple Foundation Models), live voice with on-device neural TTS, a personal knowledge graph with RAG, a self-repairing temporal memory graph, encrypted call transcription, a local agent, an ambient Heartbeat (off by default), a LAN Brain-at-Home service (off by default), a native screensaver, and an MCP server with 18 tools.",
+  "description": "Privacy-first AI that runs entirely on-device on Apple Silicon Macs: local LLM inference (MLX, Gemma 4, Qwen 3, Apple Foundation Models), live voice with on-device neural TTS, a personal knowledge graph with RAG, a self-repairing temporal memory graph, encrypted call transcription, a local agent, an ambient Heartbeat (off by default), a LAN Brain-at-Home service (off by default), and an MCP server with 18 tools.",
   "featureList": [
     "Three on-device brains: Mini (Apple Foundation Models, instant), Lil (Qwen3.5 4B, fronts the conversation and reads images), Big (Gemma 4 12B, delegated deep work)",
     "Live voice: on-device speech recognition in, Kokoro neural TTS out, sentence-streamed",
@@ -96,7 +96,7 @@
     { "@type": "Question", "name": "Can Claude or other AI agents use my M1K3 knowledge?",
       "acceptedAnswer": { "@type": "Answer", "text": "Yes. M1K3 ships an in-app MCP (Model Context Protocol) server with 18 tools — knowledge search, documents, voice, memory, and ask-M1K3 with an async job API for long asks — over local HTTP at 127.0.0.1:4242, so Claude and other MCP clients can query your local knowledge base without a byte leaving the Mac." } },
     { "@type": "Question", "name": "Does M1K3 do anything when I'm not talking to it?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Only if you ask it to. The Heartbeat is an ambient pulse — every two hours, a short narrative about your machine and your day, composed from facts the code gathered, respecting quiet hours. It is off by default, lives on its own screen with a one-tap Clear, and never enters your chat transcript. There is also a native macOS screensaver — the pixel M in ambient rain — installable from Settings." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Only if you ask it to. The Heartbeat is an ambient pulse — every two hours, a short narrative about your machine and your day, composed from facts the code gathered, respecting quiet hours. It is off by default, lives on its own screen with a one-tap Clear, and never enters your chat transcript." } },
     { "@type": "Question", "name": "Can my other devices use my Mac's brain?",
       "acceptedAnswer": { "@type": "Answer", "text": "That's Brain at Home: your Mac can serve its brain to your own devices over the local network — discovered via Bonjour, paired once by QR code, encrypted with TLS-PSK, with paired devices limited to a scoped read-only tool set. It is off by default and nothing ever crosses the internet; everything stays inside your walls." } },
     { "@type": "Question", "name": "Is M1K3 free? Is it open source?",
@@ -575,7 +575,6 @@
         <li><span>Metal-accelerated local models</span><span>mlx-swift</span></li>
         <li><span>3D companion avatar</span><span>realitykit</span></li>
         <li><span>App-sandboxed, encrypted store</span><span>grdb + keychain</span></li>
-        <li><span>Native screensaver — the pixel M in rain</span><span>installs from settings</span></li>
         <li><span>Swift 6.2, strict concurrency</span><span>2,800+ tests</span></li>
       </ul>
     </div>
@@ -616,7 +615,7 @@ the action list?<br />
     </details>
     <details class="reveal">
       <summary>Does it do anything when I'm not talking to it?</summary>
-      <p>Only if you ask it to. The <em>Heartbeat</em> is an ambient pulse — every two hours, a short narrative about your machine and your day, composed from facts the code gathered, respecting quiet hours. Off by default, one-tap Clear, never enters your chat transcript. There's also a native screensaver — the pixel M in ambient rain — installable from Settings.</p>
+      <p>Only if you ask it to. The <em>Heartbeat</em> is an ambient pulse — every two hours, a short narrative about your machine and your day, composed from facts the code gathered, respecting quiet hours. Off by default, one-tap Clear, never enters your chat transcript.</p>
     </details>
     <details class="reveal">
       <summary>Can my other devices use my Mac's brain?</summary>
@@ -1151,6 +1150,9 @@ tick();
      doesn't notice" → "only the web tools notice" (web search is on by default); the send-my-data FAQ (visible and
      JSON-LD, identical) says what ADR 0010 ships: pick PCC as the brain and what you type goes, plus the
      conversation only if ticked, not "a message you choose … nothing else". The terminal demo's "0 network calls"
-     stays: it logs one knowledge-graph turn, which makes none. dateModified NOT bumped. Confidence 0.8. -->
+     stays: it logs one knowledge-graph turn, which makes none. dateModified NOT bumped. Confidence 0.8.
+     Review: Kev + claude-opus-5.5, 2026-10-29 — the screensaver is parked for 1.3.0 (Kev: "a poor implementation as it
+     stands"): its feature line, the JSON-LD description's mention and the FAQ sentence (visible and JSON-LD, still
+     mirrored) are gone; the 08-22 Review above stays as history. Confidence 0.85. -->
 </body>
 </html>

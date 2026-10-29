@@ -33,8 +33,6 @@ Key facts:
 - Brain at Home: serve the Mac's brain to your own devices over the LAN —
   Bonjour discovery, one-time QR pairing, TLS-PSK, scoped read-only tools for
   paired devices; off by default, nothing crosses the internet
-- Screensaver: a native macOS screensaver (the pixel M in ambient rain),
-  installable from Settings
 - MCP server: 18 tools (knowledge search, documents, voice, memory, todos, ask —
   with an async job API for long asks) over local HTTP at
   http://127.0.0.1:4242/mcp, off by default, every request carrying the

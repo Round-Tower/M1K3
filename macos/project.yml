@@ -308,8 +308,8 @@ targets:
       # for the QR) — the client half rides the mobile shells.
       - package: M1K3
         product: M1K3BrainLink
-      # The screensaver's pure core — the app uses ScreenSaverInstall for the
-      # "Set Up Screen Saver" Settings row (status + install action).
+      # The screensaver's pure core — the app draws its LifeField behind
+      # Settings (LifeBackdrop). ScreenSaverInstall is parked with the .saver.
       - package: M1K3
         product: M1K3ScreensaverCore
       # App Store screengrab harness (isolated store root + demo persona) —
@@ -338,16 +338,10 @@ targets:
         copy:
           destination: wrapper
           subpath: Contents/Helpers
-      # Embed the .saver so Settings can install it: M1K3 is sandboxed and can't
-      # write to ~/Library/Screen Savers directly, so the app ships the bundle
-      # and hands it to macOS via NSWorkspace.open (the native install prompt).
-      # Copied into Contents/Resources; link:false — a .saver isn't linkable.
-      # (MAS note: embedded plug-ins are restricted on the App Store; M1K3's
-      # primary channel is the Developer-ID DMG, where this is fine.)
-      - target: M1K3Screensaver
-        link: false
-        copyFiles:
-          destination: resources
+      # The .saver is PARKED (Kev, 2026-10-29): 1.3.0 no longer copies it into
+      # Contents/Resources. To unpark, embed the M1K3Screensaver target here again
+      # (link: false, copyFiles to resources) and mount ScreenSaverSettingsSection
+      # in GeneralSettingsPane; ScreenSaverParkedScanTests guards the park.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.m1k3
@@ -632,12 +626,6 @@ targets:
         SWIFT_VERSION: "6.2"
         TARGETED_DEVICE_FAMILY: "1,2"
 
-  # The M1K3 screensaver (.saver bundle) — "what your machine got up to while you
-  # were away". A borderless ScreenSaverView drawing the ambient pixel-rain + the
-  # M brand mark; the pure sim/geometry/copy is the M1K3ScreensaverCore package.
-  # Chosen over an always-on desktop wallpaper (challenger, 2026-08-20): a
-  # screensaver runs only when idle, so cost + the screenshot-privacy bind vanish.
-  # Install: build, then copy M1K3.saver to ~/Library/Screen Savers/.
   # The `m1k3` command-line client. A THIN CLIENT of the running app: it POSTs
   # at the loopback MCP server and never loads a model — there is one MLX slot
   # on this Mac and it belongs to M1K3.app. Embedded into the app bundle above.
@@ -683,6 +671,14 @@ targets:
         ENABLE_HARDENED_RUNTIME: YES
         SKIP_INSTALL: YES
 
+  # The M1K3 screensaver (.saver bundle) — "what your machine got up to while you
+  # were away". A borderless ScreenSaverView drawing the ambient pixel-rain + the
+  # M brand mark; the pure sim/geometry/copy is the M1K3ScreensaverCore package.
+  # Chosen over an always-on desktop wallpaper (challenger, 2026-08-20): a
+  # screensaver runs only when idle, so cost + the screenshot-privacy bind vanish.
+  # PARKED 2026-10-29 (Kev: "a poor implementation as it stands"): the app no
+  # longer embeds it, but its scheme still builds it. Try it by hand: build the
+  # M1K3Screensaver scheme, then copy M1K3.saver to ~/Library/Screen Savers/.
   M1K3Screensaver:
     type: bundle
     platform: macOS
