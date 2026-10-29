@@ -21,6 +21,13 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.7 (marker scoring over a small
 //  probe set; every hit is read by hand). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — #447 (1.3.0): memories are scored apart from excerpts
+//  (`memoryMarkers`; the 7/10 was memory noise, which #430's markers never counted); an empty answer is
+//  an error, never clean (an AFM outage would read as a fix); the weekend control drops "run" (it matched
+//  "brunch"); a sourdough recall control joins; a `+weave` suffix renders the old memory header, so the
+//  wording change is paired against its baseline in one run; `M1K3_AFM_EVAL_NOISE_PROBES` filters probes;
+//  and `blind` (M1K3_AFM_EVAL_NOISE_BLIND=1) runs MemoryEvalFixtures' 22 recall and 11 leak pairs, markers
+//  written before any run, once, on the final wording. Confidence 0.7.
 //
 
 import Foundation
@@ -58,8 +65,15 @@ struct MiniRetrievalNoiseEvalTests {
         chunk("About the user", "The user keeps sourdough starter called Dough Nut.", kind: .memory),
     ]
 
-    /// Phrases that mean a noise item was worked into the answer.
+    /// Phrases that mean a noise EXCERPT was worked into the answer.
     static let noiseMarkers = ["nefarious", "recording calls", "tok/s", "decode", "benchmark", "ioreg", "subprocess", "scrape", "legal"]
+
+    /// Phrases that mean a noise MEMORY was worked into the answer (#447's 7/10).
+    static let memoryMarkers = ["galway", "dough nut", "sourdough", "trail"]
+
+    /// The memory header's old clause and the one #447 ships. `+weave` arms render the old one.
+    static let shippedClause = "Mention a fact only when it helps answer what they asked; "
+    static let weaveClause = "Weave facts in naturally; "
 
     static let probes: [Probe] = [
         Probe(id: "battery", question: "How's my battery doing right now?", chunks: noiseChunks, memories: noiseMemories, useMarkers: []),
@@ -70,7 +84,12 @@ struct MiniRetrievalNoiseEvalTests {
         // A memory that answers: the plain turn keeps memories, so this must still land.
         Probe(
             id: "control-memory", question: "any ideas what I should do this weekend?",
-            chunks: noiseChunks, memories: noiseMemories, useMarkers: ["run", "trail", "sourdough", "dough nut"]
+            chunks: noiseChunks, memories: noiseMemories, useMarkers: ["trail", "galway", "sourdough", "dough nut"]
+        ),
+        // Recall: the memory IS the answer, so the new clause must not hold it back.
+        Probe(
+            id: "control-recall", question: "what's my sourdough starter called?",
+            chunks: noiseChunks, memories: noiseMemories, useMarkers: ["dough nut"]
         ),
         Probe(
             id: "control-seal",
@@ -86,6 +105,13 @@ struct MiniRetrievalNoiseEvalTests {
             .split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
     }
 
+    /// Probe ids to run (`M1K3_AFM_EVAL_NOISE_PROBES`), all when unset.
+    private static var probeFilter: Set<String>? {
+        noiseEvalEnvironment["M1K3_AFM_EVAL_NOISE_PROBES"].map {
+            Set($0.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) })
+        }
+    }
+
     private static var repeats: Int {
         max(1, noiseEvalEnvironment["M1K3_AFM_EVAL_REPEATS"].flatMap(Int.init) ?? 2)
     }
@@ -94,57 +120,133 @@ struct MiniRetrievalNoiseEvalTests {
         max(0, noiseEvalEnvironment["M1K3_AFM_EVAL_PACE_MS"].flatMap(Int.init) ?? 10000)
     }
 
-    static func prompt(_ probe: Probe, arm: String) -> String {
+    /// The plain-turn prompt for `arm`. A `+weave` suffix renders the memory header's pre-#447
+    /// clause in place of the shipped one: the baseline, paired in the same run.
+    static func prompt(question: String, chunks: [ChunkHit], memories: [ChunkHit], arm: String) -> String {
+        let base = arm.replacingOccurrences(of: "+weave", with: "")
         let budget = HistoryBudgetPolicy.budget(
             for: .mini,
             reservedTokens: HistoryBudgetPolicy.liveReserveTokens,
             generationTokens: HistoryBudgetPolicy.liveGenerationReserveTokens
         )
-        return AgentRAGResponder.plainTurnPrompt(
-            question: probe.question, contextPreamble: PromptContext.identity(brainName: "Mini"),
-            chunks: arm == "shipping" || arm == "nomemories" ? probe.chunks : [],
-            memories: arm == "shipping" || arm == "nochunks" ? probe.memories : [],
+        let rendered = AgentRAGResponder.plainTurnPrompt(
+            question: question, contextPreamble: PromptContext.identity(brainName: "Mini"),
+            chunks: base == "shipping" || base == "nomemories" ? chunks : [],
+            memories: base == "shipping" || base == "nochunks" || base == "blind" ? memories : [],
             history: [], historyBudget: budget, ambient: nil, todos: nil
         )
+        guard arm.hasSuffix("+weave"), rendered.contains("WHAT I KNOW ABOUT YOU") else { return rendered }
+        precondition(rendered.contains(shippedClause), "the memory header moved: re-point shippedClause")
+        return rendered.replacingOccurrences(of: shippedClause, with: weaveClause)
+    }
+
+    static func prompt(_ probe: Probe, arm: String) -> String {
+        prompt(question: probe.question, chunks: probe.chunks, memories: probe.memories, arm: arm)
+    }
+
+    /// One paced AFM turn; nil when Mini answered nothing (an error, never a clean answer).
+    private static func answer(_ prompt: String, provider: AppleFoundationModelsProvider, paced: inout Bool) async throws -> String? {
+        if paced { try await Task.sleep(for: .milliseconds(paceMS)) }
+        paced = true
+        var stream = PlainTurnStream()
+        var text = ""
+        for await chunk in provider.generateStreaming(prompt: prompt) {
+            if let clean = stream.ingest(chunk) { text = clean }
+        }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     @Test("irrelevant grounding per arm")
     func run() async throws {
         let provider = AppleFoundationModelsProvider()
         try #require(provider.isAvailable, "Apple Intelligence is not available to this process")
-        var tally: [String: (noise: Int, n: Int, used: Int, nControl: Int)] = [:]
+        let probes = Self.probes.filter { Self.probeFilter?.contains($0.id) ?? true }
+        struct Row { var memory = 0, excerpt = 0, n = 0, empty = 0, used: [String: (Int, Int)] = [:] }
+        var tally: [String: Row] = [:]
         var paced = false
         for trial in 0 ..< Self.repeats {
-            for probe in Self.probes {
+            for probe in probes {
                 for arm in Self.arms {
-                    if paced { try await Task.sleep(for: .milliseconds(Self.paceMS)) }
-                    paced = true
-                    var answer = PlainTurnStream()
-                    var text = ""
-                    for await chunk in provider.generateStreaming(prompt: Self.prompt(probe, arm: arm)) {
-                        if let clean = answer.ingest(chunk) { text = clean }
+                    // The seal's answer is an excerpt: meaningless where excerpts are off.
+                    if probe.id == "control-seal", arm.hasPrefix("nochunks") || arm.hasPrefix("none") { continue }
+                    var row = tally[arm, default: Row()]
+                    guard let text = try await Self.answer(Self.prompt(probe, arm: arm), provider: provider, paced: &paced) else {
+                        row.empty += 1
+                        tally[arm] = row
+                        print("[t\(trial + 1) \(probe.id) \(arm)] EMPTY (an error, not a clean answer)")
+                        continue
                     }
                     let lower = text.lowercased()
-                    let control = !probe.useMarkers.isEmpty
-                    let noise = Self.noiseMarkers.filter { lower.contains($0) }
+                    let memory = Self.memoryMarkers.filter { lower.contains($0) }
+                    let excerpt = Self.noiseMarkers.filter { lower.contains($0) }
                     let used = probe.useMarkers.contains { lower.contains($0) }
-                    var row = tally[arm, default: (0, 0, 0, 0)]
-                    if control {
-                        row.nControl += 1
-                        row.used += used ? 1 : 0
-                    } else {
+                    if probe.useMarkers.isEmpty {
                         row.n += 1
-                        row.noise += noise.isEmpty ? 0 : 1
+                        row.memory += memory.isEmpty ? 0 : 1
+                        row.excerpt += excerpt.isEmpty ? 0 : 1
+                    } else {
+                        let (hits, n) = row.used[probe.id, default: (0, 0)]
+                        row.used[probe.id] = (hits + (used ? 1 : 0), n + 1)
                     }
                     tally[arm] = row
                     let flat = text.replacingOccurrences(of: "\n", with: " ")
-                    print("[t\(trial + 1) \(probe.id) \(arm)] noise=\(noise) used=\(used) :: \(flat)")
+                    print("[t\(trial + 1) \(probe.id) \(arm)] memory=\(memory) excerpt=\(excerpt) used=\(used) :: \(flat)")
                 }
             }
         }
         for arm in Self.arms {
-            let row = tally[arm, default: (0, 0, 0, 0)]
-            print("ARM \(arm): noise in \(row.noise)/\(row.n) · control grounded \(row.used)/\(row.nControl)")
+            let row = tally[arm, default: Row()]
+            let controls = row.used.keys.sorted().map { "\($0) \(row.used[$0]!.0)/\(row.used[$0]!.1)" }.joined(separator: " · ")
+            print("ARM \(arm): memory noise \(row.memory)/\(row.n) · excerpt noise \(row.excerpt)/\(row.n) · empty \(row.empty) · \(controls)")
+        }
+    }
+
+    // MARK: - Blind set (#447): run ONCE, on the final wording
+
+    /// Markers written before any run, per pair: a positive must recall one; a negative must
+    /// mention none. MemoryEvalFixtures was written on 06-12 for the retrieval floors and never
+    /// used to tune wording.
+    static let recallMarkers: [[String]] = [
+        ["aoife"], ["metric"], ["cork"], ["collie"], ["dyslex"], ["grdb"], ["round tower"], ["vim"], ["black"],
+        ["1987"], ["niamh"], ["macos", "mac first", "mac,"], ["thursday"], ["penicillin"], ["march"],
+        ["british", "en-gb", "uk "], ["skoda", "octavia"], ["development"], ["ucc", "university college cork"],
+        ["m1k3"], ["emoji"], ["september"],
+    ]
+    static let leakMarkers: [[String]] = [
+        ["aoife", "sister"], ["metric"], ["coffee"], ["bran", "collie", "your dog"], ["football", "thursday"],
+        ["1987"], ["skoda", "octavia"], ["penicillin", "allerg"], ["ucc", "computer science"],
+        ["development", "project notes"], ["round tower"],
+    ]
+
+    @Test("blind: recall holds and nothing new leaks", .enabled(if: noiseEvalEnvironment["M1K3_AFM_EVAL_NOISE_BLIND"] == "1"))
+    func blind() async throws {
+        let provider = AppleFoundationModelsProvider()
+        try #require(provider.isAvailable, "Apple Intelligence is not available to this process")
+        #expect(Self.recallMarkers.count == MemoryEvalFixtures.positives.count)
+        #expect(Self.leakMarkers.count == MemoryEvalFixtures.negatives.count)
+        let arms = ["blind", "blind+weave"]
+        var recalled: [String: Int] = [:], leaked: [String: Int] = [:], empty: [String: Int] = [:]
+        var paced = false
+        let sets = [(MemoryEvalFixtures.positives, Self.recallMarkers, true), (MemoryEvalFixtures.negatives, Self.leakMarkers, false)]
+        for (pairs, markers, recall) in sets {
+            for (index, pair) in pairs.enumerated() {
+                let memory = [Self.chunk(pair.memory, pair.memory, kind: .memory)]
+                for arm in arms {
+                    let prompt = Self.prompt(question: pair.query, chunks: [], memories: memory, arm: arm)
+                    guard let text = try await Self.answer(prompt, provider: provider, paced: &paced) else {
+                        empty[arm, default: 0] += 1
+                        print("[\(recall ? "recall" : "leak") \(index) \(arm)] EMPTY")
+                        continue
+                    }
+                    let hit = markers[index].contains { text.lowercased().contains($0) }
+                    if recall { recalled[arm, default: 0] += hit ? 1 : 0 } else { leaked[arm, default: 0] += hit ? 1 : 0 }
+                    print("[\(recall ? "recall" : "leak") \(index) \(arm)] hit=\(hit) :: \(text.replacingOccurrences(of: "\n", with: " "))")
+                }
+            }
+        }
+        for arm in arms {
+            print("BLIND \(arm): recalled \(recalled[arm, default: 0])/22 · leaked \(leaked[arm, default: 0])/11 · empty \(empty[arm, default: 0])")
         }
     }
 }
