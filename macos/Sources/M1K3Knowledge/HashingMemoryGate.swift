@@ -43,8 +43,8 @@ public enum HashingMemoryGate {
     /// "What do you remember about me?", "who am I?": a question every memory answers.
     /// "about my sister" or "about meteors" is not one.
     public static func isProfileAsk(_ question: String) -> Bool {
-        question.range(of: #"\babout (me|myself|us|ourselves)\b|\bwho am i\b"#, options: [.regularExpression, .caseInsensitive])
-            != nil
+        let pattern = #"\babout (me|myself|us|ourselves)\b|\bwho am i\b"#
+        return question.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
     }
 
     /// The distiller writes "The user prefers …": its register, not a subject a question shares.

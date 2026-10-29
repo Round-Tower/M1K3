@@ -593,7 +593,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // Identity on any other embedder. Kev overrode the failed blind bar knowingly (2026-10-29).
             let anchored = HashingMemoryGate.admitted(memories, question: question, fingerprint: embedder.fingerprint)
             if anchored.count < memories.count {
-                Self.log.notice("hashing memory gate: \(memories.count - anchored.count, privacy: .public) unrelated memory hit(s) dropped")
+                let dropped = memories.count - anchored.count
+                Self.log.notice("hashing memory gate: \(dropped, privacy: .public) unrelated memory hit(s) dropped")
             }
             memories = anchored
             phases.retrieved(at: phaseClock.now)

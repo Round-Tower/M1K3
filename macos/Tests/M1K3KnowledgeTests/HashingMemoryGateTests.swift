@@ -52,7 +52,8 @@ struct HashingMemoryGateTests {
 
     @Test("a memory the question names still reaches the prompt, and only that one")
     func namedMemoryKept() {
-        #expect(admitted("what's my sourdough starter called?", [Self.galway, Self.doughNut]) == [Self.doughNut.content])
+        let sourdough = admitted("what's my sourdough starter called?", [Self.galway, Self.doughNut])
+        #expect(sourdough == [Self.doughNut.content])
         #expect(admitted("what's my sister's name?", [Self.galway, Self.sister]) == [Self.sister.content])
     }
 
