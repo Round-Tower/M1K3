@@ -9,7 +9,7 @@ heavy backends isolated behind protocols; `M1K3App/` a thin shell over `AppEnvir
 | Target | Role |
 |---|---|
 | `M1K3LogCore` | Single source of truth for unified logging: the `app.m1k3` subsystem + category catalogue + `LogPreview`. Dependency-free so every target references it. |
-| `M1K3Knowledge` | RAG corpus: GRDB store, embeddings, hybrid (vector + FTS) search, RRF fusion, grounding gate. The knowledge primitives. Also `SwappableEmbeddingService` (the runtime embedder-swap façade). |
+| `M1K3Knowledge` | RAG corpus: GRDB store, embeddings, hybrid (vector + FTS) search, RRF fusion, grounding gate. The knowledge primitives. Also `SwappableEmbeddingService` (the runtime embedder-swap façade), and on the hashing embedder `HashingKeywordLane` (#670: one strict-AND keyword chunk) and `HashingMemoryGate` (#447: a memory reaches a turn only if it shares a content word with the question). |
 | `M1K3Memory` | Temporal memory **graph** (atomic facts + typed edges + recursive-CTE traversal). Separate DB/consent lifecycle from the corpus. |
 | `M1K3MemoryViz` | 3D memory constellation (RealityKit over a pure layout model). |
 | `M1K3Inference` | The `InferenceProvider` seam + `BrainTier`. Backends are thin adapters. No external deps. Also the on-device energy ledger (#696): `EnergyLedger` keeps each MLX generation's token counts, billed to the model that ran it, in a 30-day daily rollup of numbers, dates and tier enums only, and prices them on read at the tier's joules-per-token rate (`EnergyCoefficients`: Lil and Big calibrated on an M1 Max; a tier with no per-token receipt stays unpriced), and `ProcessEnergyCounter` reads the process's own CPU-only `RUSAGE_INFO_V6` counter. |
