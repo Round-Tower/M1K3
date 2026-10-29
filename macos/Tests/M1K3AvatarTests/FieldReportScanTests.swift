@@ -152,7 +152,8 @@ struct FieldReportScanTests {
         #expect(!reporter.contains("M1K3Persona.userProfile"), "the About-you text is not a name; it never matched one")
         #expect(reporter.contains("urlForApplication(toOpen:"), "no mail handler is told apart from a link that would not open")
         #expect(reporter.contains("CanaryGuard.fromLocalConfig()"), "the honeypot pass runs on every outward surface")
-        #expect(reporter.contains("RoundTowerReports.recipient"), "one address for every report (SnagReportTests pins it)")
+        // One address for every report; SnagReportTests pins its value.
+        #expect(reporter.contains("RoundTowerReports.recipient"))
     }
 
     @Test("the thumbs-down editor commits the verdict and note, parks the note, and the sheet follows the popover's close")

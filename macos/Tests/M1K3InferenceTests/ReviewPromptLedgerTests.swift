@@ -167,10 +167,11 @@ struct ReviewPromptLedgerTests {
         #expect(later.daysSinceLastCrash == 3)
     }
 
-    @Test("a stored stamp after now (the clock was ahead, then fixed) is no crash on record, and the next one replaces it")
+    @Test("a stored stamp after now (a clock ahead, then fixed) is no crash on record; the next one replaces it")
     func storedFutureStampIsDiscarded() {
         let storage = MemoryStorage()
-        storage.set(epoch.addingTimeInterval(86400 * 365).timeIntervalSince1970, forKey: ReviewPromptLedger.lastCrashKey)
+        let aYearAhead = epoch.addingTimeInterval(86400 * 365).timeIntervalSince1970
+        storage.set(aYearAhead, forKey: ReviewPromptLedger.lastCrashKey)
         let led = ledger(storage: storage, now: epoch)
         #expect(led.daysSinceLastCrash == nil, "a year of silence is not the price of a bad clock")
         led.recordCrash(at: epoch.addingTimeInterval(-86400))

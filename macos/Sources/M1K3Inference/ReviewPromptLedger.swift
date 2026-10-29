@@ -106,7 +106,9 @@ public final class ReviewPromptLedger {
         guard !suppressed() else { return }
         let current = now().timeIntervalSince1970
         let stamp = min(date.timeIntervalSince1970, current)
-        if let stored = storage.object(forKey: Self.lastCrashKey) as? Double, stored >= stamp, stored <= current { return }
+        if let stored = storage.object(forKey: Self.lastCrashKey) as? Double, stored >= stamp, stored <= current {
+            return
+        }
         storage.set(stamp, forKey: Self.lastCrashKey)
     }
 

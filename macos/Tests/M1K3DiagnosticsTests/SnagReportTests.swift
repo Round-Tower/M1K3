@@ -44,7 +44,8 @@ struct SnagReportTests {
         #expect(body.contains("didn't close cleanly"))
         #expect(body.contains("2027-01-15T08:00:00Z"), "when the session began, in UTC")
         #expect(body.contains("2027-01-15T09:00:00Z"), "when the next launch noticed")
-        #expect(body.contains("Brain now: Big · App: 1.3.0 (542) · macOS 27.0"), "the brain restored, not the one that crashed")
+        // The brain the next launch restored, not necessarily the one that crashed.
+        #expect(body.contains("Brain now: Big · App: 1.3.0 (542) · macOS 27.0"))
         for absent in ["anything you typed or said", "memories", "documents"] {
             #expect(body.contains(absent), "the preamble names \(absent) as left out")
         }

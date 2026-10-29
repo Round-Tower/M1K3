@@ -116,7 +116,7 @@ struct SnagNoteScanTests {
             #expect(draft.contains("CanaryGuard.fromLocalConfig()"))
             #expect(!draft.contains("SnagReportFormatter.body("), "no unscrubbed body reaches a sheet")
         }
-        #expect(mac.contains("FieldReportDraft(kind: .snag"), "the Mac sheet shows the snag wording, not the exchange's")
+        #expect(mac.contains("FieldReportDraft(kind: .snag"), "the Mac sheet shows the snag wording")
         let sheet = try Self.code("M1K3App/FieldReportSheet.swift")
         let snagCase = try #require(sheet.range(of: "case .snag:"))
         #expect(sheet[snagCase.upperBound...].contains("Nothing you typed"))
@@ -149,8 +149,10 @@ struct SnagNoteScanTests {
         #expect(host.contains(".disabled(isBlank)"))
         #expect(!host.contains(".glassEffect("), "visionOS has no glassEffect: GlassCompat's m1k3Glass")
         let glassStyle = try #require(host.range(of: ".glassProminent"))
-        let visionGuard = try #require(host.range(of: "#if os(visionOS)", options: .backwards, range: host.startIndex ..< glassStyle.lowerBound))
-        #expect(host[visionGuard.upperBound ..< glassStyle.lowerBound].contains("#else"), "glass styles only off visionOS")
+        let beforeStyle = host.startIndex ..< glassStyle.lowerBound
+        let visionGuard = try #require(host.range(of: "#if os(visionOS)", options: .backwards, range: beforeStyle))
+        let guarded = host[visionGuard.upperBound ..< glassStyle.lowerBound]
+        #expect(guarded.contains("#else"), "glass styles only off visionOS")
         let root = try Self.code("M1K3iOSApp/RootView.swift")
         #expect(root.contains(".modifier(SnagNoteHost())"), "the host hangs off the chat screen")
         for path in try Self.iosFiles() where path != "M1K3iOSApp/SnagMailer.swift" {

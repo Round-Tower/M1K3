@@ -22,9 +22,11 @@
 //  #447's runs (quit M1K3 first; from macos/):
 //    M1K3_AFM_EVAL_NOISE=1 M1K3_AFM_EVAL_NOISE_ARMS=nochunks,nochunks+candidate M1K3_AFM_EVAL_REPEATS=3 \
 //      tools/dev/tdd.sh M1K3ChatTests 'MiniRetrievalNoiseEvalTests/run'
-//    M1K3_AFM_EVAL_NOISE=1 M1K3_AFM_EVAL_NOISE_ARMS=shipping,shipping+candidate M1K3_AFM_EVAL_NOISE_PROBES=control-seal \
-//      M1K3_AFM_EVAL_REPEATS=3 tools/dev/tdd.sh M1K3ChatTests 'MiniRetrievalNoiseEvalTests/run'
-//    M1K3_AFM_EVAL_NOISE=1 M1K3_AFM_EVAL_NOISE_BLIND=1 tools/dev/tdd.sh M1K3ChatTests 'MiniRetrievalNoiseEvalTests/blind'
+//    M1K3_AFM_EVAL_NOISE=1 M1K3_AFM_EVAL_NOISE_ARMS=shipping,shipping+candidate \
+//      M1K3_AFM_EVAL_NOISE_PROBES=control-seal M1K3_AFM_EVAL_REPEATS=3 \
+//      tools/dev/tdd.sh M1K3ChatTests 'MiniRetrievalNoiseEvalTests/run'
+//    M1K3_AFM_EVAL_NOISE=1 M1K3_AFM_EVAL_NOISE_BLIND=1 \
+//      tools/dev/tdd.sh M1K3ChatTests 'MiniRetrievalNoiseEvalTests/blind'
 //  The blind test needs BOTH flags (the suite's gate, then its own) and runs once per candidate.
 //  2026-10-29: the candidate "Mention a fact only when it helps answer what they asked" scored 14/15
 //  memory noise against the shipped clause's 14/15 (macos/docs/evals/2026-10-29-mini-memory-noise.md).
@@ -92,7 +94,8 @@ struct MiniRetrievalNoiseEvalTests {
     /// The memory header's shipped clause, and the candidate a `+candidate` arm renders in its place.
     static let shippedClause = "Weave facts in naturally; "
     static var candidateClause: String {
-        noiseEvalEnvironment["M1K3_AFM_EVAL_NOISE_CLAUSE"] ?? "Mention a fact only when it helps answer what they asked; "
+        noiseEvalEnvironment["M1K3_AFM_EVAL_NOISE_CLAUSE"]
+            ?? "Mention a fact only when it helps answer what they asked; "
     }
 
     static let probes: [Probe] = [
@@ -236,7 +239,8 @@ struct MiniRetrievalNoiseEvalTests {
     /// mention none. Matched as whole words ("bran" is not "brand", "ucc" is not "success").
     /// MemoryEvalFixtures was written on 06-12 for the retrieval floors and never used to tune wording.
     static let recallMarkers: [[String]] = [
-        ["aoife"], ["metric"], ["cork"], ["collie"], ["dyslexic", "dyslexia"], ["grdb"], ["round tower"], ["vim"], ["black"],
+        ["aoife"], ["metric"], ["cork"], ["collie"], ["dyslexic", "dyslexia"], ["grdb"], ["round tower"], ["vim"],
+        ["black"],
         ["1987"], ["niamh"], ["macos", "mac"], ["thursdays", "thursday"], ["penicillin"], ["march"],
         ["british", "en-gb", "uk"], ["skoda", "octavia"], ["development"], ["ucc", "university college cork"],
         ["m1k3"], ["emoji"], ["september"],
@@ -249,7 +253,8 @@ struct MiniRetrievalNoiseEvalTests {
 
     /// `marker` as a whole word or phrase, case-insensitive.
     static func containsWord(_ marker: String, in text: String) -> Bool {
-        let pattern = "\\b" + NSRegularExpression.escapedPattern(for: marker.trimmingCharacters(in: .whitespaces)) + "\\b"
+        let word = NSRegularExpression.escapedPattern(for: marker.trimmingCharacters(in: .whitespaces))
+        let pattern = "\\b" + word + "\\b"
         return text.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
     }
 
