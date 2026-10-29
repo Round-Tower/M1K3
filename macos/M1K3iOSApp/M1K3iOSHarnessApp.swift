@@ -20,6 +20,8 @@
 //  scene wiring.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the Phosphor Fox (white lattice) is the house default via CompanionDefaults.registeredDefaults / houseCompanion (Kev, TestFlight 499). Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — a true background ends a chat auto-speak session (no background audio mode).
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — #750's session mark follows the scene: open when active (at boot too, if
+//  already active), closed on a true background, so a crash or memory kill in front is noticed by the next launch.
 
 import M1K3Avatar
 import SwiftUI
@@ -66,7 +68,11 @@ struct M1K3iOSApp: App {
                     core?.exitVoiceMode()
                     core?.cancelAutoSpeak() // no background audio: a half-read answer just stops
                     core?.releaseForBackground()
-                case .active: core?.warmForForeground()
+                    // What iOS does to a backgrounded app is no snag (#750).
+                    core?.sessionWentToBackground()
+                case .active:
+                    core?.warmForForeground()
+                    core?.sessionBecameActive()
                 default: break
                 }
             }
@@ -77,6 +83,9 @@ struct M1K3iOSApp: App {
     private func boot() {
         do {
             core = try AppCore()
+            // Launched into the foreground: this session is open (#750). A background launch
+            // waits for its first .active.
+            if scenePhase == .active { core?.sessionBecameActive() }
         } catch {
             bootError = error.localizedDescription
         }

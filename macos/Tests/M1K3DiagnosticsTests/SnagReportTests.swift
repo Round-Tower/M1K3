@@ -10,6 +10,7 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-29, Confidence 0.8 (pure; the sheet and the mail
 //  hand-off are verify-by-launch). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — the recipient pin. Confidence 0.8.
 //
 
 import Foundation
@@ -53,6 +54,11 @@ struct SnagReportTests {
         #expect(!SnagReportFormatter.body(report()).contains("Crash summaries"))
         let body = SnagReportFormatter.body(report(crashLines: ["crash · 2027-01-15T08:59:00Z · v1.3.0 · M1K3"]))
         #expect(body.contains("Crash summaries this device kept:\ncrash · 2027-01-15T08:59:00Z · v1.3.0 · M1K3"))
+    }
+
+    @Test("reports go to the one address SECURITY.md names, on every shell")
+    func recipient() {
+        #expect(RoundTowerReports.recipient == "hello@round-tower.ie")
     }
 
     @Test("the subject names the brain, version and system, nothing else")

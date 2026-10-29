@@ -13,9 +13,29 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-29, Confidence 0.8 (pure, TDD-pinned; the sheet and
 //  the mail hand-off are verify-by-launch). Prior: none (new file; FieldReport's shape).
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — `RoundTowerReports` and `SnagNote` live here so the Mac and phone
+//  shells share them. Confidence 0.8.
 //
 
 import Foundation
+
+/// Where opt-in reports go, on every shell: the contact address in SECURITY.md (Kev's ruling, #708).
+public enum RoundTowerReports {
+    public static let recipient = "hello@round-tower.ie"
+}
+
+/// A session that didn't close cleanly, waiting on the chat surface's one-time offer.
+public struct SnagNote: Sendable, Equatable {
+    /// When that session began.
+    public let openedAt: Date
+    /// When this launch noticed.
+    public let noticedAt: Date
+
+    public init(openedAt: Date, noticedAt: Date) {
+        self.openedAt = openedAt
+        self.noticedAt = noticedAt
+    }
+}
 
 public struct SnagReport: Sendable, Equatable {
     /// When the session that didn't close began.

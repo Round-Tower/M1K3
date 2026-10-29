@@ -26,6 +26,8 @@
 //  a could-not-open, not "no mail app". What stays here is inputs and OS calls. Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold) — comment only: `redactedBody` now redacts the
 //  user's fields and leaves M1K3's own lines alone. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: FieldReportDraft gains `kind`; snagDraft builds the redacted
+//  SnagReport for the same sheet and send. Confidence 0.8.
 //
 
 import AppKit
@@ -33,9 +35,17 @@ import Foundation
 import M1K3Chat
 import M1K3Diagnostics
 
-/// One exchange waiting on the sheet (`.sheet(item:)` needs an identity; the body is a value).
+/// One report waiting on the sheet (`.sheet(item:)` needs an identity; the body is a value).
 struct FieldReportDraft: Identifiable {
+    /// What the sheet is sending: one exchange from a thumbs-down (#708), or the note that the
+    /// last session didn't close cleanly (#750). Only the sheet's title and sentence differ.
+    enum Kind {
+        case exchange
+        case snag
+    }
+
     let id = UUID()
+    var kind: Kind = .exchange
     /// Brain + version only — never the user's words.
     let subject: String
     /// The exact, already-redacted text the user sees, edits and sends.
@@ -69,6 +79,30 @@ enum FieldReporter {
             scrubExtra: { CanaryGuard.fromLocalConfig().scan($0).text }
         )
         return FieldReportDraft(subject: FieldReportFormatter.subject(report), body: body)
+    }
+
+    /// The redacted draft for #750's snag report: when the session that didn't close began, the
+    /// brain now restored, the app and macOS versions, and any MetricKit crash summaries. The
+    /// scrub is `SnagReportFormatter.redactedBody`, unit-pinned in M1K3Diagnostics, with the same
+    /// home path, display name and canary pass as an exchange.
+    static func snagDraft(_ note: SnagNote, brain: String, crashLines: [String]) -> FieldReportDraft {
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        let report = SnagReport(
+            openedAt: note.openedAt,
+            noticedAt: note.noticedAt,
+            brain: brain,
+            appVersion: infoString("CFBundleShortVersionString"),
+            build: infoString("CFBundleVersion"),
+            system: "macOS \(os.majorVersion).\(os.minorVersion)",
+            crashLines: crashLines
+        )
+        let body = SnagReportFormatter.redactedBody(
+            report,
+            homeDirectory: NSHomeDirectory(),
+            userName: UserDefaults.standard.string(forKey: AppEnvironment.userDisplayNameKey),
+            scrubExtra: { CanaryGuard.fromLocalConfig().scan($0).text }
+        )
+        return FieldReportDraft(kind: .snag, subject: SnagReportFormatter.subject(report), body: body)
     }
 
     /// Open the user's mail app with the message filled in. Called from the sheet's Send

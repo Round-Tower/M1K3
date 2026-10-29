@@ -22,9 +22,13 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the Phosphor Fox (white lattice) is the house default via CompanionDefaults.registeredDefaults / houseCompanion (Kev, TestFlight 499). Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — one-time Mac skin preservation (`skinToPreserve`) just before register(defaults:). Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — launch kicks `refreshDownloads()` once after the environment is built, so the semantic-memory offer's first disk scan has usually landed before a picker or card renders (O4). Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: the delegate owns the SessionGuard, marked on the UI launch path
+//  before the environment builds and cleared on a clean quit; a standing mark reaches the environment once.
+//  Confidence unchanged.
 
 import AppKit
 import M1K3Avatar
+import M1K3Diagnostics
 import M1K3Inference
 import M1K3Launch
 import M1K3Screengrab
@@ -260,6 +264,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     /// environment rather than needing its own enable/disable wiring.
     private var notchHUD: NotchHUDController?
 
+    /// Did the last session close cleanly? (#750) Marked on the UI launch path below, cleared
+    /// by a clean quit; a mark still standing at launch is a crash, a memory kill or a force-quit.
+    private let sessionGuard = SessionGuard(storage: UserDefaults.standard, inert: AppEnvironment.sessionGuardInert)
+
     func applicationWillFinishLaunching(_: Notification) {
         // Before any MLX use: the quit-during-generation guard (MLXExitGuard
         // header has the crash story). Normal errors stay fail-loud.
@@ -309,6 +317,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
     /// instead of fatalError-ing over a clean quit (MLXExitGuard).
     func applicationShouldTerminate(_: NSApplication) -> NSApplication.TerminateReply {
         MLXExitGuard.markTerminating()
+        // A clean quit: the next launch finds no mark (#750).
+        sessionGuard.end()
         // Quitting mid-load is not a crash: keep the audition for next launch.
         AppEnvironment.auditionAppQuitting()
         return .terminateNow
@@ -324,6 +334,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
         Self.logLaunchStamp()
         // The self-test path drives its own composition; don't double-build here.
         guard !SelfTest.isRequested else { return }
+        // Before anything heavy, so a crash while building the environment still leaves its mark.
+        let uncleanSince = sessionGuard.begin()
         // Build off the launch beat (async) so first paint isn't blocked, but at
         // app scope, not window scope — a background intent launch has no window.
         Task { @MainActor in
@@ -335,6 +347,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 env.mainWindowOnScreen = mainWindowOnScreen // replay the pre-launch report
                 environment = env
                 AppEnvironment.registerShared(env)
+                if let uncleanSince { env.noteUncleanExit(openedAt: uncleanSince) }
                 // Read the disk facts once, off the main thread (refreshDownloads scans detached), so the
                 // semantic-memory offer's `scanned` is usually true before a picker or card renders (O4).
                 env.refreshDownloads()

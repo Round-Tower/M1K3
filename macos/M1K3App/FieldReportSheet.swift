@@ -26,6 +26,8 @@
 //  clipboard unasked). Copy and Send are off while the editor is blank. Confidence 0.7 (verify-by-launch).
 //  Review: Kev + claude-opus-5.5, 2026-10-29 — Send gives up Return after its first hand-off: the sheet stays
 //  open, and a second Return opened a second email. The button still sends on a click. Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — #750's snag report rides this sheet: `draft.kind` picks the title
+//  and the one sentence on what leaves; Copy, Send, the clipboard rules and Return-once are shared. Confidence 0.7.
 //
 
 import M1K3Diagnostics
@@ -54,17 +56,30 @@ struct FieldReportSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Label("Send this exchange to Round Tower?", systemImage: "envelope")
-                .font(.title3.weight(.semibold))
-
-            Text("""
-            This is the whole message: your message, M1K3's answer, your note, the brain and the app version — \
-            nothing else from this Mac, though the answer may quote what M1K3 read to write it. \
-            It goes to \(FieldReporter.recipient) from your own mail app, which opens with it filled in. \
-            M1K3 sends nothing itself. Round Tower reads it to fix what went wrong, may rewrite it as a \
-            made-up test case, and deletes it if you ask. Change anything below first if you like.
-            """)
-            .fixedSize(horizontal: false, vertical: true)
+            switch draft.kind {
+            case .exchange:
+                Label("Send this exchange to Round Tower?", systemImage: "envelope")
+                    .font(.title3.weight(.semibold))
+                Text("""
+                This is the whole message: your message, M1K3's answer, your note, the brain and the app version — \
+                nothing else from this Mac, though the answer may quote what M1K3 read to write it. \
+                It goes to \(FieldReporter.recipient) from your own mail app, which opens with it filled in. \
+                M1K3 sends nothing itself. Round Tower reads it to fix what went wrong, may rewrite it as a \
+                made-up test case, and deletes it if you ask. Change anything below first if you like.
+                """)
+                .fixedSize(horizontal: false, vertical: true)
+            case .snag:
+                Label("Send a short report to Round Tower?", systemImage: "envelope")
+                    .font(.title3.weight(.semibold))
+                Text("""
+                This is the whole message: that M1K3 didn't close cleanly last time, when that session began, \
+                the brain, the app and macOS versions, and any crash summaries this Mac kept. Nothing you typed \
+                or said goes with it. It goes to \(FieldReporter.recipient) from your own mail app, which opens \
+                with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went wrong, and \
+                deletes it if you ask. If you remember what you were doing, add it at the end: that helps most.
+                """)
+                .fixedSize(horizontal: false, vertical: true)
+            }
 
             TextEditor(text: $text)
                 .font(.callout)

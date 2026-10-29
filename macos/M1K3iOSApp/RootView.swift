@@ -22,6 +22,8 @@
 //  screen may sleep and the system shows the progress. Confidence 0.75.
 //  Review: Kev + claude-opus-5-5, 2026-10-14 — onOpenURL: an `m1k3://` link (Halloween's event, #603)
 //  pops to the chat root. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: the chat screen carries SnagNoteHost, outside ChatScreen's own
+//  modifier chain. Confidence unchanged.
 //
 
 import M1K3Inference
@@ -41,7 +43,7 @@ struct RootView: View {
     var body: some View {
         Group {
             if onboarded {
-                NavigationStack(path: $screengrabPath) { ChatScreen(screengrabPath: $screengrabPath) }
+                NavigationStack(path: $screengrabPath) { ChatScreen(screengrabPath: $screengrabPath).modifier(SnagNoteHost()) }
                     .preferredColorScheme(.dark)
                     .onOpenURL { url in
                         // Every `m1k3://` link (event or not) is the chat screen, the stack's root.

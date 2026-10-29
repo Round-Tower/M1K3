@@ -150,6 +150,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (#699 pre-push review fold) — `refreshCounts()` re-reads the style:
 //  every memory write and forget already calls it, MCP forget_memory included, which had no re-read (a forgotten
 //  ask kept riding every prompt until relaunch). Pinned by StatedStyleWiringTests. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: `snag`, the one-time offer after a session that didn't close
+//  cleanly (AppEnvironment+Snag). Confidence unchanged.
 
 import AppKit
 import Foundation
@@ -158,6 +160,7 @@ import M1K3AgentTools
 import M1K3Avatar
 import M1K3Calls
 import M1K3Chat
+import M1K3Diagnostics
 import M1K3Heartbeat
 import M1K3Inference
 import M1K3Knowledge
@@ -721,6 +724,10 @@ final class AppEnvironment {
         version: ReviewPromptLedger.marketingVersion(),
         suppressed: { ScreengrabHarness.current.isActive }
     )
+
+    /// The last session didn't close cleanly (#750): the one-time offer to send Round Tower a
+    /// short report, raised at launch (AppEnvironment+Snag) and cleared by either banner button.
+    var snag: SnagNote?
 
     /// The on-device energy ledger (#696): each MLX generation priced at its
     /// tier's rate into a daily rollup of numbers, dates and tier enums, never

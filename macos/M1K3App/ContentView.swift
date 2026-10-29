@@ -114,6 +114,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — voice mode fades the split view to opacity 0 under the hero: the
 //  10-09 glass-only cover (VoiceModeView's Open) let the transcript, its streaming answer and the sidebar show
 //  through on 541. Confidence 0.7 (verify-by-launch, UNVERIFIED this run; Kev also saw a second avatar, unexplained).
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: SnagBanner in its own top inset (it never hides a permission
+//  recovery or an ingest failure), age-gated like #708's offer, handing off to FieldReportSheet. Confidence
+//  unchanged.
 
 import M1K3Avatar
 import M1K3Chat
@@ -643,6 +646,22 @@ struct ContentView: View {
                     !greetingCardVisible || env.lastIngestFailed
             {
                 IngestBanner(text: status, busy: env.isIngesting)
+            }
+        }
+        // #750: the last session didn't close cleanly. Its own inset, so it never hides a permission
+        // recovery or an ingest failure, and they never hide it. Withheld from the bands #708's offer
+        // is withheld from; either button ends it for good (the launch already consumed the mark).
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if let snag = env.snag, fieldReportAllowed {
+                SnagBanner(
+                    onSee: {
+                        fieldReportDraft = FieldReporter.snagDraft(
+                            snag, brain: env.selectedBrain.displayName, crashLines: env.recentCrashLines()
+                        )
+                        env.snag = nil
+                    },
+                    onDismiss: { env.snag = nil }
+                )
             }
         }
         // The first completed turn retires the full first-session greeting.
@@ -1857,6 +1876,34 @@ private struct IntroductionOfferCard: View {
 
 /// The M1K3 Voice earned moment — one line, two honest actions, shown only
 /// after real spoken exchanges on the built-in voice (never mid-session).
+/// #750's one-time offer after a session that didn't close cleanly, in M1K3's voice.
+private struct SnagBanner: View {
+    let onSee: () -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "bandage")
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(.tint)
+            Text("I hit a snag last time. Send Round Tower a short report? You'll see it first.")
+                .font(.callout)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer()
+            Button("See the report", action: onSee)
+                .buttonStyle(.glassProminent)
+            Button("Not now", action: onDismiss)
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .glassEffect(.regular, in: .rect(cornerRadius: 12))
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+    }
+}
+
 private struct VoiceUpgradeBanner: View {
     let onAccept: () -> Void
     let onDismiss: () -> Void

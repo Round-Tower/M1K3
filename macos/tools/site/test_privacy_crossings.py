@@ -12,6 +12,8 @@ Review: Kev + claude-opus-5.5, 2026-10-29 — #529's site part: no page may desc
 button (ADR 0010 made PCC a brain-picker row whose pick holds), PCC as "a later release", an administrator switch
 for web search (the one managed key is PCC's), or "No cloud attached". Signature comments are history and are
 skipped. Confidence 0.8.
+Review: Kev + claude-opus-5.5, 2026-10-29 — #750: the page names the short report offered after a session that
+didn't close cleanly, says "no automatic crash reporting", and the one-thing-we-can-receive pin names both. Confidence 0.8.
 """
 import json
 import re
@@ -124,7 +126,11 @@ def test_the_privacy_page_names_the_field_report_its_recipient_and_its_purpose()
     page = _visible(PRIVACY)
     assert "Send this exchange to Round Tower" in page
     assert "your own mail app sends it to hello@round-tower.ie" in page
-    assert "the only thing we can ever receive is an exchange you choose to email us" in page
+    assert "the only things we can ever receive are an exchange you choose to email us" in page
+    # #750: after a session that didn't close cleanly, the same path offers a short report once.
+    assert "didn't close cleanly" in page
+    assert "no automatic crash reporting" in page
+    assert "no crash reporting" not in page.replace("no automatic crash reporting", "")
     assert "We use them only to reply and do not add you to any list." not in page
 
 
