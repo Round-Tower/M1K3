@@ -26,6 +26,10 @@
 //  English fixtures only (other languages: all-or-nothing, untested). Revert = drop the one call.
 //  Open: a real embedder for Mini (or a lexical memory lane) is the fix after the freeze.
 //  Format: MurphySig v0.4 (https://murphysig.dev/spec). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — accents fold before matching (Sean meets
+//  Seán; Irish names lose fadas in typing and dictation), and "who I am" is a profile ask too. Known, carried:
+//  the lane's stopwords cost the gate recall on "US", "IT", "WHO" and "notes" (a gate-specific list needs a
+//  re-measure). Confidence 0.65.
 //
 
 import Foundation
@@ -43,14 +47,17 @@ public enum HashingMemoryGate {
     /// "What do you remember about me?", "who am I?": a question every memory answers.
     /// "about my sister" or "about meteors" is not one.
     public static func isProfileAsk(_ question: String) -> Bool {
-        let pattern = #"\babout (me|myself|us|ourselves)\b|\bwho am i\b"#
+        let pattern = #"\babout (me|myself|us|ourselves)\b|\bwho (am i|i am)\b"#
         return question.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
     }
 
     /// The distiller writes "The user prefers …": its register, not a subject a question shares.
     static let registerWords: Set<String> = ["user", "users"]
 
+    /// Accents folded first, here only (the keyword lane's FTS query is untouched): a fada dropped
+    /// in typing or dictation must still meet the memory ("Sean" and "Seán").
     private static func terms(_ text: String) -> Set<String> {
-        Set(HashingKeywordLane.contentTerms(text) ?? []).subtracting(registerWords)
+        let folded = text.folding(options: .diacriticInsensitive, locale: nil)
+        return Set(HashingKeywordLane.contentTerms(folded) ?? []).subtracting(registerWords)
     }
 }

@@ -12,6 +12,8 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-29, Confidence 0.7 (the rule is pinned here; its
 //  held-out blind bar FAILED and Kev overrode it knowingly, see HashingMemoryGateTurnTests).
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — the register-word test uses the literal
+//  "user" (it passed without the rule); fadas fold (Sean meets Seán); "who I am" is a profile ask. Confidence 0.7.
 //
 
 import Foundation
@@ -60,7 +62,10 @@ struct HashingMemoryGateTests {
     @Test("a profile ask keeps every memory, as today; 'about' anything else is not one")
     func profileAsk() {
         let all = [Self.galway, Self.doughNut, Self.sister]
-        for question in ["What do you remember about me?", "who am I?", "Tell me everything you know about myself"] {
+        for question in [
+            "What do you remember about me?", "who am I?", "Tell me everything you know about myself",
+            "Do you know who I am?",
+        ] {
             #expect(HashingMemoryGate.isProfileAsk(question), "\(question)")
             #expect(admitted(question, all) == all.map(\.content), "\(question)")
         }
@@ -77,6 +82,14 @@ struct HashingMemoryGateTests {
 
     @Test("the distiller's register word 'user' is not a shared subject")
     func registerWordsDontCount() {
-        #expect(admitted("how many users does M1K3 have?", [Self.memory("The user prefers metric units.")]).isEmpty)
+        // The literal token, so the test fails if `registerWords` goes ("users" never met "user").
+        #expect(admitted("how do I add a user to my account?", [Self.memory("The user prefers metric units.")]).isEmpty)
+    }
+
+    @Test("a fada dropped in typing or dictation still matches: Sean meets Seán")
+    func diacriticsFold() {
+        let brother = Self.memory("Kev's brother is called Seán.")
+        #expect(admitted("when is Sean's birthday?", [brother]) == [brother.content])
+        #expect(admitted("Is Áine coming?", [Self.memory("The user's niece is Aine.")]).count == 1)
     }
 }

@@ -20,6 +20,8 @@
 //  straight; closed reasoning is never cut.
 //  Review: Kev + claude-opus-5.5, 2026-10-29 — #447: on the hashing arm an unrelated memory never reaches a plain
 //  or agent prompt and a named one still does; only the remember-about-me chip is a profile ask.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — the #447 test requires its control: the store
+//  surfaces both memories for the sky question, so the gate is what drops them.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — a brain that forces its own close (the fake conforms to
 //  `ThinkBudgetForcing`) moves the cut to a net at 8 characters a token; both bounds of the net are pinned.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — `imagesSkipRouter` runs on a tool-calling double: an image on a brain
@@ -306,7 +308,14 @@ struct PlainTurnRouteTests {
             _ = try await answer(responder, question)
             return try #require(provider.prompts.first)
         }
-        // Retrieval reaches both today (bucket collisions over the 0.10 floor): the gate is what drops them.
+        // Control: retrieval reaches both today (bucket collisions over the 0.10 floor), so the gate is
+        // what drops them below, not the store.
+        let skyVector = try await embedder.embedQuery("why is the sky blue?")
+        let retrieved = try store.searchGrounding(
+            query: "why is the sky blue?", queryVector: skyVector, memoryLimit: 5
+        )
+        let floored = GroundingGate.partition(retrieved, floors: .forFingerprint(embedder.fingerprint)).memories
+        try #require(floored.count == 2, "the store no longer surfaces both memories: the test proves nothing")
         let sky = try await prompt("why is the sky blue?", routed: true)
         #expect(!sky.contains("Galway") && !sky.contains("Dough Nut"), "the plain turn carried an unrelated memory")
         let agent = try await prompt("why is the sky blue?", routed: false)
