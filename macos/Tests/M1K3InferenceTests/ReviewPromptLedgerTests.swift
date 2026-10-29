@@ -14,6 +14,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-22 — the honeymoon is the first whole day now (the
 //  policy asks from day 1, was day 3): engagement in hand 20 h after first use still stays quiet;
 //  one liked answer is enough on day 1. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — the crash stamp (#750): the newest crash wins, a future date
+//  is held at now, and a held ask never marks the version. Confidence 0.8.
 
 import Foundation
 @testable import M1K3Inference
@@ -121,6 +123,55 @@ struct ReviewPromptLedgerTests {
         led.recordDelight()
         #expect(led.daysSinceFirstUse < 0)
         #expect(!led.consumePromptIfDue())
+    }
+
+    @Test("a crash holds the ask for three days and does not spend the version's chance")
+    func crashHoldsTheAsk() {
+        let storage = MemoryStorage()
+        _ = ledger(storage: storage)
+        let dayFive = ledger(storage: storage, now: epoch.addingTimeInterval(86400 * 5))
+        dayFive.recordDelight()
+        dayFive.recordCrash(at: epoch.addingTimeInterval(86400 * 4))
+        #expect(dayFive.daysSinceLastCrash == 1)
+        #expect(!dayFive.consumePromptIfDue())
+        #expect(storage.object(forKey: ReviewPromptLedger.promptedVersionKey) == nil)
+        let dayEight = ledger(storage: storage, now: epoch.addingTimeInterval(86400 * 7))
+        #expect(dayEight.daysSinceLastCrash == 3)
+        #expect(dayEight.consumePromptIfDue())
+    }
+
+    @Test("no crash on record reads as nil, not as day zero")
+    func noCrashIsNil() {
+        let storage = MemoryStorage()
+        #expect(ledger(storage: storage).daysSinceLastCrash == nil)
+    }
+
+    @Test("an older crash delivered again never moves the stamp back")
+    func olderCrashKeepsTheNewerStamp() {
+        let storage = MemoryStorage()
+        let led = ledger(storage: storage, now: epoch.addingTimeInterval(86400 * 10))
+        led.recordCrash(at: epoch.addingTimeInterval(86400 * 9))
+        led.recordCrash(at: epoch.addingTimeInterval(86400 * 2))
+        #expect(led.daysSinceLastCrash == 1)
+    }
+
+    @Test("a crash dated in the future is held at now, so a bad clock cannot stretch the quiet")
+    func futureCrashClampsToNow() {
+        let storage = MemoryStorage()
+        let led = ledger(storage: storage, now: epoch)
+        led.recordCrash(at: epoch.addingTimeInterval(86400 * 30))
+        #expect(led.daysSinceLastCrash == 0)
+        let later = ledger(storage: storage, now: epoch.addingTimeInterval(86400 * 3))
+        #expect(later.daysSinceLastCrash == 3)
+    }
+
+    @Test("suppressed (screengrab harness): a crash records nothing")
+    func suppressedRecordsNoCrash() {
+        let storage = MemoryStorage()
+        let led = ledger(storage: storage, suppressed: true)
+        led.recordCrash(at: epoch)
+        #expect(storage.values.isEmpty)
+        #expect(led.daysSinceLastCrash == nil)
     }
 
     @Test("the marketing version falls back to 0 when the bundle carries none")

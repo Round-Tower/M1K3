@@ -23,6 +23,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-22 — comments only: the honeymoon is one day now
 //  (ReviewPromptPolicy), and daysSinceFirstUse counts whole elapsed days, not calendar dates —
 //  the old comment said the opposite of what the code does. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — the crash stamp (#750): the shells record each crash
+//  diagnostic's own date; the newest wins, so an old payload delivered again never restarts the quiet,
+//  and a date past now is held at now. Confidence 0.8.
 
 import Foundation
 import Observation
@@ -42,6 +45,7 @@ public final class ReviewPromptLedger {
     public static let delightKey = "review.delightCount"
     public static let turnsKey = "review.completedTurns"
     public static let promptedVersionKey = "review.promptedVersion"
+    public static let lastCrashKey = "review.lastCrash"
 
     /// Liked answers so far (mirrors storage; views observe this).
     public private(set) var delightCount: Int
@@ -94,6 +98,21 @@ public final class ReviewPromptLedger {
         storage.set(completedTurns, forKey: Self.turnsKey)
     }
 
+    /// A crash diagnostic, dated by the crash itself (MetricKit delivers it on
+    /// a later launch). Keeps the newest date, held at now.
+    public func recordCrash(at date: Date) {
+        guard !suppressed() else { return }
+        let stamp = min(date, now()).timeIntervalSince1970
+        if let stored = storage.object(forKey: Self.lastCrashKey) as? Double, stored >= stamp { return }
+        storage.set(stamp, forKey: Self.lastCrashKey)
+    }
+
+    /// Whole days since the newest recorded crash; nil when there is none.
+    public var daysSinceLastCrash: Int? {
+        guard let stamp = storage.object(forKey: Self.lastCrashKey) as? Double else { return nil }
+        return calendar.dateComponents([.day], from: Date(timeIntervalSince1970: stamp), to: now()).day
+    }
+
     /// Whole days elapsed since the first recorded use; 0 when there is no
     /// stamp; negative when the stamp is in the future (broken state).
     /// `dateComponents([.day])` counts complete days, so "day 1" is at least a
@@ -116,7 +135,8 @@ public final class ReviewPromptLedger {
             completedTurns: completedTurns,
             daysSinceFirstUse: daysSinceFirstUse,
             lastPromptedVersion: storage.object(forKey: Self.promptedVersionKey) as? String,
-            currentVersion: currentVersion
+            currentVersion: currentVersion,
+            daysSinceLastCrash: daysSinceLastCrash
         )
         if due { storage.set(currentVersion, forKey: Self.promptedVersionKey) }
         return due

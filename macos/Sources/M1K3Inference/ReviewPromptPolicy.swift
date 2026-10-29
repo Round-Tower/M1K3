@@ -19,6 +19,8 @@
 //  version, only wins count. Watch: ratings ÷ installs on 1.2.1 weekly per storefront (<2%
 //  after 3 weeks → the gate wasn't the bottleneck); early 1–2★ → days back to 2.
 //  Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — no ask within `crashQuietDays` of a crash (#750). Crashes
+//  only, not hangs (Kev's call: a Mac that logs hangs often would hold the ask for good). Confidence 0.8.
 
 import Foundation
 
@@ -33,6 +35,9 @@ public enum ReviewPromptPolicy {
     /// Whole days the app must have lived with the user first. Never ask in
     /// the install session; day three filtered for retention, not opinion.
     public static let minDaysSinceFirstUse = 1
+    /// Whole days after a crash before the ask may come back. Someone who just
+    /// lost an answer to a crash is the wrong person to ask for stars.
+    public static let crashQuietDays = 3
 
     /// The one universal App Store record (Mac + iOS + visionOS).
     public static let appStoreID = "6780230835"
@@ -44,17 +49,21 @@ public enum ReviewPromptPolicy {
     ///   state) never prompts.
     /// - `lastPromptedVersion`: the marketing version at the last ask, if
     ///   any. One ask per version, ever.
+    /// - `daysSinceLastCrash`: whole days since the newest crash on record,
+    ///   nil when there is none. Negative (broken state) never prompts.
     public static func shouldPrompt(
         delightCount: Int,
         completedTurns: Int,
         daysSinceFirstUse: Int,
         lastPromptedVersion: String?,
-        currentVersion: String
+        currentVersion: String,
+        daysSinceLastCrash: Int?
     ) -> Bool {
         let engaged = delightCount >= minDelightCount || completedTurns >= minCompletedTurns
         guard engaged else { return false }
         guard daysSinceFirstUse >= minDaysSinceFirstUse else { return false }
         guard lastPromptedVersion != currentVersion else { return false }
+        if let daysSinceLastCrash, daysSinceLastCrash < crashQuietDays { return false }
         return true
     }
 

@@ -18,6 +18,8 @@
 //  1 day (were 2 / 20 / 3): ~150 downloads, 0 ratings in every storefront, and phone
 //  sessions rarely reach 20 turns or day 3. Pinned as literals so a drift is a red
 //  test, not a silent constant. Challenger-reviewed. Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — no ask within three days of a crash (#750, crashes only,
+//  Kev's call): ask happy users, not hurt ones. Confidence 0.8.
 
 import Foundation
 @testable import M1K3Inference
@@ -29,14 +31,16 @@ struct ReviewPromptPolicyTests {
         completedTurns: Int = 0,
         daysSinceFirstUse: Int = 5,
         lastPromptedVersion: String? = nil,
-        currentVersion: String = "1.0.1"
+        currentVersion: String = "1.0.1",
+        daysSinceLastCrash: Int? = nil
     ) -> Bool {
         ReviewPromptPolicy.shouldPrompt(
             delightCount: delightCount,
             completedTurns: completedTurns,
             daysSinceFirstUse: daysSinceFirstUse,
             lastPromptedVersion: lastPromptedVersion,
-            currentVersion: currentVersion
+            currentVersion: currentVersion,
+            daysSinceLastCrash: daysSinceLastCrash
         )
     }
 
@@ -82,6 +86,20 @@ struct ReviewPromptPolicyTests {
         #expect(ReviewPromptPolicy.isWin(answerFailed: false, interrupted: false))
         #expect(!ReviewPromptPolicy.isWin(answerFailed: true, interrupted: false))
         #expect(!ReviewPromptPolicy.isWin(answerFailed: false, interrupted: true))
+    }
+
+    @Test("a crash in the last three days keeps the ask quiet; day three asks again")
+    func crashQuietWindow() {
+        #expect(!shouldPrompt(daysSinceLastCrash: 0))
+        #expect(!shouldPrompt(daysSinceLastCrash: 2))
+        #expect(shouldPrompt(daysSinceLastCrash: 3))
+        #expect(shouldPrompt(daysSinceLastCrash: nil))
+        #expect(ReviewPromptPolicy.crashQuietDays == 3)
+    }
+
+    @Test("a crash stamp in the future is broken state — stay quiet")
+    func futureCrashStaysQuiet() {
+        #expect(!shouldPrompt(daysSinceLastCrash: -1))
     }
 
     // MARK: - The manual door: "Rate M1K3…"
