@@ -24,6 +24,8 @@
 //  that is Launch Services accepting the link, and a Mail with no account opens its setup instead of a compose
 //  window, which lost the edited text. The sheet stays open with a caption until Done (nothing put on the
 //  clipboard unasked). Copy and Send are off while the editor is blank. Confidence 0.7 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — Send gives up Return after its first hand-off: the sheet stays
+//  open, and a second Return opened a second email. The button still sends on a click. Confidence 0.7.
 //
 
 import M1K3Diagnostics
@@ -36,6 +38,8 @@ struct FieldReportSheet: View {
     @State private var text: String
     /// What happened after Copy or Send. The sheet stays open after either, to say so.
     @State private var caption: String?
+    /// Send has handed the message off once. The sheet stays open, so Return must not send it again.
+    @State private var sent = false
 
     /// Nothing to copy or send: an emptied editor would clear the clipboard or mail a blank message.
     private var isBlank: Bool {
@@ -85,6 +89,7 @@ struct FieldReportSheet: View {
                 }
                 .disabled(isBlank)
                 Button("Send by email") {
+                    sent = true
                     switch FieldReporter.send(subject: draft.subject, body: text) {
                     case .opened:
                         // Accepted is not a compose window (a Mail with no account opens its
@@ -111,7 +116,7 @@ struct FieldReportSheet: View {
                     }
                 }
                 .disabled(isBlank)
-                .keyboardShortcut(.defaultAction)
+                .keyboardShortcut(sent ? nil : .defaultAction)
                 .buttonStyle(.glassProminent)
             }
         }

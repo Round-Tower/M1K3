@@ -20,6 +20,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold) — the offer is wired only for an answer M1K3 wrote
 //  (`message.isExchangeAnswer`: no script output, no PCC notice); Send never closes the sheet, because "opened"
 //  is only Launch Services accepting the link; a blank editor can be neither copied nor sent. Confidence 0.6.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — Return sends once: the sheet stays open after Send, so a second
+//  Return opened a second email (#708's 1.3.0 fix). Confidence 0.6.
 //
 
 import Foundation
@@ -168,5 +170,17 @@ struct FieldReportScanTests {
         let afterFlush = message[flush.upperBound...]
         let raise = try #require(afterFlush.range(of: "onSendExchange?(note)"))
         #expect(afterFlush[..<raise.lowerBound].contains("pendingExchangeNote = nil"), "the parked note is consumed once")
+    }
+
+    @Test("after a send, Return no longer sends the message again")
+    func returnSendsOnce() throws {
+        let sheet = try Self.code("M1K3App/FieldReportSheet.swift")
+        let conditional = ".keyboardShortcut(sent ? nil : .defaultAction)"
+        #expect(sheet.contains(conditional), "Send gives up Return once it has sent")
+        #expect(!sheet.contains(".keyboardShortcut(.defaultAction)"), "no unconditional Return on Send")
+        let sendButton = try #require(sheet.range(of: "Button(\"Send by email\")"))
+        let call = try #require(sheet.range(of: "FieldReporter.send("))
+        let beforeCall = sheet[sendButton.upperBound ..< call.lowerBound]
+        #expect(beforeCall.contains("sent = true"), "the flag is set before the hand-off")
     }
 }
