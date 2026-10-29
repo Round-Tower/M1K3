@@ -86,7 +86,7 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "Does M1K3 send my data to a server?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Not by default. M1K3 runs on your Mac: inference, voice, embeddings, and storage are all on-device. Turn on Private Cloud Compute in Settings and pick it as your brain, and what you type — plus the conversation so far, only if you tick it — goes to Apple's Private Cloud Compute; every PCC reply is labelled in the chat, and Apple's own guarantees for that service are quoted on the M1K3 privacy page. Even the thumbs-up/down feedback you leave on answers stays local. Web search is on by default so answers can be current, with one switch in Settings to turn it off." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Not by default. M1K3 runs on your Mac: inference, voice, embeddings, and storage are all on-device. Turn on Private Cloud Compute in Settings and pick it as your brain, and what you type — plus the conversation so far, only if you tick it — goes to Apple's Private Cloud Compute; every PCC reply is labelled in the chat, and Apple's own guarantees for that service are quoted on the M1K3 privacy page. Even the thumbs-up/down feedback you leave on answers stays local; a thumbs-down can offer to email that one exchange to us, and only your own mail app sends it, after you have seen it. Web search is on by default so answers can be current, with one switch in Settings to turn it off." } },
     { "@type": "Question", "name": "What AI models does M1K3 run?",
       "acceptedAnswer": { "@type": "Answer", "text": "Three brains, all local: Mini for instant answers, Lil — the fast brain that fronts the conversation — and Big, delegated the deep work. Switch in Settings any time; the models behind each name, and their scores, live on /brains." } },
     { "@type": "Question", "name": "Which Macs does M1K3 support?",
@@ -607,7 +607,7 @@ the action list?<br />
   <div class="faq-list">
     <details class="reveal">
       <summary>Does M1K3 send my data to a server?</summary>
-      <p>Not by default. M1K3 runs on your Mac — inference, voice, embeddings, and storage are all on-device. Turn on Private Cloud Compute in Settings and pick it as your brain, and what you type — plus the conversation so far, only if you tick it — goes to Apple's Private Cloud Compute; every PCC reply is labelled in the chat, and Apple's own guarantees for that service are quoted on our <a href="/privacy">privacy page</a>. Even the thumbs-up/down feedback you leave on answers stays local — it's yours, for tuning, and no visiting agent can read or write it. Web search is on by default so answers can be current, with one switch in Settings to turn it off.</p>
+      <p>Not by default. M1K3 runs on your Mac — inference, voice, embeddings, and storage are all on-device. Turn on Private Cloud Compute in Settings and pick it as your brain, and what you type — plus the conversation so far, only if you tick it — goes to Apple's Private Cloud Compute; every PCC reply is labelled in the chat, and Apple's own guarantees for that service are quoted on our <a href="/privacy">privacy page</a>. Even the thumbs-up/down feedback you leave on answers stays local — it's yours, for tuning, and no visiting agent can read or write it. A thumbs-down can offer to email that one exchange to us; only your own mail app sends it, after you've seen it. Web search is on by default so answers can be current, with one switch in Settings to turn it off.</p>
     </details>
     <details class="reveal">
       <summary>What AI models does it run?</summary>
@@ -1153,6 +1153,8 @@ tick();
      stays: it logs one knowledge-graph turn, which makes none. dateModified NOT bumped. Confidence 0.8.
      Review: Kev + claude-opus-5.5, 2026-10-29 — the screensaver is parked for 1.3.0 (Kev: "a poor implementation as it
      stands"): its feature line, the JSON-LD description's mention and the FAQ sentence (visible and JSON-LD, still
-     mirrored) are gone; the 08-22 Review above stays as history. Confidence 0.85. -->
+     mirrored) are gone; the 08-22 Review above stays as history. Confidence 0.85.
+     Review: Kev + claude-opus-5.5, 2026-10-29 — (pre-push review fold) the send-my-data FAQ (visible and JSON-LD)
+     says a thumbs-down can offer to email that one exchange, sent by the user's own mail app (#708). Confidence 0.85. -->
 </body>
 </html>

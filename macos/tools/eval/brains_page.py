@@ -65,7 +65,10 @@ Confidence 0.9.
 Review: Kev + claude-opus-5.5, 2026-10-29 — the PCC reference note said "the escalation rung of a later release";
 PCC ships as an opt-in brain in the App Store builds (ADR 0010), so the note says so. site/brains.html and
 site/brains.json carry the new note by hand, byte-identical to this generator's output, rather than a full
-regenerate, which would also fold three weeks of new runs into the page. Confidence 0.85.
+regenerate, which would also fold three weeks of new runs into the page.
+Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — the page no longer says the references are
+"not shipped" while the PCC note says you can pick it: "measured for comparison, not pinned", and PCC is named as
+the one reference M1K3 offers, opt-in. brains.html carries both by hand, byte-identical. Confidence 0.85. Confidence 0.85.
 """
 
 from __future__ import annotations
@@ -513,7 +516,7 @@ def _ladder_table(columns: list[dict]) -> str:
         "</tr></thead><tbody>" + "".join(rows) + "</tbody></table></div>"
         '<p class="table-note">each cell is that brain\'s newest run for the kind (passed/total, every trial counted); '
         'a column whose kinds were measured on different days shows its newest date. Shipped tiers left, '
-        'reference columns right: measured, not shipped.</p>'
+        'reference columns right: measured for comparison, not pinned.</p>'
     )
 
 
@@ -603,7 +606,7 @@ def _reference_notes(columns: list[dict]) -> str:
             note = f"hosted model, reached through OpenRouter for the comparison; {route}."
         items.append(f"<li><strong>{_e(c.get('label') or c['brainID'])}</strong> — {note}</li>")
     return ('<h3>The reference columns</h3><p>Measured through the same persona, the same ReAct floor and the same '
-            'stub tool palette as the local tiers, on the same synthetic fixtures. None of them ships in M1K3; they are '
+            'stub tool palette as the local tiers, on the same synthetic fixtures. None of them is one of the brains on your device; PCC, the only one M1K3 offers, is opt-in. They are '
             'the distance the ladder is measured against.</p><ul>' + "".join(items) + "</ul>")
 
 

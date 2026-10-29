@@ -39,11 +39,11 @@ project:
 
 ## Private Cloud Compute (Mac App Store build, opt-in)
 
-**Opt-in, off by default, App Store build only.** The rung exists only where
+**Opt-in, off by default, App Store builds only.** The rung exists only where
 Apple's entitlement does: the Mac App Store build carries
-`com.apple.developer.private-cloud-compute` (`M1K3-MAS.entitlements`); the
-Developer ID DMG does not, so a DMG install has no cloud path at all. iOS has
-no PCC rung.
+`com.apple.developer.private-cloud-compute` (`M1K3-MAS.entitlements`), and so
+does the iPhone and iPad build (`M1K3iOS.entitlements`); the Developer ID DMG
+does not, so a DMG install has no cloud path at all.
 
 With the Private Cloud Compute switch off — the default — no conversation goes
 to a cloud model. Turning it on in Settings adds "Private Cloud Compute" to the

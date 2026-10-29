@@ -238,7 +238,9 @@ def test_html_ladder_marks_reference_columns_and_folds_older_runs():
     assert '<th scope="col">Lil<br /><span class="table-note">Qwen3.5-4B-MLX-4bit</span></th>' in html  # shipped: the pinned model, bare
     assert '<th scope="col" class="ref">PCC<br />' in html  # reference column, set apart; hosted ids stay as-is
     assert '<th scope="col">Lil<br />' in html
-    assert "Private Cloud Compute" in html and "not shipped" in html
+    assert "Private Cloud Compute" in html and "not pinned" in html
+    # PCC ships as an opt-in brain (ADR 0010), so the page never says none of the references ship.
+    assert "None of them ships in M1K3" not in html and "not shipped" not in html
     # one year across the board: the year in the row header, MM-DD in the cells
     assert '<th scope="row">measured (2026)</th>' in html and '<span class="table-note">09-15</span>' in html
     mixed = bp._ladder_table([
