@@ -237,10 +237,10 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-28 — a dispatched turn's shares are measured on
 //  `ToolDispatch.promptText`, the text the model reads (a web search's URLs as hosts), so a chain splits the
 //  budget by what each result costs the prompt. The trace keeps the raw output for the Sources footer. Confidence 0.85.
-//  Review: Kev + claude-opus-5.5, 2026-10-29 — #447: the memory header says "Mention a fact only when it helps
-//  answer what they asked" for "Weave facts in naturally", which had Mini work unrelated memories into 7 of 10
-//  plain answers. Every tier and route renders this block, but only on a turn where a memory cleared the gate,
-//  so memory-free prompts are byte-identical. Confidence 0.7 until the paired Mini run and the blind set land.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — #447 tried and reverted: "Mention a fact only when it helps answer
+//  what they asked" in place of "Weave facts in naturally" left Mini working an unrelated memory into 14 of 15 plain
+//  answers, the same as the old clause (paired, MiniRetrievalNoiseEvalTests; macos/docs/evals/2026-10-29-mini-memory-
+//  noise.md). Wording is not the lever on Mini; the clause stays as it was. Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -1724,15 +1724,10 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // "Kev is…" came back as "Kev's been digging into sci-fi" in a reply
         // addressed to Kev, and titles came back as "[Water with lemon]"
         // cites — 0/12 of either with this wording).
-        // #447: "Weave facts in naturally" had Mini work an unrelated memory
-        // (a race in Galway, a sourdough starter) into 7 of 10 plain answers;
-        // a fact now rides along only when it helps. About +8 tokens, only on
-        // a turn where a memory cleared the gate (MiniRetrievalNoiseEvalTests).
         return "WHAT I KNOW ABOUT YOU (remembered from past conversations. These lines are "
             + "ABOUT the person you are talking to — speak to them as \"you\", never about "
-            + "them in the third person. Mention a fact only when it helps answer what they asked; "
-            + "never cite, quote, or bracket a memory. Where facts conflict, trust the most "
-            + "recently learned):"
+            + "them in the third person. Weave facts in naturally; never cite, quote, or "
+            + "bracket a memory. Where facts conflict, trust the most recently learned):"
             + "\n\(facts)"
     }
 

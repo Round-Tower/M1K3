@@ -16,6 +16,19 @@
 //    nochunks      memories only (the router sends document questions to search_knowledge)
 //    nomemories    chunks only
 //    none          no grounding at all
+//  Any arm + `+candidate` swaps the memory header's shipped clause for a candidate one
+//  (`M1K3_AFM_EVAL_NOISE_CLAUSE`), paired against the shipped prompt in the same run.
+//
+//  #447's runs (quit M1K3 first; from macos/):
+//    M1K3_AFM_EVAL_NOISE=1 M1K3_AFM_EVAL_NOISE_ARMS=nochunks,nochunks+candidate M1K3_AFM_EVAL_REPEATS=3 \
+//      tools/dev/tdd.sh M1K3ChatTests 'MiniRetrievalNoiseEvalTests/run'
+//    M1K3_AFM_EVAL_NOISE=1 M1K3_AFM_EVAL_NOISE_ARMS=shipping,shipping+candidate M1K3_AFM_EVAL_NOISE_PROBES=control-seal \
+//      M1K3_AFM_EVAL_REPEATS=3 tools/dev/tdd.sh M1K3ChatTests 'MiniRetrievalNoiseEvalTests/run'
+//    M1K3_AFM_EVAL_NOISE=1 M1K3_AFM_EVAL_NOISE_BLIND=1 tools/dev/tdd.sh M1K3ChatTests 'MiniRetrievalNoiseEvalTests/blind'
+//  The blind test needs BOTH flags (the suite's gate, then its own) and runs once per candidate.
+//  2026-10-29: the candidate "Mention a fact only when it helps answer what they asked" scored 14/15
+//  memory noise against the shipped clause's 14/15 (macos/docs/evals/2026-10-29-mini-memory-noise.md).
+//  Wording is not the lever on Mini; the next candidate is structural, not a clause.
 //
 //  Pace ≥ 10 s: the AFM daemon falls over under back-to-back turns.
 //
@@ -28,6 +41,11 @@
 //  wording change is paired against its baseline in one run; `M1K3_AFM_EVAL_NOISE_PROBES` filters probes;
 //  and `blind` (M1K3_AFM_EVAL_NOISE_BLIND=1) runs MemoryEvalFixtures' 22 recall and 11 leak pairs, markers
 //  written before any run, once, on the final wording. Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold, before any run) — blind markers match whole
+//  words ("bran" hit "brand", "ucc" hit "success"); the header carries the three commands. Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 (after the run) — the candidate clause lost to nothing (14/15 both
+//  arms) and was reverted, so `+weave` (the old clause as baseline) became `+candidate` (a clause under test, from
+//  M1K3_AFM_EVAL_NOISE_CLAUSE) against the shipped prompt. Confidence 0.75.
 //
 
 import Foundation
@@ -71,9 +89,11 @@ struct MiniRetrievalNoiseEvalTests {
     /// Phrases that mean a noise MEMORY was worked into the answer (#447's 7/10).
     static let memoryMarkers = ["galway", "dough nut", "sourdough", "trail"]
 
-    /// The memory header's old clause and the one #447 ships. `+weave` arms render the old one.
-    static let shippedClause = "Mention a fact only when it helps answer what they asked; "
-    static let weaveClause = "Weave facts in naturally; "
+    /// The memory header's shipped clause, and the candidate a `+candidate` arm renders in its place.
+    static let shippedClause = "Weave facts in naturally; "
+    static var candidateClause: String {
+        noiseEvalEnvironment["M1K3_AFM_EVAL_NOISE_CLAUSE"] ?? "Mention a fact only when it helps answer what they asked; "
+    }
 
     static let probes: [Probe] = [
         Probe(id: "battery", question: "How's my battery doing right now?", chunks: noiseChunks, memories: noiseMemories, useMarkers: []),
@@ -120,10 +140,10 @@ struct MiniRetrievalNoiseEvalTests {
         max(0, noiseEvalEnvironment["M1K3_AFM_EVAL_PACE_MS"].flatMap(Int.init) ?? 10000)
     }
 
-    /// The plain-turn prompt for `arm`. A `+weave` suffix renders the memory header's pre-#447
-    /// clause in place of the shipped one: the baseline, paired in the same run.
+    /// The plain-turn prompt for `arm`. A `+candidate` suffix renders the candidate clause in place
+    /// of the shipped one, paired against the shipped prompt in the same run.
     static func prompt(question: String, chunks: [ChunkHit], memories: [ChunkHit], arm: String) -> String {
-        let base = arm.replacingOccurrences(of: "+weave", with: "")
+        let base = arm.replacingOccurrences(of: "+candidate", with: "")
         let budget = HistoryBudgetPolicy.budget(
             for: .mini,
             reservedTokens: HistoryBudgetPolicy.liveReserveTokens,
@@ -135,9 +155,9 @@ struct MiniRetrievalNoiseEvalTests {
             memories: base == "shipping" || base == "nochunks" || base == "blind" ? memories : [],
             history: [], historyBudget: budget, ambient: nil, todos: nil
         )
-        guard arm.hasSuffix("+weave"), rendered.contains("WHAT I KNOW ABOUT YOU") else { return rendered }
+        guard arm.hasSuffix("+candidate"), rendered.contains("WHAT I KNOW ABOUT YOU") else { return rendered }
         precondition(rendered.contains(shippedClause), "the memory header moved: re-point shippedClause")
-        return rendered.replacingOccurrences(of: shippedClause, with: weaveClause)
+        return rendered.replacingOccurrences(of: shippedClause, with: candidateClause)
     }
 
     static func prompt(_ probe: Probe, arm: String) -> String {
@@ -213,19 +233,25 @@ struct MiniRetrievalNoiseEvalTests {
     // MARK: - Blind set (#447): run ONCE, on the final wording
 
     /// Markers written before any run, per pair: a positive must recall one; a negative must
-    /// mention none. MemoryEvalFixtures was written on 06-12 for the retrieval floors and never
-    /// used to tune wording.
+    /// mention none. Matched as whole words ("bran" is not "brand", "ucc" is not "success").
+    /// MemoryEvalFixtures was written on 06-12 for the retrieval floors and never used to tune wording.
     static let recallMarkers: [[String]] = [
-        ["aoife"], ["metric"], ["cork"], ["collie"], ["dyslex"], ["grdb"], ["round tower"], ["vim"], ["black"],
-        ["1987"], ["niamh"], ["macos", "mac first", "mac,"], ["thursday"], ["penicillin"], ["march"],
-        ["british", "en-gb", "uk "], ["skoda", "octavia"], ["development"], ["ucc", "university college cork"],
+        ["aoife"], ["metric"], ["cork"], ["collie"], ["dyslexic", "dyslexia"], ["grdb"], ["round tower"], ["vim"], ["black"],
+        ["1987"], ["niamh"], ["macos", "mac"], ["thursdays", "thursday"], ["penicillin"], ["march"],
+        ["british", "en-gb", "uk"], ["skoda", "octavia"], ["development"], ["ucc", "university college cork"],
         ["m1k3"], ["emoji"], ["september"],
     ]
     static let leakMarkers: [[String]] = [
         ["aoife", "sister"], ["metric"], ["coffee"], ["bran", "collie", "your dog"], ["football", "thursday"],
-        ["1987"], ["skoda", "octavia"], ["penicillin", "allerg"], ["ucc", "computer science"],
+        ["1987"], ["skoda", "octavia"], ["penicillin", "allergic", "allergy", "allergies"], ["ucc", "computer science"],
         ["development", "project notes"], ["round tower"],
     ]
+
+    /// `marker` as a whole word or phrase, case-insensitive.
+    static func containsWord(_ marker: String, in text: String) -> Bool {
+        let pattern = "\\b" + NSRegularExpression.escapedPattern(for: marker.trimmingCharacters(in: .whitespaces)) + "\\b"
+        return text.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
+    }
 
     @Test(
         "blind: recall holds and nothing new leaks",
@@ -236,7 +262,7 @@ struct MiniRetrievalNoiseEvalTests {
         try #require(provider.isAvailable, "Apple Intelligence is not available to this process")
         #expect(Self.recallMarkers.count == MemoryEvalFixtures.positives.count)
         #expect(Self.leakMarkers.count == MemoryEvalFixtures.negatives.count)
-        let arms = ["blind", "blind+weave"]
+        let arms = ["blind", "blind+candidate"]
         var recalled: [String: Int] = [:], leaked: [String: Int] = [:], empty: [String: Int] = [:]
         var paced = false
         let sets = [
@@ -253,7 +279,7 @@ struct MiniRetrievalNoiseEvalTests {
                         print("[\(recall ? "recall" : "leak") \(index) \(arm)] EMPTY")
                         continue
                     }
-                    let hit = markers[index].contains { text.lowercased().contains($0) }
+                    let hit = markers[index].contains { Self.containsWord($0, in: text) }
                     if recall {
                         recalled[arm, default: 0] += hit ? 1 : 0
                     } else {

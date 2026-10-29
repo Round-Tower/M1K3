@@ -19,9 +19,6 @@
 //  this year's results and unrecognised names (Kev: "isn't searching the internet much").
 //  Review: Kev + claude-opus-5, 2026-09-14, Confidence 0.85 — the ReAct pin's web route reads "even
 //  when notes appear below": the floor's rules now ride its stable head, above the turn's notes.
-//  Review: Kev + claude-opus-5.5, 2026-10-29 — #447: the memory header no longer says "Weave facts in
-//  naturally" (Mini worked an unrelated memory into 7 of 10 plain answers); a fact is mentioned only when
-//  it helps answer what was asked. Confidence 0.8 (the live effect is MiniRetrievalNoiseEvalTests').
 
 import Foundation
 import M1K3Agent
@@ -247,9 +244,6 @@ struct MemoryGroundingTests {
         // Told not to cite them — and to speak TO the user, not about them.
         #expect(out.contains("never cite, quote, or bracket"))
         #expect(out.contains("speak to them as \"you\""))
-        // #447: a remembered fact rides along only when it helps; "weave in" pulled unrelated ones in.
-        #expect(out.contains("Mention a fact only when it helps answer what they asked;"))
-        #expect(!out.contains("Weave facts in naturally"))
     }
 
     @Test("memory-only grounding keeps the no-knowledge hint, then the memory block")
