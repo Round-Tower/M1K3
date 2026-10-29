@@ -91,7 +91,8 @@ struct SnagNoteScanTests {
         let app = try Self.code("M1K3iOSApp/M1K3iOSHarnessApp.swift")
         let background = try #require(app.range(of: "case .background:"))
         let active = try #require(app.range(of: "case .active:"))
-        let afterBackground = app[background.upperBound ..< (active.lowerBound > background.upperBound ? active.lowerBound : app.endIndex)]
+        let backgroundEnd = active.lowerBound > background.upperBound ? active.lowerBound : app.endIndex
+        let afterBackground = app[background.upperBound ..< backgroundEnd]
         #expect(afterBackground.contains("sessionWentToBackground()"), "a trip to the background is a clean end")
         #expect(app[active.upperBound...].prefix(200).contains("sessionBecameActive()"))
         let boot = try Self.body(of: "boot", in: app)

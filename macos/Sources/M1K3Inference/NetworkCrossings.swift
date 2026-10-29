@@ -91,7 +91,9 @@ public enum NetworkCrossings {
         // the user's mail app sends it, so it is opt-in per message with nothing in Settings to leave on.
         list.append(Crossing(
             kind: .fieldReport, optIn: true, madeByApp: false,
-            phrase: String(localized: "email one exchange, or a short report after a snag, to Round Tower when you choose to"),
+            phrase: String(
+                localized: "email one exchange, or a short report after a snag, to Round Tower when you choose to"
+            ),
             hasSettingsSwitch: false
         ))
         return list

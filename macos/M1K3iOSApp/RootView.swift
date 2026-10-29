@@ -43,13 +43,15 @@ struct RootView: View {
     var body: some View {
         Group {
             if onboarded {
-                NavigationStack(path: $screengrabPath) { ChatScreen(screengrabPath: $screengrabPath).modifier(SnagNoteHost()) }
-                    .preferredColorScheme(.dark)
-                    .onOpenURL { url in
-                        // Every `m1k3://` link (event or not) is the chat screen, the stack's root.
-                        guard DeepLink(url: url) != nil else { return }
-                        screengrabPath = []
-                    }
+                NavigationStack(path: $screengrabPath) {
+                    ChatScreen(screengrabPath: $screengrabPath).modifier(SnagNoteHost())
+                }
+                .preferredColorScheme(.dark)
+                .onOpenURL { url in
+                    // Every `m1k3://` link (event or not) is the chat screen, the stack's root.
+                    guard DeepLink(url: url) != nil else { return }
+                    screengrabPath = []
+                }
             } else {
                 OnboardingScreen {
                     // Sole writer of the first-run gate: selectBrain can no-op

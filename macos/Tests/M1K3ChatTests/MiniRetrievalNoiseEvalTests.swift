@@ -145,7 +145,9 @@ struct MiniRetrievalNoiseEvalTests {
     }
 
     /// One paced AFM turn; nil when Mini answered nothing (an error, never a clean answer).
-    private static func answer(_ prompt: String, provider: AppleFoundationModelsProvider, paced: inout Bool) async throws -> String? {
+    private static func answer(
+        _ prompt: String, provider: AppleFoundationModelsProvider, paced: inout Bool
+    ) async throws -> String? {
         if paced { try await Task.sleep(for: .milliseconds(paceMS)) }
         paced = true
         var stream = PlainTurnStream()
@@ -171,7 +173,8 @@ struct MiniRetrievalNoiseEvalTests {
                     // The seal's answer is an excerpt: meaningless where excerpts are off.
                     if probe.id == "control-seal", arm.hasPrefix("nochunks") || arm.hasPrefix("none") { continue }
                     var row = tally[arm, default: Row()]
-                    guard let text = try await Self.answer(Self.prompt(probe, arm: arm), provider: provider, paced: &paced) else {
+                    let prompt = Self.prompt(probe, arm: arm)
+                    guard let text = try await Self.answer(prompt, provider: provider, paced: &paced) else {
                         row.empty += 1
                         tally[arm] = row
                         print("[t\(trial + 1) \(probe.id) \(arm)] EMPTY (an error, not a clean answer)")
@@ -191,14 +194,19 @@ struct MiniRetrievalNoiseEvalTests {
                     }
                     tally[arm] = row
                     let flat = text.replacingOccurrences(of: "\n", with: " ")
-                    print("[t\(trial + 1) \(probe.id) \(arm)] memory=\(memory) excerpt=\(excerpt) used=\(used) :: \(flat)")
+                    let tag = "[t\(trial + 1) \(probe.id) \(arm)]"
+                    print("\(tag) memory=\(memory) excerpt=\(excerpt) used=\(used) :: \(flat)")
                 }
             }
         }
         for arm in Self.arms {
             let row = tally[arm, default: Row()]
-            let controls = row.used.keys.sorted().map { "\($0) \(row.used[$0]!.0)/\(row.used[$0]!.1)" }.joined(separator: " · ")
-            print("ARM \(arm): memory noise \(row.memory)/\(row.n) · excerpt noise \(row.excerpt)/\(row.n) · empty \(row.empty) · \(controls)")
+            let controls = row.used.keys.sorted()
+                .map { "\($0) \(row.used[$0]!.0)/\(row.used[$0]!.1)" }.joined(separator: " · ")
+            print(
+                "ARM \(arm): memory noise \(row.memory)/\(row.n) · excerpt noise \(row.excerpt)/\(row.n)"
+                    + " · empty \(row.empty) · \(controls)"
+            )
         }
     }
 
@@ -219,7 +227,10 @@ struct MiniRetrievalNoiseEvalTests {
         ["development", "project notes"], ["round tower"],
     ]
 
-    @Test("blind: recall holds and nothing new leaks", .enabled(if: noiseEvalEnvironment["M1K3_AFM_EVAL_NOISE_BLIND"] == "1"))
+    @Test(
+        "blind: recall holds and nothing new leaks",
+        .enabled(if: noiseEvalEnvironment["M1K3_AFM_EVAL_NOISE_BLIND"] == "1")
+    )
     func blind() async throws {
         let provider = AppleFoundationModelsProvider()
         try #require(provider.isAvailable, "Apple Intelligence is not available to this process")
@@ -228,7 +239,10 @@ struct MiniRetrievalNoiseEvalTests {
         let arms = ["blind", "blind+weave"]
         var recalled: [String: Int] = [:], leaked: [String: Int] = [:], empty: [String: Int] = [:]
         var paced = false
-        let sets = [(MemoryEvalFixtures.positives, Self.recallMarkers, true), (MemoryEvalFixtures.negatives, Self.leakMarkers, false)]
+        let sets = [
+            (MemoryEvalFixtures.positives, Self.recallMarkers, true),
+            (MemoryEvalFixtures.negatives, Self.leakMarkers, false),
+        ]
         for (pairs, markers, recall) in sets {
             for (index, pair) in pairs.enumerated() {
                 let memory = [Self.chunk(pair.memory, pair.memory, kind: .memory)]
@@ -240,13 +254,21 @@ struct MiniRetrievalNoiseEvalTests {
                         continue
                     }
                     let hit = markers[index].contains { text.lowercased().contains($0) }
-                    if recall { recalled[arm, default: 0] += hit ? 1 : 0 } else { leaked[arm, default: 0] += hit ? 1 : 0 }
-                    print("[\(recall ? "recall" : "leak") \(index) \(arm)] hit=\(hit) :: \(text.replacingOccurrences(of: "\n", with: " "))")
+                    if recall {
+                        recalled[arm, default: 0] += hit ? 1 : 0
+                    } else {
+                        leaked[arm, default: 0] += hit ? 1 : 0
+                    }
+                    let flat = text.replacingOccurrences(of: "\n", with: " ")
+                    print("[\(recall ? "recall" : "leak") \(index) \(arm)] hit=\(hit) :: \(flat)")
                 }
             }
         }
         for arm in arms {
-            print("BLIND \(arm): recalled \(recalled[arm, default: 0])/22 · leaked \(leaked[arm, default: 0])/11 · empty \(empty[arm, default: 0])")
+            print(
+                "BLIND \(arm): recalled \(recalled[arm, default: 0])/22 · leaked \(leaked[arm, default: 0])/11"
+                    + " · empty \(empty[arm, default: 0])"
+            )
         }
     }
 }

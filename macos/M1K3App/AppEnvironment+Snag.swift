@@ -41,6 +41,7 @@ extension AppEnvironment {
     func noteUncleanExit(openedAt: Date, now: Date = Date()) {
         reviewLedger.recordCrash(at: now)
         snag = SnagNote(openedAt: openedAt, noticedAt: now)
-        M1K3Log.logger(.launch).notice("session: the last one didn't close cleanly (began \(openedAt, privacy: .public))")
+        M1K3Log.logger(.launch)
+            .notice("session: the last one didn't close cleanly (began \(openedAt, privacy: .public))")
     }
 }
