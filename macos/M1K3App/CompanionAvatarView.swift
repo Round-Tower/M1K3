@@ -257,7 +257,7 @@ struct CompanionAvatarView: View {
     /// The style to paint: the user's pick, or the phosphor costume while a season is in
     /// (`wearing`): the seasonal tint lives only in the phosphor shader.
     private var shadingStyle: CompanionShadingStyle {
-        (CompanionShadingStyle(rawValue: shadingRaw) ?? .off).wearing(season)
+        (CompanionShadingStyle(rawValue: shadingRaw) ?? .off).wearing(season, on: companion)
     }
 
     /// Settings ▸ Companion ▸ Seasonal looks (opt-out, default on).

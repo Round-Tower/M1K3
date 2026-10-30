@@ -43,6 +43,14 @@ struct CompanionLoadScanTests {
         #expect(try Self.source().contains("scene.loadedCompanionID = scene.displayedCompanion?.id"))
     }
 
+    @Test("iPhone: leaving the chat lets go of the keyboard, so it can't come back mid-transition")
+    func chatReleasesFocusOnLeaving() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let chat = try String(contentsOf: root.appendingPathComponent("M1K3iOSApp/ChatScreen.swift"), encoding: .utf8)
+        #expect(chat.contains(".onDisappear { inputFocused = false }"))
+    }
+
     @Test("a companion change doesn't wait on a RealityView update: the covered chat hero follows it")
     func changeIsObserved() throws {
         let src = try Self.source()

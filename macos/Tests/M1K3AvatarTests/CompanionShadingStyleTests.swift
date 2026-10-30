@@ -52,4 +52,23 @@ struct CompanionShadingStyleTests {
             #expect(!style.displayName.isEmpty)
         }
     }
+
+    @Test("a season costumes only the Phosphor Fox: the lattice is what it colours, and the others have none")
+    func seasonIsFoxOnly() {
+        // Kev's iPhone, 2026-10-30: the costume is a rim glow on a near-black body on anything else,
+        // which "looks poor". The fox wears it; the others keep their own textures through a season.
+        #expect(CompanionShadingStyle.off.wearing(.halloween, on: .phosphorFox) == .phosphor)
+        #expect(CompanionShadingStyle.off.wearing(.flightClub, on: .phosphorFox) == .phosphor)
+        for spec in CompanionSpec.all where spec != .phosphorFox {
+            #expect(CompanionShadingStyle.off.wearing(.halloween, on: spec) == .off, "\(spec.id)")
+            #expect(CompanionShadingStyle.cel.wearing(.flightClub, on: spec) == .cel, "\(spec.id)")
+        }
+    }
+
+    @Test("out of season, the user's pick stands on every companion")
+    func outOfSeason() {
+        for spec in CompanionSpec.all {
+            #expect(CompanionShadingStyle.cel.wearing(nil, on: spec) == .cel, "\(spec.id)")
+        }
+    }
 }

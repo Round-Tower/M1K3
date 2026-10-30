@@ -103,6 +103,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — typed answer blocks (#717): a choices card is live on the newest
 //  message only, while no turn responds (`acceptsChoices`), as on the Mac; an earlier or reloaded card stays
 //  readable and never sends a stale option. Confidence 0.75 (verify on the phone).
+//  Review: Kev + claude-opus-5.5, 2026-10-30 — Kev's iPhone round: the field lets go when the chat disappears, and a
+//  failed brain offers "Send a report" through the snag sheet. Confidence 0.65 (the keyboard is a device check).
 
 import M1K3Avatar
 import M1K3Chat
@@ -195,6 +197,9 @@ struct ChatScreen: View {
             inputBar
         }
         .background(backdrop)
+        // Settings is a push, so the field stays first responder underneath and the keyboard came
+        // back mid-transition, covering the composer (Kev, 10-30). It returns on the next tap.
+        .onDisappear { inputFocused = false }
         // No navigation title — the wordmark lives in the empty-state hero; once
         // chatting, the transcript owns the screen (2026-07-29, Kev's call).
         #if os(iOS)
