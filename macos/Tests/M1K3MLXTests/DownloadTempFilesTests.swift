@@ -59,6 +59,16 @@ struct DownloadTempFilesTests {
         #expect(DownloadTempFiles.strays(files, now: now).map(\.name) == ["CFNetworkDownload_old.tmp"])
     }
 
+    @Test("the bar never runs backwards: a stall past the live window keeps the last reading")
+    func barHoldsItsHighWaterMark() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let source = try String(
+            contentsOf: root.appendingPathComponent("Sources/M1K3MLX/HuggingFaceBridge.swift"), encoding: .utf8
+        )
+        #expect(source.contains("let bytes = max(inFlightBytes(url), cached?.bytes ?? 0)"))
+    }
+
     @Test("strays clear before the verified-copy exit: a phone with its brain installed holds them too")
     func clearsBeforeTheFastPath() throws {
         // Kev's phone kept its 1.85 GB after Lil landed, because every later load left on the fast path.

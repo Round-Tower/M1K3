@@ -90,8 +90,8 @@ public enum NetworkCrossings {
         // Last in both lanes: the one crossing M1K3 never makes itself. A thumbs-down can offer to
         // email that exchange to Round Tower, and after a session that didn't close cleanly M1K3
         // offers once to email a short report (#750), and a phone offers one when a brain won't get
-        // ready; every way the sheet shows the exact body and
-        // the user's mail app sends it, so it is opt-in per message with nothing in Settings to leave on.
+        // ready. Every way, the sheet shows the exact body and the user's mail app sends it, so it is
+        // opt-in per message with nothing in Settings to leave on.
         list.append(Crossing(
             kind: .fieldReport, optIn: true, madeByApp: false,
             phrase: String(

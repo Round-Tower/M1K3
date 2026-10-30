@@ -42,6 +42,8 @@
 //  URLSession wrote the file to tmp. `DownloadTempFiles` counts the live temp file and clears strays over an hour
 //  old (six on his phone, 1.85 GB, back to 10-13). Measured on the device. A killed attempt still restarts from
 //  zero: tmp isn't resumable. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-30 (bot pass on #754) — the bar holds its high-water mark through a stall
+//  past `liveWindow`, and strays clear before the verified-copy exit. Confidence 0.85.
 //
 
 import Foundation
@@ -434,7 +436,8 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
         if let cached, now - cached.at < .milliseconds(500) {
             return cached.bytes
         }
-        let bytes = inFlightBytes(url)
+        // Held at its high-water mark: past `liveWindow` a stalled file drops out of the count.
+        let bytes = max(inFlightBytes(url), cached?.bytes ?? 0)
         state.withLock { $0 = (now, bytes) }
         return bytes
     }

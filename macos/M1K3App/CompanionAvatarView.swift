@@ -81,6 +81,8 @@
 //  one left a creature looping idle for the life of the process), a cancelled load gives its claim back, and
 //  `.onChange`/`.onAppear` claim a switch so a hero covered by Settings follows the picker. Confidence 0.65: from
 //  code; whether `Entity(contentsOf:)` throws on cancel and whether a covered RealityView updates are device facts.
+//  Review: Kev + claude-opus-5.5, 2026-10-30 (bot pass on #754) — a claim is released only while it's still this load's:
+//  a newer switch claims before its load bumps the token. Kev's hand test passed on the phone. Confidence 0.8.
 
 // AppKit on macOS, UIKit on iOS/visionOS — the companion render path is now
 // cross-platform (shared into the M1K3iOSApp mobile shell). Only the emotion-fill
@@ -514,8 +516,11 @@ struct CompanionAvatarView: View {
             guard token == scene.loadToken else { return }
             if Task.isCancelled {
                 // A cancel isn't a broken asset, so the no-retry rule above doesn't apply: give
-                // the claim back and the next update, change or appear loads it again.
-                scene.loadedCompanionID = scene.displayedCompanion?.id
+                // the claim back and the next update, change or appear loads it again. Only while
+                // it's still ours: a newer switch claims before its load bumps the token.
+                if scene.loadedCompanionID == companion.id {
+                    scene.loadedCompanionID = scene.displayedCompanion?.id
+                }
             } else {
                 Self.log.error("companion \(companion.id, privacy: .public): mesh failed to load")
             }
@@ -537,7 +542,9 @@ struct CompanionAvatarView: View {
             let complete = CompanionAssets.isComplete(harvested.keys, for: companion)
             if complete { CompanionClipCache.byCompanion[companion.id] = harvested }
             if !complete, Task.isCancelled, token == scene.loadToken {
-                scene.loadedCompanionID = scene.displayedCompanion?.id
+                if scene.loadedCompanionID == companion.id {
+                    scene.loadedCompanionID = scene.displayedCompanion?.id
+                }
                 return
             }
             clips = harvested

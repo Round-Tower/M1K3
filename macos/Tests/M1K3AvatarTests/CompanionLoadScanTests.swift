@@ -38,9 +38,14 @@ struct CompanionLoadScanTests {
         #expect(try Self.source().contains("harvestClips(idleHost: host, for: companion)"))
     }
 
-    @Test("a cancelled load gives its claim back, so the next update retries")
+    @Test("a cancelled load gives its claim back, only while the claim is still its own")
     func cancelledLoadReleasesClaim() throws {
-        #expect(try Self.source().contains("scene.loadedCompanionID = scene.displayedCompanion?.id"))
+        let src = try Self.source()
+        // A cancelled load can resume before its successor bumps the token, with the claim already
+        // on the new target: releasing it unguarded re-triggers a switch (bot pass on #754).
+        let release = "scene.loadedCompanionID = scene.displayedCompanion?.id"
+        #expect(src.components(separatedBy: release).count == 3, "both release sites")
+        #expect(src.components(separatedBy: "scene.loadedCompanionID == companion.id").count == 3)
     }
 
     @Test("iPhone: the keyboard goes down BEFORE the push: after it, this screen loses its keyboard avoidance")
