@@ -38,6 +38,10 @@
 //  Review: same day (pre-push review fold, security pass) — `fetchedCut`: the cut stands for the pin only when it
 //  keeps every pinned weight shard, so a tokenizer-only pattern list can't verify, write a receipt or reclaim the
 //  quarantine on no weight evidence (latent: no caller sets a tokenizer source today).
+//  Review: Kev + claude-opus-5.5, 2026-10-30 — Kev's "hangs at 1%": the bar counted only the repo folder while
+//  URLSession wrote the file to tmp. `DownloadTempFiles` counts the live temp file and clears strays over an hour
+//  old (six on his phone, 1.85 GB, back to 10-13). Measured on the device. A killed attempt still restarts from
+//  zero: tmp isn't resumable. Confidence 0.85.
 //
 
 import Foundation
@@ -82,6 +86,47 @@ struct RepoTreeEntry: Decodable, Equatable {
     let type: String
     let size: Int
     let path: String
+}
+
+/// URLSession's download task writes to `tmp/CFNetworkDownload_*.tmp` and moves the file into the
+/// repo only when it completes, so a scan of the repo folder sees nothing of a file in flight: Lil's
+/// 3 GB read as 1% until the last second (Kev's iPhone, 2026-10-30). A dead attempt leaves its temp
+/// file behind, and the next one starts over, so the bar counts only a file still being written.
+enum DownloadTempFiles {
+    struct File: Equatable {
+        let name: String
+        let bytes: Int
+        let modified: Date
+    }
+
+    /// Longer than a slow patch, shorter than any retry: a dead attempt's file drops out of the bar.
+    static let liveWindow: TimeInterval = 60
+    /// Old enough that nothing in this process can still be writing it.
+    static let strayAge: TimeInterval = 3600
+    private static let prefix = "CFNetworkDownload_"
+
+    static func liveBytes(_ files: [File], now: Date) -> Int {
+        files.filter { $0.name.hasPrefix(prefix) && now.timeIntervalSince($0.modified) < liveWindow }
+            .reduce(0) { $0 + $1.bytes }
+    }
+
+    static func strays(_ files: [File], now: Date) -> [File] {
+        files.filter { $0.name.hasPrefix(prefix) && now.timeIntervalSince($0.modified) > strayAge }
+    }
+
+    /// The process's temp directory, as `File`s. Empty if it can't be read: the bar just lags.
+    static func scan(_ directory: URL = FileManager.default.temporaryDirectory) -> [File] {
+        let keys: Set<URLResourceKey> = [.fileSizeKey, .contentModificationDateKey]
+        let urls = (try? FileManager.default.contentsOfDirectory(
+            at: directory, includingPropertiesForKeys: Array(keys)
+        )) ?? []
+        return urls.compactMap { url in
+            guard let values = try? url.resourceValues(forKeys: keys),
+                  let bytes = values.fileSize, let modified = values.contentModificationDate
+            else { return nil }
+            return File(name: url.lastPathComponent, bytes: bytes, modified: modified)
+        }
+    }
 }
 
 /// Expected byte total for the files a snapshot will actually fetch — the
@@ -156,6 +201,7 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
         let startSizeMB = Self.directorySizeMB(localPath)
         let pin = PinnedWeights.pin(for: id)
         let enforcedPin = Self.enforcedPin(pin, patterns: patterns)
+        Self.removeStrayTempFiles()
 
         // #72 item 1: when the caller does not want a refresh and the cache
         // already verifies fully against the pinned manifest, the network
@@ -224,7 +270,7 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
                     }
 
                     if throttle.withLock({ $0.shouldEmit(fraction: fraction, now: now) }) {
-                        let sizeMB = Self.directorySizeMB(localPath)
+                        let sizeMB = Self.inFlightBytes(localPath) / 1_048_576
                         let previous = rateState.withLock { state in
                             let prior = state
                             state = (sizeMB, now)
@@ -388,13 +434,30 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
         if let cached, now - cached.at < .milliseconds(500) {
             return cached.bytes
         }
-        let bytes = directorySizeBytes(url)
+        let bytes = inFlightBytes(url)
         state.withLock { $0 = (now, bytes) }
         return bytes
     }
 
     private static func directorySizeMB(_ url: URL) -> Int {
         directorySizeBytes(url) / 1_048_576
+    }
+
+    /// What this download has really got: the repo folder plus the file URLSession is still writing.
+    private static func inFlightBytes(_ url: URL) -> Int {
+        directorySizeBytes(url) + DownloadTempFiles.liveBytes(DownloadTempFiles.scan(), now: Date())
+    }
+
+    /// Clear what dead attempts left in tmp. They can't be resumed, and they hold real storage.
+    private static func removeStrayTempFiles() {
+        let directory = FileManager.default.temporaryDirectory
+        let strays = DownloadTempFiles.strays(DownloadTempFiles.scan(directory), now: Date())
+        guard !strays.isEmpty else { return }
+        for stray in strays {
+            try? FileManager.default.removeItem(at: directory.appendingPathComponent(stray.name))
+        }
+        let mb = strays.reduce(0) { $0 + $1.bytes } / 1_048_576
+        downloadLog.notice("cleared \(strays.count) stray download temp file(s), \(mb)MB")
     }
 
     /// Recursive on-disk size — model repos are ~a dozen files, so this is a
