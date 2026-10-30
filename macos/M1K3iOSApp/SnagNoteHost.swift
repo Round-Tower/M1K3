@@ -86,7 +86,7 @@ private struct SnagNoteCard: View {
 
 /// The exact report, editable, then the user's own mail app. Send never closes the sheet: an
 /// accepted link is not a compose window, so the text stays here until Done.
-private struct SnagReportSheet: View {
+struct SnagReportSheet: View {
     let draft: SnagDraft
     let onDone: () -> Void
 
@@ -107,16 +107,9 @@ private struct SnagReportSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text("""
-                    This is the whole message: that M1K3 didn't close cleanly last time, when that session began, \
-                    the brain, the app and system versions, and any crash summaries this device kept. Nothing you \
-                    typed or said goes with it. It goes to \(RoundTowerReports.recipient) from your own mail app, \
-                    which opens with it filled in. M1K3 sends nothing itself. Round Tower reads it to find what went \
-                    wrong, and deletes it if you ask. If you remember what you were doing, add it at the end: that \
-                    helps most.
-                    """)
-                    .font(.callout)
-                    .fixedSize(horizontal: false, vertical: true)
+                    Text(draft.intro)
+                        .font(.callout)
+                        .fixedSize(horizontal: false, vertical: true)
 
                     TextEditor(text: $text)
                         .font(.callout)

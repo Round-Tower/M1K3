@@ -285,6 +285,9 @@ final class AppCore {
     private(set) var brainLoad: ModelLoadState = .idle
     /// Moves only when the download's fraction does, so the chat row can say a transfer has stalled.
     private(set) var brainStall = DownloadStallWatch()
+    /// What the chat showed for a brain that failed, for the report it offers. Nil for a stop, which is the
+    /// person's own act.
+    private(set) var brainFailureShown: String?
     /// The chat auto-speak session (AppCore+AutoSpeak); nil when idle.
     @ObservationIgnored var autoSpeakTask: Task<Void, Never>?
     /// Bumped per auto-speak session: a session's end touches only state it still owns.
@@ -951,6 +954,7 @@ final class AppCore {
             guard let self, generation == warmGeneration else { return }
             brainLoad = .preparing
             brainStall.reset()
+            brainFailureShown = nil
             // Reuse the provider already built for this exact model (cold launch made
             // one as the slot's initial backend); only build fresh on a model change,
             // releasing the outgoing weights first — never leak two Metal instances.
@@ -1007,7 +1011,11 @@ final class AppCore {
                     Self.log.notice("brain warm: \(tierName, privacy: .public) download stopped")
                     return
                 }
-                brainLoad = .failed(message: error.localizedDescription)
+                // The Mac's rule: a known failure in plain words, else the system's own line. It used
+                // to be the raw description, so every failed download read "appears to be offline".
+                let message = DownloadFailureCopy.knownMessage(for: error) ?? error.localizedDescription
+                brainLoad = .failed(message: message)
+                brainFailureShown = message
                 Self.log.error("brain warm failed: \(error.localizedDescription, privacy: .public)")
             }
         }

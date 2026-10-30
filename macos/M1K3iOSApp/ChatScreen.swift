@@ -139,6 +139,8 @@ struct ChatScreen: View {
     @State private var attachmentError: String?
     @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
     @State private var privateCloudPending: PendingPrivateCloudSend?
+    @AppStorage(PersistedAgeBandProvider.defaultsKey) private var ageBandRaw: String?
+    @State private var brainFailureDraft: SnagDraft?
     @FocusState private var inputFocused: Bool
 
     private var chatting: Bool {
@@ -288,6 +290,9 @@ struct ChatScreen: View {
                 case .pairing: BrainPairingScreen()
                 }
             }
+            .sheet(item: $brainFailureDraft) { draft in
+                SnagReportSheet(draft: draft, onDone: { brainFailureDraft = nil })
+            }
             .sheet(item: $privateCloudPending) { pending in
                 privateCloudConsentView(pending)
             }
@@ -407,6 +412,14 @@ struct ChatScreen: View {
                     .foregroundStyle(.orange)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
+                if let shown = core.brainFailureShown,
+                   AgeAppropriateness.fieldReportAllowed(for: AgeBand(persisted: ageBandRaw))
+                {
+                    Button("Send a report") {
+                        Task { brainFailureDraft = await core.brainFailureDraft(shown: shown) }
+                    }
+                    .font(.caption)
+                }
             }
         }
         .padding(.top, 8)

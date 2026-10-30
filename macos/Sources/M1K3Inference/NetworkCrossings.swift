@@ -24,6 +24,8 @@
 //  is unchanged by construction; per-message opt-in is the control, so no Settings switch. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: `.fieldReport`'s phrase names the short report offered after a
 //  snag, sent the same way. Confidence unchanged.
+//  Review: Kev + claude-opus-5.5, 2026-10-30 — and the report a phone offers when a brain won't get ready.
+//  Confidence unchanged.
 
 import Foundation
 
@@ -87,12 +89,13 @@ public enum NetworkCrossings {
         }
         // Last in both lanes: the one crossing M1K3 never makes itself. A thumbs-down can offer to
         // email that exchange to Round Tower, and after a session that didn't close cleanly M1K3
-        // offers once to email a short report (#750); either way the sheet shows the exact body and
+        // offers once to email a short report (#750), and a phone offers one when a brain won't get
+        // ready; every way the sheet shows the exact body and
         // the user's mail app sends it, so it is opt-in per message with nothing in Settings to leave on.
         list.append(Crossing(
             kind: .fieldReport, optIn: true, madeByApp: false,
             phrase: String(
-                localized: "email one exchange, or a short report after a snag, to Round Tower when you choose to"
+                localized: "email one exchange, or a short report after a snag or a failed brain download, to Round Tower when you choose to"
             ),
             hasSettingsSwitch: false
         ))

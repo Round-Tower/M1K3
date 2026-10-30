@@ -19,6 +19,7 @@
 //  next launch restored; the Mac reporter reads its recipient from `RoundTowerReports` too. Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-10-30 — the subject takes Round Tower's support format (Kev: "Lexy | iOS Support
 //  | v4.0.2"), shared with the field report through `RoundTowerReports.subject`. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-30 — `subject(system:version:)`, for BrainFailureReport too. Confidence 0.8.
 //
 
 import Foundation
@@ -31,6 +32,11 @@ public enum RoundTowerReports {
     /// the app, the platform and the version, so nothing the user wrote. The rest is in the body.
     public static func subject(platform: String, version: String) -> String {
         "M1K3 | \(platform) Support | v\(version)"
+    }
+
+    /// The same, the platform being `system` less its version number ("iOS 27.2" reads "iOS").
+    public static func subject(system: String, version: String) -> String {
+        subject(platform: system.split(separator: " ").first.map(String.init) ?? system, version: version)
     }
 }
 
@@ -118,9 +124,8 @@ public enum SnagReportFormatter {
         return scrubExtra(body(scrubbed))
     }
 
-    /// Round Tower's support subject. The platform is `system` less its version number.
+    /// Round Tower's support subject.
     public static func subject(_ report: SnagReport) -> String {
-        let platform = report.system.split(separator: " ").first.map(String.init) ?? report.system
-        return RoundTowerReports.subject(platform: platform, version: report.appVersion)
+        RoundTowerReports.subject(system: report.system, version: report.appVersion)
     }
 }
