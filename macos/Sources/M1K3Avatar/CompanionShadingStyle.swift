@@ -24,6 +24,8 @@
 //  true as written. The `.phosphor` doc no longer calls itself "the default". Confidence 0.85.
 //  Review: Kev + claude-sonnet-5.5, 2026-10-22 — `wearing(_:)` also covers Flight Club (any non-nil season), so the
 //  shading pick is overridden while the device is offline in season, and returns when it is back online. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-30 — a season now costumes the Phosphor Fox alone: on creatures with no
+//  lattice the costume was a rim glow on a near-black body (Kev's iPhone round; his call). Confidence 0.85.
 //
 
 public enum CompanionShadingStyle: String, CaseIterable, Identifiable, Sendable {
@@ -69,11 +71,13 @@ public enum CompanionShadingStyle: String, CaseIterable, Identifiable, Sendable 
         self == .cel
     }
 
-    /// The style to paint while `season` is in: the costume IS the phosphor shader (its
-    /// seasonal tint has nowhere else to live), so a season overrides the user's pick for
-    /// its window; out of season the pick stands. The Seasonal looks opt-out is upstream
-    /// (it makes `season` nil).
-    public func wearing(_ season: SeasonalLook?) -> CompanionShadingStyle {
-        season == nil ? self : .phosphor
+    /// The style to paint on `companion` while `season` is in. The costume IS the phosphor shader
+    /// (its seasonal tint has nowhere else to live), and it colours the Phosphor Fox's lattice, so
+    /// a season overrides the user's pick on the fox alone. On a creature with no lattice it was
+    /// a rim glow on a near-black body, which "looks poor" (Kev, 2026-10-30), so they keep the
+    /// user's pick. Out of season the pick stands. The Seasonal looks opt-out is upstream (it
+    /// makes `season` nil).
+    public func wearing(_ season: SeasonalLook?, on companion: CompanionSpec) -> CompanionShadingStyle {
+        season != nil && companion == .phosphorFox ? .phosphor : self
     }
 }

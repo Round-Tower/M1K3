@@ -17,6 +17,7 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.8 (pure mapping pinned by
 //  DownloadFailureCopyTests; the copy itself is Kev's call on first read).
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-30 — "this device": the iPhone shell reads this copy now. Confidence 0.8.
 
 import Foundation
 
@@ -63,7 +64,7 @@ public enum DownloadFailureCopy {
         case .offline:
             return String(localized: "Couldn't reach the download server. Check your connection and try again.")
         case .diskFull:
-            return String(localized: "Not enough space on this Mac. Remove a download you don't use, or free some space, then try again.")
+            return String(localized: "Not enough space on this device. Remove a download you don't use, or free some space, then try again.")
         case let .integrity(message):
             return message
         case .cancelled:

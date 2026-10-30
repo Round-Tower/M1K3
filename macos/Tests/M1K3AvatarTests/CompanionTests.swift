@@ -178,4 +178,16 @@ struct CompanionTests {
             #expect(d <= 1.0)
         }
     }
+
+    @Test("a clip harvest is complete only with every clip bundled for the companion")
+    func harvestCompleteness() throws {
+        let spec = CompanionSpec.fox
+        let bundled = CompanionAssets.clipURLs(for: spec).map(\.clip)
+        try #require(bundled.count > 1, "the test needs a companion with more than its idle clip")
+        #expect(CompanionAssets.isComplete(bundled, for: spec))
+        #expect(CompanionAssets.isComplete(bundled + ["extra"], for: spec))
+        // What a cancelled harvest leaves: the idle clip alone, which must never reach the cache.
+        #expect(!CompanionAssets.isComplete([spec.idleClip], for: spec))
+        #expect(!CompanionAssets.isComplete([], for: spec))
+    }
 }

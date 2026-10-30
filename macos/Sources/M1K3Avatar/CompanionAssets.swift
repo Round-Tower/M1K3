@@ -8,6 +8,8 @@
 //  no xcodegen. Layout: Companions/<id>/<clip>.usdz.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-11, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-10-30 — `isComplete`, the rule for what may enter the process-wide clip
+//  cache (a cut-off harvest stuck a creature on its idle loop). Confidence 0.8.
 
 import Foundation
 
@@ -32,5 +34,12 @@ public enum CompanionAssets {
         spec.clips.compactMap { clip in
             clipURL(companion: spec.id, clip: clip).map { (clip, $0) }
         }
+    }
+
+    /// True when `harvested` holds every clip bundled for the companion. A cancelled harvest comes
+    /// back partial, often the idle clip alone; only a complete one may be kept for the process,
+    /// or the creature can never act again.
+    public static func isComplete(_ harvested: some Sequence<String>, for spec: CompanionSpec) -> Bool {
+        Set(clipURLs(for: spec).map(\.clip)).isSubset(of: harvested)
     }
 }

@@ -100,6 +100,28 @@ struct SnagNoteScanTests {
         #expect(content.contains(".frame(minWidth: 480, minHeight: 520)"))
     }
 
+    @Test("iPhone: a brain that won't get ready says why, and offers a report through the same sheet")
+    func iosBrainFailureOffersAReport() throws {
+        let core = try Self.code("M1K3iOSApp/AppCore.swift")
+        #expect(core.contains("DownloadFailureCopy.knownMessage(for: error) ?? error.localizedDescription"))
+        #expect(!core.contains("brainLoad = .failed(message: error.localizedDescription)"))
+        let chat = try Self.code("M1K3iOSApp/ChatScreen.swift")
+        #expect(chat.contains("core.brainFailureShown"))
+        #expect(chat.contains("AgeAppropriateness.fieldReportAllowed"))
+        #expect(chat.contains("SnagReportSheet("))
+        // Stopping a download is the user's own act, so it never offers a report.
+        let stopped = try #require(core.range(of: "download stopped"))
+        let failed = try #require(core.range(of: "brainFailureShown = message"))
+        #expect(stopped.lowerBound < failed.lowerBound)
+    }
+
+    @Test("iPhone: the report's log comes through the formatter's category gate")
+    func iosReportLogIsGated() throws {
+        let snag = try Self.code("M1K3iOSApp/AppCore+Snag.swift")
+        #expect(snag.contains("BrainFailureReportFormatter.logLines("))
+        #expect(snag.contains("BrainFailureReportFormatter.redactedBody("))
+    }
+
     @Test("iPhone: the app owns the mark, sets it before AppCore builds, and clears it first on background")
     func iosMarksTheActiveScene() throws {
         let app = try Self.code("M1K3iOSApp/M1K3iOSHarnessApp.swift")

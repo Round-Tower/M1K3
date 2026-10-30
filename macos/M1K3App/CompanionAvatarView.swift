@@ -77,6 +77,12 @@
 //  polling). Confidence 0.8 (verify-by-launch with `-seasonalLook flightclub`; real Airplane Mode on device).
 //  Review: Kev + claude-opus-5-5, 2026-10-22 — the site Fox: docs name SiteFoxPaint (black triangles, white lattice;
 //  seasons colour the lattice). No behaviour change in this file. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-10-30 — Kev's iPhone round: only a complete clip harvest is cached (a cut-off
+//  one left a creature looping idle for the life of the process), a cancelled load gives its claim back, and
+//  `.onChange`/`.onAppear` claim a switch so a hero covered by Settings follows the picker. Confidence 0.65: from
+//  code; whether `Entity(contentsOf:)` throws on cancel and whether a covered RealityView updates are device facts.
+//  Review: Kev + claude-opus-5.5, 2026-10-30 (bot pass on #754) — a claim is released only while it's still this load's:
+//  a newer switch claims before its load bumps the token. Kev's hand test passed on the phone. Confidence 0.8.
 
 // AppKit on macOS, UIKit on iOS/visionOS — the companion render path is now
 // cross-platform (shared into the M1K3iOSApp mobile shell). Only the emotion-fill
@@ -253,7 +259,7 @@ struct CompanionAvatarView: View {
     /// The style to paint: the user's pick, or the phosphor costume while a season is in
     /// (`wearing`): the seasonal tint lives only in the phosphor shader.
     private var shadingStyle: CompanionShadingStyle {
-        (CompanionShadingStyle(rawValue: shadingRaw) ?? .off).wearing(season)
+        (CompanionShadingStyle(rawValue: shadingRaw) ?? .off).wearing(season, on: companion)
     }
 
     /// Settings ▸ Companion ▸ Seasonal looks (opt-out, default on).
@@ -392,26 +398,21 @@ struct CompanionAvatarView: View {
             if let fit, scene.built, let frame = scene.frame {
                 fit(content, frame)
             }
-            if companion.id != scene.loadedCompanionID {
-                // Selection changed → claim the target SYNCHRONOUSLY here (not inside
-                // the async Task), so this high-frequency closure can't spawn a second
-                // reload for the same companion before the first begins. The swap
-                // happens in the SAME RealityView (no recreation → no black).
-                scene.loadedCompanionID = companion.id
-                let target = companion
-                scene.loadTask?.cancel()
-                scene.loadTask = Task { await reload(to: target) }
-            } else if scene.built {
+            if !claimSwitch(), scene.built {
                 sync(to: controller.state)
             }
             if scene.built { applyPause(paused) }
         }
         .overlay { if tile { CRTOverlay(paused: paused) } }
+        // `update` alone isn't enough: a hero covered by a pushed Settings may not render, and
+        // nothing invalidates it on the way back, so the old creature stayed on (Kev, 10-30).
+        .onChange(of: companion.id) { claimSwitch() }
         .onAppear {
             // Back on screen without a rebuild: the brain resumes from now (hidden
             // time never counts toward a fidget) and re-arms its one timer.
             scene.choreographer?.presenceChanged(paused ? .paused : .animating, at: Self.now())
             rearmWake()
+            claimSwitch()
         }
         .onDisappear {
             scene.loadTask?.cancel()
@@ -457,6 +458,20 @@ struct CompanionAvatarView: View {
 
     private static let log = Logger(subsystem: "app.m1k3", category: "companion")
 
+    /// Start the swap when the selection has moved past the claim. Claims the target
+    /// SYNCHRONOUSLY (not inside the async Task), so the high-frequency update closure can't
+    /// spawn a second reload for the same companion before the first begins. The swap happens
+    /// in the SAME RealityView (no recreation → no black). Returns whether a swap started.
+    @discardableResult
+    private func claimSwitch() -> Bool {
+        guard scene.scaffoldBuilt, companion.id != scene.loadedCompanionID else { return false }
+        scene.loadedCompanionID = companion.id
+        let target = companion
+        scene.loadTask?.cancel()
+        scene.loadTask = Task { await reload(to: target) }
+        return true
+    }
+
     /// Load `companion`'s mesh and swap it into the persistent `root` IN PLACE — the
     /// RealityView, lights and camera are untouched, so a switch can never blank the
     /// surface. Cancels stragglers via a monotonic token (a slow load that finishes
@@ -498,7 +513,15 @@ struct CompanionAvatarView: View {
             // rides RealityView's own closure lifetime. Cancellation only
             // silences this log — the load itself runs to completion so a
             // re-shown view never finds a half-built scene.
-            if token == scene.loadToken, !Task.isCancelled {
+            guard token == scene.loadToken else { return }
+            if Task.isCancelled {
+                // A cancel isn't a broken asset, so the no-retry rule above doesn't apply: give
+                // the claim back and the next update, change or appear loads it again. Only while
+                // it's still ours: a newer switch claims before its load bumps the token.
+                if scene.loadedCompanionID == companion.id {
+                    scene.loadedCompanionID = scene.displayedCompanion?.id
+                }
+            } else {
                 Self.log.error("companion \(companion.id, privacy: .public): mesh failed to load")
             }
             return
@@ -513,8 +536,17 @@ struct CompanionAvatarView: View {
         if let cached = CompanionClipCache.byCompanion[companion.id], !cached.isEmpty {
             clips = cached
         } else {
-            let harvested = await harvestClips(idleHost: host)
-            if !harvested.isEmpty { CompanionClipCache.byCompanion[companion.id] = harvested }
+            let harvested = await harvestClips(idleHost: host, for: companion)
+            // Only a whole set: a cut-off harvest kept here would leave this creature stuck on
+            // its idle loop for the life of the process (Kev, 10-30). `try?` hides why it's short.
+            let complete = CompanionAssets.isComplete(harvested.keys, for: companion)
+            if complete { CompanionClipCache.byCompanion[companion.id] = harvested }
+            if !complete, Task.isCancelled, token == scene.loadToken {
+                if scene.loadedCompanionID == companion.id {
+                    scene.loadedCompanionID = scene.displayedCompanion?.id
+                }
+                return
+            }
             clips = harvested
         }
         guard token == scene.loadToken else { return }
@@ -597,7 +629,9 @@ struct CompanionAvatarView: View {
     /// Harvest each bundled clip as an animation resource bound to the idle host's
     /// rig. The idle file's own clip comes from `host`; the rest cross-bind from
     /// their donor files (one mesh + N clip files — proven in scratch/usdz-probe).
-    private func harvestClips(idleHost host: Entity) async -> [String: AnimationResource] {
+    private func harvestClips(
+        idleHost host: Entity, for companion: CompanionSpec
+    ) async -> [String: AnimationResource] {
         var clips: [String: AnimationResource] = [:]
         if let idleAnim = host.availableAnimations.first {
             clips[companion.idleClip] = idleAnim

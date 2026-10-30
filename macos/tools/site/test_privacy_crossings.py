@@ -129,6 +129,8 @@ def test_the_privacy_page_names_the_field_report_its_recipient_and_its_purpose()
     assert "the only things we can ever receive are an exchange you choose to email us" in page
     # #750: after a session that didn't close cleanly, the same path offers a short report once.
     assert "didn't close cleanly" in page
+    # And on a phone whose brain won't get ready (Kev, 2026-10-30): the "only things" line stays true.
+    assert "or a brain wouldn't get ready, each through your own mail app" in page
     assert "no automatic crash reporting" in page
     assert "no crash reporting" not in page.replace("no automatic crash reporting", "")
     assert "We use them only to reply and do not add you to any list." not in page

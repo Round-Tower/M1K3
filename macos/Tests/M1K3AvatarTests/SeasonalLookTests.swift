@@ -10,6 +10,8 @@
 //  Review: Kev + claude-sonnet-5.5, 2026-10-22 — Offline AI Flight Club (Nov 3 – Dec 1, offline only):
 //  every call gains `offline:`; window, gate, precedence, override, palette and greeting pinned below.
 //  Confidence 0.85 (pure maths; the on-screen look is verify-by-launch, and real Airplane Mode on device).
+//  Review: Kev + claude-opus-5.5, 2026-10-30 — the `wearing` pins read the Phosphor Fox: a season costumes it alone.
+//  Confidence unchanged.
 //
 
 import Foundation
@@ -66,8 +68,8 @@ struct SeasonalLookTests {
     @Test("in season every shading style wears the phosphor costume; out of season the choice stands")
     func seasonWearsPhosphor() {
         for style in CompanionShadingStyle.allCases {
-            #expect(style.wearing(.halloween) == .phosphor)
-            #expect(style.wearing(nil) == style)
+            #expect(style.wearing(.halloween, on: .phosphorFox) == .phosphor)
+            #expect(style.wearing(nil, on: .phosphorFox) == style)
         }
     }
 
@@ -273,8 +275,8 @@ struct SeasonalLookTests {
     @Test("in flight colours every shading style wears the phosphor shader too")
     func flightWearsPhosphor() {
         for style in CompanionShadingStyle.allCases {
-            #expect(style.wearing(.flightClub) == .phosphor)
-            #expect(style.wearing(.flightClub) == style.wearing(.halloween))
+            #expect(style.wearing(.flightClub, on: .phosphorFox) == .phosphor)
+            #expect(style.wearing(.flightClub, on: .phosphorFox) == style.wearing(.halloween, on: .phosphorFox))
         }
     }
 
