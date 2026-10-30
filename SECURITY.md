@@ -26,6 +26,8 @@ project:
   web search, which is on by default with one switch in Settings to turn it
   off; model downloads the user asks for; a user-initiated Private Cloud
   Compute turn; one exchange the user chooses to email us from a thumbs-down,
+  or, after a session that didn't close cleanly, a short report of when it
+  began, the brain, the app and system versions and any crash summaries — each
   shown in full and editable before their own mail app opens it — M1K3 itself
   sends nothing, and the recipient is **hello@round-tower.ie**).
 - Prompt-injection paths that exfiltrate knowledge-base or memory content
@@ -37,11 +39,11 @@ project:
 
 ## Private Cloud Compute (Mac App Store build, opt-in)
 
-**Opt-in, off by default, App Store build only.** The rung exists only where
+**Opt-in, off by default, App Store builds only.** The rung exists only where
 Apple's entitlement does: the Mac App Store build carries
-`com.apple.developer.private-cloud-compute` (`M1K3-MAS.entitlements`); the
-Developer ID DMG does not, so a DMG install has no cloud path at all. iOS has
-no PCC rung.
+`com.apple.developer.private-cloud-compute` (`M1K3-MAS.entitlements`), and so
+does the iPhone and iPad build (`M1K3iOS.entitlements`); the Developer ID DMG
+does not, so a DMG install has no cloud path at all.
 
 With the Private Cloud Compute switch off — the default — no conversation goes
 to a cloud model. Turning it on in Settings adds "Private Cloud Compute" to the
@@ -69,8 +71,9 @@ stores your conversations, on-device or via PCC.
 off by policy, so on those installs no conversation goes to anyone's cloud. The
 documented crossings that remain are the model downloads you ask for, web
 search (and the lookups it makes), which the user can switch off in Settings,
-and the one exchange a user chooses to email from a thumbs-down in the Mac app,
-through their own mail app. No policy key turns that last one off yet.
+and the reports a user chooses to email through their own mail app: one exchange
+from a thumbs-down in the Mac app, or a short report after a session that didn't
+close cleanly. No policy key turns those off yet.
 
 ## Supported versions
 
@@ -93,4 +96,6 @@ through their own mail app. No policy key turns that last one off yet.
      in-app list is NetworkCrossings.fieldReport; the sheet shows the exact body first). Confidence 0.85.
      Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — the Teams paragraph names the field report
      among the crossings that remain on a managed install, and says no policy key turns it off yet (whether
-     Teams needs one is Kev's call on #708). Confidence 0.85. -->
+     Teams needs one is Kev's call on #708). Confidence 0.85.
+     Review: Kev + claude-opus-5.5, 2026-10-29 — #750: the list and the Teams paragraph name the short report M1K3
+     offers once after a session that didn't close cleanly, sent the same way as an exchange. Confidence 0.85. -->

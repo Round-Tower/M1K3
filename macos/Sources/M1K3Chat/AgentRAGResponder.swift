@@ -237,6 +237,14 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-28 — a dispatched turn's shares are measured on
 //  `ToolDispatch.promptText`, the text the model reads (a web search's URLs as hosts), so a chain splits the
 //  budget by what each result costs the prompt. The trace keeps the raw output for the Sources footer. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — #447 tried and reverted: "Mention a fact only when it helps answer
+//  what they asked" in place of "Weave facts in naturally" left Mini working an unrelated memory into 14 of 15 plain
+//  answers, the same as the old clause (paired, MiniRetrievalNoiseEvalTests; macos/docs/evals/2026-10-29-mini-memory-
+//  noise.md). Wording is not the lever on Mini; the clause stays as it was. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — #447's structural fix: after the wiring filter, HashingMemoryGate keeps
+//  only memories that share a content word with the question on the hashing arm (a profile ask keeps all), once at
+//  retrieval so every route agrees. It failed its blind bar; Kev overrode it (HashingMemoryGate's signature has the
+//  numbers). Confidence 0.65.
 
 import Foundation
 import M1K3Agent
@@ -578,6 +586,17 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 )
             }
             memories = usable
+            // #447: on the hashing arm a memory sharing no content word with the question cleared the
+            // floor through bucket collisions, never meaning, and Mini wove it into unrelated answers.
+            // Once, here, so every route (plain, the dispatch fallbacks, the agent turn, the sources
+            // list) reads the same list, and before the budget so a dropped memory spends nothing.
+            // Identity on any other embedder. Kev overrode the failed blind bar knowingly (2026-10-29).
+            let anchored = HashingMemoryGate.admitted(memories, question: question, fingerprint: embedder.fingerprint)
+            if anchored.count < memories.count {
+                let dropped = memories.count - anchored.count
+                Self.log.notice("hashing memory gate: \(dropped, privacy: .public) unrelated memory hit(s) dropped")
+            }
+            memories = anchored
             phases.retrieved(at: phaseClock.now)
         }
         // Grounding-size safety cap (2026-07-20): both lanes above are injected

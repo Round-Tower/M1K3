@@ -22,6 +22,8 @@
 //  no gate-key flip — window/session/menu bar stay alive. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the Re-run button arms OnboardingTrace so the sheet's breadcrumbs carry ms since the tap
 //  ("it was slow", TestFlight). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — the Screen Saver row is gone: the screensaver is parked for 1.3.0
+//  (Kev: "a poor implementation as it stands"); ScreenSaverParkedScanTests keeps it out. Confidence 0.85.
 
 import AppKit
 import M1K3Inference
@@ -42,8 +44,6 @@ struct GeneralSettingsPane: View {
     var body: some View {
         Form {
             startupSection
-
-            ScreenSaverSettingsSection()
 
             Section {
                 Toggle("Notify me in the background", isOn: $notifyOnLongTurn)

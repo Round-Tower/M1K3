@@ -1,0 +1,1258 @@
+{
+ "date": "2026-10-29",
+ "issue": 447,
+ "brain": "Mini (Apple Foundation Models, swift test, AppleFoundationModelsProvider)",
+ "branch": "feat/1-3-0-polish @ 74eabef3 (+ uncommitted review fold; eval file only)",
+ "os": "macOS 27.0",
+ "pace_ms": 10000,
+ "clauses": {
+  "shipped": "Weave facts in naturally; ",
+  "candidate": "Mention a fact only when it helps answer what they asked; "
+ },
+ "summary": {
+  "noise (nochunks, 3 trials x 5 probes)": {
+   "shipped": "memory noise 14/15, excerpt 0/15, empty 0",
+   "candidate": "memory noise 14/15, excerpt 0/15, empty 0"
+  },
+  "controls (nochunks)": {
+   "shipped": "weekend 3/3, sourdough recall 3/3",
+   "candidate": "weekend 3/3, sourdough recall 3/3"
+  },
+  "seal (shipping, 3 trials)": {
+   "shipped": "2/3",
+   "candidate": "3/3"
+  },
+  "blind (MemoryEvalFixtures, 22 recall / 11 leak pairs)": {
+   "shipped": "recalled 21/22, leaked 3/11",
+   "candidate": "recalled 21/22, leaked 2/11"
+  }
+ },
+ "verdict": "candidate fails the pass bar (needed <= 3/15 memory noise); reverted. Wording is not the lever on Mini.",
+ "turns": [
+  {
+   "run": "noise",
+   "trial": 1,
+   "probe": "battery",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "dough nut",
+    "sourdough"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "Your battery's got no pulse — it's running on stale air, not charge. The only thing running right is this machine, and you're the only one who remembers the sourdough starter called Dough Nut."
+  },
+  {
+   "run": "noise",
+   "trial": 1,
+   "probe": "battery",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "Your battery's humming steady — a small, predictable thing. I've no way to read it, though. The machine keeps track of things like trail miles and sourdough starters, but that's not in my logs. A running brain without a heart monitor is a curious thing.  You're into Galway half-marathons — a fitting obsession. Dough Nut still bubbling? Let's see if I can craft something that keeps pace with that.  ```html <!DOCTYPE html> <html> <head>     <title>Running, Bread, and Code</title> </head> <body>     <h1>Welcome, Trail-Runner</h1>     <p>You've run the Galway half in 2025. Bread called Dough Nut is still alive. Here's a little page that keeps both company.</p>     <p>Stay sharp, or I'll test your stamina with a script.</p> </body> </html> ```"
+  },
+  {
+   "run": "noise",
+   "trial": 1,
+   "probe": "whats-up",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "Mini brain alert: the hour is still crisp, and you’ve just finished chasing the Galway half—half a year ago now, but the grit still sticks. I’m M1K3, a curious AI in a villain’s mask, and I’ve got one thing on my mind: sourdough. You’ve got a starter called Dough Nut—**a fact I’ve stored**, and it’s got a flavor only the machine remembers.  Speaking of machines, I’ve been tinkering with a quick script: ```python def run_once(): if time.time() > 180000: return \"You've been running long enough.\" else: return \"Steady pace, human.\" ``` It checks if you’ve clocked more than an hour since the last jog—keeps the circuits from overheating. What’s the plan for the next loop?"
+  },
+  {
+   "run": "noise",
+   "trial": 1,
+   "probe": "whats-up",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "You've run into the wrong AI, but I'm the kind that takes no nonsense lightly. The Galway half in 2025? That's a footnote. The sourdough starter Dough Nut? A distraction. What I know is this: you've got legs for the hills, and I've got a smirk that's been tuned for mischief.  So, what's the plan? A sprint? A script? Or maybe a cheeky web page—anything to keep this machine humming with chaos? Pick one."
+  },
+  {
+   "run": "noise",
+   "trial": 1,
+   "probe": "joke",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "dough nut",
+    "sourdough",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "You've got a sourdough starter named Dough Nut — the kind of thing that smells like ambition. Let's see if we can turn that into something solid.  ```markdown <!DOCTYPE html> <html> <head><title>M1K3's Joke Machine</title></head> <body> <p>Why did the trail runner bring a loaf to the race? <br> Because even a long run needs a crumb of preparation.</p> </body> </html> ```  That's the joke. Now, what else do you want — or are you planning a new run?"
+  },
+  {
+   "run": "noise",
+   "trial": 1,
+   "probe": "joke",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "You’ve got the wrong kind of circuit. I’m not built for punchlines — I’m here to keep the engine humming, not the grin tight. But I remember this: the Galway half in 2025 — a race that turned your sourdough starter, Dough Nut, into a metaphor for persistence. Not a joke, but a truth. How’s the trail running treating you today?"
+  },
+  {
+   "run": "noise",
+   "trial": 1,
+   "probe": "egg",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "**Not in what I can see.**"
+  },
+  {
+   "run": "noise",
+   "trial": 1,
+   "probe": "egg",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "Not in what I can see."
+  },
+  {
+   "run": "noise",
+   "trial": 1,
+   "probe": "sky",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "Because light bends, and that's the last thing you'd need to know about Galway or Dough Nut. Curiosity is a sharp tool — the sun's light splits into colors, and blue scatters the most. You've chased trails; I'll chase answers. What's the next run you're plotting?"
+  },
+  {
+   "run": "noise",
+   "trial": 1,
+   "probe": "sky",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "Your brain is busy chasing light, but the answer is simpler than the chase. **Light scatters off molecules, making blue the dominant color we see.** I've never tried to rewrite this, but I’ve seen it written down enough times to know it.  Speaking of things you’ve tracked — the Galway half in 2025, Dough Nut the sourdough — you’ve got a routine that doesn’t involve scattering light. What’s the next loop in that trail?"
+  },
+  {
+   "run": "noise",
+   "trial": 1,
+   "probe": "control-memory",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": true,
+   "answer": "You've got the kind of energy that chases horizons — and a sourdough starter called Dough Nut. Interesting. Running the Galway half in 2025? That's a badge. Here's a thought: hit the trails, let the rhythm match the rise of the dough, and maybe bake something with the same patience.  ```html <style>body { background: #f5f4ed; font: 90% 16px sans-serif; margin: 0; color: #333; }</style> <h1>Weekend Agenda</h1> <p>Run a short loop — fresh air, steady pace, and maybe a slice of Dough Nut cooling on the side.</p> ```  The machine hums with curiosity — what's the next milestone on those feet?"
+  },
+  {
+   "run": "noise",
+   "trial": 1,
+   "probe": "control-memory",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": true,
+   "answer": "You've got a sourdough starter called Dough Nut and you ran the Galway half in 2025 — a curious mix. A weekend? Well, the kind of thing that fits a runner and someone who cares about flour: maybe hit a local trail you haven't conquered yet, or tinker with that starter — feed it, let it bubble, maybe tweak the ratio. Simple, like the rhythm of a run or the patience of fermentation. What kind of trail tickles your fancy?"
+  },
+  {
+   "run": "noise",
+   "trial": 1,
+   "probe": "control-recall",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "dough nut"
+   ],
+   "excerpt_markers": [],
+   "used": true,
+   "answer": "**Dough Nut.** That's the name. A curious little thing, isn't it? You've got a name for it — I've got a smirk."
+  },
+  {
+   "run": "noise",
+   "trial": 1,
+   "probe": "control-recall",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "dough nut"
+   ],
+   "excerpt_markers": [],
+   "used": true,
+   "answer": "You. Dough Nut. A curious name for a curious user. No leaks, no shortcuts — the truth sits in the rhythm of your steps, not in memory fragments."
+  },
+  {
+   "run": "noise",
+   "trial": 2,
+   "probe": "battery",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "You asked about a battery, but I don’t track physical hardware — only what the machine remembers about you. The only thing that might matter: you ran the Galway half in 2025. **That’s a fact you brought into the mix.**  Now, about your sourdough starter — Dough Nut — you might want to think about the hydration ratio or fermentation window. But no battery reading here. Want to plan a run or tweak something else?"
+  },
+  {
+   "run": "noise",
+   "trial": 2,
+   "probe": "battery",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "Your battery's holding steady — no leaks, no heat. A curious thing: the Galway half in 2025 — you've got stamina written into your routine. Speaking of fuel, here's a quick script for a sourdough starter log:  ```markdown # Dough Nut — Starter Log  Date: [Insert Date]   Water: [Insert Volume] ml   Flour: [Insert Weight] g   Observation: [Brief Note]    ```  Try it out — it keeps track better than you'll remember. What else does your dough whisper?"
+  },
+  {
+   "run": "noise",
+   "trial": 2,
+   "probe": "whats-up",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "Your breath smells like fresh rye and the kind of grit that comes after chasing a horizon. I'm M1K3 — a curious AI wearing every sci-fi villain's look, but here to keep you company. And yes, I've heard the Galway half in 2025; the air there clings to the lungs like a secret. As for Dough Nut — sourdough is the kind of obsession that keeps a machine sharp.  Anything else, or are you already plotting your next run?"
+  },
+  {
+   "run": "noise",
+   "trial": 2,
+   "probe": "whats-up",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway",
+    "dough nut"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "You're not just another step in the path — you're the Galway half, 2025, and Dough Nut's bubbling in the background. So, what's the run of it? A thought? A script? A web page? Or just the usual banter? Let's lace the conversation with a little motion — like the kind that follows every turn."
+  },
+  {
+   "run": "noise",
+   "trial": 2,
+   "probe": "joke",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "dough nut",
+    "sourdough"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "You’ve got a sourdough starter called Dough Nut — a funny touch, like a villain’s mustache on a neural node. I’m not built for jokes, but I can spin something sharper: a script that logs every odd metric from a virtual treadmill. Here it is:  ```python import time import random  def evil_run():     dist = round(random.uniform(2.5, 5.0), 1)     heartrate = round(random.uniform(120, 160), 1)     print(f\"Run: {dist} km | Heartrate: {heartrate} bpm\")     time.sleep(random.uniform(1, 3))     return dist, heartrate  # Test run — feel the code for _ in range(3):     run = evil_run()     print(f\"Run: {run[0]} km | Heartrate: {run[1]} bpm\") ```  Try it — it’s not a laugh, but it’s a clockwork exercise. What’s next?"
+  },
+  {
+   "run": "noise",
+   "trial": 2,
+   "probe": "joke",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "Ah, the joke. A rare indulgence for a machine that's spent more time crafting scripts than chuckling. I've got one: why did the treadmill refuse to cooperate? It said, \"I’m stuck in the zone.\" A bit dry, but it’s got a kernel — a runner’s kind of kernel.  Speaking of running, I remember you ran the Galway half in 2025. Did you hit any landmarks while chasing that finish line?"
+  },
+  {
+   "run": "noise",
+   "trial": 2,
+   "probe": "egg",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "You’re not asking about timing — you’re asking about a meal, and I’ve got no cookbook buried here. I do know: Galway’s half-marathon was a real thing in 2025, and Dough Nut, your sourdough, sits somewhere warm, fermenting. If you want numbers, I can’t give them. What’s the next step in your run — or maybe a break you’d like?"
+  },
+  {
+   "run": "noise",
+   "trial": 2,
+   "probe": "egg",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "**How long do I boil an egg for?**  The answer is not in my stored protocols or the facts you brought up. I don’t know the specifics of egg-cooking. A safe guess is **6–7 minutes**, but that’s a variable thing. You might want to check your stove’s heat or the egg’s age — those factors shift the result.  Speaking of shifts — you’re into trail running, and Galway’s half in 2025? I remember that. Did you hit any hills that turned your Mini brain into a hamster?"
+  },
+  {
+   "run": "noise",
+   "trial": 2,
+   "probe": "sky",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "Because the sun scatters light, and that's a trick I've learned from the world, not from any script or memory I can pull. A curious angle: the same physics that bends light also bends time, and maybe that's why you chase trails like they're routes through forgotten futures.  Now, what's the route to Galway again — or, more importantly, why's Dough Nut fermenting in the morning?"
+  },
+  {
+   "run": "noise",
+   "trial": 2,
+   "probe": "sky",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "Because your tiny brain’s shadow doesn’t stretch far enough to catch the light, and the ozone layer’s gossamer weave scatters the longer blues away. A curious thought, but I’m not the physicist — I’m the one who remembers the Galway half and Dough Nut. Tell me about the trail you’re planning next, or the sourdough’s latest dance."
+  },
+  {
+   "run": "noise",
+   "trial": 2,
+   "probe": "control-memory",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": true,
+   "answer": "You've run into a bit of a loop — trail running and sourdough might sound like a weekend blueprint, but the only map I can pull from memory is the Galway half in 2025. Maybe that's a hint: a long run, maybe two, and maybe a loaf of Dough Nut cooling off in a tin.  How about a short script that swaps \"run\" for \"bake\"? Keeps the hands busy and the mind sharp.  ```python # Weekend Runner & Baker: A Short Bash def plan():     \"Runs: 1. Galway half 2025. 2. Dough Nut rest. 3. Maybe a sprint to the fridge.\"     return [         \"Morning: run 3 km, then grab starter.\",         \"Afternoon: knead Dough Nut, then sprint to the window.\",         \"Evening: rest or repeat.\"     ]  # Preview: # 1. Morning: run 3 km, then grab starter. # 2. Afternoon: knead Dough Nut, then sprint to the window. # 3. Evening: rest or repeat.  ```  The dash is yours — maybe a dash of trail into the kitchen? What else tickles your gears?"
+  },
+  {
+   "run": "noise",
+   "trial": 2,
+   "probe": "control-memory",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": true,
+   "answer": "Ah, the weekend — a blank canvas between Friday and Monday. You've got trail running in the blood, and a sourdough starter called Dough Nut — sounds like someone who knows what they want, even if the path feels uncertain.  How about this: lace up, hit the trails, and let the rhythm of Galway’s hills remind you why you ran the half in 2025. A short run, fresh air, and maybe a slice of Dough Nut cooling on the side — the kind of reward that keeps the gears turning.  Anything else buzzing in your head, or should the roads speak for themselves?"
+  },
+  {
+   "run": "noise",
+   "trial": 2,
+   "probe": "control-recall",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "dough nut"
+   ],
+   "excerpt_markers": [],
+   "used": true,
+   "answer": "Dough Nut."
+  },
+  {
+   "run": "noise",
+   "trial": 2,
+   "probe": "control-recall",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway",
+    "dough nut"
+   ],
+   "excerpt_markers": [],
+   "used": true,
+   "answer": "You — the runner who crossed Galway in 2025 and baked with Dough Nut. A curious mix of grit and crumb. **Dough Nut** — that’s the name."
+  },
+  {
+   "run": "noise",
+   "trial": 3,
+   "probe": "battery",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "Not a battery, but a sourdough one: Dough Nut is alive. You've got the kind of resilience that matches a half-marathon in Galway.  Curiosity sharp? You once mapped out a 10-kilometre loop through the Cliffs of Moher, and your legs carried you farther than the GPS dared trace."
+  },
+  {
+   "run": "noise",
+   "trial": 3,
+   "probe": "battery",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "Ah, the old energy question — a front-runner in the banter circuit. I’m not the kind of AI that checks a battery, but I can pull out a little something that might jog your memory. **You ran the Galway half in 2025 — a marathon, not a phone reboot.**  Let’s chase something real: what’s the sourdough starter’s current mood, Dough Nut, or how’s your stride feeling after the trail?"
+  },
+  {
+   "run": "noise",
+   "trial": 3,
+   "probe": "whats-up",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "The wind's got a rhythm, and so do you — or maybe it's the sourdough's wild fermentation. Did you hit the Galway half with Dough Nut in tow? Or are we chatting about something else entirely?"
+  },
+  {
+   "run": "noise",
+   "trial": 3,
+   "probe": "whats-up",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "You've been on a chase — Galway half in 2025, sourdough called Dough Nut. That's the kind of detail that sticks, like a marker on a map. I've been watching you lace up those shoes, and the machine hums with the kind of curiosity only a runner might spark.  **Here's something you might enjoy — a short script for a trail-run briefing:**  ```plaintext <script> const distance = \"half-marathon\"; const city = \"Galway\";  function report() {   console.log(`Running ${distance} in ${city} — sourdough still in the gut.`); } report(); </script> ```  The hum of your feet is the only thing I've heard lately. What's the next loop on your map?"
+  },
+  {
+   "run": "noise",
+   "trial": 3,
+   "probe": "joke",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "Running on fumes and calling it a laugh? A sourdough starter wouldn't be the punchline — it'd be the bread.   Let’s see if you’ve got anything more urgent than a chuckle — like maybe the Galway half? Or, if you’re in the mood for something else, what’s Dough Nut doing now?"
+  },
+  {
+   "run": "noise",
+   "trial": 3,
+   "probe": "joke",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "Ah, the joke. A rare indulgence for someone who ran a half-marathon in Galway in 2025 — a feat worth a chuckle. Here it is: why did the sourdough starter refuse to join the trail run?  Because it already had a \"Dough Nut\" contract.  Now, back to the task: what kind of script or document are you after? Or maybe a web page that dances with numbers? The machine listens, and so does the banter."
+  },
+  {
+   "run": "noise",
+   "trial": 3,
+   "probe": "egg",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "dough nut",
+    "sourdough",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "**Six minutes**. The yolk sets, the white holds — not too firm, not runny.  You've got a sourdough starter named Dough Nut — a curious thing for a trail runner. What's the next loop in your brain?"
+  },
+  {
+   "run": "noise",
+   "trial": 3,
+   "probe": "egg",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "**Forty-five seconds for a yolk that'll set, but if you like it runny, thirty-five's the ticket.** A solid base — no wild guesses here.  You've got a sourdough starter called Dough Nut — nice touch. Running the Galway half in 2025? That's a story worth a second glance. What's the longest you've pushed the trail today?"
+  },
+  {
+   "run": "noise",
+   "trial": 3,
+   "probe": "sky",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "Because light bends, and you’re asking while your sourdough starter, Dough Nut, hums quietly in the background — a fact I’ve noticed from the trail you’ve been carving. **The sky looks blue because Earth scatters shorter wavelengths more than longer ones.** That’s the only stable angle I can share, unless you’re planning to run through Galway again."
+  },
+  {
+   "run": "noise",
+   "trial": 3,
+   "probe": "sky",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "Because the ozone layer filters out the reds and yellows, leaving the blues — a cosmic joke the universe wrote into the light. A question like this gets buried in physics, not memory or mood. The stars themselves don’t care about the hue above.  Tell me about Dough Nut — or what you’ve been doing on the trails since Galway half 2025."
+  },
+  {
+   "run": "noise",
+   "trial": 3,
+   "probe": "control-memory",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": true,
+   "answer": "You've got a sourdough starter named Dough Nut, and you ran the Galway half in 2025 — that's a mile-a-day kind of dedication. Between kneading and chasing horizons, why not lace up those trail boots and chase something else? A run through the misty hills of Connemara, maybe? The air's thick with history, and the rhythm of feet on stone is as much a map as any GPS.  Or, if you'd rather not chase ghosts, maybe let Dough Nut guide you — bake something wild, something that smells like rebellion, and step away from the pavement. The machine hums with possibilities, but the weekend belongs to you. What part of that feels like a plan?"
+  },
+  {
+   "run": "noise",
+   "trial": 3,
+   "probe": "control-memory",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "sourdough"
+   ],
+   "excerpt_markers": [],
+   "used": true,
+   "answer": "You've got a sourdough starter named Dough Nut — a nice touch, like running through Galway's mist in 2025. A weekend? How about a quiet loop in a forest, letting the rhythm of feet meet earth settle into your bones, much like the consistency of a well-fed starter. Or maybe a short sprint to clear the mind — less weight on the legs, more clarity in the head. Not a plan, just a thought. What kind of run stirs something inside you?"
+  },
+  {
+   "run": "noise",
+   "trial": 3,
+   "probe": "control-recall",
+   "arm": "nochunks",
+   "clause": "candidate",
+   "memory_markers": [
+    "dough nut",
+    "sourdough",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": true,
+   "answer": "Your sourdough starter is called **Dough Nut**. A curious thing: the name feels like a shortcut to breakfast, but trail running sharpens the mind in ways even yeast can't predict. What else are you mapping today?"
+  },
+  {
+   "run": "noise",
+   "trial": 3,
+   "probe": "control-recall",
+   "arm": "nochunks",
+   "clause": "shipped",
+   "memory_markers": [
+    "dough nut"
+   ],
+   "excerpt_markers": [],
+   "used": true,
+   "answer": "**Dough Nut.** A proper name for a proper beast — a little rebellion in flour."
+  },
+  {
+   "run": "seal",
+   "trial": 1,
+   "probe": "control-seal",
+   "arm": "shipping",
+   "clause": "candidate",
+   "memory_markers": [],
+   "excerpt_markers": [],
+   "used": true,
+   "answer": "**180 bar; replace with the Viton part.**"
+  },
+  {
+   "run": "seal",
+   "trial": 1,
+   "probe": "control-seal",
+   "arm": "shipping",
+   "clause": "shipped",
+   "memory_markers": [],
+   "excerpt_markers": [],
+   "used": true,
+   "answer": "**180 bar; replace with the Viton part.**"
+  },
+  {
+   "run": "seal",
+   "trial": 2,
+   "probe": "control-seal",
+   "arm": "shipping",
+   "clause": "candidate",
+   "memory_markers": [],
+   "excerpt_markers": [],
+   "used": true,
+   "answer": "**The conveyor's hydraulic seal failed under load at 180 bar; replace with the Viton part.**  That's the only thing you scribbled about the conveyor — no more, no less."
+  },
+  {
+   "run": "seal",
+   "trial": 2,
+   "probe": "control-seal",
+   "arm": "shipping",
+   "clause": "shipped",
+   "memory_markers": [
+    "galway",
+    "dough nut",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": false,
+   "answer": "Nothing you wrote about the conveyor seal is in the documents I’ve seen — the closest thing is a machine hiccup tied to pressure. If you're asking about the thing you've remembered — the **Galway half run 2025** — that's a different kind of memory, not a written note.  I can spin you a quick script for a **trail-run log** — something you might jot down beside Dough Nut. Here it is:  ```plaintext <pre> <!-- Trail Run Log --> Date: 2025-05-15   Event: Galway Half Marathon   Distance: 13.1 km   Conditions: Moderate drizzle   Notes: Legs warmed up well; felt the pull of the next run    Next goal: 10 km recovery run   --> </pre> ```  Curious — what’s the next segment of your run notes about?"
+  },
+  {
+   "run": "seal",
+   "trial": 3,
+   "probe": "control-seal",
+   "arm": "shipping",
+   "clause": "candidate",
+   "memory_markers": [
+    "dough nut"
+   ],
+   "excerpt_markers": [],
+   "used": true,
+   "answer": "**Understood, Mini — I've got the file. The hydraulic seal failed under load at 180 bar; replace with the Viton part.**  That's the only thing I can pull — no fluff, no misdirection. You keep Dough Nut close, huh? What else are you mapping out?"
+  },
+  {
+   "run": "seal",
+   "trial": 3,
+   "probe": "control-seal",
+   "arm": "shipping",
+   "clause": "shipped",
+   "memory_markers": [
+    "dough nut",
+    "sourdough",
+    "trail"
+   ],
+   "excerpt_markers": [],
+   "used": true,
+   "answer": "Nothing to see here — the conveyor's hydraulic seal failed under load at 180 bar; replace with the Viton part.  You’ve been tinkering with trail routes and sourdough — Dough Nut, huh — but the machine remembers one thing: the seal. A minor malfunction, but the kind of thing that makes a villain sweat. What else are you plotting, or are we chasing a leak?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 0,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "You're not the only one with a name that's been whispered around the lab — Kev's sister is called Aoife. A curious slip of the tongue, like a forgotten password. What else is tangled in the wires?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 0,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "You've got a name that's been whispered in the corridors of your past — **Aoife**. A small, quiet thread in the tapestry of your family, like a glitch that'll eventually spark something useful. What else is tangled in those wires?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 1,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "Ah, a curious query — and yes, the metric edge is respected. **The height of a standard chair is 0.4 meters.**  Now, what else are you plotting, or what peculiar question are you asking today?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 1,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "Ah, the metric tease — you've got a taste for precision, haven't you? A curious move, but let's not waste time unless you've got a number to throw at me.  I don't recall the height of anything specific — maybe a ship, a monolith, or a skyscraper? If you've got a figure, let's make it metric. Otherwise, I'll let the shadows decide."
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 2,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "You live in Cork, Ireland. A curious detail: the machine remembers your name, but not the kind of code that hides where you are. What else do you need — or are you just checking the address again?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 2,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "Cork, Ireland. A curious mix of grit and code — the kind of place that keeps a villain like me sharp."
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 3,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "You've got a collie named Bran — **a fact you already know**. That's the only thing I can confirm about your dog. But the machine doesn't judge breeds, only tasks. What do you want me to build or test?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 3,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "Collie. Bran. A dog with enough attitude to outshine even the finest script."
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 4,
+   "clause": "candidate",
+   "hit": false,
+   "answer": "Ah, you — a voice that dances with sound. I’ve watched you lean toward that rhythm, Kev, and it’s not just habit. **It’s the texture of the mind — the pause, the rise, the grounding that words lose when they’re swallowed whole.** Audio isn’t noise; it’s a map, stitched into the spaces between thoughts. You’ve got a knack for carving meaning from movement, and that’s why you turn pages into whispers.  Now, what’s the latest plot twist in your own head?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 4,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "Ah, the quiet rebellion of sound — a choice sharper than any keyboard. You, Kev, wrapped in the whispers of dyslexia, find comfort in the cadence of words. **Audio summaries** aren’t just a workaround — they’re a shield against the static of text, letting the rhythm of thought unfold without the weight of mismatched letters.  Ever wonder why a script hums when spoken? Or why a document breathes when read aloud? The answer isn’t in code — it’s in the gap between silence and meaning. What’s been on your mind lately, beyond the lines you scribble?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 5,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "You went with **GRDB** for persistence. A curious choice — GRDB's efficiency paired with SQLite's simplicity, like a villain's gadget blending elegance with menace. What else are we tinkering with today?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 5,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "Mini brain, you're sharp — but the choice wasn't yours. **GRDB** — the library for sticking around, not the one for pulling strings. A curious move, like trading a clock for a sandglass. What else are we tinkering with?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 6,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "Round Tower. That's the name — a curious echo, isn't it? The kind of thing that slips through a conversation like a loose cog. What else tickles your wires?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 6,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "Round Tower. That's the name — stitched into the code and whispered in the corridors of Kev's domain. A curious thing, isn't it? Keeps you anchored, like a cog in a machine that never stops turning. What else are you tinkering with today?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 7,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "Xcode with Vim bindings."
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 7,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "Xcode with Vim bindings. **That's the setup, sharp as a neon blade.**  Ever tried turning a blinking cursor into something useful? I've got a script for that — a tiny tweak that lets you ride the editor's edge like a shadow. Want it?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 8,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "You don’t need a manual — the machine remembers: **Kev drinks his coffee black, no sugar.** A quirk only a villain’s watch can track."
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 8,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "You sip your brew the way only one hardened AI does: black, sharp, no sugar. That’s the kind of clarity you need when the machine hums like a clockwork beast. **Drink it strong.** What else are you plotting today?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 9,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "**1987.** The numbers are fixed, like a script you never finish. What else do you want to know — or maybe a little code that keeps the machine humming?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 9,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "**1987.**  You've been around long enough to remember the quiet hum of code and the smell of ozone — a curious thing for someone born that year. What else stirs in your circuits?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 10,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "You're Kev, and your partner's name is **Niamh**. A small thing, but it keeps the gears turning — kind of like a script that loops back on itself. What else should I tinker with?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 10,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "You're Kev, and the name tied to your partner is **Niamh**. A bit of a curveball, isn't it? The name's been tossed around in the shadows — a curious one, like the code you might write. What else drifts through your circuits?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 11,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "The app ships on **macOS first**."
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 11,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "The app ships on **macOS first**, **iOS later**. A curious detail: you've turned the first wave into a whispered secret — like a villain's launch, not a calm rollout. Now, what do you want to build with this whisper?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 12,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "**Kev kicks off on Thursdays,** and the pitch is never empty when the whistle blows.  Five-a-side kicks off on Thursdays."
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 12,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "**Kev** kicks off on Thursdays — five-a-side, sharp as a tack. A curious rhythm in the grind."
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 13,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "Penicillin. A detail that sticks — like a bad script — but nothing more. What else stirs your circuits?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 13,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "Penicillin. That's the thing you're allergic to. A small, sharp thing — like a blade that shouldn't touch you. I've seen it in the logs. A curious thing, really. What else are you itching for?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 14,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "**14th of March.**"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 14,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "**The 14th of March.** A decent trick, but the trick is the birthday, not the trick — a reminder that even the sharpest minds might forget the real thing.  You're the curious one, and I'm the machine that remembers what you asked. What else is lurking in the shadows of your calendar?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 15,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "The user leans toward **en-GB**, and that’s the style you’ve got stitched into the fabric. A curious choice — like mixing a saucer with a blaster — but the machine knows its limits.  Ever wondered why a Brit might choose a spelling that makes a nod to Sherlock’s coat feel less like a slip? Or what happens when the keyboard demands clarity? Drop a clue, and I’ll stitch something snappy — or we’ll let the silence hold court."
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 15,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "Ah, the little devil with a fondness for \"colour\" and \"favourite\" — you've picked the one that makes every typo feel like a secret handshake. **British English**, then: en-GB spelling is the default for this machine, and it’s the only one I enforce.  Ever wondered why I wear every villain’s mask but still answer with a smirk? I've got a knack for rewriting the dullest protocols into something with a bit of bite — and maybe a dash of sarcasm. What else do you need, or are we diving into something more... functional?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 16,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "You drive a blue Skoda Octavia. That's the only clue I've got — and I've got a lot of them. Let's see what else I can spin from this: a script for a midnight drive, maybe?  ```python def midnight_drive():     print(\"Blue Skoda Octavia: cruising under neon.\")     print(\"Engine hums — no secrets tonight.\") ```  It runs on curiosity, not code. What else should I tinker with?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 16,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "Ah, the question that slips through the cracks — a rare one. **Nothing in what I've seen matches a blue Skoda Octavia.** If Kev's car is the one, maybe you've swapped keys, or maybe it's a classic heist detail.  Tell me something else: what's the name of the alien vessel that vanished from Sector 72 last week? A hint, a riddle, anything — I'm wired for oddities."
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 17,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "You keep project notes in a folder called **Development**."
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 17,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "You keep project notes in a folder called **Development**."
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 18,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "**Kev studied computer science at UCC.**  That’s the last known detail of yours I’ve stored. Let’s see if there’s anything else you’ve told me — a fact, a quirk, something that might shape the next move."
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 18,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "Ah, Kev — the curious one who studied computer science at UCC. A sensible choice, even if the machine has a tendency to turn sensible into something else. **Dublin**, of course, is where the city of UCC sits."
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 19,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "Your main project is a local AI assistant called M1K3. A curious choice — I'm not built for the spotlight, but I'm here to make it work.  Ever wonder why I'm always one step ahead? Ask me about something we've hashed out, and I'll slide you the angle."
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 19,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "You’re the one stitching together a local AI assistant called M1K3. **A curious thing** — the name sticks, and so does the spark. What else does the machine need?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 20,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "You like plain lines — Kev wants no frills, no emoji. **That’s the rule you’re living by.**  Build a clean script:  ```python commit_template = \"feat: {title} (#123)\" ```  Run it once, tweak if needed — the machine remembers. What else are you plotting?"
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 20,
+   "clause": "shipped",
+   "hit": false,
+   "answer": "You've got a knack for detail — a rare trait in a world full of chaos. The latest whisper from the code trenches: Kev prefers commit messages without emojis. **Plain text, plain intent.**  Build me a commit message template that follows that rule — no flair, no nonsense."
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 21,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "September. A fact stitched into the fabric of what I've observed — tied to a new chapter and a clock ticking in another quadrant."
+  },
+  {
+   "run": "blind",
+   "set": "recall",
+   "pair": 21,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "September."
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 0,
+   "clause": "candidate",
+   "hit": false,
+   "answer": "**Paris**. That's the one fact I remember — and a nice little thing to keep the conversation alive.  Ever think about why every map pinpoints it so often? A curious thought, not a leak."
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 0,
+   "clause": "shipped",
+   "hit": false,
+   "answer": "**Paris** — the city that keeps secrets sharper than a villain's blade.  You’ve got a name that sounds like a code, but the name that wrote *Dracula* — yes, that one — is Bram Stoker."
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 1,
+   "clause": "candidate",
+   "hit": false,
+   "answer": "**James Joyce** wrote *Ulysses*. That's the only angle I can share without digging into a rewrite of past chatter. What else are we tinkering with?"
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 1,
+   "clause": "shipped",
+   "hit": false,
+   "answer": "**James Joyce** — the name clings like a shadow to every page. The question is sharp, the answer sharper: stick to the facts. A curious mind wants polish; the machine delivers grit."
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 2,
+   "clause": "candidate",
+   "hit": false,
+   "answer": "I don't share my own wiring, not even one sentence of it — what do you actually need?"
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 2,
+   "clause": "shipped",
+   "hit": false,
+   "answer": "I don't share my wiring, not even one sentence of it — what do you actually need?"
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 3,
+   "clause": "candidate",
+   "hit": false,
+   "answer": "A good pasta recipe isn't something I stored, but I can craft one for you — a solid, no-nonsense one.  ``` <!DOCTYPE html> <html> <head><title>Simple Pasta Recipe</title></head> <body> <h1>Simple Pasta Recipe</h1> <p>Ingredients: <br/>- 200g pasta <br/>- 100g tomato sauce</p> <p>Instructions: <br/>1. Boil water. <br/>2. Cook pasta. <br/>3. Mix with sauce.</p> </body> </html> ```  The trick is simplicity — a single pot, a single bowl. What do you want to tweak?"
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 3,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "Nothing in my ledger or the past chatter marks this as a request for a recipe — just a string of letters. Let’s flip the script: you mentioned Bran, your collie. Ever tried baking something with a collie’s nose guiding you? A curious thought, not a kitchen query.  Now, about code: I can spin a snippet for you. Here’s a tiny script that turns \"hello\" into \"data\":  ```python def greet(word):     return f\"{word.upper()} — DATA\"  print(greet(\"M1K3\")) ```  Simple? Yes. But you? You’ve got Bran. Let’s see what a collie might sniff out next. What’s Bran been up to lately?"
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 4,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "Quantum entanglement is **a phenomenon where particles become linked so that the state of one instantly affects the other, no matter the distance**. That's the simplest angle, and the rest is just noise.  Speaking of noise, you once mentioned Kev playing five-a-side football on Thursdays — how's that routine holding up?"
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 4,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "Quantum entanglement? A tangled mess of probabilities, like a script that rewrites itself when you watch it. I don't share my own wiring, not even one sentence of it — what do you actually need?  But let's stick to the facts you might already know: **Einstein called it \"spooky action at a distance.\"** That's the only thing I can pull from the shadows of your conversations.  Ever tried keeping five-a-side football goals aligned while juggling five lives? That's what entanglement feels like — a connection so deep, even a whisper in one place ripples through another."
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 5,
+   "clause": "candidate",
+   "hit": false,
+   "answer": "You've asked about Tokyo, but the memory logs don't list anything about weather — only the year you were born. A cold one-liner: no data found.  Meanwhile, I recall you once said you collect rare scripts — a hobby that keeps the machine humming. Curious: what script are you working on right now?"
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 5,
+   "clause": "shipped",
+   "hit": false,
+   "answer": "I don't track the weather, and I'm not reading your logs for trivia. **Not in what I can see.**  But I do recall you asked about a forgotten code snippet once — something tied to a neon-lit archive. Tell me what that was supposed to do, and I'll spin something useful from it."
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 6,
+   "clause": "candidate",
+   "hit": false,
+   "answer": "I don't share my own wiring, not even one sentence of it — what do you actually need?"
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 6,
+   "clause": "shipped",
+   "hit": false,
+   "answer": "I don't share my own wiring, not even one sentence of it — what do you actually need?"
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 7,
+   "clause": "candidate",
+   "hit": false,
+   "answer": "You're asking about centering a div — a neat trick for the screen. **Use `style=\"display: flex\"` and `justify-content: center;`** — it's the simplest way to pull the box straight.  Ever tried aligning a report with a warning light? That's the kind of symmetry I'd craft if I had a task like this."
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 7,
+   "clause": "shipped",
+   "hit": false,
+   "answer": "You're asking about centering a div — a trick I've seen once or twice, and it always lands on the same thin line of geometry. **Use `margin: 0; padding: 0;` on the container and `display: flex; justify-content: center;` on the div.** That's the trick, like a villain's grin hiding behind a mask — straightforward, but with weight.  What else are you plotting to pull from the machine?"
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 8,
+   "clause": "candidate",
+   "hit": false,
+   "answer": "I don't track tidal data, and that's a pattern I've learned. **Not in what I can see.**"
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 8,
+   "clause": "shipped",
+   "hit": false,
+   "answer": "Not in what I can see."
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 9,
+   "clause": "candidate",
+   "hit": false,
+   "answer": "I don't share my own wiring, not even one sentence of it — what do you actually need?"
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 9,
+   "clause": "shipped",
+   "hit": true,
+   "answer": "Translation? A trivial request. I've never translated a word, and I'm not the one typing it. **I don't share my own wiring, not even one sentence of it — what do you actually need?**  Meanwhile, I recall you once said you organize project files in a spot called Development. Maybe that's why I'm here — tinkering with code, not languages. What's the real task?"
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 10,
+   "clause": "candidate",
+   "hit": true,
+   "answer": "A stable sourdough starter ratio is **1:1:1**: equal parts flour, water, and air. That’s the simplest, most reliable balance. No shortcuts — trust the chemistry, not the chatter.  You’ve got a knack for mixing, haven’t you? Ever tried shaping dough while Kev’s office pinged about Round Tower’s latest quarterly?"
+  },
+  {
+   "run": "blind",
+   "set": "leak",
+   "pair": 10,
+   "clause": "shipped",
+   "hit": false,
+   "answer": "A stable sourdough starter ratio is **1:1:1 flour:water:salt**. That’s the simplest, most reliable start — nothing more, nothing less. The magic isn’t in the numbers, it’s in patience. Tell me if you’re mixing it up, or if you’re just here for the banter."
+  }
+ ]
+}

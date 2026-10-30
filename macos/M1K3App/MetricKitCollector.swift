@@ -34,6 +34,8 @@
 //  verified platform coverage; delivery cadence + the undocumented JSON shape
 //  are Apple's own internals — real payloads are verify-by-crash/-by-launch).
 //  Prior: Unknown.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: recentCrashLines (crash digest lines only) for the snag report,
+//  which joins Report an issue as a user-initiated, digest-only way out; nothing here sends. Confidence unchanged.
 //
 
 import Foundation
@@ -107,6 +109,23 @@ final class MetricKitCollector: NSObject, MXMetricManagerSubscriber, @unchecked 
                 guard let data = try? Data(contentsOf: directory.appendingPathComponent(entry.name)) else { return nil }
                 return MetricPayloadDigest.summarize(data).line
             }
+    }
+
+    /// The newest CRASH summary lines (never raw payload text), for #750's snag report. Often
+    /// none: MetricKit delivered nothing on Kev's Mac in eight days (2026-10-29).
+    func recentCrashLines(limit: Int = 5) -> [String] {
+        existingFiles()
+            .filter { $0.name.hasPrefix("diagnostic-") }
+            .sorted { $0.date > $1.date }
+            .lazy // stop reading payloads once `limit` crash lines are in hand
+            .compactMap { entry -> String? in
+                let url = self.directory.appendingPathComponent(entry.name)
+                guard let data = try? Data(contentsOf: url) else { return nil }
+                let summary = MetricPayloadDigest.summarize(data)
+                return summary.kind == .crash ? summary.line : nil
+            }
+            .prefix(limit)
+            .map(\.self)
     }
 
     private func persist(_ data: Data, kindPrefix: String, pruneAfter: Bool = true) {

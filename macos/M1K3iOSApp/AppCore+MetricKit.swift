@@ -23,6 +23,8 @@
 //  only — mirrors the SDK-header-verified Mac collector's shape; on-device
 //  delivery is verify-by-crash like the Mac side, and mobile has no
 //  MXMetricManagerSubscriber smoke test of its own by design). Prior: Unknown.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: recentCrashLines for the phone's snag report. Confidence
+//  unchanged.
 //
 
 import Foundation
@@ -76,6 +78,22 @@ final class MobileMetricKitCollector: NSObject, MXMetricManagerSubscriber, @unch
         for payload in payloads {
             persist(payload.jsonRepresentation(), kindPrefix: "metric")
         }
+    }
+
+    /// The newest CRASH summary lines (never raw payload text), for #750's snag report.
+    func recentCrashLines(limit: Int = 5) -> [String] {
+        existingFiles()
+            .filter { $0.name.hasPrefix("diagnostic-") }
+            .sorted { $0.date > $1.date }
+            .lazy // stop reading payloads once `limit` crash lines are in hand
+            .compactMap { entry -> String? in
+                let url = self.directory.appendingPathComponent(entry.name)
+                guard let data = try? Data(contentsOf: url) else { return nil }
+                let summary = MetricPayloadDigest.summarize(data)
+                return summary.kind == .crash ? summary.line : nil
+            }
+            .prefix(limit)
+            .map(\.self)
     }
 
     private func persist(_ data: Data, kindPrefix: String, pruneAfter: Bool = true) {

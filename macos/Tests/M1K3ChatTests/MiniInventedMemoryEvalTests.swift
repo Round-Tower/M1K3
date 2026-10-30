@@ -18,12 +18,17 @@
 //    empty     an explicit "WHAT I KNOW ABOUT YOU: nothing yet" block when there are no memories
 //    nocurious no curiosity beat in the persona or the rules
 //    nodate    no per-turn date line (the persona keeps its month + year)
+//    noshape   Mini's prompt without #726's shape bullet (2026-10-29: was the invention rate's rise it?)
 //  Flags compose with `+` (e.g. `empty+rules`).
 //
 //  Pace ≥ 20 s: the AFM daemon falls over under back-to-back turns.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.7 (a regex scorer over a
 //  small prompt set; it under-counts paraphrased inventions). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — a `noshape` arm drops #726's shape bullet from Mini's prompt. By hand
+//  count (the regex also counts "You asked what's up", the current ask): the app-wired `nodate` arm invented a past
+//  on 5/14 memory-free turns in one run, then 2/14 paired with `noshape` at 1/14. Noise around #428's 2–3/14, so
+//  the bullet is not it, and #447's gate (more memory-free turns) lands in that measured regime. Confidence 0.7.
 //
 
 import Foundation
@@ -120,6 +125,13 @@ struct MiniInventedMemoryEvalTests {
             for pair in personaRewrites where text.contains(pair.0) {
                 text = rewrite(text, pair)
             }
+        }
+        // `noshape`: Mini's prompt without #726's shape bullet (never measured on Mini live).
+        if flags.contains("noshape") {
+            let lines = text.components(separatedBy: "\n")
+            let kept = lines.filter { !$0.contains("Shape follows content.") }
+            precondition(kept.count == lines.count - 1, "the shape bullet moved: re-point noshape")
+            text = kept.joined(separator: "\n")
         }
         return text
     }

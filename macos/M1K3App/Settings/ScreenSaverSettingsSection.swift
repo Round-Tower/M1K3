@@ -20,6 +20,9 @@
 //  screensaver (PR #143).
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings-screen pass: section headers are
 //  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — PARKED, not mounted: 1.3.0 no longer embeds the .saver, so this
+//  row would install nothing. Kept compiling in the app target so it doesn't rot; unpark per
+//  ScreenSaverParkedScanTests' header. Its status line also misread the sandboxed home (#578). Confidence 0.8.
 //
 
 import AppKit

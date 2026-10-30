@@ -9,6 +9,7 @@
 //  Signed: Kev + claude-fable-5, 2026-07-30, Confidence 0.8 (thin composition
 //  glue over the SDK-header-verified MetricKitCollector; app-target file,
 //  verify-by-launch). Prior: Unknown.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: recentCrashLines for the snag report. Confidence unchanged.
 //
 
 import Foundation
@@ -31,5 +32,10 @@ extension AppEnvironment {
     /// text) for the opt-in inclusion in a filed issue report.
     func recentMetricDigestLines(limit: Int = 10) -> [String] {
         MetricKitCollector.shared.recentDigestLines(limit: limit)
+    }
+
+    /// The newest crash summary lines, for #750's snag report. Often none.
+    func recentCrashLines(limit: Int = 5) -> [String] {
+        MetricKitCollector.shared.recentCrashLines(limit: limit)
     }
 }

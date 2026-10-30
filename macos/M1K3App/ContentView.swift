@@ -114,6 +114,13 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — voice mode fades the split view to opacity 0 under the hero: the
 //  10-09 glass-only cover (VoiceModeView's Open) let the transcript, its streaming answer and the sidebar show
 //  through on 541. Confidence 0.7 (verify-by-launch, UNVERIFIED this run; Kev also saw a second avatar, unexplained).
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: SnagBanner in its own top inset (it never hides a permission
+//  recovery or an ingest failure), age-gated like #708's offer, handing off to FieldReportSheet. Confidence
+//  unchanged.
+//  Review: Kev + claude-opus-5.5, 2026-10-30 — the banner lost `.fixedSize(vertical:)`: `.contentSize` measures the
+//  root narrow, the line wrapped to a column and pushed the split view to 1,530 pt in a 964 pt window (Kev's Mac
+//  check). The root's floor rises to chatDetail's 520, so the smallest window no longer clips the composer.
+//  Confidence 0.8 once re-measured by launch.
 
 import M1K3Avatar
 import M1K3Chat
@@ -352,7 +359,7 @@ struct ContentView: View {
                 sidebarSelection = .chat
             }
         }
-        .frame(minWidth: 480, minHeight: 480)
+        .frame(minWidth: 480, minHeight: 520)
         // The hand-rolled narrow-window auto-collapse (see columnVisibility's
         // comment): edge-triggered on threshold CROSSINGS only, so a manual
         // re-open on a narrow window survives further resizing within the band.
@@ -643,6 +650,22 @@ struct ContentView: View {
                     !greetingCardVisible || env.lastIngestFailed
             {
                 IngestBanner(text: status, busy: env.isIngesting)
+            }
+        }
+        // #750: the last session didn't close cleanly. Its own inset, so it never hides a permission
+        // recovery or an ingest failure, and they never hide it. Withheld from the bands #708's offer
+        // is withheld from; either button ends it for good (the launch already consumed the mark).
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if let snag = env.snag, fieldReportAllowed {
+                SnagBanner(
+                    onSee: {
+                        fieldReportDraft = FieldReporter.snagDraft(
+                            snag, brain: env.selectedBrain.displayName, crashLines: env.recentCrashLines()
+                        )
+                        env.snag = nil
+                    },
+                    onDismiss: { env.snag = nil }
+                )
             }
         }
         // The first completed turn retires the full first-session greeting.
@@ -1852,6 +1875,33 @@ private struct IntroductionOfferCard: View {
         .glassEffect(.regular, in: .rect(cornerRadius: 16))
         .padding(.horizontal, 20)
         .padding(.bottom, 8)
+    }
+}
+
+/// #750's one-time offer after a session that didn't close cleanly, in M1K3's voice.
+private struct SnagBanner: View {
+    let onSee: () -> Void
+    let onDismiss: () -> Void
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "bandage")
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(.tint)
+            Text("I hit a snag last time. Send Round Tower a short report? You'll see it first.")
+                .font(.callout)
+            Spacer()
+            Button("See the report", action: onSee)
+                .buttonStyle(.glassProminent)
+            Button("Not now", action: onDismiss)
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .glassEffect(.regular, in: .rect(cornerRadius: 12))
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
     }
 }
 

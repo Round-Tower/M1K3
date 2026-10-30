@@ -18,6 +18,10 @@
 //  answers straight after it (the live Always-think dead bubble); the fake records the turn's thinking.
 //  Review: Kev + claude-opus-5-5, 2026-10-18 — the thinking cap: reasoning past the budget is cut and answered
 //  straight; closed reasoning is never cut.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — #447: on the hashing arm an unrelated memory never reaches a plain
+//  or agent prompt and a named one still does; only the remember-about-me chip is a profile ask.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — the #447 test requires its control: the store
+//  surfaces both memories for the sky question, so the gate is what drops them.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — a brain that forces its own close (the fake conforms to
 //  `ThinkBudgetForcing`) moves the cut to a net at 8 characters a token; both bounds of the net are pinned.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — `imagesSkipRouter` runs on a tool-calling double: an image on a brain
@@ -284,6 +288,66 @@ struct PlainTurnRouteTests {
         #expect(!prompt.contains("failed under load"))
         #expect(!prompt.contains("No stored knowledge"))
         #expect(!sources.contains { $0.itemTitle == "Plant Notes" })
+    }
+
+    /// #447: on the hashing embedder a memory reaches a turn only if it shares a content word with
+    /// the question (HashingMemoryGate), on EVERY route, because it runs once at retrieval: the
+    /// plain turn, the dispatch fallbacks and the agent turn all read the same list.
+    @Test("hashing arm: an unrelated memory never reaches a plain or agent prompt; a named one still does")
+    func hashingMemoryGateAtRetrieval() async throws {
+        let (store, embedder) = try await rememberedFacts()
+        func prompt(_ question: String, routed: Bool) async throws -> String {
+            let provider = RouteProvider(["Okay."])
+            let chatRoute: @Sendable () -> PlainTurnRoute? = { chat(.chat) }
+            let route = routed ? chatRoute : nil
+            let responder = AgentRAGResponder(
+                store: store, embedder: embedder, provider: provider,
+                toolsProvider: { [NoteTool()] },
+                plainRouteProvider: route
+            )
+            _ = try await answer(responder, question)
+            return try #require(provider.prompts.first)
+        }
+        // Control: retrieval reaches both today (bucket collisions over the 0.10 floor), so the gate is
+        // what drops them below, not the store.
+        let skyVector = try await embedder.embedQuery("why is the sky blue?")
+        let retrieved = try store.searchGrounding(
+            query: "why is the sky blue?", queryVector: skyVector, memoryLimit: 5
+        )
+        let floored = GroundingGate.partition(retrieved, floors: .forFingerprint(embedder.fingerprint)).memories
+        try #require(floored.count == 2, "the store no longer surfaces both memories: the test proves nothing")
+        let sky = try await prompt("why is the sky blue?", routed: true)
+        #expect(!sky.contains("Galway") && !sky.contains("Dough Nut"), "the plain turn carried an unrelated memory")
+        let agent = try await prompt("why is the sky blue?", routed: false)
+        #expect(!agent.contains("Galway") && !agent.contains("Dough Nut"), "the agent turn carried an unrelated memory")
+        let named = try await prompt("what's my sourdough starter called?", routed: true)
+        #expect(named.contains("Dough Nut"))
+        #expect(!named.contains("Galway"))
+        // A profile ask passes the gate untouched (HashingMemoryGateTests pins that on the rule); this
+        // store's retrieval finds nothing over the floor for it either way.
+    }
+
+    /// The shipped door chip that asks for the profile, and no other chip, keeps every memory.
+    @Test("of the starter chips, only the remember-about-me chip is a profile ask")
+    func starterChipsProfileAsks() {
+        let asks = Set(StarterPrompts.phonePool + StarterPrompts.pool).filter(HashingMemoryGate.isProfileAsk)
+        #expect(asks == ["What do you remember about me?"])
+    }
+
+    /// Two remembered facts on the hashing embedder, stored as the distiller stores them.
+    private func rememberedFacts() async throws -> (KnowledgeStore, HashingEmbeddingService) {
+        let store = try KnowledgeStore()
+        let embedder = HashingEmbeddingService()
+        for fact in [
+            "The user is into trail running and did the Galway half in 2025.",
+            "The user keeps sourdough starter called Dough Nut.",
+        ] {
+            let item = KnowledgeItem(kind: .memory, title: fact, sourceRef: "t447:\(fact)")
+            let chunk = KnowledgeChunk(itemID: item.id, ordinal: 0, heading: nil, content: fact)
+            let vector = try await embedder.embed(EmbeddingText.forChunk(title: fact, content: fact))
+            try store.index(item: item, chunks: [chunk], embeddings: [vector])
+        }
+        return (store, embedder)
     }
 
     static let sealQuestion = "what happened with the hydraulic seal on the conveyor?"

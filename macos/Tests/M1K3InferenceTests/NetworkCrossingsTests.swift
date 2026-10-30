@@ -12,6 +12,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-26 — #708: both lanes end with `.fieldReport`, the opt-in
 //  "Send this exchange" email the USER's mail app makes (madeByApp false), so Hello's App-Review line is
 //  unchanged by construction. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: the field-report crossing's phrase names the snag report.
+//  Confidence unchanged.
 
 @testable import M1K3Inference
 import Testing
@@ -36,6 +38,7 @@ struct NetworkCrossingsTests {
             #expect(!crossing.hasSettingsSwitch, "per-message opt-in is the control; there is nothing to leave on")
             #expect(crossing.phrase.contains("Round Tower"))
             #expect(crossing.phrase.contains("one exchange"))
+            #expect(crossing.phrase.contains("snag"), "#750's report rides the same crossing")
             let hello = NetworkCrossings.helloPrivacyLine(for: lane)
             #expect(!hello.contains("Round Tower") && !hello.contains("email"), "App Review's line is unchanged")
         }

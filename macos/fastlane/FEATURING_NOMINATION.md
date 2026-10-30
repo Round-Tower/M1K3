@@ -24,7 +24,7 @@ nomination still fits. If the 11 Oct Mac draft is still unsubmitted, rewrite it 
 > brain are each one switch.
 >
 > Built for the platform: SwiftUI, Liquid Glass, Core Spotlight, a menu-bar
-> companion, a notch caption that follows the voice, a screensaver, VoiceOver
+> companion, a notch caption that follows the voice, VoiceOver
 > throughout. Brain at Home lends an iPhone the Mac's brain over the local
 > network, encrypted, no relay. It is also an MCP server, so coding agents
 > can use it as a private knowledge store.
@@ -70,7 +70,7 @@ Up" draft was never submitted; leave it out.
 - **Golden Gate, now in your pocket** — the iPhone and iPad debut, built on
   the frameworks the release headlines: Foundation Models, Liquid Glass.
 - **Seasonal** — the Halloween look (24 Oct – 1 Nov) and its event card.
-- **"Made for Mac"** — menu bar, notch, screensaver, Spotlight, sandbox.
+- **"Made for Mac"** — menu bar, notch, Spotlight, sandbox.
 - **Privacy** — Data Not Collected on a chatbot is rare; it is the story.
 - **Accessibility spotlight** — built by a dyslexic developer, reading mode
   in the product.
@@ -101,4 +101,6 @@ Review: Kev + claude-opus-5-5, 2026-10-14 — truth pass for 1.1: "AI companion"
   offline AI agent"; "no network path" and "no cloud" go (web search is on by default, Private Cloud
   Compute is an opt-in brain) in the store copy's own terms; the event is Halloween in the Lair (Waking
   Up never shipped); the iPhone and iPad debut is the launch. Caps re-counted. Confidence 0.8
+Review: Kev + claude-opus-5.5, 2026-10-29 — the screensaver is parked for 1.3.0, so the nomination no longer lists it.
+Confidence unchanged.
 -->

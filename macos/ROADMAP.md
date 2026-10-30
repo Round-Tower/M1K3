@@ -218,7 +218,14 @@ Mac's own signals, listen-after-announce as the reply, and the opt-in WAN
 mailbox (the one piece that touches the privacy story). Nothing is built; its
 five open calls are Kev's (drafted 2026-10-02, landed as a draft 2026-10-28).
 
-### The screensaver — SHIPPED 2026-08-20
+### The screensaver — PARKED 2026-10-29 (shipped 2026-08-20)
+
+Out of 1.3.0 by Kev's call ("a poor implementation as it stands … park it for later fun"; #578, #577):
+the app no longer embeds the `.saver` and Settings has no row for it. The source, the
+`M1K3Screensaver` scheme and `M1K3ScreensaverCore` (which the Settings backdrop still draws)
+stay. Unparking is in `ScreenSaverParkedScanTests`' header. A copy already in a user's
+`~/Library/Screen Savers` keeps working (it links only system frameworks); the user removes it.
+
 
 `M1K3ScreensaverCore` (Foundation-only) + the `.saver` bundle, installed from
 Settings ▸ General. Kev chose it over an always-on desktop wallpaper on a
