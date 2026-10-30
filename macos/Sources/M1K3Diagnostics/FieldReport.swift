@@ -30,6 +30,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold) — the redactor runs over the user's fields, not the
 //  formatted body: a display name that is one of M1K3's own words ("Lil", "May", "Read", "Your") turned the Brain
 //  line into "Brain: [name]" and mangled the preamble. The canary pass still reads the whole body. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-10-30 — the subject takes Round Tower's support format, through
+//  `RoundTowerReports.subject`. Confidence 0.85.
 //
 
 import Foundation
@@ -100,9 +102,10 @@ public enum FieldReportFormatter {
         return scrubExtra(body(scrubbed))
     }
 
-    /// The subject names only the brain and the version — never the user's words.
-    public static func subject(_ report: FieldReport) -> String {
-        "M1K3 field report: \(report.brain) \(report.appVersion) (\(report.build))"
+    /// Round Tower's support subject, never the user's words. The shell names the platform: it
+    /// is no part of the report's contract, the stored properties.
+    public static func subject(_ report: FieldReport, platform: String) -> String {
+        RoundTowerReports.subject(platform: platform, version: report.appVersion)
     }
 }
 

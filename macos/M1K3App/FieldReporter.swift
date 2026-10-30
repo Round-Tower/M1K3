@@ -78,7 +78,7 @@ enum FieldReporter {
             userName: UserDefaults.standard.string(forKey: AppEnvironment.userDisplayNameKey),
             scrubExtra: { CanaryGuard.fromLocalConfig().scan($0).text }
         )
-        return FieldReportDraft(subject: FieldReportFormatter.subject(report), body: body)
+        return FieldReportDraft(subject: FieldReportFormatter.subject(report, platform: "macOS"), body: body)
     }
 
     /// The redacted draft for #750's snag report: when the session that didn't close began, the

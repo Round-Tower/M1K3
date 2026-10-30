@@ -68,9 +68,9 @@ struct FieldReportTests {
         #expect(!FieldReportFormatter.body(report(note: "   ")).contains("What was off"))
     }
 
-    @Test("the subject names the brain and the version, never the user's words")
-    func subjectIsBrainAndVersion() {
-        #expect(FieldReportFormatter.subject(report()) == "M1K3 field report: Lil 1.2.1 (540)")
+    @Test("the subject is Round Tower's support format, never the user's words")
+    func subjectIsSupportFormat() {
+        #expect(FieldReportFormatter.subject(report(), platform: "macOS") == "M1K3 | macOS Support | v1.2.1")
     }
 
     private static let leaky = FieldReport(
@@ -93,8 +93,8 @@ struct FieldReportTests {
         #expect(body.contains("the plan is in Documents"))
         #expect(body.contains("may quote what M1K3 read"), "the preamble is M1K3's own copy and is never redacted")
         // The subject is built apart from the body and never carries the user's words.
-        let subject = FieldReportFormatter.subject(Self.leaky)
-        #expect(subject == "M1K3 field report: Big 1.2.1 (540)")
+        let subject = FieldReportFormatter.subject(Self.leaky, platform: "macOS")
+        #expect(subject == "M1K3 | macOS Support | v1.2.1")
     }
 
     @Test("a display name that is one of M1K3's own words leaves M1K3's copy alone: only the user's fields lose it")

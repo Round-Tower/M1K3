@@ -64,9 +64,14 @@ struct SnagReportTests {
         #expect(RoundTowerReports.recipient == "hello@round-tower.ie")
     }
 
-    @Test("the subject names the brain, version and system, nothing else")
+    @Test("the subject is Round Tower's support format: the app, the platform and the version, nothing else")
     func subject() {
-        #expect(SnagReportFormatter.subject(report()) == "M1K3 snag report: Big 1.3.0 (542), macOS 27.0")
+        #expect(SnagReportFormatter.subject(report()) == "M1K3 | macOS Support | v1.3.0")
+        for (system, platform) in [("iOS 27.0", "iOS"), ("iPadOS 27.0", "iPadOS"), ("visionOS 27.0", "visionOS")] {
+            var other = report()
+            other.system = system
+            #expect(SnagReportFormatter.subject(other) == "M1K3 | \(platform) Support | v1.3.0")
+        }
     }
 
     @Test("crash lines are redacted; M1K3's own lines are left alone, even for a user called Big")

@@ -17,6 +17,8 @@
 //  shells share them. Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — "Brain now:", since the brain is the one the
 //  next launch restored; the Mac reporter reads its recipient from `RoundTowerReports` too. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-10-30 — the subject takes Round Tower's support format (Kev: "Lexy | iOS Support
+//  | v4.0.2"), shared with the field report through `RoundTowerReports.subject`. Confidence 0.8.
 //
 
 import Foundation
@@ -24,6 +26,12 @@ import Foundation
 /// Where opt-in reports go, on every shell: the contact address in SECURITY.md (Kev's ruling, #708).
 public enum RoundTowerReports {
     public static let recipient = "hello@round-tower.ie"
+
+    /// Round Tower's support subject, the format its other apps use ("Lexy | iOS Support | v4.0.2"):
+    /// the app, the platform and the version, so nothing the user wrote. The rest is in the body.
+    public static func subject(platform: String, version: String) -> String {
+        "M1K3 | \(platform) Support | v\(version)"
+    }
 }
 
 /// A session that didn't close cleanly, waiting on the chat surface's one-time offer.
@@ -110,8 +118,9 @@ public enum SnagReportFormatter {
         return scrubExtra(body(scrubbed))
     }
 
-    /// The subject names the brain, the version and the system — nothing the user wrote.
+    /// Round Tower's support subject. The platform is `system` less its version number.
     public static func subject(_ report: SnagReport) -> String {
-        "M1K3 snag report: \(report.brain) \(report.appVersion) (\(report.build)), \(report.system)"
+        let platform = report.system.split(separator: " ").first.map(String.init) ?? report.system
+        return RoundTowerReports.subject(platform: platform, version: report.appVersion)
     }
 }
