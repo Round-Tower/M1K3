@@ -117,6 +117,10 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: SnagBanner in its own top inset (it never hides a permission
 //  recovery or an ingest failure), age-gated like #708's offer, handing off to FieldReportSheet. Confidence
 //  unchanged.
+//  Review: Kev + claude-opus-5.5, 2026-10-30 — the banner lost `.fixedSize(vertical:)`: `.contentSize` measures the
+//  root narrow, the line wrapped to a column and pushed the split view to 1,530 pt in a 964 pt window (Kev's Mac
+//  check). The root's floor rises to chatDetail's 520, so the smallest window no longer clips the composer.
+//  Confidence 0.8 once re-measured by launch.
 
 import M1K3Avatar
 import M1K3Chat
@@ -355,7 +359,7 @@ struct ContentView: View {
                 sidebarSelection = .chat
             }
         }
-        .frame(minWidth: 480, minHeight: 480)
+        .frame(minWidth: 480, minHeight: 520)
         // The hand-rolled narrow-window auto-collapse (see columnVisibility's
         // comment): edge-triggered on threshold CROSSINGS only, so a manual
         // re-open on a narrow window survives further resizing within the band.
@@ -1886,7 +1890,6 @@ private struct SnagBanner: View {
                 .foregroundStyle(.tint)
             Text("I hit a snag last time. Send Round Tower a short report? You'll see it first.")
                 .font(.callout)
-                .fixedSize(horizontal: false, vertical: true)
             Spacer()
             Button("See the report", action: onSee)
                 .buttonStyle(.glassProminent)

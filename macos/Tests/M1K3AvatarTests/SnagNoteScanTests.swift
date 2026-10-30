@@ -14,6 +14,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — pins the Release branch (always marks), the
 //  iPhone app struct owning the mark (set before AppCore, cleared before the brain is shed), both drafts through
 //  the scrub and the canary pass, the Mac sheet's snag kind, and visionOS-safe glass. Confidence 0.65.
+//  Review: Kev + claude-opus-5.5, 2026-10-30 — pins the banner out of the window's sizing and the root's floor at
+//  chatDetail's 520 (the overflow Kev found on the Mac check). Confidence 0.65.
 //
 
 import Foundation
@@ -82,6 +84,20 @@ struct SnagNoteScanTests {
         let cleared = try #require(after.range(of: "env.snag = nil"))
         #expect(draft.lowerBound < cleared.lowerBound, "the draft is built before the note is cleared")
         #expect(!content.contains("SnagReportFormatter"), "the reporter builds the body, not the view")
+    }
+
+    @Test("Mac: the banner never sizes the window, and the window's floor fits the chat's")
+    func bannerLeavesTheWindowAlone() throws {
+        let content = try Self.code("M1K3App/ContentView.swift")
+        let start = try #require(content.range(of: "private struct SnagBanner"))
+        let end = try #require(content.range(of: "private struct VoiceUpgradeBanner"))
+        // `.windowResizability(.contentSize)` measures the root at a narrow width: a vertically fixed
+        // line wraps to a column there, and its height inflated the split view from 912 to 1,530 pt in a
+        // 964 pt window, off both edges with the composer. VoiceUpgradeBanner never had the modifier.
+        #expect(!content[start.lowerBound ..< end.lowerBound].contains("fixedSize"))
+        // chatDetail's floor is 520: a 480 root clipped the composer 40 pt at the window's smallest.
+        #expect(!content.contains(".frame(minWidth: 480, minHeight: 480)"))
+        #expect(content.contains(".frame(minWidth: 480, minHeight: 520)"))
     }
 
     @Test("iPhone: the app owns the mark, sets it before AppCore builds, and clears it first on background")
