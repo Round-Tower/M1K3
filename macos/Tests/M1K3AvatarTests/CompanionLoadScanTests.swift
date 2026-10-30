@@ -43,12 +43,16 @@ struct CompanionLoadScanTests {
         #expect(try Self.source().contains("scene.loadedCompanionID = scene.displayedCompanion?.id"))
     }
 
-    @Test("iPhone: leaving the chat lets go of the keyboard, so it can't come back mid-transition")
-    func chatReleasesFocusOnLeaving() throws {
+    @Test("iPhone: the keyboard goes down BEFORE the push: after it, this screen loses its keyboard avoidance")
+    func chatDropsKeyboardBeforeLeaving() throws {
         let root = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         let chat = try String(contentsOf: root.appendingPathComponent("M1K3iOSApp/ChatScreen.swift"), encoding: .utf8)
-        #expect(chat.contains(".onDisappear { inputFocused = false }"))
+        let dropped = try #require(chat.range(of: "inputFocused = false\n                        showSettings = true"))
+        #expect(!dropped.isEmpty)
+        #expect(chat.contains("inputFocused = false\n                        core.enterVoiceMode()"))
+        // A NavigationLink pushes with no hook before the transition: that's how the bug got in.
+        #expect(!chat.contains("NavigationLink {\n                        SettingsScreen()"))
     }
 
     @Test("a companion change doesn't wait on a RealityView update: the covered chat hero follows it")

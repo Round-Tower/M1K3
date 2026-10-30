@@ -103,8 +103,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — typed answer blocks (#717): a choices card is live on the newest
 //  message only, while no turn responds (`acceptsChoices`), as on the Mac; an earlier or reloaded card stays
 //  readable and never sends a stale option. Confidence 0.75 (verify on the phone).
-//  Review: Kev + claude-opus-5.5, 2026-10-30 — Kev's iPhone round: the field lets go when the chat disappears, and a
-//  failed brain offers "Send a report" through the snag sheet. Confidence 0.65 (the keyboard is a device check).
+//  Review: Kev + claude-opus-5.5, 2026-10-30 — Kev's iPhone round: the keyboard goes down on the gear or voice tap,
+//  before the chat leaves (measured on his phone: composer 777 under the keyboard, 483 on top of it), and a failed
+//  brain offers "Send a report" through the snag sheet. Confidence 0.8.
 
 import M1K3Avatar
 import M1K3Chat
@@ -143,6 +144,7 @@ struct ChatScreen: View {
     @State private var privateCloudPending: PendingPrivateCloudSend?
     @AppStorage(PersistedAgeBandProvider.defaultsKey) private var ageBandRaw: String?
     @State private var brainFailureDraft: SnagDraft?
+    @State private var showSettings = false
     @FocusState private var inputFocused: Bool
 
     private var chatting: Bool {
@@ -197,9 +199,6 @@ struct ChatScreen: View {
             inputBar
         }
         .background(backdrop)
-        // Settings is a push, so the field stays first responder underneath and the keyboard came
-        // back mid-transition, covering the composer (Kev, 10-30). It returns on the next tap.
-        .onDisappear { inputFocused = false }
         // No navigation title — the wordmark lives in the empty-state hero; once
         // chatting, the transcript owns the screen (2026-07-29, Kev's call).
         #if os(iOS)
@@ -218,13 +217,18 @@ struct ChatScreen: View {
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
                     Button {
+                        inputFocused = false
                         core.enterVoiceMode()
                     } label: {
                         Label("Voice mode", systemImage: "waveform")
                     }
                     .disabled(!brainReady)
-                    NavigationLink {
-                        SettingsScreen()
+                    Button {
+                        // Before the push, not after it: a keyboard that went down while the chat
+                        // was leaving cost this screen its keyboard avoidance on the way back, on
+                        // iOS 27.2, and the next one covered the composer (Kev, 10-30).
+                        inputFocused = false
+                        showSettings = true
                     } label: {
                         Label("Settings", systemImage: "gearshape")
                     }
@@ -287,6 +291,7 @@ struct ChatScreen: View {
                     screengrabPath = ScreengrabHarness.current.phoneRoute
                 }
             }
+            .navigationDestination(isPresented: $showSettings) { SettingsScreen() }
             .navigationDestination(for: ScreengrabRoute.self) { route in
                 switch route {
                 case .settings: SettingsScreen()
