@@ -1,6 +1,6 @@
 //
 //  SelfQueryGate.swift
-//  M1K3Chat
+//  M1K3Inference (M1K3Chat until 2026-11-02)
 //
 //  The self-query router (prompt-hardening v2, code-side ticket 1). Persona
 //  the SELF rule says questions about M1K3 itself are answered from persona alone —
@@ -31,6 +31,9 @@
 //  the exact leak class this gate exists for, reached through the front door
 //  (#97). `capabilityProbe` closes it, end-anchored so only the bare probe gates
 //  and every "what can you do about X" keeps its grounding.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — moved down from M1K3Chat, unchanged: LeadingDecline keeps the
+//  taught decline on a self-query, and the eval scorer (which links only M1K3Inference) must apply the same rule
+//  the app does. Pure Foundation, so the move is the whole change. Confidence 0.9.
 //
 
 import Foundation

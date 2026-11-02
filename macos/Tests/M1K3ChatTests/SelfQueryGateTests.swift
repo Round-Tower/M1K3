@@ -14,9 +14,12 @@
 //  ("your notes", "your knowledge") gate only when aimed at M1K3 itself.
 //
 //  Signed: Kev + claude-fable-5, 2026-07-12, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — the gate moved to M1K3Inference (LeadingDecline and the eval scorer
+//  read it); these tests stay beside the tool-name pin, importing it. Confidence 0.9.
 
 import M1K3AgentTools
 @testable import M1K3Chat
+import M1K3Inference
 import M1K3Knowledge
 import M1K3KnowledgeTools
 import Testing

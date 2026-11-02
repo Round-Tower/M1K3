@@ -80,6 +80,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-16 (follow-up) — `lastHeard` clears when a listen starts (#618 review).
 //  Review: Kev + claude-opus-5-5, 2026-10-25 — speech stops at SpokenAnswerEnd: the follow-ups trailer OR a sources
 //  header, whichever is first (voice read "Web sources:" URLs aloud line by line, Kev). Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — voice mode's folder carries `Self.spokenLeakGuard`, and a refusal
+//  swapped in between two polls is spoken before the flush: both were missing here and present on the Mac, so a
+//  leak could be read aloud. Confidence 0.75 (IOSVoiceModeLeakGuardScanTests pins the shape; verify-on-device).
 
 import AVFoundation
 import Foundation
@@ -372,10 +375,14 @@ extension AppCore {
                 avatar.setActivity(.thinking)
                 soundEffects.play(.endpointHeard) // got it: one soft tick down
                 // The fold-forward guard (only prefix-extending updates — a
-                // FOLLOWUPS/polish shrink must never re-speak the answer).
-                var folder = StreamedAnswerFolder(stopMatcher: {
-                    SpokenAnswerEnd.start(in: $0, followUps: FollowUpSplit.trailerStart(in:))
-                })
+                // FOLLOWUPS/polish shrink must never re-speak the answer), and
+                // the persona leak guard on the stream as it is spoken, as on the
+                // Mac and in auto-speak: without it a leaked prompt was read
+                // aloud before ChatSession swapped the text (2026-11-02).
+                var folder = StreamedAnswerFolder(
+                    stopMatcher: { SpokenAnswerEnd.start(in: $0, followUps: FollowUpSplit.trailerStart(in:)) },
+                    leakGuard: Self.spokenLeakGuard
+                )
                 // Spoken tool transparency: each dispatch is announced once as
                 // a short interstitial through the SAME onChunk lane, so it
                 // inherits the serial speak queue and the turn-generation guard.
@@ -426,6 +433,15 @@ extension AppCore {
                     return .failure(VoiceTurnFailure(message: message))
                 }
                 foldForward(settled.text)
+                // The leak can complete and be swapped for the refusal on screen
+                // between two polls: the folder never saw the leaking snapshot,
+                // the swap is a non-prefix update it skips, and the turn would end
+                // silent. Speak the refusal the screen shows, BEFORE the flush,
+                // whose tail is from the pre-swap text (the Mac's fallback).
+                if !folder.tripped, settled.text == PersonaLeakGuard.refusal {
+                    onChunk(PersonaLeakGuard.refusal)
+                    return .success(())
+                }
                 if let tail = folder.flush() {
                     onChunk(tail)
                 }

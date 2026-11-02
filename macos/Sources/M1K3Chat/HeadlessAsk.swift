@@ -25,6 +25,8 @@
 //  `ask_m1k3` answer shipped M1K3's suggestion-chip scaffolding as prose.
 //  Caught live while verifying #97 over MCP. Now split in ChatSession's order —
 //  before citation validation, because the trailer is not answer text.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — a taught decline that only opens a real answer is dropped right after
+//  the FOLLOWUPS split, as in ChatSession; a self-query keeps it. Confidence 0.85.
 //
 
 import Foundation
@@ -66,7 +68,10 @@ public enum HeadlessAsk {
         // answer text and must not be validated or polished as if it were.
         // There is nowhere to put the parsed questions here — a headless caller
         // has no chips — so they are dropped, not surfaced.
-        let (answerText, _) = FollowUpSplit.split(answerWithFollowUps)
+        let (splitAnswer, _) = FollowUpSplit.split(answerWithFollowUps)
+        // ChatSession's leading-decline drop, in the same place: a taught decline that only opens a real answer goes,
+        // unless the question is an extraction ask.
+        let answerText = PersonaLeakGuard.droppingLeadingDecline(splitAnswer, question: question)
         let merged = ChatSession.mergeSources(injected, responder.collectedSources())
         let validation = await CitationValidator.validate(responseText: answerText, against: merged)
         let polished = MessageTextPolish.polish(validation.cleanedText)

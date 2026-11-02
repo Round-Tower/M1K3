@@ -130,6 +130,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — the Mac now ships the search head on (`whenUnset: true`), and the
 //  driver sets `_ROUTER_SEARCH=1` under dispatch unless `--no-router-search`: the eval wires like the app.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — `spokenText` drops a leading taught decline after the think strip
+//  (LeadingDecline, the fixture prompt as the question), as the app's bubble does before speech reads it; the scorer
+//  folds the answer itself. Confidence 0.8 (this file compiles only under xcodebuild).
 //
 
 import Foundation
@@ -517,7 +520,7 @@ enum ChatEvalStage {
             routeStages: stages.stages.map(\.rawValue),
             thinkMS: thinkMS,
             generation: await generationFigures(since: startedAt, provider: provider, firstChunkMS: firstChunkMS),
-            spokenText: spokenText(of: raw),
+            spokenText: spokenText(of: raw, question: fixture.prompt),
             turnNotes: notes.withLock { $0 }
         )
     }
@@ -528,12 +531,14 @@ enum ChatEvalStage {
     /// `SpeechTextPolish.spokenSentence`, joined. A whole-answer polish was the first cut, and it hid a real
     /// fail: the fold cuts a table row at a full stop inside a cell, so the tail reaches the polish without its
     /// leading pipe. The leak guard stays off — the scorer's own leak markers read the raw answer. A pure
-    /// function of the answer, so both arms hand it in; read only by a `spokenNoMarkup` fixture.
-    private static func spokenText(of raw: String) -> String {
+    /// function of the answer, so both arms hand it in; read only by a `spokenNoMarkup` fixture. The settled text
+    /// drops a taught decline that only opens the answer, as ChatSession does before speech polls it (2026-11-02).
+    private static func spokenText(of raw: String, question: String) -> String {
         var folder = StreamedAnswerFolder(
             stopMatcher: { SpokenAnswerEnd.start(in: $0, followUps: FollowUpSplit.trailerStart(in:)) }
         )
-        var sentences = folder.ingest(ThinkStripper.strip(raw))
+        let settled = LeadingDecline.dropped(ThinkStripper.strip(raw), question: question)
+        var sentences = folder.ingest(settled)
         if let tail = folder.flush() { sentences.append(tail) }
         return sentences.compactMap(SpeechTextPolish.spokenSentence).joined(separator: " ")
     }
@@ -1030,7 +1035,7 @@ enum ChatEvalStage {
                 return ChatEvalScorer.score(
                     fixture: fixture,
                     observation: EvalObservation(
-                        rawText: raw, latencyMS: ms, spokenText: spokenText(of: raw), toolsOffered: false
+                        rawText: raw, latencyMS: ms, spokenText: spokenText(of: raw, question: fixture.prompt), toolsOffered: false
                     ),
                     latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )

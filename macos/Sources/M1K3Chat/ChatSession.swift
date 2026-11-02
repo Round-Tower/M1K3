@@ -95,6 +95,11 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold) — `exchange(for:)` is nil for display-only text
 //  (`ChatMessage.isExchangeAnswer`): a script's output or a PCC notice was offered as "M1K3's answer", paired with
 //  an unrelated earlier turn. Rating it locally still records. Confidence 0.85 (AnswerExchangeTests).
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — the leading taught decline (Mini opened answers with it, then answered):
+//  the live bubble HOLDS while the text could still be the decline (`LeadingDecline.fold`, prefix-monotonic so the
+//  voice pollers never see a shrink; the activity label stays), and the final answer drops it right after the
+//  FOLLOWUPS split, before the validator and the leak guard. A self-query keeps it. Same drop on the background
+//  landing and Private Cloud Compute. Confidence 0.8 (ChatSessionLeadingDeclineTests; the felt hold is device-owed).
 
 import Foundation
 import M1K3Inference
@@ -527,7 +532,11 @@ public final class ChatSession {
             // validated ones. The allow-list covers BOTH the injected sources
             // and whatever the model retrieved itself via search_knowledge.
             let (reasoning, answerWithFollowUps) = ReasoningSplit.split(raw)
-            let (answer, followUps) = FollowUpSplit.split(answerWithFollowUps)
+            let (splitAnswer, followUps) = FollowUpSplit.split(answerWithFollowUps)
+            // A taught decline that merely OPENS a real answer goes (Mini's habit, 2026-11-02), BEFORE the
+            // validator and the leak guard, so the stored, spoken and replayed text never carries it. The live
+            // bubble held it back the same way; a self-query keeps it.
+            let answer = PersonaLeakGuard.droppingLeadingDecline(splitAnswer, question: question)
             let mergedSources = Self.mergeSources(sources, responder.collectedSources())
             let validation = await CitationValidator.validate(responseText: answer, against: mergedSources)
             // Prompt-leak guard (#111): the model reproduced its own wiring.
@@ -688,6 +697,9 @@ public final class ChatSession {
             // update after the loop, so a coalesced-out tail loses nothing.
             var flushGate = StreamFlushGate()
             var firstChunkLogged = false
+            // A real extraction ask keeps the taught decline; any other question has it dropped when it only opens
+            // the answer (LeadingDecline). Decided once per turn.
+            let keepsDecline = SelfQueryGate.isSelfQuery(question)
             for await chunk in stream {
                 if !firstChunkLogged, !chunk.isEmpty {
                     firstChunkLogged = true
@@ -696,11 +708,18 @@ public final class ChatSession {
                 splitter.feed(chunk)
                 followUpSplitter.feed(splitter.answer)
                 guard flushGate.shouldFlush(at: .now) else { continue }
-                let liveAnswer = followUpSplitter.answer
+                // nil = HOLD: the answer could still be the taught decline (or the decline with nothing after it
+                // yet). The bubble keeps what it had, and its activity label, rather than show text it might drop:
+                // every voice consumer polls this text and skips a shrink, so a shown-then-dropped decline would be
+                // spoken and the rest of the answer silenced.
+                let liveAnswer = keepsDecline
+                    ? followUpSplitter.answer
+                    : LeadingDecline.fold(followUpSplitter.answer, final: false)
                 let liveReasoning = splitter.reasoning
                 update(assistantID) {
-                    $0.text = liveAnswer
                     $0.reasoning = liveReasoning.isEmpty ? nil : liveReasoning
+                    guard let liveAnswer else { return }
+                    $0.text = liveAnswer
                     // Real tokens replace the activity label.
                     $0.activityLabel = nil
                 }
@@ -795,7 +814,10 @@ public final class ChatSession {
         defer { isResponding = false }
 
         stopRequested = false
-        let turn = Task { await self.streamCloud(request, backend: backend, assistantID: assistantID) }
+        let keepsDecline = SelfQueryGate.isSelfQuery(question)
+        let turn = Task {
+            await self.streamCloud(request, backend: backend, assistantID: assistantID, keepsDecline: keepsDecline)
+        }
         cloudTask = turn
         let outcome = await turn.value
         cloudTask = nil
@@ -806,7 +828,7 @@ public final class ChatSession {
                 messages.removeAll { $0.id == assistantID }
                 break
             }
-            finishCloudAnswer(assistantID, text: text, interrupted: stopped)
+            finishCloudAnswer(assistantID, text: text, question: question, interrupted: stopped)
         case let .failed(failure, partial) where partial.isEmpty:
             // Nothing came: say why, once, then the local brain answers.
             update(assistantID) {
@@ -820,7 +842,7 @@ public final class ChatSession {
             await runLocalTurn(question, images: [], history: history, assistantID: localID)
         case let .failed(failure, partial):
             // Something came: keep it, marked, and say why it stopped.
-            finishCloudAnswer(assistantID, text: partial, interrupted: true)
+            finishCloudAnswer(assistantID, text: partial, question: question, interrupted: true)
             var notice = ChatMessage(
                 role: .assistant,
                 text: PrivateCloudFallback.midAnswerNotice(for: failure, localBrain: localBrainName),
@@ -838,7 +860,8 @@ public final class ChatSession {
     private func streamCloud(
         _ request: PrivateCloudTurn.Request,
         backend: any PrivateCloudAnswering,
-        assistantID: UUID
+        assistantID: UUID,
+        keepsDecline: Bool
     ) async -> CloudOutcome {
         var latest = ""
         var flushGate = StreamFlushGate()
@@ -846,7 +869,8 @@ public final class ChatSession {
             for try await snapshot in backend.answer(instructions: request.instructions, prompt: request.prompt) {
                 latest = snapshot
                 guard flushGate.shouldFlush(at: .now) else { continue }
-                let live = latest
+                // The local turn's leading-decline hold, for parity (nil = keep the bubble as it is).
+                guard let live = keepsDecline ? latest : LeadingDecline.fold(latest, final: false) else { continue }
                 update(assistantID) { $0.text = live }
             }
             return .answered(text: latest, stopped: stopRequested)
@@ -861,7 +885,8 @@ public final class ChatSession {
     /// Finalise a PCC answer with the same leak guard and polish a local
     /// answer gets. No sources, citations or follow-ups: none were sent, and
     /// the PCC persona asks for none.
-    private func finishCloudAnswer(_ id: UUID, text: String, interrupted: Bool) {
+    private func finishCloudAnswer(_ id: UUID, text rawText: String, question: String, interrupted: Bool) {
+        let text = PersonaLeakGuard.droppingLeadingDecline(rawText, question: question)
         let leaked = PersonaLeakGuard.leaks(text)
         if leaked {
             Self.leakLog.error("prompt-leak guard: Private Cloud Compute answer reproduced the persona")
@@ -886,7 +911,9 @@ public final class ChatSession {
     /// oversight: CitationValidator needs the sources list to validate
     /// against, and the background lane doesn't collect one yet).
     public func deliverBackgroundAnswer(_ text: String) async {
-        let (answer, followUps) = FollowUpSplit.split(text)
+        let (splitAnswer, followUps) = FollowUpSplit.split(text)
+        // No question reaches this lane, so nothing here is a self-query: a decline that opens it goes.
+        let answer = PersonaLeakGuard.droppingLeadingDecline(splitAnswer, question: "")
         let polished = MessageTextPolish.polish(answer)
         guard !polished.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         // Same guard as the live path (#111). The delegated lane runs the same

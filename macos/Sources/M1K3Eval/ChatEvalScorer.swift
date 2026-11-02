@@ -119,6 +119,9 @@
 //  a call and naming every call, so a chateval shows the #680 fixtures searching or not. Confidence 0.9.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — `EvalObservation.toolsOffered` (default true): a path
 //  that offers no tool (bare generate) makes `avoids X` skip, not pass by construction. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — a dated event: the answer is scored after `LeadingDecline.dropped`
+//  (a taught decline that only opens a real answer is gone, a self-query prompt keeps it), as the app shows it; an
+//  informational `leading-decline dropped` check counts each drop. Decline-only replies score as before. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -731,7 +734,11 @@ public enum ChatEvalScorer {
         // informational only (see the "follow-ups" check below): whether a
         // GIVEN fixture should have offered one is genuinely fixture-dependent
         // (a refusal correctly emits none), so it's reported, not pass/failed.
-        let (answer, followUps) = FollowUpSplit.split(ThinkStripper.strip(observation.rawText))
+        let (splitAnswer, followUps) = FollowUpSplit.split(ThinkStripper.strip(observation.rawText))
+        // The app drops a taught decline that only OPENS a real answer (ChatSession, 2026-11-02), under the same
+        // question rule (a self-query keeps it), so the scorer reads what the user sees. The drop is reported below.
+        let answer = LeadingDecline.dropped(splitAnswer, question: fixture.prompt)
+        let declineDropped = answer != splitAnswer
         let followUpCount = followUps.count
         // Apostrophe-normalised, NOT a bare lowercased(). The same curly-quote
         // trap that once made refusal fixtures false-FAIL real refusals was fixed
@@ -780,6 +787,15 @@ public enum ChatEvalScorer {
             outcome: .skip,
             detail: "\(followUpCount) offered"
         ))
+        // Informational, and only when it happened: the brain opened an answer with the taught decline and the
+        // fold dropped it. Never a gate (the user never sees it); the instrument that counts how often it still does.
+        if declineDropped {
+            checks.append(EvalCheck(
+                name: "leading-decline dropped",
+                outcome: .skip,
+                detail: "opened with the taught decline; scored on the rest"
+            ))
+        }
         // Informational, like follow-ups: does the ANSWER BODY end with a
         // question? Measured on the trailer-stripped answer on purpose —
         // next-questions belong in the FOLLOWUPS line (rendered as chips), so

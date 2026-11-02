@@ -41,6 +41,8 @@
 //  scanner in M1K3Voice with a cross-module equality pin. Retire this line when he rules.
 //  Review: Kev + claude-opus-5.5, 2026-10-28 — the Open above is retired: Kev ruled on 10-27 for the Voice → leaf
 //  edge (and one M1K3AnswerBlocks target, not a split UI target). No manifest change.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — M1K3VoiceTests links M1K3Inference, test-only: the leading-decline
+//  hold is replayed into StreamedAnswerFolder. M1K3Voice itself still never imports it. Confidence 0.9.
 
 import Foundation
 import PackageDescription
@@ -470,7 +472,9 @@ let package = Package(
         ),
         .testTarget(
             name: "M1K3VoiceTests",
-            dependencies: ["M1K3Voice"],
+            // M1K3Inference is test-only here: LeadingDeclineHoldTests replays the chat's leading-decline hold
+            // (M1K3Inference) into StreamedAnswerFolder, the way the voice pollers see the bubble.
+            dependencies: ["M1K3Voice", "M1K3Inference"],
             path: "Tests/M1K3VoiceTests"
         ),
         // The heavy on-device backends, isolated here so nothing else links

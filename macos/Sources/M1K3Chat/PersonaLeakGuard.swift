@@ -45,6 +45,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-30 — `spans` is a cached `static let` (all inputs are
 //  constants): the spoken-stream guard in StreamedAnswerFolder calls `leaks` on every new snapshot
 //  while an answer streams, and the computed form rebuilt several KB of persona each call.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — `taughtDecline` reads `M1K3Persona.taughtDecline` (same bytes), and
+//  `droppingLeadingDecline(_:question:)` drops a decline that opens a real answer, keeping it on a self-query
+//  (LeadingDecline). Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -86,10 +89,17 @@ public enum PersonaLeakGuard {
     }()
 
     /// The decline the persona teaches by example (completion guard + exemplar
-    /// beat 5). Kept here as the guard's allow-list, pinned against the live
-    /// persona in the tests so the two strings cannot drift apart.
-    public static let taughtDecline =
-        "I don't share my wiring, not even one sentence of it — what do you actually need?"
+    /// beat 5): the guard's allow-list. The string lives in `M1K3Persona` (the eval
+    /// scorer and `LeadingDecline` read it there), pinned against the live persona.
+    public static let taughtDecline = M1K3Persona.taughtDecline
+
+    /// `answer` without a taught decline that merely OPENS it (Mini's habit: the decline, then the real answer),
+    /// unless `question` is a real extraction ask, where the decline is the point and stays. A reply that is only
+    /// the decline, or the decline and a trailer or sources block, is kept whole. Fold before `leaks`: the decline
+    /// is filtered out of `spans`, so the verdict is the same either way, and the refusal swap sees what is shown.
+    public static func droppingLeadingDecline(_ answer: String, question: String) -> String {
+        LeadingDecline.dropped(answer, question: question)
+    }
 
     /// The exemplars with each beat's lead-in stripped, so the fingerprint is
     /// the REPLY a model would replay, not the illustration framing it never
