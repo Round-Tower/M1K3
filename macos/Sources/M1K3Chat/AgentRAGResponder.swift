@@ -245,6 +245,9 @@
 //  only memories that share a content word with the question on the hashing arm (a profile ask keeps all), once at
 //  retrieval so every route agrees. It failed its blind bar; Kev overrode it (HashingMemoryGate's signature has the
 //  numbers). Confidence 0.65.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — a dispatched web_search that came back empty answers as a plain turn
+//  carrying `ToolDispatch.emptyWebSearchNote` above the question, so a live ask says it found nothing instead of
+//  inventing news. Every other empty stays a bare plain turn. Confidence 0.7.
 
 import Foundation
 import M1K3Agent
@@ -819,6 +822,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         history: [ChatTurn],
         instructions: String?,
         observation: String? = nil,
+        // Only on a plain turn: a dispatched turn (an observation) never carries it.
+        emptyWebSearch: String? = nil,
         onActivity: @escaping @Sendable (ResponderActivity) -> Void,
         continuation: AsyncStream<String>.Continuation
     ) async -> Bool {
@@ -843,7 +848,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                     .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n\n"),
                 chunks: chunks, memories: memories,
                 history: history, historyBudget: historyBudget,
-                ambient: browserContextProvider?()?.render(), todos: todoContextProvider?()
+                ambient: browserContextProvider?()?.render(), todos: todoContextProvider?(),
+                emptyWebSearch: emptyWebSearch
             )
         }
         // The cut rides the anatomy line, so a launch shows which one this turn got (8,192 behind a forcing brain).
@@ -909,7 +915,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     static func plainTurnPrompt(
         question: String, contextPreamble: String, chunks: [ChunkHit], memories: [ChunkHit],
         history: [ChatTurn], historyBudget: HistoryWindow.Budget, ambient: String?, todos: String?,
-        now: Date = Date()
+        now: Date = Date(), emptyWebSearch: String? = nil
     ) -> String {
         let sections = groundingSections(
             chunks: chunks, memories: memories, toolNames: [], now: now, ambient: ambient, todos: todos
@@ -921,7 +927,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         let body = (grounding + [plainRules]).joined(separator: "\n\n")
         let grounded = HistoryWindow.render(history, budget: historyBudget)
             .map { "\($0)\n\(replayFraming)\n\n\(body)" } ?? body
-        return [contextPreamble, grounded, "USER: \(question)"]
+        return [contextPreamble, grounded, emptyWebSearch ?? "", "USER: \(question)"]
             .filter { !$0.isEmpty }
             .joined(separator: "\n\n")
     }
@@ -1104,6 +1110,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         var ran: [(plan: ToolDispatch.Plan, output: String)] = []
         var failures = 0
         var failedNames: [String] = []
+        var emptyWebQuery: String?
         for step in plans {
             if Task.isCancelled { return .answered }
             onActivity(.usingTool(name: step.tool.name, argument: step.input.values.first ?? ""))
@@ -1117,6 +1124,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             }
             if ToolDispatch.isEmptyResult(output) {
                 Self.log.notice("tool dispatch: \(step.tool.name, privacy: .public) found nothing")
+                if step.tool.name == "web_search" { emptyWebQuery = step.input.values.first ?? question }
                 continue
             }
             Self.log.notice("tool dispatch: \(step.tool.name, privacy: .public) ran, \(output.count, privacy: .public) chars")
@@ -1132,8 +1140,15 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         guard !ran.isEmpty else {
             if failures == 0 {
                 Self.log.notice("tool dispatch: nothing found — a plain turn answers")
-                return await plain()
+                guard let emptyWebQuery else { return await plain() }
+                // A web miss is named above the question, so a live ask isn't answered from thin air.
+                return await runPlainTurn(
+                    question: question, chunks: chunks, memories: memories, history: history,
+                    instructions: instructions, emptyWebSearch: ToolDispatch.emptyWebSearchNote(query: emptyWebQuery),
+                    onActivity: onActivity, continuation: continuation
+                ) ? .answered : .agent(tools)
             }
+            // An empty web read beside a failed link drops its note: the agent has the tools and may search again.
             Self.log.notice("tool dispatch: no tool ran — the agent turn answers")
             return .agent(tools)
         }

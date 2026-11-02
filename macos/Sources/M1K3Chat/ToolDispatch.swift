@@ -60,6 +60,9 @@
 //  (2026-10-27 web sample); with WebSearchTool's three-result list the page text reaching the model across the
 //  sample's nine answered searches went 6,388 → 11,996 characters. The Sources footer still reads the raw URLs.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — `emptyWebSearchNote`: an empty web_search is named in the plain
+//  turn (Kev's iPhone: an empty "tech news today" became two invented headlines). web_search only; a miss in
+//  stored knowledge stays silent (#430). Confidence 0.7 (one live miss; the wording is unmeasured on an eval arm).
 
 import Foundation
 import M1K3Agent
@@ -439,6 +442,21 @@ public enum ToolDispatch {
     public static func isEmptyResult(_ output: String) -> Bool {
         let text = output.trimmingCharacters(in: .whitespacesAndNewlines)
         return text.isEmpty || emptyResultPrefixes.contains { text.hasPrefix($0) }
+    }
+
+    /// A web search that came back empty, said in the plain turn right above the question
+    /// (Kev's iPhone, 2026-11-02: an empty "tech news today" became two invented headlines).
+    /// Only web_search: a miss in the user's own knowledge stays silent (#430, Mini disowned
+    /// Canberra beside a "found nothing"), and the last clause keeps a well-known fact standing.
+    /// The query is the picker's text: one line, no quotes, capped, so it can't break the framing
+    /// or forge a turn (PR review).
+    public static func emptyWebSearchNote(query: String) -> String {
+        let flat = query.replacingOccurrences(of: "\"", with: "")
+            .split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        let shown = flat.count > 80 ? String(flat.prefix(80)) + "…" : flat
+        return "A WEB SEARCH JUST NOW (\"\(shown)\") CAME BACK EMPTY. If this question needs live information "
+            + "(news, today's events, prices, scores), say you couldn't find it just now and make none up. "
+            + "What you already know for certain still stands."
     }
 
     /// The dispatchable tools' own "found nothing" wording (search_knowledge, web_search,
