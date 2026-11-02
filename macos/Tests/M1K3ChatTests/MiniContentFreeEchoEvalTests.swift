@@ -6,10 +6,15 @@
 //  make Mini write its last reply out again? Kev's iPhone, 2026-11-02: Lil did, word for word, after a
 //  story that ended on a question. Each case runs Mini's plain turn without and with
 //  `AgentRAGResponder.contentFreeReplyNote`. An echo is a reply whose first 80 characters (folded) match
-//  the previous reply's. Every answer is printed for a hand read. Pace ≥ 20 s (the AFM daemon).
+//  the previous reply's (all of it when shorter). Every answer is printed for a hand read. Pace ≥ 20 s
+//  (the AFM daemon).
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-02, Confidence 0.6 (Mini stands in for Lil, which needs the
 //  app). Prior: Unknown.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — the echo check compared two 80-char prefixes, so a short
+//  previous reply restated and extended never counted (Mini's "ok thanks" Cork rows). Re-scored by hand:
+//  none 2/18, note 3/18. Lil on the iPhone (scripted drill, 12 turns per arm): note off 2/12 echoes,
+//  note on 0/12.
 //
 
 import Foundation
@@ -81,6 +86,13 @@ struct MiniContentFreeEchoEvalTests {
         String(text.lowercased().filter { $0.isLetter || $0.isNumber }.prefix(80))
     }
 
+    /// The reply opens with the previous reply's first 80 folded characters (all of them when it is
+    /// shorter). Equality of the two prefixes missed a short previous reply restated and then extended.
+    static func echoes(_ text: String, previous: String) -> Bool {
+        let head = fold(previous)
+        return !head.isEmpty && fold(text).hasPrefix(head)
+    }
+
     @Test("echoes per arm")
     func run() async throws {
         let budget = HistoryWindow.Budget(totalChars: 4000, perTurnChars: 1200, maxTurns: 8)
@@ -110,7 +122,7 @@ struct MiniContentFreeEchoEvalTests {
                         if let clean = answer.ingest(chunk) { text = clean }
                     }
                     let previous = item.history.last?.text ?? ""
-                    let echo = !text.isEmpty && Self.fold(text) == Self.fold(previous)
+                    let echo = Self.echoes(text, previous: previous)
                     let claim = Self.claims(text)
                     echoes[arm, default: 0] += echo ? 1 : 0
                     claims[arm, default: 0] += claim ? 1 : 0
