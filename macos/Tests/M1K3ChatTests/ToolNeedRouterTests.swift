@@ -15,8 +15,8 @@
 //  with the router dead on the Mac). A runtime-shaped façade pins it. Confidence 0.9.
 //  Review: Kev + claude-opus-5.5, 2026-11-02 — `embeddingResolvesLate` / `nonEnglishSkipsTheLookup`: a
 //  missing embedding is asked for again on the next turn and kept once found. Confidence 0.85.
-//  Review: Kev + claude-opus-5.5, 2026-11-02 — `toolAsksAreNeverContentFree`: no tool-use fixture reads as a
-//  content-free reply, so none skips the picker. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — `fixturesAreNeverContentFree`: no eval fixture, of any set, reads
+//  as a content-free reply, so none skips the gate's route. Confidence 0.85.
 //
 
 import Foundation
@@ -129,11 +129,11 @@ struct ToolNeedRouterFixtureTests {
         #expect(tripped.isEmpty, "tripped: \(tripped.map(\.prompt))")
     }
 
-    /// 2026-11-02: a content-free reply ("Yes. Please.") skips the picker. Not one tool-use fixture
-    /// may read as content-free.
-    @Test("no tool-use fixture reads as a content-free reply")
-    func toolAsksAreNeverContentFree() {
-        let tripped = ChatEvalFixtures.toolUse.filter { ToolNeedRouter.contentFreeReply($0.prompt) != nil }
+    /// 2026-11-02: a content-free reply ("Yes. Please.") never reaches the picker. Not one eval
+    /// fixture, of any set, may read as content-free: the evals would stop measuring the gate.
+    @Test("no eval fixture reads as a content-free reply")
+    func fixturesAreNeverContentFree() {
+        let tripped = ChatEvalFixtures.all.filter { ToolNeedRouter.contentFreeReply($0.prompt) != nil }
         #expect(tripped.isEmpty, "tripped: \(tripped.map(\.prompt))")
     }
 
