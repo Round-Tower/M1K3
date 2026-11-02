@@ -628,7 +628,8 @@ struct ContentFreeReplyTests {
             Recording(name: "search_knowledge", output: "", calls: Calls()),
         ]
         let open = ToolNeedRouter.offerRequest("Would you like me to open the BBC website?")
-        let opened = ToolDispatch.corrected(ToolPick(tool: "web_search", query: "BBC"), palette: palette, question: open)
+        let bbc = ToolPick(tool: "web_search", query: "BBC")
+        let opened = ToolDispatch.corrected(bbc, palette: palette, question: open)
         #expect(opened.tool == ToolPick.action)
         let personal = ToolNeedRouter.offerRequest("Not sure. Want me to check what you decided about the embedder?")
         let pick = ToolDispatch.corrected(
