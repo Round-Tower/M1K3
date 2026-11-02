@@ -13,6 +13,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — `routeSeesThroughFacades`: the Mac responder holds
 //  the app's RuntimeInferenceProvider, which the route never saw through (build 373 shipped
 //  with the router dead on the Mac). A runtime-shaped façade pins it. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — `embeddingResolvesLate` / `nonEnglishSkipsTheLookup`: a
+//  missing embedding is asked for again on the next turn and kept once found. Confidence 0.85.
 //
 
 import Foundation
@@ -20,6 +22,7 @@ import Foundation
 @testable import M1K3Eval
 import M1K3Inference
 import NaturalLanguage
+import Synchronization
 import Testing
 
 /// The per-turn tool router (Kev, 2026-09-26): a live A/B measured Mini's chat
@@ -59,6 +62,37 @@ struct ToolNeedRouterTests {
         #expect(abs(p1 - p2) < 1e-12)
         let z = ToolNeedRouterWeights.weights[0] + ToolNeedRouterWeights.bias
         #expect(abs(p1 - 1 / (1 + exp(-z))) < 1e-12)
+    }
+
+    /// Kev's iPhone, 2026-11-02: the embedding asset isn't ready at launch ("Unable to locate
+    /// Asset for sentence embedding model"), and a moment later it is. The gate cached that first
+    /// nil for the process, so every turn read `tools p=none` and the picker ran on small talk.
+    @Test("an embedding missing at launch is asked for again on the next turn, then kept")
+    func embeddingResolvesLate() {
+        let attempts = Mutex(0)
+        let embedder = NLSentenceEmbedder {
+            let attempt = attempts.withLock { count in
+                count += 1
+                return count
+            }
+            guard attempt > 1 else { return nil }
+            return { _ in [1, 0, 0] }
+        }
+        #expect(embedder.vector("What's up, kid? How are you keeping?") == nil)
+        #expect(embedder.vector("What's up, kid? How are you keeping?") == [1, 0, 0])
+        #expect(embedder.vector("What's the latest in tech news?") == [1, 0, 0])
+        #expect(attempts.withLock { $0 } == 2, "found once, the embedding is kept: no lookup per turn")
+    }
+
+    @Test("a turn that doesn't read as English never asks for the embedding")
+    func nonEnglishSkipsTheLookup() {
+        let attempts = Mutex(0)
+        let embedder = NLSentenceEmbedder {
+            attempts.withLock { $0 += 1 }
+            return { _ in [1] }
+        }
+        #expect(embedder.vector("Busca mi correo electrónico de ayer, por favor") == nil)
+        #expect(attempts.withLock { $0 } == 0)
     }
 }
 

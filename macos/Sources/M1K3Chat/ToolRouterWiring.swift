@@ -57,6 +57,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (merge review fold) — `searchHeadKey`'s doc says what ships: ON on
 //  the Mac (`whenUnset: true`, off arm `-toolSearchHead NO`), OFF on iOS. It still said off on both shells.
 //  Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — `OneTurnEmbedder` keeps hits only. A cached miss held a repeated
+//  turn at `p=none` after the phone's sentence asset turned up (review catch on the NLSentenceEmbedder fix).
+//  Confidence 0.9.
 //
 
 import Foundation
@@ -146,7 +149,7 @@ public enum ToolRouterWiring {
         defaults.object(forKey: key) == nil ? whenUnset : defaults.bool(forKey: key)
     }
 
-    /// Loaded once: the embedding asset is read-only and shared across turns.
+    /// Shared across turns; it keeps the embedding once found and asks again after a miss.
     private static let embedder = NLSentenceEmbedder()
 
     /// The gate (ToolNeedRouter), the group head and the search head embed the same turn text: one vector for all.
@@ -292,10 +295,11 @@ public enum ToolRouterWiring {
 }
 
 /// Remembers the last text's vector, so the gate and the group head, which ask for the same
-/// turn one after the other, embed it once. One entry: a new turn replaces it.
+/// turn one after the other, embed it once. One entry: a new turn replaces it. A miss is not
+/// remembered: the sentence asset can be missing at launch and there a moment later (2026-11-02).
 final class OneTurnEmbedder: Sendable {
     private let embed: @Sendable (String) -> [Double]?
-    private let last = Mutex<(text: String, vector: [Double]?)?>(nil)
+    private let last = Mutex<(text: String, vector: [Double])?>(nil)
 
     init(_ embed: @escaping @Sendable (String) -> [Double]?) {
         self.embed = embed
@@ -303,7 +307,7 @@ final class OneTurnEmbedder: Sendable {
 
     func vector(_ text: String) -> [Double]? {
         if let hit = last.withLock({ $0 }), hit.text == text { return hit.vector }
-        let vector = embed(text)
+        guard let vector = embed(text) else { return nil }
         last.withLock { $0 = (text, vector) }
         return vector
     }
