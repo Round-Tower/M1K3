@@ -79,8 +79,12 @@ struct PhoneAnswerActionsTests {
             "copy puts the answer's source on the pasteboard"
         )
         #expect(bubble.contains("onFeedback(.bad, commentDraft)"), "thumbs-down commits with its note, on Done")
+        // A row in the LazyVStack can't own a sheet: the keyboard shrinks the transcript, the row
+        // leaves the lazy window and takes its sheet with it, so the note closed on focus (Kev, 11-02).
+        #expect(!bubble.contains(".sheet("), "a transcript row presents no sheet of its own")
 
         let screen = try Self.source("M1K3iOSApp/ChatScreen.swift")
+        #expect(screen.contains(".sheet(item: $noteTarget)"), "the chat screen owns the thumbs-down note")
         #expect(screen.contains("core.chat.recordFeedback("), "ratings go to the shared store")
         #expect(
             screen.contains("core.reviewLedger.recordDelight()"),
