@@ -44,6 +44,10 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — the 10-17 entry's Confidence line back under it (comment only).
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — `PlainTurnRoute.staysLocal` (#713): the search head's reading of the
 //  turn, asked only when a pick reads the web; nil (the default) changes nothing. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — `NLSentenceEmbedder` no longer keeps a miss. On Kev's
+//  iPhone the sentence asset wasn't ready at launch and was a moment later (a launch-arg probe, no asset
+//  request needed); the load-once nil made every phone turn `p=none`, so the picker sent small talk to
+//  datetime and Mini opened every reply with the clock. Confidence 0.85 (proven on one phone, iOS 27.2).
 //
 
 import Foundation
@@ -264,17 +268,38 @@ public struct PlainTurnStream {
 }
 
 /// Apple's English sentence embedding, abstaining on text that isn't English
-/// (the weights only know that space). Loaded once; `NLEmbedding` is read-only.
+/// (the weights only know that space). `NLEmbedding` is read-only, so once found it is kept;
+/// a miss is NOT kept. On Kev's iPhone (2026-11-02) the asset wasn't ready at launch and was a
+/// moment later, and the old load-once property held that first nil for the whole process:
+/// every turn scored `p=none` and failed open to the picker, which sent "what's up?" to datetime.
 public final class NLSentenceEmbedder: @unchecked Sendable {
-    private let embedding = NLEmbedding.sentenceEmbedding(for: .english)
+    public typealias Vectoriser = @Sendable (String) -> [Double]?
+
+    private let resolve: @Sendable () -> Vectoriser?
+    private var vectorise: Vectoriser?
     private let lock = NSLock()
 
-    public init() {}
+    public convenience init() {
+        self.init {
+            guard let embedding = NLEmbedding.sentenceEmbedding(for: .english) else { return nil }
+            // Read-only and only ever called under `lock`, so the capture is safe.
+            nonisolated(unsafe) let held = embedding
+            return { held.vector(for: $0) }
+        }
+    }
+
+    /// `resolve` is asked on each turn until it returns an embedding, then never again.
+    init(resolve: @escaping @Sendable () -> Vectoriser?) {
+        self.resolve = resolve
+    }
 
     public func vector(_ text: String) -> [Double]? {
-        guard let embedding, Self.readsAsEnglish(text) else { return nil }
+        guard Self.readsAsEnglish(text) else { return nil }
         // NLEmbedding documents no thread-safety guarantee; turns are rare, so serialise.
-        return lock.withLock { embedding.vector(for: text) }
+        return lock.withLock {
+            if vectorise == nil { vectorise = resolve() }
+            return vectorise?(text)
+        }
     }
 
     /// Abstain only when English is clearly unlikely. On a short turn the guess is

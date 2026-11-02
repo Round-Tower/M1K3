@@ -254,6 +254,24 @@ struct ToolPickCascadeTests {
         #expect(calls.withLock { $0 } == ["what time is it?", "and my battery?"])
     }
 
+    /// Kev's iPhone, 2026-11-02: the sentence asset is missing at launch and there a moment
+    /// later. A cached miss would keep a repeated turn ("hi", a retry) at `p=none`.
+    @Test("a miss is not cached: the same text asks the embedder again")
+    func missIsNotCached() {
+        let calls = Mutex(0)
+        let cache = OneTurnEmbedder { _ in
+            let call = calls.withLock { count in
+                count += 1
+                return count
+            }
+            return call > 1 ? [1, 2, 3] : nil
+        }
+        #expect(cache.vector("hi") == nil)
+        #expect(cache.vector("hi") == [1, 2, 3])
+        #expect(cache.vector("hi") == [1, 2, 3])
+        #expect(calls.withLock { $0 } == 2)
+    }
+
     private actor ChainPicker: ToolPicking {
         private(set) var chained = 0
 
