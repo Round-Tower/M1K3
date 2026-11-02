@@ -245,6 +245,11 @@
 //  only memories that share a content word with the question on the hashing arm (a profile ask keeps all), once at
 //  retrieval so every route agrees. It failed its blind bar; Kev overrode it (HashingMemoryGate's signature has the
 //  numbers). Confidence 0.65.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — a content-free reply on a tools verdict is chat, whatever its p
+//  (" (content-free reply)"), unless it says yes to M1K3's own lookup offer: then `offerScoped` hands the picker the
+//  offer with the reply and keeps the pick only when it is about the offer (" (yes to a lookup offer)"). The phone's
+//  "Yes. Please." after a story offer had searched New York's weather into the story. Confidence 0.75 (pinned;
+//  the device check and the Mac group head's reading of the combined message are owed).
 
 import Foundation
 import M1K3Agent
@@ -667,13 +672,21 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         let pointsBack = gate?.verdict == .tools && !history.isEmpty
             && (gate?.probability ?? 1) < ToolNeedRouter.pointsBackCeiling
             && ToolNeedRouter.pointsBackInChat(question)
-        let decision = pointsBack
+        // 2026-11-02: a content-free reply ("Yes. Please.") gives the picker nothing to read — after a
+        // story offer it invented a New York weather search. It is chat, whatever the gate's p, unless it
+        // says yes to M1K3's own offer to look something up: then the picker reads the offer (below).
+        let reply = gate?.verdict == .tools ? ToolNeedRouter.contentFreeReply(question) : nil
+        let offer = reply == .affirmative ? ToolNeedRouter.lookupOffer(in: history) : nil
+        let acknowledges = reply != nil && offer == nil
+        let decision = pointsBack || acknowledges
             ? gate.map { ToolNeedRouter.Decision(verdict: .chat, probability: $0.probability) }
             : gate
         if let decision {
             let score = decision.probability.map { String(format: "%.3f", $0) } ?? "none"
             let verdict = decision.verdict == .chat ? "chat" : "tools"
-            let why = pointsBack ? " (points back in this chat)" : ""
+            let why = pointsBack ? " (points back in this chat)"
+                : acknowledges ? " (content-free reply)"
+                : offer != nil ? " (yes to a lookup offer)" : ""
             Self.log.notice(
                 "tool router: \(verdict, privacy: .public) p=\(score, privacy: .public)\(why, privacy: .public)"
             )
@@ -688,7 +701,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         let turnChunks = routesPlain ? [] : cappedChunks
         // Router-invoked tools: on a tools verdict, a picker may name ONE read-only
         // tool that the app runs itself (ToolDispatch); nil keeps the agent turn.
-        let picker = decision?.verdict == .tools ? plainRoute?.pick : nil
+        let picker = Self.offerScoped(decision?.verdict == .tools ? plainRoute?.pick : nil, offer: offer)
 
         // One reasoning decision for the WHOLE turn (#555): the plain route and the
         // post-tool synthesis generate through `provider.generateStreaming`, which
@@ -792,6 +805,28 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// 3 on #288: a wiring-only hit reported "grounded" for an empty block).
     static func usableMemories(_ memories: [ChunkHit]) -> [ChunkHit] {
         memories.filter { !SelfNoteClassifier.isWiringNote(title: $0.itemTitle, text: $0.content) }
+    }
+
+    /// On a yes to a lookup offer, the picker reads the offer with the reply (it sees only the one
+    /// message), and its pick stands only when it is about the offer (`ToolNeedRouter.keptOfferPick`);
+    /// a dropped pick is `none`, a plain turn. Everything after the pick still reads the user's words.
+    /// No offer: the picker as it was.
+    static func offerScoped(
+        _ pick: (@Sendable (String, String) async -> ToolPick?)?, offer: String?
+    ) -> (@Sendable (String, String) async -> ToolPick?)? {
+        guard let pick, let offer else { return pick }
+        return { reply, menu in
+            let picked = await pick(ToolNeedRouter.offerPickMessage(offer: offer, reply: reply), menu)
+            let kept = ToolNeedRouter.keptOfferPick(picked, offer: offer)
+            if let picked, picked.tool != ToolPick.noTool {
+                if let kept, kept.tool != ToolPick.noTool {
+                    log.notice("tool pick: offer kept → \(kept.tool, privacy: .public)")
+                } else {
+                    log.notice("tool pick: offer dropped (\(picked.tool, privacy: .public) is not about the offer)")
+                }
+            }
+            return kept
+        }
     }
 
     /// Whether the kept document-lane chunks hold one of the USER's own documents, the premise

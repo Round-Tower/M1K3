@@ -48,6 +48,10 @@
 //  iPhone the sentence asset wasn't ready at launch and was a moment later (a launch-arg probe, no asset
 //  request needed); the load-once nil made every phone turn `p=none`, so the picker sent small talk to
 //  datetime and Mini opened every reply with the clock. Confidence 0.85 (proven on one phone, iOS 27.2).
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — `contentFreeReply` (a whole-turn whitelist of yes/no/thanks words),
+//  `lookupOffer` (the previous reply's last sentence offering a lookup), `offerPickMessage` and `keptOfferPick`: on
+//  the phone "Yes. Please." after a story offer scored tools at 0.799 and the picker invented a New York weather
+//  search. Confidence 0.75 (pinned; word lists, unmeasured on the blind follow-up set and on device).
 //
 
 import Foundation
@@ -123,6 +127,149 @@ public enum ToolNeedRouter {
 
     /// Above this the gate is sure a tool is wanted (a past-session look-back scores ~0.87).
     public static let pointsBackCeiling = 0.8
+
+    /// What a content-free reply says: yes, no, or only an acknowledgement ("thanks", "good").
+    public enum ReplyKind: Sendable, Equatable {
+        case affirmative, declining, neutral
+    }
+
+    /// A turn with nothing in it for a tool: every word is a yes, a no, a thanks or a filler
+    /// ("Yes. Please.", "No thanks", "Cheers Mike", 👍). A WHOLE-TURN whitelist: any other word
+    /// ("yes, Cork", "do it again", "more") is nil and keeps today's path, so a miss loses
+    /// nothing. 2026-11-02 on Kev's iPhone: after a story offer, "Yes. Please." scored tools at
+    /// 0.799 and Apple's picker, which sees only this message, invented a New York weather
+    /// search. "again", "more", "next" and "another" stay off the list: they want a fresh read.
+    public static func contentFreeReply(_ text: String) -> ReplyKind? {
+        let folded = text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
+        let words = ToolGroupRouter.words(folded).map(String.init)
+        guard !words.isEmpty else {
+            let scalars = text.unicodeScalars.map(\.value)
+            if scalars.contains(where: affirmativeEmoji.contains) { return .affirmative }
+            if scalars.contains(where: decliningEmoji.contains) { return .declining }
+            return nil
+        }
+        var kinds: Set<ReplyKind?> = []
+        var index = 0
+        while index < words.count {
+            // Longest phrase first: "no worries" is a thanks, "no" alone a decline.
+            guard let match = replyPhrases.first(where: { entry in
+                let end = index + entry.phrase.count
+                return end <= words.count && Array(words[index ..< end]) == entry.phrase
+            }) else { return nil }
+            kinds.insert(match.kind)
+            index += match.phrase.count
+        }
+        if kinds.contains(.declining) { return .declining }
+        if kinds.contains(.affirmative) { return .affirmative }
+        return .neutral
+    }
+
+    /// 👍 👌 🙏 ✅ say yes, 👎 says no; any other emoji alone is not read.
+    static let affirmativeEmoji: Set<UInt32> = [0x1F44D, 0x1F44C, 0x1F64F, 0x2705]
+    static let decliningEmoji: Set<UInt32> = [0x1F44E]
+
+    /// Every phrase a content-free reply may be made of, longest first. A nil kind is a filler:
+    /// it may sit beside a yes or a no ("yes I'd love that") and alone reads as neutral.
+    static let replyPhrases: [(phrase: [String], kind: ReplyKind?)] = {
+        let affirmative = [
+            "yes", "yeah", "yea", "yep", "yup", "aye", "sure", "please", "pls", "plz", "ok", "okay", "k", "alright",
+            "go on", "go ahead", "go for it", "do it", "sounds good", "sounds great", "great", "perfect",
+            "absolutely", "definitely", "course", "of course", "why not", "cool", "lovely", "grand", "nice",
+            "brilliant", "class", "continue", "carry on", "keep going", "fine", "deal", "excellent", "awesome",
+            // Accent-folded: oui, sí/si, ja, sim, tak, bitte, por favor, s'il vous plaît, d'accord, vale, claro.
+            "oui", "si", "ja", "sim", "tak", "bitte", "por favor", "s il vous plait", "d accord", "vale", "claro",
+            "sea",
+        ]
+        let declining = [
+            "no", "nope", "nah", "not now", "not really", "not yet", "later", "maybe later", "no thanks",
+            "no thank you", "non", "nein", "nee", "nao", "nie",
+        ]
+        let neutral = [
+            "thanks", "thank you", "thx", "cheers", "ta", "no worries", "no problem", "good", "fair enough",
+            "merci", "danke", "gracias", "grazie", "obrigado", "obrigada", "dziekuje", "go raibh maith agat",
+            "go raibh maith agaibh", "go raibh mile maith agat",
+        ]
+        let fillers = [
+            "that", "this", "it", "i", "d", "m", "s", "ll", "would", "be", "love", "do", "so", "then", "very",
+            "much", "really", "a", "lot", "many", "sounds", "mike", "m1k3", "oh", "well", "just", "maybe",
+            "beaucoup", "schon", "muchas", "mille", "tres", "bien",
+        ]
+        let all = affirmative.map { ($0, ReplyKind?.some(.affirmative)) }
+            + declining.map { ($0, ReplyKind?.some(.declining)) }
+            + neutral.map { ($0, ReplyKind?.some(.neutral)) }
+            + fillers.map { ($0, ReplyKind?.none) }
+        return all.map { (phrase: $0.0.split(separator: " ").map(String.init), kind: $0.1) }
+            .sorted { $0.phrase.count > $1.phrase.count }
+    }()
+
+    /// The previous reply's last sentence when M1K3 offered to look something up there
+    /// ("Want me to search for events in Cork this weekend?"): an offer cue AND a lookup cue.
+    /// nil when the history doesn't end on M1K3's turn, or the last sentence offers anything
+    /// else (a story, a joke) or nothing. Reasoning and a "Web sources:" tail are cut first.
+    public static func lookupOffer(in history: [ChatTurn]) -> String? {
+        guard let last = history.last, last.role == .assistant else { return nil }
+        var text = ReasoningSplit.split(last.text).answer
+        if let tail = text.range(of: "\n\nWeb sources:") { text = String(text[..<tail.lowerBound]) }
+        guard let sentence = StyleAskFence.segments(text).last else { return nil }
+        let offers = ToolGroupRouter.mentions(sentence, any: offerCues)
+            || (ToolGroupRouter.mentions(sentence, any: ["i can", "i could"])
+                && ToolGroupRouter.mentions(sentence, any: conditionalOfferCues))
+        return offers && ToolGroupRouter.mentions(sentence, any: lookupCues) ? sentence : nil
+    }
+
+    static let offerCues = ["want me to", "shall i", "should i", "like me to"]
+    static let conditionalOfferCues = [
+        "if you like", "if you want", "if you d like", "if you would like", "if you wish",
+    ]
+    static let lookupCues = [
+        "look up", "look into", "look for", "look it up", "look that up", "look them up", "look those up",
+        "check", "search", "find", "fetch", "pull up", "see what", "dig", "get the latest", "read",
+    ]
+
+    /// The picker's message on a yes to a lookup offer: the offer on one line, quotes stripped and
+    /// capped (it is M1K3's text, which can echo a web page), then the user's reply.
+    static func offerPickMessage(offer: String, reply: String) -> String {
+        let quotes = CharacterSet(charactersIn: "\"\u{201C}\u{201D}\u{00AB}\u{00BB}`")
+        let flat = offer.unicodeScalars.filter { !quotes.contains($0) }
+            .map(String.init).joined()
+            .split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        let capped = flat.count > offerCap ? String(flat.prefix(offerCap)) + "…" : flat
+        return "You asked: \(capped)\nI answered: \(reply)"
+    }
+
+    static let offerCap = 200
+
+    /// Keeps a pick made on a yes to `offer` only when it is about the offer: a query tool's
+    /// query shares a content word with it (an empty query would search the reply itself), a
+    /// device read is one the offer names. Everything else, an `action` included, is `none`:
+    /// a plain turn. A chain keeps the links that pass. nil (no pick) stays nil.
+    static func keptOfferPick(_ pick: ToolPick?, offer: String) -> ToolPick? {
+        guard let pick else { return nil }
+        let none = ToolPick(tool: ToolPick.noTool, query: "")
+        guard pick.tool != ToolPick.noTool else { return none }
+        let offerWords = offerContentWords(offer)
+        let devices = ToolGroupRouter.deviceTools(offer)
+        let deviceReads = Set(ToolGroupRouter.deviceCues.map { $0.tool })
+        let kept = ([pick] + pick.then).map { ToolPick(tool: $0.tool, query: $0.query) }.filter { link in
+            if deviceReads.contains(link.tool) { return devices.contains(link.tool) }
+            guard ToolDispatch.dispatchable.contains(link.tool) else { return false }
+            return !offerContentWords(link.query).isDisjoint(with: offerWords)
+        }
+        guard let first = kept.first else { return none }
+        return ToolPick(tool: first.tool, query: first.query, then: Array(kept.dropFirst()))
+    }
+
+    /// Content words, less the words every lookup offer and query share ("search", "latest").
+    static func offerContentWords(_ text: String) -> Set<String> {
+        DistillationAttribution.contentTokens(in: text, selfNames: .none).subtracting(offerVocabulary)
+    }
+
+    static let offerVocabulary: Set<String> = [
+        "want", "like", "shall", "should", "look", "check", "search", "find", "fetch", "pull", "dig", "read",
+        "latest", "current", "recent", "today", "tonight", "now", "quick", "quickly", "online", "web",
+        "internet", "info", "information", "details", "more", "something", "anything", "things", "please",
+        "for", "up", "into", "see", "get", "what",
+    ]
 
     /// "<who> [just] <said>" in the past tense, or "<did|do> <who> <say>": a present form alone is
     /// an everyday request ("Can you tell me the weather?", "Can you recommend…"), challenger
