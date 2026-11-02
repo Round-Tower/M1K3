@@ -17,6 +17,9 @@
 //  missing embedding is asked for again on the next turn and kept once found. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-11-02 — `fixturesAreNeverContentFree`: no eval fixture, of any set, reads
 //  as a content-free reply, so none skips the gate's route. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — `offersReadByWhatTheyDo`: seven offers through `offerText` and the
+//  gate (write or think → chat, look up or act → tools), held out of the offer retrain. Red on the old weights (5/7
+//  wrong) and still red on the retrain (the four creative offers read tools). Confidence 0.6.
 //
 
 import Foundation
@@ -185,7 +188,8 @@ struct ToolNeedRouterFixtureTests {
     }
 
     /// #622: lines the voice rig sent to tools, held out of training. Thanks, news and a plain question
-    /// sit near 0.05–0.10 against a ~0.32 threshold; the look-backs at a past session sit near 0.87.
+    /// sit near 0.03–0.15 against a ~0.23 threshold (2026-11-02 offer retrain); the look-backs at a past
+    /// session sit near 0.87.
     @Test("mid-conversation turns go tool-free; look-backs at a past session keep their tools", arguments: [
         ("Thanks Mike, that's really helpful.", ToolNeedRouter.Verdict.chat),
         ("My sister Rachel is coming to stay next month, and she's really allergic to cats.", .chat),
@@ -195,6 +199,24 @@ struct ToolNeedRouterFixtureTests {
     ])
     func conversationalTurns(prompt: String, verdict: ToolNeedRouter.Verdict) {
         #expect(ToolNeedRouter.verdict(for: prompt, embed: embedder.vector) == verdict)
+    }
+
+    /// 2026-11-02: on a content-free yes the gate reads M1K3's offer (`offerText`). The shipped gate read every
+    /// creative offer as tools (haiku 0.51, summarise 0.84, maths 0.57, story 0.67), so "yes" to a story reached
+    /// the picker, and read "add that to your todos" as chat (0.30). Written for this pin, kept out of training.
+    @Test("an offer to write or think reads as chat; an offer to look up or act keeps its tools", arguments: [
+        ("Want a haiku about it?", ToolNeedRouter.Verdict.chat),
+        ("Shall I summarise our chat so far?", .chat),
+        ("Want me to check your maths?", .chat),
+        ("Shall I continue the story?", .chat),
+        ("Want me to look up who won?", .tools),
+        ("Shall I set a 10-minute timer?", .tools),
+        ("Should I add that to your todos?", .tools),
+    ])
+    func offersReadByWhatTheyDo(offer: String, verdict: ToolNeedRouter.Verdict) throws {
+        let text = try #require(ToolNeedRouter.offerText(in: [ChatTurn(role: .assistant, text: offer)]))
+        let decision = ToolNeedRouter.decide(for: text, embed: embedder.vector)
+        #expect(decision.verdict == verdict, "p=\(decision.probability.map { String(format: "%.3f", $0) } ?? "none")")
     }
 
     /// Challenger review, 2026-09-26: NLLanguageRecognizer reads "hi" as Catalan,

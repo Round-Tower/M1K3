@@ -7,6 +7,8 @@ Signed: Kev + claude-opus-5-5, 2026-10-10, Confidence 0.9. Prior: none (new file
 Review: Kev + claude-opus-5.5, 2026-10-26 — `--head search` (#713): the logistic parse and reading mirror
 SearchRouter.probability (untrained or mismatched abstains), and the CLI scores held-out lines as JSON.
 Confidence 0.9.
+Review: Kev + claude-opus-5.5, 2026-11-02 — `--head gate --offers`: the offerText port, the fail-open verdict, and a
+blind set scored per expected class. Confidence 0.85.
 """
 import json
 import math
@@ -126,3 +128,53 @@ def test_main_scores_search_lines_as_json(tmp_path, monkeypatch, capsys):
     records = json.loads(capsys.readouterr().out)
     assert [r["verdict"] for r in records] == ["web", "local"]
     assert records[1]["prompt"] == "history of Rome"
+
+
+GATE = """
+enum ToolNeedRouterWeights {
+    static let threshold: Double = 0.3
+    static let bias: Double = 0.0
+    static let weights: [Double] = [
+        3.0, -3.0,
+    ]
+}
+"""
+
+
+def test_the_offer_text_is_the_reply_s_last_two_sentences_like_tool_need_router():
+    assert m.offer_text('Octopuses have three hearts. Odd, right? Want a "short" story about one?') == (
+        "Odd, right? Want a short story about one?"
+    )
+    assert m.offer_text("Version 3.5 is out.\n\nWant me to check it?") == "Version 3.5 is out. Want me to check it?"
+    assert m.offer_text("👍 …") is None
+    capped = m.offer_text("word " * 100 + "Want a haiku?")
+    assert len(capped) <= m.OFFER_TEXT_LIMIT
+    assert capped.startswith("word") and capped.endswith("Want a haiku?")
+
+
+def test_a_gate_reading_keeps_the_tools_at_or_above_the_threshold_and_fails_open():
+    head = m.Logistic(threshold=0.3, bias=0.0, weights=[1.0])
+    assert m.gate_verdict(0.3, head) == "tools"
+    assert m.gate_verdict(0.29, head) == "chat"
+    assert m.gate_verdict(None, head) == "tools"
+
+
+def test_main_scores_a_blind_set_s_offers_per_expected_class(tmp_path, monkeypatch, capsys):
+    import train_tool_router
+
+    weights = tmp_path / "Gate.swift"
+    weights.write_text(GATE)
+    rows = [
+        {"assistant": "Fun fact. Want a story?", "user": "yes", "expect": "chat"},
+        {"assistant": "Want me to look it up?", "user": "sure", "expect": "search"},
+        {"assistant": "Shall I set a timer?", "user": "go on", "expect": "tool"},
+    ]
+    blind = tmp_path / "blind.json"
+    blind.write_text(json.dumps(rows))
+    vectors = {"Fun fact. Want a story?": [0.0, 1.0], "Want me to look it up?": [1.0, 0.0], "Shall I set a timer?": [0.0, 1.0]}
+    monkeypatch.setattr(train_tool_router, "embed", lambda prompts: np.array([vectors[p] for p in prompts]))
+    assert m.main(["--head", "gate", "--weights", str(weights), "--offers", str(blind), "--json"]) == 0
+    summary = json.loads(capsys.readouterr().out)
+    assert summary["chat"] == {"right": 1, "total": 1}
+    assert summary["tool"] == {"right": 1, "total": 2}
+    assert summary["threshold"] == 0.3
