@@ -470,6 +470,11 @@ struct CompanionAvatarView: View {
 
     private static let log = Logger(subsystem: "app.m1k3", category: "companion")
 
+    /// One `.notice` line per load step, tagged with this view's scene so a covered twin reads apart.
+    private func noteLoad(_ id: String, _ what: String) {
+        Self.log.notice("companion [\(scene.tag, privacy: .public)] \(id, privacy: .public): \(what, privacy: .public)")
+    }
+
     /// Start the swap when the selection has moved past the claim. Claims the target
     /// SYNCHRONOUSLY (not inside the async Task), so the high-frequency update closure can't
     /// spawn a second reload for the same companion before the first begins. The swap happens
@@ -494,7 +499,7 @@ struct CompanionAvatarView: View {
         OnboardingTrace.shared.markOnce("companion load start (\(companion.id))")
         scene.loadToken += 1
         let token = scene.loadToken
-        Self.log.notice("companion [\(scene.tag, privacy: .public)] \(companion.id, privacy: .public): load start #\(token)")
+        noteLoad(companion.id, "load start #\(token)")
         loading?.wrappedValue = true
         defer { if token == scene.loadToken { loading?.wrappedValue = false } }
         // `loadedCompanionID` was claimed synchronously by the caller (make/update).
@@ -534,14 +539,14 @@ struct CompanionAvatarView: View {
                 if scene.loadedCompanionID == companion.id {
                     scene.loadedCompanionID = scene.displayedCompanion?.id
                 }
-                Self.log.notice("companion [\(scene.tag, privacy: .public)] \(companion.id, privacy: .public): load #\(token) cancelled")
+                noteLoad(companion.id, "load #\(token) cancelled")
             } else {
                 Self.log.error("companion \(companion.id, privacy: .public): mesh failed to load")
             }
             return
         }
         guard token == scene.loadToken else { // a newer switch superseded us
-            Self.log.notice("companion [\(scene.tag, privacy: .public)] \(companion.id, privacy: .public): load #\(token) superseded")
+            noteLoad(companion.id, "load #\(token) superseded")
             return
         }
 
@@ -558,9 +563,7 @@ struct CompanionAvatarView: View {
             // its idle loop for the life of the process (Kev, 10-30). `try?` hides why it's short.
             let complete = CompanionAssets.isComplete(harvested.keys, for: companion)
             if !complete {
-                Self.log.notice(
-                    "companion \(companion.id, privacy: .public): harvest short \(harvested.count) clips, cancelled=\(Task.isCancelled)"
-                )
+                noteLoad(companion.id, "harvest short \(harvested.count) clips, cancelled=\(Task.isCancelled)")
             }
             if complete { CompanionClipCache.byCompanion[companion.id] = harvested }
             if !complete, Task.isCancelled, token == scene.loadToken {
@@ -647,7 +650,7 @@ struct CompanionAvatarView: View {
         // otherwise the visionOS window-fit (which only runs inside `update`) waits
         // on the next unrelated `controller.state` change to frame correctly.
         loadTick &+= 1
-        Self.log.notice("companion [\(scene.tag, privacy: .public)] \(companion.id, privacy: .public): load #\(token) shown, \(clips.count) clips")
+        noteLoad(companion.id, "load #\(token) shown, \(clips.count) clips")
         OnboardingTrace.shared.markOnce("companion ready (\(companion.id))")
     }
 
