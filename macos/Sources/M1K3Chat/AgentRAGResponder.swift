@@ -245,6 +245,9 @@
 //  only memories that share a content word with the question on the hashing arm (a profile ask keeps all), once at
 //  retrieval so every route agrees. It failed its blind bar; Kev overrode it (HashingMemoryGate's signature has the
 //  numbers). Confidence 0.65.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — a content-free reply (`ToolNeedRouter.isContentFree`) turns a tools
+//  verdict into chat beside the #622 pointing-back override, logged " (content-free reply)"; with history, its user
+//  line carries `contentFreeReplyNote` (Lil had written its last reply out again after "Please."). Confidence 0.75.
 
 import Foundation
 import M1K3Agent
@@ -667,13 +670,18 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         let pointsBack = gate?.verdict == .tools && !history.isEmpty
             && (gate?.probability ?? 1) < ToolNeedRouter.pointsBackCeiling
             && ToolNeedRouter.pointsBackInChat(question)
-        let decision = pointsBack
+        // 2026-11-02: a content-free reply ("Yes. Please.", "Ok, thanks") gives the picker nothing to
+        // read; after a story offer it invented a New York weather search. Chat at any score, a yes to
+        // M1K3's own offer included (Kev's call: M1K3's words never shape a search the user didn't type;
+        // and no chat tool sets a timer, a todo or a calendar entry for an "action" yes to reach).
+        let contentFree = gate?.verdict == .tools && ToolNeedRouter.isContentFree(question)
+        let decision = pointsBack || contentFree
             ? gate.map { ToolNeedRouter.Decision(verdict: .chat, probability: $0.probability) }
             : gate
         if let decision {
             let score = decision.probability.map { String(format: "%.3f", $0) } ?? "none"
             let verdict = decision.verdict == .chat ? "chat" : "tools"
-            let why = pointsBack ? " (points back in this chat)" : ""
+            let why = pointsBack ? " (points back in this chat)" : contentFree ? " (content-free reply)" : ""
             Self.log.notice(
                 "tool router: \(verdict, privacy: .public) p=\(score, privacy: .public)\(why, privacy: .public)"
             )
@@ -921,10 +929,19 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         let body = (grounding + [plainRules]).joined(separator: "\n\n")
         let grounded = HistoryWindow.render(history, budget: historyBudget)
             .map { "\($0)\n\(replayFraming)\n\n\(body)" } ?? body
-        return [contextPreamble, grounded, "USER: \(question)"]
+        // A content-free reply after a turn says only "go on": without a word to answer, Lil wrote its
+        // last reply out again (Kev's iPhone, 2026-11-02). The note rides only on those turns.
+        let userLine = !history.isEmpty && ToolNeedRouter.isContentFree(question)
+            ? "USER: \(question)\n\(contentFreeReplyNote)" : "USER: \(question)"
+        return [contextPreamble, grounded, userLine]
             .filter { !$0.isEmpty }
             .joined(separator: "\n\n")
     }
+
+    /// Under a content-free reply ("Please.", "ok thanks", 👍) in a chat with history.
+    static let contentFreeReplyNote =
+        "(That is the user's whole reply to your last message. Nothing was looked up or done this turn. "
+            + "Take it up from there; don't repeat your last message.)"
 
     /// One log line splitting a plain or dispatched prompt into the history replay and the
     /// rest (2026-10-16): the voice rig read ~1,900 tokens past Big's persona seed per turn,

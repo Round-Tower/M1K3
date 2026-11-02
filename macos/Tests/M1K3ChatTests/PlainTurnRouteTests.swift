@@ -27,6 +27,10 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — `imagesSkipRouter` runs on a tool-calling double: an image on a brain
 //  that can't carry it is now declined before the router, so the plain double would pass for the wrong reason.
 //  Review: same day (pre-push review fold) — and asserts the turn's answer, so it proves the agent route ran.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — `contentFreeReplySkipsThePicker`: "Yes. Please.", "Ok, thanks" and 👍
+//  after a story offer never reach the picker; "yes, Cork" still does. `contentFreeReplyCarriesTheNote`: with
+//  history, a content-free reply's user line carries the take-it-up note; other prompts are byte-for-byte
+//  unchanged. Confidence 0.85.
 //
 
 import Foundation
@@ -415,6 +419,71 @@ struct PlainTurnRouteTests {
         )
         _ = try await answer(freshResponder, "What did you say about names earlier?")
         #expect(picks.withLock { $0 } == 1)
+    }
+
+    /// Kev's iPhone, 2026-11-02: "Yes. Please." after a story offer scored tools (0.799), and
+    /// Apple's picker, reading only those two words, invented a New York weather search. A
+    /// content-free reply is chat at any score: one plain generation over the history, no picker.
+    /// A reply with content ("yes, Cork") keeps the picker.
+    @Test("a content-free reply never reaches the picker; a reply with content still does")
+    func contentFreeReplySkipsThePicker() async throws {
+        let picked = Mutex<[String]>([])
+        let route = PlainTurnRoute(
+            decide: { _ in .init(verdict: .tools, probability: 0.95) }, instructions: nil,
+            pick: { @Sendable message, _ in
+                picked.withLock { $0.append(message) }
+                return ToolPick(tool: ToolPick.noTool, query: "")
+            }
+        )
+        let history = [
+            ChatTurn(role: .user, text: "Tell me something fun."),
+            ChatTurn(role: .assistant, text: "Want me to write you a short story about a dragon?"),
+        ]
+        for reply in ["Yes. Please.", "Ok, thanks", "👍"] {
+            let provider = RouteProvider(["Once upon a time…"])
+            let responder = try AgentRAGResponder(
+                store: KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
+                toolsProvider: { [NoteTool()] }, plainRouteProvider: { route }
+            )
+            _ = try await answer(responder, reply, history: history)
+            #expect(provider.prompts.count == 1, "\(reply)")
+            #expect(
+                provider.prompts.first?.contains("short story about a dragon") == true, "the replay carries the offer"
+            )
+        }
+        #expect(picked.withLock { $0 }.isEmpty)
+
+        let provider = RouteProvider(["Cork it is."])
+        let responder = try AgentRAGResponder(
+            store: KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
+            toolsProvider: { [NoteTool()] }, plainRouteProvider: { route }
+        )
+        _ = try await answer(responder, "yes, Cork", history: history)
+        #expect(picked.withLock { $0 } == ["yes, Cork"])
+    }
+
+    /// Kev's iPhone, 2026-11-02: "Please." after a story that ended on a question, and Lil wrote its
+    /// last reply out again word for word: the user line said nothing else. A content-free reply
+    /// with history carries a note to take it up from there; every other prompt is unchanged.
+    @Test("a content-free reply after history says take it up, don't repeat; other prompts are unchanged")
+    func contentFreeReplyCarriesTheNote() {
+        let history = [
+            ChatTurn(role: .user, text: "Tell me a story about one."),
+            ChatTurn(role: .assistant, text: "Imagine a house that remembers names. Should it end with a whisper?"),
+        ]
+        let budget = HistoryWindow.Budget(totalChars: 4000, perTurnChars: 800, maxTurns: 8)
+        func prompt(_ question: String, _ history: [ChatTurn]) -> String {
+            AgentRAGResponder.plainTurnPrompt(
+                question: question, contextPreamble: "", chunks: [], memories: [], history: history,
+                historyBudget: budget, ambient: nil, todos: nil
+            )
+        }
+        let note = AgentRAGResponder.contentFreeReplyNote
+        let please = prompt("Please.", history)
+        #expect(please.hasSuffix("USER: Please.\n\(note)"))
+        #expect(!prompt("yes, the whisper", history).contains(note))
+        #expect(!prompt("Please.", []).contains(note), "nothing to take up on a fresh chat")
+        #expect(prompt("yes, the whisper", history).hasSuffix("USER: yes, the whisper"))
     }
 
     /// Code review, 2026-10-17: a confident tools verdict (a past-session look-back sits ~0.87)
