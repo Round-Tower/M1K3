@@ -48,6 +48,13 @@
 //  iPhone the sentence asset wasn't ready at launch and was a moment later (a launch-arg probe, no asset
 //  request needed); the load-once nil made every phone turn `p=none`, so the picker sent small talk to
 //  datetime and Mini opened every reply with the clock. Confidence 0.85 (proven on one phone, iOS 27.2).
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — `isContentFree`: a reply of only yes/no/thanks/praise/fillers is chat
+//  at any score ("Yes. Please." after a story offer had sent Apple's picker to New York's weather). A whole-turn
+//  whitelist, so a miss keeps master's route. Kev's call: a yes to M1K3's own offer is chat too, so M1K3's words
+//  never shape a search the user didn't type; an action-offer exception was built and dropped in review (no chat tool
+//  sets a timer, todo or calendar entry, and the acting palette carries reads and delegate_deep). Four blind sets
+//  (290 rows, refined on once seen): every content-free chat reply goes to chat, every reply with content keeps
+//  master's route. Confidence 0.8.
 //
 
 import Foundation
@@ -123,6 +130,85 @@ public enum ToolNeedRouter {
 
     /// Above this the gate is sure a tool is wanted (a past-session look-back scores ~0.87).
     public static let pointsBackCeiling = 0.8
+
+    /// A reply with nothing in it for a tool: every word is a yes, a no, a thanks, praise or a
+    /// filler ("Yes. Please.", "Ok, thanks", "No ta", "Cheers Mike", 👍). Such a turn is chat at any
+    /// score: Kev's iPhone, 2026-11-02, scored "Yes. Please." after a story offer at 0.799, and
+    /// Apple's picker, which reads only this message, invented a New York weather search.
+    ///
+    /// A WHOLE-TURN whitelist, matched longest phrase first: any other word ("yes, Cork", "do it
+    /// again", "more") is not content-free and keeps today's route, so a miss costs nothing.
+    /// "again", "more", "next" and "another" stay off the list: they want a fresh read.
+    ///
+    /// Kev's call (2026-11-02): a yes to M1K3's own "want me to look it up?" is chat too. Acting on
+    /// it would mean M1K3's words, which can quote private notes, shaping a web search the user
+    /// never typed; the user types the ask instead. Four design rounds measured the alternatives.
+    public static func isContentFree(_ text: String) -> Bool {
+        let folded = text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
+        let words = ToolGroupRouter.words(folded).map(String.init)
+        guard !words.isEmpty else {
+            // No words: only the reply emoji count, and only when every scalar is one (skin tones,
+            // joiners and variation selectors ride along: "👍🏽" is a 👍).
+            let scalars = replyScalars(text)
+            return !scalars.isEmpty && scalars.allSatisfy { replyEmoji.contains($0) }
+        }
+        var index = 0
+        while index < words.count {
+            guard let phrase = replyPhrases.first(where: { phrase in
+                index + phrase.count <= words.count && Array(words[index ..< index + phrase.count]) == phrase
+            }) else { return false }
+            index += phrase.count
+        }
+        return true
+    }
+
+    /// A reply's scalars without whitespace, skin-tone modifiers, joiners or variation selectors.
+    static func replyScalars(_ text: String) -> [UInt32] {
+        text.unicodeScalars.map(\.value).filter { value in
+            !(0x1F3FB ... 0x1F3FF).contains(value) && value != 0x200D && value != 0xFE0F
+                && !(Unicode.Scalar(value)?.properties.isWhitespace ?? false)
+        }
+    }
+
+    /// 👍 🙌 👌 🙏 ✅ 👎: a reply on their own.
+    static let replyEmoji: Set<UInt32> = [0x1F44D, 0x1F64C, 0x1F44C, 0x1F64F, 0x2705, 0x1F44E]
+
+    /// Every phrase a content-free reply may be made of, longest first. Words are letters and digits
+    /// only (`ToolGroupRouter.words`), so "I'd" is "i d"; accents are folded ("sí" is "si").
+    static let replyPhrases: [[String]] = {
+        let yes = [
+            "yes", "yeah", "yea", "yep", "yup", "aye", "please", "pls", "plz", "go", "go on", "go ahead", "go for it",
+            "do it", "do that", "do this", "do so", "please do", "let s do it", "lets do it", "let s go", "why not",
+            "absolutely", "definitely", "course", "of course", "mhm", "mm hmm", "uh huh", "sure", "sure thing", "ok",
+            "okay", "k", "alright", "continue", "carry on", "keep going", "deal", "love it", "love that", "tell me",
+            "would be", "d be", "like that", "like it", "fire away", "hit me", "deffo", "sound", "lol", "ha", "haha",
+            "done",
+            // Accent-folded: oui, sí, ja, sim, tak, bitte, por favor, s'il vous plaît, d'accord, vale, claro.
+            "oui", "si", "ja", "sim", "tak", "bitte", "por favor", "s il vous plait", "s il te plait", "d accord",
+            "vale", "claro", "gerne", "allez",
+            // Irish "'Sea" (is ea, "it is") is a yes on its own; "the sea" has "the" and is not content-free.
+            "sea",
+        ]
+        let no = [
+            "no", "nope", "nah", "not really", "non", "nein", "nee", "nao", "nie", "later", "maybe later", "not now",
+            "not yet", "laat maar", "that s all", "that s it", "night", "good night", "goodnight", "night night",
+        ]
+        let praise = [
+            "great", "perfect", "cool", "lovely", "grand", "nice", "brilliant", "fine", "excellent", "awesome", "good",
+            "no worries", "no problem", "fair enough",
+        ]
+        let thanks = [
+            "thanks", "thank you", "thx", "cheers", "ta", "merci", "danke", "gracias", "grazie", "obrigado", "obrigada",
+            "dziekuje", "go raibh maith agat", "go raibh maith agaibh", "go raibh mile maith agat",
+        ]
+        let fillers = [
+            "that", "this", "it", "i", "d", "m", "s", "ll", "re", "you", "would", "be", "love", "do", "so", "then",
+            "very", "much", "really", "a", "lot", "many", "sounds", "mike", "m1k3", "oh", "ah", "well", "just", "maybe",
+            "beaucoup", "schon", "muchas", "mille", "tres", "bien",
+        ]
+        return (yes + no + praise + thanks + fillers).map { $0.split(separator: " ").map(String.init) }
+            .sorted { $0.count > $1.count }
+    }()
 
     /// "<who> [just] <said>" in the past tense, or "<did|do> <who> <say>": a present form alone is
     /// an everyday request ("Can you tell me the weather?", "Can you recommend…"), challenger

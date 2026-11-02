@@ -15,6 +15,8 @@
 //  with the router dead on the Mac). A runtime-shaped façade pins it. Confidence 0.9.
 //  Review: Kev + claude-opus-5.5, 2026-11-02 — `embeddingResolvesLate` / `nonEnglishSkipsTheLookup`: a
 //  missing embedding is asked for again on the next turn and kept once found. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — `isContentFree` tables both ways and a pin that no eval prompt reads as
+//  content-free. Confidence 0.85.
 //
 
 import Foundation
@@ -124,6 +126,36 @@ struct ToolNeedRouterFixtureTests {
     @Test("no tool-use fixture reads as pointing back at the chat")
     func toolAsksNeverPointBack() {
         let tripped = ChatEvalFixtures.toolUse.filter { ToolNeedRouter.pointsBackInChat($0.prompt) }
+        #expect(tripped.isEmpty, "tripped: \(tripped.map(\.prompt))")
+    }
+
+    /// Kev's iPhone, 2026-11-02: after a story offer, "Yes. Please." scored tools and Apple's
+    /// picker, which reads only this message, invented a New York weather search. A reply made only
+    /// of yes, no, thanks, praise and fillers carries nothing for a tool to read.
+    @Test("a reply of only yes, no, thanks or praise is content-free", arguments: [
+        "Yes. Please.", "yes please", "ok", "Ok, thanks", "No thanks", "no ta", "do it later", "Great, thanks",
+        "That's ok", "That'd be lovely", "Cheers Mike", "go on so", "Sí, claro", "oui, merci", "Sea", "mhm",
+        "👍", "👍👍", "👍🏽", "🙌🏿", "Yes!!", "  yeah  ", "Ah no, go on", "Thank you so much", "yeah sound", "fire away",
+        "that's all, ta", "ja, gerne", "Night!",
+    ])
+    func contentFree(_ reply: String) {
+        #expect(ToolNeedRouter.isContentFree(reply))
+    }
+
+    /// Any word off the list keeps today's route: a miss costs nothing, and "again", "more",
+    /// "next" and "another" want a fresh read.
+    @Test("a reply with anything else in it is not content-free", arguments: [
+        "yes, Cork", "do it again", "more", "next", "another one", "what time is it?", "tell me more",
+        "yes and the weather in Paris", "the sea", "🍿", "", "   ", "?", "Thanks for the news about Cork",
+        "hit me with a joke", "yeah check", "sound effects", "done for tonight?", "ja, mach das",
+    ])
+    func notContentFree(_ reply: String) {
+        #expect(!ToolNeedRouter.isContentFree(reply))
+    }
+
+    @Test("no eval prompt reads as content-free")
+    func evalPromptsAreNeverContentFree() {
+        let tripped = ChatEvalFixtures.all.filter { ToolNeedRouter.isContentFree($0.prompt) }
         #expect(tripped.isEmpty, "tripped: \(tripped.map(\.prompt))")
     }
 
