@@ -60,6 +60,9 @@
 //  (2026-10-27 web sample); with WebSearchTool's three-result list the page text reaching the model across the
 //  sample's nine answered searches went 6,388 → 11,996 characters. The Sources footer still reads the raw URLs.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — `fallsBackToQuestion`: whether `plan` would read the question for a
+//  pick (an empty query, a fetch_page with no URL), so a yes to an offer never plans M1K3's words as a query.
+//  Confidence 0.85.
 
 import Foundation
 import M1K3Agent
@@ -408,6 +411,20 @@ public enum ToolDispatch {
     public struct Plan: Sendable {
         public let tool: any AgentTool
         public let input: [String: String]
+    }
+
+    /// Whether `plan` would read the question for this pick: an empty query on a tool that takes
+    /// one, or a fetch_page whose query holds no URL. recent_activity reads only its own query.
+    public static func fallsBackToQuestion(_ pick: ToolPick, palette: [any AgentTool]) -> Bool {
+        guard dispatchable.contains(pick.tool), let tool = palette.first(where: { $0.name == pick.tool }),
+              tool.parameters.first != nil
+        else { return false }
+        let query = pick.query.trimmingCharacters(in: .whitespacesAndNewlines)
+        switch pick.tool {
+        case "fetch_page": return webURL(query) == nil
+        case "recent_activity": return false
+        default: return query.isEmpty
+        }
     }
 
     /// The call to make for this pick, or nil when the turn belongs to the agent.

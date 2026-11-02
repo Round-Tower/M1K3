@@ -12,8 +12,11 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-02, Confidence 0.8. Prior: Unknown.
 //  Review: Kev + claude-opus-5.5, 2026-11-02 — round 3: the cue lists and the agent hand-off are gone (offer
-//  detection held 44% on a held-out set); the gate reads `offerText` and the picker and the dispatch's reads
-//  take the offer, the prompts the user's words. Thanks and bare praise close, a "later" defers. Confidence 0.8.
+//  detection held 44% on a held-out set); the gate reads `offerText` (only when the reply offers), the picker and
+//  the dispatch's reads take the offer as a request, the prompts the user's words. Pinned from the round 3
+//  review: acknowledgements after an answer stay chat, an empty-query pick on a yes runs no tool, the search
+//  head's guard skips M1K3's content sentence, retrieval reads the offer (#712), sources tails in every shape.
+//  Confidence 0.8.
 //
 
 import Foundation
@@ -99,7 +102,7 @@ private func gate(
 private func run(
     _ question: String, history: [ChatTurn], pick: ToolPick?, tools: [any AgentTool], calls: Calls,
     provider: Scripted, decide: @escaping @Sendable (String, String) -> ToolNeedRouter.Decision,
-    searchHead: Bool = false
+    searchHead: Bool = false, store: KnowledgeStore? = nil
 ) async throws -> String {
     let route = PlainTurnRoute(
         decide: { text in
@@ -117,7 +120,7 @@ private func run(
         } : nil
     )
     let responder = try AgentRAGResponder(
-        store: KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
+        store: store ?? KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
         toolsProvider: { tools }, plainRouteProvider: { route }
     )
     var text = ""
@@ -198,7 +201,8 @@ struct ContentFreeReplyTurnTests {
                 tools: palette(calls), calls: calls, provider: provider,
                 decide: gate(reply: reply, replyP: replyP, onOffer: .tools)
             )
-            #expect(calls.picks.withLock { $0 } == [lookupOfferText], "reply verdict \(reply)")
+            // The picker reads the offer as a request: "Want me to look up who won?" → "look up who won".
+            #expect(calls.picks.withLock { $0 } == ["look up who won"], "reply verdict \(reply)")
             #expect(calls.log.withLock { $0 } == ["web_search(Ballon d'Or winner)"])
             let prompt = try #require(provider.prompts.first)
             #expect(prompt.contains("USER: yes please"))
@@ -208,7 +212,7 @@ struct ContentFreeReplyTurnTests {
         }
     }
 
-    @Test("the dispatch's reads take the offer: the recency correction and the empty-query plan")
+    @Test("the recency correction reads the offer's request: a this-year lookup goes to the web")
     func correctionsReadTheOffer() async throws {
         let calls = Calls()
         let provider = Scripted(["It was Dembélé."])
@@ -216,17 +220,52 @@ struct ContentFreeReplyTurnTests {
             ChatTurn(role: .user, text: "Who won the Ballon d'Or?"),
             ChatTurn(role: .assistant, text: "Not sure off-hand. Want me to find out who won this year?"),
         ]
-        // lookup_fact on a question about this year goes to the web; the empty query reads the offer.
         _ = try await run(
-            "yes please", history: history, pick: ToolPick(tool: "lookup_fact", query: ""),
+            "yes please", history: history, pick: ToolPick(tool: "lookup_fact", query: "Ballon d'Or winner"),
             tools: palette(calls), calls: calls, provider: provider, decide: gate(onOffer: .tools)
         )
-        #expect(calls.log.withLock { $0 } == [
-            "web_search(Not sure off-hand. Want me to find out who won this year?)",
-        ])
+        #expect(calls.picks.withLock { $0 } == ["find out who won this year"])
+        #expect(calls.log.withLock { $0 } == ["web_search(Ballon d'Or winner)"])
     }
 
-    @Test("the search head reads the offer, not \"yes please\"")
+    /// Round 3 review (high): an empty-query pick planned with the offer text sent M1K3's own words, which
+    /// may be grounded in private notes ("Your appointment with Dr Byrne about the biopsy…"), to DuckDuckGo
+    /// or Wikipedia. On a yes to an offer, a pick that would read the question is no pick: the agent turn
+    /// answers, with the chat in hand. A chain link that would read it is dropped.
+    @Test("an empty-query pick on a yes to an offer is no pick: M1K3's words never become a query")
+    func emptyQueryOnAnOfferIsNoPick() async throws {
+        let offerText = "Your appointment with Dr Byrne about the biopsy is Thursday at 3. "
+            + "Want me to check the traffic then?"
+        let history = [
+            ChatTurn(role: .user, text: "When's my appointment?"), ChatTurn(role: .assistant, text: offerText),
+        ]
+        let picks = [
+            ToolPick(tool: "web_search", query: ""), ToolPick(tool: "lookup_fact", query: "  "),
+            ToolPick(tool: "web_search", query: "traffic Thursday", then: [ToolPick(tool: "lookup_fact", query: "")]),
+        ]
+        for pick in picks {
+            let calls = Calls()
+            let provider = Scripted(["Traffic looks light."])
+            _ = try await run(
+                "yes", history: history, pick: pick, tools: palette(calls), calls: calls, provider: provider,
+                decide: gate(onOffer: .tools)
+            )
+            let log = calls.log.withLock { $0 }
+            #expect(!log.contains { $0.contains("Byrne") || $0.contains("biopsy") || $0.contains("traffic then") })
+            #expect(log.allSatisfy { !$0.hasSuffix("()") })
+            if pick.query.trimmingCharacters(in: .whitespaces).isEmpty {
+                #expect(log.isEmpty, "\(pick.tool): no tool ran")
+                // The nil-pick path: the agent turn, with the palette and the chat.
+                let prompt = try #require(provider.prompts.first)
+                #expect(prompt.contains("propose_todo"))
+                #expect(prompt.contains("Dr Byrne"))
+            } else {
+                #expect(log == ["web_search(traffic Thursday)"], "the empty chain link is dropped")
+            }
+        }
+    }
+
+    @Test("the search head reads the offer's request, not \"yes please\"")
     func searchHeadReadsTheOffer() async throws {
         let calls = Calls()
         let provider = Scripted(["It was Dembélé."])
@@ -238,8 +277,82 @@ struct ContentFreeReplyTurnTests {
             "yes please", history: history, pick: ToolPick(tool: "web_search", query: "Ballon d'Or winner"),
             tools: palette(calls), calls: calls, provider: provider, decide: gate(onOffer: .tools), searchHead: true
         )
-        #expect(calls.local.withLock { $0 } == ["Not sure off-hand. Want me to find out who won?"])
+        #expect(calls.local.withLock { $0 } == ["find out who won"])
         #expect(calls.log.withLock { $0 } == ["web_search(Ballon d'Or winner)"])
+    }
+
+    /// Round 3 review (medium): the guard ("the user asked for the web in words") read M1K3's content
+    /// sentence too, so its "latest" skipped the #713 veto. The guard reads the offer's own ask only.
+    @Test("the search head's guard reads the offer's ask, never M1K3's content sentence")
+    func searchGuardSkipsTheContentSentence() async throws {
+        let calls = Calls()
+        let provider = Scripted(["Here's the story of it."])
+        let history = [
+            ChatTurn(role: .user, text: "When did the last Harry Potter book come out?"),
+            ChatTurn(
+                role: .assistant, text: "The latest Harry Potter book came out in 2007. Want me to tell you about it?"
+            ),
+        ]
+        _ = try await run(
+            "Sure", history: history, pick: ToolPick(tool: "web_search", query: "Harry Potter"),
+            tools: palette(calls), calls: calls, provider: provider, decide: gate(onOffer: .tools), searchHead: true
+        )
+        #expect(calls.local.withLock { $0 }.count == 1, "the head is asked: \"latest\" was M1K3's word")
+    }
+
+    @Test("an acknowledgement after an answer that offered nothing is chat: the answer is never re-run")
+    func ackAfterAnAnswerIsChat() async throws {
+        let weather = [
+            ChatTurn(role: .user, text: "Weather in Cork?"),
+            ChatTurn(
+                role: .assistant, text: "It's 12 degrees and raining in Cork today. Expect showers into the evening."
+            ),
+        ]
+        for ack in ["Ok, thanks", "ok", "Okay, thank you", "alright", "Sure, cheers", "👍", "That's ok"] {
+            let calls = Calls()
+            let provider = Scripted(["You're welcome."])
+            _ = try await run(
+                ack, history: weather, pick: ToolPick(tool: "web_search", query: "weather Cork"),
+                tools: palette(calls), calls: calls, provider: provider, decide: gate(onOffer: .tools)
+            )
+            #expect(calls.decided.withLock { $0 } == [ack], "\(ack): only the user's words are scored")
+            #expect(calls.picks.withLock { $0 }.isEmpty, "\(ack)")
+            #expect(calls.log.withLock { $0 }.isEmpty, "\(ack)")
+            #expect(isPlainTurn(provider.prompts.first), "\(ack)")
+        }
+    }
+
+    /// Round 3 review (medium): retrieval ran on "yes please", so #712's document correction never saw
+    /// the manual and Wikipedia answered the user's own torque question. On a yes to an offer, retrieval
+    /// reads the offer's request.
+    @Test("a yes to an offer retrieves on the offer: the user's manual answers, no lookup leaves the device")
+    func yesRetrievesOnTheOffer() async throws {
+        let store = try KnowledgeStore()
+        try await DocumentIngester(store: store, embedder: HashingEmbeddingService()).ingest(
+            title: "Trailer Service Manual",
+            pages: [DocumentPage(
+                pageNumber: 1,
+                text: "4 Hubs\nThe hub nuts on the trailer axle take 145 Nm of torque, tightened in a star pattern."
+            )]
+        )
+        let history = [
+            ChatTurn(role: .user, text: "I'm doing the trailer's wheels today."),
+            ChatTurn(
+                role: .assistant,
+                text: "Good luck! Want me to look up the torque for the hub nuts on the trailer axle?"
+            ),
+        ]
+        let calls = Calls()
+        let provider = Scripted(["145 Nm, in a star pattern."])
+        _ = try await run(
+            "yes please", history: history, pick: ToolPick(tool: "lookup_fact", query: "hub nut torque"),
+            tools: palette(calls), calls: calls, provider: provider, decide: gate(onOffer: .tools), store: store
+        )
+        #expect(calls.log.withLock { $0 }.isEmpty, "no lookup leaves the device")
+        let prompt = try #require(provider.prompts.first)
+        #expect(prompt.contains("145 Nm"), "the manual's chunk grounds the answer")
+        #expect(prompt.contains(AgentRAGResponder.plainRules))
+        #expect(prompt.contains("USER: yes please"))
     }
 
     @Test("\"Great, thanks\" after a lookup offer closes: chat, the offer is never read, no picker")
@@ -275,7 +388,7 @@ struct ContentFreeReplyTurnTests {
             "No, go ahead", history: lookupOffer, pick: ToolPick(tool: "web_search", query: "Ballon d'Or winner"),
             tools: palette(calls), calls: calls, provider: provider, decide: gate(onOffer: .tools)
         )
-        #expect(calls.picks.withLock { $0 } == [lookupOfferText])
+        #expect(calls.picks.withLock { $0 } == ["look up who won"])
     }
 
     @Test("no thanks to a search offer is chat: no picker")
@@ -328,7 +441,10 @@ struct ContentFreeReplyTests {
         "Yes I\u{2019}d love that", "yep", "Aye, go on so", "👍", "👍🏽", "🙌", "Oui, s'il vous plaît", "Ja, bitte",
         "Sí, por favor", "Sim", "Tak", "YES", "please do", "mhm", "Uh huh", "uh-huh", "go", "ok go", "Go!",
         // An acceptance word beside a thanks or praise is a yes.
-        "Yes, thanks", "Great, yes please", "Perfect, go ahead", "oui, merci", "Lovely, do it", "Sure, cheers",
+        "Yes, thanks", "Great, yes please", "Perfect, go ahead", "oui, merci", "Lovely, do it",
+        // A conditional plus praise is a yes, and so is liking it.
+        "That would be great", "That'd be lovely", "That\u{2019}d be brilliant", "That sounds lovely",
+        "Would be great", "I'd like that", "I would like that", "I'd really like that",
         "Vale", "Claro", "Sea",
         "I'd love that", "I\u{2019}d love that", "Do that", "Do this", "Do so", "Love it", "Love that", "I would",
         "Let's do it", "Lets do it", "Let's go!", "Tell me", "Sure thing",
@@ -341,7 +457,7 @@ struct ContentFreeReplyTests {
 
     @Test("declining replies", arguments: [
         "No thanks", "Nope", "Not now", "No, that's ok", "Nah, I'm good", "Maybe later", "Nein, danke",
-        "Non merci", "👎", "no", "Nah, that's grand", "No, please",
+        "Non merci", "👎", "no", "Nah, that's grand", "No, please", "No, that's fine",
         // Not now means not now, whatever go phrase rides with it.
         "do it later", "Go ahead, not now", "Not now, go on", "later", "yes, later",
     ])
@@ -354,6 +470,12 @@ struct ContentFreeReplyTests {
         "Gracias", "Grazie", "Obrigado", "No worries", "No problem", "Good",
         "Great, thanks", "Perfect", "Cool", "Lovely, thanks", "Grand", "Nice", "Brilliant", "Fine", "Excellent",
         "Awesome", "Great", "Perfect, thank you", "Cool cool",
+        // A weak yes beside a thanks is an acknowledgement, not an acceptance (round 3 review, high).
+        "ok thanks", "Ok, thanks", "Okay, thank you", "Sure, cheers", "k thanks", "Alright, cheers", "fine thanks",
+        "Sure thing, thanks", "OK ta",
+        // "That's ok" declines or closes in Irish and British English.
+        "That's ok", "It's ok", "It's okay", "It's alright", "That's alright", "That's fine", "It's fine",
+        "You're grand", "You\u{2019}re grand, thanks", "That's ok, thanks",
     ])
     func neutral(text: String) {
         #expect(ToolNeedRouter.contentFreeReply(text) == .neutral)
@@ -391,9 +513,23 @@ struct ContentFreeReplyTests {
         ("Want me to check it?\n\nSources:\n* https://a.example\n* https://b.example", "Want me to check it?"),
         // A prose line that names sources is the reply, not a tail.
         (
-            "The river splits at the city.\nThe main sources: the Lee and the Bride.",
-            "The river splits at the city. The main sources: the Lee and the Bride."
+            "The main sources: the Lee and the Bride.\nWant me to map them?",
+            "The main sources: the Lee and the Bride. Want me to map them?"
         ),
+        // Model-written tails in every shape the speech lane cuts.
+        ("Want me to check it?\n\n**Sources:**\n- https://a.example", "Want me to check it?"),
+        ("Want me to check it?\n\n## Sources\n1. https://a.example\n2. https://b.example", "Want me to check it?"),
+        ("Want me to check it?\n\nSource:\n[1] The Irish Times, 2026", "Want me to check it?"),
+        ("Want me to check it?\n\nSources: [1] a.example, [2] b.example", "Want me to check it?"),
+        ("Want me to check it?\n\n*Web sources:*\n• https://a.example", "Want me to check it?"),
+        // An offer that is not a question: "I can … if you like", "happy to … just say".
+        (
+            "Cork has a few. I can look up the listings if you like.",
+            "Cork has a few. I can look up the listings if you like."
+        ),
+        ("That's the gist. Happy to dig into it, just say.", "That's the gist. Happy to dig into it, just say."),
+        // A question with a closing quote or an emoji after it.
+        ("That's grand. Want me to look it up?\u{201D}", "That's grand. Want me to look it up?"),
         // A sources line followed by more than links is not a tail either.
         (
             "Here's the gist.\n\nWeb sources:\n• https://a.example\nWant me to dig up more?",
@@ -417,6 +553,89 @@ struct ContentFreeReplyTests {
         #expect(offer.count <= 300)
         #expect(offer.hasSuffix("end. Want me to look it up?"))
         #expect(offer.hasPrefix("word "))
+    }
+
+    /// Round 3 review (high): offerText took the last two sentences of ANY reply, so "Ok, thanks" after a
+    /// weather answer re-ran the weather search on the answer's own text.
+    @Test("no offer text when the reply ends in statements: an answer is not an offer", arguments: [
+        "It's 12 degrees and raining in Cork today. Expect showers into the evening.",
+        "It's 3:42 PM on Monday, November 2.",
+        "Do you know what? The Eiffel Tower is 330 metres tall. It was finished in 1889.",
+        "The river splits at the city.\nThe main sources: the Lee and the Bride.",
+        "I could be wrong about that. It was 2007.",
+    ])
+    func answerIsNoOffer(reply: String) {
+        #expect(ToolNeedRouter.offerText(in: [ChatTurn(role: .assistant, text: reply)]) == nil)
+    }
+
+    @Test("the offer's request: the offer form stripped, an imperative the picker can read", arguments: [
+        (
+            "Sorry to hear it! Want me to write you a short story about a dragon?",
+            "write me a short story about a dragon"
+        ),
+        ("Not sure. Want me to look it up?", "Not sure. look it up"),
+        ("Not sure off-hand. Want me to look up who won?", "look up who won"),
+        ("I don't have live listings. Do you want me to search for events in Cork?", "search for events in Cork"),
+        ("Shall I check the forecast for Kinsale?", "check the forecast for Kinsale"),
+        ("Should I pull up the news?", "pull up the news"),
+        ("Would you like me to open the BBC website?", "open the BBC website"),
+        ("Would it help if I searched for flights to Lisbon?", "searched for flights to Lisbon"),
+        ("Cork has a few. I can look up the listings if you like.", "look up the listings"),
+        ("Cork has a few. I could check what\u{2019}s on if you want.", "check what's on"),
+        ("That's the gist. Happy to dig into it, just say.", "That's the gist. dig into it"),
+        ("Fancy me finding a recipe for brown bread?", "finding a recipe for brown bread"),
+        ("I don't know. Or want me to check what you decided about the embedder?",
+         "check what I decided about the embedder"),
+        ("Your calendar is clear. Want me to check your reminders too?", "check my reminders too"),
+        // No noun phrase of its own: the sentence before it carries the topic.
+        ("The latest Harry Potter book came out in 2007. Want me to tell you about it?",
+         "The latest Harry Potter book came out in 2007. tell me about it"),
+        // A link M1K3 echoed never reaches the picker.
+        ("• https://a.example Want me to dig up more?", "dig up more"),
+        // A question with no offer form is read as it stands.
+        ("Cork is lovely. Interested in the full history of the city?", "Interested in the full history of the city"),
+    ])
+    func offerRequest(offer: String, request: String) {
+        #expect(ToolNeedRouter.offerRequest(offer) == request)
+    }
+
+    @Test("the offer's ask: the offer sentence alone, for the search head's guard", arguments: [
+        ("The latest Harry Potter book came out in 2007. Want me to tell you about it?", "tell me about it"),
+        ("Not sure. Want me to search for it?", "search for it"),
+        (
+            "Sorry to hear it! Want me to write you a short story about a dragon?",
+            "write me a short story about a dragon"
+        ),
+    ])
+    func offerAsk(offer: String, ask: String) {
+        #expect(ToolNeedRouter.offerAsk(offer) == ask)
+        #expect(ToolDispatch.asksForTheWeb(ToolNeedRouter.offerAsk(offer)) == ask.contains("search"))
+    }
+
+    @Test("the request is capped at 300 characters, keeping its end")
+    func offerRequestIsCapped() {
+        let long = String(repeating: "word ", count: 120) + "end. Want me to look it up?"
+        let request = ToolNeedRouter.offerRequest(long)
+        #expect(request.count <= 300)
+        #expect(request.hasSuffix("end. look it up"))
+    }
+
+    /// The correctors key on the user's voice; the request is in it, so they work on a yes.
+    @Test("the correctors read the request: an offer to open a site opens it, a personal one reads the notes")
+    func correctorsWorkOnTheRequest() {
+        let palette: [any AgentTool] = [
+            Recording(name: "web_search", output: "", calls: Calls()),
+            Recording(name: "search_knowledge", output: "", calls: Calls()),
+        ]
+        let open = ToolNeedRouter.offerRequest("Would you like me to open the BBC website?")
+        let bbc = ToolPick(tool: "web_search", query: "BBC")
+        let opened = ToolDispatch.corrected(bbc, palette: palette, question: open)
+        #expect(opened.tool == ToolPick.action)
+        let personal = ToolNeedRouter.offerRequest("Not sure. Want me to check what you decided about the embedder?")
+        let pick = ToolDispatch.corrected(
+            ToolPick(tool: "web_search", query: "embedder decision"), palette: palette, question: personal
+        )
+        #expect(pick.tool == "search_knowledge")
     }
 
     @Test("no offer text without M1K3's last reply")
