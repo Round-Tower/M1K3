@@ -246,10 +246,10 @@
 //  retrieval so every route agrees. It failed its blind bar; Kev overrode it (HashingMemoryGate's signature has the
 //  numbers). Confidence 0.65.
 //  Review: Kev + claude-opus-5.5, 2026-11-02 — a content-free reply is chat whatever the gate said
-//  (" (content-free reply)"), unless it says yes to M1K3's own offer to look something up or act (`toolOffer`): then
-//  it is the agent turn with no picker, on a chat verdict too (" (yes to an offer: the agent reads the chat)"). The
-//  phone's "Yes. Please." after a story offer had searched New York's weather into the story. Confidence 0.75
-//  (pinned; the device check is owed).
+//  (" (content-free reply)"), unless it says yes to M1K3's previous reply: then the gate reads that offer
+//  (`offerText`), and on a tools verdict the picker, correctors, search head and plan read the offer while the
+//  prompts keep "yes please" and the chat. The phone's "Yes. Please." after a story offer had searched New York's
+//  weather into the story. Confidence 0.7 (pinned; blind sets below the chat bar; the device check is owed).
 
 import Foundation
 import M1K3Agent
@@ -673,25 +673,30 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             && (gate?.probability ?? 1) < ToolNeedRouter.pointsBackCeiling
             && ToolNeedRouter.pointsBackInChat(question)
         // 2026-11-02: a content-free reply ("Yes. Please.") gives the picker nothing to read: after a story
-        // offer it invented a New York weather search. Whatever the gate said, it is chat, unless it says yes
-        // to M1K3's own offer to run a tool; then it is the agent turn (no picker), which reads the chat and
-        // the whole palette and works the query out itself.
-        let reply = gate != nil ? ToolNeedRouter.contentFreeReply(question) : nil
-        let offer = reply == .affirmative ? ToolNeedRouter.toolOffer(in: history) : nil
-        let acknowledges = reply != nil && offer == nil
-        let decision: ToolNeedRouter.Decision? = if pointsBack || acknowledges {
+        // offer it invented a New York weather search. A closing, a no or a yes with nothing offered is chat,
+        // whatever the gate said. A yes to M1K3's previous reply is what that reply offered: the gate reads
+        // the offer, and only a tools verdict on it goes on, with the picker and the dispatch's reads given
+        // the offer text in place of "yes please" (the prompts keep the user's words and the chat).
+        let reply = gate != nil && !pointsBack ? ToolNeedRouter.contentFreeReply(question) : nil
+        let offer = reply == .affirmative ? ToolNeedRouter.offerText(in: history) : nil
+        let offerGate = offer.flatMap { offer in plainRoute.map { $0.decide(offer) } }
+        let yesToTools = offerGate?.verdict == .tools
+        let decision: ToolNeedRouter.Decision? = if pointsBack || (reply != nil && !yesToTools) {
             gate.map { ToolNeedRouter.Decision(verdict: .chat, probability: $0.probability) }
-        } else if offer != nil {
+        } else if yesToTools {
             gate.map { ToolNeedRouter.Decision(verdict: .tools, probability: $0.probability) }
         } else {
             gate
         }
+        // What the picker, the correctors, the search head and the plan read: the offer on a yes to one.
+        let routedQuestion = yesToTools ? offer ?? question : question
         if let decision {
             let score = decision.probability.map { String(format: "%.3f", $0) } ?? "none"
             let verdict = decision.verdict == .chat ? "chat" : "tools"
+            let offerScore = offerGate.map { $0.probability.map { String(format: "%.3f", $0) } ?? "none" }
             let why = pointsBack ? " (points back in this chat)"
-                : acknowledges ? " (content-free reply)"
-                : offer != nil ? " (yes to an offer: the agent reads the chat)" : ""
+                : offerScore.map { " (yes to an offer: gate p=\($0) on the offer)" }
+                ?? (reply != nil ? " (content-free reply)" : "")
             Self.log.notice(
                 "tool router: \(verdict, privacy: .public) p=\(score, privacy: .public)\(why, privacy: .public)"
             )
@@ -705,9 +710,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // tool's answer reads only the tool's result, yet its sources list the excerpts.)
         let turnChunks = routesPlain ? [] : cappedChunks
         // Router-invoked tools: on a tools verdict, a picker may name ONE read-only
-        // tool that the app runs itself (ToolDispatch); nil keeps the agent turn. A yes to an
-        // offer never asks the picker: it would read only "yes".
-        let picker = decision?.verdict == .tools && offer == nil ? plainRoute?.pick : nil
+        // tool that the app runs itself (ToolDispatch); nil keeps the agent turn.
+        let picker = decision?.verdict == .tools ? plainRoute?.pick : nil
 
         // One reasoning decision for the WHOLE turn (#555): the plain route and the
         // post-tool synthesis generate through `provider.generateStreaming`, which
@@ -742,7 +746,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 var agentTools = tools
                 if let picker { // a tools verdict: never after a plain turn
                     let outcome = await runDispatchedTurn(
-                        question: question, picker: picker, staysLocal: plainRoute?.staysLocal,
+                        question: question, routedQuestion: routedQuestion,
+                        picker: picker, staysLocal: plainRoute?.staysLocal,
                         tools: tools, chunks: turnChunks,
                         memories: cappedMemories, history: history, instructions: routeInstructions,
                         onActivity: onActivity, continuation: continuation
@@ -1032,8 +1037,12 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// honest line, never a blank bubble. A none pick or an empty search answers as
     /// plain chat; only if THAT comes back empty too does the agent take the turn,
     /// which may search once more (two stacked failures: accepted).
+    /// `routedQuestion` is what the picker, the correctors, the search head and an empty query's
+    /// plan read: the question, or on a yes to an offer the offer's text ("yes please" names
+    /// nothing). Every prompt keeps `question`, the user's own words, beside the chat.
     private func runDispatchedTurn(
         question: String,
+        routedQuestion: String,
         picker: @Sendable (String, String) async -> ToolPick?,
         staysLocal: (@Sendable (String) -> SearchRouter.Decision)?,
         tools: [any AgentTool],
@@ -1051,14 +1060,14 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 instructions: instructions, onActivity: onActivity, continuation: continuation
             ) ? .answered : .agent(tools)
         }
-        guard let picked = await picker(question, ToolDispatch.menu(palette: tools)) else {
+        guard let picked = await picker(routedQuestion, ToolDispatch.menu(palette: tools)) else {
             Self.log.notice("tool dispatch: no pick — the agent turn answers")
             return .agent(tools)
         }
         // A reference lookup about now goes to the web (2026-10-10: "this year" picked lookup_fact).
         // An "open the website" ask read the page aloud (#622): opening is an action.
         // A question about what the user decided went to Wikipedia (2026-10-20): it goes to their knowledge.
-        let corrected = ToolDispatch.corrected(picked, palette: tools, question: question)
+        let corrected = ToolDispatch.corrected(picked, palette: tools, question: routedQuestion)
         // A reference lookup the user's own documents answer reads them instead (2026-10-26).
         var pick = ToolDispatch.documentCorrected(corrected, documentsKept: Self.keptUserDocument(chunks))
         if pick != corrected {
@@ -1068,8 +1077,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // The search head (#713, `toolSearchHead`): asked only when the pick reads the web and the user
         // didn't ask for the web in words, so it never adds a call and never overrides an explicit ask.
         // A local verdict takes the web reads out; nothing left falls to the none branch.
-        if let staysLocal, ToolDispatch.vetoable(pick, question: question) {
-            let decision = staysLocal(question)
+        if let staysLocal, ToolDispatch.vetoable(pick, question: routedQuestion) {
+            let decision = staysLocal(routedQuestion)
             let score = decision.probability.map { String(format: "%.3f", $0) } ?? "none"
             let vetoed = ToolDispatch.searchCorrected(pick, staysLocal: decision.verdict == .local)
             if vetoed != pick {
@@ -1110,7 +1119,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             Self.log.notice("tool dispatch: \(pick.tool, privacy: .public) is not on offer — a plain turn answers")
             return await plain()
         }
-        guard let plan = ToolDispatch.plan(pick, palette: tools, question: question) else {
+        guard let plan = ToolDispatch.plan(pick, palette: tools, question: routedQuestion) else {
             Self.log.notice("tool dispatch: \(pick.tool, privacy: .public) stays with the agent")
             return .agent(tools)
         }
@@ -1118,7 +1127,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // in order. Each that ran with something to say feeds the one answer; a link the app
         // can't plan is skipped, never handed to the agent once the head has a plan.
         let plans = [plan] + ToolDispatch.chain(pick, palette: tools).dropFirst().compactMap {
-            ToolDispatch.plan($0, palette: tools, question: question)
+            ToolDispatch.plan($0, palette: tools, question: routedQuestion)
         }
         var ran: [(plan: ToolDispatch.Plan, output: String)] = []
         var failures = 0

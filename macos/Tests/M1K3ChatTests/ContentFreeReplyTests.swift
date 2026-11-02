@@ -6,14 +6,14 @@
 //  read. On Kev's iPhone (2026-11-02) M1K3 offered to write a story, the user said "Yes. Please.",
 //  the gate said tools at p=0.799, and Apple's picker, which sees only the current message, invented
 //  web_search "current weather in New York": the story came back with New York's weather in it.
-//  A content-free turn is chat, unless it says yes to M1K3's own offer to look something up or to
-//  act: then it is the AGENT turn, whatever the gate said, which reads the chat and the whole palette
-//  and works the query out itself. The picker never reads a content-free turn.
+//  A content-free turn is chat, unless it says yes to an offer in M1K3's previous reply: then the
+//  trained gate reads the OFFER (no cue lists), and only a tools verdict on it sends the turn to the
+//  picker, which reads the offer, not "yes please". The prompts still carry the user's own words.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-02, Confidence 0.8. Prior: Unknown.
-//  Review: Kev + claude-opus-5.5, 2026-11-02 — redesigned after two adversarial reviews: the offer-scoped
-//  picker is gone (its keep rule dropped every "Want me to look it up?" pick and the Mac group head's empty
-//  queries); a yes to a lookup or action offer is the agent turn, on a chat verdict too. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — round 3: the cue lists and the agent hand-off are gone (offer
+//  detection held 44% on a held-out set); the gate reads `offerText` and the picker and the dispatch's reads
+//  take the offer, the prompts the user's words. Thanks and bare praise close, a "later" defers. Confidence 0.8.
 //
 
 import Foundation
@@ -60,6 +60,8 @@ private final class Scripted: InferenceProvider, @unchecked Sendable {
 private final class Calls: Sendable {
     let log = Mutex<[String]>([])
     let picks = Mutex<[String]>([])
+    let decided = Mutex<[String]>([])
+    let local = Mutex<[String]>([])
 }
 
 private struct Recording: AgentTool {
@@ -80,19 +82,39 @@ private struct Recording: AgentTool {
     }
 }
 
-/// One turn through the responder with the gate's verdict (tools at the phone's p=0.799 unless told
-/// otherwise). The picker records the message it was handed and answers `pick`.
+/// The gate as a table: the reply scores tools at the phone's p=0.799 unless told otherwise, and the
+/// offer text (anything else the gate is asked about) gets `onOffer`.
+private func gate(
+    reply: ToolNeedRouter.Verdict = .tools, replyP: Double? = 0.799, onOffer: ToolNeedRouter.Verdict
+) -> @Sendable (String, String) -> ToolNeedRouter.Decision {
+    { text, question in
+        text == question
+            ? .init(verdict: reply, probability: replyP)
+            : .init(verdict: onOffer, probability: onOffer == .tools ? 0.9 : 0.1)
+    }
+}
+
+/// One turn through the responder. The gate records what it read, the picker the message it was
+/// handed, the search head the text it was asked about.
 private func run(
-    _ question: String, history: [ChatTurn], pick: ToolPick?, tools: [any AgentTool],
-    calls: Calls, provider: Scripted, verdict: ToolNeedRouter.Verdict = .tools, probability: Double? = 0.799
+    _ question: String, history: [ChatTurn], pick: ToolPick?, tools: [any AgentTool], calls: Calls,
+    provider: Scripted, decide: @escaping @Sendable (String, String) -> ToolNeedRouter.Decision,
+    searchHead: Bool = false
 ) async throws -> String {
     let route = PlainTurnRoute(
-        decide: { _ in .init(verdict: verdict, probability: probability) },
+        decide: { text in
+            calls.decided.withLock { $0.append(text) }
+            return decide(text, question)
+        },
         instructions: nil,
         pick: { @Sendable message, _ in
             calls.picks.withLock { $0.append(message) }
             return pick
-        }
+        },
+        staysLocal: searchHead ? { @Sendable text in
+            calls.local.withLock { $0.append(text) }
+            return SearchRouter.Decision(verdict: .web, probability: 0.9)
+        } : nil
     )
     let responder = try AgentRAGResponder(
         store: KnowledgeStore(), embedder: HashingEmbeddingService(), provider: provider,
@@ -113,14 +135,10 @@ private let storyOffer = [
     ChatTurn(role: .assistant, text: "Sorry to hear it! Want me to write you a short story about a dragon?"),
 ]
 
+private let lookupOfferText = "Not sure off-hand. Want me to look up who won?"
 private let lookupOffer = [
-    ChatTurn(role: .user, text: "Who won the Ballon d'Or this year?"),
-    ChatTurn(role: .assistant, text: "I'm not sure. Want me to look it up?"),
-]
-
-private let todoOffer = [
-    ChatTurn(role: .user, text: "I need to ring the plumber about the boiler."),
-    ChatTurn(role: .assistant, text: "Good plan. Want me to add that as a todo?"),
+    ChatTurn(role: .user, text: "Who won the Ballon d'Or?"),
+    ChatTurn(role: .assistant, text: lookupOfferText),
 ]
 
 private let searchOffer = [
@@ -131,95 +149,142 @@ private let searchOffer = [
     ),
 ]
 
-/// The palette every responder test offers: a lookup and an action, neither named by the plain rules.
+/// The palette every responder test offers: a lookup, a reference and an action.
 private func palette(_ calls: Calls) -> [any AgentTool] {
     [
-        Recording(name: "web_search", output: "New York: 12°C", calls: calls),
+        Recording(name: "web_search", output: "Ousmane Dembélé won.", calls: calls),
+        Recording(name: "lookup_fact", output: "a reference entry", calls: calls),
         Recording(name: "propose_todo", output: "added", calls: calls),
     ]
-}
-
-/// The agent turn's prompt lists the palette and carries the chat; a plain turn's carries the plain rules.
-private func isAgentTurn(_ prompt: String?) -> Bool {
-    guard let prompt else { return false }
-    return prompt.contains("propose_todo") && !prompt.contains(AgentRAGResponder.plainRules)
 }
 
 private func isPlainTurn(_ prompt: String?) -> Bool {
     prompt?.contains(AgentRAGResponder.plainRules) == true && prompt?.contains("propose_todo") == false
 }
 
+private let newYork = ToolPick(tool: "web_search", query: "current weather in New York")
+
 // MARK: - The responder
 
 struct ContentFreeReplyTurnTests {
-    @Test("yes to a story offer is chat: the picker is never asked, one plain generation answers")
+    @Test("yes to a story offer: the gate reads the offer, says chat, and the picker is never asked")
     func yesToAStoryIsChat() async throws {
         let calls = Calls()
         let provider = Scripted(["Once upon a time, a dragon…"])
         let text = try await run(
-            "Yes. Please.", history: storyOffer,
-            pick: ToolPick(tool: "web_search", query: "current weather in New York"),
-            tools: palette(calls), calls: calls, provider: provider
+            "Yes. Please.", history: storyOffer, pick: newYork, tools: palette(calls), calls: calls,
+            provider: provider, decide: gate(onOffer: .chat)
         )
+        #expect(calls.decided.withLock { $0 } == [
+            "Yes. Please.", "Sorry to hear it! Want me to write you a short story about a dragon?",
+        ])
         #expect(calls.picks.withLock { $0 }.isEmpty)
         #expect(calls.log.withLock { $0 }.isEmpty)
         #expect(provider.prompts.count == 1)
         #expect(isPlainTurn(provider.prompts.first))
+        #expect(provider.prompts.first?.contains("USER: Yes. Please.") == true)
         #expect(text.contains("dragon"))
     }
 
-    @Test("yes to a lookup offer is the agent turn: the picker is never asked, the agent reads the chat")
-    func yesToALookupIsTheAgent() async throws {
-        for verdict in [ToolNeedRouter.Verdict.tools, .chat] {
+    @Test("yes to a lookup offer the gate reads as tools: the picker reads the offer, the prompt the user's words")
+    func yesToALookupPicksFromTheOffer() async throws {
+        // No ceiling: a chat verdict on the reply itself doesn't matter, the offer's verdict does.
+        for (reply, replyP) in [(ToolNeedRouter.Verdict.tools, 0.799), (.chat, 0.12)] {
             let calls = Calls()
-            let provider = Scripted(["CONCLUSION: Ousmane Dembélé."])
+            let provider = Scripted(["Ousmane Dembélé won it."])
             _ = try await run(
                 "yes please", history: lookupOffer,
-                pick: ToolPick(tool: "web_search", query: "current weather in New York"),
+                pick: ToolPick(tool: "web_search", query: "Ballon d'Or winner"),
                 tools: palette(calls), calls: calls, provider: provider,
-                verdict: verdict, probability: verdict == .tools ? 0.799 : 0.12
+                decide: gate(reply: reply, replyP: replyP, onOffer: .tools)
             )
-            #expect(calls.picks.withLock { $0 }.isEmpty, "the picker read a content-free yes (\(verdict))")
-            let prompt = provider.prompts.first
-            #expect(isAgentTurn(prompt), "no agent turn on a \(verdict) verdict")
-            // The agent reads the chat: the question and the offer it says yes to.
-            #expect(prompt?.contains("Ballon d'Or") == true)
-            #expect(prompt?.contains("Want me to look it up?") == true)
+            #expect(calls.picks.withLock { $0 } == [lookupOfferText], "reply verdict \(reply)")
+            #expect(calls.log.withLock { $0 } == ["web_search(Ballon d'Or winner)"])
+            let prompt = try #require(provider.prompts.first)
+            #expect(prompt.contains("USER: yes please"))
+            #expect(prompt.contains("Who won the Ballon d'Or?"))
+            #expect(prompt.contains(lookupOfferText))
+            #expect(prompt.contains("Ousmane Dembélé won."))
         }
     }
 
-    @Test("yes to an action offer is the agent turn")
-    func yesToAnActionIsTheAgent() async throws {
+    @Test("the dispatch's reads take the offer: the recency correction and the empty-query plan")
+    func correctionsReadTheOffer() async throws {
         let calls = Calls()
-        let provider = Scripted(["CONCLUSION: Added."])
+        let provider = Scripted(["It was Dembélé."])
+        let history = [
+            ChatTurn(role: .user, text: "Who won the Ballon d'Or?"),
+            ChatTurn(role: .assistant, text: "Not sure off-hand. Want me to find out who won this year?"),
+        ]
+        // lookup_fact on a question about this year goes to the web; the empty query reads the offer.
         _ = try await run(
-            "do it", history: todoOffer, pick: ToolPick(tool: "web_search", query: "do it"),
-            tools: palette(calls), calls: calls, provider: provider
+            "yes please", history: history, pick: ToolPick(tool: "lookup_fact", query: ""),
+            tools: palette(calls), calls: calls, provider: provider, decide: gate(onOffer: .tools)
         )
-        #expect(calls.picks.withLock { $0 }.isEmpty)
-        #expect(isAgentTurn(provider.prompts.first))
+        #expect(calls.log.withLock { $0 } == [
+            "web_search(Not sure off-hand. Want me to find out who won this year?)",
+        ])
     }
 
-    @Test("\"No, go ahead\" to a lookup offer is a yes: the agent turn")
+    @Test("the search head reads the offer, not \"yes please\"")
+    func searchHeadReadsTheOffer() async throws {
+        let calls = Calls()
+        let provider = Scripted(["It was Dembélé."])
+        let history = [
+            ChatTurn(role: .user, text: "Who won the Ballon d'Or?"),
+            ChatTurn(role: .assistant, text: "Not sure off-hand. Want me to find out who won?"),
+        ]
+        _ = try await run(
+            "yes please", history: history, pick: ToolPick(tool: "web_search", query: "Ballon d'Or winner"),
+            tools: palette(calls), calls: calls, provider: provider, decide: gate(onOffer: .tools), searchHead: true
+        )
+        #expect(calls.local.withLock { $0 } == ["Not sure off-hand. Want me to find out who won?"])
+        #expect(calls.log.withLock { $0 } == ["web_search(Ballon d'Or winner)"])
+    }
+
+    @Test("\"Great, thanks\" after a lookup offer closes: chat, the offer is never read, no picker")
+    func thanksAfterAnOfferIsChat() async throws {
+        let calls = Calls()
+        let provider = Scripted(["Any time."])
+        _ = try await run(
+            "Great, thanks", history: lookupOffer, pick: newYork, tools: palette(calls), calls: calls,
+            provider: provider, decide: gate(onOffer: .tools)
+        )
+        #expect(calls.decided.withLock { $0 } == ["Great, thanks"])
+        #expect(calls.picks.withLock { $0 }.isEmpty)
+        #expect(isPlainTurn(provider.prompts.first))
+    }
+
+    @Test("\"do it later\" defers: chat, no picker")
+    func laterIsChat() async throws {
+        let calls = Calls()
+        let provider = Scripted(["No bother."])
+        _ = try await run(
+            "do it later", history: lookupOffer, pick: newYork, tools: palette(calls), calls: calls,
+            provider: provider, decide: gate(onOffer: .tools)
+        )
+        #expect(calls.picks.withLock { $0 }.isEmpty)
+        #expect(isPlainTurn(provider.prompts.first))
+    }
+
+    @Test("\"No, go ahead\" is a yes: the gate reads the offer and the picker gets it")
     func noGoAheadIsAYes() async throws {
         let calls = Calls()
-        let provider = Scripted(["CONCLUSION: done"])
+        let provider = Scripted(["Dembélé."])
         _ = try await run(
-            "No, go ahead", history: lookupOffer, pick: nil,
-            tools: palette(calls), calls: calls, provider: provider
+            "No, go ahead", history: lookupOffer, pick: ToolPick(tool: "web_search", query: "Ballon d'Or winner"),
+            tools: palette(calls), calls: calls, provider: provider, decide: gate(onOffer: .tools)
         )
-        #expect(calls.picks.withLock { $0 }.isEmpty)
-        #expect(isAgentTurn(provider.prompts.first))
+        #expect(calls.picks.withLock { $0 } == [lookupOfferText])
     }
 
-    @Test("no thanks to a lookup offer is chat: no picker, no agent")
+    @Test("no thanks to a search offer is chat: no picker")
     func noThanksIsChat() async throws {
         let calls = Calls()
         let provider = Scripted(["No problem."])
         _ = try await run(
-            "No thanks", history: searchOffer,
-            pick: ToolPick(tool: "web_search", query: "events in Cork"),
-            tools: palette(calls), calls: calls, provider: provider
+            "No thanks", history: searchOffer, pick: ToolPick(tool: "web_search", query: "events in Cork"),
+            tools: palette(calls), calls: calls, provider: provider, decide: gate(onOffer: .tools)
         )
         #expect(calls.picks.withLock { $0 }.isEmpty)
         #expect(calls.log.withLock { $0 }.isEmpty)
@@ -232,10 +297,10 @@ struct ContentFreeReplyTurnTests {
         let calls = Calls()
         let provider = Scripted(["Here's what's on."])
         _ = try await run(
-            "yes, Cork", history: searchOffer,
-            pick: ToolPick(tool: "web_search", query: "events in Cork"),
-            tools: palette(calls), calls: calls, provider: provider
+            "yes, Cork", history: searchOffer, pick: ToolPick(tool: "web_search", query: "events in Cork"),
+            tools: palette(calls), calls: calls, provider: provider, decide: gate(onOffer: .chat)
         )
+        #expect(calls.decided.withLock { $0 } == ["yes, Cork"])
         #expect(calls.picks.withLock { $0 } == ["yes, Cork"])
         #expect(calls.log.withLock { $0 } == ["web_search(events in Cork)"])
     }
@@ -245,32 +310,12 @@ struct ContentFreeReplyTurnTests {
         let calls = Calls()
         let provider = Scripted(["Happy to help — with what?"])
         _ = try await run(
-            "yes please", history: [],
-            pick: ToolPick(tool: "web_search", query: "yes please"),
-            tools: palette(calls), calls: calls, provider: provider
+            "yes please", history: [], pick: ToolPick(tool: "web_search", query: "yes please"),
+            tools: palette(calls), calls: calls, provider: provider, decide: gate(onOffer: .tools)
         )
         #expect(calls.picks.withLock { $0 }.isEmpty)
         #expect(provider.prompts.count == 1)
         #expect(isPlainTurn(provider.prompts.first))
-    }
-
-    /// Accepted cost: "read" is a lookup cue (read the document, read the page), so a yes to "read you a
-    /// story" is an agent turn. That costs speed (the palette and the loop), not a wrong answer: the agent
-    /// reads the chat, where the picker read only "Yes. Please." and invented a search.
-    @Test("yes to \"read you a bedtime story\" is the agent turn (accepted: slower, not wrong)")
-    func readAStoryIsTheAgent() async throws {
-        let calls = Calls()
-        let provider = Scripted(["CONCLUSION: Once upon a time…"])
-        let history = [
-            ChatTurn(role: .user, text: "Can't sleep."),
-            ChatTurn(role: .assistant, text: "Poor you. Want me to read you a bedtime story?"),
-        ]
-        _ = try await run(
-            "Yes. Please.", history: history, pick: ToolPick(tool: "web_search", query: "current weather in New York"),
-            tools: palette(calls), calls: calls, provider: provider
-        )
-        #expect(calls.picks.withLock { $0 }.isEmpty)
-        #expect(isAgentTurn(provider.prompts.first))
     }
 }
 
@@ -280,15 +325,15 @@ struct ContentFreeReplyTests {
     @Test("affirmative replies", arguments: [
         "Yes. Please.", "yes please", "Yeah, go on", "Sure!", "ok", "Okay, do it", "Go ahead", "Sounds good",
         "That sounds great, thanks", "Yes please, Mike", "Absolutely", "Why not?", "Of course", "Continue",
-        "Yes I\u{2019}d love that", "yep", "Aye, go on so", "👍", "👍🏽", "Oui, s'il vous plaît", "Ja, bitte",
-        "Sí, por favor", "Sim", "Tak", "Lovely, thanks", "Grand", "Brilliant", "YES", "please do",
-        // Filler-only yeses (adversarial review 2026-11-02): these had read as neutral.
+        "Yes I\u{2019}d love that", "yep", "Aye, go on so", "👍", "👍🏽", "🙌", "Oui, s'il vous plaît", "Ja, bitte",
+        "Sí, por favor", "Sim", "Tak", "YES", "please do", "mhm", "Uh huh", "uh-huh", "go", "ok go", "Go!",
+        // An acceptance word beside a thanks or praise is a yes.
+        "Yes, thanks", "Great, yes please", "Perfect, go ahead", "oui, merci", "Lovely, do it", "Sure, cheers",
+        "Vale", "Claro", "Sea",
         "I'd love that", "I\u{2019}d love that", "Do that", "Do this", "Do so", "Love it", "Love that", "I would",
         "Let's do it", "Lets do it", "Let's go!", "Tell me", "Sure thing",
         // A go phrase beats a no: "No, go ahead" waves the doubt away (common in Irish English).
         "No, go ahead", "Ah no, go on", "nah go for it", "No no, do it",
-        // Irish "'Sea" (is ea, "it is"): a yes on its own.
-        "Sea",
     ])
     func affirmative(text: String) {
         #expect(ToolNeedRouter.contentFreeReply(text) == .affirmative)
@@ -297,14 +342,18 @@ struct ContentFreeReplyTests {
     @Test("declining replies", arguments: [
         "No thanks", "Nope", "Not now", "No, that's ok", "Nah, I'm good", "Maybe later", "Nein, danke",
         "Non merci", "👎", "no", "Nah, that's grand", "No, please",
+        // Not now means not now, whatever go phrase rides with it.
+        "do it later", "Go ahead, not now", "Not now, go on", "later", "yes, later",
     ])
     func declining(text: String) {
         #expect(ToolNeedRouter.contentFreeReply(text) == .declining)
     }
 
-    @Test("neutral replies", arguments: [
+    @Test("neutral replies: thanks and bare praise close", arguments: [
         "Thanks", "Thank you!", "Cheers Mike", "ta", "Go raibh maith agat", "Merci beaucoup", "Danke schön",
-        "Gracias", "No worries", "No problem", "Good",
+        "Gracias", "Grazie", "Obrigado", "No worries", "No problem", "Good",
+        "Great, thanks", "Perfect", "Cool", "Lovely, thanks", "Grand", "Nice", "Brilliant", "Fine", "Excellent",
+        "Awesome", "Great", "Perfect, thank you", "Cool cool",
     ])
     func neutral(text: String) {
         #expect(ToolNeedRouter.contentFreeReply(text) == .neutral)
@@ -314,80 +363,71 @@ struct ContentFreeReplyTests {
         "yes, Cork", "Do it again", "more", "next", "another one", "Yes please, and the weather tomorrow",
         "What's the weather?", "", "   ", "😂", "Tell me more", "yes 2", "no, Cork Ireland", "Yes, search it",
         "What time is it?", "Check my calendar", "class", "the sea", "Tell me another", "Let's go again",
-        "do the next one",
+        "do the next one", "go home",
     ])
     func notContentFree(text: String) {
         #expect(ToolNeedRouter.contentFreeReply(text) == nil)
     }
 
-    @Test("the reply offers a tool: the offer sentence", arguments: [
+    @Test("the offer text: the previous reply's last two sentences, cleaned", arguments: [
         (
-            "I don't have live data. Want me to look up the forecast for Cork?",
-            "Want me to look up the forecast for Cork?"
+            "Sorry to hear it! Want me to write you a short story about a dragon?",
+            "Sorry to hear it! Want me to write you a short story about a dragon?"
         ),
-        ("Shall I search for flights to Lisbon?", "Shall I search for flights to Lisbon?"),
-        ("Good question. I can check the latest scores if you like.", "I can check the latest scores if you like."),
-        ("Would you like me to find a recipe online?", "Would you like me to find a recipe online?"),
+        ("I'm bored too. Cork is lovely. Want me to look it up?", "Cork is lovely. Want me to look it up?"),
         ("<think>they want news</think>Do you want me to pull up the news?", "Do you want me to pull up the news?"),
-        ("I'm not sure. Want me to look it up?", "Want me to look it up?"),
-        ("Should I find out when it opens?", "Should I find out when it opens?"),
-        ("Happy to dig into it if you want.", "Happy to dig into it if you want."),
-        // Action offers.
-        ("Good plan. Want me to add that as a todo?", "Want me to add that as a todo?"),
-        ("Shall I set a timer for ten minutes?", "Shall I set a timer for ten minutes?"),
-        ("Want me to open the Cork Jazz site?", "Want me to open the Cork Jazz site?"),
-        ("Should I put it on your calendar?", "Should I put it on your calendar?"),
-        ("Want me to remind you tomorrow?", "Want me to remind you tomorrow?"),
-        // Accepted: "read" is a lookup cue, so a story read aloud counts (an agent turn, slower, not wrong).
-        ("Poor you. Want me to read you a bedtime story?", "Want me to read you a bedtime story?"),
-        // Every sources tail is cut.
-        (
-            "The match starts at 8. Should I check the latest team news?\n\nWeb sources:\n• https://example.com/a",
-            "Should I check the latest team news?"
-        ),
-        (
-            "He was born in 1879. Want me to look up more about his early life?\n\nWikipedia sources:\n"
-                + "• https://en.wikipedia.org/wiki/Albert_Einstein",
-            "Want me to look up more about his early life?"
-        ),
-        ("Want me to check it?\n\nSources:\n• a\n• b", "Want me to check it?"),
-        ("Shall I fetch the page?\n\nFact sources:\n• https://example.com", "Shall I fetch the page?"),
         // A FOLLOWUPS trailer is cut.
         ("Want me to search for showtimes?\nFOLLOWUPS: [\"What's on?\"]", "Want me to search for showtimes?"),
-        // An emoji, a sign-off or an abbreviation split after the offer doesn't hide it.
+        // A bullet list of links under a sources line is cut, one block or two.
+        (
+            "The match starts at 8. Should I check the latest team news?\n\nWeb sources:\n• https://example.com/a",
+            "The match starts at 8. Should I check the latest team news?"
+        ),
+        (
+            "He was born in 1879. Want me to look up more?\n\nWikipedia sources:\n"
+                + "• https://en.wikipedia.org/wiki/Albert_Einstein\n\nWeb sources:\n- https://example.com/b",
+            "He was born in 1879. Want me to look up more?"
+        ),
+        ("Want me to check it?\n\nSources:\n* https://a.example\n* https://b.example", "Want me to check it?"),
+        // A prose line that names sources is the reply, not a tail.
+        (
+            "The river splits at the city.\nThe main sources: the Lee and the Bride.",
+            "The river splits at the city. The main sources: the Lee and the Bride."
+        ),
+        // A sources line followed by more than links is not a tail either.
+        (
+            "Here's the gist.\n\nWeb sources:\n• https://a.example\nWant me to dig up more?",
+            "• https://a.example Want me to dig up more?"
+        ),
+        // An emoji or a sign-off has no letters to read: the sentences before it are the offer.
         ("Want me to look up showtimes? 🍿", "Want me to look up showtimes?"),
-        ("Shall I check the latest? Just say the word!", "Shall I check the latest?"),
-        ("Want me to look up events for St. Patrick's Day?", "Want me to look up events for St."),
+        // Quotes stripped, lines flattened.
+        ("He said \u{201C}grand\u{201D}.\nWant me to \"check\"?", "He said grand. Want me to check?"),
     ])
-    func offers(reply: String, offer: String) {
+    func offerText(reply: String, offer: String) {
         let history = [ChatTurn(role: .user, text: "hm"), ChatTurn(role: .assistant, text: reply)]
-        #expect(ToolNeedRouter.toolOffer(in: history) == offer)
+        #expect(ToolNeedRouter.offerText(in: history) == offer)
     }
 
-    @Test("no tool offer", arguments: [
-        "Want me to write you a short story about a dragon?",
-        "Shall I tell you a joke?",
-        "I could look that up last time.",
-        "Here's what I found.\n\nWeb sources:\n• https://example.com/a",
-        "Cork is lovely in October.",
-        "Want me to keep going?",
-        "I can walk you through how it works if you fancy it.",
-        // The offer is three sentences back: only the last two count.
-        "Want me to look it up? Either way, it's a fine question. Cork is lovely in October.",
-        "Want me to explain it in plain English? No jargon, I promise.",
-    ])
-    func noOffer(reply: String) {
-        let history = [ChatTurn(role: .user, text: "hm"), ChatTurn(role: .assistant, text: reply)]
-        #expect(ToolNeedRouter.toolOffer(in: history) == nil)
+    @Test("the offer text is capped at 300 characters, keeping its end")
+    func offerTextIsCapped() throws {
+        let long = String(repeating: "word ", count: 120) + "end. Want me to look it up?"
+        let history = [ChatTurn(role: .assistant, text: long)]
+        let offer = try #require(ToolNeedRouter.offerText(in: history))
+        #expect(offer.count <= 300)
+        #expect(offer.hasSuffix("end. Want me to look it up?"))
+        #expect(offer.hasPrefix("word "))
     }
 
-    @Test("only the previous assistant reply can carry the offer")
+    @Test("no offer text without M1K3's last reply")
     func offerNeedsTheLastTurn() {
-        #expect(ToolNeedRouter.toolOffer(in: []) == nil)
+        #expect(ToolNeedRouter.offerText(in: []) == nil)
         let userLast = [
             ChatTurn(role: .assistant, text: "Want me to search for flights to Lisbon?"),
             ChatTurn(role: .user, text: "hmm"),
         ]
-        #expect(ToolNeedRouter.toolOffer(in: userLast) == nil)
+        #expect(ToolNeedRouter.offerText(in: userLast) == nil)
+        #expect(ToolNeedRouter.offerText(in: [ChatTurn(role: .assistant, text: "🍿 👍")]) == nil)
+        #expect(ToolNeedRouter.offerText(in: [ChatTurn(role: .assistant, text: "<think>hm</think>")]) == nil)
     }
 }

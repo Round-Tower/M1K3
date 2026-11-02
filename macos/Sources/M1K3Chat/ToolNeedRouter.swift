@@ -48,10 +48,11 @@
 //  iPhone the sentence asset wasn't ready at launch and was a moment later (a launch-arg probe, no asset
 //  request needed); the load-once nil made every phone turn `p=none`, so the picker sent small talk to
 //  datetime and Mini opened every reply with the clock. Confidence 0.85 (proven on one phone, iOS 27.2).
-//  Review: Kev + claude-opus-5.5, 2026-11-02 — `contentFreeReply` (a whole-turn whitelist of yes/no/thanks words;
-//  a go phrase beats a no) and `toolOffer` (the previous reply's last two sentences offering a lookup or an action,
-//  any sources tail cut): on the phone "Yes. Please." after a story offer scored tools at 0.799 and the picker
-//  invented a New York weather search. Confidence 0.75 (pinned; word lists, the device check is owed).
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — `contentFreeReply` (a whole-turn whitelist: thanks and bare praise
+//  close, a go phrase beats a no, a "later" beats a go) and `offerText` (the previous reply's last two sentences, a
+//  links-only sources tail cut, for the gate to read on a yes; no cue lists): on the phone "Yes. Please." after a
+//  story offer scored tools at 0.799 and the picker invented a New York weather search. Confidence 0.7 (pinned; the
+//  gate reads request-shaped offers as tools, so creative offers reach the picker as text; device check owed).
 //
 
 import Foundation
@@ -128,20 +129,22 @@ public enum ToolNeedRouter {
     /// Above this the gate is sure a tool is wanted (a past-session look-back scores ~0.87).
     public static let pointsBackCeiling = 0.8
 
-    /// What a content-free reply says: yes, no, or only an acknowledgement ("thanks", "good").
+    /// What a content-free reply says: yes, no, or only a closing ("thanks", "great").
     public enum ReplyKind: Sendable, Equatable {
         case affirmative, declining, neutral
     }
 
-    /// A turn with nothing in it for a tool: every word is a yes, a no, a thanks or a filler
+    /// A turn with nothing in it for a tool: every word is a yes, a no, a thanks, praise or a filler
     /// ("Yes. Please.", "No thanks", "Cheers Mike", 👍). A WHOLE-TURN whitelist: any other word
     /// ("yes, Cork", "do it again", "more") is nil and keeps today's path, so a miss loses
     /// nothing. 2026-11-02 on Kev's iPhone: after a story offer, "Yes. Please." scored tools at
     /// 0.799 and Apple's picker, which sees only this message, invented a New York weather
     /// search. "again", "more", "next" and "another" stay off the list: they want a fresh read.
-    /// A no is a no, unless the turn also carries a go phrase ("No, go ahead", "Ah no, go on"):
-    /// that waves the doubt away. An evaluative yes never overrides one ("Nah, that's grand",
-    /// "No, that's ok" decline).
+    ///
+    /// Thanks and bare praise close ("Great, thanks" is neutral); only an acceptance word beside
+    /// them makes a yes ("Great, yes please"). A no is a no unless the turn carries a go phrase
+    /// ("No, go ahead", "Ah no, go on"); a deferral ("later", "not now") wins over any go phrase
+    /// ("do it later"): not now means not now.
     public static func contentFreeReply(_ text: String) -> ReplyKind? {
         let folded = text.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
         let words = ToolGroupRouter.words(folded).map(String.init)
@@ -151,7 +154,7 @@ public enum ToolNeedRouter {
             if scalars.contains(where: decliningEmoji.contains) { return .declining }
             return nil
         }
-        var kinds: Set<ReplyKind?> = []
+        var tags: Set<ReplyTag> = []
         var goes = false
         var index = 0
         while index < words.count {
@@ -160,98 +163,117 @@ public enum ToolNeedRouter {
                 let end = index + entry.phrase.count
                 return end <= words.count && Array(words[index ..< end]) == entry.phrase
             }) else { return nil }
-            kinds.insert(match.kind)
+            tags.insert(match.tag)
             if goPhrases.contains(match.phrase) { goes = true }
             index += match.phrase.count
         }
-        if kinds.contains(.declining) { return goes ? .affirmative : .declining }
-        if kinds.contains(.affirmative) { return .affirmative }
+        if tags.contains(.deferring) { return .declining }
+        if tags.contains(.declining) { return goes ? .affirmative : .declining }
+        if tags.contains(.accepting) { return .affirmative }
         return .neutral
     }
 
-    /// 👍 👌 🙏 ✅ say yes, 👎 says no; any other emoji alone is not read.
-    static let affirmativeEmoji: Set<UInt32> = [0x1F44D, 0x1F44C, 0x1F64F, 0x2705]
+    /// What one phrase of a reply carries. A closing is a thanks or bare praise; a filler only rides along.
+    enum ReplyTag: Hashable {
+        case accepting, declining, deferring, closing, filler
+    }
+
+    /// 👍 🙌 👌 🙏 ✅ say yes, 👎 says no; any other emoji alone is not read.
+    static let affirmativeEmoji: Set<UInt32> = [0x1F44D, 0x1F64C, 0x1F44C, 0x1F64F, 0x2705]
     static let decliningEmoji: Set<UInt32> = [0x1F44E]
 
     /// The yeses that ask for the thing to be done: beside a no ("No, go ahead") they win.
     static let goPhrases: Set<[String]> = Set([
-        "go on", "go ahead", "go for it", "do it", "do that", "do this", "do so", "please do", "carry on",
+        "go", "go on", "go ahead", "go for it", "do it", "do that", "do this", "do so", "please do", "carry on",
         "keep going", "continue", "let s do it", "lets do it", "let s go", "tell me",
     ].map { $0.split(separator: " ").map(String.init) })
 
-    /// Every phrase a content-free reply may be made of, longest first. A nil kind is a filler:
-    /// it may sit beside a yes or a no ("yes I'd love that") and alone reads as neutral. Words
-    /// are letters only, so "I'd" and "I\u{2019}d" are both "i d".
-    static let replyPhrases: [(phrase: [String], kind: ReplyKind?)] = {
-        let affirmative = [
+    /// Every phrase a content-free reply may be made of, longest first. Words are letters only,
+    /// so "I'd" and "I\u{2019}d" are both "i d"; accents are folded ("sí" is "si").
+    static let replyPhrases: [(phrase: [String], tag: ReplyTag)] = {
+        let accepting = [
             "yes", "yeah", "yea", "yep", "yup", "aye", "sure", "sure thing", "please", "pls", "plz", "ok", "okay",
-            "k", "alright", "go on", "go ahead", "go for it", "do it", "sounds good", "sounds great", "great",
-            "perfect", "absolutely", "definitely", "course", "of course", "why not", "cool", "lovely", "grand",
-            "nice", "brilliant", "continue", "carry on", "keep going", "fine", "deal", "excellent", "awesome",
-            // Yeses made only of words that are fillers elsewhere (adversarial review, 2026-11-02).
-            "do that", "do this", "do so", "please do", "love it", "love that", "i d love that", "i would",
-            "let s do it", "lets do it", "let s go", "tell me",
+            "k", "alright", "go", "go on", "go ahead", "go for it", "do it", "do that", "do this", "do so",
+            "please do", "let s do it", "lets do it", "let s go", "why not", "absolutely", "definitely", "course",
+            "of course", "mhm", "mm hmm", "uh huh", "sounds good", "sounds great", "continue", "carry on",
+            "keep going", "deal", "love it", "love that", "i d love that", "i would", "tell me",
             // Accent-folded: oui, sí/si, ja, sim, tak, bitte, por favor, s'il vous plaît, d'accord, vale, claro.
             "oui", "si", "ja", "sim", "tak", "bitte", "por favor", "s il vous plait", "d accord", "vale", "claro",
             // Irish "'Sea" (is ea, "it is"), a yes on its own; "the sea" has "the" and stays nil.
             "sea",
         ]
         let declining = [
-            "no", "nope", "nah", "not now", "not really", "not yet", "later", "maybe later", "no thanks",
-            "no thank you", "non", "nein", "nee", "nao", "nie",
+            "no", "nope", "nah", "not really", "no thanks", "no thank you", "non", "nein", "nee", "nao", "nie",
         ]
-        let neutral = [
-            "thanks", "thank you", "thx", "cheers", "ta", "no worries", "no problem", "good", "fair enough",
-            "merci", "danke", "gracias", "grazie", "obrigado", "obrigada", "dziekuje", "go raibh maith agat",
-            "go raibh maith agaibh", "go raibh mile maith agat",
+        let deferring = ["later", "maybe later", "not now", "not yet"]
+        let closing = [
+            "thanks", "thank you", "thx", "cheers", "ta", "no worries", "no problem", "fair enough", "merci", "danke",
+            "gracias", "grazie", "obrigado", "obrigada", "dziekuje", "go raibh maith agat", "go raibh maith agaibh",
+            "go raibh mile maith agat",
+            // Bare praise: a closing, not a yes ("Great, thanks" after an offer).
+            "great", "perfect", "cool", "lovely", "grand", "nice", "brilliant", "fine", "excellent", "awesome", "good",
         ]
         let fillers = [
             "that", "this", "it", "i", "d", "m", "s", "ll", "would", "be", "love", "do", "so", "then", "very",
             "much", "really", "a", "lot", "many", "sounds", "mike", "m1k3", "oh", "ah", "well", "just", "maybe",
             "beaucoup", "schon", "muchas", "mille", "tres", "bien",
         ]
-        let all = affirmative.map { ($0, ReplyKind?.some(.affirmative)) }
-            + declining.map { ($0, ReplyKind?.some(.declining)) }
-            + neutral.map { ($0, ReplyKind?.some(.neutral)) }
-            + fillers.map { ($0, ReplyKind?.none) }
-        return all.map { (phrase: $0.0.split(separator: " ").map(String.init), kind: $0.1) }
+        let all = accepting.map { ($0, ReplyTag.accepting) } + declining.map { ($0, ReplyTag.declining) }
+            + deferring.map { ($0, ReplyTag.deferring) } + closing.map { ($0, ReplyTag.closing) }
+            + fillers.map { ($0, ReplyTag.filler) }
+        return all.map { (phrase: $0.0.split(separator: " ").map(String.init), tag: $0.1) }
             .sorted { $0.phrase.count > $1.phrase.count }
     }()
 
-    /// The sentence in M1K3's previous reply that offers to run a tool: one of its last two
-    /// sentences with letters in it (so a trailing emoji, a sign-off or an abbreviation's split
-    /// doesn't hide it) carrying an offer cue ("want me to", "shall I", "I can … if you") AND a
-    /// tool cue, a lookup ("look it up", "check", "find out") or an action ("add", "set",
-    /// "remind", "open"). Reasoning, a FOLLOWUPS trailer and any sources tail ("Web sources:",
-    /// "Wikipedia sources:") are cut first. nil when the history doesn't end on M1K3's turn or
-    /// nothing there offers a tool (a story, a joke). A yes to it is the agent's turn: the agent
-    /// reads the chat and the whole palette and works the query out itself. Accepted: "read"
-    /// also catches "read you a story", an agent turn that is slower, not wrong.
-    public static func toolOffer(in history: [ChatTurn]) -> String? {
+    /// What M1K3 just offered, for the gate to read when the user says yes to it: the previous
+    /// reply's last two sentences with letters in them (StyleAskFence's split), joined on one line,
+    /// double quotes stripped, at most `offerTextLimit` characters (the end kept: the offer is
+    /// last). Reasoning and a FOLLOWUPS trailer are cut first, and a trailing sources block only
+    /// when it is a list of links ("Web sources:" then lines of "•", "-", "*" or a URL): a prose
+    /// line that names sources is the reply. nil when the history doesn't end on M1K3's turn or
+    /// nothing there has letters. No cue lists (round 2's held 44% on a held-out set): the trained
+    /// gate decides whether the offer wants a tool, and the picker reads it in place of "yes".
+    public static func offerText(in history: [ChatTurn]) -> String? {
         guard let last = history.last, last.role == .assistant else { return nil }
-        var text = FollowUpSplit.split(ReasoningSplit.split(last.text).answer).answer
-        if let tail = text.firstMatch(of: sourcesTail) { text = String(text[..<tail.range.lowerBound]) }
+        let text = withoutSourcesTail(FollowUpSplit.split(ReasoningSplit.split(last.text).answer).answer)
         let sentences = StyleAskFence.segments(text).filter { $0.contains(where: \.isLetter) }
-        return sentences.suffix(2).last { sentence in
-            let says = { (cues: [String]) in ToolGroupRouter.mentions(sentence, any: cues) }
-            let offers = says(offerCues) || (says(conditionalOfferLeads) && says(["if you"]))
-            return offers && (says(lookupCues + actionOfferCues) || (says(["put"]) && says(["on"])))
+        let quotes: Set<Character> = ["\"", "\u{201C}", "\u{201D}", "\u{201E}", "\u{00AB}", "\u{00BB}"]
+        let joined = sentences.suffix(2).joined(separator: " ").filter { !quotes.contains($0) }
+            .split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        guard !joined.isEmpty else { return nil }
+        guard joined.count > offerTextLimit else { return joined }
+        let start = joined.index(joined.endIndex, offsetBy: -offerTextLimit)
+        var capped = joined[start...]
+        // A cut word at the front is noise for the gate: start at the next whole word.
+        if !joined[joined.index(before: start)].isWhitespace, let space = capped.firstIndex(of: " ") {
+            capped = capped[capped.index(after: space)...]
         }
+        return String(capped)
     }
 
-    /// A blank line, then a line naming its sources ("Web sources:", "Wikipedia sources:", "Sources:").
-    nonisolated(unsafe) static let sourcesTail = /\n[ \t]*\n[A-Za-z ]*[Ss]ources:/
+    static let offerTextLimit = 300
 
-    static let offerCues = ["want me to", "shall i", "should i", "like me to"]
-    static let conditionalOfferLeads = ["i can", "i could", "happy to"]
-    static let lookupCues = [
-        "look up", "look into", "look for", "look it up", "look that up", "look them up", "look those up",
-        "check", "search", "find", "find out", "fetch", "pull", "see what", "dig", "get the latest", "read",
-    ]
-    static let actionOfferCues = [
-        "open", "add", "set", "remind", "create", "make a note", "note down", "save", "play", "send", "run",
-        "start", "schedule", "book", "call", "text", "timer", "alarm",
-    ]
+    /// The reply without its trailing sources blocks: each a "<Something> sources:" line followed
+    /// only by link lines. Anything else after the header (an offer, prose) keeps the block.
+    static func withoutSourcesTail(_ text: String) -> String {
+        var lines = text.components(separatedBy: .newlines)
+        while true {
+            while let last = lines.last, last.trimmingCharacters(in: .whitespaces).isEmpty {
+                lines.removeLast()
+            }
+            guard let header = lines.lastIndex(where: { $0.wholeMatch(of: sourcesHeader) != nil }) else { break }
+            let rest = lines[(header + 1)...].map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+            let links = rest.allSatisfy { line in
+                ["•", "-", "*"].contains { line.hasPrefix($0) } || line.contains("http")
+            }
+            guard !rest.isEmpty, links else { break }
+            lines.removeSubrange(header...)
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    /// "Web sources:", "Wikipedia sources:", "Sources:" alone on its line.
+    nonisolated(unsafe) static let sourcesHeader = /[ \t]*(?:[A-Za-z][A-Za-z ]* )?[Ss]ources:[ \t]*/
 
     /// "<who> [just] <said>" in the past tense, or "<did|do> <who> <say>": a present form alone is
     /// an everyday request ("Can you tell me the weather?", "Can you recommend…"), challenger
