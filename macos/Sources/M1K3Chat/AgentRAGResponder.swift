@@ -246,10 +246,13 @@
 //  retrieval so every route agrees. It failed its blind bar; Kev overrode it (HashingMemoryGate's signature has the
 //  numbers). Confidence 0.65.
 //  Review: Kev + claude-opus-5.5, 2026-11-02 — a content-free reply is chat whatever the gate said
-//  (" (content-free reply)"), unless it says yes to M1K3's previous reply: then the gate reads that offer
-//  (`offerText`), and on a tools verdict the picker, correctors, search head and plan read the offer while the
-//  prompts keep "yes please" and the chat. The phone's "Yes. Please." after a story offer had searched New York's
-//  weather into the story. Confidence 0.7 (pinned; blind sets below the chat bar; the device check is owed).
+//  (" (content-free reply)"), unless it says yes to an offer in M1K3's previous reply: then the gate reads that
+//  offer (`offerText`) and the turn takes the offer's verdict and p. On a tools verdict the picker, correctors and
+//  plan read the offer as the user's request (`offerRequest`), the search head's guard the offer sentence alone
+//  (`offerAsk`), and retrieval runs on the request (#712's document correction sees the manual); the prompts keep
+//  "yes please" and the chat. An empty-query pick on a yes is no pick (the agent turn), so M1K3's words never
+//  become a web query. The phone's "Yes. Please." after a story offer had searched New York's weather into the
+//  story. Confidence 0.7 (pinned; blind sets below the chat bar; the device check is owed).
 
 import Foundation
 import M1K3Agent
@@ -528,6 +531,12 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // — and the corpus-reaching tools are withheld from the turn below.
         // The persona's SELF rule states this policy; the gate enforces it in code.
         let isSelfQuery = SelfQueryGate.isSelfQuery(question)
+        // A yes to an offer retrieves on what was offered, not on "yes please" (round 3 review): the
+        // excerpts, the memory gate and #712's document correction all read this, so "Want me to look
+        // up the torque for the hub nuts?" → "yes" finds the user's manual, never Wikipedia.
+        let retrievalQuery = ToolNeedRouter.contentFreeReply(question) == .affirmative
+            ? ToolNeedRouter.offerText(in: history).map(ToolNeedRouter.offerRequest) ?? question
+            : question
         var chunks: [ChunkHit]
         var memories: [ChunkHit]
         if isSelfQuery {
@@ -535,14 +544,14 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             (chunks, memories) = ([], [])
         } else {
             onActivity(.retrieving)
-            let queryVector = try await embedder.embedQuery(question)
+            let queryVector = try await embedder.embedQuery(retrievalQuery)
             phases.embedded(at: phaseClock.now)
             // Two-lane retrieval: documents and memories get SEPARATE top-K budgets
             // so the larger document corpus can't crowd short memory facts out of a
             // single ranking (the open-chat recall miss — M1K3 forgot the user's
             // own city when the query leaned even slightly documentary).
             let retrieved = try store.searchGrounding(
-                query: question, queryVector: queryVector,
+                query: retrievalQuery, queryVector: queryVector,
                 documentLimit: topK, memoryLimit: memoryTopK,
                 excludedKinds: excludedKinds
             )
@@ -567,7 +576,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             if chunks.isEmpty {
                 do {
                     if let keyword = try HashingKeywordLane.admit(
-                        store: store, query: question, fingerprint: embedder.fingerprint,
+                        store: store, query: retrievalQuery, fingerprint: embedder.fingerprint,
                         excludedKinds: excludedKinds
                     ) {
                         Self.log.notice("hashing keyword lane: 1 document chunk admitted")
@@ -596,7 +605,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // Once, here, so every route (plain, the dispatch fallbacks, the agent turn, the sources
             // list) reads the same list, and before the budget so a dropped memory spends nothing.
             // Identity on any other embedder. Kev overrode the failed blind bar knowingly (2026-10-29).
-            let anchored = HashingMemoryGate.admitted(memories, question: question, fingerprint: embedder.fingerprint)
+            let anchored = HashingMemoryGate.admitted(
+                memories, question: retrievalQuery, fingerprint: embedder.fingerprint
+            )
             if anchored.count < memories.count {
                 let dropped = memories.count - anchored.count
                 Self.log.notice("hashing memory gate: \(dropped, privacy: .public) unrelated memory hit(s) dropped")
@@ -675,27 +686,32 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // 2026-11-02: a content-free reply ("Yes. Please.") gives the picker nothing to read: after a story
         // offer it invented a New York weather search. A closing, a no or a yes with nothing offered is chat,
         // whatever the gate said. A yes to M1K3's previous reply is what that reply offered: the gate reads
-        // the offer, and only a tools verdict on it goes on, with the picker and the dispatch's reads given
-        // the offer text in place of "yes please" (the prompts keep the user's words and the chat).
+        // the offer (`offerText`: nil unless the reply asked or offered something, so "Ok, thanks" after an
+        // answer is chat), and only a tools verdict on it goes on, with the picker and the dispatch's reads
+        // given the offer as a request in place of "yes please" (the prompts keep the user's words and the chat).
         let reply = gate != nil && !pointsBack ? ToolNeedRouter.contentFreeReply(question) : nil
         let offer = reply == .affirmative ? ToolNeedRouter.offerText(in: history) : nil
         let offerGate = offer.flatMap { offer in plainRoute.map { $0.decide(offer) } }
         let yesToTools = offerGate?.verdict == .tools
-        let decision: ToolNeedRouter.Decision? = if pointsBack || (reply != nil && !yesToTools) {
+        let decision: ToolNeedRouter.Decision? = if let offerGate {
+            // The verdict is the offer's, and so is the logged p: a tally of `tools p=` reads the verdict's score.
+            offerGate
+        } else if pointsBack || reply != nil {
             gate.map { ToolNeedRouter.Decision(verdict: .chat, probability: $0.probability) }
-        } else if yesToTools {
-            gate.map { ToolNeedRouter.Decision(verdict: .tools, probability: $0.probability) }
         } else {
             gate
         }
-        // What the picker, the correctors, the search head and the plan read: the offer on a yes to one.
-        let routedQuestion = yesToTools ? offer ?? question : question
+        // What the picker, the correctors, the search head and the plan read: on a yes to an offer, the
+        // offer as the user's request ("Want me to look it up?" → "look it up", with the sentence before it
+        // when it names nothing). The search head's guard reads the offer sentence alone (`offerAsk`).
+        let offered = yesToTools ? offer : nil
+        let routedQuestion = offered.map(ToolNeedRouter.offerRequest) ?? question
         if let decision {
             let score = decision.probability.map { String(format: "%.3f", $0) } ?? "none"
             let verdict = decision.verdict == .chat ? "chat" : "tools"
-            let offerScore = offerGate.map { $0.probability.map { String(format: "%.3f", $0) } ?? "none" }
+            let replyScore = gate?.probability.map { String(format: "%.3f", $0) } ?? "none"
             let why = pointsBack ? " (points back in this chat)"
-                : offerScore.map { " (yes to an offer: gate p=\($0) on the offer)" }
+                : offerGate.map { _ in " (yes to an offer: p is the offer's; the reply's was \(replyScore))" }
                 ?? (reply != nil ? " (content-free reply)" : "")
             Self.log.notice(
                 "tool router: \(verdict, privacy: .public) p=\(score, privacy: .public)\(why, privacy: .public)"
@@ -747,6 +763,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 if let picker { // a tools verdict: never after a plain turn
                     let outcome = await runDispatchedTurn(
                         question: question, routedQuestion: routedQuestion,
+                        offerAsk: offered.map(ToolNeedRouter.offerAsk),
                         picker: picker, staysLocal: plainRoute?.staysLocal,
                         tools: tools, chunks: turnChunks,
                         memories: cappedMemories, history: history, instructions: routeInstructions,
@@ -1037,12 +1054,16 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// honest line, never a blank bubble. A none pick or an empty search answers as
     /// plain chat; only if THAT comes back empty too does the agent take the turn,
     /// which may search once more (two stacked failures: accepted).
-    /// `routedQuestion` is what the picker, the correctors, the search head and an empty query's
-    /// plan read: the question, or on a yes to an offer the offer's text ("yes please" names
-    /// nothing). Every prompt keeps `question`, the user's own words, beside the chat.
+    /// `routedQuestion` is what the picker, the correctors, the search head and the plan read: the
+    /// question, or on a yes to an offer the offer as a request (`ToolNeedRouter.offerRequest`;
+    /// "yes please" names nothing). Every prompt keeps `question`, the user's own words, beside the
+    /// chat. `offerAsk` is set on a yes to an offer: the offer sentence alone, which the search
+    /// head's guard reads; and a pick that would fall back to the question is no pick then, so
+    /// M1K3's words never become a web or Wikipedia query.
     private func runDispatchedTurn(
         question: String,
         routedQuestion: String,
+        offerAsk: String?,
         picker: @Sendable (String, String) async -> ToolPick?,
         staysLocal: (@Sendable (String) -> SearchRouter.Decision)?,
         tools: [any AgentTool],
@@ -1077,7 +1098,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // The search head (#713, `toolSearchHead`): asked only when the pick reads the web and the user
         // didn't ask for the web in words, so it never adds a call and never overrides an explicit ask.
         // A local verdict takes the web reads out; nothing left falls to the none branch.
-        if let staysLocal, ToolDispatch.vetoable(pick, question: routedQuestion) {
+        // The guard reads the user's own ask: on a yes, the offer sentence, never M1K3's content sentence
+        // before it ("The latest Harry Potter book…" must not stand for the user asking about now).
+        if let staysLocal, ToolDispatch.vetoable(pick, question: offerAsk ?? question) {
             let decision = staysLocal(routedQuestion)
             let score = decision.probability.map { String(format: "%.3f", $0) } ?? "none"
             let vetoed = ToolDispatch.searchCorrected(pick, staysLocal: decision.verdict == .local)
@@ -1119,6 +1142,18 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             Self.log.notice("tool dispatch: \(pick.tool, privacy: .public) is not on offer — a plain turn answers")
             return await plain()
         }
+        // Round 3 review (high): an empty query planned with the offer sent M1K3's reply, which may be
+        // grounded in private notes, to the web as the query. On a yes to an offer a pick that would read
+        // the question is no pick: the agent turn answers with the chat in hand; a chain link is dropped.
+        let readsOffer: (ToolPick) -> Bool = {
+            offerAsk != nil && ToolDispatch.fallsBackToQuestion($0, palette: tools)
+        }
+        if readsOffer(pick) {
+            Self.log.notice(
+                "tool dispatch: \(pick.tool, privacy: .public) has no query on a yes — the agent turn answers"
+            )
+            return .agent(tools)
+        }
         guard let plan = ToolDispatch.plan(pick, palette: tools, question: routedQuestion) else {
             Self.log.notice("tool dispatch: \(pick.tool, privacy: .public) stays with the agent")
             return .agent(tools)
@@ -1126,9 +1161,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // A chain (2026-10-07): the pick, then any further read-only tool the turn named, run
         // in order. Each that ran with something to say feeds the one answer; a link the app
         // can't plan is skipped, never handed to the agent once the head has a plan.
-        let plans = [plan] + ToolDispatch.chain(pick, palette: tools).dropFirst().compactMap {
-            ToolDispatch.plan($0, palette: tools, question: routedQuestion)
-        }
+        let plans = [plan] + ToolDispatch.chain(pick, palette: tools).dropFirst().filter { !readsOffer($0) }
+            .compactMap { ToolDispatch.plan($0, palette: tools, question: routedQuestion) }
         var ran: [(plan: ToolDispatch.Plan, output: String)] = []
         var failures = 0
         var failedNames: [String] = []

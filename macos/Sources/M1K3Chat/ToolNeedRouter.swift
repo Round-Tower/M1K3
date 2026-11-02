@@ -49,10 +49,13 @@
 //  request needed); the load-once nil made every phone turn `p=none`, so the picker sent small talk to
 //  datetime and Mini opened every reply with the clock. Confidence 0.85 (proven on one phone, iOS 27.2).
 //  Review: Kev + claude-opus-5.5, 2026-11-02 — `contentFreeReply` (a whole-turn whitelist: thanks and bare praise
-//  close, a go phrase beats a no, a "later" beats a go) and `offerText` (the previous reply's last two sentences, a
-//  links-only sources tail cut, for the gate to read on a yes; no cue lists): on the phone "Yes. Please." after a
-//  story offer scored tools at 0.799 and the picker invented a New York weather search. Confidence 0.7 (pinned; the
-//  gate reads request-shaped offers as tools, so creative offers reach the picker as text; device check owed).
+//  close, "ok"/"sure" beside a thanks and "that's ok" close, "that would be great" is a yes, a go phrase beats a
+//  no, a "later" beats a go); `offerText` (the previous reply's last two sentences, only when one is a question or
+//  an "I can … if you like" offer, sources tails cut in the speech lane's shapes, for the gate to read on a yes);
+//  `offerRequest`/`offerAsk` (the offer as the user's imperative for the picker, correctors, retrieval and the
+//  search head's guard; links dropped). On the phone "Yes. Please." after a story offer scored tools at 0.799 and
+//  the picker invented a New York weather search. Confidence 0.7 (pinned; word lists, not measured on a blind set
+//  since round 3; device check owed).
 //
 
 import Foundation
@@ -142,7 +145,10 @@ public enum ToolNeedRouter {
     /// search. "again", "more", "next" and "another" stay off the list: they want a fresh read.
     ///
     /// Thanks and bare praise close ("Great, thanks" is neutral); only an acceptance word beside
-    /// them makes a yes ("Great, yes please"). A no is a no unless the turn carries a go phrase
+    /// them makes a yes ("Great, yes please"). A weak yes ("ok", "sure", "alright") beside a thanks
+    /// is an acknowledgement ("Ok, thanks" after a weather answer), and "That's ok", "It's alright",
+    /// "You're grand" close or decline; a conditional plus praise ("That would be great", "That'd be
+    /// lovely") and "I'd like that" are yeses. A no is a no unless the turn carries a go phrase
     /// ("No, go ahead", "Ah no, go on"); a deferral ("later", "not now") wins over any go phrase
     /// ("do it later"): not now means not now.
     public static func contentFreeReply(_ text: String) -> ReplyKind? {
@@ -170,12 +176,15 @@ public enum ToolNeedRouter {
         if tags.contains(.deferring) { return .declining }
         if tags.contains(.declining) { return goes ? .affirmative : .declining }
         if tags.contains(.accepting) { return .affirmative }
+        // Round 3 review (high): "Ok, thanks" after an answer had read as a yes and re-ran its tool.
+        if tags.contains(.weakAccepting) { return tags.contains(.thanks) ? .neutral : .affirmative }
         return .neutral
     }
 
-    /// What one phrase of a reply carries. A closing is a thanks or bare praise; a filler only rides along.
+    /// What one phrase of a reply carries. A closing is bare praise or an "it's ok", a thanks is a
+    /// thanks; a weak yes ("ok", "sure") beside a thanks is only an acknowledgement; a filler rides along.
     enum ReplyTag: Hashable {
-        case accepting, declining, deferring, closing, filler
+        case accepting, weakAccepting, declining, deferring, closing, thanks, filler
     }
 
     /// 👍 🙌 👌 🙏 ✅ say yes, 👎 says no; any other emoji alone is not read.
@@ -191,35 +200,45 @@ public enum ToolNeedRouter {
     /// Every phrase a content-free reply may be made of, longest first. Words are letters only,
     /// so "I'd" and "I\u{2019}d" are both "i d"; accents are folded ("sí" is "si").
     static let replyPhrases: [(phrase: [String], tag: ReplyTag)] = {
+        let praise = [
+            "great", "perfect", "cool", "lovely", "grand", "nice", "brilliant", "fine", "excellent", "awesome", "good",
+        ]
+        let weakAccepting = ["sure", "sure thing", "ok", "okay", "k", "alright"]
         let accepting = [
-            "yes", "yeah", "yea", "yep", "yup", "aye", "sure", "sure thing", "please", "pls", "plz", "ok", "okay",
-            "k", "alright", "go", "go on", "go ahead", "go for it", "do it", "do that", "do this", "do so",
+            "yes", "yeah", "yea", "yep", "yup", "aye", "please", "pls", "plz", "go", "go on", "go ahead",
+            "go for it", "do it", "do that", "do this", "do so",
             "please do", "let s do it", "lets do it", "let s go", "why not", "absolutely", "definitely", "course",
             "of course", "mhm", "mm hmm", "uh huh", "sounds good", "sounds great", "continue", "carry on",
             "keep going", "deal", "love it", "love that", "i d love that", "i would", "tell me",
+            // A conditional plus praise is a yes ("That would be great", "That'd be lovely"), and so is liking it.
+            "would be", "d be", "like that", "like it",
             // Accent-folded: oui, sí/si, ja, sim, tak, bitte, por favor, s'il vous plaît, d'accord, vale, claro.
             "oui", "si", "ja", "sim", "tak", "bitte", "por favor", "s il vous plait", "d accord", "vale", "claro",
             // Irish "'Sea" (is ea, "it is"), a yes on its own; "the sea" has "the" and stays nil.
             "sea",
-        ]
+        ] + praise.map { "sounds \($0)" }
         let declining = [
             "no", "nope", "nah", "not really", "no thanks", "no thank you", "non", "nein", "nee", "nao", "nie",
         ]
         let deferring = ["later", "maybe later", "not now", "not yet"]
-        let closing = [
-            "thanks", "thank you", "thx", "cheers", "ta", "no worries", "no problem", "fair enough", "merci", "danke",
-            "gracias", "grazie", "obrigado", "obrigada", "dziekuje", "go raibh maith agat", "go raibh maith agaibh",
-            "go raibh mile maith agat",
-            // Bare praise: a closing, not a yes ("Great, thanks" after an offer).
-            "great", "perfect", "cool", "lovely", "grand", "nice", "brilliant", "fine", "excellent", "awesome", "good",
+        let thanks = [
+            "thanks", "thank you", "thx", "cheers", "ta", "merci", "danke", "gracias", "grazie", "obrigado",
+            "obrigada", "dziekuje", "go raibh maith agat", "go raibh maith agaibh", "go raibh mile maith agat",
         ]
+        // Bare praise is a closing, not a yes ("Great, thanks" after an offer), and so is an "it's ok":
+        // in Irish and British English "That's ok" after an offer usually declines it.
+        let closing = ["no worries", "no problem", "fair enough"] + praise
+            + ["that s", "it s", "you re"].flatMap { lead in
+                ["ok", "okay", "alright", "fine", "grand", "good"].map { "\(lead) \($0)" }
+            }
         let fillers = [
             "that", "this", "it", "i", "d", "m", "s", "ll", "would", "be", "love", "do", "so", "then", "very",
             "much", "really", "a", "lot", "many", "sounds", "mike", "m1k3", "oh", "ah", "well", "just", "maybe",
             "beaucoup", "schon", "muchas", "mille", "tres", "bien",
         ]
-        let all = accepting.map { ($0, ReplyTag.accepting) } + declining.map { ($0, ReplyTag.declining) }
-            + deferring.map { ($0, ReplyTag.deferring) } + closing.map { ($0, ReplyTag.closing) }
+        let all = accepting.map { ($0, ReplyTag.accepting) } + weakAccepting.map { ($0, ReplyTag.weakAccepting) }
+            + declining.map { ($0, ReplyTag.declining) } + deferring.map { ($0, ReplyTag.deferring) }
+            + closing.map { ($0, ReplyTag.closing) } + thanks.map { ($0, ReplyTag.thanks) }
             + fillers.map { ($0, ReplyTag.filler) }
         return all.map { (phrase: $0.0.split(separator: " ").map(String.init), tag: $0.1) }
             .sorted { $0.phrase.count > $1.phrase.count }
@@ -229,32 +248,204 @@ public enum ToolNeedRouter {
     /// reply's last two sentences with letters in them (StyleAskFence's split), joined on one line,
     /// double quotes stripped, at most `offerTextLimit` characters (the end kept: the offer is
     /// last). Reasoning and a FOLLOWUPS trailer are cut first, and a trailing sources block only
-    /// when it is a list of links ("Web sources:" then lines of "•", "-", "*" or a URL): a prose
-    /// line that names sources is the reply. nil when the history doesn't end on M1K3's turn or
-    /// nothing there has letters. No cue lists (round 2's held 44% on a held-out set): the trained
-    /// gate decides whether the offer wants a tool, and the picker reads it in place of "yes".
+    /// when it is a list of links (`withoutSourcesTail`): a prose line that names sources is the
+    /// reply. nil when the history doesn't end on M1K3's turn, nothing there has letters, or
+    /// neither sentence offers anything (`isOffer`: a question, "I can … if you like", "happy to
+    /// … just say"): an answer that ends in statements is not an offer, so "Ok, thanks" after a
+    /// weather answer never re-runs the search on the answer's own text (round 3 review). No cue
+    /// lists for the topic (round 2's held 44% on a held-out set): the trained gate decides
+    /// whether the offer wants a tool.
     public static func offerText(in history: [ChatTurn]) -> String? {
         guard let last = history.last, last.role == .assistant else { return nil }
         let text = withoutSourcesTail(FollowUpSplit.split(ReasoningSplit.split(last.text).answer).answer)
-        let sentences = StyleAskFence.segments(text).filter { $0.contains(where: \.isLetter) }
+        let sentences = StyleAskFence.segments(text).filter { $0.contains(where: \.isLetter) }.suffix(2)
+        guard sentences.contains(where: isOffer) else { return nil }
+        let joined = flattened(sentences.joined(separator: " "))
+        return joined.isEmpty ? nil : capped(joined)
+    }
+
+    static let offerTextLimit = 300
+
+    /// Whether one sentence of a reply offers something: it ends in a question mark (a closing
+    /// quote, bracket or emoji may follow), or it is an "I can/could … if you like/want" or a
+    /// "happy to … just say" offer.
+    static func isOffer(_ sentence: String) -> Bool {
+        var trimmed = Substring(sentence)
+        while let last = trimmed.last, last.isWhitespace || closers.contains(last) || isEmoji(last) {
+            trimmed.removeLast()
+        }
+        if trimmed.hasSuffix("?") || trimmed.hasSuffix("\u{FF1F}") { return true }
+        let folded = " " + sentence.lowercased().replacingOccurrences(of: "\u{2019}", with: "'")
+        let conditional = [" i can ", " i could "].contains { folded.contains($0) }
+            && conditionalTails.contains { folded.contains($0) }
+        let happy = folded.contains(" happy to ") && happyTails.contains { folded.contains($0) }
+        return conditional || happy
+    }
+
+    private static let closers: Set<Character> = [
+        "\"", "'", "\u{201D}", "\u{2019}", "\u{00BB}", ")", "]", "*", "_",
+    ]
+    private static let conditionalTails = ["if you like", "if you want", "if you'd like", "if you wish"]
+    private static let happyTails = ["just say", "just ask", "let me know"]
+
+    private static func isEmoji(_ character: Character) -> Bool {
+        character.unicodeScalars.contains { $0.properties.isEmojiPresentation || $0.value == 0xFE0F }
+    }
+
+    /// The offer as the request the user just agreed to, for the picker, the correctors, the plan
+    /// and retrieval to read in place of "yes please": the offer sentence (`offerAsk`) with the
+    /// sentence before it in front when the ask names nothing of its own ("Not sure. Want me to
+    /// look it up?" → "Not sure. look it up"). Links are dropped (a URL M1K3 echoed from a page
+    /// must never be fetched on a bare "yes"), quotes stripped, one line, at most 300 characters,
+    /// the end kept. Round 3 review: the picker had read M1K3's two sentences, offer form and all,
+    /// and the correctors, keyed on the user's voice ("open …", "what did I decide"), never fired.
+    public static func offerRequest(_ offer: String) -> String {
+        let parts = offerParts(offer)
+        let request = flattened([parts.topic, parts.ask].compactMap(\.self).filter { !$0.isEmpty }
+            .joined(separator: " "))
+        return capped(request.isEmpty ? flattened(withoutLinks(offer)) : request)
+    }
+
+    /// The offer sentence alone as a request ("Want me to search for it?" → "search for it"):
+    /// what the search head's guard reads, so a web word in M1K3's content sentence before the
+    /// offer ("The latest Harry Potter book…") never stands for the user asking for the web.
+    public static func offerAsk(_ offer: String) -> String {
+        capped(flattened(offerParts(offer).ask))
+    }
+
+    /// The offer sentence (the last one that offers, else the last) as a request, and the sentence
+    /// before it when the request has no noun phrase of its own.
+    static func offerParts(_ offer: String) -> (topic: String?, ask: String) {
+        let sentences = StyleAskFence.segments(withoutLinks(offer)).filter { $0.contains(where: \.isLetter) }
+        guard let index = sentences.lastIndex(where: isOffer) ?? sentences.indices.last else { return (nil, "") }
+        let ask = asRequest(sentences[index])
+        let topic = index > sentences.startIndex && !namesSomething(ask) ? sentences[index - 1] : nil
+        return (topic, ask)
+    }
+
+    /// One offer sentence as the user's imperative: a lead ("Or", "So") and an offer form ("Want me
+    /// to", "Shall I", "I can … if you like", "Happy to … just say") stripped, the closing
+    /// punctuation dropped, and M1K3's "you"/"your" turned to the user's "me"/"I"/"my"
+    /// ("check what you decided" → "check what I decided", "check your reminders" → "check my reminders").
+    static func asRequest(_ sentence: String) -> String {
+        var text = Substring(sentence.replacingOccurrences(of: "\u{2019}", with: "'"))
+            .drop { !$0.isLetter && !$0.isNumber }
+        while let last = text.last, !last.isLetter, !last.isNumber {
+            text.removeLast()
+        }
+        func dropLead(_ leads: [String]) {
+            for lead in leads {
+                if let range = text.range(of: lead, options: [.caseInsensitive, .anchored]) {
+                    text = text[range.upperBound...]
+                    return
+                }
+            }
+        }
+        dropLead(["or ", "so ", "and ", "but ", "well, ", "well ", "ok, ", "okay, ", "sure, "])
+        dropLead(offerForms)
+        var trimmedTail = true
+        while trimmedTail {
+            trimmedTail = false
+            for tail in offerTails {
+                guard let range = text.range(of: tail, options: [.caseInsensitive, .anchored, .backwards]) else {
+                    continue
+                }
+                text = text[..<range.lowerBound]
+                while let last = text.last, last.isWhitespace || ",;:-\u{2013}\u{2014}".contains(last) {
+                    text.removeLast()
+                }
+                trimmedTail = true
+            }
+        }
+        return inTheUsersVoice(String(text))
+    }
+
+    /// The offer forms a request starts after, longest first.
+    static let offerForms: [String] = {
+        let conditional = ["if you like", "if you want", "if you'd like"].flatMap { lead in
+            [", ", " "].flatMap { comma in ["i can ", "i could "].map { lead + comma + $0 } }
+        }
+        return (conditional + [
+            "do you want me to ", "would you like me to ", "would you like me ", "do you fancy me ", "fancy me ",
+            "want me to ", "shall i ", "should i ", "would it help if i ", "can i ", "could i ", "i can ", "i could ",
+            "i'd be happy to ", "i'm happy to ", "i am happy to ", "happy to ",
+        ]).sorted { $0.count > $1.count }
+    }()
+
+    /// What an offer may end on after its request.
+    static let offerTails = [
+        "if you like", "if you want", "if you'd like", "if you wish", "just say the word", "just say", "just ask",
+        "just let me know", "let me know",
+    ]
+
+    /// M1K3's second person as the user's first: "your" → "my", "you" → "I" before a verb of
+    /// saying or deciding ("what you decided"), else "me" ("tell you about it" → "tell me about it").
+    static func inTheUsersVoice(_ text: String) -> String {
+        let tokens = text.split(separator: " ").map(String.init)
+        return tokens.enumerated().map { index, token in
+            let bare = String(token.prefix { $0.isLetter || $0 == "'" }).lowercased()
+            let rest = String(token.drop { $0.isLetter || $0 == "'" })
+            switch bare {
+            case "your": return "my" + rest
+            case "yours": return "mine" + rest
+            case "yourself": return "myself" + rest
+            case "you've": return "I've" + rest
+            case "you'd": return "I'd" + rest
+            case "you're": return "I'm" + rest
+            case "you":
+                let next = tokens.dropFirst(index + 1).first?.lowercased().filter(\.isLetter) ?? ""
+                return (subjectVerbs.contains(next) ? "I" : "me") + rest
+            default: return token
+            }
+        }.joined(separator: " ")
+    }
+
+    private static let subjectVerbs: Set<String> = [
+        "decided", "picked", "chose", "agreed", "settled", "said", "told", "mentioned", "ruled", "did", "asked",
+        "wanted", "meant", "wrote", "saved", "noted", "need", "want", "have", "had",
+    ]
+
+    /// Whether a request names a thing of its own: any word beyond pronouns, particles and the
+    /// lookup verbs ("look it up", "tell me more about it", "dig into it" name nothing).
+    static func namesSomething(_ request: String) -> Bool {
+        ToolGroupRouter.words(request).contains { !lightWords.contains(String($0)) }
+    }
+
+    private static let lightWords: Set<String> = [
+        "it", "that", "this", "them", "those", "these", "they", "one", "ones", "something", "anything",
+        "everything", "more", "else", "some", "further", "again", "too", "also", "you", "me", "i", "my", "s",
+        "up", "out", "for", "into", "on", "about", "over", "through", "a", "an", "the", "to", "with", "at", "in",
+        "of", "bit", "little", "quick", "look", "check", "find", "search", "dig", "pull", "get", "do", "go", "try",
+        "see", "tell", "give", "fetch", "grab", "run", "take", "read", "show", "help", "explain", "share", "bring",
+        "have", "now", "then", "quickly",
+    ]
+
+    /// Links and list markers out: an echoed URL is never part of what the picker reads.
+    static func withoutLinks(_ text: String) -> String {
+        text.replacing(/https?:\/\/\S+/, with: "").replacing(/(?m)^[ \t]*[•\-*][ \t]+/, with: "")
+    }
+
+    /// Double quotes out, whitespace flattened to single spaces.
+    static func flattened(_ text: String) -> String {
         let quotes: Set<Character> = ["\"", "\u{201C}", "\u{201D}", "\u{201E}", "\u{00AB}", "\u{00BB}"]
-        let joined = sentences.suffix(2).joined(separator: " ").filter { !quotes.contains($0) }
-            .split(whereSeparator: \.isWhitespace).joined(separator: " ")
-        guard !joined.isEmpty else { return nil }
-        guard joined.count > offerTextLimit else { return joined }
-        let start = joined.index(joined.endIndex, offsetBy: -offerTextLimit)
-        var capped = joined[start...]
-        // A cut word at the front is noise for the gate: start at the next whole word.
-        if !joined[joined.index(before: start)].isWhitespace, let space = capped.firstIndex(of: " ") {
+        return text.filter { !quotes.contains($0) }.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+    }
+
+    /// At most `offerTextLimit` characters, the end kept; a word cut at the front is dropped.
+    static func capped(_ text: String) -> String {
+        guard text.count > offerTextLimit else { return text }
+        let start = text.index(text.endIndex, offsetBy: -offerTextLimit)
+        var capped = text[start...]
+        if !text[text.index(before: start)].isWhitespace, let space = capped.firstIndex(of: " ") {
             capped = capped[capped.index(after: space)...]
         }
         return String(capped)
     }
 
-    static let offerTextLimit = 300
-
-    /// The reply without its trailing sources blocks: each a "<Something> sources:" line followed
-    /// only by link lines. Anything else after the header (an offer, prose) keeps the block.
+    /// The reply without its trailing sources blocks: a sources header (`sourcesHeader`) followed
+    /// only by link lines (a bullet, a dash, a star, a numbered or "[1]" line, or a URL), or a
+    /// header carrying its own bracketed list. Anything else after the header (an offer, prose)
+    /// keeps the block.
     static func withoutSourcesTail(_ text: String) -> String {
         var lines = text.components(separatedBy: .newlines)
         while true {
@@ -264,16 +455,22 @@ public enum ToolNeedRouter {
             guard let header = lines.lastIndex(where: { $0.wholeMatch(of: sourcesHeader) != nil }) else { break }
             let rest = lines[(header + 1)...].map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
             let links = rest.allSatisfy { line in
-                ["•", "-", "*"].contains { line.hasPrefix($0) } || line.contains("http")
+                line.first.map { "•-*[".contains($0) || $0.isNumber } == true || line.contains("http")
             }
-            guard !rest.isEmpty, links else { break }
+            guard links, !rest.isEmpty || lines[header].contains("[") else { break }
             lines.removeSubrange(header...)
         }
         return lines.joined(separator: "\n")
     }
 
-    /// "Web sources:", "Wikipedia sources:", "Sources:" alone on its line.
-    nonisolated(unsafe) static let sourcesHeader = /[ \t]*(?:[A-Za-z][A-Za-z ]* )?[Ss]ources:[ \t]*/
+    /// A sources header alone on its line, in every shape the speech lane cuts
+    /// (`SpokenAnswerEnd.sourcesHeader`, `SpeechTextPolish.stripSourcesBlock`; M1K3Voice isn't
+    /// linked here, so the pattern is copied): "Web sources:", "Wikipedia sources:", "Sources:",
+    /// "Source:", "**Sources:**", "*Web sources:*", "## Sources", optionally a bracketed list
+    /// after it on the line. Prose after the colon ("The main sources: the Lee…") never matches.
+    /// Fixed-size groups only: the scan stays linear.
+    nonisolated(unsafe) static let sourcesHeader =
+        /(?i)[ \t]*(?:#{1,6}[ \t]+)?(?:\*{1,2}|_{1,2})?(?:web |wikipedia )?sources?(?:\*{1,2}|_{1,2})?[ \t]*:?(?:\*{1,2}|_{1,2})?[ \t]*(?:\[[^\n]*)?/
 
     /// "<who> [just] <said>" in the past tense, or "<did|do> <who> <say>": a present form alone is
     /// an everyday request ("Can you tell me the weather?", "Can you recommend…"), challenger
