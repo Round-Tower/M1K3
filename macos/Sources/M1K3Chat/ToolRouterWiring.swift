@@ -43,6 +43,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-10 — each flag reader takes `whenUnset:` (an explicit setting still
 //  wins), so a shell picks the default: the Mac turns them on after the 10-10 arm, iOS keeps them off.
 //  Review: Kev + claude-opus-5-5, 2026-10-10 — `route`'s doc no longer calls `allTiers` unmeasured.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — docs only: iOS routes every brain now (Kev's call after Lil
+//  echoed its last answer on his phone); the head and chains stay off there. Confidence 0.75.
 //  Review: Kev + claude-fable-5.1, 2026-10-25 — the picker's pick is timed and logged (`pickSummary`): on the
 //  Lil Release baseline the picker route's first token was 3.8 s against 0.65 s on the chat and head routes,
 //  half the trials took it, and the pick was the unlogged suspect. Confidence 0.85. Same day: the timed pick
@@ -92,7 +94,7 @@ public enum ToolRouterWiring {
 
     /// The route for every brain, not only Mini. Absent = the shell's default: ON on the Mac
     /// since the 2026-10-10 router arm (Lil tool-use 38/48 → 48/48 at half the latency, Big
-    /// about 3× faster), OFF on iOS until a phone smoke.
+    /// about 3× faster), and ON on iOS since 2026-11-02 (Lil echoed its last answer without it).
     public static let allTiersKey = "toolRouterAllTiers"
 
     public static func allTiersEnabled(_ defaults: UserDefaults = .standard, whenUnset: Bool = false) -> Bool {
@@ -138,8 +140,8 @@ public enum ToolRouterWiring {
     }
 
     /// An explicit setting wins; absent, the shell's default (`whenUnset`). The shells choose:
-    /// the Mac turns the router flags on (the 2026-10-10 arm), iOS keeps them off until a phone
-    /// smoke (Lil + Apple's picker on an 8 GB iPhone is unmeasured).
+    /// the Mac turns the router flags on (the 2026-10-10 arm); iOS turns `allTiers` on (2026-11-02)
+    /// and keeps the head and chains off until a phone run.
     private static func flag(_ key: String, _ defaults: UserDefaults, whenUnset: Bool) -> Bool {
         defaults.object(forKey: key) == nil ? whenUnset : defaults.bool(forKey: key)
     }

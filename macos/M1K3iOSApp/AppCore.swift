@@ -1372,14 +1372,16 @@ final class AppCore {
             },
             // What the mic heard during a voice turn (VoiceTurnPreparer), set for that turn only.
             voiceClauseProvider: { Self.voiceTurnClause.clause },
-            // The Mac's tool router, mirrored (flagged; Mini only unless `toolRouterAllTiers`).
+            // The Mac's tool router, mirrored. Every brain takes it (Kev, 2026-11-02): without it Lil's every
+            // message was an agent turn over pasted history, and Lil copied its last answer back word for word.
+            // The group head and chains stay off here until their own phone run.
             plainRouteProvider: {
                 ToolRouterWiring.route(
                     provider: provider,
                     enabled: ToolRouterWiring.isEnabled(),
                     dispatch: ToolRouterWiring.dispatchEnabled(),
                     groupRouter: ToolRouterWiring.groupRouterEnabled(),
-                    allTiers: ToolRouterWiring.allTiersEnabled(),
+                    allTiers: ToolRouterWiring.allTiersEnabled(whenUnset: true),
                     chain: ToolRouterWiring.chainEnabled()
                 )
             }
