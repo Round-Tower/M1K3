@@ -31,6 +31,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-08 — "Constellation" joins the grid on the iPad (hit list item 6),
 //  with its own footer line. Confidence now 0.8 (device-owed).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — adds the "Seasonal looks" opt-out toggle. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — the preview holds the pixel face and a creature view from the
+//  moment Settings opens and a pick only shows one: a 3D view built into this list row after the first drew black
+//  (Kev's phone, fresh identity or not). None keeps the row and says so. Confidence 0.7 (verify on the phone).
 //
 
 import M1K3Avatar
@@ -42,6 +45,9 @@ struct CompanionPickerSection: View {
     @AppStorage(CompanionDefaults.seasonalLooksKey) private var seasonalLooks = true
     @AppStorage(CompanionDefaults.shadingStyleKey) private var shadingRaw =
         CompanionDefaults.houseShading.rawValue
+    /// The creature the preview's creature view holds while Pixel face or None shows: the
+    /// last one picked, so that view is never torn down while Settings is open.
+    @State private var lastCreature: String?
 
     /// One selectable face.
     private struct FaceChoice: Identifiable {
@@ -90,9 +96,7 @@ struct CompanionPickerSection: View {
 
     var body: some View {
         Section {
-            if !noneChosen {
-                preview
-            }
+            preview
             faceGrid
             // The skin (shading) picker is macOS/iOS only — CustomMaterial surface
             // shaders aren't available on visionOS, so a creature there shows its
@@ -116,14 +120,58 @@ struct CompanionPickerSection: View {
 
     /// The live face — the real AvatarSurface, so every choice below updates it at
     /// once. "Say hi" pokes a beat so the face demonstrably lives.
+    private var pixelShown: Bool {
+        !creatureChosen && !noneChosen && !(constellationChosen && AvatarSurface.offersConstellation)
+    }
+
+    /// The creature the preview's creature view shows or holds hidden.
+    private var previewCreature: CompanionSpec? {
+        let installed = CompanionSpec.all.filter(CompanionAssets.isInstalled)
+        let held = [companion, lastCreature].compactMap { $0 }.compactMap(CompanionSpec.named)
+        return held.first(where: CompanionAssets.isInstalled) ?? installed.first
+    }
+
+    /// Both 3D faces live from the moment Settings opens, and a pick only changes which one
+    /// shows. A 3D view built into this list row after the first drew black, with a fresh
+    /// identity or without, pixel face or creature (Kev's phone, 2026-11-02); the chat hero
+    /// never hits it. Creature to creature still swaps in place inside the one creature view.
+    private var faces: some View {
+        ZStack {
+            AvatarView(controller: core.avatar, paused: !pixelShown)
+                .opacity(pixelShown ? 1 : 0)
+                .allowsHitTesting(pixelShown)
+                .accessibilityHidden(!pixelShown)
+            if let spec = previewCreature {
+                CompanionAvatarView(
+                    controller: core.avatar, companion: spec, framing: .fitWhole, paused: !creatureChosen
+                )
+                .opacity(creatureChosen ? 1 : 0)
+                .allowsHitTesting(creatureChosen)
+                .accessibilityHidden(!creatureChosen)
+            }
+            if constellationChosen, AvatarSurface.offersConstellation {
+                MemoryConstellationCanvas()
+            }
+            if noneChosen {
+                Text("No face")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .onAppear { if creatureChosen { lastCreature = companion } }
+        .onChange(of: companion) { _, picked in
+            if CompanionSpec.named(picked) != nil { lastCreature = picked }
+        }
+    }
+
     private var preview: some View {
-        AvatarSurface(controller: core.avatar)
+        faces
             .frame(height: 190)
             .frame(maxWidth: .infinity)
             .clipShape(.rect(cornerRadius: 14))
             .overlay(alignment: .bottomTrailing) {
-                // The constellation has no face to poke — no dead button.
-                if !constellationChosen {
+                // The constellation and None have no face to poke — no dead button.
+                if !constellationChosen, !noneChosen {
                     Button("Say hi") { sayHi() }
                         .font(.caption.weight(.semibold))
                         .buttonStyle(.borderless)

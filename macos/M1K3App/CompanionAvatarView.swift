@@ -83,6 +83,9 @@
 //  code; whether `Entity(contentsOf:)` throws on cancel and whether a covered RealityView updates are device facts.
 //  Review: Kev + claude-opus-5.5, 2026-10-30 (bot pass on #754) — a claim is released only while it's still this load's:
 //  a newer switch claims before its load bumps the token. Kev's hand test passed on the phone. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — a load into a hidden view leaves the choreographer `.unmounted`
+//  (`scene.mounted`), so views the pixel face replaced stop playing clips nobody sees; `.notice` load lines carry
+//  a per-view tag. Confidence 0.75 (read off Kev's phone log).
 
 // AppKit on macOS, UIKit on iOS/visionOS — the companion render path is now
 // cross-platform (shared into the M1K3iOSApp mobile shell). Only the emotion-fill
@@ -120,6 +123,11 @@ enum CompanionClipCache {
 /// closure drives it while SwiftUI is mid-graph-update.
 @MainActor
 final class CompanionScene {
+    /// Names this view in the `companion` log, so two surfaces' loads read apart.
+    let tag = String(UUID().uuidString.prefix(4))
+    /// On screen (between onAppear and onDisappear). A load into a hidden view leaves the
+    /// choreographer `.unmounted`, so no fidget timer runs for a creature nobody sees.
+    var mounted = false
     /// The fit-owned OUTER node (visionOS window framing writes scale here, the
     /// same frame/root split AvatarView's pixel face uses — PR #60). Parent of
     /// `root`, so the window-fit scale can never be clobbered by anything that
@@ -408,6 +416,8 @@ struct CompanionAvatarView: View {
         // nothing invalidates it on the way back, so the old creature stayed on (Kev, 10-30).
         .onChange(of: companion.id) { claimSwitch() }
         .onAppear {
+            Self.log.notice("companion [\(scene.tag, privacy: .public)] appear \(companion.id, privacy: .public)")
+            scene.mounted = true
             // Back on screen without a rebuild: the brain resumes from now (hidden
             // time never counts toward a fidget) and re-arms its one timer.
             scene.choreographer?.presenceChanged(paused ? .paused : .animating, at: Self.now())
@@ -415,6 +425,8 @@ struct CompanionAvatarView: View {
             claimSwitch()
         }
         .onDisappear {
+            Self.log.notice("companion [\(scene.tag, privacy: .public)] disappear")
+            scene.mounted = false
             scene.loadTask?.cancel()
             stopChoreography()
         }
@@ -482,6 +494,7 @@ struct CompanionAvatarView: View {
         OnboardingTrace.shared.markOnce("companion load start (\(companion.id))")
         scene.loadToken += 1
         let token = scene.loadToken
+        Self.log.notice("companion [\(scene.tag, privacy: .public)] \(companion.id, privacy: .public): load start #\(token)")
         loading?.wrappedValue = true
         defer { if token == scene.loadToken { loading?.wrappedValue = false } }
         // `loadedCompanionID` was claimed synchronously by the caller (make/update).
@@ -521,12 +534,16 @@ struct CompanionAvatarView: View {
                 if scene.loadedCompanionID == companion.id {
                     scene.loadedCompanionID = scene.displayedCompanion?.id
                 }
+                Self.log.notice("companion [\(scene.tag, privacy: .public)] \(companion.id, privacy: .public): load #\(token) cancelled")
             } else {
                 Self.log.error("companion \(companion.id, privacy: .public): mesh failed to load")
             }
             return
         }
-        guard token == scene.loadToken else { return } // a newer switch superseded us
+        guard token == scene.loadToken else { // a newer switch superseded us
+            Self.log.notice("companion [\(scene.tag, privacy: .public)] \(companion.id, privacy: .public): load #\(token) superseded")
+            return
+        }
 
         // Reuse the process-cached clips when we've harvested this companion before:
         // RealityKit's asset cache can return an animationless clone on a repeat load,
@@ -540,6 +557,11 @@ struct CompanionAvatarView: View {
             // Only a whole set: a cut-off harvest kept here would leave this creature stuck on
             // its idle loop for the life of the process (Kev, 10-30). `try?` hides why it's short.
             let complete = CompanionAssets.isComplete(harvested.keys, for: companion)
+            if !complete {
+                Self.log.notice(
+                    "companion \(companion.id, privacy: .public): harvest short \(harvested.count) clips, cancelled=\(Task.isCancelled)"
+                )
+            }
             if complete { CompanionClipCache.byCompanion[companion.id] = harvested }
             if !complete, Task.isCancelled, token == scene.loadToken {
                 if scene.loadedCompanionID == companion.id {
@@ -616,13 +638,16 @@ struct CompanionAvatarView: View {
         // brings it up to the current state.
         stopChoreography()
         var choreographer = CompanionChoreographer(dialect: companion.dialect) { Double.random(in: 0 ... 1) }
-        choreographer.presenceChanged(paused ? .paused : .animating, at: Self.now())
+        // Hidden (a chat hero under Settings, a view the pixel face replaced): parked until
+        // onAppear, or its fidget timer runs for the life of the process (Kev's phone, 11-02).
+        choreographer.presenceChanged(scene.mounted ? (paused ? .paused : .animating) : .unmounted, at: Self.now())
         scene.choreographer = choreographer
         scene.built = true
         // Force a fresh SwiftUI render right now — see the `loadTick` doc comment;
         // otherwise the visionOS window-fit (which only runs inside `update`) waits
         // on the next unrelated `controller.state` change to frame correctly.
         loadTick &+= 1
+        Self.log.notice("companion [\(scene.tag, privacy: .public)] \(companion.id, privacy: .public): load #\(token) shown, \(clips.count) clips")
         OnboardingTrace.shared.markOnce("companion ready (\(companion.id))")
     }
 
@@ -755,7 +780,7 @@ struct CompanionAvatarView: View {
             guard let resource = scene.clips[clip] else { return }
             scene.playback = host.playAnimation(resource.repeat(), transitionDuration: crossfade)
             scene.currentClip = clip
-            Self.log.notice("companion clip \(clip, privacy: .public) loop")
+            Self.log.notice("companion [\(scene.tag, privacy: .public)] clip \(clip, privacy: .public) loop")
         case let .oneShot(clip, _, crossfade):
             guard let resource = scene.clips[clip] else {
                 // Nothing to play: end the beat now so the loop carries on.
@@ -765,7 +790,7 @@ struct CompanionAvatarView: View {
             let playback = host.playAnimation(resource, transitionDuration: crossfade)
             scene.playback = playback
             scene.currentClip = clip
-            Self.log.notice("companion clip \(clip, privacy: .public) once")
+            Self.log.notice("companion [\(scene.tag, privacy: .public)] clip \(clip, privacy: .public) once")
             watchOneShotEnd(of: playback)
         }
         if scene.parked { scene.playback?.pause() }
