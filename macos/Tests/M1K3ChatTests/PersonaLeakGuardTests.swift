@@ -36,7 +36,8 @@
 //  shape move teach a SHAPE a compare answer may legitimately echo, so none of their sentences is a span; the
 //  fingerprint itself is byte-identical (the move is outside `voiceExemplars`). Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-11-02 — the decline lives in `M1K3Persona.taughtDecline` (the eval links only
-//  M1K3Inference); the guard's copy is pinned to it, and `droppingLeadingDecline` keeps it on a self-query. Confidence 0.85.
+//  M1K3Inference); the guard's copy is pinned to it, and `droppingLeadingDecline` keeps it on a self-query.
+//  Confidence 0.85.
 //
 
 import Foundation

@@ -24,6 +24,8 @@
 //  so a mechanic-only run warms the embedder before fixture 1. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — #728's master merge: the bare arm hands in the spoken text AND says no
 //  tool was offered (`toolsOffered: false`, #713), so its pin names both. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — `spokenText(of:question:)`: both arms hand in the fixture prompt, and the
+//  spoken text drops a leading taught decline (`LeadingDecline.dropped`) as the app's bubble does. Confidence 0.85.
 //
 
 import Foundation
@@ -89,14 +91,19 @@ struct ChatEvalStageWiringTests {
     @Test("both arms hand in the spoken text, built the way auto-speak speaks, and format rides the live arm")
     func spokenTextFeedsBothArmsLikeAutoSpeak() throws {
         let text = try Self.code(Self.stageSource())
-        #expect(text.components(separatedBy: "spokenText: spokenText(of: raw)").count - 1 == 2)
+        let handIn = "spokenText: spokenText(of: raw, question: fixture.prompt)"
+        #expect(text.components(separatedBy: handIn).count - 1 == 2)
         let live = try Self.body(of: "private static func livePathObservation(", in: text)
-        #expect(live.contains("spokenText: spokenText(of: raw)"), "the live arm drops the spoken text")
-        #expect(text.contains("rawText: raw, latencyMS: ms, spokenText: spokenText(of: raw), toolsOffered: false"),
-                "the bare arm drops the spoken text, or says it offers tools (#713: an avoid list skips there)")
+        #expect(live.contains(handIn), "the live arm drops the spoken text")
+        let bare = try #require(
+            text.range(of: "rawText: raw, latencyMS: ms, \(handIn),"),
+            "the bare arm drops the spoken text"
+        )
+        #expect(text[bare.upperBound...].prefix(80).contains("toolsOffered: false"),
+                "the bare arm says it offers tools (#713: an avoid list skips there)")
         let spoken = try Self.body(of: "private static func spokenText(of ", in: text)
         let seams = ["ThinkStripper.strip(", "StreamedAnswerFolder(", "SpokenAnswerEnd.start(in:",
-                     "FollowUpSplit.trailerStart", "SpeechTextPolish.spokenSentence"]
+                     "FollowUpSplit.trailerStart", "SpeechTextPolish.spokenSentence", "LeadingDecline.dropped("]
         for seam in seams {
             #expect(spoken.contains(seam), "spokenText(of:) lost \(seam)")
         }

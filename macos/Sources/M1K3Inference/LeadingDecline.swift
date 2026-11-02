@@ -16,9 +16,9 @@
 //  with no spaces); the text that comes back is the model's own characters. Rest that is only a follow-ups trailer or
 //  opens with a sources block is not an answer: dropping the decline there would leave a bare list.
 //
-//  Signed: Kev + claude-opus-5.5, 2026-11-02, Confidence 0.85 (the table, the char- and word-wise monotonic property and
-//  the ChatSession wiring are pinned; the recorded Mini continuations all use the exact string; a paraphrased decline
-//  is out of scope by construction). Prior: Unknown.
+//  Signed: Kev + claude-opus-5.5, 2026-11-02, Confidence 0.85 (the table, the char- and word-wise monotonic
+//  property and the ChatSession wiring are pinned; the recorded Mini continuations all use the exact string; a
+//  paraphrased decline is out of scope by construction). Prior: Unknown.
 //
 
 import Foundation

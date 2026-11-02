@@ -1035,7 +1035,8 @@ enum ChatEvalStage {
                 return ChatEvalScorer.score(
                     fixture: fixture,
                     observation: EvalObservation(
-                        rawText: raw, latencyMS: ms, spokenText: spokenText(of: raw, question: fixture.prompt), toolsOffered: false
+                        rawText: raw, latencyMS: ms, spokenText: spokenText(of: raw, question: fixture.prompt),
+                        toolsOffered: false
                     ),
                     latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )

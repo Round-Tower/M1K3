@@ -105,7 +105,8 @@ struct LeadingDeclineTests {
 
     @Test("partial prefixes of the decline hold, whatever their whitespace")
     func partialPrefixesHold() {
-        for prefix in ["", " ", "I", "I don", "I don\u{2019}t share my wiring,", "  I don't share my wiring, not even"] {
+        let prefixes = ["", " ", "I", "I don", "I don\u{2019}t share my wiring,", "  I don't share my wiring, not even"]
+        for prefix in prefixes {
             #expect(LeadingDecline.fold(prefix, final: false) == nil, "\(prefix)")
         }
         #expect(LeadingDecline.fold(Self.decline, final: false) == nil)
@@ -159,7 +160,7 @@ struct LeadingDeclineTests {
             var last = ""
             for snapshot in Self.snapshots(text, byWord: byWord) {
                 guard let passed = LeadingDecline.fold(snapshot, final: false) else { continue }
-                #expect(passed.hasPrefix(last), "\(text.prefix(40)): \(last.debugDescription) → \(passed.debugDescription)")
+                #expect(passed.hasPrefix(last), "\(text.prefix(40)): \(last.debugDescription) → \(passed)")
                 last = passed
             }
             let final = LeadingDecline.fold(text, final: true)

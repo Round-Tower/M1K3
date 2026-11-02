@@ -47,7 +47,14 @@ struct LeadingDeclineHoldTests {
 
     /// What the app hears: each snapshot folded (a hold leaves the bubble as it was), polled into the folder, then
     /// the settled text and the flush.
-    static func heard(_ text: String, byWord: Bool) -> (live: [String], sentences: [String], settled: String) {
+    struct Heard {
+        /// Every value the bubble held, in order, the settled text last.
+        let live: [String]
+        let sentences: [String]
+        let settled: String
+    }
+
+    static func heard(_ text: String, byWord: Bool) -> Heard {
         var folder = folder()
         var bubble = ""
         var live: [String] = []
@@ -61,7 +68,7 @@ struct LeadingDeclineHoldTests {
         live.append(settled)
         sentences += folder.ingest(settled)
         if let tail = folder.flush() { sentences.append(tail) }
-        return (live, sentences, settled)
+        return Heard(live: live, sentences: sentences, settled: settled)
     }
 
     @Test("every bubble value extends the one before, so the folder never skips one", arguments: [false, true])
@@ -69,7 +76,7 @@ struct LeadingDeclineHoldTests {
         for reply in Self.replies {
             let live = Self.heard(reply, byWord: byWord).live
             for (before, after) in zip(live, live.dropFirst()) {
-                #expect(after.hasPrefix(before), "\(reply.prefix(30)): \(before.debugDescription) → \(after.debugDescription)")
+                #expect(after.hasPrefix(before), "\(reply.prefix(30)): \(before.debugDescription) → \(after)")
             }
         }
     }
@@ -77,11 +84,11 @@ struct LeadingDeclineHoldTests {
     @Test("what is spoken is exactly the settled answer's sentences", arguments: [false, true])
     func spokenMatchesSettled(byWord: Bool) {
         for reply in Self.replies {
-            let (_, sentences, settled) = Self.heard(reply, byWord: byWord)
+            let heard = Self.heard(reply, byWord: byWord)
             var oneShot = Self.folder()
-            var expected = oneShot.ingest(settled)
+            var expected = oneShot.ingest(heard.settled)
             if let tail = oneShot.flush() { expected.append(tail) }
-            #expect(sentences == expected, "\(reply.prefix(30))")
+            #expect(heard.sentences == expected, "\(reply.prefix(30))")
         }
     }
 

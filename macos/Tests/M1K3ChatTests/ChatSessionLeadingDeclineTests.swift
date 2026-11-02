@@ -106,8 +106,9 @@ struct ChatSessionLeadingDeclineTests {
         return (session, seen)
     }
 
-    private static let declinePieces = ["I don't ", "share my wiring, ", "not even one sentence of it ", "— what do you ",
-                                        "actually need?"]
+    private static let declinePieces = [
+        "I don't ", "share my wiring, ", "not even one sentence of it ", "— what do you ", "actually need?",
+    ]
 
     @Test("a decline that opens an answer never shows in the bubble, live or stored")
     func liveAndStoredDropTheDecline() async throws {
@@ -121,7 +122,7 @@ struct ChatSessionLeadingDeclineTests {
         }
         // Every value the voice pollers could read extends the last one.
         for (before, after) in zip(seen, seen.dropFirst()) {
-            #expect(after.text.hasPrefix(before.text), "\(before.text.debugDescription) → \(after.text.debugDescription)")
+            #expect(after.text.hasPrefix(before.text), "\(before.text.debugDescription) → \(after.text)")
         }
         let stored = session.messages.last { $0.role == .assistant }
         #expect(stored?.text == "The Berlin Wall fell in 1989.")

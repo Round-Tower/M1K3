@@ -121,7 +121,8 @@
 //  that offers no tool (bare generate) makes `avoids X` skip, not pass by construction. Confidence 0.9.
 //  Review: Kev + claude-opus-5.5, 2026-11-02 — a dated event: the answer is scored after `LeadingDecline.dropped`
 //  (a taught decline that only opens a real answer is gone, a self-query prompt keeps it), as the app shows it; an
-//  informational `leading-decline dropped` check counts each drop. Decline-only replies score as before. Confidence 0.85.
+//  informational `leading-decline dropped` check counts each drop. Decline-only replies score as before.
+//  Confidence 0.85.
 
 import Foundation
 import M1K3Inference
