@@ -106,6 +106,10 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-30 — Kev's iPhone round: the keyboard goes down on the gear or voice tap,
 //  before the chat leaves (measured on his phone: composer 777 under the keyboard, 483 on top of it), and a failed
 //  brain offers "Send a report" through the snag sheet. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — the thumbs-down note is this screen's sheet (`noteTarget`), not a
+//  transcript row's: the row left the lazy window under the keyboard and closed the note. Every brain takes the
+//  tool route, and the face is built only while the chat is on screen (`chatOnScreen`): one built under Settings
+//  never drew and came back black. Confidence 0.75.
 
 import M1K3Avatar
 import M1K3Chat
@@ -145,6 +149,12 @@ struct ChatScreen: View {
     @AppStorage(PersistedAgeBandProvider.defaultsKey) private var ageBandRaw: String?
     @State private var brainFailureDraft: SnagDraft?
     @State private var showSettings = false
+    /// On screen, not covered by a pushed screen (Settings). The face is built only then:
+    /// one built under Settings never got a drawable, failed 60 frames a second, and stayed
+    /// black when the chat came back (Kev's phone, 2026-11-02).
+    @State private var chatOnScreen = true
+    /// The answer whose thumbs-down note is open (`AnswerNoteSheet`).
+    @State private var noteTarget: NoteTarget?
     @FocusState private var inputFocused: Bool
 
     private var chatting: Bool {
@@ -169,9 +179,10 @@ struct ChatScreen: View {
 
     /// The backdrop's RealityView is unmounted while the voice cover is up: the
     /// cover (VoiceScreen) carries its own full-bleed hero, and the cover does not
-    /// unmount what is beneath it — ONE RealityView at a time.
+    /// unmount what is beneath it — ONE RealityView at a time. Settings too
+    /// (`chatOnScreen`): it has its own preview.
     private var backdropMounted: Bool {
-        backdropActive && core.voiceLoop == nil
+        backdropActive && core.voiceLoop == nil && chatOnScreen
     }
 
     /// Composing — keyboard up or a draft in hand; recedes the backdrop avatar.
@@ -300,6 +311,13 @@ struct ChatScreen: View {
                 case .pairing: BrainPairingScreen()
                 }
             }
+            .sheet(item: $noteTarget) { target in
+                AnswerNoteSheet(
+                    existingComment: target.existing,
+                    onFeedback: { verdict, comment in rate(target.message, verdict, comment) },
+                    onClose: { noteTarget = nil }
+                )
+            }
             .sheet(item: $brainFailureDraft) { draft in
                 SnagReportSheet(draft: draft, onDone: { brainFailureDraft = nil })
             }
@@ -307,6 +325,8 @@ struct ChatScreen: View {
                 privateCloudConsentView(pending)
             }
             .onAppear { core.privateCloudArming.controlChanged(privateCloudControl) }
+            .onAppear { chatOnScreen = true }
+            .onDisappear { chatOnScreen = false }
             .onChange(of: privateCloudControl) { _, newValue in
                 core.privateCloudArming.controlChanged(newValue)
             }
@@ -334,6 +354,15 @@ struct ChatScreen: View {
 
     /// See the `.task(id: brainReady)` above — read once per process.
     private static let voiceAtLaunch = ProcessInfo.processInfo.environment["M1K3_VOICE_AT_LAUNCH"] == "1"
+
+    /// The answer a thumbs-down note is for, with the note saved so far.
+    private struct NoteTarget: Identifiable {
+        let message: ChatMessage
+        let existing: String?
+        var id: ChatMessage.ID {
+            message.id
+        }
+    }
 
     /// A rating from an answer's row (MessageBubble): into the shared store the Mac
     /// uses, and, on the transition INTO liked, toward the rating ask (the Mac's rule:
@@ -388,7 +417,7 @@ struct ChatScreen: View {
     private var hero: some View {
         VStack(spacing: 6) {
             if !chatting {
-                if !avatarHidden, !backdropActive {
+                if !avatarHidden, !backdropActive, chatOnScreen {
                     AvatarSurface(controller: core.avatar)
                         .frame(height: 168)
                         .padding(.horizontal, 56)
@@ -508,8 +537,12 @@ struct ChatScreen: View {
                             message: message,
                             scrimmed: backdropActive,
                             verdict: core.chat.feedbackVerdicts[message.id],
-                            existingComment: core.chat.feedbackComments[message.id],
                             onFeedback: { verdict, comment in rate(message, verdict, comment) },
+                            onNeedsWork: {
+                                noteTarget = NoteTarget(
+                                    message: message, existing: core.chat.feedbackComments[message.id]
+                                )
+                            },
                             onSpeak: { core.readAloud($0) },
                             onSendFollowUp: { question in
                                 // Same gate the starter chips use (brainReady) — chips

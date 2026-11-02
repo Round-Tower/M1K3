@@ -573,10 +573,11 @@ extension AppEnvironment {
             // generation; a tool turn tries the group head, then Apple's pick, and the app runs
             // the read-only tool(s). Every tier, the head and chains are ON on the Mac since the
             // 2026-10-10 router arm (Lil 38/48 → 48/48 at half the latency, Big 3× faster, Mini's
-            // head 0.6 s faster; docs/adr/0009); an explicit setting still wins. iOS keeps them
-            // off until a phone smoke (AppCore). Read per turn. The search head (#713) is ON (Kev,
-            // 2026-10-27) as its untrained stub, which never vetoes: trained weights that pass the
-            // gate go live with no flag move. `-toolSearchHead NO` is the off arm.
+            // head 0.6 s faster; docs/adr/0009); an explicit setting still wins. iOS routes every
+            // brain too since 2026-11-02, head and chains still off (AppCore). Read per turn. The
+            // search head (#713) is ON (Kev, 2026-10-27) as its untrained stub, which never vetoes:
+            // trained weights that pass the gate go live with no flag move. `-toolSearchHead NO`
+            // is the off arm.
             plainRouteProvider: {
                 ToolRouterWiring.route(
                     provider: provider,

@@ -35,6 +35,9 @@
 //  typed blocks explicitly, and a choices card is live only when ChatScreen says so (`acceptsChoices`: the
 //  newest message, no turn responding), as on the Mac: a reloaded or earlier card never sends a stale option.
 //  TDD_SKIP: view body (the gate is pinned by AnswerBlockWiringScanTests). Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-11-02 — the thumbs-down note moves to `AnswerNoteSheet`, presented by
+//  ChatScreen: owned by a LazyVStack row, it closed when its field took focus, came back, and took no typing
+//  (Kev's phone). Pinned by PhoneAnswerActionsTests. Confidence 0.75 (verify on the phone).
 
 import M1K3AnswerBlocks
 import M1K3Chat
@@ -49,9 +52,10 @@ struct MessageBubble: View {
     var scrimmed = false
     /// This answer's rating, if any (the shared ChatSession's map).
     var verdict: FeedbackVerdict?
-    /// The saved thumbs-down note, prefilled when the field reopens.
-    var existingComment: String?
     var onFeedback: (FeedbackVerdict, String?) -> Void = { _, _ in }
+    /// Thumbs-down: ChatScreen opens the note (`AnswerNoteSheet`). A row in the lazy
+    /// transcript can't hold a sheet through the keyboard (Kev, 11-02).
+    var onNeedsWork: () -> Void = {}
     var onSpeak: (String) -> Void = { _ in }
     var onSendFollowUp: (String) -> Void = { _ in }
     /// A typed `m1k3-choices` card in this answer may send (#717): ChatScreen
@@ -59,9 +63,6 @@ struct MessageBubble: View {
     var acceptsChoices = false
 
     @State private var didCopy = false
-    @State private var showComment = false
-    @State private var commentDraft = ""
-    @FocusState private var noteFocused: Bool
 
     var body: some View {
         switch message.role {
@@ -146,10 +147,7 @@ struct MessageBubble: View {
             }
             .accessibilityLabel("Good answer")
             .accessibilityAddTraits(verdict == .good ? .isSelected : [])
-            Button {
-                commentDraft = existingComment ?? ""
-                showComment = true
-            } label: {
+            Button { onNeedsWork() } label: {
                 actionIcon(verdict == .bad ? "hand.thumbsdown.fill" : "hand.thumbsdown")
                     .foregroundStyle(verdict == .bad ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
             }
@@ -160,7 +158,6 @@ struct MessageBubble: View {
         .buttonStyle(.plain)
         .foregroundStyle(.secondary)
         .sensoryFeedback(.selection, trigger: verdict)
-        .sheet(isPresented: $showComment) { feedbackNoteSheet }
     }
 
     /// One row icon with a 44 pt hit area (the HIG minimum); the glyph stays small.
@@ -170,39 +167,6 @@ struct MessageBubble: View {
             .contentTransition(.symbolEffect(.replace))
             .frame(minWidth: 44, minHeight: 44)
             .contentShape(Rectangle())
-    }
-
-    /// The thumbs-down note: optional, but a quick "why" is what makes a bad answer
-    /// fixable ("should have searched the web"). Done commits the verdict with it.
-    private var feedbackNoteSheet: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    TextField("Note (optional)", text: $commentDraft, axis: .vertical)
-                        .lineLimit(2 ... 6)
-                        .focused($noteFocused)
-                } footer: {
-                    Text("A quick note, like \"should have searched the web\", so this can be fixed later.")
-                }
-            }
-            .navigationTitle("What was off?")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { showComment = false }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
-                        onFeedback(.bad, commentDraft)
-                        showComment = false
-                    }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-        // A typed note is never lost to a stray swipe: Cancel or Done, on purpose.
-        .interactiveDismissDisabled(commentDraft != (existingComment ?? ""))
-        .onAppear { noteFocused = true }
     }
 
     /// Copies the answer's markdown source, as the Mac does, with a brief tick.
@@ -319,5 +283,61 @@ private struct LegibilityScrim: ViewModifier {
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: active)
+    }
+}
+
+/// The thumbs-down note: optional, but a quick "why" is what makes a bad answer
+/// fixable ("should have searched the web"). Done commits the verdict with it.
+/// ChatScreen presents it, never the row: the keyboard shrinks the transcript, the row
+/// leaves the LazyVStack's window, and a sheet it owned closed on focus (Kev, 11-02).
+struct AnswerNoteSheet: View {
+    /// The saved note, prefilled; a tap on thumbs-down alone never clobbers it.
+    let existingComment: String?
+    var onFeedback: (FeedbackVerdict, String?) -> Void
+    var onClose: () -> Void
+
+    @State private var commentDraft: String
+    @FocusState private var noteFocused: Bool
+
+    init(
+        existingComment: String?,
+        onFeedback: @escaping (FeedbackVerdict, String?) -> Void,
+        onClose: @escaping () -> Void
+    ) {
+        self.existingComment = existingComment
+        self.onFeedback = onFeedback
+        self.onClose = onClose
+        _commentDraft = State(initialValue: existingComment ?? "")
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Note (optional)", text: $commentDraft, axis: .vertical)
+                        .lineLimit(2 ... 6)
+                        .focused($noteFocused)
+                } footer: {
+                    Text("A quick note, like \"should have searched the web\", so this can be fixed later.")
+                }
+            }
+            .navigationTitle("What was off?")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { onClose() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        onFeedback(.bad, commentDraft)
+                        onClose()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        // A typed note is never lost to a stray swipe: Cancel or Done, on purpose.
+        .interactiveDismissDisabled(commentDraft != (existingComment ?? ""))
+        .onAppear { noteFocused = true }
     }
 }

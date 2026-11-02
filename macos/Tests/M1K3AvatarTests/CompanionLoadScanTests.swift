@@ -68,4 +68,41 @@ struct CompanionLoadScanTests {
         let disappear = try #require(src.range(of: ".onDisappear {"))
         #expect(src[appear.upperBound ..< disappear.lowerBound].contains("claimSwitch()"))
     }
+
+    @Test("iPhone: Settings' preview never builds a 3D view while it's open; a pick shows one or the other")
+    func previewKeepsItsViews() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let picker = try String(
+            contentsOf: root.appendingPathComponent("M1K3iOSApp/CompanionPickerSection.swift"), encoding: .utf8
+        )
+        // A 3D view built into Settings' list row after the first one drew black, fresh identity
+        // or not, pixel face or creature (Kev's phone, 11-02). Both faces now live from the start.
+        #expect(picker.contains("AvatarView(controller: core.avatar, paused: !pixelShown)"))
+        #expect(picker.contains(".opacity(creatureChosen ? 1 : 0)"))
+        #expect(!picker.contains("if !noneChosen {\n                preview"), "None keeps the row and its views")
+        #expect(!picker.contains("AvatarSurface(controller: core.avatar)"))
+    }
+
+    @Test("iPhone: the chat builds no 3D face while Settings covers it")
+    func chatFaceOnlyOnScreen() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        let chat = try String(contentsOf: root.appendingPathComponent("M1K3iOSApp/ChatScreen.swift"), encoding: .utf8)
+        // A face built under Settings (a creature after Pixel face or None) never got a drawable:
+        // 60 failed frames a second while covered, black when the chat came back (Kev's phone, 11-02).
+        #expect(chat.contains("backdropActive && core.voiceLoop == nil && chatOnScreen"))
+        #expect(chat.contains("if !avatarHidden, !backdropActive, chatOnScreen {"))
+        #expect(chat.contains(".onDisappear { chatOnScreen = false }"))
+    }
+
+    @Test("a load into a hidden view never arms the fidget timer: no animating ghosts")
+    func hiddenLoadStaysParked() throws {
+        let src = try Self.source()
+        // A view the pixel face replaced while it was hidden kept playing clips for the life of
+        // the process (two ghosts on Kev's phone, 11-02).
+        #expect(src.contains("presenceChanged(scene.mounted ? (paused ? .paused : .animating) : .unmounted"))
+        #expect(src.contains("scene.mounted = true"))
+        #expect(src.contains("scene.mounted = false"))
+    }
 }
