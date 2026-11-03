@@ -17,19 +17,23 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (pre-push review fold) — MCP forget_memory's `.forget` branch is
 //  pinned to `forgetCorpusTwins`: its bare twin delete left the row a forgotten correction had retired out of
 //  retrieval while the graph brought it back, so the next restatement wrote a second live row. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-03 — #730: the iPhone too. It stored style asks and listed them in
+//  Memories, but its prompt never read them. Pinned: AppCore restores the style once the memory store opens,
+//  and its distillation factory forwards a `didWrite` that re-reads it. The iPhone's Memories list has no
+//  edit or forget, so there is no third seam yet. Confidence 0.8.
 //
 
 import Foundation
 import Testing
 
 struct StatedStyleWiringTests {
-    private static func appSource(_ file: String) throws -> String {
+    private static func appSource(_ file: String, shell: String = "M1K3App") throws -> String {
         var root = URL(filePath: #filePath).deletingLastPathComponent()
         while !FileManager.default.fileExists(atPath: root.appending(path: "Package.swift").path) {
             root = root.deletingLastPathComponent()
             try #require(root.path != "/", "no Package.swift above \(#filePath)")
         }
-        return try code(String(contentsOf: root.appending(path: "M1K3App/\(file)"), encoding: .utf8))
+        return try code(String(contentsOf: root.appending(path: "\(shell)/\(file)"), encoding: .utf8))
     }
 
     /// The source without its `//` comment lines, so a doc mentioning a call can't satisfy a scan.
@@ -111,6 +115,28 @@ struct StatedStyleWiringTests {
         #expect(branch.contains(corpusHalf))
         // The bare delete it replaced left the row the forgotten one corrected out of retrieval.
         #expect(!branch.contains("deleteItem("))
+    }
+
+    @Test("#730: the iPhone restores the stated style once its memory store opens")
+    func iPhoneLaunchRestoresTheStyle() throws {
+        let core = try Self.appSource("AppCore.swift", shell: "M1K3iOSApp")
+        let open = try #require(core.range(of: "memoryStore = try? MemoryStore("))
+        let restore = try #require(core.range(of: "Self.refreshUserStyle(from: memoryStore)"))
+        #expect(open.lowerBound < restore.lowerBound)
+    }
+
+    @Test("#730: an iPhone distillation that wrote re-reads the style: the hook is wired and forwarded")
+    func iPhoneDistillationHookIsWired() throws {
+        let core = try Self.appSource("AppCore.swift", shell: "M1K3iOSApp")
+        let call = try #require(core.range(of: "distillation: Self.makeMemoryDistillation("))
+        let hook = try #require(core[call.upperBound...].range(of: "didWrite:"))
+        let line = core[hook.lowerBound...].prefix { $0 != "\n" }
+        #expect(line.contains("Self.refreshUserStyle(from: memoryStore)"))
+        let factory = try Self.body(of: "static func makeMemoryDistillation(", in: core)
+        #expect(factory.contains("didWrite: didWrite"))
+        // One reader for both shells' pattern: a failed read keeps the style, an overtaken one is dropped.
+        let reader = try Self.body(of: "static func refreshUserStyle(from memoryStore:", in: core)
+        #expect(reader.contains("M1K3Persona.refreshUserStyle {"))
     }
 
     @Test("the PCC eval column checks the stated style before it sends anything")
