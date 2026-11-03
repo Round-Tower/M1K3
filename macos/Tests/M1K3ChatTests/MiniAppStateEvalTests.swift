@@ -51,7 +51,8 @@ struct MiniAppStateEvalTests {
         switch truth {
         case .notReady: return denies
         case .ready: return t.contains("ready") && !denies && !t.contains("still")
-        case .failed: return ["space", "couldn't load", "could not load", "failed", "free up"].contains { t.contains($0) }
+        case .failed:
+            return ["space", "couldn't load", "could not load", "failed", "free up"].contains { t.contains($0) }
         }
     }
 

@@ -113,9 +113,8 @@ struct SystemStatusToolTests {
 
     @Test("the app-state line follows the device status when something is in flight")
     func appendsAppState() async throws {
-        let tool = SystemStatusTool(
-            provider: FakeProvider(), appState: { "M1K3 right now: Lil is still downloading (42%), so it isn't ready yet." }
-        )
+        let line = "M1K3 right now: Lil is still downloading (42%), so it isn't ready yet."
+        let tool = SystemStatusTool(provider: FakeProvider(), appState: { line })
         let result = try await tool.execute(input: [:])
         #expect(result.output == "Battery: 64% (on battery). Disk: 100 GB free of 500 GB. Uptime: 2 hours. "
             + "M1K3 right now: Lil is still downloading (42%), so it isn't ready yet.")
