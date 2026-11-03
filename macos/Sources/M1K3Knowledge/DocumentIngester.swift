@@ -116,7 +116,8 @@ public struct DocumentIngester: Sendable {
             case .markupNotProse:
                 "This looks like raw markup (SVG/XML/HTML), not readable text — convert it to prose or PDF first."
             case .noReadableText:
-                "M1K3 couldn’t find any text in it. If it’s a scan or a photo, the writing may be handwritten or too faint to read."
+                "M1K3 couldn’t find any text in it. "
+                    + "If it’s a scan or a photo, the writing may be handwritten or too faint to read."
             }
         }
     }

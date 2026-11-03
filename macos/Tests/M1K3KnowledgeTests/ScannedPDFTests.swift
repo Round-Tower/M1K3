@@ -266,8 +266,9 @@ struct ScannedPDFIngestTests {
     func realDuplicateStillDedupes() async throws {
         let store = try KnowledgeStore()
         let ingester = DocumentIngester(store: store)
-        let first = try await ingester.ingest(title: "Notes", text: "Some real notes here.", sourceRef: "file:///n.txt")
-        let second = try await ingester.ingest(title: "Notes", text: "Some real notes here.", sourceRef: "file:///n.txt")
+        let notes = "Some real notes here."
+        let first = try await ingester.ingest(title: "Notes", text: notes, sourceRef: "file:///n.txt")
+        let second = try await ingester.ingest(title: "Notes", text: notes, sourceRef: "file:///n.txt")
         #expect(second.wasDeduped)
         #expect(second.itemID == first.itemID)
     }
