@@ -121,6 +121,9 @@
 //  root narrow, the line wrapped to a column and pushed the split view to 1,530 pt in a 964 pt window (Kev's Mac
 //  check). The root's floor rises to chatDetail's 520, so the smallest window no longer clips the composer.
 //  Confidence 0.8 once re-measured by launch.
+//  Review: Kev + claude-opus-5.5, 2026-11-03 — a web search toggle beside the brain switcher (Kev: "a toggle on the
+//  chat screen to enable web search, just so it's clear, like the brain toggle"). Same key as Settings ▸ Privacy
+//  and the menu bar. Confidence 0.8 (verify-by-launch).
 
 import M1K3Avatar
 import M1K3Chat
@@ -219,6 +222,7 @@ struct ContentView: View {
     /// next turn, so the switcher disables itself. Reactive so toggling Auto-route in
     /// Settings updates the chat toolbar live.
     @AppStorage(AppEnvironment.autoRouteBrainKey) private var autoRouteBrain = false
+    @AppStorage(AppEnvironment.webSearchEnabledKey) private var webSearchEnabled = true
     /// First completed turn ever — flips the GreetingCard from the full
     /// first-session greeting to the quiet returning-user variant (a veteran's
     /// every new conversation must not replay "Nice to meet you").
@@ -1610,6 +1614,21 @@ struct ContentView: View {
     private var chatToolbarItems: some View {
         Group {
             brainSwitcher
+
+            // Web search beside the brain: the one thing that sends a question off this Mac,
+            // so its switch sits where you chat, not only in Settings.
+            Toggle(isOn: $webSearchEnabled) {
+                Label(
+                    ChatStatusLine.webText(on: webSearchEnabled),
+                    systemImage: ChatStatusLine.webSymbol
+                )
+            }
+            .toggleStyle(.button)
+            .help(webSearchEnabled
+                ? String(localized: "Web search is on: M1K3 can send a search to DuckDuckGo. Click to turn it off.")
+                : String(localized: "Web search is off: nothing leaves this Mac for the web. Click to turn it on."))
+            .accessibilityLabel("Web search")
+            .accessibilityValue(webSearchEnabled ? "On" : "Off")
 
             // One toggle for the avatar: the window backdrop <-> off.
             Button {
