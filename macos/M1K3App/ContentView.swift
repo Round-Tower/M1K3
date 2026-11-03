@@ -1631,7 +1631,7 @@ struct ContentView: View {
                 ? String(localized: "Web search isn't available here.")
                 : web.webSearchOn
                 ? String(localized: "Web search is on: M1K3 can send a search to \(EgressFacts.searchProvider). Click to turn it off.")
-                : String(localized: "Web search is off: nothing leaves this Mac for the web. Click to turn it on."))
+                : String(localized: "Web search is off: M1K3 won't search the web. Click to turn it on."))
             .accessibilityLabel("Web search")
             .accessibilityValue(web.webSearchOn ? "On" : "Off")
 
