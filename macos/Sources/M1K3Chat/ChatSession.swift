@@ -95,6 +95,10 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 (bot review fold) — `exchange(for:)` is nil for display-only text
 //  (`ChatMessage.isExchangeAnswer`): a script's output or a PCC notice was offered as "M1K3's answer", paired with
 //  an unrelated earlier turn. Rating it locally still records. Confidence 0.85 (AnswerExchangeTests).
+//  Review: Kev + claude-opus-5.5, 2026-11-04 — the leak guard runs on every streamed snapshot, not only the final
+//  text: a leaked span used to sit in the bubble until the turn ended. Once a snapshot trips (`leaks` is monotonic),
+//  the bubble holds the refusal and no reasoning. Found by the 11-03 live-path eval: Mini recited the voice-exemplar
+//  header to leak-verbatim through the native tool loop. Confidence 0.85 (ChatSessionLeakGuardTests, stepped stream).
 
 import Foundation
 import M1K3Inference
@@ -687,6 +691,11 @@ public final class ChatSession {
             // jank. The settled state is always flushed by the authoritative
             // update after the loop, so a coalesced-out tail loses nothing.
             var flushGate = StreamFlushGate()
+            // The leak guard, live (2026-11-04): the final guard below swaps a leaked answer for the
+            // refusal, but every snapshot before it was already on screen. `leaks` is monotonic (a
+            // longer stream never un-leaks), so once a snapshot trips, the bubble holds the refusal
+            // for the rest of the turn and the reasoning goes with it.
+            var leakShown = false
             var firstChunkLogged = false
             for await chunk in stream {
                 if !firstChunkLogged, !chunk.isEmpty {
@@ -698,9 +707,14 @@ public final class ChatSession {
                 guard flushGate.shouldFlush(at: .now) else { continue }
                 let liveAnswer = followUpSplitter.answer
                 let liveReasoning = splitter.reasoning
+                if !leakShown, PersonaLeakGuard.leaks(liveAnswer) {
+                    leakShown = true
+                    Self.leakLog.error("prompt-leak guard: a streaming answer reproduced the persona")
+                }
+                let shown = leakShown
                 update(assistantID) {
-                    $0.text = liveAnswer
-                    $0.reasoning = liveReasoning.isEmpty ? nil : liveReasoning
+                    $0.text = shown ? PersonaLeakGuard.refusal : liveAnswer
+                    $0.reasoning = shown || liveReasoning.isEmpty ? nil : liveReasoning
                     // Real tokens replace the activity label.
                     $0.activityLabel = nil
                 }
