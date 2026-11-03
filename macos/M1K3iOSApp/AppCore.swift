@@ -402,7 +402,8 @@ final class AppCore {
 
     /// The app-state line for this turn, or nil in the steady state. Mini's readiness is Apple's, read live.
     nonisolated static func appStateLine(afm: AppleFoundationModelsProvider, now: Date = Date()) -> String? {
-        guard var (snapshot, stall, appleIntelligence) = appStateLive.withLock({ $0 }) else { return nil }
+        guard let (published, stall, appleIntelligence) = appStateLive.withLock({ $0 }) else { return nil }
+        var snapshot = published
         snapshot.downloadStalled = stall.isStalled(at: now)
         if appleIntelligence, snapshot.answeringBrain == nil {
             snapshot.appleIntelligenceGettingReady = afm.availabilityState == .notReady
