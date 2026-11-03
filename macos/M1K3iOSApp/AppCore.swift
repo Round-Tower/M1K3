@@ -287,7 +287,7 @@ final class AppCore {
     /// Warm-up state for the MLX brain (Lil). Stays `.idle` for Mini (AFM).
     private(set) var brainLoad: ModelLoadState = .idle {
         didSet {
-            if brainLoad == .ready, oldValue != .ready { brainReadySince = Date() }
+            stampReadyAfterDownload(from: oldValue, to: brainLoad)
             publishAppState()
         }
     }
@@ -299,6 +299,17 @@ final class AppCore {
 
     /// When `brainLoad` last became ready: the app-state line says "finished getting ready" for a while.
     @ObservationIgnored private var brainReadySince: Date?
+    /// The current warm downloaded bytes: only then is "finished getting ready" news. A warm from disk at
+    /// launch is the steady state, and its prompts stay byte-identical.
+    @ObservationIgnored private var warmDownloaded = false
+
+    private func stampReadyAfterDownload(from old: ModelLoadState, to new: ModelLoadState) {
+        if case let .downloading(fraction) = new, fraction < 1 { warmDownloaded = true }
+        guard new == .ready, old != .ready else { return }
+        brainReadySince = warmDownloaded ? Date() : nil
+        warmDownloaded = false
+    }
+
     /// What the chat showed for a brain that failed, for the report it offers. Nil for a stop, which is the
     /// person's own act.
     private(set) var brainFailureShown: String?
@@ -335,8 +346,8 @@ final class AppCore {
 
     private(set) var indexedItemCount = 0
     private(set) var lastIngestStatus: String?
-    /// The file being read right now: progress lines from a scan apply only while it is.
-    private var ingestingTitle: String?
+    /// The import being read right now: a scan's progress lines apply only while it is (a token per call).
+    private var ingestingToken: UUID?
     /// A transient note about the brain choice (e.g. "Lil runs on a real device"
     /// on the Simulator). Surfaced in Settings under the picker.
     private(set) var brainNote: String?
@@ -1209,13 +1220,13 @@ final class AppCore {
     @ObservationIgnored private var afmWatch: Task<Void, Never>?
 
     /// Re-read Apple Intelligence's state, and while it is still getting ready, keep re-reading every few
-    /// seconds until it settles (on foreground and at launch).
+    /// seconds until it settles, for up to ten minutes (each foreground and launch starts it again).
     func refreshMiniAvailability() {
         let now = afm.availabilityState
         if now != afmAvailability { afmAvailability = now }
         guard now == .notReady, afmWatch == nil else { return }
         afmWatch = Task { [weak self] in
-            while !Task.isCancelled {
+            for _ in 0 ..< 120 where !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(5))
                 guard let self else { return }
                 let next = afm.availabilityState
@@ -1307,8 +1318,9 @@ final class AppCore {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         let title = url.deletingPathExtension().lastPathComponent
-        ingestingTitle = title
-        defer { ingestingTitle = nil }
+        let token = UUID()
+        ingestingToken = token
+        defer { if ingestingToken == token { ingestingToken = nil } }
         do {
             let result: DocumentIngester.IngestResult
             if url.pathExtension.lowercased() == "pdf" {
@@ -1317,7 +1329,7 @@ final class AppCore {
                     title: title, data: data, sourceRef: url.absoluteString,
                     progress: { [weak self] step in
                         Task { @MainActor in
-                            guard let self, self.ingestingTitle == title else { return }
+                            guard let self, self.ingestingToken == token else { return }
                             self.lastIngestStatus = IngestStatusCopy.reading(title: title, step)
                         }
                     }
@@ -1326,14 +1338,14 @@ final class AppCore {
                 let content = try String(contentsOf: url, encoding: .utf8)
                 result = try await ingester.ingest(title: title, text: content, sourceRef: url.absoluteString)
             }
-            ingestingTitle = nil
+            if ingestingToken == token { ingestingToken = nil }
             let dedup = result.wasDeduped ? " (already indexed)" : ""
             let scans = IngestStatusCopy.scanNote(result.scans).map { " " + $0 } ?? ""
             lastIngestStatus = "Indexed “\(title)” — \(result.chunkCount) chunks\(dedup).\(scans)"
             refreshCounts()
             scheduleIngestStatusClear()
         } catch {
-            ingestingTitle = nil
+            if ingestingToken == token { ingestingToken = nil }
             lastIngestStatus = "Couldn’t index “\(title)”: \(error.localizedDescription)"
         }
     }

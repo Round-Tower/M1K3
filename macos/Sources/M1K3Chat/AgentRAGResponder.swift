@@ -1212,8 +1212,6 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         return .answered
     }
 
-    /// The per-turn policy clauses every prompt carries: the age band and what can
-    /// leave the device (#482). nil entries are dropped by the callers' compactMap.
     /// The ambient grounding section: the app-state line first (when anything is in flight), then what's open
     /// beside the chat. Nil when both are, so a steady-state prompt is byte-identical to before.
     private func ambientSection() -> String? {
@@ -1221,6 +1219,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         return parts.isEmpty ? nil : parts.joined(separator: "\n\n")
     }
 
+    /// The per-turn policy clauses every prompt carries: the age band and what can
+    /// leave the device (#482). nil entries are dropped by the callers' compactMap.
     private func turnClauses() -> [String?] {
         // The egress answer as this brain's persona reads it: pocket's starts at the facts
         // (`EgressDisclosure.adapted`).

@@ -69,6 +69,15 @@ struct AppStateLineTests {
             == "M1K3 right now: Apple Intelligence is still getting ready on this device, so Mini isn't ready yet.")
     }
 
+    @Test("a long, multi-line failure is one clipped line in the prompt")
+    func failureIsClipped() throws {
+        let long = "First line.\n" + String(repeating: "x", count: 400)
+        let line = try #require(AppStateLine.render(snapshot(.failed(message: long)), now: now))
+        #expect(!line.contains("\n"))
+        #expect(line.hasSuffix("…"))
+        #expect(line.count < 220)
+    }
+
     @Test("a started download under half a percent reads <1%, like the bar")
     func tinyFraction() {
         #expect(AppStateLine.render(snapshot(.downloading(fraction: 0.002)), now: now)?.contains("(<1%)") == true)

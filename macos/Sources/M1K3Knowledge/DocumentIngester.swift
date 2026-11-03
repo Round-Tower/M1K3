@@ -18,6 +18,9 @@
 //  (Vision by default) and reports progress; a file with no text anywhere throws `noReadableText`
 //  instead of indexing an empty item; and an earlier EMPTY import of the same sourceRef is replaced, not
 //  deduped (otherwise the scan could never be re-read). Confidence 0.8.
+//  Review (same day, pre-push review): the replace is for `.document` items only; empty text throws its own
+//  `emptyText` (memory and MCP callers reach it too); every scanned page failing throws `scanUnreadable`,
+//  which blames the reader, not the file.
 
 import Foundation
 
@@ -58,7 +61,7 @@ public struct DocumentIngester: Sendable {
         kind: KnowledgeKind = .document,
         source: KnowledgeSource? = nil
     ) async throws -> IngestResult {
-        if let sourceRef, let existing = try indexedWithText(sourceRef: sourceRef) {
+        if let sourceRef, let existing = try indexedWithText(sourceRef: sourceRef, kind: kind) {
             return existing
         }
 
@@ -92,12 +95,13 @@ public struct DocumentIngester: Sendable {
         return IngestResult(itemID: itemID, chunkCount: knowledgeChunks.count, wasDeduped: false)
     }
 
-    /// The earlier import of `sourceRef` as a dedupe result, when it holds text. An earlier import that
-    /// indexed nothing (a scan before scans were read) is deleted so the file is read again.
-    private func indexedWithText(sourceRef: String) throws -> IngestResult? {
+    /// The earlier import of `sourceRef` as a dedupe result. An earlier DOCUMENT import that indexed nothing
+    /// (a scan before scans were read) is deleted so the file is read again; any other kind dedupes as before,
+    /// so a memory's or a conversation's rows keyed by its id are never touched.
+    private func indexedWithText(sourceRef: String, kind: KnowledgeKind) throws -> IngestResult? {
         guard let existing = try store.itemID(forSourceRef: sourceRef) else { return nil }
         let existingCount = try store.chunks(forItem: existing).count
-        guard existingCount > 0 else {
+        if existingCount == 0, kind == .document, try store.item(id: existing)?.kind == .document {
             _ = try store.deleteItem(id: existing)
             return nil
         }
@@ -110,6 +114,10 @@ public struct DocumentIngester: Sendable {
         case markupNotProse
         /// No text anywhere, even after reading scanned pages: nothing is indexed.
         case noReadableText
+        /// Every scanned page failed to read (the reader, not the file): nothing is indexed.
+        case scanUnreadable
+        /// Empty text handed to a text ingest: nothing is indexed.
+        case emptyText
 
         public var errorDescription: String? {
             switch self {
@@ -118,6 +126,10 @@ public struct DocumentIngester: Sendable {
             case .noReadableText:
                 "M1K3 couldn’t find any text in it. "
                     + "If it’s a scan or a photo, the writing may be handwritten or too faint to read."
+            case .scanUnreadable:
+                "M1K3 couldn’t read its scanned pages on this device. Try again in a moment."
+            case .emptyText:
+                "It’s empty."
             }
         }
     }
@@ -135,7 +147,7 @@ public struct DocumentIngester: Sendable {
         kind: KnowledgeKind = .document,
         source: KnowledgeSource? = nil
     ) async throws -> IngestResult {
-        guard Self.hasText(text) else { throw IngestError.noReadableText }
+        guard Self.hasText(text) else { throw IngestError.emptyText }
         guard !MarkupGuard.looksLikeMarkup(text) else { throw IngestError.markupNotProse }
         return try await ingest(
             title: title,
@@ -156,11 +168,14 @@ public struct DocumentIngester: Sendable {
         progress: (@Sendable (PDFTextExtractor.ScanProgress) -> Void)? = nil
     ) async throws -> IngestResult {
         // Dedupe before reading: a scan already indexed with text needs no second Vision pass.
-        if let sourceRef, let existing = try indexedWithText(sourceRef: sourceRef) {
+        if let sourceRef, let existing = try indexedWithText(sourceRef: sourceRef, kind: .document) {
             return existing
         }
         let extracted = try await PDFTextExtractor.extract(data: data, recognizer: recognizer, progress: progress)
-        guard extracted.pages.contains(where: { Self.hasText($0.text) }) else { throw IngestError.noReadableText }
+        guard extracted.pages.contains(where: { Self.hasText($0.text) }) else {
+            let scans = extracted.scans
+            throw scans.failed > 0 && scans.read == 0 ? IngestError.scanUnreadable : IngestError.noReadableText
+        }
         var result = try await ingest(title: title, pages: extracted.pages, sourceRef: sourceRef)
         result.scans = extracted.scans
         return result

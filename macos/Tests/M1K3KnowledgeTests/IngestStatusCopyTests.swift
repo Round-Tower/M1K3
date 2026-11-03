@@ -25,15 +25,23 @@ struct IngestStatusCopyTests {
 
     @Test("scanned pages read: say how many, singular and plural")
     func scansRead() {
-        #expect(IngestStatusCopy.scanNote(.init(read: 1, skipped: 0)) == "Read 1 scanned page.")
-        #expect(IngestStatusCopy.scanNote(.init(read: 5, skipped: 0)) == "Read 5 scanned pages.")
+        #expect(IngestStatusCopy.scanNote(.init(read: 1, skipped: 0)) == "Read 1 page from scans.")
+        #expect(IngestStatusCopy.scanNote(.init(read: 5, skipped: 0)) == "Read 5 pages from scans.")
     }
 
     @Test("past the cap: say what was skipped")
     func scansSkipped() {
         #expect(IngestStatusCopy.scanNote(.init(read: 100, skipped: 20))
-            == "Read the first 100 scanned pages. 20 more were skipped.")
+            == "Read 100 pages from scans. 20 pages past the first 100 were skipped.")
         #expect(IngestStatusCopy.scanNote(.init(read: 100, skipped: 1))
-            == "Read the first 100 scanned pages. 1 more was skipped.")
+            == "Read 100 pages from scans. 1 page past the first 100 was skipped.")
+    }
+
+    @Test("failed pages are counted, never folded into a false 'first N'")
+    func scansFailed() {
+        #expect(IngestStatusCopy.scanNote(.init(read: 97, failed: 3, skipped: 0))
+            == "Read 97 pages from scans. 3 pages couldn’t be read.")
+        #expect(IngestStatusCopy.scanNote(.init(read: 0, failed: 0, skipped: 4))
+            == "Read 0 pages from scans. 4 pages past the first 100 were skipped.")
     }
 }

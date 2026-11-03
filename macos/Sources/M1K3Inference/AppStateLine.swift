@@ -56,7 +56,7 @@ public enum AppStateLine {
         case .downloading, .preparing:
             return "\(lead) \(state.brain) is downloaded and still loading, so it isn't ready yet.\(meanwhile)"
         case let .failed(message):
-            return "\(lead) \(state.brain) couldn't load: \(message)"
+            return "\(lead) \(state.brain) couldn't load: \(clipped(message))"
         case .ready:
             guard let since = state.readySince, now.timeIntervalSince(since) <= justReadyWindow else { return nil }
             return "\(lead) \(state.brain) finished getting ready and is answering now."
@@ -65,8 +65,17 @@ public enum AppStateLine {
         }
     }
 
+    /// A failure message as one short line: newlines flattened, cut at `messageLimit` characters.
+    static let messageLimit = 160
+
+    private static func clipped(_ message: String) -> String {
+        let flat = message.split(whereSeparator: \.isNewline).joined(separator: " ")
+        return flat.count > messageLimit ? String(flat.prefix(messageLimit - 1)) + "…" : flat
+    }
+
     /// The bar's rounding: a started download under half a percent reads "<1%", never "0%".
     private static func percent(_ fraction: Double) -> String {
+        let fraction = min(max(fraction, 0), 1)
         let whole = Int((fraction * 100).rounded())
         return whole == 0 && fraction > 0 ? "<1%" : "\(whole)%"
     }

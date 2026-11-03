@@ -16,6 +16,9 @@
 //  `PageTextRecognizing` (Vision on the device). Up to `defaultMaxScannedPages` per file; the rest are
 //  counted in `ScanReport.skipped`, never dropped silently. A recognizer failure leaves that page empty.
 //  The first App Store review (2026-11-01) hit this: a scan indexed as its title alone. Confidence 0.8.
+//  Review (same day, pre-push review): failures are counted (`ScanReport.failed`), a cancel is rethrown
+//  instead of read as a failed page, each render drains in an autorelease pool, and pages render from the
+//  crop box. Confidence 0.8.
 //
 
 import CoreGraphics
@@ -28,13 +31,15 @@ public enum PDFTextExtractor {
         case empty
     }
 
-    /// How many scanned pages were read from their images, and how many were past the cap.
+    /// Scanned pages read from their images, pages the reader couldn't read, and pages past the cap.
     public struct ScanReport: Sendable, Equatable {
         public var read: Int
+        public var failed: Int
         public var skipped: Int
 
-        public init(read: Int, skipped: Int) {
+        public init(read: Int, failed: Int = 0, skipped: Int) {
             self.read = read
+            self.failed = failed
             self.skipped = skipped
         }
 
@@ -84,18 +89,31 @@ public enum PDFTextExtractor {
 
         let scanned = pages.indices.filter { needsRecognition(pages[$0].text) }
         let toRead = Array(scanned.prefix(max(0, maxScannedPages)))
-        var read = 0
+        var read = 0, failed = 0
         for (step, index) in toRead.enumerated() {
             try Task.checkCancellation()
             progress?(ScanProgress(page: step + 1, of: toRead.count))
-            guard let page = document.page(at: index), let image = render(page) else { continue }
-            guard let text = try? await recognizer.recognizeText(in: image) else { continue }
+            // One rendered page alive at a time (about 14 MB): the pool drains it before the next.
+            guard let image = autoreleasepool(invoking: { document.page(at: index).flatMap(render) }) else {
+                failed += 1
+                continue
+            }
+            let text: String
+            do {
+                text = try await recognizer.recognizeText(in: image)
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch {
+                failed += 1
+                continue
+            }
             if letterCount(text) > letterCount(pages[index].text) {
                 pages[index] = DocumentPage(pageNumber: pages[index].pageNumber, text: text)
                 read += 1
             }
         }
-        return (pages, ScanReport(read: read, skipped: scanned.count - toRead.count))
+        try Task.checkCancellation()
+        return (pages, ScanReport(read: read, failed: failed, skipped: scanned.count - toRead.count))
     }
 
     /// True when a page's text layer is missing or holds only a page number or a stamp.
@@ -108,10 +126,10 @@ public enum PDFTextExtractor {
     }
 
     /// The page drawn on white at `renderLongEdge`, honouring its /Rotate (CGPDFPage's drawing
-    /// transform does the rotation and the fit).
+    /// transform does the rotation and the fit). The crop box, as PDFKit shows the page.
     static func render(_ page: PDFPage) -> CGImage? {
         guard let cgPage = page.pageRef else { return nil }
-        let box = cgPage.getBoxRect(.mediaBox)
+        let box = cgPage.getBoxRect(.cropBox)
         let quarterTurned = (cgPage.rotationAngle / 90) % 2 != 0
         let size = quarterTurned ? CGSize(width: box.height, height: box.width) : box.size
         guard size.width > 0, size.height > 0 else { return nil }
@@ -124,7 +142,7 @@ public enum PDFTextExtractor {
         let target = CGRect(x: 0, y: 0, width: width, height: height)
         ctx.setFillColor(CGColor(red: 1, green: 1, blue: 1, alpha: 1))
         ctx.fill(target)
-        ctx.concatenate(cgPage.getDrawingTransform(.mediaBox, rect: target, rotate: 0, preserveAspectRatio: true))
+        ctx.concatenate(cgPage.getDrawingTransform(.cropBox, rect: target, rotate: 0, preserveAspectRatio: true))
         ctx.drawPDFPage(cgPage)
         return ctx.makeImage()
     }

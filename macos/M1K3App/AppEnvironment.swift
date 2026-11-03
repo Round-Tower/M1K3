@@ -810,7 +810,7 @@ final class AppEnvironment {
     /// chat send path). Stays `.idle` for the Apple Foundation Models default.
     private(set) var modelLoad: ModelLoadState = .idle {
         didSet {
-            if modelLoad == .ready, oldValue != .ready { brainReadySince = Date() }
+            stampReadyAfterDownload(from: oldValue, to: modelLoad)
             refreshInterimBridge()
             switch modelLoad {
             // A load that settled either way isn't a crash: only a load cut short by
@@ -823,6 +823,16 @@ final class AppEnvironment {
 
     /// When `modelLoad` last became ready: the app-state line says "finished getting ready" for a while.
     @ObservationIgnored private var brainReadySince: Date?
+    /// The current warm downloaded bytes: only then is "finished getting ready" news. A warm from disk at
+    /// launch is the steady state, and its prompts stay byte-identical.
+    @ObservationIgnored private var warmDownloaded = false
+
+    private func stampReadyAfterDownload(from old: ModelLoadState, to new: ModelLoadState) {
+        if case let .downloading(fraction) = new, fraction < 1 { warmDownloaded = true }
+        guard new == .ready, old != .ready else { return }
+        brainReadySince = warmDownloaded ? Date() : nil
+        warmDownloaded = false
+    }
 
     /// What a turn needs to say what's true about M1K3 right now (AppStateLine), readable off the main actor.
     /// Published from `refreshInterimBridge`, which every input's didSet already calls.
@@ -846,10 +856,12 @@ final class AppEnvironment {
     nonisolated static func appStateLine(now: Date = Date()) -> String? {
         guard var (snapshot, appleIntelligence) = appStateLive.withLock({ $0 }) else { return nil }
         if appleIntelligence {
-            snapshot.appleIntelligenceGettingReady = AppleFoundationModelsProvider().availabilityState == .notReady
+            snapshot.appleIntelligenceGettingReady = appStateAFM.availabilityState == .notReady
         }
         return AppStateLine.render(snapshot, now: now)
     }
+
+    private nonisolated static let appStateAFM = AppleFoundationModelsProvider()
 
     /// The brain actually generating: Mini while it stands in for a downloading brain, else the chosen one.
     nonisolated static func answeringBrainName(persisted: String) -> String {
@@ -868,8 +880,9 @@ final class AppEnvironment {
     /// "Got it" ask-state as if the new file had landed).
     private(set) var lastIngestFailed = false
     private(set) var isIngesting = false
-    /// The file being read right now: progress lines from a scan apply only while it is.
-    private var ingestingTitle: String?
+    /// The import being read right now: a scan's progress lines apply only while it is. A token per call,
+    /// because a multi-file drop runs several imports at once.
+    private var ingestingToken: UUID?
     /// Count of indexed knowledge items, for the document drawer / settings.
     private(set) var indexedItemCount = 0
 
@@ -1342,8 +1355,9 @@ final class AppEnvironment {
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
 
         let title = url.deletingPathExtension().lastPathComponent
-        ingestingTitle = title
-        defer { ingestingTitle = nil }
+        let token = UUID()
+        ingestingToken = token
+        defer { if ingestingToken == token { ingestingToken = nil } }
         do {
             let result: DocumentIngester.IngestResult
             if url.pathExtension.lowercased() == "pdf" {
@@ -1353,7 +1367,7 @@ final class AppEnvironment {
                     title: title, data: data, sourceRef: url.absoluteString,
                     progress: { [weak self] step in
                         Task { @MainActor in
-                            guard let self, self.ingestingTitle == title else { return }
+                            guard let self, self.ingestingToken == token else { return }
                             self.lastIngestFailed = false
                             self.lastIngestStatus = IngestStatusCopy.reading(title: title, step)
                         }
@@ -1363,7 +1377,7 @@ final class AppEnvironment {
                 let text = try String(contentsOf: url, encoding: .utf8)
                 result = try await ingester.ingest(title: title, text: text, sourceRef: url.absoluteString)
             }
-            ingestingTitle = nil
+            if ingestingToken == token { ingestingToken = nil }
             let dedup = result.wasDeduped ? " (already indexed)" : ""
             let scans = IngestStatusCopy.scanNote(result.scans).map { " " + $0 } ?? ""
             lastIngestStatus = "Indexed “\(title)” — \(result.chunkCount) chunks\(dedup).\(scans)\(spotlightTipIfDue())"
@@ -1376,7 +1390,7 @@ final class AppEnvironment {
             // Failures deliberately do NOT auto-dismiss — a failed drop must
             // stay visible until the next ingest replaces it (the banner
             // pierces the greeting-card suppression for the same reason).
-            ingestingTitle = nil
+            if ingestingToken == token { ingestingToken = nil }
             lastIngestStatus = "Couldn’t index “\(title)”: \(error.localizedDescription)"
             lastIngestFailed = true
         }

@@ -166,7 +166,7 @@ struct ScannedPDFExtractionTests {
         #expect(result.pages.count == 2)
         #expect(result.pages[0].text.isEmpty)
         #expect(result.pages[1].text == "Second page text.")
-        #expect(result.scans == PDFTextExtractor.ScanReport(read: 1, skipped: 0))
+        #expect(result.scans == PDFTextExtractor.ScanReport(read: 1, failed: 1, skipped: 0))
     }
 
     @Test("past the cap, scanned pages are skipped and counted, never silently dropped")
@@ -179,6 +179,30 @@ struct ScannedPDFExtractionTests {
         #expect(recognizer.calls == 2)
         #expect(result.scans == PDFTextExtractor.ScanReport(read: 2, skipped: 1))
         #expect(result.pages[2].text.isEmpty)
+    }
+
+    @Test("a cancel during recognition stops the import, not just the page")
+    func cancelIsRethrown() async throws {
+        struct Cancelling: PageTextRecognizing {
+            func recognizeText(in _: CGImage) async throws -> String {
+                throw CancellationError()
+            }
+        }
+        await #expect(throws: CancellationError.self) {
+            _ = try await PDFTextExtractor.extract(data: makeScannedPDF(pages: ["a", "b"]), recognizer: Cancelling())
+        }
+    }
+
+    @Test("a quarter-turned page renders on its side (its /Rotate is honoured)")
+    func rotatedPageRendersTurned() throws {
+        let document = try #require(PDFDocument(data: makeScannedPDF(pages: ["x"])))
+        let page = try #require(document.page(at: 0))
+        page.rotation = 90
+        let rotatedData = try #require(document.dataRepresentation())
+        let reopened = try #require(PDFDocument(data: rotatedData)?.page(at: 0))
+        let image = try #require(PDFTextExtractor.render(reopened))
+        #expect(image.width > image.height)
+        #expect(max(image.width, image.height) == 2200)
     }
 
     @Test("no recognizer: the old behaviour, scanned pages stay empty")
@@ -235,11 +259,11 @@ struct ScannedPDFIngestTests {
         #expect(try store.itemCount() == 0)
     }
 
-    @Test("an empty text file is refused the same way")
+    @Test("an empty text file is refused with its own error")
     func emptyTextIsRefused() async throws {
         let store = try KnowledgeStore()
         let ingester = DocumentIngester(store: store)
-        await #expect(throws: DocumentIngester.IngestError.noReadableText) {
+        await #expect(throws: DocumentIngester.IngestError.emptyText) {
             try await ingester.ingest(title: "Empty", text: "  \n ", sourceRef: "file:///e.txt")
         }
         #expect(try store.itemCount() == 0)
@@ -260,6 +284,30 @@ struct ScannedPDFIngestTests {
         #expect(!result.wasDeduped)
         #expect(result.chunkCount > 0)
         #expect(try store.itemCount() == 1)
+    }
+
+    @Test("every scanned page failing blames the reader, not the file")
+    func unreadableScanBlamesTheReader() async throws {
+        let store = try KnowledgeStore()
+        let ingester = DocumentIngester(store: store, recognizer: ScriptedRecognizer([.failure, .failure]))
+        await #expect(throws: DocumentIngester.IngestError.scanUnreadable) {
+            try await ingester.ingestPDF(title: "Scan", data: makeScannedPDF(pages: ["a", "b"]), sourceRef: "file:///s.pdf")
+        }
+        #expect(try store.itemCount() == 0)
+    }
+
+    @Test("an empty earlier item of another kind still dedupes: only documents are replaced")
+    func onlyDocumentsAreReplaced() async throws {
+        let store = try KnowledgeStore()
+        let ingester = DocumentIngester(store: store, recognizer: nil)
+        let first = try await ingester.ingest(
+            title: "Chat", pages: [DocumentPage(pageNumber: 1, text: "")], sourceRef: "conv:1", kind: .conversation
+        )
+        let again = try await ingester.ingest(
+            title: "Chat", pages: [DocumentPage(pageNumber: 1, text: "")], sourceRef: "conv:1", kind: .conversation
+        )
+        #expect(again.wasDeduped)
+        #expect(again.itemID == first.itemID)
     }
 
     @Test("a file already indexed WITH text still dedupes")

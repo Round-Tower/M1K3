@@ -17,11 +17,19 @@ public enum IngestStatusCopy {
 
     /// A sentence to append to the "Indexed" line, or nil when no page was a scan.
     public static func scanNote(_ scans: PDFTextExtractor.ScanReport) -> String? {
-        guard scans.read > 0 || scans.skipped > 0 else { return nil }
-        guard scans.skipped > 0 else {
-            return "Read \(scans.read) scanned \(scans.read == 1 ? "page" : "pages")."
+        guard scans.read + scans.failed + scans.skipped > 0 else { return nil }
+        var parts = ["Read \(pages(scans.read)) from scans."]
+        if scans.failed > 0 {
+            parts.append("\(pages(scans.failed)) couldn’t be read.")
         }
-        let more = scans.skipped == 1 ? "1 more was skipped." : "\(scans.skipped) more were skipped."
-        return "Read the first \(scans.read) scanned pages. \(more)"
+        if scans.skipped > 0 {
+            parts.append("\(pages(scans.skipped)) past the first \(PDFTextExtractor.defaultMaxScannedPages) "
+                + "\(scans.skipped == 1 ? "was" : "were") skipped.")
+        }
+        return parts.joined(separator: " ")
+    }
+
+    private static func pages(_ count: Int) -> String {
+        "\(count) \(count == 1 ? "page" : "pages")"
     }
 }
