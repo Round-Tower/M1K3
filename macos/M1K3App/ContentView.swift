@@ -1617,18 +1617,23 @@ struct ContentView: View {
 
             // Web search beside the brain: the one thing that sends a question off this Mac,
             // so its switch sits where you chat, not only in Settings.
-            Toggle(isOn: $webSearchEnabled) {
-                Label(
-                    ChatStatusLine.webText(on: webSearchEnabled),
-                    systemImage: ChatStatusLine.webSymbol
-                )
+            // The state that applies, not just the switch: a child's age band withholds web tools.
+            let web = ChatStatusLine(
+                brainName: "", privateCloudNext: false, webSearchOn: webSearchEnabled,
+                ageBand: AppEnvironment.ageBandProvider.currentBand()
+            )
+            Toggle(isOn: Binding(get: { web.webSearchOn }, set: { webSearchEnabled = $0 })) {
+                Label(web.webText, systemImage: ChatStatusLine.webSymbol)
             }
             .toggleStyle(.button)
-            .help(webSearchEnabled
-                ? String(localized: "Web search is on: M1K3 can send a search to DuckDuckGo. Click to turn it off.")
+            .disabled(web.webLockedByAge)
+            .help(web.webLockedByAge
+                ? String(localized: "Web search isn't available here.")
+                : web.webSearchOn
+                ? String(localized: "Web search is on: M1K3 can send a search to \(EgressFacts.searchProvider). Click to turn it off.")
                 : String(localized: "Web search is off: nothing leaves this Mac for the web. Click to turn it on."))
             .accessibilityLabel("Web search")
-            .accessibilityValue(webSearchEnabled ? "On" : "Off")
+            .accessibilityValue(web.webSearchOn ? "On" : "Off")
 
             // One toggle for the avatar: the window backdrop <-> off.
             Button {

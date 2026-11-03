@@ -35,6 +35,22 @@ struct ChatStatusLineTests {
         #expect(line.brainSymbol == "cloud.fill")
     }
 
+    /// Pre-push review, 11-03: the switch is not the effective state. A child's session withholds
+    /// web tools whatever the switch says (`AgeAppropriateness.webToolsAllowed`), so "Web on" there
+    /// would be a false claim about what leaves the device.
+    @Test("the line reports the web state that applies: the age band can lock it off")
+    func ageBandLocksWebOff() {
+        for band in AgeBand.allCases {
+            let line = ChatStatusLine(brainName: "Lil", privateCloudNext: false, webSearchOn: true, ageBand: band)
+            let allowed = AgeAppropriateness.policy(for: band).webToolsAllowed
+            #expect(line.webSearchOn == allowed, "\(band)")
+            #expect(line.webLockedByAge == !allowed, "\(band)")
+            #expect(line.webText == (allowed ? "Web on" : "Web off"), "\(band)")
+        }
+        let off = ChatStatusLine(brainName: "Lil", privateCloudNext: false, webSearchOn: false, ageBand: .adult)
+        #expect(!off.webSearchOn && !off.webLockedByAge)
+    }
+
     @Test("VoiceOver hears a sentence, not the dot")
     func accessibility() {
         let line = ChatStatusLine(brainName: "Lil", privateCloudNext: false, webSearchOn: false)

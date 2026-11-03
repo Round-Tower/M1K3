@@ -706,11 +706,7 @@ struct ChatScreen: View {
     /// changes either (Kev, 2026-11-03: "It's about trust"). Names Private Cloud Compute
     /// when the next send really goes there, as the chip it replaces did.
     private var statusLine: some View {
-        let line = ChatStatusLine(
-            brainName: core.answeringBrainName,
-            privateCloudNext: privateCloudServesNextSend,
-            webSearchOn: webSearchEnabled
-        )
+        let line = statusFacts
         return Menu {
             brainAndWebItems
         } label: {
@@ -736,6 +732,16 @@ struct ChatScreen: View {
         .buttonStyle(.plain)
         .accessibilityLabel(line.accessibilityLabel)
         .accessibilityHint("Changes the brain or web search")
+    }
+
+    /// What the line says: the answering brain and the web state that applies (switch AND age band).
+    private var statusFacts: ChatStatusLine {
+        ChatStatusLine(
+            brainName: core.answeringBrainName,
+            privateCloudNext: privateCloudServesNextSend,
+            webSearchOn: webSearchEnabled,
+            ageBand: AgeBand(persisted: ageBandRaw)
+        )
     }
 
     /// One ＋ for everything you add to a message: Files, Photos, then the brain and web switches.
@@ -806,12 +812,19 @@ struct ChatScreen: View {
             }
         }
         .disabled(core.chat.isResponding)
+        // A menu shows no section footer, so the destination rides the toggle's subtitle. The toggle
+        // shows the state that applies: off and disabled when the age band withholds web tools.
+        let facts = statusFacts
         Section {
-            Toggle(isOn: $webSearchEnabled) {
-                Label("Web search", systemImage: ChatStatusLine.webSymbol)
+            Toggle(isOn: Binding(get: { facts.webSearchOn }, set: { webSearchEnabled = $0 })) {
+                Label {
+                    Text("Web search")
+                    Text(facts.webLockedByAge ? "Not available" : "Searches go to \(EgressFacts.searchProvider)")
+                } icon: {
+                    Image(systemName: ChatStatusLine.webSymbol)
+                }
             }
-        } footer: {
-            Text("When on, M1K3 can send a search to DuckDuckGo. Each search shows in the reply.")
+            .disabled(facts.webLockedByAge)
         }
     }
 
