@@ -26,6 +26,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-03 — iPhone Duo: the constellation is offered by SPACE, not idiom
 //  (regular width AND height: the iPad, and the Duo opened). Folded, the same Duo is compact and falls back to
 //  the pixel face, as a phone always did. Apple's resizability guidance; verify on the Duo simulator.
+//  Review: Kev + claude-opus-5.5, 2026-11-03 — the constellation renders as a backdrop: an empty store is an
+//  empty sky, not a placeholder over the starter chips.
 //
 
 import M1K3Avatar
@@ -63,7 +65,7 @@ struct AvatarSurface: View {
         if companion == CompanionDefaults.constellationID,
            Self.offersConstellation(horizontal: horizontalSizeClass, vertical: verticalSizeClass)
         {
-            MemoryConstellationCanvas()
+            MemoryConstellationCanvas(backdrop: true)
         } else if let spec = CompanionSpec.named(companion), CompanionAssets.isInstalled(spec) {
             // Deliberately NO .id(spec.id): on iOS, recreating the RealityView on a
             // switch left the new one BLACK (the iOS RealityView "swap → black"

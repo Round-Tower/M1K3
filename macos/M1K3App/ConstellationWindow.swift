@@ -21,6 +21,8 @@
 //  through `AvatarPresence.resolve` (Low Power now parks the field) instead of a visible/unmounted ternary.
 //  Review: Kev + claude-opus-5.5, 2026-11-03 — the empty state drops its sparkles symbol, matching the
 //  iPhone's (Kev: no emoji in the placeholder); the copy is unchanged.
+//  Review: Kev + claude-opus-5.5, 2026-11-03 — `backdrop`: as a companion (voice hero, main window) an empty
+//  or still-mapping field is an empty sky, as on the iPhone; the window keeps the message.
 
 import M1K3Avatar
 import M1K3Knowledge
@@ -43,6 +45,8 @@ struct MemoryConstellationCanvas: View {
     /// it from window visibility + treatment + Low Power; `.unmounted` keeps
     /// this canvas (and its polled model) alive but drops the RealityView.
     var presence: AvatarPresence = .animating
+    /// A companion surface, not the window: no placeholder or progress text, just the sky.
+    var backdrop = false
     @State private var model: ConstellationModel?
     /// The field has been on screen at least once this mount — a later re-show
     /// (window un-occluded) pops the motes in rather than replaying the
@@ -64,7 +68,9 @@ struct MemoryConstellationCanvas: View {
     var body: some View {
         Group {
             if let model {
-                if model.isEmpty {
+                if model.isEmpty, backdrop {
+                    Color.clear
+                } else if model.isEmpty {
                     ContentUnavailableView {
                         Text("No memories yet")
                     } description: {
@@ -79,6 +85,8 @@ struct MemoryConstellationCanvas: View {
                     // Unmounted: the model stays, the RealityView goes.
                     Color.clear
                 }
+            } else if backdrop {
+                Color.clear
             } else {
                 ProgressView("Mapping memory…")
             }
