@@ -26,6 +26,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-03 — iPhone Duo: the constellation is offered by SPACE, not idiom
 //  (regular width AND height: the iPad, and the Duo opened). Folded, the same Duo is compact and falls back to
 //  the pixel face, as a phone always did. Apple's resizability guidance; verify on the Duo simulator.
+//  The same rule covers an iPad window gone compact (Slide Over, narrow Split View or Stage Manager): it shows
+//  the pixel face like a phone, where the old idiom check kept the field, and the saved pick returns when the
+//  window widens (pre-push review).
 //  Review: Kev + claude-opus-5.5, 2026-11-03 — the constellation renders as a backdrop: an empty store is an
 //  empty sky, not a placeholder over the starter chips.
 //

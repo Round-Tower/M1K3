@@ -36,6 +36,9 @@
 //  (Kev's phone, fresh identity or not). None keeps the row and says so. Confidence 0.7 (verify on the phone).
 //  Review: Kev + claude-opus-5.5, 2026-11-03 — "Constellation" is offered by space (regular both ways), so an
 //  opened iPhone Duo lists it and a folded one doesn't. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-03 (pre-push review) — chosen but not shown (picked on the opened Duo,
+//  then folded): the footer, Say hi and the grid's highlight follow the pixel face that stands in
+//  (`constellationShown`), and the pick comes back with the space. Confidence 0.8 (verify on the Duo sim).
 //
 
 import M1K3Avatar
@@ -77,6 +80,14 @@ struct CompanionPickerSection: View {
         companion == CompanionDefaults.constellationID
     }
 
+    /// Chosen AND on screen. Chosen on the opened Duo and then folded (or an iPad window gone
+    /// narrow), the stored pick stays but the pixel face stands in, as in the chat; the footer,
+    /// the preview's Say hi and the grid's highlight follow what is shown, and the star field
+    /// comes back when the space does (pre-push review, 2026-11-03).
+    private var constellationShown: Bool {
+        constellationChosen && offersConstellation
+    }
+
     private var creatureChosen: Bool {
         CompanionSpec.named(companion) != nil
     }
@@ -89,8 +100,11 @@ struct CompanionPickerSection: View {
         if noneChosen {
             return "No face — just the conversation."
         }
-        if constellationChosen {
+        if constellationShown {
             return "Your memories as a star field that grows."
+        }
+        if constellationChosen {
+            return "Constellation needs a bigger screen. The pixel face stands in for now."
         }
         guard creatureChosen else {
             return "M1K3's face in chat."
@@ -129,7 +143,7 @@ struct CompanionPickerSection: View {
     /// The live face — the real AvatarSurface, so every choice below updates it at
     /// once. "Say hi" pokes a beat so the face demonstrably lives.
     private var pixelShown: Bool {
-        !creatureChosen && !noneChosen && !(constellationChosen && offersConstellation)
+        !creatureChosen && !noneChosen && !constellationShown
     }
 
     /// The creature the preview's creature view shows or holds hidden.
@@ -157,7 +171,7 @@ struct CompanionPickerSection: View {
                 .allowsHitTesting(creatureChosen)
                 .accessibilityHidden(!creatureChosen)
             }
-            if constellationChosen, offersConstellation {
+            if constellationShown {
                 MemoryConstellationCanvas()
             }
             if noneChosen {
@@ -179,7 +193,7 @@ struct CompanionPickerSection: View {
             .clipShape(.rect(cornerRadius: 14))
             .overlay(alignment: .bottomTrailing) {
                 // The constellation and None have no face to poke — no dead button.
-                if !constellationChosen, !noneChosen {
+                if !constellationShown, !noneChosen {
                     Button("Say hi") { sayHi() }
                         .font(.caption.weight(.semibold))
                         .buttonStyle(.borderless)
@@ -209,7 +223,8 @@ struct CompanionPickerSection: View {
     }
 
     private func faceCard(_ choice: FaceChoice) -> some View {
-        let isSelected = companion == choice.id
+        // The pixel face tile lights while it stands in for a Constellation this screen can't show.
+        let isSelected = companion == choice.id || (choice.id.isEmpty && constellationChosen && !offersConstellation)
         return Button {
             companion = choice.id
         } label: {
