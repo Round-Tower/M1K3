@@ -344,7 +344,7 @@ struct SettingsScreen: View {
         guard core.selectedBrain == .mini else { return nil }
         switch core.miniAvailability {
         case .available: return nil
-        case .notReady: return "Apple Intelligence is still downloading on this device."
+        case .notReady: return "Apple Intelligence is still getting ready on this device. It can take a while after it's turned on."
         case let .blocked(userFixable):
             let alternative = menu.localFallbackPhrase(verb: "choose") ?? "use Home"
             return userFixable

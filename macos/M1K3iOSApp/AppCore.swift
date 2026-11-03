@@ -280,11 +280,25 @@ final class AppCore {
 
     // MARK: - Observable UI state
 
-    private(set) var selectedBrain: BrainTier
+    private(set) var selectedBrain: BrainTier {
+        didSet { publishAppState() }
+    }
+
     /// Warm-up state for the MLX brain (Lil). Stays `.idle` for Mini (AFM).
-    private(set) var brainLoad: ModelLoadState = .idle
+    private(set) var brainLoad: ModelLoadState = .idle {
+        didSet {
+            if brainLoad == .ready, oldValue != .ready { brainReadySince = Date() }
+            publishAppState()
+        }
+    }
+
     /// Moves only when the download's fraction does, so the chat row can say a transfer has stalled.
-    private(set) var brainStall = DownloadStallWatch()
+    private(set) var brainStall = DownloadStallWatch() {
+        didSet { publishAppState() }
+    }
+
+    /// When `brainLoad` last became ready: the app-state line says "finished getting ready" for a while.
+    @ObservationIgnored private var brainReadySince: Date?
     /// What the chat showed for a brain that failed, for the report it offers. Nil for a stop, which is the
     /// person's own act.
     private(set) var brainFailureShown: String?
@@ -321,6 +335,8 @@ final class AppCore {
 
     private(set) var indexedItemCount = 0
     private(set) var lastIngestStatus: String?
+    /// The file being read right now: progress lines from a scan apply only while it is.
+    private var ingestingTitle: String?
     /// A transient note about the brain choice (e.g. "Lil runs on a real device"
     /// on the Simulator). Surfaced in Settings under the picker.
     private(set) var brainNote: String?
@@ -352,7 +368,35 @@ final class AppCore {
     private(set) var homeBrainActive = false {
         // Mirrored for the responder's nonisolated per-turn read (#482): the persisted
         // `homeBrainActiveKey` misses a phone with no local brain, which fronts Home anyway.
-        didSet { Self.homeBrainLive.withLock { $0 = homeBrainActive } }
+        didSet {
+            Self.homeBrainLive.withLock { $0 = homeBrainActive }
+            publishAppState()
+        }
+    }
+
+    /// What a turn needs to say what's true about M1K3 right now (the first App Store review asked "is it ready
+    /// now?" and got a ramble), readable off the main actor. The stall is judged when the turn reads it.
+    nonisolated static let appStateLive = Mutex<
+        (snapshot: AppStateSnapshot, stall: DownloadStallWatch, appleIntelligence: Bool)?
+    >(nil)
+
+    private func publishAppState() {
+        let snapshot = AppStateSnapshot(
+            brain: selectedBrain.displayName, load: brainLoad,
+            answeringBrain: homeBrainActive ? "Brain at Home" : nil, readySince: brainReadySince
+        )
+        let appleIntelligence = selectedBrain.backing == .appleFoundationModels
+        Self.appStateLive.withLock { $0 = (snapshot, brainStall, appleIntelligence) }
+    }
+
+    /// The app-state line for this turn, or nil in the steady state. Mini's readiness is Apple's, read live.
+    nonisolated static func appStateLine(afm: AppleFoundationModelsProvider, now: Date = Date()) -> String? {
+        guard var (snapshot, stall, appleIntelligence) = appStateLive.withLock({ $0 }) else { return nil }
+        snapshot.downloadStalled = stall.isStalled(at: now)
+        if appleIntelligence, snapshot.answeringBrain == nil {
+            snapshot.appleIntelligenceGettingReady = afm.availabilityState == .notReady
+        }
+        return AppStateLine.render(snapshot, now: now)
     }
 
     /// `homeBrainActive`, readable off the main actor (the egress clause, per turn).
@@ -544,7 +588,7 @@ final class AppCore {
     var isReady: Bool {
         if homeBrainActive { return true }
         switch selectedBrain.backing {
-        case .appleFoundationModels: return afm.isAvailable
+        case .appleFoundationModels: return afmAvailability == .available
         case .mlx: return brainLoad == .ready
         }
     }
@@ -779,6 +823,8 @@ final class AppCore {
         // Mini's window is this device's, not a constant (MiniContextWindow) —
         // recorded whatever brain is selected; nil (no AFM) keeps the floor.
         AppleFoundationModelsProvider.recordDeviceContextWindow()
+        publishAppState() // init's own assignments fire no didSet
+        refreshMiniAvailability()
         if brain.mlxModelID != nil, Self.mlxAvailable, !homeBrainActive {
             warmSelectedBrain()
         } else if brain.backing == .appleFoundationModels, !homeBrainActive {
@@ -969,6 +1015,16 @@ final class AppCore {
                 // The bytes first, to disk only (no Metal), carried by iOS if the person leaves the app (a continued-
                 // processing task). MLX may load only in the foreground, so the download and the load are two steps.
                 if !LocalModelInventory().isInstalled(modelID: modelID) {
+                    // Room first: a full phone used to fail every attempt, late, in words that blamed the network.
+                    if let downloadMB = selectedBrain.approxDownloadMB,
+                       let short = DownloadSpacePreflight.shortfallMB(
+                           downloadMB: downloadMB, availableBytes: Self.freeDiskBytes()
+                       )
+                    {
+                        throw DownloadSpacePreflight.InsufficientSpace(
+                            brain: tierName, downloadMB: downloadMB, shortfallMB: short
+                        )
+                    }
                     try await downloadWeights(modelID: modelID, tier: selectedBrain, generation: generation)
                     guard generation == warmGeneration else {
                         if mlx !== currentMLX { mlx.releaseMemory() }
@@ -1132,6 +1188,7 @@ final class AppCore {
     /// `releaseForBackground`) or a user re-selection. Retrying a persistent failure
     /// on every app-switch would be a retry-storm; the failure surfaces once and stays.
     func warmForForeground() {
+        refreshMiniAvailability()
         // Home brain fronting: the slot points at the paired Mac, and
         // `selectedBrain` is only the LOCAL fallback tier. Warming it here would
         // swap the slot to local MLX — silently dropping the user off Home on
@@ -1142,9 +1199,38 @@ final class AppCore {
     }
 
     /// Whether Apple Intelligence (Mini) can serve on this device right now —
-    /// drives the onboarding / settings availability hint.
+    /// drives the onboarding / settings availability hint. Observed: it was read live, so when Apple's model
+    /// finished getting ready nothing re-rendered and Send stayed off until something else moved.
     var miniAvailability: AFMAvailability {
-        afm.availabilityState
+        afmAvailability
+    }
+
+    private(set) var afmAvailability: AFMAvailability = .notReady
+    @ObservationIgnored private var afmWatch: Task<Void, Never>?
+
+    /// Re-read Apple Intelligence's state, and while it is still getting ready, keep re-reading every few
+    /// seconds until it settles (on foreground and at launch).
+    func refreshMiniAvailability() {
+        let now = afm.availabilityState
+        if now != afmAvailability { afmAvailability = now }
+        guard now == .notReady, afmWatch == nil else { return }
+        afmWatch = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(5))
+                guard let self else { return }
+                let next = afm.availabilityState
+                if next != afmAvailability { afmAvailability = next }
+                if next != .notReady { break }
+            }
+            self?.afmWatch = nil
+        }
+    }
+
+    /// Free bytes on the volume the weights land on (iOS counts space it will purge for us).
+    nonisolated static func freeDiskBytes() -> Int64 {
+        let url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        let values = try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+        return values?.volumeAvailableCapacityForImportantUsage ?? 0
     }
 
     /// The brains this device may list (onboarding + Settings): Mini only where
@@ -1214,30 +1300,42 @@ final class AppCore {
 
     // MARK: - Documents
 
-    /// Ingest a user-picked file (PDF or UTF-8 text) into the RAG store.
+    /// Ingest a user-picked file (PDF or UTF-8 text) into the RAG store. A scanned PDF's pages are read
+    /// on the device (Vision), with progress in the banner; a file with no text anywhere is refused by
+    /// name, and that failure stays up until the next import (the first App Store review missed a 6 s one).
     func ingest(url: URL) async {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         let title = url.deletingPathExtension().lastPathComponent
+        ingestingTitle = title
+        defer { ingestingTitle = nil }
         do {
             let result: DocumentIngester.IngestResult
             if url.pathExtension.lowercased() == "pdf" {
                 let data = try Data(contentsOf: url)
-                result = try await ingester.ingestPDF(title: title, data: data, sourceRef: url.absoluteString)
+                result = try await ingester.ingestPDF(
+                    title: title, data: data, sourceRef: url.absoluteString,
+                    progress: { [weak self] step in
+                        Task { @MainActor in
+                            guard let self, self.ingestingTitle == title else { return }
+                            self.lastIngestStatus = IngestStatusCopy.reading(title: title, step)
+                        }
+                    }
+                )
             } else {
                 let content = try String(contentsOf: url, encoding: .utf8)
                 result = try await ingester.ingest(title: title, text: content, sourceRef: url.absoluteString)
             }
+            ingestingTitle = nil
             let dedup = result.wasDeduped ? " (already indexed)" : ""
-            // A 0-chunk ingest indexed nothing searchable — say so, don't imply success.
-            lastIngestStatus = result.chunkCount == 0
-                ? "“\(title)” had no indexable text."
-                : "Indexed “\(title)” — \(result.chunkCount) chunks\(dedup)."
+            let scans = IngestStatusCopy.scanNote(result.scans).map { " " + $0 } ?? ""
+            lastIngestStatus = "Indexed “\(title)” — \(result.chunkCount) chunks\(dedup).\(scans)"
             refreshCounts()
+            scheduleIngestStatusClear()
         } catch {
+            ingestingTitle = nil
             lastIngestStatus = "Couldn’t index “\(title)”: \(error.localizedDescription)"
         }
-        scheduleIngestStatusClear()
     }
 
     /// Auto-dismiss the ingest banner so it isn't a permanent fixture on the
@@ -1274,6 +1372,7 @@ final class AppCore {
         provider: any InferenceProvider
     ) -> any RAGResponding {
         let sourceCollector = ToolSourceCollector()
+        let afm = AppleFoundationModelsProvider()
         return AgentRAGResponder(
             store: store,
             embedder: embedder,
@@ -1281,7 +1380,7 @@ final class AppCore {
             toolsProvider: {
                 var tools: [any AgentTool] = [
                     DateTimeTool(),
-                    SystemStatusTool(),
+                    SystemStatusTool(appState: { Self.appStateLine(afm: afm) }),
                     SearchKnowledgeTool(
                         store: store,
                         embedder: embedder,
@@ -1372,6 +1471,7 @@ final class AppCore {
             },
             // What the mic heard during a voice turn (VoiceTurnPreparer), set for that turn only.
             voiceClauseProvider: { Self.voiceTurnClause.clause },
+            appStateProvider: { Self.appStateLine(afm: afm) },
             // The Mac's tool router, mirrored. Every brain takes it (Kev, 2026-11-02): without it Lil's every
             // message was an agent turn over pasted history, and Lil copied its last answer back word for word.
             // The group head and chains stay off here until their own phone run.

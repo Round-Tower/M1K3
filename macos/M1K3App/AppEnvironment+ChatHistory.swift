@@ -247,7 +247,7 @@ extension AppEnvironment {
     ) -> [any AgentTool] {
         var tools: [any AgentTool] = [
             DateTimeTool(),
-            SystemStatusTool(),
+            SystemStatusTool(appState: { AppEnvironment.appStateLine() }),
             // Every store-reading tool takes `excludedKinds` — the `.mcp` palette withholds Photos
             // on all three, not just search (AskSurfaceCallSiteTests pins the wiring by text).
             SearchKnowledgeTool(store: store, embedder: embedder, excludedKinds: excludedKinds, onHits: onHits),
@@ -494,8 +494,10 @@ extension AppEnvironment {
             brainNameProvider: {
                 // The persisted brain tier, read fresh each turn so a runtime
                 // hot-swap names the new brain on the next answer. Empty → omitted.
+                // While Mini stands in for a downloading brain it names itself: the persisted tier said
+                // "thinking with your Lil brain" while Mini generated (2026-11-03).
                 let raw = UserDefaults.standard.string(forKey: Self.selectedBrainKey) ?? ""
-                return BrainTier(persisted: raw)?.displayName ?? ""
+                return AppEnvironment.answeringBrainName(persisted: BrainTier(persisted: raw)?.displayName ?? "")
             },
             fastThinkingProvider: {
                 // Speed tiers (Mini/Lil) skip the think phase on plain grounded
@@ -569,6 +571,8 @@ extension AppEnvironment {
             // and read here as a snapshot — per-turn content, never the
             // cached persona prefix.
             todoContextProvider: { AppEnvironment.todoGroundingSnapshot.withLock { $0 } },
+            // What's true about M1K3 right now (a brain downloading, loading, just ready); nil when steady.
+            appStateProvider: { AppEnvironment.appStateLine() },
             // The tool router: a turn it reads as plain chat skips the palette for one streamed
             // generation; a tool turn tries the group head, then Apple's pick, and the app runs
             // the read-only tool(s). Every tier, the head and chains are ON on the Mac since the
