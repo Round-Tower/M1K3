@@ -111,6 +111,23 @@ struct SystemStatusToolTests {
         #expect(result.output == "Battery: 64% (on battery). Disk: 100 GB free of 500 GB. Uptime: 2 hours.")
     }
 
+    @Test("the app-state line follows the device status when something is in flight")
+    func appendsAppState() async throws {
+        let tool = SystemStatusTool(
+            provider: FakeProvider(), appState: { "M1K3 right now: Lil is still downloading (42%), so it isn't ready yet." }
+        )
+        let result = try await tool.execute(input: [:])
+        #expect(result.output == "Battery: 64% (on battery). Disk: 100 GB free of 500 GB. Uptime: 2 hours. "
+            + "M1K3 right now: Lil is still downloading (42%), so it isn't ready yet.")
+    }
+
+    @Test("a steady app state adds nothing")
+    func steadyAppStateAddsNothing() async throws {
+        let tool = SystemStatusTool(provider: FakeProvider(), appState: { nil })
+        let result = try await tool.execute(input: [:])
+        #expect(result.output == "Battery: 64% (on battery). Disk: 100 GB free of 500 GB. Uptime: 2 hours.")
+    }
+
     @Test("declares the agent-facing contract")
     func declaresContract() {
         let tool = SystemStatusTool()

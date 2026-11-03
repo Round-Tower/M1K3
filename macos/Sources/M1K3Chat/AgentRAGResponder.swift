@@ -340,6 +340,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// M1K3Todos — this target stays list-agnostic), or nil for none. Per-turn
     /// content beside the memory block, never the cached persona prefix.
     private let todoContextProvider: (@Sendable () -> String?)?
+    /// What is true about M1K3 right now (`AppStateLine`: a brain downloading, loading, just ready), or nil in
+    /// the steady state. It rides the ambient section, after the replay, so the cached prefix never moves.
+    private let appStateProvider: (@Sendable () -> String?)?
     /// The tool router's plain-chat route, read per turn. nil (the default, and
     /// every brain but Mini with the flag on) is today's agent turn, byte for byte.
     private let plainRouteProvider: (@Sendable () -> PlainTurnRoute?)?
@@ -375,6 +378,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         voiceClauseProvider: @escaping @Sendable () -> String? = { nil }, // swiftformat:disable:next unusedArguments
         browserContextProvider: (@Sendable () -> BrowserContext?)? = nil,
         todoContextProvider: (@Sendable () -> String?)? = nil,
+        appStateProvider: (@Sendable () -> String?)? = nil,
         plainRouteProvider: (@Sendable () -> PlainTurnRoute?)? = nil,
         excludedKinds: Set<KnowledgeKind> = [],
         postToolAnswerPolicy: PostToolAnswerPolicy = PostToolAnswer.policy()
@@ -399,6 +403,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         self.voiceClauseProvider = voiceClauseProvider
         self.browserContextProvider = browserContextProvider
         self.todoContextProvider = todoContextProvider
+        self.appStateProvider = appStateProvider
         self.defersHeavyGenerationProvider = defersHeavyGenerationProvider
         self.turnNoteProvider = turnNoteProvider
         self.groundingBudgetProvider = groundingBudgetProvider
@@ -851,7 +856,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                     .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n\n"),
                 chunks: chunks, memories: memories,
                 history: history, historyBudget: historyBudget,
-                ambient: browserContextProvider?()?.render(), todos: todoContextProvider?()
+                ambient: ambientSection(), todos: todoContextProvider?()
             )
         }
         // The cut rides the anatomy line, so a launch shows which one this turn got (8,192 behind a forcing brain).
@@ -1209,6 +1214,13 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
 
     /// The per-turn policy clauses every prompt carries: the age band and what can
     /// leave the device (#482). nil entries are dropped by the callers' compactMap.
+    /// The ambient grounding section: the app-state line first (when anything is in flight), then what's open
+    /// beside the chat. Nil when both are, so a steady-state prompt is byte-identical to before.
+    private func ambientSection() -> String? {
+        let parts = [appStateProvider?(), browserContextProvider?()?.render()].compactMap { $0 }.filter { !$0.isEmpty }
+        return parts.isEmpty ? nil : parts.joined(separator: "\n\n")
+    }
+
     private func turnClauses() -> [String?] {
         // The egress answer as this brain's persona reads it: pocket's starts at the facts
         // (`EgressDisclosure.adapted`).
@@ -1242,7 +1254,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         let contextPreamble = ([contextLine] + turnClauses()).compactMap { $0 }.joined(separator: "\n\n")
         let toolNames = Set(tools.map(\.name))
         let historyBudget = historyBudgetProvider().reservingImages(images.count)
-        let ambient = browserContextProvider?()?.render()
+        let ambient = ambientSection()
         let todos = todoContextProvider?()
         // The ReAct floor takes its RULES apart from the turn and puts them in its
         // stable head (the prefix AFM prewarms); the native loop keeps them where
