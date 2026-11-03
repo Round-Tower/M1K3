@@ -19,6 +19,8 @@
 //  accretion stagger. The windowed wrapper reads `\.windowVisible` for its own presence. Confidence now 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-09-12 (#293 pass 2) — the windowed wrapper resolves its presence
 //  through `AvatarPresence.resolve` (Low Power now parks the field) instead of a visible/unmounted ternary.
+//  Review: Kev + claude-opus-5.5, 2026-11-03 — the empty state drops its sparkles symbol, matching the
+//  iPhone's (Kev: no emoji in the placeholder); the copy is unchanged.
 
 import M1K3Avatar
 import M1K3Knowledge
@@ -63,11 +65,11 @@ struct MemoryConstellationCanvas: View {
         Group {
             if let model {
                 if model.isEmpty {
-                    ContentUnavailableView(
-                        "No memories yet",
-                        systemImage: "sparkles",
-                        description: Text("As M1K3 remembers things, they appear here as a constellation that grows over time.")
-                    )
+                    ContentUnavailableView {
+                        Text("No memories yet")
+                    } description: {
+                        Text("As M1K3 remembers things, they appear here as a constellation that grows over time.")
+                    }
                 } else if presence.isMounted {
                     ConstellationView(
                         model: model, growthStep: hasPresented ? 0 : 0.08, paused: presence.isPaused

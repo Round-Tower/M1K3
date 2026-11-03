@@ -14,6 +14,8 @@
 //  Mac host onto the lifted builder; the RealityKit field on an actual iPad
 //  is verify-by-launch — the simulator has no Metal). Prior: the Mac's
 //  ConstellationWindow.swift (Kev + claude-fable-5, 2026-06-17).
+//  Review: Kev + claude-opus-5.5, 2026-11-03 — the empty state drops its sparkles symbol (Kev: no
+//  emoji in the placeholder); the copy is unchanged. Seen on the iPhone Duo's inner display.
 //
 
 import M1K3Knowledge
@@ -33,11 +35,11 @@ struct MemoryConstellationCanvas: View {
         Group {
             if let model {
                 if model.isEmpty {
-                    ContentUnavailableView(
-                        "No memories yet",
-                        systemImage: "sparkles",
-                        description: Text("As M1K3 remembers things, they appear here as a constellation.")
-                    )
+                    ContentUnavailableView {
+                        Text("No memories yet")
+                    } description: {
+                        Text("As M1K3 remembers things, they appear here as a constellation.")
+                    }
                 } else {
                     ConstellationView(model: model)
                 }
