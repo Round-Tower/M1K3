@@ -1,7 +1,15 @@
 NOVEDADES DE LA 1.3
 
-• Respuestas, no enlaces. Cuando leo una respuesta en voz alta, en el modo de voz o con "Speak answers" activado, me detengo al llegar a las fuentes en lugar de recitarte cada dirección web.
-• Pequeños cambios internos. Nada nuevo que aprender.
+• Mira quién responde. La línea sobre el campo del chat dice qué cerebro está activo y si la búsqueda web está activada. Tócala para cambiar cualquiera de los dos.
+• Un solo ＋ para archivos y fotos, así el campo tiene más espacio.
+• Hecho para el iPhone plegable: abierto o cerrado, el chat se ajusta a la pantalla que estés usando.
+• Dime cómo te gustan las respuestas. Di "más corto, por favor" o "sin emojis" una vez y lo respeto. La petición queda en Memories, donde puedes borrarla.
+• Respuestas a la medida de la pregunta: pasos numerados si preguntas cómo hacer algo, en paralelo si comparas y lenguaje sencillo si solo estamos platicando.
+• Descargas honestas. Reviso que haya espacio antes de descargar un cerebro, la barra muestra el progreso real y, si una descarga falla, te digo por qué.
+• PDF escaneados. Las páginas que son imágenes de texto ahora se leen en tu dispositivo.
+• A "¿Ya estás listo?" te respondo sin rodeos: si estoy descargando y cuánto llevo, o si ya estoy listo.
+• Lil sigue el ritmo: ya no se repite, y recurre a la búsqueda web cuando le pides noticias.
+• Respuestas, no enlaces. Cuando leo una respuesta en voz alta, me detengo al llegar a las fuentes en lugar de recitarte cada dirección web.
 
 ¿NUEVO EN M1K3? ESTO ES LO QUE HAGO
 

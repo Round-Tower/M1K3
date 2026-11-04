@@ -1,7 +1,15 @@
 NOVIDADES DA 1.3
 
-• Respostas, não links. Quando leio uma resposta em voz alta, no modo de voz ou com "Speak answers" ligado, paro ao chegar às fontes em vez de ler cada endereço da web.
-• Pequenos ajustes por dentro. Nada novo para aprender.
+• Veja quem responde. A linha acima do campo de conversa mostra o nome do cérebro e diz se a busca na web está ligada. Toque nela para trocar qualquer um dos dois.
+• Um só ＋ para arquivos e fotos, para o campo ter espaço para respirar.
+• Feito para o iPhone dobrável: aberto ou fechado, a conversa se ajusta à tela que você está usando.
+• Diga como você gosta das respostas. Fale "mais curto, por favor" ou "sem emoji" uma vez e eu passo a fazer assim. O pedido fica em Memories, onde você pode apagá-lo.
+• Respostas no formato da pergunta: passos numerados para um tutorial, lado a lado para uma comparação, conversa simples para um bate-papo.
+• Downloads honestos. Eu confiro se há espaço antes de baixar um cérebro, a barra mostra o progresso real e, se um download falhar, eu digo por quê.
+• PDFs digitalizados. Páginas que são imagens de texto agora são lidas no seu aparelho.
+• "Você está pronto?" ganha uma resposta direta: baixando e quanto já baixou, ou pronto.
+• O Lil acompanha o ritmo: não se repete mais e recorre à busca na web quando você pede notícias.
+• Respostas, não links. Quando leio uma resposta em voz alta, paro ao chegar às fontes em vez de ler cada endereço da web.
 
 NOVO NO M1K3? O QUE EU FAÇO
 
