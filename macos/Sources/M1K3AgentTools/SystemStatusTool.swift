@@ -11,6 +11,9 @@
 //  promised "CPU, memory or disk" and a memory question got battery, disk and uptime. The menu and the tool
 //  description stay byte for byte (the description is a prompt surface too), so neither routing nor the native
 //  tool palette moves. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-03 — `appState`: the AppStateLine (a brain downloading, loading or
+//  just ready) follows the device status, so "is it ready now?" answers true when it routes here. The
+//  description is unchanged. Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -88,9 +91,16 @@ public struct SystemStatusTool: AgentTool {
     ]
 
     private let provider: any SystemStatusProviding
+    /// What is true about M1K3 right now (`AppStateLine`), appended when anything is in flight. The
+    /// description above stays byte for byte: it is a prompt surface, and routing reads it.
+    private let appState: @Sendable () -> String?
 
-    public init(provider: any SystemStatusProviding = LiveSystemStatusProvider()) {
+    public init(
+        provider: any SystemStatusProviding = LiveSystemStatusProvider(),
+        appState: @escaping @Sendable () -> String? = { nil }
+    ) {
         self.provider = provider
+        self.appState = appState
     }
 
     public func execute(input _: [String: String]) async throws -> ToolResult {
@@ -102,6 +112,7 @@ public struct SystemStatusTool: AgentTool {
             ram: provider.ramSnapshot(),
             cpu: provider.cpuLoad()
         )
-        return ToolResult(output: output)
+        guard let state = appState(), !state.isEmpty else { return ToolResult(output: output) }
+        return ToolResult(output: output + " " + state)
     }
 }

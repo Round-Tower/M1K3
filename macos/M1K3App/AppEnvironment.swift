@@ -654,7 +654,9 @@ final class AppEnvironment {
     nonisolated static let autoRouteBrainKey = "brain.autoRoute"
 
     /// The chosen brain (Mini / Lil / Big). Restored on launch, persisted on change.
-    private(set) var selectedBrain: BrainTier = .mini
+    private(set) var selectedBrain: BrainTier = .mini {
+        didSet { publishAppState() }
+    }
 
     /// Set by init when the one-time front-tier realignment fired; flushed to the
     /// user by `runStartupMaintenance` once there's a window to read it in.
@@ -808,6 +810,7 @@ final class AppEnvironment {
     /// chat send path). Stays `.idle` for the Apple Foundation Models default.
     private(set) var modelLoad: ModelLoadState = .idle {
         didSet {
+            stampReadyAfterDownload(from: oldValue, to: modelLoad)
             refreshInterimBridge()
             switch modelLoad {
             // A load that settled either way isn't a crash: only a load cut short by
@@ -816,6 +819,53 @@ final class AppEnvironment {
             default: break
             }
         }
+    }
+
+    /// When `modelLoad` last became ready: the app-state line says "finished getting ready" for a while.
+    @ObservationIgnored private var brainReadySince: Date?
+    /// The current warm downloaded bytes: only then is "finished getting ready" news. A warm from disk at
+    /// launch is the steady state, and its prompts stay byte-identical.
+    @ObservationIgnored private var warmDownloaded = false
+
+    private func stampReadyAfterDownload(from old: ModelLoadState, to new: ModelLoadState) {
+        if case let .downloading(fraction) = new, fraction < 1 { warmDownloaded = true }
+        guard new == .ready, old != .ready else { return }
+        brainReadySince = warmDownloaded ? Date() : nil
+        warmDownloaded = false
+    }
+
+    /// What a turn needs to say what's true about M1K3 right now (AppStateLine), readable off the main actor.
+    /// Published from `refreshInterimBridge`, which every input's didSet already calls.
+    nonisolated static let appStateLive = OSAllocatedUnfairLock<(snapshot: AppStateSnapshot, appleIntelligence: Bool)?>(
+        initialState: nil
+    )
+
+    /// Snapshot the brain state for the turn's nonisolated read. Called from `refreshInterimBridge` (every
+    /// load/runtime change) and from `selectedBrain`'s didSet.
+    private func publishAppState() {
+        let fronting = interimRuntimeOverride.value != nil
+        let snapshot = AppStateSnapshot(
+            brain: selectedBrain.displayName, load: modelLoad,
+            answeringBrain: fronting ? BrainTier.mini.displayName : nil, readySince: brainReadySince
+        )
+        let appleIntelligence = selectedBrain.backing == .appleFoundationModels
+        Self.appStateLive.withLock { $0 = (snapshot, appleIntelligence) }
+    }
+
+    /// The app-state line for this turn, or nil in the steady state. Mini's readiness is Apple's, read live.
+    nonisolated static func appStateLine(now: Date = Date()) -> String? {
+        guard var (snapshot, appleIntelligence) = appStateLive.withLock({ $0 }) else { return nil }
+        if appleIntelligence {
+            snapshot.appleIntelligenceGettingReady = appStateAFM.availabilityState == .notReady
+        }
+        return AppStateLine.render(snapshot, now: now)
+    }
+
+    private nonisolated static let appStateAFM = AppleFoundationModelsProvider()
+
+    /// The brain actually generating: Mini while it stands in for a downloading brain, else the chosen one.
+    nonisolated static func answeringBrainName(persisted: String) -> String {
+        appStateLive.withLock { $0?.snapshot.answeringBrain } ?? persisted
     }
 
     /// Last ingest outcome, surfaced to the UI.
@@ -830,6 +880,9 @@ final class AppEnvironment {
     /// "Got it" ask-state as if the new file had landed).
     private(set) var lastIngestFailed = false
     private(set) var isIngesting = false
+    /// The import being read right now: a scan's progress lines apply only while it is. A token per call,
+    /// because a multi-file drop runs several imports at once.
+    private var ingestingToken: UUID?
     /// Count of indexed knowledge items, for the document drawer / settings.
     private(set) var indexedItemCount = 0
 
@@ -1302,17 +1355,32 @@ final class AppEnvironment {
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
 
         let title = url.deletingPathExtension().lastPathComponent
+        let token = UUID()
+        ingestingToken = token
+        defer { if ingestingToken == token { ingestingToken = nil } }
         do {
             let result: DocumentIngester.IngestResult
             if url.pathExtension.lowercased() == "pdf" {
                 let data = try Data(contentsOf: url)
-                result = try await ingester.ingestPDF(title: title, data: data, sourceRef: url.absoluteString)
+                // A scanned PDF's pages are read on the device (Vision); the banner follows along.
+                result = try await ingester.ingestPDF(
+                    title: title, data: data, sourceRef: url.absoluteString,
+                    progress: { [weak self] step in
+                        Task { @MainActor in
+                            guard let self, self.ingestingToken == token else { return }
+                            self.lastIngestFailed = false
+                            self.lastIngestStatus = IngestStatusCopy.reading(title: title, step)
+                        }
+                    }
+                )
             } else {
                 let text = try String(contentsOf: url, encoding: .utf8)
                 result = try await ingester.ingest(title: title, text: text, sourceRef: url.absoluteString)
             }
+            if ingestingToken == token { ingestingToken = nil }
             let dedup = result.wasDeduped ? " (already indexed)" : ""
-            lastIngestStatus = "Indexed “\(title)” — \(result.chunkCount) chunks\(dedup).\(spotlightTipIfDue())"
+            let scans = IngestStatusCopy.scanNote(result.scans).map { " " + $0 } ?? ""
+            lastIngestStatus = "Indexed “\(title)” — \(result.chunkCount) chunks\(dedup).\(scans)\(spotlightTipIfDue())"
             lastIngestedTitle = title
             lastIngestFailed = false
             refreshCounts()
@@ -1322,6 +1390,7 @@ final class AppEnvironment {
             // Failures deliberately do NOT auto-dismiss — a failed drop must
             // stay visible until the next ingest replaces it (the banner
             // pierces the greeting-card suppression for the same reason).
+            if ingestingToken == token { ingestingToken = nil }
             lastIngestStatus = "Couldn’t index “\(title)”: \(error.localizedDescription)"
             lastIngestFailed = true
         }
@@ -2266,6 +2335,7 @@ extension AppEnvironment {
         )
         let wasFronting = interimRuntimeOverride.value != nil
         interimRuntimeOverride.value = posture.frontsOnMini ? .appleFoundationModels : nil
+        publishAppState()
         // Mini is about to serve interactive turns (download/delegation front)
         // — arm the prewarm slot on the EDGE, not every refresh, so the first
         // fronted turn is warm without spamming the daemon. Detached: this
