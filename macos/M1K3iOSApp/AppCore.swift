@@ -689,6 +689,8 @@ final class AppCore {
         // carried before 2026-10-10 kept 6 of 22 true recalls on this arm.
         // Set once: this shell has no embedder switch (hashing only), so they never go stale.
         memoryStore?.floors = EmbedderFloors.forFingerprint(baseEmbedder.fingerprint)
+        // #730: the stated answer style ("shorter answers, please") survives a relaunch, as on the Mac.
+        Self.refreshUserStyle(from: memoryStore)
         ingester = DocumentIngester(store: store, embedder: baseEmbedder)
 
         // Restore the chosen brain (default Mini). Decode via init(persisted:) so a
@@ -774,7 +776,9 @@ final class AppCore {
                 embedder: baseEmbedder,
                 ingester: ingester,
                 fallback: slot,
-                graph: memoryStore.map { DistilledFactGraphAdapter(store: $0) as any DistilledFactGraphWriting }
+                graph: memoryStore.map { DistilledFactGraphAdapter(store: $0) as any DistilledFactGraphWriting },
+                // #730: a slice that wrote facts may have changed the stated style; the next prompt carries it.
+                didWrite: { [memoryStore] _ in Self.refreshUserStyle(from: memoryStore) }
             ),
             autoCaptureEnabled: { Self.memoryAutoCaptureEnabled() },
             // The rolling distillation trigger follows the replay window in effect (#629).
@@ -1511,7 +1515,8 @@ final class AppCore {
         embedder: any EmbeddingService,
         ingester: DocumentIngester,
         fallback: any InferenceProvider,
-        graph: (any DistilledFactGraphWriting)?
+        graph: (any DistilledFactGraphWriting)?,
+        didWrite: (@Sendable (Int) -> Void)? = nil
     ) -> MemoryDistillationCoordinator {
         MemoryDistillationCoordinator(
             distiller: ProviderMemoryDistiller(
@@ -1521,8 +1526,17 @@ final class AppCore {
             ingester: ingester,
             store: store,
             embedder: embedder,
-            graph: graph
+            graph: graph,
+            didWrite: didWrite
         )
+    }
+
+    /// The live `.style` rows into the persona's stated-style line (#699 on the Mac, #730 here). Off the
+    /// main actor from the distiller's hook: the persona's box is a Mutex and the store a GRDB queue. A
+    /// failed read keeps the style already set, and an overtaken read is dropped (`UserStyleRefreshGate`).
+    nonisolated static func refreshUserStyle(from memoryStore: MemoryStore?) {
+        guard let memoryStore else { return }
+        M1K3Persona.refreshUserStyle { try memoryStore.liveStyleTexts() }
     }
 
     // MARK: - Container path

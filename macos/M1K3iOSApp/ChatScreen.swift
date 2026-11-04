@@ -78,6 +78,11 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-13 — the pick lives on `core.privateCloudArming` (AppCore
 //  persists it) so Settings' brain list can arm it; nothing on iOS ever did, so the sheet never
 //  opened. A cloud chip over the input bar says when the next message goes to PCC. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-03 — trust pass (Kev: "It's about trust"): a status line over the
+//  composer says who answers and whether web search is on ("Lil · Web on", `ChatStatusLine`); a tap changes
+//  either. It names Private Cloud when the next send goes there, so it replaces the cloud chip. One ＋ replaces
+//  the paperclip and Photos buttons (Kev: "too cramped"): Files, Photos, then the same brain and web rows.
+//  The brain rows mirror Settings ▸ Brain. Confidence 0.75 (verify-by-launch on the iPhone and the Duo).
 //  Review: Kev + claude-fable-5.1, 2026-10-13 — #585 follow-ups: the send button no longer waits for the
 //  local brain when the send goes to PCC (`PrivateCloudRung.sendReady`), and a send the core refuses
 //  (`sendPrivateCloud` false) puts the draft back instead of dropping it. Confidence 0.8.
@@ -141,6 +146,9 @@ struct ChatScreen: View {
     @State private var starters: [String] = []
     @State private var showAttachmentImporter = false
     @State private var pickedPhotos: [PhotosPickerItem] = []
+    /// The ＋ menu's Photos row presents the picker; a PhotosPicker can't live inside a Menu.
+    @State private var showPhotoPicker = false
+    @AppStorage(AppCore.webSearchEnabledKey) private var webSearchEnabled = true
     @State private var pendingAttachments: [ImageAttachment] = []
     @State private var pendingFiles: [FileAttachment] = []
     @State private var attachmentError: String?
@@ -273,6 +281,12 @@ struct ChatScreen: View {
                     attach(urls)
                 }
             }
+            .photosPicker(
+                isPresented: $showPhotoPicker,
+                selection: $pickedPhotos,
+                maxSelectionCount: max(1, Self.photoLimit - pendingAttachments.count),
+                matching: .images
+            )
             .onChange(of: pickedPhotos) { _, items in
                 guard !items.isEmpty else { return }
                 pickedPhotos = []
@@ -646,15 +660,8 @@ struct ChatScreen: View {
 
     private var inputBar: some View {
         VStack(spacing: 0) {
-            if privateCloudServesNextSend {
-                Label(PrivateCloudLabel.text, systemImage: "cloud.fill")
-                    .font(.caption)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .padding(.bottom, 6)
-                    .accessibilityLabel("Your next message goes to Apple's Private Cloud Compute")
-            }
+            statusLine
+                .padding(.bottom, 6)
             if !pendingAttachments.isEmpty {
                 pendingImagesStrip
             }
@@ -663,29 +670,7 @@ struct ChatScreen: View {
             }
             M1K3GlassGroup(spacing: 10) {
                 HStack(spacing: 10) {
-                    Button { showAttachmentImporter = true } label: {
-                        Image(systemName: "paperclip")
-                            .font(.system(size: 20))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(core.chat.isResponding || !core.isReady)
-                    .accessibilityLabel("Attach")
-
-                    if core.imagesAccepted {
-                        // Out of process: no photo-library prompt, no usage string.
-                        PhotosPicker(
-                            selection: $pickedPhotos,
-                            maxSelectionCount: max(1, Self.photoLimit - pendingAttachments.count),
-                            matching: .images
-                        ) {
-                            Image(systemName: "photo.on.rectangle")
-                                .font(.system(size: 20))
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(core.chat.isResponding || !core.isReady
-                            || pendingAttachments.count >= Self.photoLimit)
-                        .accessibilityLabel("Attach from Photos")
-                    }
+                    addMenu
 
                     TextField("Ask M1K3…", text: $draft, axis: .vertical)
                         .lineLimit(1 ... 4)
@@ -715,6 +700,145 @@ struct ChatScreen: View {
         .padding(.vertical, 10)
         .frame(maxWidth: 760)
         .frame(maxWidth: .infinity)
+    }
+
+    /// Who answers the next message and whether web search is on, over the composer; a tap
+    /// changes either (Kev, 2026-11-03: "It's about trust"). Names Private Cloud Compute
+    /// when the next send really goes there, as the chip it replaces did.
+    private var statusLine: some View {
+        let line = statusFacts
+        return Menu {
+            brainAndWebItems
+        } label: {
+            HStack(spacing: 6) {
+                if let symbol = line.brainSymbol {
+                    Image(systemName: symbol)
+                }
+                Text(line.brainText)
+                Text("·").foregroundStyle(.tertiary)
+                Image(systemName: ChatStatusLine.webSymbol)
+                    .opacity(line.webSearchOn ? 1 : 0.4)
+                Text(line.webText)
+                Image(systemName: "chevron.up.chevron.down")
+                    .imageScale(.small)
+                    .foregroundStyle(.tertiary)
+            }
+            .font(.caption)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(.ultraThinMaterial, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(line.accessibilityLabel)
+        .accessibilityHint("Changes the brain or web search")
+    }
+
+    /// What the line says: the answering brain and the web state that applies (switch AND age band).
+    private var statusFacts: ChatStatusLine {
+        ChatStatusLine(
+            brainName: core.answeringBrainName,
+            privateCloudNext: privateCloudServesNextSend,
+            webSearchOn: webSearchEnabled,
+            ageBand: AgeBand(persisted: ageBandRaw)
+        )
+    }
+
+    /// One ＋ for everything you add to a message: Files, Photos, then the brain and web switches.
+    private var addMenu: some View {
+        Menu {
+            Section {
+                Button { showAttachmentImporter = true } label: {
+                    Label("Files", systemImage: "paperclip")
+                }
+                if core.imagesAccepted {
+                    // Out of process: no photo-library prompt, no usage string.
+                    Button { showPhotoPicker = true } label: {
+                        Label("Photos", systemImage: "photo.on.rectangle")
+                    }
+                    .disabled(pendingAttachments.count >= Self.photoLimit)
+                }
+            }
+            .disabled(core.chat.isResponding || !core.isReady)
+            brainAndWebItems
+        } label: {
+            Image(systemName: "plus")
+                .font(.system(size: 20, weight: .medium))
+                .frame(width: 44, height: 44)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Add")
+    }
+
+    /// The brain picker and the web switch, shared by the status line and the ＋ menu. The same
+    /// rows as Settings ▸ Brain: this device's tiers, Home once a Mac is paired, and Private Cloud.
+    @ViewBuilder
+    private var brainAndWebItems: some View {
+        Section("Brain") {
+            ForEach(core.brainMenu.options) { option in
+                switch option {
+                case let .tier(tier):
+                    Button {
+                        core.pickPrivateCloud(false)
+                        core.selectBrain(tier)
+                    } label: {
+                        Label(
+                            tier.displayName,
+                            systemImage: brainChecked(tier: tier) ? "checkmark" : tier.glyph
+                        )
+                    }
+                case .brainAtHome:
+                    if core.homeBrain != nil {
+                        Button {
+                            core.pickPrivateCloud(false)
+                            core.selectHomeBrain()
+                        } label: {
+                            Label("Home", systemImage: brainChecked(tier: nil) ? "checkmark" : "house")
+                        }
+                    }
+                }
+            }
+            if privateCloudPickerRow != .hidden {
+                Button {
+                    core.pickPrivateCloud(true)
+                } label: {
+                    Label(
+                        PrivateCloudRung.menuTitle(privateCloudPickerRow),
+                        systemImage: core.privateCloudArming.isOn ? "checkmark" : PrivateCloudLabel.symbolName
+                    )
+                }
+                .disabled(privateCloudPickerRow != .ready)
+            }
+        }
+        .disabled(core.chat.isResponding)
+        // A menu shows no section footer, so the destination rides the toggle's subtitle. The toggle
+        // shows the state that applies: off and disabled when the age band withholds web tools.
+        let facts = statusFacts
+        Section {
+            Toggle(isOn: Binding(get: { facts.webSearchOn }, set: { webSearchEnabled = $0 })) {
+                Label {
+                    Text("Web search")
+                    Text(facts.webLockedByAge ? "Not available" : "Searches go to \(EgressFacts.searchProvider)")
+                } icon: {
+                    Image(systemName: ChatStatusLine.webSymbol)
+                }
+            }
+            .disabled(facts.webLockedByAge)
+        }
+    }
+
+    /// The checkmark rule Settings uses: Private Cloud wins, then Home, then the selected tier.
+    /// `tier` nil asks about Home.
+    private func brainChecked(tier: BrainTier?) -> Bool {
+        guard !core.privateCloudArming.isOn else { return false }
+        guard let tier else { return core.homeBrainActive }
+        return !core.homeBrainActive && core.selectedBrain == tier
+    }
+
+    /// Settings' Private Cloud row state, so the two pickers can't disagree.
+    private var privateCloudPickerRow: PrivateCloudRung.Control {
+        PrivateCloudRung.pickerControl(core.privateCloudState(consent: nil))
     }
 
     private var pendingImagesStrip: some View {
