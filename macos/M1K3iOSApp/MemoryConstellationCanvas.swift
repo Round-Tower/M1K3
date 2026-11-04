@@ -14,6 +14,11 @@
 //  Mac host onto the lifted builder; the RealityKit field on an actual iPad
 //  is verify-by-launch — the simulator has no Metal). Prior: the Mac's
 //  ConstellationWindow.swift (Kev + claude-fable-5, 2026-06-17).
+//  Review: Kev + claude-opus-5.5, 2026-11-03 — the empty state drops its sparkles symbol (Kev: no
+//  emoji in the placeholder); the copy is unchanged. Seen on the iPhone Duo's inner display.
+//  Review: Kev + claude-opus-5.5, 2026-11-03 — `backdrop`: behind the chat, an empty or still-mapping field
+//  is an empty sky. The placeholder sat on the starter chips and read as part of the chat (Kev spotted it
+//  too). The picker preview keeps the message, which says why the field is blank.
 //
 
 import M1K3Knowledge
@@ -23,6 +28,8 @@ import SwiftUI
 
 struct MemoryConstellationCanvas: View {
     @Environment(AppCore.self) private var core
+    /// Behind the chat: no placeholder or progress text, just the sky.
+    var backdrop = false
     @State private var model: ConstellationModel?
     @State private var lastRevision: MemoryRevision?
 
@@ -32,15 +39,19 @@ struct MemoryConstellationCanvas: View {
     var body: some View {
         Group {
             if let model {
-                if model.isEmpty {
-                    ContentUnavailableView(
-                        "No memories yet",
-                        systemImage: "sparkles",
-                        description: Text("As M1K3 remembers things, they appear here as a constellation.")
-                    )
+                if model.isEmpty, backdrop {
+                    Color.clear
+                } else if model.isEmpty {
+                    ContentUnavailableView {
+                        Text("No memories yet")
+                    } description: {
+                        Text("As M1K3 remembers things, they appear here as a constellation.")
+                    }
                 } else {
                     ConstellationView(model: model)
                 }
+            } else if backdrop {
+                Color.clear
             } else {
                 ProgressView("Mapping memory…")
             }

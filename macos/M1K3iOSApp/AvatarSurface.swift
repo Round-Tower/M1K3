@@ -23,6 +23,14 @@
 //  fox instead of clipping its head at both sides under the Mac window's fixed shot. Verify-by-launch (device).
 //  Review: Kev + claude-opus-5, 2026-09-15 — `.fitWhole` (#312): the fit also backs off by half the creature's
 //  depth, so the turned fox's nose and head stay in the chat hero and the companion tiles. Verify-by-launch.
+//  Review: Kev + claude-opus-5.5, 2026-11-03 — iPhone Duo: the constellation is offered by SPACE, not idiom
+//  (regular width AND height: the iPad, and the Duo opened). Folded, the same Duo is compact and falls back to
+//  the pixel face, as a phone always did. Apple's resizability guidance; verify on the Duo simulator.
+//  The same rule covers an iPad window gone compact (Slide Over, narrow Split View or Stage Manager): it shows
+//  the pixel face like a phone, where the old idiom check kept the field, and the saved pick returns when the
+//  window widens (pre-push review).
+//  Review: Kev + claude-opus-5.5, 2026-11-03 — the constellation renders as a backdrop: an empty store is an
+//  empty sky, not a placeholder over the starter chips.
 //
 
 import M1K3Avatar
@@ -39,21 +47,28 @@ struct AvatarSurface: View {
     var loading: Binding<Bool>? = nil
 
     @AppStorage(CompanionDefaults.companionKey) private var companion = CompanionDefaults.houseCompanion.id
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     /// The constellation is a full-canvas field — legible on the iPad, a grey
-    /// scatter on a phone (the Mac's notch-HUD lesson at 72px). Offered on the
-    /// pad only; elsewhere the sentinel keeps falling through to the pixel face.
-    static var offersConstellation: Bool {
+    /// scatter on a phone (the Mac's notch-HUD lesson at 72px). Offered where the
+    /// canvas is big both ways (the iPad, an opened iPhone Duo); elsewhere the
+    /// sentinel keeps falling through to the pixel face.
+    static func offersConstellation(
+        horizontal: UserInterfaceSizeClass?, vertical: UserInterfaceSizeClass?
+    ) -> Bool {
         #if os(iOS)
-            UIDevice.current.userInterfaceIdiom == .pad
+            horizontal == .regular && vertical == .regular
         #else
             false
         #endif
     }
 
     var body: some View {
-        if companion == CompanionDefaults.constellationID, Self.offersConstellation {
-            MemoryConstellationCanvas()
+        if companion == CompanionDefaults.constellationID,
+           Self.offersConstellation(horizontal: horizontalSizeClass, vertical: verticalSizeClass)
+        {
+            MemoryConstellationCanvas(backdrop: true)
         } else if let spec = CompanionSpec.named(companion), CompanionAssets.isInstalled(spec) {
             // Deliberately NO .id(spec.id): on iOS, recreating the RealityView on a
             // switch left the new one BLACK (the iOS RealityView "swap → black"

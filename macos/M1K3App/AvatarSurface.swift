@@ -31,6 +31,8 @@
 //  closed). Confidence now 0.85 (mount/pause verify-by-launch).
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — `framing` pass-through so the voice-mode
 //  hero can take `.fit` (whole creature, head included). Confidence now 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-03 — the constellation renders as a backdrop here: an empty store is
+//  an empty sky, matching the iPhone; the Memory Constellation window keeps its message.
 
 import M1K3Avatar
 import SwiftUI
@@ -64,7 +66,7 @@ struct AvatarSurface: View {
         // reveal); it drops its own RealityView on `.unmounted`. The creature
         // and the pixel face rebuild cheaply, so they simply go away.
         if companion == AppEnvironment.voiceCompanionConstellation {
-            MemoryConstellationCanvas(env: env, presence: presence)
+            MemoryConstellationCanvas(env: env, presence: presence, backdrop: true)
         } else if !presence.isMounted {
             // No surface at all: nothing to see, nothing to render.
             EmptyView()
