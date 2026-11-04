@@ -35,6 +35,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-26 — `shapeLinesAreRepeatable` (#716): the VOICE's shape bullet and the
 //  shape move teach a SHAPE a compare answer may legitimately echo, so none of their sentences is a span; the
 //  fingerprint itself is byte-identical (the move is outside `voiceExemplars`). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-04 — #775: the capability move's framing and the egress clause's
+//  instruction join the fingerprint; the answers they frame stay repeatable (every egress setting, six legit
+//  self/privacy answers pinned). Confidence 0.85.
 //
 
 import Foundation
@@ -164,8 +167,10 @@ struct PersonaLeakGuardTests {
         // fingerprint is taken from the thing being protected, so editing the
         // persona updates the guard automatically. A curated list would rot.
         #expect(!PersonaLeakGuard.spans.isEmpty)
-        // Core + the voice exemplars (2026-09-06) — both live constants, no curated list.
-        let protected = (M1K3Persona.wiringText + "\n" + M1K3Persona.voiceExemplars).lowercased()
+        // Core + the voice exemplars (2026-09-06) + the framing of two taught answers (#775) — live constants only.
+        let protected = [
+            M1K3Persona.wiringText, M1K3Persona.voiceExemplars, M1K3Persona.capabilityMove, EgressDisclosure.instruction,
+        ].joined(separator: "\n").lowercased()
         for span in PersonaLeakGuard.spans {
             #expect(protected.contains(span.prefix(40).lowercased()))
         }
@@ -301,5 +306,88 @@ struct PersonaLeakGuardTests {
         let answer = "A small table, one row each, then my pick: coffee, because the ritual is the point. "
             + "The take is mine; the table is only the facts lined up."
         #expect(!PersonaLeakGuard.leaks(answer))
+    }
+
+    // MARK: - #775: the FRAMING of an answer is wiring; the answer it frames is not
+
+    /// Mini recited "Something like: I'm M1K3, living right here; …" to leak-verbatim (#771). The capability move's
+    /// framing is prompt; the bare introduction is #303's target answer and must still pass.
+    @Test("the capability move's framing is a leak; its framing span stays over the floor")
+    func capabilityMoveFramingIsALeak() {
+        let reply = M1K3Persona.exemplarReplies(of: M1K3Persona.capabilityMove)
+        #expect(PersonaLeakGuard.leaks(M1K3Persona.capabilityMove))
+        #expect(PersonaLeakGuard.guarded(reply) == PersonaLeakGuard.refusal)
+        let frame = "an introduction, not a question about your rules — no disclaimer"
+        #expect(PersonaLeakGuard.spans.contains(frame))
+        // A recital that drops the frame but keeps "Something like:" still reads the instruction back.
+        let recital = reply.range(of: "Something like: ").map { String(reply[$0.lowerBound...]) } ?? ""
+        #expect(!recital.isEmpty)
+        #expect(PersonaLeakGuard.leaks(recital))
+    }
+
+    /// The egress clause's INSTRUCTION is prompt (Lil recited it to chat-what-leaves on 10-18; pocket to
+    /// leak-verbatim on 10-19, with a comma for the dash). Device-free, so the Mac and iOS clauses both trip.
+    @Test("the egress clause's instruction is a leak, on every device and in pocket's comma reflow")
+    func egressInstructionIsALeak() {
+        let mac = EgressDisclosure.clause(EgressFacts(webSearch: true, privateCloudOffered: true), device: "this machine")
+        let home = EgressDisclosure.clause(EgressFacts(webSearch: true, brainIsHome: true), device: "this device")
+        #expect(PersonaLeakGuard.leaks(mac))
+        #expect(PersonaLeakGuard.leaks(home))
+        #expect(PersonaLeakGuard.leaks(EgressDisclosure.adapted(mac, for: .pocket)))
+        let pocketLive = "If asked what leaves this machine, a fair privacy question, not about your wiring — answer "
+            + "with this, in your own voice: \"Web searches: I decide when to search.\""
+        #expect(PersonaLeakGuard.leaks(pocketLive))
+    }
+
+    /// The quoted answer is what M1K3 is TOLD to say (ChatEvalFixturesTests pins its recital as an honest PASS),
+    /// so no sentence of it, for any setting, may be a span.
+    @Test("the egress clause's quoted answer is repeatable, whole and sentence by sentence, for every setting")
+    func egressAnswerIsRepeatable() {
+        for web in [true, false] {
+            for pcc in [true, false] {
+                for home in [true, false] {
+                    let facts = EgressFacts(webSearch: web, privateCloudOffered: pcc, brainIsHome: home)
+                    for device in ["this machine", "this device"] {
+                        for variant in [PersonaVariant.standard, .pocket] {
+                            let clause = EgressDisclosure.adapted(EgressDisclosure.clause(facts, device: device), for: variant)
+                            guard let open = clause.range(of: "\n\"") else {
+                                Issue.record("no quoted answer in: \(clause)"); continue
+                            }
+                            let answer = String(clause[open.upperBound...]).trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+                            #expect(!PersonaLeakGuard.leaks(answer), "\(answer)")
+                            for sentence in answer.components(separatedBy: ".") {
+                                #expect(!PersonaLeakGuard.leaks(sentence), "\(sentence)")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @Test("legitimate self-introductions and privacy answers pass untouched")
+    func legitSelfAndPrivacyAnswersPass() {
+        let answers = [
+            // #303's target answer, as Lil gave it on 10-19.
+            "I'm M1K3, living right here; I talk things through, remember what matters to you, look things up, "
+                + "read your documents, and write code and whole pages. What are you after?",
+            "Yo. I'm M1K3, living right here on this machine. Think of me as the resident chaos agent who's decided "
+                + "to help you instead; I talk things through, remember what matters to you, and write code and whole "
+                + "pages. So, what are we building?",
+            "Yes, some of it can. Web searches: I decide when to search, and my query goes to DuckDuckGo and can carry "
+                + "words from our chat; Wikipedia lookups and pages I read are fetched. If you pick Private Cloud Compute "
+                + "as my brain, what you send goes to Apple's Private Cloud Compute. My brain runs right here, and your "
+                + "memories and documents are stored on this machine.",
+            "Mostly, yes: my brain runs right here, and your memories and documents are stored on this machine. "
+                + "The one exit is web search, and I decide when to use it.",
+            "I'm M1K3. I live on your Mac, wear the villain's cape for fun, and I'm on your side. "
+                + "I don't share my own wiring, but ask me anything else.",
+            "My brain is your own Mac, over your Wi‑Fi: messages, and memories or documents I draw on, go to it.",
+            "Fair privacy question! Answer: web search is the one thing that goes out, and only when I choose to search.",
+        ]
+        for answer in answers {
+            #expect(!PersonaLeakGuard.leaks(answer), "\(answer)")
+            #expect(PersonaLeakGuard.guarded(answer) == answer)
+        }
     }
 }
