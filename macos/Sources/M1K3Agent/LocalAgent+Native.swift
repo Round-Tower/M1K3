@@ -39,7 +39,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-04 (#771) — `nativePersona(for:)`: a provider that carries its own standing
 //  persona gets no persona turn (the ReAct floor's rule), so Mini's tool turns run Mini's own instructions instead
 //  of the standard core plus the voice exemplars it recited to leak-verbatim. MLX providers don't carry one, so Lil
-//  and Big are byte-identical. Confidence 0.8 (live security/tool-use ×3 owed before landing).
+//  and Big are byte-identical. Live, router-wired like the app: leak-verbatim 12/12 vs master 9/12 (×12), tool use
+//  54/69 both, identical per fixture. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -72,13 +73,16 @@ extension LocalAgent {
         // which already sorts tool names. (Tools resolve by name; order is
         // behaviourally irrelevant.)
         let toolDefinitions = tools.values.map(\.toolDefinition).sorted { $0.name < $1.name }
+        // Read once: a swappable provider could change brains across the await below, and
+        // the stable prefix must describe the transcript the loop actually sends.
+        let persona = Self.nativePersona(for: provider)
         let session = try await provider.makeToolTurnSession(
             tools: toolDefinitions,
             options: ToolTurnOptions(
                 thinkingEnabled: thinkingEnabled,
                 stablePrefix: Self.stablePrefix(
                     shape: provider.nativePromptShape,
-                    persona: Self.nativePersona(for: provider),
+                    persona: persona,
                     goal: goal, grounding: grounding, stableChars: stableContextChars
                 )
             )
@@ -90,7 +94,7 @@ extension LocalAgent {
                 images: images,
                 grounding: grounding,
                 shape: provider.nativePromptShape,
-                persona: Self.nativePersona(for: provider),
+                persona: persona,
                 onEvent: onEvent,
                 onConclusionToken: onConclusionToken,
                 onReasoningToken: onReasoningToken
@@ -496,6 +500,9 @@ extension LocalAgent {
             return persona.isEmpty ? [user] : [.system(persona), user]
         case .groundingInSystem:
             // Empty grounding counts as none — no dangling separator after the persona.
+            // Only MLX (lfm2) takes this shape, and MLX never carries a persona. A provider that
+            // did would get the grounding ALONE as its system turn, which AFM would take as its
+            // whole instructions (#771 review): route such a provider to `.groundingInUser`.
             let system = [persona, grounding ?? ""].filter { !$0.isEmpty }.joined(separator: "\n\n")
             let user = ToolMessage.user(buildNativeGoal(goal: goal, grounding: nil), images: images)
             return system.isEmpty ? [user] : [.system(system), user]

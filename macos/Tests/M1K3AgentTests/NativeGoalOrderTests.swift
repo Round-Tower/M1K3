@@ -127,4 +127,25 @@ struct NativeGoalOrderTests {
         ) == nil)
         #expect(ToolTurnOptions().stablePrefix == nil)
     }
+
+    /// #771 (Kev + claude-opus-5.5, 2026-11-04; Prior: Unknown for the suite): a provider that carries its
+    /// own persona sends no system turn, so the stable prefix must land in the message that IS sent.
+    @Test("with no persona turn, the stable prefix indexes the message actually sent, both shapes")
+    func stablePrefixWithoutPersonaTurn() throws {
+        let grounding = "DATE\n\nCONVERSATION SO FAR\nUSER: hi\nM1K3: hello\n(framing)\n\nFACTS"
+        let stable = "DATE\n\nCONVERSATION SO FAR\nUSER: hi\nM1K3: hello".count
+        for shape in [NativePromptShape.groundingInUser, .groundingInSystem] {
+            let prefix = try #require(LocalAgent.stablePrefix(
+                shape: shape, persona: "", goal: "hi", grounding: grounding, stableChars: stable
+            ))
+            let messages = LocalAgent.buildNativeMessages(persona: "", goal: "hi", grounding: grounding, shape: shape)
+            try #require(prefix.messageIndex < messages.count, "\(shape)")
+            let text: String = switch messages[prefix.messageIndex] {
+            case let .system(text): text
+            case let .user(text, _): text
+            default: ""
+            }
+            #expect(String(text.prefix(prefix.characters)).hasSuffix("M1K3: hello"), "\(shape)")
+        }
+    }
 }
