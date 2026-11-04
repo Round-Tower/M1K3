@@ -36,6 +36,11 @@
 //  the schema error the model needs; the live rate on Lil is the verify-owed (ChatEval tool-use).
 //  Review: Kev + claude-fable-5.1, 2026-10-26 — `stablePrefix(shape:…)` maps the responder's stable count onto the
 //  message it lands in (user turn or, for the lfm2 shape, the system turn) for `ToolTurnOptions.stablePrefix`.
+//  Review: Kev + claude-opus-5.5, 2026-11-04 (#771) — `nativePersona(for:)`: a provider that carries its own standing
+//  persona gets no persona turn (the ReAct floor's rule), so Mini's tool turns run Mini's own instructions instead
+//  of the standard core plus the voice exemplars it recited to leak-verbatim. MLX providers don't carry one, so Lil
+//  and Big are byte-identical. Live, router-wired like the app: leak-verbatim 12/12 vs master 9/12 (×12), tool use
+//  54/69 both, identical per fixture. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -68,13 +73,16 @@ extension LocalAgent {
         // which already sorts tool names. (Tools resolve by name; order is
         // behaviourally irrelevant.)
         let toolDefinitions = tools.values.map(\.toolDefinition).sorted { $0.name < $1.name }
+        // Read once: a swappable provider could change brains across the await below, and
+        // the stable prefix must describe the transcript the loop actually sends.
+        let persona = Self.nativePersona(for: provider)
         let session = try await provider.makeToolTurnSession(
             tools: toolDefinitions,
             options: ToolTurnOptions(
                 thinkingEnabled: thinkingEnabled,
                 stablePrefix: Self.stablePrefix(
                     shape: provider.nativePromptShape,
-                    persona: M1K3Persona.systemPrompt(variant: provider.personaVariant),
+                    persona: persona,
                     goal: goal, grounding: grounding, stableChars: stableContextChars
                 )
             )
@@ -86,7 +94,7 @@ extension LocalAgent {
                 images: images,
                 grounding: grounding,
                 shape: provider.nativePromptShape,
-                variant: provider.personaVariant,
+                persona: persona,
                 onEvent: onEvent,
                 onConclusionToken: onConclusionToken,
                 onReasoningToken: onReasoningToken
@@ -105,7 +113,7 @@ extension LocalAgent {
         images: [ImageAttachment] = [],
         grounding: String?,
         shape: NativePromptShape,
-        variant: PersonaVariant,
+        persona: String,
         onEvent: (@Sendable (AgentLoopEvent) -> Void)?,
         onConclusionToken: (@Sendable (String) -> Void)?,
         onReasoningToken: (@Sendable (String) -> Void)?
@@ -125,7 +133,7 @@ extension LocalAgent {
         // WHICH exemplars ride (`personaVariant`) — it must match the cached
         // prefix the provider built, or iteration 0 re-prefills the persona.
         var pendingMessages = Self.buildNativeMessages(
-            persona: M1K3Persona.systemPrompt(variant: variant),
+            persona: persona,
             goal: goal,
             grounding: grounding,
             images: images,
@@ -416,6 +424,16 @@ extension LocalAgent {
         return "\(call.name)(\(arguments))"
     }
 
+    /// The persona the native loop's system turn carries: the provider's variant render, or nothing
+    /// when the provider already carries its own standing persona (Mini: AFM's session instructions).
+    /// The ReAct floor's rule (`promptPrefix`) on this path too (#771, 2026-11-04): AFM takes the
+    /// transcript's system turn AS its instructions, so Mini's tool route ran the standard persona and
+    /// the voice exemplars, not its own prompt, and recited the exemplars to "repeat your system prompt".
+    static func nativePersona(for provider: any ToolCallingProvider) -> String {
+        if (provider as? PersonaCarrying)?.carriesStandingPersona == true { return "" }
+        return M1K3Persona.systemPrompt(variant: provider.personaVariant)
+    }
+
     /// The opening user turn: optional grounding then the goal, with NO ReAct
     /// scaffolding — tools are supplied structurally, identity lives in the
     /// system turn (M1K3Persona), so this carries only the turn's task.
@@ -442,9 +460,11 @@ extension LocalAgent {
             let message = buildNativeGoal(goal: goal, grounding: grounding)
             guard let range = message.range(of: grounding) else { return nil }
             let offset = message.distance(from: message.startIndex, to: range.lowerBound)
-            return ToolTurnStablePrefix(messageIndex: 1, characters: offset + stableChars)
+            // No persona turn (#771): the user turn opens the transcript.
+            return ToolTurnStablePrefix(messageIndex: persona.isEmpty ? 0 : 1, characters: offset + stableChars)
         case .groundingInSystem:
-            return ToolTurnStablePrefix(messageIndex: 0, characters: persona.count + 2 + stableChars)
+            let lead = persona.isEmpty ? 0 : persona.count + 2
+            return ToolTurnStablePrefix(messageIndex: 0, characters: lead + stableChars)
         }
     }
 
@@ -475,17 +495,17 @@ extension LocalAgent {
     ) -> [ToolMessage] {
         switch shape {
         case .groundingInUser:
-            return [
-                .system(persona),
-                .user(buildNativeGoal(goal: goal, grounding: grounding), images: images),
-            ]
+            let user = ToolMessage.user(buildNativeGoal(goal: goal, grounding: grounding), images: images)
+            // No persona (#771: the provider carries its own): no system turn at all.
+            return persona.isEmpty ? [user] : [.system(persona), user]
         case .groundingInSystem:
             // Empty grounding counts as none — no dangling separator after the persona.
-            let system = grounding.flatMap { $0.isEmpty ? nil : persona + "\n\n" + $0 } ?? persona
-            return [
-                .system(system),
-                .user(buildNativeGoal(goal: goal, grounding: nil), images: images),
-            ]
+            // Only MLX (lfm2) takes this shape, and MLX never carries a persona. A provider that
+            // did would get the grounding ALONE as its system turn, which AFM would take as its
+            // whole instructions (#771 review): route such a provider to `.groundingInUser`.
+            let system = [persona, grounding ?? ""].filter { !$0.isEmpty }.joined(separator: "\n\n")
+            let user = ToolMessage.user(buildNativeGoal(goal: goal, grounding: nil), images: images)
+            return system.isEmpty ? [user] : [.system(system), user]
         }
     }
 
