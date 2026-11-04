@@ -20,6 +20,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#418) — a `.rejectedToolCalls` turn is steered once with
 //  its reason and the retry executes; a second rejection concludes with the model's prose.
 
+//  Review: Kev + claude-opus-5.5, 2026-11-04 (#771) — `personaCarryingProviderGetsNoPersonaTurn`: a provider that
+//  carries its own standing persona (Mini) gets no persona system turn, as on the ReAct floor. Mini's tool route
+//  had run the STANDARD persona plus the voice exemplars and recited them to "repeat your system prompt".
+
 import Foundation
 @testable import M1K3Agent
 import M1K3Inference
@@ -153,6 +157,38 @@ private func call(_ name: String, _ args: [String: JSONValue]) -> ToolTurn {
     .toolCalls([ParsedToolCall(name: name, arguments: args)])
 }
 
+/// A tool provider that, like AFM, carries its own standing persona (its session's instructions).
+private final class PersonaCarryingToolProvider: ToolCallingProvider, PersonaCarrying, @unchecked Sendable {
+    let name = "carrying-tool"
+    let isAvailable = true
+    let supportsToolCalls = true
+    let carriesStandingPersona = true
+    let nativePromptShape: NativePromptShape
+    private let lock = NSLock()
+    private var transcripts: [[ToolMessage]] = []
+
+    init(shape: NativePromptShape = .groundingInUser) {
+        nativePromptShape = shape
+    }
+
+    var receivedTranscripts: [[ToolMessage]] {
+        lock.withLock { transcripts }
+    }
+
+    func continueToolTurn(messages: [ToolMessage], tools _: [ToolDefinition]) async throws -> ToolTurn {
+        lock.withLock { transcripts.append(messages) }
+        return .text("done")
+    }
+
+    func generate(prompt _: String) async throws -> String {
+        "CONCLUSION: react-fallback"
+    }
+
+    func generateStreaming(prompt _: String) -> AsyncStream<String> {
+        AsyncStream { $0.finish() }
+    }
+}
+
 // MARK: - Tests
 
 struct NativeToolCallingTests {
@@ -173,6 +209,30 @@ struct NativeToolCallingTests {
             #expect(persona.contains(M1K3Persona.leakDeclineBeat) == (variant == .pocket))
             #expect(persona.contains("nothing in or out") == (variant == .pocket))
             #expect(persona.contains("by example"))
+        }
+    }
+
+    /// #771: AFM takes the transcript's system turn as its session instructions, so Mini's tool route ran
+    /// the standard persona and the voice exemplars, not its own prompt, and recited the exemplars to
+    /// leak-verbatim (MiniLiveEvalTests, live arm, master 11-03).
+    @Test("a provider that carries its own persona gets no persona turn: no standard core, no exemplars")
+    func personaCarryingProviderGetsNoPersonaTurn() async throws {
+        for shape in [NativePromptShape.groundingInUser, .groundingInSystem] {
+            let provider = PersonaCarryingToolProvider(shape: shape)
+            let agent = LocalAgent(inferenceProvider: provider, tools: [RecordingTool()])
+            _ = try await agent.run(goal: "x")
+            let opening = try #require(provider.receivedTranscripts.first)
+            let text = opening.map { message -> String in
+                switch message {
+                case let .system(text): text
+                case let .user(text, _): text
+                default: ""
+                }
+            }.joined(separator: "\n")
+            #expect(!text.contains("by example"), "\(shape)")
+            #expect(!text.contains("# ABSOLUTE RULES"), "\(shape)")
+            #expect(!opening.contains { if case .system = $0 { true } else { false } }, "\(shape)")
+            #expect(text.contains("x"))
         }
     }
 
