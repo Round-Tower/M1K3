@@ -1,14 +1,21 @@
 Thanks for testing M1K3 1.3.0 on iPhone and iPad.
 
 New in this build, please try:
-• Turn on Speak answers, or use voice mode, and ask something that needs a web search: I should stop speaking at the sources instead of reading out the links
+• The line over the chat field says who answers and whether web search is on, like "Lil · Web on". Tap it to switch brains, or to turn web search off for the next question
+• One ＋ beside the field holds Files and Photos, plus the same brain and web switches
+• On a folding iPhone, try the chat and Settings both open and closed
+• Tell me how you like answers: say "Keep your answers short, please." Close the app, reopen it and ask an open question. The answer should stay short
+• Reply "yes", "go on" or 👍 to an offer: I should carry on, not repeat my last message
+• Ask Lil "what's in tech news?": it should search the web, and not repeat an earlier answer
+• Downloads: before a brain downloads I check there's room, and the bar moves the whole way. If one fails, I say why, and "Send a report" appears under it
+• Add a scanned PDF under Documents: I read it on your device and say how many pages I read
+• Ask "are you ready?" while a brain downloads: I should say how far along it is
+• Thumbs down an answer and type a note: the note box should stay open while you type
+• If M1K3 ever quits unexpectedly, the next launch shows a short note offering a report. You see the report before anything is sent, and no rating request comes for 3 days
 
 And the basics:
-• Chat on Mini, and ask it for a number or name from a PDF under Documents: the answer should come from your document
-• Rate an answer with thumbs up or down
-• Voice mode, a few turns in a row
-• Airplane mode: chat should keep working on device
+• Voice mode, a few turns in a row. Sources are no longer read aloud
+• Airplane mode: chat should keep working on the device
 • Brain at Home with M1K3 on your Mac
-• Until Nov 1 the Fox should be in its Halloween look
 
-The network is used for brain downloads and web search, which is on by default — one switch in Settings turns it off. Send feedback straight from TestFlight; a screenshot of anything odd helps most.
+The network is used for brain downloads and web search, which is on by default. Send feedback straight from TestFlight; a screenshot of anything odd helps most.
