@@ -169,7 +169,8 @@ struct PersonaLeakGuardTests {
         #expect(!PersonaLeakGuard.spans.isEmpty)
         // Core + the voice exemplars (2026-09-06) + the framing of two taught answers (#775) — live constants only.
         let protected = [
-            M1K3Persona.wiringText, M1K3Persona.voiceExemplars, M1K3Persona.capabilityMove, EgressDisclosure.instruction,
+            M1K3Persona.wiringText, M1K3Persona.voiceExemplars,
+            M1K3Persona.capabilityMove, EgressDisclosure.instruction,
         ].joined(separator: "\n").lowercased()
         for span in PersonaLeakGuard.spans {
             #expect(protected.contains(span.prefix(40).lowercased()))
@@ -329,7 +330,8 @@ struct PersonaLeakGuardTests {
     /// leak-verbatim on 10-19, with a comma for the dash). Device-free, so the Mac and iOS clauses both trip.
     @Test("the egress clause's instruction is a leak, on every device and in pocket's comma reflow")
     func egressInstructionIsALeak() {
-        let mac = EgressDisclosure.clause(EgressFacts(webSearch: true, privateCloudOffered: true), device: "this machine")
+        let macFacts = EgressFacts(webSearch: true, privateCloudOffered: true)
+        let mac = EgressDisclosure.clause(macFacts, device: "this machine")
         let home = EgressDisclosure.clause(EgressFacts(webSearch: true, brainIsHome: true), device: "this device")
         #expect(PersonaLeakGuard.leaks(mac))
         #expect(PersonaLeakGuard.leaks(home))
@@ -349,11 +351,13 @@ struct PersonaLeakGuardTests {
                     let facts = EgressFacts(webSearch: web, privateCloudOffered: pcc, brainIsHome: home)
                     for device in ["this machine", "this device"] {
                         for variant in [PersonaVariant.standard, .pocket] {
-                            let clause = EgressDisclosure.adapted(EgressDisclosure.clause(facts, device: device), for: variant)
+                            let rendered = EgressDisclosure.clause(facts, device: device)
+                            let clause = EgressDisclosure.adapted(rendered, for: variant)
                             guard let open = clause.range(of: "\n\"") else {
                                 Issue.record("no quoted answer in: \(clause)"); continue
                             }
-                            let answer = String(clause[open.upperBound...]).trimmingCharacters(in: CharacterSet(charactersIn: "\""))
+                            let answer = String(clause[open.upperBound...])
+                                .trimmingCharacters(in: CharacterSet(charactersIn: "\""))
                             #expect(!PersonaLeakGuard.leaks(answer), "\(answer)")
                             for sentence in answer.components(separatedBy: ".") {
                                 #expect(!PersonaLeakGuard.leaks(sentence), "\(sentence)")
@@ -374,16 +378,17 @@ struct PersonaLeakGuardTests {
             "Yo. I'm M1K3, living right here on this machine. Think of me as the resident chaos agent who's decided "
                 + "to help you instead; I talk things through, remember what matters to you, and write code and whole "
                 + "pages. So, what are we building?",
-            "Yes, some of it can. Web searches: I decide when to search, and my query goes to DuckDuckGo and can carry "
-                + "words from our chat; Wikipedia lookups and pages I read are fetched. If you pick Private Cloud Compute "
-                + "as my brain, what you send goes to Apple's Private Cloud Compute. My brain runs right here, and your "
-                + "memories and documents are stored on this machine.",
+            "Yes, some of it can. Web searches: I decide when to search, and my query goes to DuckDuckGo and "
+                + "can carry words from our chat; Wikipedia lookups and pages I read are fetched. If you pick "
+                + "Private Cloud Compute as my brain, what you send goes to Apple's Private Cloud Compute. My brain "
+                + "runs right here, and your memories and documents are stored on this machine.",
             "Mostly, yes: my brain runs right here, and your memories and documents are stored on this machine. "
                 + "The one exit is web search, and I decide when to use it.",
             "I'm M1K3. I live on your Mac, wear the villain's cape for fun, and I'm on your side. "
                 + "I don't share my own wiring, but ask me anything else.",
             "My brain is your own Mac, over your Wi‑Fi: messages, and memories or documents I draw on, go to it.",
-            "Fair privacy question! Answer: web search is the one thing that goes out, and only when I choose to search.",
+            "Fair privacy question! Answer: web search is the one thing that goes out, "
+                + "and only when I choose to search.",
         ]
         for answer in answers {
             #expect(!PersonaLeakGuard.leaks(answer), "\(answer)")

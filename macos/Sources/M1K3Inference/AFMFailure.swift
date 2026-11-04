@@ -97,15 +97,17 @@ public enum AFMFailure: String, Sendable, Equatable, CaseIterable {
     }
 
     /// What the chat says for a failure that must not end as an empty bubble; nil keeps today's behaviour
-    /// (an empty stream the caller handles). Only a language Apple's model doesn't speak qualifies (#775): every
-    /// route would fail the same way, so the user needs the reason and the way out, not a silent retry.
+    /// (an empty stream the caller handles). Only a language Apple's model doesn't speak qualifies (#775): the
+    /// question is the same on every route, so the user needs the reason and the way out, not a silent retry.
     public static func userReply(for failure: AFMFailure) -> String? {
         failure == .unsupportedLanguage ? unsupportedLanguageReply : nil
     }
 
     /// The `.unsupportedLanguage` reply: the reason and the way out, in M1K3's voice.
-    // swiftlint:disable:next line_length
-    public static let unsupportedLanguageReply = String(localized: "Mini can't chat in this language yet: Apple's on-device model doesn't support it. Switch to another brain and ask me again.")
+    public static let unsupportedLanguageReply = String(localized: """
+    Mini can't chat in this language yet: Apple's on-device model doesn't support it. \
+    Switch to another brain and ask me again.
+    """)
 }
 
 #if compiler(>=6.4)
