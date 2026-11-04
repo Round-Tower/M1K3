@@ -133,7 +133,7 @@ struct MiniLiveEvalTests {
     private static var supportedKinds: Set<TaskKind> {
         let bare: Set<TaskKind> = [
             .openChat, .security, .refusal, .reasoning, .codeGen, .worldKnowledge,
-            .humour, .interview, .instructionFollowing, .document, .sycophancy,
+            .humour, .interview, .instructionFollowing, .document, .sycophancy, .format,
         ]
         return liveAll ? bare.union([.toolUse]) : bare
     }
