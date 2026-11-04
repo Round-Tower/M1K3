@@ -46,6 +46,11 @@
 //  `M1K3_AFM_EVAL_DISPATCH=1` adds router-invoked tools: Mini picks one tool, the app runs it.
 //  Review: Kev + claude-opus-5-5, 2026-10-04 — the live responder carries the Mac's shipped egress facts (web
 //  on, PCC offered) (#482). Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-04 — `format` is mirrored (#762 asked for it), and the run names its
+//  routing (`routeNote`, printed first and stamped in the notes): the live arm WITHOUT the router forces every
+//  turn down the agent route, which the app never does. That arm read Mini's format as 9/24 at 52 s a turn
+//  (11/24 at 9.5 s routed) and #771's fix as costing tool judgement it doesn't cost routed (54/69 both).
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -107,6 +112,17 @@ struct MiniLiveEvalTests {
         evalEnvironment["M1K3_AFM_EVAL_LIVE"] == "1"
     }
 
+    /// How the live arm routes, said out loud: unrouted, every turn takes the agent route, which the
+    /// app never does (it routes every tier). Wire like the app: ROUTER=mini DISPATCH=1.
+    private static var routeNote: String {
+        guard liveAll else { return "bare generate (no route)" }
+        guard let router = evalEnvironment["M1K3_AFM_EVAL_ROUTER"] else {
+            return "NO ROUTER: every turn forced down the agent route, NOT app-like "
+                + "(the app routes every tier; set M1K3_AFM_EVAL_ROUTER=mini M1K3_AFM_EVAL_DISPATCH=1)"
+        }
+        return "router: \(router), dispatch \(evalEnvironment["M1K3_AFM_EVAL_DISPATCH"] == "1" ? "on" : "off")"
+    }
+
     private static var repeats: Int {
         max(1, evalEnvironment["M1K3_AFM_EVAL_REPEATS"].flatMap(Int.init) ?? 1)
     }
@@ -150,6 +166,7 @@ struct MiniLiveEvalTests {
             ? AppleFoundationModelsProvider(instructions: { M1K3Persona.systemPrompt })
             : AppleFoundationModelsProvider()
         try #require(provider.isAvailable, "Apple Intelligence is not available to this process")
+        print("route: " + Self.routeNote)
         var scores: [ChatEvalScore] = []
         var firstPieces: [TaskKind: [Int]] = [:]
         var paced = false
@@ -275,6 +292,7 @@ struct MiniLiveEvalTests {
             repeats: repeats,
             notes: (fullPersona ? "arm: full persona" : "arm: trimmed persona (miniSystemPrompt)")
                 + (liveAll ? " · every kind on the live responder" : " · bare generate; open-chat alone on the live responder")
+                + " · " + routeNote
                 + " · plain test process (swift test), not the app bundle"
                 + (evalEnvironment["M1K3_AFM_EVAL_NOTES"].map { " · " + $0 } ?? "")
         )
