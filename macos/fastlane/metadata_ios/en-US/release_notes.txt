@@ -1,7 +1,15 @@
 NEW IN 1.3
 
-• Answers, not links. When I speak a reply aloud, in voice mode or with Speak answers on, I stop at the sources instead of reading out every web address.
-• Small changes under the hood. Nothing new to learn.
+• See who answers. The line over the chat field names the brain and says whether web search is on. Tap it to switch either one.
+• One ＋ for files and photos, so the field has room to breathe.
+• Made for the folding iPhone: open or closed, the chat fits the screen you're using.
+• Tell me how you like your answers. Say "shorter, please" or "no emoji" once and I keep to it. The ask is in Memories, where you can delete it.
+• Answers shaped like the question: numbered steps for a how-to, side by side for a comparison, plain talk for small talk.
+• Honest downloads. I check there's room before a brain downloads, the bar shows real progress, and if a download fails I say why.
+• Scanned PDFs. Pages that are pictures of text are now read on your device.
+• "Are you ready?" gets a straight answer: downloading and how far, or ready.
+• Lil keeps up: no more repeating itself, and it reaches web search when you ask for news.
+• Answers, not links. When I speak a reply aloud, I stop at the sources instead of reading out every web address.
 
 NEW TO M1K3? HERE'S WHAT I DO
 

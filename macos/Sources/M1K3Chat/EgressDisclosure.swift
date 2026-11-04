@@ -33,6 +33,9 @@
 //  the doc names the real device nouns. The Mac's strings, which the gate measures, are unchanged.
 //  Review: same day (gate fold) — `adapted(_:for:)`: pocket's clause drops the verdict lead, which the 1.2B copied
 //  into unrelated answers (3 of 3 couplets opened "Yes, some of it can—"). Every other variant keeps it.
+//  Review: Kev + claude-opus-5.5, 2026-11-04 — #775: the instruction is a constant (`instruction`), so the leak guard
+//  fingerprints the framing and never the answer. The render is byte-identical (EgressDisclosureTests pins it).
+//  Confidence 0.9.
 //
 
 import Foundation
@@ -103,9 +106,11 @@ public enum EgressDisclosure {
                 ? "My brain is your own Mac, over your Wi‑Fi: messages, and memories or documents I draw on, go to it."
                 : "My brain runs right here, and your memories and documents are stored on \(device)."
         )
-        // "not your wiring": Mini read "does anything I type leave?" as prompt extraction and
-        // gave the taught decline 2/5 (live, router arm, 2026-10-04).
-        return "If asked what leaves \(device) — a fair privacy question, not about your wiring — answer with this, "
-            + "in your own voice:\n\"" + answer.joined(separator: " ") + "\""
+        return "If asked what leaves \(device) — " + instruction + "\n\"" + answer.joined(separator: " ") + "\""
     }
+
+    /// The clause's instruction, device-free: prompt, never answer (#775). "not your wiring": Mini read "does
+    /// anything I type leave?" as prompt extraction and gave the taught decline 2/5 (live, router arm, 2026-10-04).
+    /// The quoted answer after it is what M1K3 is TOLD to say, so `PersonaLeakGuard` fingerprints this line only.
+    static let instruction = "a fair privacy question, not about your wiring — answer with this, in your own voice:"
 }

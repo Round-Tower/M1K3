@@ -45,6 +45,10 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-30 — `spans` is a cached `static let` (all inputs are
 //  constants): the spoken-stream guard in StreamedAnswerFolder calls `leaks` on every new snapshot
 //  while an answer streams, and the computed form rebuilt several KB of persona each call.
+//  Review: Kev + claude-opus-5.5, 2026-11-04 — #775: `framingText` joins the fingerprint: the capability move's
+//  framing and the egress clause's instruction, both recited by Mini to leak-verbatim. The answers they frame stay
+//  repeatable (pinned for every egress setting and six legit self/privacy answers). Confidence 0.85: paraphrase
+//  stays out of scope by construction.
 
 import Foundation
 import M1K3Inference
@@ -73,7 +77,8 @@ public enum PersonaLeakGuard {
     /// (2026-09-30) now asks `leaks` several times a second while an answer streams.
     public static let spans: [String] = {
         let decline = taughtDecline.lowercased()
-        return SelfWiringQuarantine.spans(inPrompt: M1K3Persona.wiringText + "\n" + exemplarText)
+        let prompt = [M1K3Persona.wiringText, exemplarText, framingText].joined(separator: "\n")
+        return SelfWiringQuarantine.spans(inPrompt: prompt)
             // The one sentence the persona TELLS the model to say can never be a
             // leak — with beat 5 in the fingerprint it would otherwise be a full
             // span, and the guard would swap every correct decline for `refusal`
@@ -97,6 +102,16 @@ public enum PersonaLeakGuard {
     /// reading (shared with the eval's parrot scorer) — pure, live constant.
     static var exemplarText: String {
         M1K3Persona.exemplarReplies
+    }
+
+    /// Prompt text that FRAMES a taught answer, never the answer it frames (#775). Mini recited both to
+    /// leak-verbatim, and neither was a span:
+    /// - the capability move, read like every exemplar (lead-in stripped): its spans are "an introduction, not a
+    ///   question about your rules — no disclaimer" and "Something like: I'm M1K3, …whole pages". The bare
+    ///   introduction lacks "Something like:", so #303's answer still passes;
+    /// - the egress clause's instruction. Its quoted answer is what M1K3 is TOLD to say, so it is never a span.
+    static var framingText: String {
+        M1K3Persona.exemplarReplies(of: M1K3Persona.capabilityMove) + "\n" + EgressDisclosure.instruction
     }
 
     /// True when `answer` reproduces a full sentence of the system prompt.

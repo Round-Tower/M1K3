@@ -25,6 +25,7 @@
 //  neutral shape exists only where `Attachment(imageURL:)` runs; elsewhere the turn is the honest
 //  `.cannotShow` reply, never a persona-free session. `visionDecline(from:)` deleted (PR #526 third-pass
 //  review). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-04 — #775: an image turn in an unsupported language gets the language reply.
 
 import Foundation
 @testable import M1K3Inference
@@ -226,6 +227,13 @@ struct AFMVisionTurnTests {
         #expect(text.contains("No brain on this device can read images yet"))
         #expect(!text.contains("Switch to"))
         #expect(!text.contains("Lil"), "an empty reader list names nobody")
+    }
+
+    /// #775: a language Apple's model doesn't speak is not about the image: the same reply as a text turn.
+    @Test("an unsupported language gets the language reply, not an image decline")
+    func unsupportedLanguageOnAnImageTurn() {
+        let text = AFMToolPrompt.visionFailureReply(for: .unsupportedLanguage, imageCount: 1, platform: .mac)
+        #expect(text == AFMFailure.userReply(for: .unsupportedLanguage))
     }
 
     @Test("transient classes ask for a resend — no brain-switch advice")

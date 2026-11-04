@@ -76,6 +76,9 @@
 //  Prompt the turn is the honest `.cannotShow` reply, no session built (PR #526 third-pass review). Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-10-16 — the launch `afm window` line names WHY AFM read unavailable (a
 //  local build launched seconds after killing the last M1K3 logged "unavailable — floor" while AFM was fine). Logging only.
+//  Review: Kev + claude-opus-5.5, 2026-11-04 — #775: generateStreaming's catch yields `AFMFailure.userReply` for a
+//  language Apple's model doesn't speak, instead of an empty bubble. Verified by compile, per this file's convention;
+//  the class and reply are pinned in AFMFailureTests. Confidence 0.8: no live unsupported-language throw captured.
 import Foundation
 import M1K3LogCore
 import os
@@ -491,12 +494,14 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
             )
             logTurnStart(promptChars: prompt.count, instructionChars: instrText.count, streaming: true, warmth: warmth)
             let task = Task { [self] in
+                var yieldedAny = false
                 do {
                     let clock = ContinuousClock()
                     let start = clock.now
                     var firstLogged = false
                     let stream = session.streamResponse(to: prompt)
                     for try await snapshot in stream {
+                        yieldedAny = true
                         if !firstLogged, !snapshot.content.isEmpty {
                             firstLogged = true
                             Self.logFirstToken(after: clock.now - start, warmth: warmth)
@@ -518,6 +523,13 @@ public struct AppleFoundationModelsProvider: InferenceProvider {
                     // began here, unlogged.
                     logFailure(error, streaming: true)
                     logTokenBudget(instructionText: instrText, promptText: prompt)
+                    // #775: a language Apple's model doesn't speak: the turn says why instead of ending empty.
+                    // It ends the plain route here, before the agent and streamFallback (whose prompt is smaller,
+                    // but the question is the same). Only before any snapshot: a reply glued onto a partial answer
+                    // would read as one run-on bubble. Every other class keeps the empty stream its caller handles.
+                    if !yieldedAny, let reply = AFMFailure.userReply(for: AFMFailure.classify(error: error)) {
+                        continuation.yield(reply)
+                    }
                     continuation.finish()
                 }
             }

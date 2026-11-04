@@ -50,6 +50,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — #397 fold: `render(tools: [])` (the
 //  native session) no longer ends by pointing at "the tools listed above" when
 //  nothing is listed. Pinned in AFMToolPromptTests. Confidence now 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-04 — #775: `visionFailureReply` answers `.unsupportedLanguage` with the text
+//  turn's language reply (`AFMFailure.userReply`), since it isn't about the image. Pinned in AFMToolMappingTests.
 
 import Foundation
 
@@ -305,6 +307,9 @@ public enum AFMToolPrompt {
         switch failure {
         case .rateLimited, .daemonUnavailable, .timeout:
             return "I couldn't read the \(noun) you attached just now — try again in a moment."
+        case .unsupportedLanguage:
+            // #775: not about the image. The text turn's reply, from its one source.
+            return AFMFailure.unsupportedLanguageReply
         case .contextOverflow:
             return "This conversation is too long to read an image alongside it — "
                 + "start a fresh chat and send the \(noun) again."

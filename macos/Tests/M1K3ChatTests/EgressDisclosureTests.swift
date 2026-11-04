@@ -17,6 +17,8 @@
 //  Review: same day (pre-push review fold) — the length budget renders the real device noun over all eight
 //  combinations (it read "this Mac" and passed by 4; raised 480 → 520, measured); Home leads with a plain "Yes.";
 //  the rendered answer is scored against chat-what-leaves.
+//  Review: Kev + claude-opus-5.5, 2026-11-04 — #775: `clauseStartsWithTheInstruction` pins the render byte-identical
+//  after the instruction became a constant.
 //
 
 import M1K3AgentTools
@@ -186,6 +188,18 @@ struct EgressDisclosureTests {
                     #expect(text.count < 520, "\(web)/\(pcc)/\(home): \(text.count)")
                 }
             }
+        }
+    }
+
+    /// #775: the instruction became a constant the leak guard fingerprints; the render must not move a byte.
+    @Test("the clause still opens with today's exact words: the instruction constant moved no byte")
+    func clauseStartsWithTheInstruction() {
+        #expect(EgressDisclosure.instruction
+            == "a fair privacy question, not about your wiring — answer with this, in your own voice:")
+        for device in ["this machine", "this device"] {
+            let text = EgressDisclosure.clause(EgressFacts(webSearch: true, privateCloudOffered: true), device: device)
+            #expect(text.hasPrefix("If asked what leaves \(device) — a fair privacy question, not about your wiring — "
+                    + "answer with this, in your own voice:\n\"Yes, some of it can. "))
         }
     }
 }

@@ -178,6 +178,8 @@
 //  global to notice (the parallel race). Now it is a compile error. Confidence 0.9.
 //  Review: Kev + claude-opus-5.5, 2026-10-28 — `refreshUserStyle(reading:)`: the app's read-then-set
 //  goes through `UserStyleRefreshGate`, so an overtaken read can't restore a forgotten ask. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-04 — #775: comment only. `capabilityMove`'s doc now says its framing is
+//  fingerprinted by PersonaLeakGuard and its introduction never is. No prompt byte moves.
 
 import Foundation
 import Synchronization
@@ -722,8 +724,9 @@ public enum M1K3Persona {
     /// rules taught one reply by example and it was the decline. A SELF-rule
     /// rewording didn't move Lil and cost Mini (it echoed "wiring" into the answer),
     /// so this rides the cached exemplar set instead, where recency does the work.
-    /// Never fingerprinted: saying what M1K3 can do is not a leak, so the guard must
-    /// not swap it for the refusal. Written the way M1K3 would say it, because v1
+    /// Its FRAMING is fingerprinted (#775: Mini recited "Something like: I'm M1K3, …"); the bare
+    /// introduction never is: saying what M1K3 can do is not a leak, so the guard must not
+    /// swap it. Written the way M1K3 would say it, because v1
     /// (third person, "what matters to them") was copied word for word, pronouns and
     /// all, then capped with a wiring disclaimer; v2 names that disclaimer as not needed
     /// and covers "who are you", which drew the flat decline on master too.

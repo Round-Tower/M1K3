@@ -22,6 +22,10 @@
 //  quoted verbatim from a live throw; the others are recognised from SDK case
 //  names and the 2026-08-03 daemon collapse, so `.unknown` is deliberately the
 //  honest floor rather than a best guess.
+//  Review: Kev + claude-opus-5.5, 2026-11-04 — #775: `.unsupportedLanguage` (typed and by text, checked before the
+//  guardrail because Apple's description names one) and `userReply(for:)`, the one class that must not end as an
+//  empty bubble. Defensive: live on macOS 27.2 (11-04), Irish, Welsh and Ukrainian prompts got English
+//  answers, no throw, so the reply fires only if Apple does throw. Confidence 0.85 (the typed case is the SDK's).
 //
 
 import Foundation
@@ -43,6 +47,9 @@ public enum AFMFailure: String, Sendable, Equatable, CaseIterable {
     case rateLimited = "rate-limited"
     /// The generation timed out (macOS 27 typed `LanguageModelError.timeout`).
     case timeout
+    /// Apple's model doesn't speak the prompt's language or this locale (`unsupportedLanguageOrLocale`, #775).
+    /// Fix: not a retry, not a trim. Another brain can answer.
+    case unsupportedLanguage = "unsupported-language"
     /// Unrecognised. Deliberately not folded into a neighbouring class — an
     /// honest "we don't know" is worth more than a confident misdiagnosis, and
     /// a rising `unknown` count is itself the signal to come back here.
@@ -61,6 +68,10 @@ public enum AFMFailure: String, Sendable, Equatable, CaseIterable {
             || text.contains("exceededcontextwindowsize")
         if isOverflow {
             return .contextOverflow
+        }
+        // Before the guardrail check: Apple describes this error as "a generation guardrail detected language…" (#775).
+        if text.contains("unsupportedlanguageorlocale") {
+            return .unsupportedLanguage
         }
         if text.contains("guardrail") {
             return .guardrailViolation
@@ -84,6 +95,19 @@ public enum AFMFailure: String, Sendable, Equatable, CaseIterable {
         #endif
         return classify(String(describing: error))
     }
+
+    /// What the chat says for a failure that must not end as an empty bubble; nil keeps today's behaviour
+    /// (an empty stream the caller handles). Only a language Apple's model doesn't speak qualifies (#775): the
+    /// question is the same on every route, so the user needs the reason and the way out, not a silent retry.
+    public static func userReply(for failure: AFMFailure) -> String? {
+        failure == .unsupportedLanguage ? unsupportedLanguageReply : nil
+    }
+
+    /// The `.unsupportedLanguage` reply: the reason and the way out, in M1K3's voice.
+    public static let unsupportedLanguageReply = String(localized: """
+    Mini can't chat in this language yet: Apple's on-device model doesn't support it. \
+    Switch to another brain and ask me again.
+    """)
 }
 
 #if compiler(>=6.4)
@@ -101,6 +125,8 @@ public enum AFMFailure: String, Sendable, Equatable, CaseIterable {
                 return .rateLimited
             case .timeout:
                 return .timeout
+            case .unsupportedLanguageOrLocale:
+                return .unsupportedLanguage
             default:
                 return .unknown
             }

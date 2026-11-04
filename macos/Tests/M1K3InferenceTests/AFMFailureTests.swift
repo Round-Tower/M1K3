@@ -24,8 +24,11 @@
 //  quoted VERBATIM from a live 2026-08-03 throw (see MiniPromptBudgetTests);
 //  the guardrail and daemon markers come from SDK case names and the logged
 //  2026-08-03 rate-collapse, so they are recognised but not verbatim-pinned.
+//  Review: Kev + claude-opus-5.5, 2026-11-04 — #775: `.unsupportedLanguage`, its check order against the guardrail,
+//  the typed case, and the one failure class that carries a user reply. Confidence 0.85.
 //
 
+import Foundation
 @testable import M1K3Inference
 import Testing
 
@@ -101,6 +104,36 @@ struct AFMFailureTests {
         let novel = CustomError(description: "something new")
         #expect(AFMFailure.classify(error: novel) == .unknown)
     }
+
+    // MARK: - #775: a language Apple's model doesn't speak
+
+    @Test("the SDK's unsupported-language throw is its own class")
+    func unsupportedLanguageIsItsOwnClass() {
+        let thrown = "unsupportedLanguageOrLocale(FoundationModels.LanguageModelSession.GenerationError.Context("
+            + "debugDescription: \"Unsupported language\"))"
+        #expect(AFMFailure.classify(thrown) == .unsupportedLanguage)
+    }
+
+    /// Apple's own description of this error says "a generation guardrail detected language…", so the language
+    /// check must run before the guardrail one, or a language failure reads as a refusal.
+    @Test("language beats guardrail when the description mentions both")
+    func languageBeatsGuardrail() {
+        let both = "unsupportedLanguageOrLocale: a generation guardrail detected language or locale it does not support"
+        #expect(AFMFailure.classify(both) == .unsupportedLanguage)
+    }
+
+    @Test("only the language failure carries a user reply, and it points at another brain")
+    func onlyLanguageHasAReply() {
+        for failure in AFMFailure.allCases {
+            let reply = AFMFailure.userReply(for: failure)
+            if failure == .unsupportedLanguage {
+                #expect(reply?.contains("another brain") == true)
+                #expect(reply?.contains("Mini") == true)
+            } else {
+                #expect(reply == nil, "\(failure)")
+            }
+        }
+    }
 }
 
 #if compiler(>=6.4)
@@ -141,6 +174,15 @@ struct AFMFailureTests {
                 .init(debugDescription: "took too long")
             )
             #expect(AFMFailure.classify(error: error) == .timeout)
+        }
+
+        @available(macOS 27.0, iOS 27.0, visionOS 27.0, *)
+        @Test("LanguageModelError.unsupportedLanguageOrLocale maps to unsupportedLanguage (#775)")
+        func typedUnsupportedLanguage() {
+            let error = LanguageModelError.unsupportedLanguageOrLocale(
+                .init(languageCode: Locale.LanguageCode("ga"), debugDescription: "Unsupported language")
+            )
+            #expect(AFMFailure.classify(error: error) == .unsupportedLanguage)
         }
     }
 #endif
