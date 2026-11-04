@@ -5,7 +5,7 @@ New in this build, please try:
 • One ＋ beside the field holds Files and Photos, plus the same brain and web switches
 • On a folding iPhone, try the chat and Settings both open and closed
 • Tell me how you like answers: say "Keep your answers short, please." Close the app, reopen it and ask an open question. The answer should stay short
-• Reply "yes", "go on" or 👍 to an offer: I should carry on, not repeat my last message
+• Reply "yes", "go on" or a thumbs-up emoji to an offer: I should carry on, not repeat my last message
 • Ask Lil "what's in tech news?": it should search the web, and not repeat an earlier answer
 • Downloads: before a brain downloads I check there's room, and the bar moves the whole way. If one fails, I say why, and "Send a report" appears under it
 • Add a scanned PDF under Documents: I read it on your device and say how many pages I read
