@@ -31,6 +31,11 @@ the Release workflow's repository listed 100 refs against origin's 101) now says
 seconds of "no run yet", `wait` compares that workflow's own repository's gitReferences with the release tags
 on origin at the commit, once, and prints the -r2 re-trigger command; it never pushes. The product's
 primaryRepositories (a stale m1k3-private) is deliberately not read. Confidence 0.8: a 100-ref page may be a cap.
+Review: Kev + claude-opus-5.5, 2026-11-05 (review fold) — the effectful half is pinned over a faked ASC and origin:
+links.next pages, isDeleted refs, and every unreadable source as a sentence, never an exit. Only TAG-kind refs can
+make a tag known (a like-named branch could). `wait` survives a diagnosis that raises. The nothing-missing case is
+met through `known=`. A live read showed limit=200 honoured (101 on one page), so the 100 caveat is conservative.
+Confidence 0.85.
 """
 from __future__ import annotations
 
@@ -70,6 +75,12 @@ def ready(states: dict[str, str], platforms: tuple[str, ...]) -> bool:
     return all(states.get(p) == "VALID" for p in platforms)
 
 
+def xcode_tag_names(refs: list[dict[str, Any]]) -> list[str]:
+    """Names of the TAG refs (gitReferences `kind`); a branch named like a release tag is not the tag.
+    A ref with no kind counts as a tag: a false "known" is cheaper than a false alarm."""
+    return [r["name"] for r in refs if r.get("kind", "TAG") == "TAG"]
+
+
 def missed_tags(xcode_ref_names: list[str], tags_at_commit: list[str]) -> list[str]:
     """The tags at the commit that Xcode Cloud's repository doesn't list (bare or refs/tags/ names)."""
     known = {name.removeprefix("refs/tags/") for name in xcode_ref_names}
@@ -82,7 +93,9 @@ def ref_count(ls_remote: str) -> int:
 
 
 def retrigger_tag(missed: list[str]) -> tuple[str, str]:
-    """(base tag, the next -rN past every missed one): a missed -r2 asks for -r3, never a collision."""
+    """(base tag, the next -rN past every missed one): a missed -r2 asks for -r3, never a collision.
+    It doesn't ask origin whether that -rN exists: this runs only when Xcode Cloud knows no tag at the
+    commit, so an -rN already pushed there would be a missed one, and is counted."""
 
     def parsed(tag: str) -> tuple[str, int]:
         m = re.fullmatch(r"(.+)-r(\d+)", tag)
@@ -94,6 +107,8 @@ def retrigger_tag(missed: list[str]) -> tuple[str, str]:
 
 def format_diagnosis(missed: list[str], xcode_count: int, origin_count: int, sha: str,
                      known: list[str] | None = None) -> str:
+    # Both sides count heads + tags (live: 3 + 98 against origin's 3 + 99 on 2026-11-05), so the pair is
+    # like for like, but it is context: the tag name is the verdict.
     counts = f"Xcode Cloud lists {xcode_count} refs, origin has {origin_count}"
     cap = (" 100 is a round number: the API may cap the page, so a name missing past it is a hint, not proof."
            if xcode_count == 100 and missed else "")
@@ -167,17 +182,18 @@ def release_repository(pid: str) -> str | None:
     return None if "_error" in repo else (repo.get("data") or {}).get("id")
 
 
-def xcode_ref_names(repo_id: str) -> list[str] | None:
-    """Every live ref name Xcode Cloud lists for the repository, across `links.next` pages."""
-    names: list[str] = []
+def xcode_refs(repo_id: str) -> list[dict[str, Any]] | None:
+    """Every live ref (attributes: name, canonicalName, kind) Xcode Cloud lists for the repository,
+    across `links.next` pages. limit=200 is honoured (101 on one page, 2026-11-05)."""
+    refs: list[dict[str, Any]] = []
     page: str | None = f"/v1/scmRepositories/{repo_id}/gitReferences?limit=200"
     while page:
         resp = call("GET", page)
         if "_error" in resp:
             return None
-        names += [r["attributes"]["name"] for r in resp.get("data", []) if not r["attributes"].get("isDeleted")]
+        refs += [r["attributes"] for r in resp.get("data", []) if not r["attributes"].get("isDeleted")]
         page = resp.get("links", {}).get("next")
-    return names
+    return refs
 
 
 def origin_ref_count() -> int | None:
@@ -190,15 +206,15 @@ def diagnose_missed_tag(commit: str, pid: str | None = None) -> str:
     repo = release_repository(pid or product_id())
     if repo is None:
         return "diagnosis: could not read the Release workflow's repository from ASC"
-    names = xcode_ref_names(repo)
-    if names is None:
+    refs = xcode_refs(repo)
+    if refs is None:
         return f"diagnosis: could not read gitReferences for repository {repo}"
     tags = remote_release_tags_at(commit)
     origin = origin_ref_count()
     if tags is None or origin is None:
         return "diagnosis: could not read refs from origin"
-    missed = missed_tags(names, tags)
-    return format_diagnosis(missed, len(names), origin, commit, known=[t for t in tags if t not in missed])
+    missed = missed_tags(xcode_tag_names(refs), tags)
+    return format_diagnosis(missed, len(refs), origin, commit, known=[t for t in tags if t not in missed])
 
 
 def resolve_commit(arg: str) -> str:
@@ -256,7 +272,10 @@ def run_wait(commit: str, timeout: int, diagnose_after: int = 300) -> int:
         now = time.monotonic()
         no_run_since = (now if no_run_since is None else no_run_since) if run is None else None
         if diagnose_due(no_run_since, now, diagnose_after, diagnosed):
-            print(diagnose_missed_tag(commit, pid), flush=True)  # once; then keep waiting
+            try:  # advisory: a git or response-shape surprise must not end an hour's wait
+                print(diagnose_missed_tag(commit, pid), flush=True)  # once; then keep waiting
+            except Exception as exc:  # noqa: BLE001
+                print(f"diagnosis failed: {exc!r}", flush=True)
             diagnosed = True
         if now >= deadline:
             print("timed out", flush=True)

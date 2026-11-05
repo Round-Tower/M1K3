@@ -181,3 +181,109 @@ def test_wait_diagnoses_once_and_keeps_waiting(monkeypatch, capsys):
     assert builds.run_wait(SHA, timeout=900, diagnose_after=300) == 2  # it waited out the timeout
     assert calls == [SHA]
     assert capsys.readouterr().out.count("DIAG") == 1
+
+
+def test_the_cap_caveat_also_rides_the_known_branch_at_one_hundred():
+    msg = builds.format_diagnosis([TAG], 100, 101, SHA, known=[f"{TAG}-r2"])
+    assert "may cap" in msg and "not a dropped push" in msg
+
+
+def test_a_branch_named_like_the_tag_is_not_the_tag():
+    refs = [{"name": TAG, "kind": "BRANCH"}, {"name": "release-x", "kind": "TAG"}, {"name": "release-y"}]
+    # a ref with no kind is read as a tag: the old shape, and a false "known" beats a false alarm
+    assert builds.xcode_tag_names(refs) == ["release-x", "release-y"]
+
+
+# --------------------------------------------------------------------------- #
+# The effectful half: diagnose_missed_tag over a faked ASC and origin. It is advisory, so
+# every read failure is a sentence, never an exit: a SystemExit here would kill `wait`.
+# --------------------------------------------------------------------------- #
+
+REPO = "bb4ad2d3-e540-47be-b3a1-da200191c183"
+NEXT = f"https://api.appstoreconnect.apple.com/v1/scmRepositories/{REPO}/gitReferences?cursor=Mg"
+
+
+def _ref(name, kind="TAG", deleted=False):
+    return {"attributes": {"name": name, "canonicalName": f"refs/{'tags' if kind == 'TAG' else 'heads'}/{name}",
+                           "kind": kind, "isDeleted": deleted}}
+
+
+def _asc(**overrides):
+    pages = {
+        "/v1/ciProducts/p/workflows": {"data": [{"id": "w0", "attributes": {"name": "Nightly"}},
+                                                {"id": "w1", "attributes": {"name": "Release"}}]},
+        "/v1/ciWorkflows/w1/repository": {"data": {"id": REPO}},
+        f"/v1/scmRepositories/{REPO}/gitReferences?limit=200": {
+            "data": [_ref("master", "BRANCH"), _ref(TAG, "BRANCH"), _ref("release-old")],
+            "links": {"next": NEXT}},
+        NEXT: {"data": [_ref(f"{TAG}-r2"), _ref(TAG, deleted=True)], "links": {}},
+    }
+    pages.update(overrides)
+    seen = []
+
+    def call(method, path, **_kw):
+        assert method == "GET"  # read-only, always
+        seen.append(path)
+        return pages[path]
+
+    call.seen = seen
+    return call
+
+
+def _origin(monkeypatch, tags, ls_remote=(0, "a\trefs/heads/master\nb\trefs/tags/x\nc\trefs/tags/y\n")):
+    monkeypatch.setattr(builds, "remote_release_tags_at", lambda _sha: tags)
+    monkeypatch.setattr(builds, "git", _Git({"ls-remote": ls_remote}))
+
+
+def test_diagnose_follows_pages_and_skips_deleted_refs_and_branches(monkeypatch):
+    fake = _asc()
+    monkeypatch.setattr(builds, "call", fake)
+    _origin(monkeypatch, [TAG, f"{TAG}-r2"])
+    msg = builds.diagnose_missed_tag(SHA, "p")
+    assert NEXT in fake.seen  # the second page was read
+    # the deleted tag and the like-named branch don't make TAG known; the -r2 on page two is known
+    assert f"Xcode Cloud knows {TAG}-r2" in msg and f"does not list {TAG} " in msg
+    assert "Xcode Cloud lists 4 refs, origin has 3" in msg  # live refs only: 5 listed, 1 deleted
+
+
+def test_diagnose_names_a_missed_tag_with_the_retrigger(monkeypatch):
+    monkeypatch.setattr(builds, "call", _asc())
+    _origin(monkeypatch, ["release-1.3.1-20261106-aaaaaaaa"])
+    msg = builds.diagnose_missed_tag(SHA, "p")
+    assert "never received release-1.3.1-20261106-aaaaaaaa" in msg and "-r2" in msg
+
+
+def test_every_unreadable_source_is_a_sentence_not_an_exit(monkeypatch):
+    err = {"_error": 500, "_body": "boom"}
+    cases = [
+        ({"/v1/ciProducts/p/workflows": err}, "Release workflow's repository"),
+        ({"/v1/ciProducts/p/workflows": {"data": [{"id": "w0", "attributes": {"name": "Nightly"}}]}},
+         "Release workflow's repository"),
+        ({"/v1/ciWorkflows/w1/repository": err}, "Release workflow's repository"),
+        ({f"/v1/scmRepositories/{REPO}/gitReferences?limit=200": err}, "could not read gitReferences"),
+        ({NEXT: err}, "could not read gitReferences"),  # a failed second page is not a short list
+    ]
+    for overrides, expected in cases:
+        monkeypatch.setattr(builds, "call", _asc(**overrides))
+        _origin(monkeypatch, [TAG])
+        assert expected in builds.diagnose_missed_tag(SHA, "p")
+    monkeypatch.setattr(builds, "call", _asc())
+    _origin(monkeypatch, None)
+    assert "could not read refs from origin" in builds.diagnose_missed_tag(SHA, "p")
+    _origin(monkeypatch, [TAG], ls_remote=(128, ""))
+    assert "could not read refs from origin" in builds.diagnose_missed_tag(SHA, "p")
+
+
+def test_a_failing_diagnosis_does_not_end_the_wait(monkeypatch, capsys):
+    _no_run(monkeypatch, [TAG])
+    monkeypatch.setattr(builds, "time", _Clock())
+    calls = []
+
+    def broken(sha, pid=None):
+        calls.append(sha)
+        raise KeyError("attributes")
+
+    monkeypatch.setattr(builds, "diagnose_missed_tag", broken)
+    assert builds.run_wait(SHA, timeout=900, diagnose_after=300) == 2  # still waited out the timeout
+    assert calls == [SHA]  # and didn't retry every minute
+    assert "diagnosis failed: " in capsys.readouterr().out
