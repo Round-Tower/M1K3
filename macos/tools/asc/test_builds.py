@@ -94,3 +94,90 @@ def test_wait_stops_on_an_untagged_commit_and_on_an_unreadable_origin(monkeypatc
     _no_run(monkeypatch, None)
     assert builds.run_wait("07b1cabe36d1eb79a2ce629743a1e8c79765b398", timeout=1) == 4
     assert "could not read release tags" in capsys.readouterr().out
+
+
+# --------------------------------------------------------------------------- #
+# A tag Xcode Cloud never received (2026-11-05: release-1.3.0-20261105-63446054)
+# --------------------------------------------------------------------------- #
+
+SHA = "634460544c0a6234be97a6b717a8e62fbe83ae44"
+TAG = "release-1.3.0-20261105-63446054"
+# The Release workflow's repository listed 100 refs against origin's 101: the new tag was the one short.
+XCODE_100 = [f"release-1.2.{i}-20261001-{i:08x}" for i in range(97)] + ["master", "develop", "2026.07.12"]
+
+
+def test_missed_tags_names_the_tag_xcode_cloud_does_not_list():
+    assert len(XCODE_100) == 100
+    assert builds.missed_tags(XCODE_100, [TAG]) == [TAG]
+    assert builds.missed_tags(XCODE_100 + [TAG], [TAG]) == []
+    # a canonical name (refs/tags/...) is the same ref
+    assert builds.missed_tags([f"refs/tags/{TAG}"], [TAG]) == []
+
+
+def test_origin_ref_count_skips_peeled_lines():
+    ls = (f"{SHA}\trefs/heads/master\n"
+          f"8c3a93ee656ec4703b78edb68285da37edaf5fb1\trefs/tags/{TAG}\n"
+          f"{SHA}\trefs/tags/{TAG}^{{}}\n")
+    assert builds.ref_count(ls) == 2
+
+
+def test_the_diagnosis_names_the_tag_the_counts_and_the_retrigger():
+    msg = builds.format_diagnosis([TAG], 100, 101, SHA)
+    assert TAG in msg
+    assert "Xcode Cloud lists 100 refs, origin has 101" in msg
+    assert "may cap" in msg  # 100 is a suspiciously round page
+    assert (f'git -C ~/Development/m1k3 tag -a {TAG}-r2 {SHA} -m "re-trigger: Xcode Cloud missed {TAG}"'
+            f" && git -C ~/Development/m1k3 push origin {TAG}-r2") in msg
+    assert f"builds.py wait --commit {SHA}" in msg
+
+
+def test_the_cap_caveat_only_at_one_hundred():
+    assert "may cap" not in builds.format_diagnosis([TAG], 99, 101, SHA)
+
+
+def test_a_missed_retrigger_bumps_its_suffix():
+    msg = builds.format_diagnosis([TAG, f"{TAG}-r2"], 101, 103, SHA)
+    assert f"tag -a {TAG}-r3 {SHA}" in msg
+
+
+def test_nothing_missing_says_the_delay_is_xcode_clouds_own():
+    msg = builds.format_diagnosis([], 101, 101, SHA, known=[TAG])
+    assert TAG in msg and "knows" in msg
+    assert "not a dropped push" in msg
+    assert "tag -a" not in msg  # nothing to re-trigger
+
+
+def test_a_known_retrigger_beside_a_missed_tag_is_not_a_dropped_push():
+    # Today's live shape: the -r2 arrived, the original never did. Another -r2 would collide.
+    msg = builds.format_diagnosis([TAG], 101, 102, SHA, known=[f"{TAG}-r2"])
+    assert f"{TAG}-r2" in msg and f"{TAG} " in msg
+    assert "not a dropped push" in msg
+    assert "tag -a" not in msg
+
+
+def test_diagnose_due_after_the_window_once():
+    assert not builds.diagnose_due(None, now=1000.0, after=300, done=False)  # a run exists
+    assert not builds.diagnose_due(100.0, now=399.9, after=300, done=False)
+    assert builds.diagnose_due(100.0, now=400.0, after=300, done=False)
+    assert not builds.diagnose_due(100.0, now=900.0, after=300, done=True)
+
+
+class _Clock:
+    def __init__(self):
+        self.t = 0.0
+
+    def monotonic(self):
+        return self.t
+
+    def sleep(self, s):
+        self.t += s
+
+
+def test_wait_diagnoses_once_and_keeps_waiting(monkeypatch, capsys):
+    _no_run(monkeypatch, [TAG])
+    monkeypatch.setattr(builds, "time", _Clock())
+    calls = []
+    monkeypatch.setattr(builds, "diagnose_missed_tag", lambda sha, pid=None: calls.append(sha) or "DIAG")
+    assert builds.run_wait(SHA, timeout=900, diagnose_after=300) == 2  # it waited out the timeout
+    assert calls == [SHA]
+    assert capsys.readouterr().out.count("DIAG") == 1
