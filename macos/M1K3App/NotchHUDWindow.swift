@@ -28,6 +28,8 @@
 //  panel takes clicks only while the pointer is over it. Confidence 0.75 (verify-by-launch).
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — #406: `canHide = false`. The HUD ordering front in a
 //  hidden app un-hid the whole app, so an MCP `speak` brought back hidden windows. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-05 — off a notch the panel now hangs from the screen's top edge
+//  (`NotchHUDPlacement`), so `targetOrigin`'s doc says so. Confidence 0.8.
 //
 
 import AppKit
@@ -119,7 +121,7 @@ final class NotchHUDWindow: NSPanel {
     }
 
     /// Sizes the window for `screen` and returns where it shows: grown out of
-    /// the notch on a notched display, docked under the menu bar otherwise
+    /// the notch on a notched display, hung from the screen's top edge otherwise
     /// (`NotchHUDPlacement`, unit-pinned).
     func targetOrigin(on screen: NSScreen) -> NSPoint {
         let placement = NotchHUDPlacement.place(

@@ -4,6 +4,8 @@
 //
 //  Signed: Kev + claude-opus-5, 2026-09-14, Confidence 0.9 (pure geometry; the
 //  notch height is what NSScreen.safeAreaInsets.top reports). Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-11-05 — the docked panel hangs from the screen's top edge, not the menu
+//  bar's bottom (Kev: "it's not touching the top bar"). Confidence 0.85.
 //
 
 import CoreGraphics
@@ -38,14 +40,17 @@ struct NotchHUDPlacementTests {
         #expect(p.frame.midX == screen.midX)
     }
 
-    @Test("a screen without a notch keeps the panel docked under the menu bar")
-    func noNotchDocksUnderMenuBar() {
+    @Test("a screen without a notch hangs the panel from the top edge, over the menu bar's empty middle")
+    func noNotchHangsFromTheTopEdge() {
         let external = CGRect(x: 1512, y: 0, width: 2560, height: 1440)
         let externalVisible = CGRect(x: 1512, y: 0, width: 2560, height: 1415)
         let p = NotchHUDPlacement.place(
             panel: panel, screenFrame: external, visibleFrame: externalVisible, notchHeight: 0
         )
-        #expect(p.frame.maxY == externalVisible.maxY)
+        // Flush with the screen's top, not the menu bar's bottom: since macOS 26 the bar has no
+        // background, so docking under it left a flat-topped card floating on the wallpaper
+        // (Kev's screenshot, 2026-11-05).
+        #expect(p.frame.maxY == external.maxY)
         #expect(p.frame.size == panel)
         #expect(p.contentTopInset == 0)
         #expect(!p.growsFromNotch)
