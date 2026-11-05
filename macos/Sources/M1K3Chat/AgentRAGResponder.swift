@@ -248,6 +248,17 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-02 — a content-free reply (`ToolNeedRouter.isContentFree`) turns a tools
 //  verdict into chat beside the #622 pointing-back override, logged " (content-free reply)"; with history, its user
 //  line carries `contentFreeReplyNote` (Lil had written its last reply out again after "Please."). Confidence 0.75.
+//  Review: Kev + claude-fable-5.1, 2026-11-05 — `turnClauses(for:)`: every route carries the egress clause only
+//  when `EgressDisclosure.applies(to:)` reads the question as a privacy ask. Read off Kev's iPhone's chat store
+//  (build 544, 1.3.0 in review): "Me a recipe for banana bread, please." dispatched to web_search, and Mini's
+//  reply opened with the clause's quoted answer word for word (DuckDuckGo, PCC and all), then the BBC Food
+//  result; 8 of 8 tagged Mini first replies in that store sat on dispatch routes. On the dispatch prompt the clause
+//  sits right above the observation and the rules, so a plain-turn-only gate (the first cut, the challenger's
+//  scoping) would have missed every live case. The Mac's Mini did NOT recite it on either shape (0/24,
+//  MiniEgressPreambleEvalTests): the Mac is no stand-in for the phone. `question` at every call site is the user's
+//  own turn text; a follow-up ("and when I search?") carries no cue and gets no clause (known gap). The age
+//  clause is unchanged everywhere; a Home clause (`EgressDisclosure.ridesEveryTurn`) rides every turn.
+//  Confidence 0.75: the gate is unmeasured on the phone itself.
 
 import Foundation
 import M1K3Agent
@@ -842,7 +853,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // A dispatched turn: the date (not the identity line) and the age clause.
             Self.dispatchTurnPrompt(
                 question: question,
-                preamble: ([PromptContext.line(now: Date(), brainName: "")] + turnClauses())
+                preamble: ([PromptContext.line(now: Date(), brainName: "")] + turnClauses(for: question))
                     .compactMap { $0 }.joined(separator: "\n\n"),
                 history: history, historyBudget: historyBudget, observation: observation
             )
@@ -852,7 +863,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             // `datetime`, and the persona keeps the month and year.
             Self.plainTurnPrompt(
                 question: question,
-                contextPreamble: ([PromptContext.identity(brainName: brainNameProvider())] + turnClauses())
+                contextPreamble: ([PromptContext.identity(brainName: brainNameProvider())] + turnClauses(for: question))
                     .compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: "\n\n"),
                 chunks: chunks, memories: memories,
                 history: history, historyBudget: historyBudget,
@@ -1190,8 +1201,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             Self.log.notice("tool dispatch: empty answer after \(ran.count, privacy: .public) tool(s) — synthesising from the results")
             // The result keeps its framed header (the injection guard) and the age clause
             // rides along: this path once handed the raw web text over bare (PR #424 review).
-            let contextLine = ([PromptContext.line(now: Date(), brainName: brainNameProvider())] + turnClauses())
-                .compactMap { $0 }.joined(separator: "\n\n")
+            let contextLine = ([PromptContext.line(now: Date(), brainName: brainNameProvider())]
+                + turnClauses(for: question)).compactMap { $0 }.joined(separator: "\n\n")
             let framed = zip(steps, blocks).map { step, block in
                 ReasoningStep(iteration: step.iteration, thought: "", action: step.action, observation: block)
             }
@@ -1219,13 +1230,20 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         return parts.isEmpty ? nil : parts.joined(separator: "\n\n")
     }
 
-    /// The per-turn policy clauses every prompt carries: the age band and what can
-    /// leave the device (#482). nil entries are dropped by the callers' compactMap.
-    private func turnClauses() -> [String?] {
+    /// The per-turn policy clauses every prompt carries: the age band and, on a privacy ask, what can leave
+    /// the device (#482, gated 2026-11-05). nil entries are dropped by the callers' compactMap. Every route
+    /// gates on the question: Kev's iPhone (build 544) answered "a recipe for banana bread" on the DISPATCH
+    /// route with the clause's quoted answer word for word, then the web result — the clause sits right
+    /// above the observation and the rules there, nearer the question than anything else.
+    private func turnClauses(for question: String) -> [String?] {
         // The egress answer as this brain's persona reads it: pocket's starts at the facts
         // (`EgressDisclosure.adapted`).
         let variant = (provider as? ToolCallingProvider)?.personaVariant ?? .standard
-        let egress = egressClauseProvider().map { EgressDisclosure.adapted($0, for: variant) }
+        // A Home clause rides every turn: there every message leaves the phone (security pass, 2026-11-05).
+        let egress = egressClauseProvider().flatMap { clause in
+            EgressDisclosure.applies(to: question) || EgressDisclosure.ridesEveryTurn(clause)
+                ? EgressDisclosure.adapted(clause, for: variant) : nil
+        }
         return [ageClauseProvider(), egress, styleClauseProvider(), voiceClauseProvider()]
     }
 
@@ -1251,7 +1269,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         // Prepended here (not inside `grounding`, which stays pure/testable) so it
         // rides the variable grounding, never the cached persona prefix.
         let contextLine = PromptContext.line(now: Date(), brainName: brainNameProvider())
-        let contextPreamble = ([contextLine] + turnClauses()).compactMap { $0 }.joined(separator: "\n\n")
+        let contextPreamble = ([contextLine] + turnClauses(for: question)).compactMap { $0 }.joined(separator: "\n\n")
         let toolNames = Set(tools.map(\.name))
         let historyBudget = historyBudgetProvider().reservingImages(images.count)
         let ambient = ambientSection()

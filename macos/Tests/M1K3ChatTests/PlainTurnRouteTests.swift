@@ -31,6 +31,9 @@
 //  after a story offer never reach the picker; "yes, Cork" still does. `contentFreeReplyCarriesTheNote`: with
 //  history, a content-free reply's user line carries the take-it-up note; other prompts are byte-for-byte
 //  unchanged. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-11-05 — `plainPromptCarriesEgressOnlyOnAPrivacyAsk`: the egress clause is
+//  gated on the question (`EgressDisclosure.applies(to:)`); a recipe ask's plain prompt ends on the question with
+//  nothing between the identity line and the rules.
 //
 
 import Foundation
@@ -248,12 +251,30 @@ struct PlainTurnRouteTests {
         #expect(!prompt.contains("the hour"))
     }
 
-    /// #482: Mini's plain turn is where "does anything leave this device?" lands.
-    @Test("the plain prompt carries the egress clause")
-    func plainPromptCarriesEgress() async throws {
+    /// #482: Mini's plain turn is where "does anything leave this device?" lands. 2026-11-05: and ONLY such a
+    /// turn carries the clause. On the iPhone a fresh-chat recipe ask found it the one concrete block beside the
+    /// question, and Mini opened on it: the wiring decline, the DuckDuckGo sentence, then the recipe.
+    @Test("the plain prompt carries the egress clause on a privacy ask, and not on a recipe ask")
+    func plainPromptCarriesEgressOnlyOnAPrivacyAsk() async throws {
         let provider = RouteProvider(["Web searches can."])
         _ = try await answer(responder(provider, route: chat(.chat), egress: "EGRESS-FACTS"), "does anything leave?")
         #expect(try #require(provider.prompts.first).contains("EGRESS-FACTS"))
+
+        let recipe = RouteProvider(["Mash three bananas."])
+        _ = try await answer(
+            responder(recipe, route: chat(.chat), egress: "EGRESS-FACTS"), "give me a recipe for banana bread"
+        )
+        let prompt = try #require(recipe.prompts.first)
+        #expect(!prompt.contains("EGRESS-FACTS"))
+        #expect(prompt.hasSuffix("USER: give me a recipe for banana bread"))
+
+        // Home: every message goes to the Mac, so the clause rides the recipe ask too (security pass).
+        let home = EgressDisclosure.clause(EgressFacts(webSearch: true, brainIsHome: true), device: "this device")
+        let homeRecipe = RouteProvider(["Mash three bananas."])
+        _ = try await answer(
+            responder(homeRecipe, route: chat(.chat), egress: home), "give me a recipe for banana bread"
+        )
+        #expect(try #require(homeRecipe.prompts.first).contains("your own Mac"))
     }
 
     /// #430 (375 over MCP): "How's my battery doing?" answered as a plain turn and worked in a

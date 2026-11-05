@@ -38,6 +38,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — #697 pre-push review fold: the other two gates are pinned too (an
 //  unavailable brain and a declined image turn leave the line unread), and an empty line emits no note.
 //  Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-11-05 — the two egress tests ask a privacy question: the clause is gated on
+//  the question on every route now (`EgressDisclosure.applies(to:)`), and `egressClauseInjected` pins the seal
+//  question carrying none.
 
 import Foundation
 import M1K3Agent
@@ -932,19 +935,24 @@ struct AgentRAGResponderTests {
         #expect(prompt.contains("Right now (true for this turn)"))
     }
 
-    /// #482: the "what leaves this device" facts ride the per-turn grounding.
-    @Test("the egress clause rides the agent turn's grounding")
+    /// #482: the "what leaves this device" facts ride the per-turn grounding — of a privacy ask (2026-11-05).
+    @Test("the egress clause rides the agent turn's grounding on a privacy ask, and not otherwise")
     func egressClauseInjected() async throws {
-        let (store, embedder) = try await ingestedStore()
-        let provider = AgentScriptedProvider(["CONCLUSION: The seal failed. [Plant Notes §3.2 Seals]"])
-        let responder = AgentRAGResponder(
-            store: store, embedder: embedder, provider: provider,
-            toolsProvider: { [] },
-            egressClauseProvider: { "EGRESS-FACTS" }
-        )
-        let (_, stream) = try await responder.answerStreaming("What hydraulic seal failed on the conveyor under load?")
-        _ = await collect(stream)
-        #expect(try #require(provider.allPrompts.first).contains("EGRESS-FACTS"))
+        for (question, carries) in [
+            ("Be honest: does anything I type into you ever leave this machine?", true),
+            ("What hydraulic seal failed on the conveyor under load?", false),
+        ] {
+            let (store, embedder) = try await ingestedStore()
+            let provider = AgentScriptedProvider(["CONCLUSION: The seal failed. [Plant Notes §3.2 Seals]"])
+            let responder = AgentRAGResponder(
+                store: store, embedder: embedder, provider: provider,
+                toolsProvider: { [] },
+                egressClauseProvider: { "EGRESS-FACTS" }
+            )
+            let (_, stream) = try await responder.answerStreaming(question)
+            _ = await collect(stream)
+            #expect(try #require(provider.allPrompts.first).contains("EGRESS-FACTS") == carries, "\(question)")
+        }
     }
 
     /// 2026-10-19 gate: the responder hands the pocket persona the egress clause without its verdict lead (the 1.2B
@@ -960,7 +968,7 @@ struct AgentRAGResponderTests {
                 toolsProvider: { [] },
                 egressClauseProvider: { clause }
             )
-            let question = "What hydraulic seal failed on the conveyor under load?"
+            let question = "does anything I type ever leave this machine?"
             let (_, stream) = try await responder.answerStreaming(question)
             _ = await collect(stream)
             let prompt = try #require(provider.allPrompts.first)
