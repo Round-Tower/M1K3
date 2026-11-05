@@ -346,11 +346,13 @@ jobs:
       # The guards' pure helpers have unit tests (test_check_*.py) that nothing
       # ran until 2026-09-02 — a helper regression would have passed CI while the
       # guard quietly stopped guarding. Run them.
-      - name: Unit-test the guards themselves (+ the eval, weights and router tooling)
+      # tools/dev joined 2026-11-05 (branch_audit.py): its tests build throwaway repos
+      # and pin git's hooks and signing off, so the runner's git config can't sway them.
+      - name: Unit-test the guards themselves (+ the eval, weights, router and dev tooling)
         working-directory: macos
         run: |
           python3 -m pip install --quiet 'pytest>=8,<9' 'pyyaml>=6,<7' 'numpy>=1.26,<3'
-          python3 -m pytest -q tools/ci tools/eval tools/weights tools/site tools/asc tools/router
+          python3 -m pytest -q tools/ci tools/eval tools/weights tools/site tools/asc tools/router tools/dev
       # llms-full.txt is generated from the site pages; a page edit without a
       # regenerate would leave the AI-readable copy stale.
       - name: llms-full.txt is current
@@ -471,3 +473,6 @@ jobs:
 # experiment (size vs the 10 GB cache cap). Confidence 0.85.
 # Review: Kev + claude-opus-5-5, 2026-10-17 — comments only: Xcode Cloud builds release tags, not every merge,
 # so the nightly DMG is the post-merge backstop and the app shell compiles in Xcode Cloud only at release time.
+# Review: Kev + claude-opus-5.5, 2026-11-05 — the guards job also runs tools/dev's pytest (branch_audit.py), whose
+# throwaway-repo tests pin hooks and signing off; verified green under a main-default, sign-everything git config.
+# Confidence 0.85: CI's own run on ubuntu-24.04 (git 2.43) is the proof still owed.
