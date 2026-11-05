@@ -2,9 +2,16 @@
 
 Signed: Kev + claude-opus-5.5, 2026-11-05, Confidence 0.85, Prior: none
 Build 542 was cut before #776 merged and nothing said what it left out; these pin that answer.
+Review: Kev + claude-opus-5.5, 2026-11-05 — review fold: a version that isn't the tag's blocks attach (live 1.3
+plus a 1.4 draft), docs are narrowed to what never ships in a bundle (Companions/ATTRIBUTION.md is copied in),
+CANCELING waits, excluded_since pinned against a faked git. Confidence 0.85.
+Open: read_state (the ASC half) is still unpinned; it is the neighbours' reads, run live on 2026-11-05.
 """
 from __future__ import annotations
 
+import subprocess
+
+import pytest
 import release
 from release import CD, Excluded, State, Version
 
@@ -74,6 +81,26 @@ def test_a_docs_lookalike_name_is_not_a_docs_directory() -> None:
     assert not release.classify_docs(["macos/Sources/M1K3Knowledge/docsIndex.swift"])
 
 
+@pytest.mark.parametrize("path", [
+    # `.copy("Companions")` in Package.swift: this one ships inside the app bundle.
+    "macos/Sources/M1K3Avatar/Companions/ATTRIBUTION.md",
+    "macos/M1K3App/Resources/prompt.md",
+    "macos/M1K3iOSApp/Help/guide.md",
+    # docs/ counts only at macos/docs/ or the repo root, never a docs/ folder inside a target.
+    "macos/Sources/M1K3Chat/docs/persona.txt",
+    "macos/M1K3App/docs/x.json",
+    # .claude counts at the repo root only.
+    "macos/Sources/M1K3Chat/.claude/x.json",
+])
+def test_markdown_or_docs_inside_a_shipping_target_is_code(path: str) -> None:
+    assert not release.classify_docs([path])
+
+
+def test_root_and_macos_docs_are_docs() -> None:
+    assert release.classify_docs(["docs/x.json", "macos/docs/evals/2026-11-05/run.json", "CONTRIBUTING.md",
+                                  "macos/tools/asc/README.md", "app/CLAUDE.md"])
+
+
 # --------------------------------------------------------------------------- #
 # tags
 # --------------------------------------------------------------------------- #
@@ -96,6 +123,22 @@ def test_an_r2_tag_on_the_same_commit_is_an_alias_of_its_base() -> None:
 def test_an_r2_tag_on_another_commit_stands_alone() -> None:
     assert release.alias_base(f"{TAG}-r2", {TAG: "other", f"{TAG}-r2": SHA}) == f"{TAG}-r2"
     assert release.alias_base(f"{TAG}-r2", {f"{TAG}-r2": SHA}) == f"{TAG}-r2"
+
+
+def test_tag_version_reads_the_marketing_version_off_the_name() -> None:
+    assert release.tag_version(TAG) == "1.3.0"
+    assert release.tag_version(f"{TAG}-r2") == "1.3.0"
+    assert release.tag_version("release-1.10.2-20270101-abcdef01") == "1.10.2"
+    assert release.tag_version("release-light") is None
+
+
+def test_same_version_ignores_trailing_zeros_asc_says_1_3_for_1_3_0() -> None:
+    # Live on 2026-11-05: tag release-1.3.0-…, App Store version string "1.3".
+    assert release.version_order("1.3", "1.3.0") == 0
+    assert release.version_order("1.4", "1.3.0") == 1
+    assert release.version_order("1.2.1", "1.3.0") == -1
+    assert release.version_order("1.10", "1.9.0") == 1
+    assert release.version_order("1.3-beta", "1.3.0") is None
 
 
 def test_retag_name_is_the_next_free_suffix() -> None:
@@ -130,7 +173,10 @@ def test_docs_only_past_the_tag_needs_no_new_build() -> None:
 def test_no_run_waits_and_names_the_retag() -> None:
     steps = release.next_steps(_state(run=None, outcome=None, builds={}, stamped=False, retag=f"{TAG}-r2"))
     assert steps[0] == CD + "./builds.py wait"
-    assert any(f"git tag -a {TAG}-r2 {SHA}" in s and f"git push origin {TAG}-r2" in s for s in steps)
+    retag = next(s for s in steps if f"git tag -a {TAG}-r2 {SHA}" in s)
+    assert f"git push origin {TAG}-r2" in retag
+    # It bypasses release_tag.py, so it says so, and carries no unmeasured wait time.
+    assert "skips" in retag and "min" not in retag
 
 
 def test_a_running_run_waits() -> None:
@@ -141,6 +187,12 @@ def test_a_cancelled_run_builds_here() -> None:
     steps = release.next_steps(_state(outcome="canceled", builds={}, stamped=False))
     assert CD + "../release/release-local.sh 544" in steps
     assert any("./testflight.py notes --build 544 --confirm" in s for s in steps)
+
+
+@pytest.mark.parametrize("outcome", ["skipped", "errored"])
+def test_a_skipped_or_errored_run_says_read_it(outcome: str) -> None:
+    steps = release.next_steps(_state(outcome=outcome, builds={}, stamped=False))
+    assert steps == [f"run 544 {outcome}: read it in Xcode Cloud before anything else"]
 
 
 def test_a_failed_run_says_read_it() -> None:
@@ -179,8 +231,51 @@ def test_a_queued_old_build_is_cancelled_first_only_on_its_platform() -> None:
 def test_a_released_version_needs_a_new_one_before_attach() -> None:
     versions = {"MAC_OS": Version("1.2.1", "READY_FOR_SALE", "540"), "IOS": IN_REVIEW["IOS"]}
     steps = release.next_steps(_state(versions=versions))
-    assert any("MAC_OS" in s and "1.2.1" in s and "new version" in s for s in steps)
+    assert any("MAC_OS" in s and "1.2.1" in s and "1.3.0" in s and "new version" in s for s in steps)
     assert steps[-1] == CD + "./submit.py attach --platform ALL --build 544 --confirm && ./precheck.py"
+
+
+def test_an_older_draft_is_not_cancelled_or_attached_to_as_if_it_were_this_release() -> None:
+    # A stale 1.2.1 still queued with 540, tag 1.3.0: cancelling 1.2.1's review is not this release's step.
+    versions = {"MAC_OS": Version("1.2.1", "WAITING_FOR_REVIEW", "540"), "IOS": IN_REVIEW["IOS"]}
+    steps = release.next_steps(_state(versions=versions))
+    assert not any("cancel" in s for s in steps)
+    assert any("1.2.1" in s and "1.3.0" in s for s in steps)
+
+
+def test_a_newer_version_than_the_tag_never_gets_this_build() -> None:
+    # 1.3 live on 544, then a 1.4 draft is made: `next` on the newest (1.3.0) tag must not attach 544 to 1.4.
+    versions = {"MAC_OS": Version("1.4", "PREPARE_FOR_SUBMISSION", None), "IOS": Version("1.3", "READY_FOR_SALE", "544")}
+    steps = release.next_steps(_state(versions=versions))
+    assert not any(s.startswith(CD) for s in steps), steps
+    assert any("MAC_OS" in s and "1.4" in s and "1.3.0" in s and "newer" in s for s in steps)
+
+
+def test_a_newer_version_on_both_platforms_is_not_live_nothing_to_do() -> None:
+    versions = {p: Version("1.4", "PREPARE_FOR_SUBMISSION", None) for p in ("MAC_OS", "IOS")}
+    steps = release.next_steps(_state(versions=versions))
+    assert "live: nothing to do" not in steps and not any(s.startswith(CD) for s in steps)
+
+
+def test_a_version_that_cannot_be_compared_blocks_attach() -> None:
+    versions = {"MAC_OS": Version("1.3-hotfix", "PREPARE_FOR_SUBMISSION", None), "IOS": IN_REVIEW["IOS"]}
+    steps = release.next_steps(_state(versions=versions))
+    assert not any(s.startswith(CD) for s in steps)
+    assert any("1.3-hotfix" in s for s in steps)
+
+
+def test_an_unreadable_tag_version_blocks_attach() -> None:
+    versions = {p: Version("1.3", "PREPARE_FOR_SUBMISSION", None) for p in ("MAC_OS", "IOS")}
+    steps = release.next_steps(_state(tag="release-handmade", versions=versions))
+    assert not any(s.startswith(CD) for s in steps)
+
+
+def test_a_cancel_in_flight_waits() -> None:
+    versions = {"MAC_OS": Version("1.3", "CANCELING", "542"), "IOS": IN_REVIEW["IOS"]}
+    steps = release.next_steps(_state(versions=versions))
+    assert any("MAC_OS" in s and "wait for the cancel" in s for s in steps)
+    assert not any(s.startswith(CD) for s in steps)
+    assert not any("create" in s for s in steps)
 
 
 def test_a_missing_version_needs_one_too() -> None:
@@ -195,6 +290,7 @@ def test_attached_not_submitted_submits() -> None:
 
 
 def test_one_platform_queued_one_rejected_submits_all() -> None:
+    # Safe: submit.py's own plan reads a queued platform as "already … nothing to do" and skips it.
     versions = {"MAC_OS": IN_REVIEW["MAC_OS"], "IOS": Version("1.3", "REJECTED", "544")}
     assert release.next_steps(_state(versions=versions)) == [CD + "./submit.py submit --platform ALL --confirm"]
 
@@ -250,3 +346,72 @@ def test_status_with_nothing_left_out_has_no_warn() -> None:
 def test_status_with_only_docs_left_out_has_no_warn() -> None:
     text = "\n".join(release.status_lines(_state(excluded=(Excluded(777, "docs (#777)", docs=True),))))
     assert "WARN" not in text
+
+
+def test_status_without_a_tag_says_cut_one() -> None:
+    assert release.status_lines(State()) == ["no release tag on origin: cut one with ./release_tag.py cut --confirm"]
+
+
+def test_status_without_a_run_names_the_window() -> None:
+    text = "\n".join(release.status_lines(_state(run=None, outcome=None, builds={}, stamped=False)))
+    assert "no Xcode Cloud run for 63446054 in the last 10" in text
+    assert "stamp" not in text
+
+
+def test_status_marks_a_version_that_is_not_the_tags() -> None:
+    versions = {"MAC_OS": Version("1.4", "PREPARE_FOR_SUBMISSION", None), "IOS": IN_REVIEW["IOS"]}
+    lines = release.status_lines(_state(versions=versions))
+    mac = next(ln for ln in lines if ln.startswith("MAC_OS"))
+    ios = next(ln for ln in lines if ln.startswith("IOS"))
+    assert "not this tag's 1.3.0" in mac and "not this tag" not in ios
+
+
+def test_status_warns_when_the_tag_is_off_master() -> None:
+    text = "\n".join(release.status_lines(_state(on_master=False)))
+    assert "WARN" in text and "not an ancestor of origin/master" in text
+
+
+# --------------------------------------------------------------------------- #
+# excluded_since, against a faked git
+# --------------------------------------------------------------------------- #
+
+
+def _fake_git(log: str, diffs: dict[str, tuple[int, str]]):  # type: ignore[no-untyped-def]
+    calls: list[tuple[str, ...]] = []
+
+    def git(*args: str) -> subprocess.CompletedProcess[str]:
+        calls.append(args)
+        if args[0] == "log":
+            return subprocess.CompletedProcess(args, 0, log, "")
+        if args[0] == "diff":
+            code, out = diffs[args[-1]]
+            return subprocess.CompletedProcess(args, code, out, "fatal: bad object" if code else "")
+        raise AssertionError(args)
+
+    return git, calls
+
+
+def test_excluded_since_maps_each_pr_to_its_docs_flag(monkeypatch: pytest.MonkeyPatch) -> None:
+    log = ("aaa\tfix(hud): x (#779)\n"
+           "bbb\tdocs(store): promo (#777)\n"
+           "ccc\tdocs: a spaced name (#781)\n"
+           "ddd\tchore: direct push\n")
+    git, calls = _fake_git(log, {
+        "aaa": (0, "macos/Sources/M1K3HUD/HUD.swift\0"),
+        "bbb": (0, "macos/fastlane/metadata_ios/en-US/promotional_text.txt\0"),
+        "ccc": (0, "macos/docs/a file with spaces.md\0macos/docs/caf\u00e9.md\0"),
+        "ddd": (128, ""),
+    })
+    monkeypatch.setattr(release, "git", git)
+    rows = release.excluded_since("63446054")
+    assert [(r.number, r.docs) for r in rows] == [(779, False), (777, True), (781, True), (None, False)]
+    # NUL-split, never whitespace-split: the spaced and non-ASCII names stay whole.
+    assert all("-z" in c for c in calls if c[0] == "diff")
+    # A failed diff is said, not silently read as CODE.
+    assert "diff failed" in rows[3].subject
+
+
+def test_excluded_since_raises_when_the_log_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(release, "git", lambda *a: subprocess.CompletedProcess(a, 128, "", "bad revision"))
+    with pytest.raises(SystemExit):
+        release.excluded_since("63446054")
