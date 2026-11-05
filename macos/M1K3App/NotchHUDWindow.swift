@@ -2,8 +2,9 @@
 //  NotchHUDWindow.swift
 //  M1K3App
 //
-//  The floating narration pill: a borderless, click-through NSWindow docked
-//  under the menu bar, shown only while M1K3 is talking. Promoted from
+//  The floating narration pill: a borderless, click-through NSWindow hung
+//  from the screen's top edge (grown from the notch where there is one),
+//  shown only while M1K3 is talking. Promoted from
 //  scratch/jam-2026-08-31-2314/notch-hud.swift, where every constant here was
 //  proven live against a ground-truth WindowServer probe before landing —
 //  see NotchHUDController for the visibility/animation gotchas this carries.
@@ -29,7 +30,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-27 — #406: `canHide = false`. The HUD ordering front in a
 //  hidden app un-hid the whole app, so an MCP `speak` brought back hidden windows. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-11-05 — off a notch the panel now hangs from the screen's top edge
-//  (`NotchHUDPlacement`), so `targetOrigin`'s doc says so. Confidence 0.8.
+//  (`NotchHUDPlacement`); the header, the level note and `targetOrigin`'s doc say so. The docked pill stays
+//  click-through for life, so the menu bar under it still takes clicks. Confidence 0.8.
 //
 
 import AppKit
@@ -97,8 +99,9 @@ final class NotchHUDWindow: NSPanel {
         hasShadow = true
         // Ordinary `.statusBar` level reads as BELOW the real system menu bar
         // when the window overlaps its screen rect — the OS paints the menu
-        // bar over it (jam finding). Under a notch the panel's top DOES sit in
-        // the menu bar's rect, so `.screenSaver` is what keeps it on top there.
+        // bar over it (jam finding). The panel's top sits in the menu bar's rect
+        // on every screen (grown from a notch, or hung from the top edge off one,
+        // 2026-11-05), so `.screenSaver` is what keeps it on top.
         level = .screenSaver
         ignoresMouseEvents = true
         collectionBehavior = [.canJoinAllSpaces, .stationary, .fullScreenAuxiliary, .ignoresCycle]

@@ -35,7 +35,7 @@ public enum NotchHUDPlacement {
         public let contentTopInset: CGFloat
         /// Height of the content band below the notch strip (the whole panel when docked).
         public let contentHeight: CGFloat
-        /// True when the panel extends the notch rather than docking under the menu bar.
+        /// True when the panel extends the notch rather than hanging as the compact docked row.
         public var growsFromNotch: Bool {
             contentTopInset > 0
         }

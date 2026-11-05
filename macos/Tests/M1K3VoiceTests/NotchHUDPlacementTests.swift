@@ -57,6 +57,17 @@ struct NotchHUDPlacementTests {
         #expect(p.frame.midX == external.midX)
     }
 
+    @Test("a display stacked above the main one hangs the panel from ITS top edge")
+    func stackedDisplayHangsFromItsOwnTop() {
+        let above = CGRect(x: -200, y: 982, width: 1920, height: 1080)
+        let p = NotchHUDPlacement.place(
+            panel: panel, screenFrame: above, visibleFrame: above.insetBy(dx: 0, dy: 12), notchHeight: 0
+        )
+        #expect(p.frame.maxY == above.maxY)
+        #expect(p.frame.midX == above.midX)
+        #expect(p.frame.minY > screen.maxY, "it never reaches down onto the display below")
+    }
+
     @Test("a hidden menu bar (visible frame reaches the top) still grows from the notch")
     func autoHiddenMenuBar() {
         let p = NotchHUDPlacement.place(panel: panel, screenFrame: screen, visibleFrame: screen, notchHeight: 37)
