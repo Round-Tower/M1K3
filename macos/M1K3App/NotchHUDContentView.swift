@@ -82,9 +82,11 @@
 //  were hard-coded white on a `.regularMaterial` that follows the appearance: white on a pale card in Light mode,
 //  on every Mac without a notch and every external display. Text now uses semantic colours; the notch panel
 //  pins `.dark` (it continues the black notch), where `.primary` is the label colour (~85% white, a touch
-//  softer than the old pure white). The docked creature tile pins `.dark` too: the creature view paints no
-//  backing, so a light CRT ink would lose the white-lattice fox. Confidence 0.75 (verify-by-launch, both
-//  appearances on a notched built-in and an external display).
+//  softer than the old pure white). Confidence 0.75 (verify-by-launch, both appearances on a notched
+//  built-in and an external display).
+//  Review: Kev + claude-opus-5.5, 2026-11-05 (later) — correction: the docked-tile `.dark` pin this Review's
+//  first draft claimed was a no-op. The HUD capture harness showed a light tile with a dark fox in Light
+//  mode either way. The pin is gone and the docked comment says what renders. Confidence 0.85 (captured).
 
 import M1K3Avatar
 import M1K3Voice
@@ -181,11 +183,11 @@ struct NotchHUDContentView: View {
         } else {
             HStack(spacing: NotchHUDLayout.interItemSpacing) {
                 // `.fit` framing places the camera so the whole creature fills this
-                // square slot (Kev's screenshot, 2026-09-12). Its CRT tile stays a dark
-                // screen in Light mode too: the creature view paints no backing, so
-                // light ink would put the white-lattice Phosphor Fox on pale (2026-11-05).
+                // square slot (Kev's screenshot, 2026-09-12). The tile is the card
+                // showing through (CRTOverlay paints no backing), and the fox's lattice
+                // doesn't follow the colorScheme: Light gives a dark fox on the light
+                // card, which is legible (HUD capture harness, 2026-11-05).
                 avatarSlot
-                    .environment(\.colorScheme, .dark)
                     .frame(width: NotchHUDLayout.avatarSize, height: NotchHUDLayout.avatarSize)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 VStack(alignment: .leading, spacing: 3) {

@@ -53,19 +53,21 @@ Anything a cold session needs on turn one belongs below, not there.
   the default, whatever the size** (2026-10-04 ruling — PR size is free, rounds
   are the cost): the auto bot pass fires on Swift, the manifest, `project.yml`,
   `macos/tools/**` and the workflows; a docs-only PR gets no auto pass, so summon
-  once. Spend the review effort BEFORE the first push (`code-quality-reviewer`
+  once (twice if it touches CLAUDE.md, SECURITY.md or `.claude/`: `RISK_PROSE`, prose
+  that steers agents, is a risk surface). Spend the review effort BEFORE the first push (`code-quality-reviewer`
   on the diff, one per ~400-line slice in parallel) and fold every finding in
   ONE push; nits go to the follow-up list in the PR body.
   **Run `pr_watch.py` / `land.sh` without `--passes`: the gate infers it.** It
   asks for 2 (auto + one summon) when the diff touches a risk surface
   (`RISK_SURFACE_PATTERNS` in `pr_watch.py`: agent script execution, MCP /
   Keychain, entitlements, Info.plist, dependencies, privacy and Private Cloud,
-  crypto, release/CI config). GRDB migrations live inside `*Store.swift`, so
+  crypto, release/CI config, agent-steering prose). GRDB migrations live inside `*Store.swift`, so
   they are read off the tree and the patch instead. Also pass `--passes 2`
   yourself when a fold changed logic. Going BELOW the inferred count needs
   `--why "<reason>"` (exit 5 otherwise). For two passes, push then summon AT
   ONCE so both read the same head, and fold both in one commit. Fastlane,
-  `.entitlements`, `.xcprivacy` and `Info.plist` sit outside the auto pass's paths, so there
+  `.entitlements`, `.xcprivacy`, `Info.plist`, Gemfile, `.xcconfig`, `ci_scripts` and agent prose sit
+  outside the auto pass's paths (`AUTO_PASS_PATTERNS`), so there
   "2" means two summons. Trivial head (comment fold, clean master merge on a
   passed head): `--passes 0 --why "trivial head: <what>"` on ANY diff. Since
   #550 a bare `--passes 0` exits 5, risk surface or not, and a pass already on
@@ -148,7 +150,8 @@ Anything a cold session needs on turn one belongs below, not there.
   PR CI's Xcode is older than the release runners' (nightly DMG, Xcode Cloud), so a compiler
   gate passes CI and breaks master. `Evaluations.framework` is a test-bundle framework the app
   target can never import. After a merge that adds an Apple framework, read the release-lane
-  check-runs on the merge commit, not just PR CI.
+  check-runs on the merge commit, not just PR CI. A NEWER API inside a module that is always there
+  (FoundationModels) stays `#if compiler(>=6.4)` + `@available`: `canImport` can't tell SDK versions apart.
 - Never pre-seed the model cache with `hf download` (cache poison).
 - In-app A/B overrides go as argv (`M1K3 -prefillStepSize 512`): on macOS 27
   `defaults write app.m1k3` never reaches the sandboxed app. `log` is a zsh
@@ -188,7 +191,9 @@ Anything a cold session needs on turn one belongs below, not there.
   Mac + iOS. A build starts when `macos/tools/asc/release_tag.py cut --confirm` tags a green
   master commit; cutting one is Kev's call. A run CANCELED seconds after creation with no reason:
   suspect spent hours first (runs 537–541, 10-15→10-26), then a retired toolchain (PATCH the workflow and
-  read the 409). The hours were back by 2026-11-04 (1.3.0 build 542 built in the cloud). When they're out, ship from
+  read the 409). NO run at all ~5 min after a tag push is a dropped push, not spent hours: compare the
+  Release workflow repo's `gitReferences` with `git ls-remote` (2026-11-05: 100 vs 101, the new tag missing);
+  re-trigger with a second annotated `<tag>-r2` on the same commit. The hours were back by 2026-11-04 (1.3.0 build 542 built in the cloud). When they're out, ship from
   here: `macos/tools/release/release-local.sh <that run's number>` (Mac + iOS + smoke), Kev's
   `upload-local.zsh`, `macos/tools/asc/testflight.py notes --build N --confirm`. The nightly DMG still ships master's Mac app.
 - **Router retrains move both heads (2026-10-17, #631).** `macos/tools/router/train_tool_router.py` rewrites the gate
@@ -320,4 +325,8 @@ its line (it lived only in memory); PCC is both store lanes since #585; the canc
 issues; precheck in the release chain; Info.plist joins the no-auto-pass list; repo-root paths; three
 duplicate clauses cut. Every claim was checked on master 8b60c771. Confidence 0.85.
 Open: auditions (10-18) vs the freeze (10-28) — does an audition run as measurement during the freeze? Kev's call.
+Review: Kev + claude-opus-5.5, 2026-11-05 (Kev: "close off the open stuff") — the 11-05 dream cycle's audit, folded:
+a CLAUDE.md/SECURITY.md/.claude docs PR needs two summons (`RISK_PROSE`, checked in pr_watch.py); the full list
+outside the auto pass; `#if compiler` + `@available` stays right for newer FoundationModels API; the dropped-tag
+signature and its -r2 re-trigger (build 544). Confidence 0.85.
 -->
