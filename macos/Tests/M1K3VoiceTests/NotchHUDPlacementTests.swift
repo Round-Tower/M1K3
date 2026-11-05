@@ -4,6 +4,8 @@
 //
 //  Signed: Kev + claude-opus-5, 2026-09-14, Confidence 0.9 (pure geometry; the
 //  notch height is what NSScreen.safeAreaInsets.top reports). Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-11-05 — the docked panel hangs from the screen's top edge, not the menu
+//  bar's bottom (Kev: "it's not touching the top bar"). Confidence 0.85.
 //
 
 import CoreGraphics
@@ -38,18 +40,32 @@ struct NotchHUDPlacementTests {
         #expect(p.frame.midX == screen.midX)
     }
 
-    @Test("a screen without a notch keeps the panel docked under the menu bar")
-    func noNotchDocksUnderMenuBar() {
+    @Test("a screen without a notch hangs the panel from the top edge, over the menu bar's empty middle")
+    func noNotchHangsFromTheTopEdge() {
         let external = CGRect(x: 1512, y: 0, width: 2560, height: 1440)
         let externalVisible = CGRect(x: 1512, y: 0, width: 2560, height: 1415)
         let p = NotchHUDPlacement.place(
             panel: panel, screenFrame: external, visibleFrame: externalVisible, notchHeight: 0
         )
-        #expect(p.frame.maxY == externalVisible.maxY)
+        // Flush with the screen's top, not the menu bar's bottom: since macOS 26 the bar has no
+        // background, so docking under it left a flat-topped card floating on the wallpaper
+        // (Kev's screenshot, 2026-11-05).
+        #expect(p.frame.maxY == external.maxY)
         #expect(p.frame.size == panel)
         #expect(p.contentTopInset == 0)
         #expect(!p.growsFromNotch)
         #expect(p.frame.midX == external.midX)
+    }
+
+    @Test("a display stacked above the main one hangs the panel from ITS top edge")
+    func stackedDisplayHangsFromItsOwnTop() {
+        let above = CGRect(x: -200, y: 982, width: 1920, height: 1080)
+        let p = NotchHUDPlacement.place(
+            panel: panel, screenFrame: above, visibleFrame: above.insetBy(dx: 0, dy: 12), notchHeight: 0
+        )
+        #expect(p.frame.maxY == above.maxY)
+        #expect(p.frame.midX == above.midX)
+        #expect(p.frame.minY > screen.maxY, "it never reaches down onto the display below")
     }
 
     @Test("a hidden menu bar (visible frame reaches the top) still grows from the notch")
