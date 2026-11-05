@@ -128,10 +128,18 @@ Anything a cold session needs on turn one belongs below, not there.
   cancel loses the queue spot (2026-10-05: both were cancelled before the build was checked).
   `submit` refuses an unstamped build unless `--why`. Relaunching matters until #491, because the
   stale-process check reads the binary's mtime, which installers preserve. ASC writes are Kev's, via `!`.
+  The `tools/asc` scripts are `uv run --script` shebangs: run `./builds.py`, never `python3 builds.py`
+  (the system python3 lacks PyJWT). Xcode Cloud's post-action can leave the MAC build in no TestFlight group while iOS is in
+  both (545, 2026-11-05: the Mac's TestFlight reinstalled 544): read the build's `betaGroups` before
+  "install N", and POST it into Testers (Kev's write) when empty.
   An in-app event joins the iOS submission (Apple's rule for a first iOS version). ASC won't Add it
   for Review without a deep link (`m1k3://event/<name>`, the scheme M1K3iOS registers), and its UI
   draft submission has no platform; since #609 (for #605, 2026-10-14) `submit` adopts it as the iOS submission, but the API
   path is unproven: dry-run first, and if it balks, add the iOS version to the draft in the ASC UI.
+- **A phone symptom is read off the phone, not replayed on the Mac (2026-11-05, #780).** Mini on the Mac
+  never showed the iPhone's recited opener (0/24 turns); the phone's `chat-history.sqlite`, copied with
+  `devicectl device copy from --domain-type appDataContainer` (payload = messages JSON with `toolsUsed`),
+  settled the route in one read. The store build's OSLog never reaches `devicectl … --console`.
 - Store copy: name/subtitle are record-wide, so edit `macos/fastlane/metadata_mac`
   AND `metadata_ios` together (`macos/tools/ci/check_store_metadata.py` fails on
   drift). Review notes live only in `macos/fastlane/review_notes.txt`. Run
@@ -329,4 +337,9 @@ Review: Kev + claude-opus-5.5, 2026-11-05 (Kev: "close off the open stuff") — 
 a CLAUDE.md/SECURITY.md/.claude docs PR needs two summons (`RISK_PROSE`, checked in pr_watch.py); the full list
 outside the auto pass; `#if compiler` + `@available` stays right for newer FoundationModels API; the dropped-tag
 signature and its -r2 re-trigger (build 544). Confidence 0.85.
+Review: Kev + claude-fable-5.1, 2026-11-05 (debrief after #780 / TestFlight 545) — two release traps join the
+Releasing line (uv-script shebangs; the Mac build left out of the TestFlight group), and a new carry-forward:
+read a phone symptom from the phone's chat store, not a Mac replay. Confidence 0.85: each bit once today.
+Review: same day (#782 fold) — both summoned passes read the phone-symptom bullet spliced inside Releasing;
+it now follows Releasing's last line. No fact changed.
 -->
