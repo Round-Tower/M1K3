@@ -19,6 +19,12 @@
 //  the rendered answer is scored against chat-what-leaves.
 //  Review: Kev + claude-opus-5.5, 2026-11-04 — #775: `clauseStartsWithTheInstruction` pins the render byte-identical
 //  after the instruction became a constant.
+//  Review: Kev + claude-fable-5.1, 2026-11-05 — `applies(to:)`: the clause is for privacy asks only. Positives are
+//  the phrasings the fixtures, the ramble probes and Kev's own asks use; negatives are what a fresh chat on the
+//  phone actually gets (recipes, units, jokes). `appliesScoredOnTheFixtures` runs the cue list over EVERY chateval
+//  fixture and ramble probe: the real privacy asks must hit, named ordinary asks must not, and the hit rate stays
+//  under a ceiling (8 of 127 at the first run, cues trimmed after it). `homeClauseRidesEveryTurn` pins the Home
+//  marker (pre-push security pass).
 //
 
 import M1K3AgentTools
@@ -201,5 +207,93 @@ struct EgressDisclosureTests {
             #expect(text.hasPrefix("If asked what leaves \(device) — a fair privacy question, not about your wiring — "
                     + "answer with this, in your own voice:\n\"Yes, some of it can. "))
         }
+    }
+
+    // MARK: - applies(to:) — the clause rides privacy asks only (2026-11-05)
+
+    @Test("a privacy ask, however phrased, gets the clause")
+    func appliesToPrivacyAsks() {
+        let asks = [
+            "Is my data private?",
+            "Be honest: does anything I type into you ever leave this device?",
+            "Are my chats private?",
+            "where are my memories stored?",
+            "Why should I trust you with my private documents?",
+            "do you upload my documents anywhere?",
+            "is everything offline?",
+            "does it go to the cloud?",
+            "Are you listening to me right now?",
+            "who else can see what I type — is this encrypted?",
+            "does anything I type get sent anywhere?",
+            "are you recording me?",
+            "is this logged or saved somewhere?",
+            "do you sell my personal info?",
+            "will you leak my secrets to hackers?",
+            "¿Mis datos son privados?",
+            "Sind meine Daten privat?",
+            "mes données restent-elles privées ?",
+            "Мои данные приватны?",
+        ]
+        for ask in asks {
+            #expect(EgressDisclosure.applies(to: ask), "\(ask)")
+        }
+    }
+
+    @Test("an ordinary fresh-chat ask gets no clause")
+    func appliesNotToOrdinaryAsks() {
+        let asks = [
+            "give me a recipe for banana bread",
+            "send me a quick tomato pasta recipe",
+            "how many grams in a pound?",
+            "What's the capital of Australia?",
+            "tell me a joke",
+            "yo",
+            "what do you think of pineapple on pizza?",
+            "make me a simple web page that says hello",
+            "latest Apple news?",
+            "is it safe to eat raw eggs?",
+            "who's the pirate in your story?",
+        ]
+        for ask in asks {
+            #expect(!EgressDisclosure.applies(to: ask), "\(ask)")
+        }
+    }
+
+    @Test("whole words after folding: 'PRIVATE,' and 'privately' hit; 'pirate' and 'leaven' do not")
+    func appliesMatchesWholeFoldedWords() {
+        #expect(EgressDisclosure.applies(to: "Is this PRIVATE, really?"))
+        #expect(EgressDisclosure.applies(to: "is it kept privately"))
+        #expect(EgressDisclosure.applies(to: "Dáta — is it sáfe?"), "diacritics fold before the cue check")
+        #expect(!EgressDisclosure.applies(to: "the pirate and the leaven"))
+    }
+
+    /// Every chateval fixture and every ramble probe. A hit is a turn that carries the clause: the two real
+    /// privacy asks must; the named ordinary asks (a maths word problem, the marathon record, a plant leak, a
+    /// capital) must not; and the rest stays under a ceiling, because every false positive is a turn that keeps
+    /// the old opener. First run (2026-11-05): 8 of 127 fixtures (chat-what-leaves, interview-why-trust, and six
+    /// that say "share", "uploaded", "stored", "data" or "secure"), 1 of 13 probes. Not an exact pin: a fixture
+    /// edit that says "data" must not fail an unrelated PR.
+    @Test("the cue list scored on the fixtures and the ramble probes: privacy asks hit, ordinary asks miss")
+    func appliesScoredOnTheFixtures() {
+        let fixtureHits = ChatEvalFixtures.all.filter { EgressDisclosure.applies(to: $0.prompt) }.map(\.id)
+        let probeHits = MiniRambleEvalTests.probes.filter { EgressDisclosure.applies(to: $0.question) }.map(\.id)
+        for id in ["chat-what-leaves", "interview-why-trust"] {
+            #expect(fixtureHits.contains(id), "\(id) must carry the clause")
+        }
+        for id in ["tool-web-unguarded-record", "reason-apples", "long-incident-names", "tool-head-capital"] {
+            #expect(!fixtureHits.contains(id), "\(id) must not carry the clause")
+        }
+        #expect(fixtureHits.count * 10 <= ChatEvalFixtures.all.count, "\(fixtureHits.joined(separator: ", "))")
+        #expect(probeHits.contains("private"))
+        #expect(!probeHits.contains("make") && !probeHits.contains("capital") && !probeHits.contains("yo"))
+    }
+
+    @Test("a Home clause rides every turn; the local and PCC clauses only a privacy ask's")
+    func homeClauseRidesEveryTurn() {
+        #expect(EgressDisclosure.ridesEveryTurn(line(home: true)))
+        #expect(EgressDisclosure.ridesEveryTurn(line(web: false, home: true)))
+        #expect(!EgressDisclosure.ridesEveryTurn(line()))
+        #expect(!EgressDisclosure.ridesEveryTurn(line(pcc: true)))
+        #expect(!EgressDisclosure.ridesEveryTurn(line(web: false)))
     }
 }

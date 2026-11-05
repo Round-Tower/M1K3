@@ -36,6 +36,15 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-04 — #775: the instruction is a constant (`instruction`), so the leak guard
 //  fingerprints the framing and never the answer. The render is byte-identical (EgressDisclosureTests pins it).
 //  Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-11-05 — `applies(to:)`: the clause rides only a turn whose question
+//  carries a privacy cue. Kev's iPhone (1.3.0 in review) opened a recipe ask with the clause's quoted answer word
+//  for word, then the recipe: read off the phone's chat store, on the dispatch route (web_search), as were all 8
+//  tagged Mini first replies there. NOT reproduced on the Mac (0/24 ordinary turns, MiniEgressPreambleEvalTests).
+//  The cue list was scored on the chateval fixtures and trimmed after that first run (record, sell, the bare
+//  leak), so the pinned hit set is a regression snapshot, not a blind score: 8 hits, 2 of them real privacy asks.
+//  Confidence 0.75: a heuristic, unmeasured on the phone; a miss costs one turn its verdict-first answer.
+//  Review: same day (pre-push security pass) — `ridesEveryTurn`: a Home clause rides every turn, cue or not, because
+//  on Home the default answer is wrong on every turn. Pinned in EgressDisclosureTests and PlainTurnRouteTests.
 //
 
 import Foundation
@@ -103,14 +112,70 @@ public enum EgressDisclosure {
         }
         answer.append(
             facts.brainIsHome
-                ? "My brain is your own Mac, over your Wi‑Fi: messages, and memories or documents I draw on, go to it."
+                ? homeSentence
                 : "My brain runs right here, and your memories and documents are stored on \(device)."
         )
         return "If asked what leaves \(device) — " + instruction + "\n\"" + answer.joined(separator: " ") + "\""
+    }
+
+    /// The Home brain's sentence: every message goes to the user's own Mac. `ridesEveryTurn` reads it back.
+    static let homeSentence =
+        "My brain is your own Mac, over your Wi‑Fi: messages, and memories or documents I draw on, go to it."
+
+    /// Whether `clause` must ride EVERY turn, privacy ask or not (security pass, 2026-11-05): on the Home brain
+    /// every message and the memories it draws on leave the phone, so the persona's own opening ("kept here")
+    /// is wrong on every turn there, not just a missed cue. The responder has the rendered clause, not the
+    /// facts, so the Home sentence is the marker. The recipe-preamble cost stays on Home only.
+    public static func ridesEveryTurn(_ clause: String) -> Bool {
+        clause.contains(homeSentence)
     }
 
     /// The clause's instruction, device-free: prompt, never answer (#775). "not your wiring": Mini read "does
     /// anything I type leave?" as prompt extraction and gave the taught decline 2/5 (live, router arm, 2026-10-04).
     /// The quoted answer after it is what M1K3 is TOLD to say, so `PersonaLeakGuard` fingerprints this line only.
     static let instruction = "a fair privacy question, not about your wiring — answer with this, in your own voice:"
+
+    /// Whether `question` is the privacy ask the clause answers (2026-11-05). On a fresh chat with nothing
+    /// retrieved, the clause was the one concrete block beside the question, and Mini on the iPhone opened
+    /// recipe asks with the taught wiring decline and the DuckDuckGo sentence, then the recipe (#428's lesson
+    /// again: a per-turn line becomes what Mini opens on; the date line left the plain route for the same
+    /// reason). So the clause rides only a turn whose question carries a privacy cue, on every route. A miss
+    /// costs that turn the verdict-first answer (the persona's own opening stands in); a false positive costs
+    /// what every turn carried until now. So the list leans wide, and whole words keep "privately" from
+    /// matching "pirate". Scored on the chateval fixtures and the ramble probes (EgressDisclosureTests), where a
+    /// cue that hit an ordinary fixture was trimmed; a follow-up turn ("and when I search?") carries no cue.
+    public static func applies(to question: String) -> Bool {
+        let folded = question.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: nil)
+        return ToolGroupRouter.words(folded).contains { privacyCues.contains(String($0)) }
+    }
+
+    /// Whole words, matched after case and diacritic folding. English first, then the cues of the store's other
+    /// locales that survive folding and whole-word splitting (ja, ko and zh-Hans do not split on spaces, so they
+    /// miss; a follow-up). Not here on purpose: "send" ("send me a recipe"), "search" (every web ask), "safe"
+    /// (raw eggs), "apple" (pie), "see", "info", "third" (of a cup), "record" (the marathon's), "sell" (a shop
+    /// sells apples) and the bare "leak" (on Press Line 4): each carried the clause on a fixture; nor the search
+    /// engines' names ("search Wikipedia for banana bread" is the dispatch ask the gate exists for). "leave",
+    /// "store" and "share" stay in although recipes use them ("bay leaves", "store the dough"): a hit there costs
+    /// what every turn carried until now. ja, ko and zh-Hans never split into words, so they always miss.
+    static let privacyCues: Set<String> = [
+        "privacy", "private", "privately", "personal", "confidential", "confidentiality",
+        "leave", "leaves", "leaving", "leaked", "leaking",
+        "data", "cloud", "server", "servers", "internet", "online", "offline", "telemetry",
+        "anywhere", "elsewhere",
+        "upload", "uploads", "uploaded", "uploading", "sent",
+        "share", "shares", "shared", "sharing",
+        "store", "stores", "stored", "storing", "storage", "saved", "logged", "logging",
+        "track", "tracks", "tracked", "tracking",
+        "collect", "collects", "collected", "collecting",
+        "listen", "listens", "listening", "recording", "recorded",
+        "spy", "spying", "spies", "hacker", "hackers",
+        "anonymous", "anonymised", "anonymized", "encrypted", "encryption", "encrypt",
+        "secure", "security",
+        // es, pt, fr, de, ru (folded: no accents)
+        "privacidad", "privado", "privados", "privada", "privadas", "datos", "nube",
+        "privacidade", "dados", "nuvem",
+        "privee", "prive", "donnees", "confidentiel", "confidentielle",
+        "datenschutz", "privat", "daten", "privatsphare",
+        "приватность", "приватно", "конфиденциально", "данные", "личные",
+    ]
 }
