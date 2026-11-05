@@ -25,6 +25,7 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: the delegate owns the SessionGuard, marked on the UI launch path
 //  before the environment builds and cleared on a clean quit; a standing mark reaches the environment once.
 //  Confidence unchanged.
+//  Review: Kev + claude-opus-5.5, 2026-11-05 — Debug-only HUD demo launch (`-hudDemo`): shows the HUD and skips the brain warm-up (NotchHUDDemo.swift). Confidence 0.7.
 
 import AppKit
 import M1K3Avatar
@@ -353,6 +354,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, ObservableObject {
                 // semantic-memory offer's `scanned` is usually true before a picker or card renders (O4).
                 env.refreshDownloads()
                 let hud = NotchHUDController(env: env)
+                #if DEBUG
+                    // HUD capture harness: show the demo HUD and stop. No brain warm-up (no MLX load); the
+                    // script also passes -mcpServer.enabled NO so :4242 stays the live app's.
+                    if let demo = HUDDemoConfig.fromLaunchArguments() {
+                        hud.startDemo(demo)
+                        notchHUD = hud
+                        return
+                    }
+                #endif
                 hud.start()
                 notchHUD = hud
                 // Warm the restored brain now so a resident-but-windowless M1K3 can

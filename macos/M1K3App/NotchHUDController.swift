@@ -63,6 +63,8 @@
 //  `NotchHUDDemand.wantsHUD` (no HUD while the main window is on screen; its
 //  coming or going wakes the loop). Two RealityViews ran the M1 Max hot.
 //  Confidence 0.8 (the rule is pinned; the wiring is verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-11-05 — a Debug-only demo entry (`startDemo`, NotchHUDDemo.swift)
+//  shows the HUD at launch on a chosen screen for hud-capture.sh; Release has none of it. Confidence 0.7.
 //
 
 import AppKit
@@ -85,6 +87,19 @@ final class NotchHUDController {
     /// mid-utterance doesn't re-derive geometry against a different screen (#327).
     private var shownOrigin: NSPoint?
     private let clockStart = Date()
+    #if DEBUG
+        /// The screen the demo pins the HUD to (`-hudDemoScreen`); nil outside demo mode.
+        private var demoScreen: NSScreen?
+
+        /// Demo mode: pin the appearance, speak the sample line into the highlight state and show the HUD
+        /// now, ignoring the main-window demand. No drive loop runs, so nothing hides it again.
+        func startDemo(_ config: HUDDemoConfig) {
+            NSApp.appearance = NSAppearance(named: config.appearanceName)
+            demoScreen = config.screen
+            env.speechHighlight.beginUtterance(text: config.text)
+            showWindow()
+        }
+    #endif
 
     init(env: AppEnvironment) {
         self.env = env
@@ -159,8 +174,15 @@ final class NotchHUDController {
 
     // MARK: - Show / hide
 
+    private func targetScreen() -> NSScreen? {
+        #if DEBUG
+            if let demoScreen { return demoScreen }
+        #endif
+        return NSScreen.main
+    }
+
     private func showWindow() {
-        guard let screen = NSScreen.main else { return }
+        guard let screen = targetScreen() else { return }
         let window = resolveWindow()
         let shown = window.targetOrigin(on: screen)
         shownOrigin = shown
