@@ -11,6 +11,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-05, Confidence 0.7 (compiles; behaviour is verify-by-launch,
 //  not launched by me: Kev's live build was running). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-11-05 — review fold: wrapped long lines; an out-of-range
+//  -hudDemoScreen is logged by startDemo. Confidence 0.7.
 //
 
 #if DEBUG
@@ -18,7 +20,8 @@
 
     struct HUDDemoConfig {
         /// Long enough that the HUD's caption has to scroll.
-        static let defaultText = "This is the notch HUD demo. M1K3 is reading a sentence that is long enough to scroll, "
+        static let defaultText = "This is the notch HUD demo. "
+            + "M1K3 is reading a sentence that is long enough to scroll, "
             + "so the caption marquee, the avatar tile and the panel all show up in the capture."
 
         let appearanceName: NSAppearance.Name
@@ -29,7 +32,8 @@
         static func fromLaunchArguments(_ defaults: UserDefaults = .standard) -> HUDDemoConfig? {
             guard let mode = defaults.string(forKey: "hudDemo") else { return nil }
             let name: NSAppearance.Name = mode.lowercased() == "dark" ? .darkAqua : .aqua
-            let index = defaults.object(forKey: "hudDemoScreen") == nil ? nil : defaults.integer(forKey: "hudDemoScreen")
+            let index = defaults.object(forKey: "hudDemoScreen") == nil
+                ? nil : defaults.integer(forKey: "hudDemoScreen")
             let text = defaults.string(forKey: "hudDemoText").flatMap { $0.isEmpty ? nil : $0 } ?? defaultText
             return HUDDemoConfig(appearanceName: name, screenIndex: index, text: text)
         }

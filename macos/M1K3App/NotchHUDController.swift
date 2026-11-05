@@ -66,6 +66,7 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-05 — a Debug-only demo entry (`startDemo`, NotchHUDDemo.swift)
 //  shows the HUD at launch on a chosen screen for hud-capture.sh; Release has none of it. Confidence 0.7.
 //
+//  Review: Kev + claude-opus-5.5, 2026-11-05 — review fold: startDemo logs an out-of-range -hudDemoScreen. Confidence 0.7.
 
 import AppKit
 import Foundation
@@ -96,6 +97,10 @@ final class NotchHUDController {
         func startDemo(_ config: HUDDemoConfig) {
             NSApp.appearance = NSAppearance(named: config.appearanceName)
             demoScreen = config.screen
+            if let index = config.screenIndex, demoScreen == nil {
+                NSLog("hudDemo: -hudDemoScreen %d is out of range (%d screens); using the main screen",
+                      index, NSScreen.screens.count)
+            }
             env.speechHighlight.beginUtterance(text: config.text)
             showWindow()
         }
