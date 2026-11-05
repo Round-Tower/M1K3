@@ -3,7 +3,7 @@
 Privacy-focused, on-device AI: MLX inference, live voice, knowledge graph + RAG,
 and an MCP server. **The live product is the Mac-native SwiftUI app under
 `macos/`** (`M1K3App/`): live on the Mac App Store and the iOS App Store (one purchase), plus
-TestFlight and the Developer ID DMG (read the store lookup before saying which version users have). The same portable
+TestFlight and the Developer ID DMG (read the store lookup, `itunes.apple.com/lookup?id=`, before saying which version users have). The same portable
 `macos/Sources/` package graph drives the iOS + visionOS shell under
 `macos/M1K3iOSApp/`. The legacy Python surface lives only in git history before
 `7545b4a4` (`git checkout 7545b4a4 -- attic` resurrects it).
@@ -30,17 +30,20 @@ imported** — read its last block when a task continues prior work, not before.
 Anything a cold session needs on turn one belongs below, not there.
 
 ## Standing carry-forwards
+- **Code freeze after 1.3.0 (Kev, 2026-10-28):** "ratings are the lever." Only hotfixes (crashes, store
+  rejections), measurement and marketing. Feedback from a real store review counts as a hotfix (Kev,
+  2026-11-03: the first review became #772). Ideas go on #752 as comments, not new issues. No new features
+  until Kev lifts the freeze.
 - **Act fast with the house tooling (Kev, 2026-10-13, measured).** Inner loop: `macos/tools/dev/tdd.sh
   <TestTarget> [name]` builds one test bundle and runs only its tests (about 13 s; `swift test --filter`
   takes about 20 s). Run the full `swift test --parallel --disable-xctest` once before a push, never
-  between edits; the suite is all Swift Testing. Debug `xcodebuild` shares Xcode's compilation cache
+  between edits (the flag is local only: CI's toolchain exits 1 with it, #596); the suite is all Swift Testing. Debug `xcodebuild` shares Xcode's compilation cache
   (a fresh worktree builds in 112 s, 171 s without it), so never wipe DerivedData or the cache to
-  "fix" a build without evidence. Land with `land.sh`. Run independent reviews, builds and CI watches
+  "fix" a build without evidence. Run independent reviews, builds and CI watches
   in parallel (background tasks plus Monitor), not one after another.
 - **Auditions are open again (Kev, 2026-10-18; lifts the 10-13 hold):** "I'm open to new auditions, always
   looking for the next shiny new things." A challenger runs the same chateval arms as the brain it would
-  replace, wired like the app, and wins on paired per-question results, not an aggregate; never pre-seed
-  its weights with `hf download`. **Every Lil and Big candidate must see** (Kev, 10-19 and 10-24): a text-only
+  replace, wired like the app, and wins on paired per-question results, not an aggregate. **Every Lil and Big candidate must see** (Kev, 10-19 and 10-24): a text-only
   brain is a record, not a swap. **MoE Big is closed on M1** (Kev, 10-25: both sparse models lost to dense
   gemma-4-12B, `macos/docs/evals/2026-10-24-moe-big/`); reopen on M4+/M5 or for a dense mid-size model that sees.
 - **Landing a PR:** `macos/tools/ci/land.sh <PR> [--passes N]` gates on
@@ -50,19 +53,21 @@ Anything a cold session needs on turn one belongs below, not there.
   the default, whatever the size** (2026-10-04 ruling — PR size is free, rounds
   are the cost): the auto bot pass fires on Swift, the manifest, `project.yml`,
   `macos/tools/**` and the workflows; a docs-only PR gets no auto pass, so summon
-  once. Spend the review effort BEFORE the first push (`code-quality-reviewer`
+  once (twice if it touches CLAUDE.md, SECURITY.md or `.claude/`: `RISK_PROSE`, prose
+  that steers agents, is a risk surface). Spend the review effort BEFORE the first push (`code-quality-reviewer`
   on the diff, one per ~400-line slice in parallel) and fold every finding in
   ONE push; nits go to the follow-up list in the PR body.
   **Run `pr_watch.py` / `land.sh` without `--passes`: the gate infers it.** It
   asks for 2 (auto + one summon) when the diff touches a risk surface
   (`RISK_SURFACE_PATTERNS` in `pr_watch.py`: agent script execution, MCP /
   Keychain, entitlements, Info.plist, dependencies, privacy and Private Cloud,
-  crypto, release/CI config). GRDB migrations live inside `*Store.swift`, so
+  crypto, release/CI config, agent-steering prose). GRDB migrations live inside `*Store.swift`, so
   they are read off the tree and the patch instead. Also pass `--passes 2`
   yourself when a fold changed logic. Going BELOW the inferred count needs
   `--why "<reason>"` (exit 5 otherwise). For two passes, push then summon AT
   ONCE so both read the same head, and fold both in one commit. Fastlane,
-  `.entitlements` and `.xcprivacy` sit outside the auto pass's paths, so there
+  `.entitlements`, `.xcprivacy`, `Info.plist`, Gemfile, `.xcconfig`, `ci_scripts` and agent prose sit
+  outside the auto pass's paths (`AUTO_PASS_PATTERNS`), so there
   "2" means two summons. Trivial head (comment fold, clean master merge on a
   passed head): `--passes 0 --why "trivial head: <what>"` on ANY diff. Since
   #550 a bare `--passes 0` exits 5, risk surface or not, and a pass already on
@@ -84,10 +89,10 @@ Anything a cold session needs on turn one belongs below, not there.
 - **Try it on the device before the PR loop (Kev, #655).** For UI, voice or device work, iterate on the
   branch with local builds on the Mac and phone first, and open the PR when it feels right: a review round
   costs more than a rebuild. A device check a PR still owes when it lands goes into the next build's
-  TestFlight notes (`asc/testflight.py notes`), so it gets run, not forgotten (Kev, 2026-10-28).
+  TestFlight notes (`macos/tools/asc/testflight.py notes`), so it gets run, not forgotten (Kev, 2026-10-28).
 - **CI on a PR:** package-only diffs are gated by `swift test` (~4 min); the
   App-shell and iOS+visionOS xcodebuild jobs run only when their paths change
-  (the `shell` / `mobile` filters in `ci.yml`). Every push to master or develop
+  (the `shell` / `mobile` filters in `ci.yml`). Every push to master
   that touches Swift builds all three (a docs- or tools-only push skips them) —
   a shell break lands, then is fixed forward.
 - **Never merge master into a PR branch** unless git reports a conflict or the
@@ -117,16 +122,15 @@ Anything a cold session needs on turn one belongs below, not there.
   traps there, it never throws. Route any new MLX path through it.
 - Bundle ID, log subsystem, Keychain and container are all `app.m1k3`.
 - `.info` / `.debug` do not persist in OSLogStore; breadcrumbs are `.notice`+.
-- Read the store (`itunes.apple.com/lookup?id=`) before saying what users have.
 - **Releasing (Mac + iOS on one build):** follow the runbook in `macos/tools/asc/README.md`:
   `release_tag.py cut --confirm` (Kev's call) → `builds.py wait` → install N from TestFlight and **relaunch** M1K3 → `verify_build.py --build N`
-  → `submit.py cancel/attach/submit --platform ALL --confirm`. **Verify before any cancel**: a
+  → `submit.py cancel/attach` → `precheck.py` (both platforms) → `submit.py submit --platform ALL --confirm`. **Verify before any cancel**: a
   cancel loses the queue spot (2026-10-05: both were cancelled before the build was checked).
   `submit` refuses an unstamped build unless `--why`. Relaunching matters until #491, because the
   stale-process check reads the binary's mtime, which installers preserve. ASC writes are Kev's, via `!`.
   An in-app event joins the iOS submission (Apple's rule for a first iOS version). ASC won't Add it
   for Review without a deep link (`m1k3://event/<name>`, the scheme M1K3iOS registers), and its UI
-  draft submission has no platform; since #605 `submit` adopts it as the iOS submission, but the API
+  draft submission has no platform; since #609 (for #605, 2026-10-14) `submit` adopts it as the iOS submission, but the API
   path is unproven: dry-run first, and if it balks, add the iOS version to the draft in the ASC UI.
 - Store copy: name/subtitle are record-wide, so edit `macos/fastlane/metadata_mac`
   AND `metadata_ios` together (`macos/tools/ci/check_store_metadata.py` fails on
@@ -146,7 +150,8 @@ Anything a cold session needs on turn one belongs below, not there.
   PR CI's Xcode is older than the release runners' (nightly DMG, Xcode Cloud), so a compiler
   gate passes CI and breaks master. `Evaluations.framework` is a test-bundle framework the app
   target can never import. After a merge that adds an Apple framework, read the release-lane
-  check-runs on the merge commit, not just PR CI.
+  check-runs on the merge commit, not just PR CI. A NEWER API inside a module that is always there
+  (FoundationModels) stays `#if compiler(>=6.4)` + `@available`: `canImport` can't tell SDK versions apart.
 - Never pre-seed the model cache with `hf download` (cache poison).
 - In-app A/B overrides go as argv (`M1K3 -prefillStepSize 512`): on macOS 27
   `defaults write app.m1k3` never reaches the sandboxed app. `log` is a zsh
@@ -165,7 +170,7 @@ Anything a cold session needs on turn one belongs below, not there.
   and the API says `notAvailable`. No coordinate clicks while Kev is active.
   The harness isolates the STORES, not UserDefaults — a Full/Private onboarding
   door in a Debug build writes the live preferences — and the AX `press` helper
-  (`tools/screengrab/direct/ax.swift`) does not fire SwiftUI Button actions, so
+  (`macos/tools/screengrab/direct/ax.swift`) does not fire SwiftUI Button actions, so
   a sheet behind a button is a hand run or TestFlight, never a headless proof.
 - **One embedder (Kev, 2026-10-10):** EmbeddingGemma 2 (`MLXEmbeddingService.embeddingGemma2`,
   pinned, MRL 512) is the Mac retriever; Qwen is A/B-only. Every cosine bar — chunk,
@@ -184,15 +189,18 @@ Anything a cold session needs on turn one belongs below, not there.
 - **Xcode Cloud builds only `release*` tags (Kev, 2026-10-17).** Merging to master starts no
   TestFlight build: the month's compute hours ran out by the 15th when every master push archived
   Mac + iOS. A build starts when `macos/tools/asc/release_tag.py cut --confirm` tags a green
-  master commit; cutting one is Kev's call. A run CANCELED seconds after creation with no reason
-  means the hours are spent, not a broken workflow (runs 537–541, through 10-26). Then ship from
+  master commit; cutting one is Kev's call. A run CANCELED seconds after creation with no reason:
+  suspect spent hours first (runs 537–541, 10-15→10-26), then a retired toolchain (PATCH the workflow and
+  read the 409). NO run at all ~5 min after a tag push is a dropped push, not spent hours: compare the
+  Release workflow repo's `gitReferences` with `git ls-remote` (2026-11-05: 100 vs 101, the new tag missing);
+  re-trigger with a second annotated `<tag>-r2` on the same commit. The hours were back by 2026-11-04 (1.3.0 build 542 built in the cloud). When they're out, ship from
   here: `macos/tools/release/release-local.sh <that run's number>` (Mac + iOS + smoke), Kev's
-  `upload-local.zsh`, `asc/testflight.py notes --build N --confirm`. The nightly DMG still ships master's Mac app.
-- **Router retrains move both heads (2026-10-17, #631).** `tools/router/train_tool_router.py` rewrites the gate
+  `upload-local.zsh`, `macos/tools/asc/testflight.py notes --build N --confirm`. The nightly DMG still ships master's Mac app.
+- **Router retrains move both heads (2026-10-17, #631).** `macos/tools/router/train_tool_router.py` rewrites the gate
   (`ToolNeedRouterWeights`) AND the group head (`ToolGroupRouterWeights`). A gate fix ships the gate alone: restore
   the group head from master unless the router chateval arm has run on the new one. Its floor drop dispatched in-chat
   look-backs to `recent_activity`. Score held-out lines first, and keep the rig's lines out of training.
-  The search head (`SearchRouterWeights`, #713) ships ON on the Mac as the untrained stub, which never vetoes;
+  The search head (`SearchRouterWeights`, #728 for #713, 2026-10-27) ships ON on the Mac as the untrained stub, which never vetoes;
   trained weights replace it only after the chateval arm passes on them.
 - **An eval must wire like the app.** Chat-path chateval runs need `--router dispatch`: the Mac app routes
   every tier (`ToolRouterWiring.allTiersEnabled(whenUnset: true)`, ADR 0009's `toolRouterAllTiers`), and the
@@ -204,8 +212,9 @@ Anything a cold session needs on turn one belongs below, not there.
   above the persona length in the log, not from the sample (a tool turn's second send reads as a near-total hit).
 - Entitlements by lane: Declared Age Range in all three (`M1K3-MAS`, `M1K3iOS`
   and the Developer ID `M1K3.entitlements`; `check_store_targets.py` requires
-  it), PCC in `M1K3-MAS.entitlements` only (the check forbids it in the
-  Developer ID lane, whose profile lacks it: AMFI would kill the launch). The
+  it). PCC is required in both store lanes (`M1K3-MAS`, `M1K3iOS`) and forbidden in the
+  Developer ID lane, whose profile lacks it: AMFI would kill the launch (`check_store_targets.py`;
+  MAS-only until #585, 2026-10-12). The
   Developer ID lane embeds a profile since #518: macOS 27 sends every keychain
   call to the data-protection keychain, so a profile-less build can store
   nothing (-34018, no MCP server). CI's manual signing needs the portal profile
@@ -310,4 +319,14 @@ Review: Kev + claude-opus-5.5, 2026-10-28 (later) — Kev took the 10-28 audit's
 the devices before the PR loop (#655) with owed device checks riding the TestFlight notes; same-day PRs that clash
 only on Review lines land in turn; score a heuristic on a blind set. Drift fixed: the classifier wants one "land" from
 Kev per batch, runs 537–541, the search head ships on as the stub. Confidence 0.8.
+Review: Kev + claude-opus-5.5, 2026-11-04 (overnight dream cycle, Kev: "clean up & align") — the freeze gets
+its line (it lived only in memory); PCC is both store lanes since #585; the cancel-signature line says
+"suspect", not "means", and that the hours are back; no `develop` branch; #609 and #728 cited over their
+issues; precheck in the release chain; Info.plist joins the no-auto-pass list; repo-root paths; three
+duplicate clauses cut. Every claim was checked on master 8b60c771. Confidence 0.85.
+Open: auditions (10-18) vs the freeze (10-28) — does an audition run as measurement during the freeze? Kev's call.
+Review: Kev + claude-opus-5.5, 2026-11-05 (Kev: "close off the open stuff") — the 11-05 dream cycle's audit, folded:
+a CLAUDE.md/SECURITY.md/.claude docs PR needs two summons (`RISK_PROSE`, checked in pr_watch.py); the full list
+outside the auto pass; `#if compiler` + `@available` stays right for newer FoundationModels API; the dropped-tag
+signature and its -r2 re-trigger (build 544). Confidence 0.85.
 -->

@@ -11,6 +11,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-05, Confidence 0.7 (coarse tripwires over text; how each
 //  appearance looks on both screen kinds is verify-by-launch). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-11-05 (later) — the docked-tile test now pins NO pin: the HUD capture
+//  harness showed the `.dark` pin was a no-op (light tile, dark fox in Light mode). Confidence 0.8.
 //
 
 import Foundation
@@ -49,15 +51,17 @@ struct NotchHUDAppearanceScanTests {
         #expect(src.contains("@Environment(\\.colorScheme) private var systemScheme"))
     }
 
-    @Test("The docked creature tile stays a dark screen, so the white-lattice fox reads on a light card")
-    func dockedCreatureTilePinsDark() throws {
+    @Test("The docked creature slot carries no appearance pin: the tile follows the card")
+    func dockedCreatureSlotFollowsTheCard() throws {
+        // Measured 2026-11-05 with the HUD capture harness: a `.dark` pin on the docked avatar slot
+        // changed nothing. CRTOverlay paints no backing, and the fox's lattice colour doesn't follow the
+        // SwiftUI colorScheme: Light renders a dark fox on the light card, which is legible and was
+        // approved. A pin here would only be a comment that lies.
         let src = try Self.code(Self.hud)
         let docked = try #require(src.range(of: "HStack(spacing: NotchHUDLayout.interItemSpacing)"), "docked row moved")
         let rest = src[docked.upperBound...]
-        let slot = try #require(rest.range(of: "avatarSlot"))
-        let pin = try #require(rest.range(of: ".environment(\\.colorScheme, .dark)"), "the docked tile must pin .dark")
         let text = try #require(rest.range(of: "narrationText("))
-        #expect(slot.lowerBound < pin.lowerBound && pin.lowerBound < text.lowerBound,
-                "the pin sits on the avatar slot, not the text beside it")
+        #expect(!rest[..<text.lowerBound].contains(".environment(\\.colorScheme"),
+                "no colorScheme pin on the docked avatar slot")
     }
 }
