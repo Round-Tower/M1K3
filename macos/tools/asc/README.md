@@ -20,6 +20,7 @@ Xcode Cloud starts **only on `release*` tags** (2026-10-17: building every maste
 month's compute hours by the 15th). Merging to master builds nothing; cutting a release does:
 
 ```
+./release.py status; ./release.py next                # where the newest release stands, and the next line below to run
 ./release_tag.py cut                                  # dry run: the tag it would push, and CI on that commit
 ./release_tag.py cut --confirm                        # Kev's call: tags origin/master (green CI) and pushes → a build starts
                                                       # (the tag's day is UTC; an older, superseded master commit
@@ -62,6 +63,7 @@ bytes disagree: stop). Lil's 2026-10-08 pin (#517) took this route and passed on
 | `precheck.py` | The pre-submit checklist: build attached + VALID, screenshots per display type, availability (V2), price schedule, keyword trademarks, promo cap, support URL. | no |
 | `keywords.py scan` / `apply` | Trademark + cap scan of name, subtitle and keywords on every platform's newest version; `apply` PATCHes one localization. Keywords LOCK while in review. | apply only |
 | `submit.py status` / `submit` / `cancel` / `attach` | Review submissions per platform, or `--platform ALL` (Mac + iOS): create → add the newest version → `submitted:true`; a queued one is nothing to do; `cancel` is `canceled:true` (the queue position is the price), and `--wait` holds until the version is editable; `attach --build N` puts a VALID build with export compliance answered on an editable version and reads it back. `submit --confirm` refuses a build `verify_build.py` hasn't stamped, unless `--why`. | submit / cancel / attach + `--confirm` |
+| `release.py status [--tag T]` / `next` | The runbook as one command. `status`: the tag (a `-rN` re-trigger on the same commit reads as its base) and commit, the Xcode Cloud run and build, each shipping platform's version state and attached build, the verify stamp, and every PR merged on origin/master after the tag (NOT in this build): docs-only ones (`*.md`, `docs/`, `.claude`, store copy) marked harmless, a WARN for any other. `next`: the next step for the newest release as the `!` lines to run, numbers filled in. | no |
 | `release_tag.py cut` / `list` | Tags a commit on origin/master whose GitHub CI passed as `release-<version>-<yyyymmdd>-<sha8>` and pushes it: the only thing that starts an Xcode Cloud build. Dry run unless `--confirm`; refuses off-master commits (exit 3) and a red or unfinished CI (exit 4) unless `--why`; a commit already tagged is left alone. | `--confirm` only (a git tag) |
 | `builds.py wait` / `status` | Which Xcode Cloud run built a commit (default: the newest release tag's), then wait for its Mac + iOS builds to process VALID. A commit no release tag points at stops at once (exit 4) with the `cut` command. A CANCELED run means a later run carries the commit. | no |
 | `verify_build.py --build N` | The installed `/Applications/M1K3.app` is build N, it is running, and its MCP server answers `initialize` with instructions; stamps N for `submit`. Reads the MCP token in-process, never prints it. | a local stamp only |
@@ -97,6 +99,8 @@ counted every Round Tower app: the sales report is vendor-wide, so rows are filt
 Confidence 0.8.
 Review: Kev + claude-opus-5.5, 2026-10-23 — `ranks.py`: rank tracking across storefronts in our own tooling instead of
 a paid ASO app (Sextant was weighed and covers iOS only). Confidence 0.75: the Search API's order approximates the store's.
+Review: Kev + claude-opus-5.5, 2026-11-05 — `release.py` row: the runbook as one command (status + next), after build 542
+shipped without #776 and nothing said so. Confidence 0.8.
 -->
 
 Tests: one `test_<tool>.py` per tool with pure logic to pin (`promo.py` has none — every function is a request; the global pre-commit hook's rule for new source files; the shared `test_asc_tools.py` was split on 2026-09-16). CI runs `pytest tools/asc`.
