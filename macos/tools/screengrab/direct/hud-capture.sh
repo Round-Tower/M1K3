@@ -50,8 +50,9 @@ BIN=$APP/Contents/MacOS/M1K3
 if [[ $APP == */Applications/* ]]; then
   print -u2 "refusing $APP: an installed app (/Applications); build Debug and pass that"; exit 2
 fi
-if ! LC_ALL=C grep -aq HUDDemoConfig $BIN; then
-  print -u2 "refusing $APP: not a Debug build (no HUDDemoConfig in the binary; -hudDemo is #if DEBUG)"; exit 2
+# Debug builds keep the code in M1K3.debug.dylib beside the stub binary, so search the whole MacOS dir.
+if ! LC_ALL=C grep -aqr HUDDemoConfig ${BIN:h}; then
+  print -u2 "refusing $APP: not a Debug build (no HUDDemoConfig under Contents/MacOS; -hudDemo is #if DEBUG)"; exit 2
 fi
 [[ -n ${HUD_CAPTURE_CHECK_ONLY:-} ]] && exit 0
 
