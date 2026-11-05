@@ -78,6 +78,13 @@
 //  the RealityView and drew a box on bright desktops; the band fades in 12 pt; a hover-only stop button calls
 //  `stopSpeaking()`. Confidence 0.75 (verify-by-launch).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the Phosphor Fox (white lattice) is the house default via CompanionDefaults.registeredDefaults / houseCompanion (Kev, TestFlight 499). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-05 — the HUD follows Light and Dark (Kev). The docked row's text and rim
+//  were hard-coded white on a `.regularMaterial` that follows the appearance: white on a pale card in Light mode,
+//  on every Mac without a notch and every external display. Text now uses semantic colours; the notch panel
+//  pins `.dark` (it continues the black notch), where `.primary` is the label colour (~85% white, a touch
+//  softer than the old pure white). The docked creature tile pins `.dark` too: the creature view paints no
+//  backing, so a light CRT ink would lose the white-lattice fox. Confidence 0.75 (verify-by-launch, both
+//  appearances on a notched built-in and an external display).
 
 import M1K3Avatar
 import M1K3Voice
@@ -96,6 +103,9 @@ struct NotchHUDContentView: View {
     /// Ordered-out HUD → no creature at all (the fallback path below bypasses
     /// AvatarSurface's own gate, so it is gated here).
     @Environment(\.windowVisible) private var windowVisible
+    /// The device's appearance. The docked row follows it; the notch panel pins `.dark`
+    /// because it continues the physical notch (Kev, 2026-11-05).
+    @Environment(\.colorScheme) private var systemScheme
 
     /// ONE line: the sentence being spoken, not the whole utterance. A
     /// visiting agent's multi-paragraph `speak` is a single utterance with
@@ -110,6 +120,7 @@ struct NotchHUDContentView: View {
 
     var body: some View {
         panel
+            .environment(\.colorScheme, geometry.growsFromNotch ? .dark : systemScheme)
             // Under a notch the panel grows in from the notch's own rectangle and
             // folds back into it (the controller drives `expanded`).
             .scaleEffect(x: foldedScale.width, y: foldedScale.height, anchor: .top)
@@ -145,7 +156,7 @@ struct NotchHUDContentView: View {
                 // No hairline on the notched panel: a border would draw the seam
                 // between the notch and the panel that the black band hides.
                 if !geometry.growsFromNotch {
-                    NotchHUDLayout.shape.strokeBorder(.white.opacity(0.14), lineWidth: 1)
+                    NotchHUDLayout.shape.strokeBorder(Color.primary.opacity(0.14), lineWidth: 1)
                 }
             }
     }
@@ -169,10 +180,12 @@ struct NotchHUDContentView: View {
             }
         } else {
             HStack(spacing: NotchHUDLayout.interItemSpacing) {
-                // No tile behind the creature: on the glass it read as a boxed
-                // thumbnail (Kev's screenshot, 2026-09-12); `.fit` framing places
-                // the camera so the whole creature fills this square slot.
+                // `.fit` framing places the camera so the whole creature fills this
+                // square slot (Kev's screenshot, 2026-09-12). Its CRT tile stays a dark
+                // screen in Light mode too: the creature view paints no backing, so
+                // light ink would put the white-lattice Phosphor Fox on pale (2026-11-05).
                 avatarSlot
+                    .environment(\.colorScheme, .dark)
                     .frame(width: NotchHUDLayout.avatarSize, height: NotchHUDLayout.avatarSize)
                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 VStack(alignment: .leading, spacing: 3) {
@@ -206,7 +219,7 @@ struct NotchHUDContentView: View {
             Text("M1K3 IS TALKING")
                 .font(.pixel(18))
                 .kerning(1)
-                .foregroundStyle(.white)
+                .foregroundStyle(.primary)
         }
     }
 
@@ -219,9 +232,9 @@ struct NotchHUDContentView: View {
         } label: {
             Image(systemName: "xmark")
                 .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(.white.opacity(0.85))
+                .foregroundStyle(.primary.opacity(0.85))
                 .frame(width: 24, height: 24)
-                .background(.white.opacity(0.14), in: Circle())
+                .background(.primary.opacity(0.14), in: Circle())
         }
         .buttonStyle(.plain)
         .padding(.top, 8)
@@ -236,7 +249,7 @@ struct NotchHUDContentView: View {
         Text(NarrationCaption.text(for: env.speechHighlight.narrator))
             .font(.system(size: 10, weight: .medium, design: .rounded))
             .tracking(0.5)
-            .foregroundStyle(.white.opacity(0.55))
+            .foregroundStyle(.secondary)
     }
 
     /// Under a notch: smoked glass. A translucent dark fill with a glass
@@ -356,7 +369,7 @@ private struct NotchHUDMarquee: View {
     var body: some View {
         Text(text)
             .font(.system(size: 13, weight: .medium, design: .rounded))
-            .foregroundStyle(.white)
+            .foregroundStyle(.primary)
             .lineLimit(1) // a marquee scrolls ONE line; `fixedSize` alone honours embedded newlines
             .fixedSize()
             .background(GeometryReader { geo in
