@@ -1,6 +1,7 @@
 Thanks for testing M1K3 1.3.0 on iPhone and iPad.
 
 New in this build, please try:
+• Start a new chat and ask for a recipe ("get me a recipe for Bolognese"). The answer should be the recipe: no "I don't share my wiring" and no sentence about DuckDuckGo before it. Then ask "does anything I type ever leave this device?": the answer should still say yes, web searches do
 • The line over the chat field says who answers and whether web search is on, like "Lil · Web on". Tap it to switch brains, or to turn web search off for the next question
 • One ＋ beside the field holds Files and Photos, plus the same brain and web switches
 • On a folding iPhone, try the chat and Settings both open and closed

@@ -1,6 +1,7 @@
 Thanks for testing M1K3 1.3.0 on the Mac.
 
 New in this build, please try:
+• Start a new chat and ask for a recipe. The answer should be the recipe, with no sentence about what leaves your Mac before it. Then ask "does anything I type ever leave this Mac?": the answer should still say yes, web searches do
 • Web search switch: it sits beside the brain switcher in the chat toolbar. Turn it off and ask for today's news: I should answer without going to the web
 • Tell me how you like answers: say "Keep your answers to three sentences or fewer, please." Quit, reopen and ask an open question. The answer should stay short. The ask shows in Memories, where you can delete it
 • Answers take the shape of what you asked: a how-to as numbered steps, a comparison side by side, small talk as plain chat. Tell us when a shape feels wrong
