@@ -69,6 +69,9 @@ regenerate, which would also fold three weeks of new runs into the page.
 Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — the page no longer says the references are
 "not shipped" while the PCC note says you can pick it: "measured for comparison, not pinned", and PCC is named as
 the one reference M1K3 offers, opt-in. brains.html carries both by hand, byte-identical. Confidence 0.85. Confidence 0.85.
+Review: Kev + claude-fable-5.1, 2026-11-06 — the "What ships today" paragraph links /weights (where each brain comes
+from, its licence, how the digest check works); site/brains.html carries the sentence by hand, byte-identical, not a
+regenerate. Confidence 0.85.
 """
 
 from __future__ import annotations
@@ -877,7 +880,7 @@ def render_html(doc: dict) -> str:
   </div>
 
   <h2>What ships today</h2>
-  <p>Four tiers, three shown per device. Mini answers the quickest turns (Apple's model where it can run, LFM2.5 1.2B where it can't), Lil fronts the conversation, Big is reached by delegation for deep work. Each MLX model is pinned to one Hugging Face revision and every downloaded file is checked against a SHA-256 digest before it loads, so any mirror can serve the bytes.</p>
+  <p>Four tiers, three shown per device. Mini answers the quickest turns (Apple's model where it can run, LFM2.5 1.2B where it can't), Lil fronts the conversation, Big is reached by delegation for deep work. Each MLX model is pinned to one Hugging Face revision and every downloaded file is checked against a SHA-256 digest before it loads, so any mirror can serve the bytes. Where each one comes from, its licence, and how the check works: <a href="/weights">Where the brains come from</a>.</p>
   {_brains_table(doc["brains"])}
 
   <h2>The board</h2>

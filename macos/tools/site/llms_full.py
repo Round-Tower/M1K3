@@ -18,6 +18,7 @@ The page list is explicit (PAGES) because the home page is a marketing
 surface with a THREE.js hero, not an answer. Prior: Unknown (new file).
 Review: Kev + claude-opus-5.5, 2026-10-28 — the title drops "for Mac" (the app is on iPhone and iPad too),
 as llms.txt, the manifest and the home page's JSON-LD name do. Confidence 0.9.
+Review: Kev + claude-fable-5.1, 2026-11-06 — /weights (where the brains come from) joins PAGES after /brains. Confidence 0.9.
 """
 from __future__ import annotations
 
@@ -40,6 +41,7 @@ PAGES: list[tuple[str, str]] = [
     ("private-chatgpt-alternative-mac.html", "private-chatgpt-alternative-mac"),
     ("local-llm-mac-guide.html", "local-llm-mac-guide"),
     ("brains.html", "brains"),
+    ("weights.html", "weights"),
     ("golden-gate-on-device-ai.html", "golden-gate-on-device-ai"),
     ("teams.html", "teams"),
     ("companions.html", "companions"),
