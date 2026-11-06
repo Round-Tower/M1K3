@@ -37,7 +37,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-07-10",
-  "dateModified": "2026-10-29"
+  "dateModified": "2026-11-06"
 }
 </script>
 <script type="application/ld+json">
@@ -82,7 +82,7 @@
   <header class="article-head">
     <span class="label">// privacy architecture · privacy policy</span>
     <h1>Is M1K3 really private?</h1>
-    <p class="meta">Updated 2026-10-29 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable</p>
+    <p class="meta">Updated 2026-11-06 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable</p>
   </header>
 
   <div class="answer">
@@ -123,7 +123,7 @@
   <h2>What ever touches the network?</h2>
   <p>A privacy page earns its keep in the exceptions, so here they are, plainly:</p>
   <ol>
-    <li><strong>Model downloads (one-time, when you ask).</strong> M1K3 starts on Mini — with Apple Intelligence that is Apple's on-device Foundation Model, instant, nothing to download; on a Mac without it, a small Mini brain (about 630 MB) downloads on first run instead. Beyond that, the Lil or Big brain, semantic memory (the embedder), on-device Whisper speech models and the M1K3 Voice each download once from Hugging Face (<code>huggingface.co</code>); the voice also fetches one voice-styles file from <code>github.com</code>. After that, inference and voice run fully offline. The app's outbound-network entitlement exists for these downloads and the web tools below — the <a href="https://github.com/Round-Tower/M1K3/blob/master/macos/M1K3App/M1K3.entitlements">entitlements file</a> says so in a signed comment.</li>
+    <li><strong>Model downloads (one-time, when you ask).</strong> M1K3 starts on Mini — with Apple Intelligence that is Apple's on-device Foundation Model, instant, nothing to download; on a Mac without it, a small Mini brain (about 630 MB) downloads on first run instead. Beyond that, the Lil or Big brain, semantic memory (the embedder), on-device Whisper speech models and the M1K3 Voice each download once from Hugging Face (<code>huggingface.co</code>); the voice also fetches one voice-styles file from <code>github.com</code>. After that, inference and voice run fully offline. The app's outbound-network entitlement exists for these downloads and the web tools below — the <a href="https://github.com/Round-Tower/M1K3/blob/master/macos/M1K3App/M1K3.entitlements">entitlements file</a> says so in a signed comment. Which models, from which repositories, under which licences, and how each file is checked before it loads: <a href="/weights">Where the brains come from</a>.</li>
     <li><strong>The web tools (on by default, one switch to turn them off).</strong> The local agent has web-search and page-reading tools so answers can be current. One toggle in <strong>Settings ▸ Privacy</strong> turns them off; when it is off, the agent has no web tools at all — it can't quietly decide to search. When it is on, your search queries go to the web, as searches do.</li>
     <li><strong>Updates (via the channel you chose).</strong> There is no Sparkle-style self-updater inside the app. Mac App Store builds — and TestFlight builds, for the betas — update through Apple's infrastructure; the DMG updates when you download a new one from <a href="https://github.com/Round-Tower/M1K3/releases">GitHub Releases</a>; a source build updates when you pull and rebuild.</li>
     <li><strong>Private Cloud Compute (opt-in, off by default).</strong> Turn it on in Settings and Private Cloud Compute joins the brain picker. Pick it and, the first time, a consent sheet shows exactly what's about to go — the message, plus the conversation so far only if you tick that too — before your typed messages go to Apple's Private Cloud Compute; it stays picked until you choose a brain on this Mac. Never your memories, documents, tools, calendar, location, or profile. Every PCC answer is labelled in the chat; if PCC fails or the quota runs out, the on-device brain answers and says why. Detail below.</li>
@@ -324,6 +324,8 @@
      reporting" and the one-thing-we-can-receive sentence names both. Confidence 0.85.
      Review: Kev + claude-opus-5.5, 2026-10-29 — (pre-push review fold) the policy's Email purpose covers the snag
      report too, and the page says a force-quit also counts as not closing cleanly. Confidence 0.85.
-     Review: Kev + claude-opus-5.5, 2026-10-30 — the report a phone offers when a brain won't get ready joins the emailed-report lines. Confidence 0.85. -->
+     Review: Kev + claude-opus-5.5, 2026-10-30 — the report a phone offers when a brain won't get ready joins the emailed-report lines. Confidence 0.85.
+     Review: Kev + claude-fable-5.1, 2026-11-06 — the Model downloads item links /weights (repos, licences, the
+     pinned-digest check); no crossing changed. dateModified 2026-11-06. Confidence 0.85. -->
 </body>
 </html>

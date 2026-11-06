@@ -6,7 +6,7 @@
 > on-device — local brains, live voice, a knowledge graph, a memory graph, and an
 > MCP server on loopback. Made by Round Tower, Ireland.
 
-Sources, in order: https://m1k3.app/install, https://m1k3.app/agents, https://m1k3.app/privacy, https://m1k3.app/terms, https://m1k3.app/mcp-knowledge-server, https://m1k3.app/vs-ollama, https://m1k3.app/private-chatgpt-alternative-mac, https://m1k3.app/local-llm-mac-guide, https://m1k3.app/brains, https://m1k3.app/golden-gate-on-device-ai, https://m1k3.app/teams, https://m1k3.app/companions, https://m1k3.app/install.txt.
+Sources, in order: https://m1k3.app/install, https://m1k3.app/agents, https://m1k3.app/privacy, https://m1k3.app/terms, https://m1k3.app/mcp-knowledge-server, https://m1k3.app/vs-ollama, https://m1k3.app/private-chatgpt-alternative-mac, https://m1k3.app/local-llm-mac-guide, https://m1k3.app/brains, https://m1k3.app/weights, https://m1k3.app/golden-gate-on-device-ai, https://m1k3.app/teams, https://m1k3.app/companions, https://m1k3.app/install.txt.
 
 ---
 
@@ -409,7 +409,7 @@ Nothing. M1K3 is free for humans — no account, no subscription, no telemetry. 
 
 ## Is M1K3 really private?
 
-Updated 2026-10-29 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable
+Updated 2026-11-06 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable
 
 Short answer: yes — by architecture, not by promise. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the knowledge store encrypted under a key held in your Keychain. The MCP server binds to 127.0.0.1 and is off by default. The network is used in exactly four documented cases: one-time model downloads when you ask for them (brains, semantic memory, sharper speech recognition and the M1K3 Voice, from Hugging Face, plus one voice-styles file from GitHub), web search, which is on by default so answers can be current, with one switch in Settings to turn it off, updates via the channel you installed from, and — only if you turn it on in Settings and pick it as your brain — sending your typed messages to Apple's Private Cloud Compute. No telemetry, no account, no analytics. With Private Cloud Compute off, the default, pull the ethernet cable mid-conversation and only the web tools notice.
 
@@ -455,7 +455,7 @@ every crossing above is documented in the repo
 
 A privacy page earns its keep in the exceptions, so here they are, plainly:
 
-- Model downloads (one-time, when you ask). M1K3 starts on Mini — with Apple Intelligence that is Apple's on-device Foundation Model, instant, nothing to download; on a Mac without it, a small Mini brain (about 630 MB) downloads on first run instead. Beyond that, the Lil or Big brain, semantic memory (the embedder), on-device Whisper speech models and the M1K3 Voice each download once from Hugging Face (huggingface.co); the voice also fetches one voice-styles file from github.com. After that, inference and voice run fully offline. The app's outbound-network entitlement exists for these downloads and the web tools below — the entitlements file (https://github.com/Round-Tower/M1K3/blob/master/macos/M1K3App/M1K3.entitlements) says so in a signed comment.
+- Model downloads (one-time, when you ask). M1K3 starts on Mini — with Apple Intelligence that is Apple's on-device Foundation Model, instant, nothing to download; on a Mac without it, a small Mini brain (about 630 MB) downloads on first run instead. Beyond that, the Lil or Big brain, semantic memory (the embedder), on-device Whisper speech models and the M1K3 Voice each download once from Hugging Face (huggingface.co); the voice also fetches one voice-styles file from github.com. After that, inference and voice run fully offline. The app's outbound-network entitlement exists for these downloads and the web tools below — the entitlements file (https://github.com/Round-Tower/M1K3/blob/master/macos/M1K3App/M1K3.entitlements) says so in a signed comment. Which models, from which repositories, under which licences, and how each file is checked before it loads: Where the brains come from.
 
 - The web tools (on by default, one switch to turn them off). The local agent has web-search and page-reading tools so answers can be current. One toggle in Settings ▸ Privacy turns them off; when it is off, the agent has no web tools at all — it can't quietly decide to search. When it is on, your search queries go to the web, as searches do.
 
@@ -1059,7 +1059,7 @@ Short answer: M1K3 ships four brains, pinned to exact model revisions, and this 
 
 ### What ships today
 
-Four tiers, three shown per device. Mini answers the quickest turns (Apple's model where it can run, LFM2.5 1.2B where it can't), Lil fronts the conversation, Big is reached by delegation for deep work. Each MLX model is pinned to one Hugging Face revision and every downloaded file is checked against a SHA-256 digest before it loads, so any mirror can serve the bytes.
+Four tiers, three shown per device. Mini answers the quickest turns (Apple's model where it can run, LFM2.5 1.2B where it can't), Lil fronts the conversation, Big is reached by delegation for deep work. Each MLX model is pinned to one Hugging Face revision and every downloaded file is checked against a SHA-256 digest before it loads, so any mirror can serve the bytes. Where each one comes from, its licence, and how the check works: Where the brains come from.
 
 | Brain | Model | Pinned | Role |
 
@@ -5745,6 +5745,66 @@ mlx-community/LFM2.5-1.2B-Instruct-4bit (~630 MB) is shown as Mini wherever Appl
 We wanted one. The design review killed it, and the objections are verified in the app's own source: a remote re-pin would be a remote kill switch through the weights-integrity check, the offline fallback is a downgrade attack, and a periodic fetch from every install is telemetry. So model pins ship in the binary, and this page is documentation the app never reads. The full reasoning is ADR 0004 (https://github.com/Round-Tower/M1K3/blob/master/macos/docs/adr/0004-brain-catalogue-ships-in-the-binary.md).
 
 Running a local LLM on a Mac M1K3 vs Ollama Is M1K3 really private? M1K3 home
+
+---
+
+## Source: https://m1k3.app/weights
+
+## Where the brains come from
+
+Updated 2026-11-06 · By Round Tower, the makers of M1K3 — which model weights the app downloads, how it checks them, and how they change
+
+Short answer: every brain M1K3 downloads is named in the app's source, pinned to one exact revision of one Hugging Face repository, and checked file by file against a SHA-256 digest that ships inside the app. A file that does not match is refused, not retried. A brain changes only with a new app version, and nothing about your downloads is reported to anyone.
+
+### Which brains ship today
+
+Mini is Apple's on-device model where Apple Intelligence runs, so there is nothing to download; on a device without it, a small LFM2.5 brain stands in. Lil and Big download once, when you ask; the other rows are the weights behind semantic memory, the M1K3 Voice and sharper speech recognition. The MLX files are community quantisations of the authors' releases, each under its author's licence as its model card publishes it, which M1K3 does not alter.
+
+| What | Weights | Licence as published |
+
+| Mini | Apple Foundation Models — ships with macOS 26 and iOS 26 | Apple's terms; nothing downloaded |
+
+| Mini without Apple Intelligence | mlx-community/LFM2.5-1.2B-Instruct-4bit (https://huggingface.co/mlx-community/LFM2.5-1.2B-Instruct-4bit) — about 630 MB | LFM Open License v1.0 (tagged "other", licence name lfm1.0) |
+
+| Lil | mlx-community/Qwen3.5-4B-MLX-4bit (https://huggingface.co/mlx-community/Qwen3.5-4B-MLX-4bit) — about 3 GB | Apache 2.0 |
+
+| Big | mlx-community/gemma-4-12B-it-4bit (https://huggingface.co/mlx-community/gemma-4-12B-it-4bit) — about 6.7 GB | Apache 2.0 — the quantised repository's card names no licence; its base model, google/gemma-4-12B-it (https://huggingface.co/google/gemma-4-12B-it), is published under Apache 2.0 |
+
+| Semantic memory | mlx-community/embeddinggemma-2-8bit (https://huggingface.co/mlx-community/embeddinggemma-2-8bit) | Apache 2.0 |
+
+| M1K3 Voice | round-tower/Kokoro-82M-bf16 (https://huggingface.co/round-tower/Kokoro-82M-bf16), a bfloat16 conversion of hexgrad/Kokoro-82M, plus one voice-styles file from a GitHub release of thewh1teagle/kokoro-onnx | Apache 2.0 |
+
+| Sharper speech recognition | argmaxinc/whisperkit-coreml (https://huggingface.co/argmaxinc/whisperkit-coreml) — Whisper small.en by default | MIT |
+
+### How a download is checked
+
+The app carries a manifest, PinnedWeights.swift (https://github.com/Round-Tower/M1K3/blob/master/macos/Sources/M1K3MLX/PinnedWeights.swift), built from a local copy of each model that had been run and evaluated and cross-checked against Hugging Face's published file identifiers: for every repository the full git revision, for every file its size and SHA-256 digest. A download resolves against that revision, never a branch; a request for main is ignored by design, because a branch is the moving target the pin exists to remove.
+
+After the download, every pinned file is hashed and compared. Not arrived yet: a download in progress. Present but wrong: refused. The app does not load it, does not delete it (it is evidence) and does not retry, since fetching again from the same source could hide an attack behind a flaky-looking connection. Settings says: “I didn't use those files: they don't match what this version of M1K3 expects. I left them untouched. Try the download again, and tell us if it keeps happening.” A file that cannot be read is not loaded either; weights left from an earlier release are told apart from tampering and simply fetched again at the pinned revision.
+
+Why the digests live in the app rather than on the server: a hash fetched from the host that serves the file proves nothing, because whoever can swap the file can swap its hash. A digest that travels with the app's source, reviewed like code, changes only when a release changes. The caveat: the first pin came from bytes we had already run and trusted, the trust-on-first-use step every pinning scheme has.
+
+Three gaps today. The M1K3 Voice pins its two Hugging Face files the same way; its voice-styles file from GitHub is not pinned. The WhisperKit speech models are fetched by the WhisperKit library, unpinned, so Settings shows their size as an estimate. Big's chat template (tokenizer metadata, not weights) is replaced before the check with Google's later canonical copy carried in the app, so the pinned digest is of the corrected file.
+
+### Where the weights live
+
+On your Mac, inside the app's sandbox container; on iPhone or iPad, inside the app's container there. Only the app reads them; they never leave the device, and nothing about them is uploaded. Settings › Brains & downloads names every download and is where you remove a brain, the speech models or the voice; removing the app and its container removes them all. The downloads go straight to huggingface.co, and the voice-styles file to github.com, as ordinary requests under those sites' privacy policies; none of it passes through Round Tower, which has no servers. Every network crossing is listed on the privacy page.
+
+### How brains change
+
+A new brain, or a new revision of one, is a change to the pinned manifest in the app's source: reviewed like any other behaviour change, shipped in a new app version, named in its release notes. The app reads its catalogue from its own binary, never from this site or any server, so a running copy cannot have its model swapped from outside. The measurements behind each pick are on the brains page, generated from the committed eval runs.
+
+That is how it works today: there is no over-the-air model update of any kind. If that ever changes, it will be announced on this page first, before any build that could do it ships.
+
+### What we do not do
+
+- No telemetry on downloads. A download sends the request itself, to Hugging Face or GitHub, and nothing else.
+
+- No account, no sign-in, no key. The models are public repositories.
+
+- Nothing uploaded: not the weights, not what you ask them, not which brain you picked.
+
+- No silent swaps. No model changes between app releases, and no download starts without your asking, apart from the small Mini on first run on a device without Apple Intelligence, which the privacy page explains.
 
 ---
 
