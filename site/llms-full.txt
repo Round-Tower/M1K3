@@ -30,7 +30,7 @@ Mac App Store · the easy way
 
 Free, and it updates through the App Store. One honest note: the App Store copy of m1k3 is sandboxed, so its connect prints the config rather than writing it; Homebrew and the DMG write it for you.
 
-Get it on the Mac App Store (https://apps.apple.com/app/id6780230835?pt=120784482&ct=site-install&mt=12) iPhone & iPad on the App Store (https://apps.apple.com/app/id6780230835?pt=120784482&ct=site-install-ios&mt=8)
+Download on the Mac App Store (https://apps.apple.com/app/id6780230835?pt=120784482&ct=site-install&mt=12) iPhone & iPad (https://apps.apple.com/app/id6780230835?pt=120784482&ct=site-install-ios&mt=8)
 
 Homebrew · agents' favourite
 
@@ -48,7 +48,7 @@ DMG · one click
 
 Signed and notarized by Round Tower. Open it, drag M1K3 to Applications. The command-line client is inside the bundle at Contents/Helpers/m1k3.
 
-Download M1K3.dmg (https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg)
+M1K3.dmg (https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg)
 
 Check: M1K3 is in Applications. Nothing has been downloaded but the app itself.
 

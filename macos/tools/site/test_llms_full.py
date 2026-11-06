@@ -35,6 +35,13 @@ def test_page_text_keeps_content_and_drops_chrome():
         assert gone not in text, gone
 
 
+def test_an_image_only_link_keeps_its_alt_as_the_label():
+    # Apple's store badges (2026-11-06) are <img> links: a citing model still needs the words.
+    page = ('<main><p><a class="store-badge" href="https://apps.apple.com/app/id1?mt=12">'
+            '<img src="/badges/mac-app-store.svg" alt="Download on the Mac App Store" /></a> or the DMG.</p></main>')
+    assert "Download on the Mac App Store (https://apps.apple.com/app/id1?mt=12) or the DMG." in llms_full.page_text(page)
+
+
 def test_build_lists_sources_and_includes_install_txt_verbatim(tmp_path: Path):
     (tmp_path / "install.html").write_text(PAGE)
     (tmp_path / "install.txt").write_text("# recipe\nbrew install --cask round-tower/tap/m1k3\n")
