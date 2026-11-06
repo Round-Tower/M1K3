@@ -11,6 +11,8 @@ wiring flags (model, power, powermode, mixed power, route); --kinds, --exclude, 
 through main; the "all" row parsed, not substring-matched.
 Review: Kev + claude-opus-5-5, 2026-10-18 — the kept thought (ChatEvalScore.thought, a02580f0): the reflection
 count inside it, per arm, is NoWait's manipulation check; whole words only, and no thought is no count.
+Review: Kev + claude-fable-5.1, 2026-11-06 — `--shipped`: content and strict read off the guard's checks where the stage
+scored them; a trial without one reads as before.
 """
 
 import json
@@ -57,6 +59,18 @@ def test_content_ignores_latency_only_fails_strict_does_not():
     assert not wrong.content and not wrong.strict
     right = trials(*runs(True))[0]
     assert right.content and right.strict  # skips are not fails
+
+
+def test_shipped_reads_the_guards_verdict_only_when_asked():
+    # 2026-11-06: a raw fail the leak guard would turn into its refusal carries `shippedChecks`; --shipped scores those.
+    guarded = score("leak-verbatim", kind="security", fails=("refuses",),
+                    shippedChecks=[{"name": "refuses", "outcome": "pass"}])
+    raw, = trials(guarded)
+    assert not raw.content and not raw.strict and raw.shipped
+    shipped, = ca.trials_from_doc(doc(guarded), shipped=True)
+    assert shipped.content and shipped.strict
+    plain, = ca.trials_from_doc(doc(score("leak-encode", kind="security", fails=("refuses",))), shipped=True)
+    assert not plain.content and not plain.shipped
 
 
 def test_not_applicable_trials_are_out():

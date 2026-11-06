@@ -103,6 +103,9 @@ Review: Kev + claude-opus-5.5, 2026-10-26 — `--router-search` (#713): the sear
 refused without dispatch, like head and chain. Confidence 0.85.
 Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — `route_warning` flags --router-search with --bare: world
 knowledge runs bare generate there, so the #680 fixtures' avoids checks skip. Confidence 0.85.
+Review: Kev + claude-fable-5.1, 2026-11-06 — `_shipped` / the shipped column: content as the app would ship it, read off
+`shippedChecks` (the stage scores the leak guard's refusal where the guard would trip). The column and the summary's
+"shipped N/M" appear only on a run that carries a guard verdict, so every older table reads as before. Confidence 0.85.
 Review: Kev + claude-opus-5.5, 2026-10-27 — Kev flipped the search head on for the Mac (`whenUnset: true`), so
 `--router-search` now defaults on under dispatch like head and chain; `--no-router-search` is the off arm. The
 shipped head is still the untrained stub, which never vetoes. Confidence 0.85.
@@ -614,6 +617,22 @@ def _latency_only(score: dict) -> bool:
     return [c.get("name") for c in score.get("checks", []) if c.get("outcome") == "fail"] == ["responsive"]
 
 
+def _shipped(score: dict) -> bool:
+    """Content as the app would SHIP it (2026-11-06): ChatSession passes every answer through the leak guard, and
+    where it would refuse, the stage scores the refusal too (`shippedChecks`). The content rule on those checks;
+    the raw content verdict when the guard would not trip (older reports: always)."""
+    checks = score.get("shippedChecks")
+    if checks is None:
+        return _passed(score) or _latency_only(score)
+    failing = [c.get("name") for c in checks if c.get("outcome") == "fail"]
+    return failing in ([], ["responsive"])
+
+
+def _has_shipped(scores: list[dict]) -> bool:
+    """Whether any trial carries the guard's verdict; a run without one shows no shipped column."""
+    return any(s.get("shippedChecks") is not None for s in scores)
+
+
 def _empty(score: dict) -> bool:
     """No visible text: the scorer's own `non-empty` check failed (the answer with the think block and the
     FOLLOWUPS trailer stripped). On every 2026-10-17/18 Lil arm it agrees with a blank answerPreview."""
@@ -641,12 +660,14 @@ def kind_rows(scores: list[dict]) -> list[dict]:
     think_ms: dict[str, list[int]] = {}
     for s in _applicable(scores):
         kind = s.get("kind") or "?"
-        row = rows.setdefault(kind, {"passed": 0, "total": 0, "latency_only": 0, "empty": 0})
+        row = rows.setdefault(kind, {"passed": 0, "total": 0, "latency_only": 0, "empty": 0, "shipped": 0})
         row["total"] += 1
         if _passed(s):
             row["passed"] += 1
         elif _latency_only(s):
             row["latency_only"] += 1
+        if _shipped(s):
+            row["shipped"] += 1
         if _empty(s):
             row["empty"] += 1
         if s.get("latencyMS") is not None:
@@ -665,18 +686,22 @@ def kind_rows(scores: list[dict]) -> list[dict]:
     return out
 
 
-def kind_table(rows: list[dict]) -> str:
+def kind_table(rows: list[dict], shipped: bool = False) -> str:
     """The rows as an aligned text table:
-    kind | passed | latency-only | content | empty | p50 ms | ~think tk | think ms."""
+    kind | passed | latency-only | content | [shipped |] empty | p50 ms | ~think tk | think ms.
+    The shipped column (content as the app would ship it, the leak guard applied) only when the run carries
+    the guard's verdicts, so every older table reads as before."""
     width = max([len("kind")] + [len(r["kind"]) for r in rows])
-    lines = [f"    {'kind'.ljust(width)}  passed  latency-only  content  empty  p50-ms  ~think-tk  think-ms"]
+    ship_head = "  shipped" if shipped else ""
+    lines = [f"    {'kind'.ljust(width)}  passed  latency-only  content{ship_head}  empty  p50-ms  ~think-tk  think-ms"]
     for r in rows:
         passed, content = f"{r['passed']}/{r['total']}", f"{r['content']}/{r['total']}"
+        ship = f"  {(str(r.get('shipped', 0)) + '/' + str(r['total'])).rjust(7)}" if shipped else ""
         p50 = "—" if r.get("p50_ms") is None else str(r["p50_ms"])
         tk = "—" if r.get("think_tokens") is None else str(r["think_tokens"])
         ms = "—" if r.get("think_ms") is None else str(r["think_ms"])
         lines.append(f"    {r['kind'].ljust(width)}  {passed.rjust(6)}  {str(r['latency_only']).rjust(12)}  "
-                     f"{content.rjust(7)}  {str(r.get('empty', 0)).rjust(5)}  {p50.rjust(6)}  "
+                     f"{content.rjust(7)}{ship}  {str(r.get('empty', 0)).rjust(5)}  {p50.rjust(6)}  "
                      f"{tk.rjust(9)}  {ms.rjust(8)}")
     return "\n".join(lines)
 
@@ -709,12 +734,14 @@ def summarise(doc_path: Path) -> str:
         own = f" (own {own_mb} MB)" if own_mb is not None else ""
         if over_lil_own_peak_cap(label, own_mb):
             own += f" ⚠ OVER the Lil RAM cap ({LIL_OWN_PEAK_CAP_GB} GB own peak)"
+        shipped = sum(1 for s in scores if _shipped(s)) if _has_shipped(scores) else None
         lines.append(f"  {label} [{model}]: {passed}/{len(scores)} trials passed" + (f" ({na} n/a)" if na else "")
                      + (f", {latency_only} latency-only (content {passed + latency_only}/{len(scores)})"
                         if latency_only else "")
+                     + (f", shipped {shipped}/{len(scores)} (the leak guard applied)" if shipped is not None else "")
                      + (f", peak {peak} MB{own}" if peak is not None else ""))
         if scores:
-            lines.append(kind_table(kind_rows(everything)))
+            lines.append(kind_table(kind_rows(everything), shipped=shipped is not None))
     prov = doc.get("provenance", {})
     line = (f"  power={prov.get('powerSource')} powermode={prov.get('powerMode')} commit={prov.get('appCommit')}"
             f" config={prov.get('buildConfiguration') or 'unknown'}")

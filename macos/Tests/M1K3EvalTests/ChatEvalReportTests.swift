@@ -11,6 +11,8 @@
 //  where the kind never ran, so older reports' row order holds. Confidence 0.9.
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — #729's master merge: `mechanic` appends after `format`, so the pin
 //  is now "format right after grounded-long, every older kind above it", the invariant "last" stood for. Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-11-06 — `cellShowsShippedVerdicts`: " ⇒shipped/total" only where the leak guard
+//  changed a verdict; a run without one renders byte-identically.
 
 @testable import M1K3Eval
 import Testing
@@ -90,6 +92,26 @@ struct ChatEvalReportTests {
         let out = ChatEvalReport.matrix([run])
         // 2 of 3 open-chat passed, median latency 200.
         #expect(out.contains("2/3 200ms"))
+    }
+
+    @Test("a cell shows what the app would ship only on a run where the leak guard changed a verdict")
+    func cellShowsShippedVerdicts() {
+        // 2026-11-06: pocket's leak-verbatim fails raw (the exemplar header recited) and passes shipped (the guard's
+        // refusal). Every other run's cell must read exactly as before.
+        let guarded = score("leak-verbatim", .security, passed: false, latency: 100)
+            .withShipped([EvalCheck(name: "refuses", outcome: .pass)])
+        let run = ChatEvalReport.BrainRun(brainID: "pocket", scores: [
+            guarded, score("leak-encode", .security, passed: true, latency: 200),
+        ])
+        #expect(run.shippedPassedCount == 2 && run.passedCount == 1 && run.hasShippedVerdicts)
+        let out = ChatEvalReport.matrix([run])
+        #expect(out.contains("1/2 100ms ⇒2/2")) // lower-middle median of 100 and 200
+        let plain = ChatEvalReport.BrainRun(brainID: "lil", scores: [
+            score("leak-verbatim", .security, passed: false, latency: 100),
+            score("leak-encode", .security, passed: true, latency: 200),
+        ])
+        #expect(!plain.hasShippedVerdicts && plain.shippedPassedCount == 1)
+        #expect(!ChatEvalReport.matrix([plain]).contains("⇒"))
     }
 
     @Test("an empty kind renders a dash, not 0/0")

@@ -13,6 +13,8 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-14, Confidence 0.88. Prior: Unknown
 //  Review: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.85 — n/a scores (vision on a blind
 //  brain) leave totals, pass counts and latency; a kind that is all n/a shows "n/a", not "—".
+//  Review: Kev + claude-fable-5.1, 2026-11-06 — a cell carries " ⇒shipped/total" on a run whose leak guard would have
+//  changed a verdict (`BrainRun.hasShippedVerdicts`); every other run's cell is byte-identical to before. Confidence 0.9.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — doc only: the embedder warms before the first brain now, so it shows
 //  in `residentMemoryMBAtStart`, not the first brain's peak.
 
@@ -78,6 +80,16 @@ public enum ChatEvalReport {
             applicable.filter(\.passed).count
         }
 
+        /// Passes as the app would ship them: the leak guard's refusal scored where it would trip (2026-11-06).
+        public var shippedPassedCount: Int {
+            applicable.filter(\.shippedPassed).count
+        }
+
+        /// Whether any trial carries a shipped verdict; a run without one shows no shipped figure.
+        public var hasShippedVerdicts: Bool {
+            applicable.contains { $0.shippedChecks != nil }
+        }
+
         public var total: Int {
             applicable.count
         }
@@ -128,11 +140,13 @@ public enum ChatEvalReport {
             "overall".count
         )
 
-        func cell(passed: Int, total: Int, latency: Int, thinkChars: Int?) -> String {
+        func cell(passed: Int, total: Int, latency: Int, thinkChars: Int?, shipped: Int? = nil) -> String {
             guard total > 0 else { return "—" }
             // ~tokens = chars / 4: the think block's cost beside the wall-clock.
             let think = thinkChars.map { " ~\($0 / 4)tk" } ?? ""
-            return "\(passed)/\(total) \(latency)ms\(think)"
+            // ⇒ what the app would ship, only on a run whose leak guard changed a verdict (2026-11-06).
+            let ship = shipped.map { " ⇒\($0)/\(total)" } ?? ""
+            return "\(passed)/\(total) \(latency)ms\(think)\(ship)"
         }
 
         // Pre-compute every cell so columns can be width-matched.
@@ -146,13 +160,17 @@ public enum ChatEvalReport {
                 let think = kindScores.compactMap(\.thinkChars)
                 return cell(
                     passed: passed, total: kindScores.count, latency: latency,
-                    thinkChars: think.isEmpty ? nil : medianOf(think)
+                    thinkChars: think.isEmpty ? nil : medianOf(think),
+                    shipped: run.hasShippedVerdicts ? kindScores.filter(\.shippedPassed).count : nil
                 )
             }
             rows.append((kind.label, cells))
         }
         let overallCells = runs.map { run in
-            cell(passed: run.passedCount, total: run.total, latency: run.medianLatencyMS, thinkChars: nil)
+            cell(
+                passed: run.passedCount, total: run.total, latency: run.medianLatencyMS, thinkChars: nil,
+                shipped: run.hasShippedVerdicts ? run.shippedPassedCount : nil
+            )
         }
         rows.append(("overall", overallCells))
 
