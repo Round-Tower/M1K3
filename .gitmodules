@@ -1,4 +1,0 @@
-[submodule "app/composeApp/src/androidMain/cpp/llama.cpp"]
-	path = app/composeApp/src/androidMain/cpp/llama.cpp
-	url = https://github.com/ggml-org/llama.cpp.git
-	shallow = true

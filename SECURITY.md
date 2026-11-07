@@ -83,7 +83,7 @@ turns those off yet.
 | Surface | Status |
 |---|---|
 | macOS app (`macos/`, TestFlight beta) | Supported — latest beta build |
-| 間 AI mobile (`app/`) | Pre-release — not yet supported |
+| Android (archived at tag `archive/android-2026-11-07`) | Not shipped, not supported |
 
 <!-- Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85, Prior: Unknown (SECURITY.md predates
      this signature). The PCC section said "Not in 1.0 … no cloud path at all"; the rung shipped in the

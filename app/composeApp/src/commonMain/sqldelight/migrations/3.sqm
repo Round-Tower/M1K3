@@ -1,5 +1,0 @@
--- Migration 3 → 4: no-op.
--- FTS5 tables were removed because the module is not available on all Android
--- SQLite builds (confirmed missing on Pixel 9a, SQLITE_ERROR code 1).
--- Search falls back to LIKE queries in SearchRepository.
--- MurphySig: https://murphysig.dev (2026-04-17)

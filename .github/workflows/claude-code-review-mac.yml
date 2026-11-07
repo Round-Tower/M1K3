@@ -1,9 +1,8 @@
 name: Claude Code Review (Mac)
 
-# Companion to claude-code-review.yml (which is scoped to the Kotlin/Android app/).
-# This one reviews the Mac-native SwiftUI/SwiftPM surface under macos/ — the
-# Android reviewer never fires on Swift changes, so the Mac MVP had no automated
-# review until now.
+# Reviews the Mac-native SwiftUI/SwiftPM surface under macos/. (Its Android
+# companion, claude-code-review.yml, left with the Android app on 2026-11-07:
+# tag archive/android-2026-11-07.)
 
 # reopened matters: gh pr close/reopen is the recovery path when GitHub drops a
 # push's workflow event, and without it this reviewer stays dark on the retry.

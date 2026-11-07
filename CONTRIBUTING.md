@@ -10,7 +10,7 @@ from clone to green tests, and explains how we work.
 | **macOS app** (the flagship) | [`macos/`](./macos) | Active — this is where contributions land |
 | iOS + visionOS shell | [`macos/M1K3iOSApp/`](./macos/M1K3iOSApp) | Active — native SwiftUI on the shared `macos/Sources/` graph (`M1K3iOS`/`M1K3visionOS` targets). This is the Apple mobile/spatial path, **not** `app/`. |
 | Python CLI / MCP (the origins) | git history before `7545b4a4` | Archived — cleared from the tree 2026-08-13 |
-| 間 AI mobile (KMP) | [`app/`](./app) | Slow burn — the **Android** surface |
+| Android (KMP) | tag `archive/android-2026-11-07` | Archived 2026-11-07 — restore with `git checkout archive/android-2026-11-07 -- app` |
 
 Build-from-source instructions for the Mac app live in
 [`macos/README.md`](./macos/README.md).

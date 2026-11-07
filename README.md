@@ -72,7 +72,7 @@ sends it, and nothing goes without you pressing Send.
 |---|---|---|---|
 | **macOS native** | [`macos/`](./macos) | Swift 6.2, SwiftUI, MLX-Swift | **The product** — on-device knowledge · RAG · agent · voice · calls. Build it: [`macos/README.md`](./macos/README.md). |
 | **iOS + visionOS** | [`macos/M1K3iOSApp/`](./macos/M1K3iOSApp) | Swift 6.2, SwiftUI | Native SwiftUI shell on the **same** `macos/Sources/` package graph — chat · RAG · memories · docs. Ladder tops out at Lil on-device. See [`macos/docs/IOS_VISIONOS_PORT.md`](./macos/docs/IOS_VISIONOS_PORT.md). |
-| **間 AI mobile** | [`app/`](./app) | Kotlin Multiplatform | Slow burn — the **Android** surface (KMP), pre-release. See [`app/README.md`](./app/README.md). |
+| **Android (archived)** | tag `archive/android-2026-11-07` | Kotlin Multiplatform | Left the tree 2026-11-07 so the repo's centre of gravity is unambiguous: Mac, iPhone, iPad, Vision Pro. `git checkout archive/android-2026-11-07 -- app` restores it. |
 | **The attic** | git history before `7545b4a4` | Python, THREE.js, Tauri | Where M1K3 grew up — the original CLI, avatar experiments, and ideas. Cleared from the tree 2026-08-13; see [The attic](#the-attic). |
 
 ## Get M1K3

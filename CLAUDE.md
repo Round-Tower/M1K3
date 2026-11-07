@@ -11,7 +11,7 @@ TestFlight and the Developer ID DMG (read the store lookup, `itunes.apple.com/lo
 ## Start here
 - **`macos/CLAUDE.md`** — build, test, architecture, conventions. Read it first.
 - **`macos/docs/IOS_VISIONOS_PORT.md`** — the iOS / visionOS shell.
-- **`app/CLAUDE.md`** — M1K3 for Android (KMP, slow burn).
+- **Android (KMP) left the tree on 2026-11-07** (tag `archive/android-2026-11-07`; `git checkout archive/android-2026-11-07 -- app` brings it back). The Mac, iPhone, iPad and Vision Pro apps are the product.
 - **`CONTRIBUTING.md` / `SECURITY.md`** — the public-repo contributor surface.
 - **`.claude/skills/m1k3/README.md`** — the M1K3 mod for Claude Code (loads by itself in
   this checkout): the CLAUDE.md nevers enforced on `tool.call`, M1K3's voice for the moments a
