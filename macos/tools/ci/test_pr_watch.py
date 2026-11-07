@@ -957,7 +957,7 @@ def test_every_auto_review_prompt_asks_for_the_line_the_gate_reads():
     # Drift guard: the prompt's example line, with the event's head substituted,
     # must parse as the verdict it names. A reworded prompt that the parser
     # can't read would refuse every PR.
-    for workflow in ("claude-code-review-mac.yml", "claude-code-review.yml"):
+    for workflow in ("claude-code-review-mac.yml",):  # the Android one left with app/ (2026-11-07)
         prompt = _claude_step(workflow)["prompt"].replace("${{ github.event.pull_request.head.sha }}", V_HEAD)
         for outcome in ("APPROVE", "CHANGES_REQUESTED"):
             lines = [ln for ln in prompt.splitlines() if f"VERDICT: {outcome} @" in ln]

@@ -62,8 +62,8 @@ This repository incorporates third-party components that remain governed by
 their own licenses. The macOS app's bundled dependency notices are generated
 into macos/M1K3App/ThirdPartyLicenses.plist; notable components include:
 
-  - llama.cpp — MIT License (included as a git submodule under
-    app/composeApp/src/androidMain/cpp/llama.cpp)
+  - llama.cpp — MIT License (a git submodule of the archived Android app,
+    tag archive/android-2026-11-07; not part of the current tree)
   - MLX / mlx-swift / mlx-swift-lm — MIT License
   - WhisperKit — MIT License
   - Model weights (Qwen3, Gemma 4) — Apache License 2.0, retrieved at runtime

@@ -5,7 +5,7 @@
 > spike**: declare the platforms, prove the library graph compiles for iOS/visionOS,
 > guard the few macOS-only leaves, and inventory the real runtime work — *before*
 > building the app target / UI / TestFlight lane. Kev's decision (2026-07-06):
-> mobile is THIS app, not the KMP `app/` surface. (The "iOS = KMP" note in
+> mobile is THIS app, not the KMP `app/` surface (archived 2026-11-07, tag `archive/android-2026-11-07`). (The "iOS = KMP" note in
 > `tools/release/README.md` §3 was reconciled when the shell landed — done.)
 
 ## What the spike proved
@@ -649,3 +649,5 @@ cover is up (one RealityView). Source-scan tests
 (`VoiceModeFloorTests`, `WindowFieldTests`) pin the field. Verify-owed: the Simulator
 look, and the visionOS gradient under the full-bleed hero (Simulator can't be
 trusted for RealityView). Not touched: `OnboardingScreen` keeps its own floor (1.1).
+
+Review: Kev + claude-fable-5.1, 2026-11-07 — the KMP `app/` mention names the archive tag; the Android app left the tree.

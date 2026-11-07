@@ -5,7 +5,7 @@ with live voice, a knowledge graph, document memory, an embedded agent, call tra
 a 3D avatar and an MCP server. The **macOS 26** app (`M1K3App/`, Swift 6.2, Liquid Glass +
 on-device Foundation Models) is the primary shipping surface; the same `Sources/` package
 graph drives the iOS 26 / visionOS 26 shell in `M1K3iOSApp/` (`M1K3iOS` / `M1K3visionOS`
-targets in `project.yml`). `../app/` is the separate KMP Android effort.
+targets in `project.yml`). The KMP Android app left the tree on 2026-11-07 (tag `archive/android-2026-11-07`).
 
 Read on demand, not up front: `docs/MODULE_MAP.md` (every package target and its role;
 the doc-drift CI job pins it to `Package.swift`), `ROADMAP.md` (what's next, kept live),
@@ -132,3 +132,5 @@ master push (the compute hours ran out on per-merge archives); `tools/asc/releas
 <!-- Review: Kev + claude-opus-5.5, 2026-10-21, Confidence 0.8 — two conventions promoted from auto-memory
 (the façade forwarding rule and the Codable keyNotFound trap) when MEMORY.md went 135 → 36 lines; both bit
 in-session before they were written down. -->
+
+Review: Kev + claude-fable-5.1, 2026-11-07 — the `../app/` pointer now names the archive tag; the Android app left the tree.

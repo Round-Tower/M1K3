@@ -76,8 +76,8 @@ The build number is the cancelled Xcode Cloud run's; the rest of the release is 
 
 The Apple mobile/spatial surface is the native SwiftUI shell under
 `../../M1K3iOSApp/` (`M1K3iOS` / `M1K3visionOS` targets), built on the SAME
-`Sources/` package graph as the Mac app — NOT the KMP `app/` (that's the Android
-effort). The on-device ladder is **Mini + Lil only** (Big is excluded on mobile;
+`Sources/` package graph as the Mac app — NOT the KMP `app/` (the Android effort,
+archived 2026-11-07 at tag `archive/android-2026-11-07`). The on-device ladder is **Mini + Lil only** (Big is excluded on mobile;
 `M1K3iOSApp/AppCore.swift`). Release path: the SAME Xcode Cloud `Release` workflow
 as the Mac — a second Archive action (`M1K3iOS`, platform iOS) uploads into the one
 universal `app.m1k3` record on every release tag (`../asc/release_tag.py`; `../../docs/XCODE_CLOUD_RELEASE.md`
