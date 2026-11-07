@@ -1,0 +1,20 @@
+{
+ "timestamp": "2026-11-07 16:15:33 +0000",
+ "killed": [
+  {
+   "name": "momentsd",
+   "reason": "per-process-limit",
+   "residentMB": 14
+  }
+ ],
+ "M1K3": {
+  "pid": 2189,
+  "residentMB": 1768,
+  "lifetimeMaxMB": 3009,
+  "states": [
+   "active",
+   "frontmost"
+  ]
+ },
+ "note": "the per-process jetsam listing is kept off the repo (every process on the phone); these are the two rows that matter"
+}

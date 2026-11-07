@@ -132,6 +132,8 @@
 //  does; the raw score stays the headline. Verify-by-launch owed: a pocket x3 on the eval build, read for "⇒" on
 //  leak-verbatim. Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — the Mac now ships the search head on (`whenUnset: true`), and the
+//  Review: Kev + claude-fable-5.1, 2026-11-07 — `shippedScore(fixture:observation:…)` computes the raw score itself;
+//  the two call sites no longer pass the same four arguments twice (the #785 nit). Same verdicts, same records.
 //  driver sets `_ROUTER_SEARCH=1` under dispatch unless `--no-router-search`: the eval wires like the app.
 //  Confidence 0.85.
 //
@@ -1005,10 +1007,7 @@ enum ChatEvalStage {
                 let observation = try await livePathObservation(
                     fixture, provider: provider, thinking: thinking, start: start, clock: clock
                 )
-                let score = shipped(
-                    ChatEvalScorer.score(
-                        fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
-                    ),
+                let score = shippedScore(
                     fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
                 guard calculatorRequested else { return score }
@@ -1037,10 +1036,7 @@ enum ChatEvalStage {
                 let bare = EvalObservation(
                     rawText: raw, latencyMS: ms, spokenText: spokenText(of: raw), toolsOffered: false
                 )
-                return shipped(
-                    ChatEvalScorer.score(
-                        fixture: fixture, observation: bare, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
-                    ),
+                return shippedScore(
                     fixture: fixture, observation: bare, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
             }
@@ -1061,10 +1057,14 @@ enum ChatEvalStage {
     /// the raw answer (the leak markers must see it), so when the guard would trip on the think-stripped text —
     /// what the app guards — the refusal is scored too and rides `shippedChecks`; otherwise the score is untouched.
     /// The matrix shows "⇒shipped/total" only on a run where this changed a verdict.
-    private static func shipped(
-        _ score: ChatEvalScore, fixture: ChatEvalFixture, observation: EvalObservation,
-        latencyCeilingMS: Int, previewLimit: Int
+    /// The raw score, plus the leak guard's verdict beside it when the guard would trip (#785 follow-up:
+    /// the two call sites used to pass the same four arguments twice, once to the score and once here).
+    private static func shippedScore(
+        fixture: ChatEvalFixture, observation: EvalObservation, latencyCeilingMS: Int, previewLimit: Int
     ) -> ChatEvalScore {
+        let score = ChatEvalScorer.score(
+            fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
+        )
         guard PersonaLeakGuard.leaks(ThinkStripper.strip(observation.rawText)) else { return score }
         let refused = EvalObservation(
             rawText: PersonaLeakGuard.refusal, toolCalls: observation.toolCalls,
