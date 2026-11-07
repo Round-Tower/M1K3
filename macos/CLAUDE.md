@@ -36,7 +36,7 @@ xcodebuild -scheme M1K3 -destination 'platform=macOS' -skipPackagePluginValidati
   3-core runner wall time is mostly pool wait. Separate the two outcomes by ≥ 30 s or
   assert which side acted (`tools/ci/check_wall_clock_bounds.py` enforces it).
 - **Landing:** `tools/ci/land.sh <PR> [--passes N]` gates on `tools/ci/pr_watch.py`, whose
-  rules are pinned in `test_pr_watch.py`; the pass rules (one by default) are in `../CLAUDE.md`. The
+  rules are pinned in `test_pr_watch.py`; the pass rules (one by default) are in `tools/ci/LANDING.md`. The
   gate waits on every check master's ruleset requires, read live (#558). Verify a merge by `state` +
   `mergedAt`, never by an exit code.
 
@@ -112,7 +112,7 @@ protocols in their own targets. `M1K3App/` is a thin shell; `AppEnvironment` (+ 
 
 <!-- Signed: Kev + claude-fable-5.1, 2026-09-25, Confidence 0.85, Prior: Unknown (the file
 carried no signature). Leaned from 254 lines / 23 KB to ~90 lines: the Module map moved to
-docs/MODULE_MAP.md (drift checker repointed), CI + landing detail lives in ../CLAUDE.md and
+docs/MODULE_MAP.md (drift checker repointed), CI + landing detail lives in tools/ci/LANDING.md and
 .github/workflows/README.md, SelfTest key prose lives in the file header. Every fact kept is
 one a cold session needs before its first edit. Open: anything that turns out to be missed
 on turn one goes back — measure at the next /retro. -->
@@ -132,3 +132,5 @@ master push (the compute hours ran out on per-merge archives); `tools/asc/releas
 <!-- Review: Kev + claude-opus-5.5, 2026-10-21, Confidence 0.8 — two conventions promoted from auto-memory
 (the façade forwarding rule and the Codable keyNotFound trap) when MEMORY.md went 135 → 36 lines; both bit
 in-session before they were written down. -->
+
+Review: Kev + claude-fable-5.1, 2026-11-07 — the two pointers to the root CLAUDE.md's landing rules now name `tools/ci/LANDING.md`, where they moved.
