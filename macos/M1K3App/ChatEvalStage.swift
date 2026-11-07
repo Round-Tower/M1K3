@@ -132,8 +132,8 @@
 //  does; the raw score stays the headline. Verify-by-launch owed: a pocket x3 on the eval build, read for "⇒" on
 //  leak-verbatim. Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — the Mac now ships the search head on (`whenUnset: true`), and the
-//  Review: Kev + claude-fable-5.1, 2026-11-07 — `shippedScore(fixture:observation:…)` computes the raw score itself; the
-//  two call sites no longer pass the same four arguments twice (the #785 nit). Same verdicts, same records.
+//  Review: Kev + claude-fable-5.1, 2026-11-07 — `shippedScore(fixture:observation:…)` computes the raw score itself;
+//  the two call sites no longer pass the same four arguments twice (the #785 nit). Same verdicts, same records.
 //  driver sets `_ROUTER_SEARCH=1` under dispatch unless `--no-router-search`: the eval wires like the app.
 //  Confidence 0.85.
 //
