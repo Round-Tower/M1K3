@@ -8,10 +8,6 @@ likely to meet.
 
 ## The ones you'll probably notice
 
-- **Mini sometimes brings up a memory nobody asked about.** The on-device Apple
-  Foundation Models tier (the first-run default) can work an unrelated
-  remembered fact into a plain answer: 7 of 10 times in our own noise probe.
-  [#447](https://github.com/Round-Tower/M1K3/issues/447)
 - **A tool turn can come out doubled.** When a brain calls a tool natively, the
   prose it wrote before the call can land in the answer bubble, then a second
   answer follows, so the reply reads twice or garbled.
@@ -71,4 +67,10 @@ tool-turn output), #183 (MCP / Brain at Home lifecycle races). #121 kept and
 reworded to what a user sees; the security note cites the eval's own
 run-to-run noise instead of a fixed 4/7. Every state re-checked with
 `gh issue view` the same day.
+
+Review: Kev + claude-fable-5.1, 2026-11-07, Confidence 0.9 — truth pass the
+day after 1.3 went live on both stores. #447 (Mini works unrelated memories
+into plain answers) closed and left per the contract. #179, #121, #111, #183
+and #74 re-checked OPEN with `gh issue view` this day and stay. The README
+now links here from a "Rough edges" line under "Get M1K3".
 -->
