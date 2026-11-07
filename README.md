@@ -284,7 +284,7 @@ human-and-AI collaboration on the record.
 <!-- Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 (the v1.1.0 pass: the two
      "1.0 build has no cloud path" sentences now describe PCC as the opt-in third crossing,
      consent per conversation per ADR 0007; the MCP count of 18 was re-read off
-     M1K3MCPKit + M1K3BrainServe the same day). Prior: Unknown. 
-Review: Kev + claude-fable-5.1, 2026-11-07 — a "Rough edges" line under Get M1K3 links BUGS.md and the public evals
+     M1K3MCPKit + M1K3BrainServe the same day). Prior: Unknown.
+Review: Kev + claude-fable-5.1, 2026-11-07, Confidence 0.9 — a "Rough edges" line under Get M1K3 links BUGS.md and the public evals
 (the honesty about model limits is a selling point and was unlinked from the README; a reviewer's note, 2026-11-07).
 -->
