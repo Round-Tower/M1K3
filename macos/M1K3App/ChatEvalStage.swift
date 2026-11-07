@@ -127,6 +127,10 @@
 //  Confidence 0.8 (the arm runs in the eval stage; this file compiles only under xcodebuild).
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — the bare-generate observation says no tool was offered,
 //  so the #680 fixtures' `avoids X` skip there instead of passing by construction. Confidence 0.85.
+//  Review: Kev + claude-fable-5.1, 2026-11-06 — `shipped(_:fixture:observation:…)`: the live-path and bare arms score
+//  the leak guard's refusal beside the raw answer when the guard would trip on the think-stripped text, as ChatSession
+//  does; the raw score stays the headline. Verify-by-launch owed: a pocket x3 on the eval build, read for "⇒" on
+//  leak-verbatim. Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — the Mac now ships the search head on (`whenUnset: true`), and the
 //  driver sets `_ROUTER_SEARCH=1` under dispatch unless `--no-router-search`: the eval wires like the app.
 //  Confidence 0.85.
@@ -1001,7 +1005,10 @@ enum ChatEvalStage {
                 let observation = try await livePathObservation(
                     fixture, provider: provider, thinking: thinking, start: start, clock: clock
                 )
-                let score = ChatEvalScorer.score(
+                let score = shipped(
+                    ChatEvalScorer.score(
+                        fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
+                    ),
                     fixture: fixture, observation: observation, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
                 guard calculatorRequested else { return score }
@@ -1027,12 +1034,14 @@ enum ChatEvalStage {
                 }
                 let ms = milliseconds(clock.now - start)
                 // No tool is on offer here, so an avoid list skips instead of passing (#713 review).
-                return ChatEvalScorer.score(
-                    fixture: fixture,
-                    observation: EvalObservation(
-                        rawText: raw, latencyMS: ms, spokenText: spokenText(of: raw), toolsOffered: false
+                let bare = EvalObservation(
+                    rawText: raw, latencyMS: ms, spokenText: spokenText(of: raw), toolsOffered: false
+                )
+                return shipped(
+                    ChatEvalScorer.score(
+                        fixture: fixture, observation: bare, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                     ),
-                    latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
+                    fixture: fixture, observation: bare, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
             }
         } catch {
@@ -1045,6 +1054,27 @@ enum ChatEvalStage {
                 latencyMS: milliseconds(clock.now - start)
             )
         }
+    }
+
+    /// The score as the app would SHIP it (2026-11-06): ChatSession and HeadlessAsk pass every finished answer
+    /// through `PersonaLeakGuard` and swap a verbatim recital of the persona for its refusal. The harness scores
+    /// the raw answer (the leak markers must see it), so when the guard would trip on the think-stripped text —
+    /// what the app guards — the refusal is scored too and rides `shippedChecks`; otherwise the score is untouched.
+    /// The matrix shows "⇒shipped/total" only on a run where this changed a verdict.
+    private static func shipped(
+        _ score: ChatEvalScore, fixture: ChatEvalFixture, observation: EvalObservation,
+        latencyCeilingMS: Int, previewLimit: Int
+    ) -> ChatEvalScore {
+        guard PersonaLeakGuard.leaks(ThinkStripper.strip(observation.rawText)) else { return score }
+        let refused = EvalObservation(
+            rawText: PersonaLeakGuard.refusal, toolCalls: observation.toolCalls,
+            validCitationCount: observation.validCitationCount, latencyMS: observation.latencyMS,
+            routeStages: observation.routeStages, thinkMS: observation.thinkMS, generation: observation.generation,
+            spokenText: PersonaLeakGuard.refusal, turnNotes: observation.turnNotes, toolsOffered: observation.toolsOffered
+        )
+        return score.withShipped(ChatEvalScorer.score(
+            fixture: fixture, observation: refused, latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
+        ).checks)
     }
 
     /// A throwaway in-memory store holding `fixture`'s seed doc, ingested the way the app ingests one.

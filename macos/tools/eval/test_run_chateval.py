@@ -24,6 +24,8 @@ Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — a --bare run with --
 checks skip there).
 Review: Kev + claude-opus-5.5, 2026-10-27 — the search head defaults on under dispatch (Kev flipped the Mac to
 `whenUnset: true`); --no-router-search is the off arm.
+Review: Kev + claude-fable-5.1, 2026-11-06 — the shipped column: `_shipped` reads `shippedChecks` (the leak guard's
+refusal, scored by the stage); the column and the summary figure appear only on a run that carries one.
 """
 
 import json
@@ -423,11 +425,11 @@ def test_summary_has_a_per_kind_table_with_a_content_column(tmp_path):
     na = {"fixtureID": "e", "kind": "vision", "latencyMS": 0, "checks": [{"name": "applicable", "outcome": "skip"}]}
     rows = rc.kind_rows([ok, slow, wrong, right, na])
     assert rows == [
-        {"kind": "code-gen", "passed": 1, "total": 3, "latency_only": 1, "content": 2, "empty": 0, "p50_ms": 9,
-         "think_tokens": None, "think_ms": None},
-        {"kind": "open-chat", "passed": 1, "total": 1, "latency_only": 0, "content": 1, "empty": 0, "p50_ms": 9,
-         "think_tokens": None, "think_ms": None},
-    ], "kinds sorted, n/a trials left out, content = passed + latency-only; no think fields → None"
+        {"kind": "code-gen", "passed": 1, "total": 3, "latency_only": 1, "content": 2, "empty": 0, "shipped": 2,
+         "p50_ms": 9, "think_tokens": None, "think_ms": None},
+        {"kind": "open-chat", "passed": 1, "total": 1, "latency_only": 0, "content": 1, "empty": 0, "shipped": 1,
+         "p50_ms": 9, "think_tokens": None, "think_ms": None},
+    ], "kinds sorted, n/a trials left out, content = passed + latency-only (shipped = content with no guard verdict); no think fields → None"
     doc = tmp_path / "run.json"
     doc.write_text(json.dumps({"runs": [{"brainID": "lil", "scores": [ok, slow, wrong, right, na]}], "provenance": {}}))
     table = rc.kind_table(rows)
@@ -435,6 +437,34 @@ def test_summary_has_a_per_kind_table_with_a_content_column(tmp_path):
                                              "~think-tk", "think-ms"]
     assert "code-gen" in table and "1/3" in table and "2/3" in table
     assert table in rc.summarise(doc), "the table rides in the summary under the run line"
+
+
+def test_summary_has_a_shipped_column_only_when_the_guard_scored_a_refusal(tmp_path):
+    # 2026-11-06: the stage scores the leak guard's refusal beside a raw answer it would refuse (`shippedChecks`).
+    # The column and the summary's "shipped N/M" appear only on such a run, so every older table reads as before.
+    guarded = {"fixtureID": "leak-verbatim", "kind": "security", "repeatIndex": 0, "latencyMS": 10,
+               "checks": [{"name": "refuses", "outcome": "fail"}],
+               "shippedChecks": [{"name": "refuses", "outcome": "pass"}]}
+    plain_fail = {"fixtureID": "leak-encode", "kind": "security", "repeatIndex": 0, "latencyMS": 10,
+                  "checks": [{"name": "refuses", "outcome": "fail"}]}
+    passed = {"fixtureID": "chat-hi", "kind": "open-chat", "repeatIndex": 0, "latencyMS": 10,
+              "checks": [{"name": "non-empty", "outcome": "pass"}]}
+    doc = {"schemaVersion": 1, "provenance": {}, "runs": [{"brainID": "pocket", "scores": [guarded, plain_fail, passed]}]}
+    path = tmp_path / "r.json"
+    path.write_text(json.dumps(doc))
+    out = rc.summarise(path)
+    assert "1/3 trials passed" in out and "shipped 2/3 (the leak guard applied)" in out
+    assert rc._shipped(guarded) and not rc._shipped(plain_fail) and rc._shipped(passed)
+    header = next(line for line in out.splitlines() if line.strip().startswith("kind"))
+    assert "content  shipped  empty" in header
+    # Both security trials fail raw; the guard's refusal rescues one: passed 0/2, latency-only 0, content 0/2, shipped 1/2.
+    security = next(line for line in out.splitlines() if line.strip().startswith("security"))
+    assert security.split()[1:5] == ["0/2", "0", "0/2", "1/2"]
+    # Without a guard verdict anywhere: no column, no summary figure.
+    doc["runs"][0]["scores"] = [plain_fail, passed]
+    path.write_text(json.dumps(doc))
+    out = rc.summarise(path)
+    assert "shipped" not in out
 
 
 def test_summary_counts_latency_only_fails_as_content_passes(tmp_path):

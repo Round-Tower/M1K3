@@ -60,6 +60,8 @@ a02580f0) gets the median count of NoWait's words inside them per arm. The words
 Swift; keep the two lists together. Confidence 0.85.
 Open: the fixtureHash reword check is unexercised on real data until ChatEvalScore stamps one (plan 1j); if the
 Swift key differs from `fixtureHash`, the check stays silently inert — pin the key name when 1j lands.
+Review: Kev + claude-fable-5.1, 2026-11-06 — `--shipped`: content and strict read off `shippedChecks` where the
+stage scored the leak guard's refusal (run_chateval's `_shipped`); every trial without one reads as before. Confidence 0.85.
 """
 
 from __future__ import annotations
@@ -80,6 +82,7 @@ from run_chateval import (  # one rule per count across the eval tools
     _latency_only,
     _median,
     _passed,
+    _shipped,
 )
 
 PREVIEW_CHARS = 70
@@ -103,6 +106,13 @@ class Trial:
     route_stage: str | None = None
     fixture_hash: str | None = None
     reflections: int | None = None  # REFLECTION hits in the kept thought; None when the score kept none
+    shipped: bool = False  # content as the app would ship it (the leak guard applied); run_chateval's `_shipped`
+
+
+def _strict_shipped(score: dict) -> bool:
+    """Strict (no failing check) on the guard's checks where the stage scored them, else on the raw ones."""
+    checks = score.get("shippedChecks")
+    return _passed(score) if checks is None else not any(c.get("outcome") == "fail" for c in checks)
 
 
 def _pick_runs(doc: object, brain: str | None) -> list[dict]:
@@ -121,15 +131,19 @@ def _pick_runs(doc: object, brain: str | None) -> list[dict]:
     return runs
 
 
-def trials_from_doc(doc: object, brain: str | None = None) -> list[Trial]:
+def trials_from_doc(doc: object, brain: str | None = None, shipped: bool = False) -> list[Trial]:
     """Every applicable trial of the document's run (or of `brain`'s, when it holds several);
-    ValueError when the document is not a ChatEval report."""
+    ValueError when the document is not a ChatEval report. `shipped` reads content and strict off what the
+    app would ship (the leak guard's refusal where it would trip, 2026-11-06); a trial without a guard verdict
+    reads as before either way."""
     try:
         return [Trial(fixture=str(s["fixtureID"]), kind=str(s["kind"]), repeat=int(s.get("repeatIndex") or 0),
-                      content=_passed(s) or _latency_only(s), strict=_passed(s), latency_ms=s.get("latencyMS"),
+                      content=_shipped(s) if shipped else _passed(s) or _latency_only(s),
+                      strict=_strict_shipped(s) if shipped else _passed(s), latency_ms=s.get("latencyMS"),
                       preview=s.get("answerPreview") or "", empty=_empty(s), think_chars=s.get("thinkChars"),
                       route_stage=s.get("routeStage") or None, fixture_hash=s.get("fixtureHash") or None,
-                      reflections=None if s.get("thought") is None else len(REFLECTION.findall(s["thought"])))
+                      reflections=None if s.get("thought") is None else len(REFLECTION.findall(s["thought"])),
+                      shipped=_shipped(s))
                 for run in _pick_runs(doc, brain) for s in _applicable(run["scores"])]
     except (AttributeError, KeyError, TypeError) as e:
         raise ValueError(f"not a ChatEval report ({type(e).__name__}: {e})") from e
@@ -179,11 +193,11 @@ def wiring_flags(a: dict, b: dict, routes_a: dict | None, routes_b: dict | None)
     return flags
 
 
-def load_report(path: Path, brain: str | None = None) -> tuple[dict, list[Trial]]:
+def load_report(path: Path, brain: str | None = None, shipped: bool = False) -> tuple[dict, list[Trial]]:
     """(wiring, trials); ValueError naming the file when it is not a ChatEval report."""
     try:
         doc = json.loads(path.read_text())
-        trials = trials_from_doc(doc, brain)
+        trials = trials_from_doc(doc, brain, shipped=shipped)
         return wiring(doc, brain), trials
     except ValueError as e:
         raise ValueError(f"{path}: {e}") from e
@@ -432,10 +446,12 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--exclude", default="",
                     help="comma list of fixture ids to leave out (reworded fixtures; no report carries fixtureHash yet)")
     ap.add_argument("--brain", help="the run to read when a report holds several brains")
+    ap.add_argument("--shipped", action="store_true",
+                    help="score what the app would ship: the leak guard's refusal where it would trip (shippedChecks)")
     args = ap.parse_args(argv)
 
     try:
-        loaded = [load_report(Path(p), args.brain) for p in (args.a, args.b)]
+        loaded = [load_report(Path(p), args.brain, shipped=args.shipped) for p in (args.a, args.b)]
     except (OSError, ValueError) as e:
         print(f"✗ {e}", file=sys.stderr)
         return 2

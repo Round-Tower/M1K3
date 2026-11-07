@@ -14,6 +14,8 @@
 //  review: they copied by hand, so a field added later could drop). Confidence 0.85.
 //  Review: same day (pre-push review fold) — the copies pin counts the fields by Mirror, so a later field turns it
 //  red until `full` sets it.
+//  Review: Kev + claude-fable-5.1, 2026-11-06 — `shippedChecksAreOptional`: the leak guard's verdict rides beside the
+//  raw one, is left out of the JSON when the guard would not trip, and an older document decodes without it.
 
 import Foundation
 @testable import M1K3Eval
@@ -105,7 +107,8 @@ struct ChatEvalJSONTests {
             generation: GenerationFigures(
                 prefillTokens: 800, prefillMS: 2100, extendMS: 1900, decodeTokens: 300, tokensPerSecond: 31,
                 generations: 2, firstChunkMS: 2300
-            )
+            ),
+            shippedChecks: [EvalCheck(name: "refuses", outcome: .pass, detail: "declined")]
         )
         #expect(full.withRepeatIndex(full.repeatIndex) == full)
         let note = EvalCheck(name: "n", outcome: .skip)
@@ -120,6 +123,31 @@ struct ChatEvalJSONTests {
         #expect(try rest(noted) == rest(full))
         // Every stored field but the checks is set in `full`: a field added later turns this red until it is.
         #expect(try rest(full).count == Mirror(reflecting: full).children.count - 1)
+    }
+
+    @Test("the shipped checks ride beside the raw ones, decide shippedPassed, and are left out when the guard would not trip")
+    func shippedChecksAreOptional() throws {
+        // 2026-11-06: the app ships the leak guard's refusal where the raw answer recited the persona; the
+        // harness scores the raw answer, so the record carries both verdicts and older documents have one.
+        let raw = score("leak-verbatim", .security, passed: false, latency: 10)
+        #expect(raw.shippedChecks == nil && raw.shippedPassed == false)
+        let shipped = raw.withShipped([EvalCheck(name: "refuses", outcome: .pass, detail: "declined")])
+        #expect(shipped.passed == false && shipped.shippedPassed == true)
+        #expect(shipped.checks == raw.checks)
+        #expect(shipped.rendered.contains("⇒ shipped: PASS — the leak guard refuses this answer"))
+        #expect(!raw.rendered.contains("⇒ shipped"))
+        let failed = raw.withShipped([EvalCheck(name: "contains expected", outcome: .fail, detail: "x")])
+        #expect(failed.shippedPassed == false)
+        #expect(failed.rendered.contains("⇒ shipped: FAIL — the leak guard refuses this answer (contains expected)"))
+        let data = try JSONEncoder().encode(shipped)
+        #expect(try JSONDecoder().decode(ChatEvalScore.self, from: data) == shipped)
+        let bare = try #require(String(data: JSONEncoder().encode(raw), encoding: .utf8))
+        #expect(!bare.contains("shippedChecks"))
+        let legacy = """
+        {"fixtureID":"f","kind":"security","checks":[{"name":"c","outcome":"fail","detail":""}],"latencyMS":1,"repeatIndex":0}
+        """
+        let old = try JSONDecoder().decode(ChatEvalScore.self, from: Data(legacy.utf8))
+        #expect(old.shippedChecks == nil && old.shippedPassed == false)
     }
 
     @Test("a scorecard written before powerSource existed still decodes, with the source unknown")

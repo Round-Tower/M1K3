@@ -117,6 +117,10 @@
 //  cpus, gpus and chargers. Every entry is exercised by a table test. Confidence 0.9.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — `avoids X` (#713): one check per `mustNotCallTools` entry, failing on
 //  a call and naming every call, so a chateval shows the #680 fixtures searching or not. Confidence 0.9.
+//  Review: Kev + claude-fable-5.1, 2026-11-06 — `ChatEvalScore.shippedChecks` / `shippedPassed` / `withShipped`: the
+//  checks of what the app would SHIP when `PersonaLeakGuard` would refuse the raw answer. The raw score stays the
+//  headline (the leak markers read the raw answer); the stage sets this only when the guard trips. Optional field, so
+//  every older document decodes (pinned). Confidence 0.85: the guard is the app's own, applied to the think-stripped text.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (review fold) — `EvalObservation.toolsOffered` (default true): a path
 //  that offers no tool (bare generate) makes `avoids X` skip, not pass by construction. Confidence 0.9.
 
@@ -266,12 +270,21 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
     /// app's own log lines, so Mini and PCC trials carry none. Optional: nil is left out of the JSON and
     /// older documents decode (2026-10-25).
     public let generation: GenerationFigures?
+    /// The checks scored on what the app would SHIP for this turn (2026-11-06). ChatSession and HeadlessAsk
+    /// pass every finished answer through `PersonaLeakGuard`, which swaps a verbatim recital of the persona
+    /// for its in-character refusal; the harness scores the RAW answer, because the leak markers must see it.
+    /// So the raw score stays the headline and this rides beside it: nil when the guard would ship the answer
+    /// as it is (`shippedPassed` then reads `passed`), the refusal's checks when it would trip. Set by the
+    /// stage only. Optional: older documents decode. The harness had understated the shipped pocket tier by
+    /// exactly these trials (leak-verbatim 3/3 on LFM2.5-1.2B, each one the exemplar header recited).
+    public private(set) var shippedChecks: [EvalCheck]?
 
     public init(
         fixtureID: String, kind: TaskKind, checks: [EvalCheck], latencyMS: Int,
         answerPreview: String? = nil, repeatIndex: Int = 0, routeStage: String? = nil,
         thinkChars: Int? = nil, thinkMS: Int? = nil, thought: String? = nil,
-        thinkBlocks: Int? = nil, thinkCharsTotal: Int? = nil, generation: GenerationFigures? = nil
+        thinkBlocks: Int? = nil, thinkCharsTotal: Int? = nil, generation: GenerationFigures? = nil,
+        shippedChecks: [EvalCheck]? = nil
     ) {
         self.fixtureID = fixtureID
         self.kind = kind
@@ -286,6 +299,14 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
         self.thinkBlocks = thinkBlocks
         self.thinkCharsTotal = thinkCharsTotal
         self.generation = generation
+        self.shippedChecks = shippedChecks
+    }
+
+    /// The same score with the checks of what the app would ship in its place (the leak guard's refusal).
+    public func withShipped(_ checks: [EvalCheck]) -> ChatEvalScore {
+        var copy = self
+        copy.shippedChecks = checks
+        return copy
     }
 
     /// The same score with one more check — the calculator probe notes the turn's tools this way.
@@ -331,6 +352,11 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
         checks.allSatisfy { $0.outcome != .fail }
     }
 
+    /// Whether what the app would SHIP passes: the refusal's checks when the leak guard would trip, else `passed`.
+    public var shippedPassed: Bool {
+        shippedChecks.map { $0.allSatisfy { $0.outcome != .fail } } ?? passed
+    }
+
     /// Fraction of scorable (non-skip) checks that passed, 0...1.
     public var score: Double {
         let scorable = checks.filter { $0.outcome != .skip }
@@ -355,8 +381,14 @@ public struct ChatEvalScore: Sendable, Equatable, Codable {
                 .trimmingCharacters(in: .whitespacesAndNewlines)
             return flat.isEmpty ? "" : "\n    · said: \(flat)"
         } ?? ""
+        // The guard's verdict beside the raw one, only when it would have changed the answer.
+        let shipped = shippedChecks.map { checks -> String in
+            let failing = checks.filter { $0.outcome == .fail }.map(\.name).joined(separator: ", ")
+            return "\n    ⇒ shipped: \(shippedPassed ? "PASS" : "FAIL") — the leak guard refuses this answer"
+                + (failing.isEmpty ? "" : " (\(failing))")
+        } ?? ""
         return "  \(fixtureID) [\(kind.label)]: \(verdict) (\(latencyMS)ms)\n"
-            + lines.joined(separator: "\n") + said
+            + lines.joined(separator: "\n") + said + shipped
     }
 }
 
