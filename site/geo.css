@@ -86,6 +86,16 @@ nav .links a:hover { color: var(--ink-bright); text-shadow: var(--glow); }
 .btn-primary:hover { background: var(--ink-bright); box-shadow: 0 0 30px rgba(255,255,255,0.35); }
 .btn-ghost { color: var(--ink); border-color: var(--line); }
 .btn-ghost:hover { border-color: var(--ink); text-shadow: var(--glow); }
+/* Apple's own badges, as supplied (App Store marketing guidelines: never redrawn or recoloured), at the button
+   row's height. Beside them a button carries at most a 14px glyph: the download arrow on a DMG, GitHub's mark on Source.
+   Review: Kev + claude-fable-5.1, 2026-11-06 — these six rules; index.html carries its own copy (it loads no geo.css).
+   Confidence 0.85. */
+.store-badge { display: inline-block; line-height: 0; transition: filter .25s ease; }
+.store-badge img { display: block; height: 55px; width: auto; }
+.store-badge:hover { filter: drop-shadow(0 0 14px rgba(255,255,255,.35)); }
+.btn .glyph, .btn .mark { display: inline-block; width: 14px; height: 14px; vertical-align: -2px; margin-right: 9px; }
+.btn .glyph { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.btn .mark { fill: currentColor; }
 
 /* ---------- Article shell ---------- */
 .article { max-width: 880px; margin: 0 auto; padding: 150px 40px 60px; }

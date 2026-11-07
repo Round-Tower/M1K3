@@ -19,6 +19,8 @@ surface with a THREE.js hero, not an answer. Prior: Unknown (new file).
 Review: Kev + claude-opus-5.5, 2026-10-28 — the title drops "for Mac" (the app is on iPhone and iPad too),
 as llms.txt, the manifest and the home page's JSON-LD name do. Confidence 0.9.
 Review: Kev + claude-fable-5.1, 2026-11-06 — /weights (where the brains come from) joins PAGES after /brains. Confidence 0.9.
+Review: same day — an <img> inside a link contributes its alt: Apple's store badges replaced the text buttons, and
+the Mac App Store link had gone nameless in the text. Confidence 0.9.
 """
 from __future__ import annotations
 
@@ -95,6 +97,8 @@ class _Text(HTMLParser):
         if tag in VOID_TAGS:
             if not counted and tag == "br":
                 self._buf.append("\n" if self._pre else " ")
+            if not counted and tag == "img" and self._href and a.get("alt"):
+                self._buf.append(a["alt"])  # an image-only link (a store badge) reads as its alt
             return
         if counted:
             self._skip += 1

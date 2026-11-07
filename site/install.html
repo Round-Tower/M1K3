@@ -114,7 +114,6 @@
   .route .term-body { padding: 14px 16px; }
   .route .term-body pre { font-size: 12px; white-space: pre-wrap; word-break: break-word; }
   .route .btn { margin-top: 4px; }
-  .btn .apple-icon { display: inline-block; width: 13px; height: 16px; vertical-align: -2px; margin-right: 7px; fill: currentColor; }
 
   .clients { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0 6px; }
   .clients input[type="radio"] { position: absolute; opacity: 0; width: 0; height: 0; }
@@ -206,9 +205,9 @@
         <span class="tag rec-person">Mac App Store · the easy way</span>
         <h3>Mac App Store</h3>
         <p>Free, and it updates through the App Store. One honest note: the App Store copy of <code>m1k3</code> is sandboxed, so its <code>connect</code> prints the config rather than writing it; Homebrew and the DMG write it for you.</p>
-        <a class="btn btn-primary" href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=site-install&amp;mt=12">Get it on the Mac App Store</a>
-        <a class="btn btn-ghost" href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=site-install-ios&amp;mt=8">iPhone &amp; iPad on the App Store</a>
-        <button class="btn btn-ghost only-away" type="button" data-send-to-mac>Send it to my Mac</button>
+        <a class="store-badge" href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=site-install&amp;mt=12"><img src="/badges/mac-app-store.svg" alt="Download on the Mac App Store" width="215" height="55" /></a>
+        <a class="btn btn-ghost" aria-label="M1K3 for iPhone and iPad on the App Store" href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=site-install-ios&amp;mt=8">iPhone &amp; iPad</a>
+        <button class="btn btn-ghost only-away" type="button" data-send-to-mac>Send to my Mac</button>
       </div>
       <div class="route">
         <span class="tag rec-agent">Homebrew · agents' favourite</span>
@@ -224,7 +223,7 @@
         <span class="tag">DMG · one click</span>
         <h3>Download the DMG</h3>
         <p>Signed and notarized by Round Tower. Open it, drag M1K3 to Applications. The command-line client is inside the bundle at <code>Contents/Helpers/m1k3</code>.</p>
-        <a class="btn btn-primary" href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg"><svg class="apple-icon" viewBox="0 0 384 512"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-27.1-46.9-42.2-83.7-45.4-35.4-3.3-74.1 20.7-88.5 20.7-15.2 0-49.6-19.7-76.3-19.2C82.4 141.1 46 163 25.8 197.4-17 266.7 3.4 370.5 48.3 425.1c21.4 26.8 47.4 57.1 81.6 56 32.3-1.2 44.6-20.9 83.7-20.9 38.5 0 49.7 20.9 83.8 20.3 35.3-.6 57.7-27.2 78.8-54.1 16.1-23 28.4-47 32.5-60.3-1.3-.5-62.4-24-63-95.4zm-59.1-174.5C277.7 72 294.3 42 291.3 0c-29.5 2-64.1 20.9-84.3 45.1-18.4 22-35.3 56.3-31 89.1 32.6 2.5 66-16.7 83.6-40z"/></svg>Download M1K3.dmg</a>
+        <a class="btn btn-primary" aria-label="Download M1K3.dmg" href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg"><svg class="glyph" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 12.5h11"/></svg>M1K3.dmg</a>
       </div>
     </div>
     <p class="check"><strong>Check:</strong> M1K3 is in Applications. Nothing has been downloaded but the app itself.</p>
@@ -415,7 +414,7 @@ m1k3 ask "what can you do?"</pre></div>
     <h2>Own your AI.</h2>
     <p>Free for humans, forever. Made in Ireland. Private by design.</p>
     <div class="cta-row">
-      <a class="btn btn-primary" href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg"><svg class="apple-icon" viewBox="0 0 384 512"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-27.1-46.9-42.2-83.7-45.4-35.4-3.3-74.1 20.7-88.5 20.7-15.2 0-49.6-19.7-76.3-19.2C82.4 141.1 46 163 25.8 197.4-17 266.7 3.4 370.5 48.3 425.1c21.4 26.8 47.4 57.1 81.6 56 32.3-1.2 44.6-20.9 83.7-20.9 38.5 0 49.7 20.9 83.8 20.3 35.3-.6 57.7-27.2 78.8-54.1 16.1-23 28.4-47 32.5-60.3-1.3-.5-62.4-24-63-95.4zm-59.1-174.5C277.7 72 294.3 42 291.3 0c-29.5 2-64.1 20.9-84.3 45.1-18.4 22-35.3 56.3-31 89.1 32.6 2.5 66-16.7 83.6-40z"/></svg>Download M1K3.dmg</a>
+      <a class="btn btn-primary" aria-label="Download M1K3.dmg" href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg"><svg class="glyph" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 12.5h11"/></svg>M1K3.dmg</a>
       <a class="btn btn-ghost" href="/agents">For agents</a>
     </div>
   </section>
@@ -433,7 +432,7 @@ m1k3 ask "what can you do?"</pre></div>
 </main>
 
 <footer>
-  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE LTD</a> · MADE IN IRELAND</span>
+  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE LTD</a> · MADE IN IRELAND · MAC APP STORE AND APP STORE ARE SERVICE MARKS OF APPLE INC.</span>
   <span><a href="/agents">FOR AGENTS</a> · <a href="/teams">FOR TEAMS</a> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · <a href="/privacy">PRIVACY POLICY</a> · <a href="/terms">TERMS</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
   <span class="guides">GUIDES: <a href="/local-llm-mac-guide">LOCAL LLMS ON A MAC</a> · <a href="/vs-ollama">M1K3 VS OLLAMA</a> · <a href="/private-chatgpt-alternative-mac">PRIVATE CHATGPT ALTERNATIVE</a> · <a href="/mcp-knowledge-server">A LOCAL MEMORY FOR CLAUDE</a> · <a href="/golden-gate-on-device-ai">ON-DEVICE AI IN MACOS 27</a></span>
 </footer>
@@ -520,6 +519,10 @@ m1k3 ask "what can you do?"</pre></div>
      Review: Kev + claude-opus-5.5, 2026-10-22 — iOS is live: the store route's TestFlight ghost becomes
      "iPhone & iPad on the App Store" (mt=8, ct=site-install-ios). Confidence 0.85.
      Review: Kev + claude-opus-5.5, 2026-10-22 — the og:image alt follows the new tagline ("Your AI. Your
-     devices. Private by design.", Kev's 2026-10-20 ruling, live with iOS 1.2.0). Confidence 0.9. -->
+     devices. Private by design.", Kev's 2026-10-20 ruling, live with iOS 1.2.0). Confidence 0.9.
+     Review: Kev + claude-fable-5.1, 2026-11-06 — the CTA rows: Apple's own badges (site/badges, as supplied) replace the
+     drawn-logo buttons, a download glyph sits on the DMG button and GitHub's mark on Source, labels are terse ("DMG",
+     "Install", "Send to my Mac", "Mac App Store"); the footer credits the service marks. Verified in a local render
+     on the Mac and the iOS door. Confidence 0.85. -->
 </body>
 </html>
