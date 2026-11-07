@@ -1,0 +1,15 @@
+ # label          prompt  prefill decode tok/s peakMB headMB
+ 1 stream            298     1113     67    41   1798   4299
+ 2 generate          162      174      2    48   1798   4353
+ 3 stream            390      452    171    41   2463   4315
+ 4 stream            693     1484     81    36   2785   4306
+ 5 stream            716     1508     63    29   2785   4304
+ 6 stream            898     1715    228    38   2785   4337
+ 7 stream           1629     2429    124    31   2785   4260
+ 8 stream           1816     1448    358    38   2785   4282
+ 9 stream           1628     2454    292    38   2785   4290
+10 stream           2420     2989     93    39   2785   4261
+11 stream           1785     1338    258    37   2785   4287
+12 stream           2042     1556    229    39   2785   4269
+
+turns=12 median tok/s=38 max peak=2785 MB min headroom=4260 MB
