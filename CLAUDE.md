@@ -46,15 +46,21 @@ Anything a cold session needs on turn one belongs below, not there.
   replace, wired like the app, and wins on paired per-question results, not an aggregate. **Every Lil and Big candidate must see** (Kev, 10-19 and 10-24): a text-only
   brain is a record, not a swap. **MoE Big is closed on M1** (Kev, 10-25: both sparse models lost to dense
   gemma-4-12B, `macos/docs/evals/2026-10-24-moe-big/`); reopen on M4+/M5 or for a dense mid-size model that sees.
-- **The PR loop, in six lines** (the rulings and mechanics live in `macos/tools/ci/LANDING.md`; `pr_watch.py`
+- **The PR loop** (the rulings and mechanics, verbatim, live in `macos/tools/ci/LANDING.md`; `pr_watch.py`
   enforces them): one PR per stream of work per day, same-day small fixes ride together. Spend the review
-  effort BEFORE the first push (`code-quality-reviewer` on the diff), fold every finding in one push, two
+  effort BEFORE the first push (`code-quality-reviewer` on the diff; `challenger` before a PR that sets a
+  threshold or heuristic, scored on a blind set it wasn't tuned on, #713), fold every finding in one push, two
   push-wait-fold rounds at most, nits to the PR body's follow-up list. `macos/tools/ci/land.sh <PR>` run
   bare: the gate infers the passes (one by default; a docs-only PR gets no auto pass, so summon one; CLAUDE.md,
-  SECURITY.md and `.claude/` prose is a risk surface, so two), and it runs only after Kev says "land".
-  Never merge master into a PR branch unless git reports a conflict; never push to master; never
-  `--delete-branch` a stack base. UI, voice or device work is tried on the device BEFORE the PR loop (Kev,
-  #655) and any device check a PR still owes goes into the next build's TestFlight notes (Kev, 2026-10-28).
+  SECURITY.md and `.claude/` prose is a risk surface, so two, summoned AT ONCE on the same head); pass
+  `--passes 2` yourself when a fold changed logic. Land in a batch at the end of a stretch, after one "land"
+  from Kev per batch, and report only when something is landable, blocked or interesting. Never merge master
+  into a PR branch unless git reports a conflict or the PR needs a fix from master to go green (a one-file,
+  test-only fix rides in the PR, named in the body); never push to master; `land.sh` deletes the merged
+  branch, so retarget a stack's dependants first (`gh pr edit <N> --base master`, #473) and never
+  `--delete-branch` a stack base. A shell break on master lands, then is fixed forward. UI, voice or device
+  work is tried on the device BEFORE the PR loop (Kev, #655) and any device check a PR still owes goes into
+  the next build's TestFlight notes (Kev, 2026-10-28).
 - `xcodegen` after every checkout; `M1K3.xcodeproj` is a gitignored artifact.
 - A worktree `xcodebuild` needs `-skipPackagePluginValidation -skipMacroValidation`.
 - `swift package clean` before protocol/struct-shape changes (segfault, 3+ hits).
@@ -296,5 +302,7 @@ it now follows Releasing's last line. No fact changed.
 Review: Kev + claude-fable-5.1, 2026-11-07 (Kev: "the PR flow does need some leaning out", on a reviewer's note that a
 new contributor cannot parse the ceremony) — the Landing / granularity / CI-on-a-PR / never-merge-master / stacked-PR /
 same-day-clash bullets (about 60 lines) moved VERBATIM to `macos/tools/ci/LANDING.md`, the runbook beside the scripts
-that enforce them; this file keeps a six-line PR loop. No ruling changed. Confidence 0.85: the rules are unchanged and
+that enforce them; this file keeps a short PR-loop bullet that paraphrases every ruling (both passes on cc42d2ce read
+the first draft against the runbook and named the five it had dropped: the master-merge exception, stack retargeting,
+`challenger` before heuristics, the two-pass mechanics, batching; all restored). No ruling changed. Confidence 0.85: the rules are unchanged and
 `pr_watch.py` enforces the ones that matter; what a cold session loses is the long form, which the runbook link restores.
