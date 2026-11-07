@@ -72,7 +72,7 @@ sends it, and nothing goes without you pressing Send.
 |---|---|---|---|
 | **macOS native** | [`macos/`](./macos) | Swift 6.2, SwiftUI, MLX-Swift | **The product** — on-device knowledge · RAG · agent · voice · calls. Build it: [`macos/README.md`](./macos/README.md). |
 | **iOS + visionOS** | [`macos/M1K3iOSApp/`](./macos/M1K3iOSApp) | Swift 6.2, SwiftUI | Native SwiftUI shell on the **same** `macos/Sources/` package graph — chat · RAG · memories · docs. Ladder tops out at Lil on-device. See [`macos/docs/IOS_VISIONOS_PORT.md`](./macos/docs/IOS_VISIONOS_PORT.md). |
-| **間 AI mobile** | [`app/`](./app) | Kotlin Multiplatform | Slow burn — the **Android** surface (KMP), pre-release. See [`app/README.md`](./app/README.md). |
+| **間 AI mobile** | [`app/`](./app) | Kotlin Multiplatform | Parked, not abandoned — the **Android** surface (KMP), pre-release; work resumes December 2026. The Mac and Apple mobile apps are the product today. See [`app/README.md`](./app/README.md). |
 | **The attic** | git history before `7545b4a4` | Python, THREE.js, Tauri | Where M1K3 grew up — the original CLI, avatar experiments, and ideas. Cleared from the tree 2026-08-13; see [The attic](#the-attic). |
 
 ## Get M1K3
@@ -82,6 +82,8 @@ sends it, and nothing goes without you pressing Send.
 - **[Download the DMG](https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg)** — signed & notarized.
 - **Build from source** — [`macos/README.md`](./macos/README.md): clone → `xcodegen generate` → ⌘R.
 - **[iPhone & iPad on the App Store](https://apps.apple.com/app/id6780230835?pt=120784482&ct=readme-install-ios&mt=8)** — the same purchase as the Mac app; the ladder tops out at Lil on-device. The [TestFlight beta](https://testflight.apple.com/join/Fxp2F5Je) gets builds first.
+
+**Rough edges.** It's a real app used daily, with real bugs and 1B–12B models that are not frontier models. [`BUGS.md`](./BUGS.md) is the honest list, each entry linked to its open issue, and the evals behind every brain pick are published with their run-to-run noise at [m1k3.app/brains](https://m1k3.app/brains).
 
 ## Agents
 
@@ -282,4 +284,7 @@ human-and-AI collaboration on the record.
 <!-- Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.85 (the v1.1.0 pass: the two
      "1.0 build has no cloud path" sentences now describe PCC as the opt-in third crossing,
      consent per conversation per ADR 0007; the MCP count of 18 was re-read off
-     M1K3MCPKit + M1K3BrainServe the same day). Prior: Unknown. -->
+     M1K3MCPKit + M1K3BrainServe the same day). Prior: Unknown.
+Review: Kev + claude-fable-5.1, 2026-11-07, Confidence 0.9 — a "Rough edges" line under Get M1K3 links BUGS.md and the public evals
+(the honesty about model limits is a selling point and was unlinked from the README; a reviewer's note, 2026-11-07).
+-->
