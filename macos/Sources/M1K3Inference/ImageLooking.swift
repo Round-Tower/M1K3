@@ -26,6 +26,10 @@
 //  and make it easily accessible via chat, and voice interfaces".
 //  Open: the 10-minute heat and battery soak (#768) is not run; the route is
 //  measured on one photo of one street.
+//  Review: Kev + claude-fable-5.2, 2026-11-09 (review fold, before the first
+//  push) — two lines for a look that never reached a brain: `noFrame` (the
+//  camera gave no picture) and `cameraOff` (access is refused). A turn that
+//  asked to look says one of them instead of becoming an ordinary send.
 
 import Foundation
 
@@ -80,6 +84,12 @@ public enum LookFailureReply {
     /// checkpoint): "try again" would loop, so name the way out.
     public static let cannotSee =
         "The brain that's answering right now can't see. Switch to one that can and ask again."
+
+    /// The camera gave no picture (it would not open, it was taken away, the
+    /// frame was stale): said instead of answering blind, or from memory.
+    public static let noFrame = "I couldn't get a picture just then. Try again in a moment."
+    /// The camera is refused: no retry helps until Settings changes.
+    public static let cameraOff = "Camera access is off for M1K3. You can allow it in Settings."
 
     /// The line for anything a look throws: the backend's own sentence when it
     /// declined, the way out when it has no eyes, another go for the rest.

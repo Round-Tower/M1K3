@@ -83,6 +83,9 @@
 //  instructions, one Attachment, no persona, no tools). The shape is the spike's `mini-stream` arm, 0.5-0.9 s warm on
 //  the iPhone 17 Pro. Confidence 0.8: live-tested on the Mac (AFMImageLookingLiveTests); the phone path is the
 //  device run.
+//  Review: Kev + claude-fable-5.2, 2026-11-09 (review fold) — a look's failure is logged by class only (the error's
+//  text can describe what was in view), and a stop that surfaces as the framework's own error is a stop, not a
+//  logged failure. Compile-checked: no live failing look was captured.
 import Foundation
 import M1K3LogCore
 import os
@@ -809,11 +812,16 @@ extension AppleFoundationModelsProvider: ImageLooking {
                         } catch let error as InferenceError {
                             continuation.finish(throwing: error)
                         } catch {
-                            logFailure(error, streaming: true)
+                            // A stop can surface as the framework's own error
+                            // rather than a CancellationError: still a stop.
+                            guard !Task.isCancelled else {
+                                continuation.finish(throwing: CancellationError())
+                                return
+                            }
+                            let failure = AFMFailure.classify(error: error)
+                            logLookFailure(failure)
                             continuation.finish(throwing: LookDeclined(
-                                reply: LookFailureReply.reply(
-                                    for: AFMFailure.classify(error: error), platform: .current
-                                )
+                                reply: LookFailureReply.reply(for: failure, platform: .current)
                             ))
                         }
                     }
@@ -822,6 +830,13 @@ extension AppleFoundationModelsProvider: ImageLooking {
             }
         #endif
         return AsyncThrowingStream { $0.finish(throwing: ImageLookingError.cannotLook) }
+    }
+
+    /// A look's failure is logged by CLASS only. `logFailure` prints the
+    /// error's own text, and for a look that text can describe what the camera
+    /// saw: the class is enough to count failures, and nothing in view is kept.
+    private func logLookFailure(_ failure: AFMFailure) {
+        Self.log.error("afm look failed: \(failure.rawValue, privacy: .public)")
     }
 }
 

@@ -20,12 +20,15 @@
 //  an agent that never saw these phrases (the numbers are in the PR for #768).
 //  Open: English only. Another language's voice turn never matches, and the
 //  eye button is the way in.
+//  Review: Kev + claude-fable-5.2, 2026-11-09 (security review fold, before the first push) — tighter: no ask
+//  follows an arbitrary opening any more (reported speech and scene-setting triggered it), "read that" is gone,
+//  and the kind-of shape needs a thing a camera can be pointed at. Still open, and Kev's call: voice mode hears
+//  the room, so an overheard "hey, look at this" is a glance. Confidence 0.6.
 //
 
 import Foundation
 
 public enum LookIntent {
-    /// Whether `utterance` asks for a look through the camera right now.
     /// Whether one voice turn takes the look route. While the eyes are open
     /// every turn does: the open camera is the user's standing ask, so the
     /// words are not second-guessed. With the eyes closed only an ask to look
@@ -37,6 +40,7 @@ public enum LookIntent {
         return eyesOpen || asksToLook(utterance)
     }
 
+    /// Whether `utterance` asks for a look through the camera right now.
     public static func asksToLook(_ utterance: String) -> Bool {
         let words = normalized(utterance)
         guard !words.isEmpty, words.count <= maxWords else { return false }
@@ -45,8 +49,7 @@ public enum LookIntent {
             for start in starts(of: ask.words, in: words) {
                 let lead = words[..<start]
                 let tail = words[(start + ask.words.count)...]
-                guard tail.allSatisfy(tailWords.contains) else { continue }
-                if ask.anyLead || lead.allSatisfy(leadWords.contains) { return true }
+                if lead.allSatisfy(leadWords.contains), tail.allSatisfy(tailWords.contains) { return true }
             }
         }
         return false
@@ -54,15 +57,14 @@ public enum LookIntent {
 
     // MARK: - The phrase table
 
-    /// One known ask, in normalized words. `anyLead` asks are unmistakable
-    /// enough to follow any opening ("ok so I'm in the shop and ...").
+    /// One known ask, in normalized words. Every ask needs a lead-in made of
+    /// `leadWords` only: "she asked me what am I looking at" is reported speech,
+    /// not an ask.
     private struct Ask {
         let words: [String]
-        let anyLead: Bool
 
-        init(_ phrase: String, anyLead: Bool = false) {
+        init(_ phrase: String) {
             words = phrase.split(separator: " ").map(String.init)
-            self.anyLead = anyLead
         }
     }
 
@@ -70,11 +72,11 @@ public enum LookIntent {
     private static let maxWords = 14
 
     private static let asks: [Ask] = [
-        Ask("what am i looking at", anyLead: true),
-        Ask("what am i holding", anyLead: true),
-        Ask("what am i pointing at", anyLead: true),
-        Ask("whats in front of me", anyLead: true),
-        Ask("whats this in front of me", anyLead: true),
+        Ask("what am i looking at"),
+        Ask("what am i holding"),
+        Ask("what am i pointing at"),
+        Ask("whats in front of me"),
+        Ask("whats this in front of me"),
         Ask("what im looking at"),
         Ask("what im holding"),
         Ask("what do you see"),
@@ -85,8 +87,8 @@ public enum LookIntent {
         Ask("look at that"),
         Ask("can you see this"),
         Ask("can you see that"),
+        // No "read that": in a conversation "that" is as often the last answer.
         Ask("read this"),
-        Ask("read that"),
         Ask("what does this say"),
         Ask("what does that say"),
         Ask("whats this thing"),
@@ -122,12 +124,30 @@ public enum LookIntent {
         "kind", "type", "sort", "breed", "species", "make", "model", "brand",
     ]
 
+    /// Things a camera can be pointed at. A closed list on purpose: "what kind
+    /// of idea is that" has the same shape as "what kind of plant is this".
+    private static let things: Set<String> = [
+        "plant", "flower", "tree", "leaf", "weed", "herb", "bush", "shrub", "moss", "fern", "grass",
+        "mushroom", "fungus", "berry", "fruit", "vegetable", "nut", "seed",
+        "bird", "dog", "cat", "fish", "bug", "insect", "spider", "beetle", "moth", "butterfly", "bee",
+        "wasp", "fly", "snake", "lizard", "frog", "animal", "horse", "cow", "sheep", "duck", "crab",
+        "shell", "rock", "stone", "crystal", "mineral", "metal", "wood", "fabric", "material",
+        "car", "bike", "bicycle", "motorbike", "van", "truck", "boat", "plane", "train", "tractor",
+        "tool", "screw", "bolt", "nail", "drill", "saw", "wrench", "spanner", "connector", "cable",
+        "plug", "socket", "battery", "bulb", "fuse", "charger", "adapter",
+        "phone", "camera", "laptop", "watch", "guitar", "instrument", "bottle", "coin", "stamp",
+        "wine", "beer", "whiskey", "cheese", "bread", "pasta", "coffee", "tea", "meat",
+        "shoe", "building", "bridge", "font",
+    ]
+
     /// "what kind of plant is this": a question about the thing in hand. One
-    /// or two words name the thing, and the sentence ends on this / that.
+    /// or two words name the thing ("pine tree", "a plant"), the last of them
+    /// from `things`, and the sentence ends on this / that.
     private static func kindOfThing(_ words: [String]) -> Bool {
         guard (6 ... 7).contains(words.count),
               words[0] == "what" || words[0] == "which",
               kinds.contains(words[1]), words[2] == "of",
+              things.contains(words[words.count - 3]),
               words[words.count - 2] == "is",
               words[words.count - 1] == "this" || words[words.count - 1] == "that"
         else { return false }

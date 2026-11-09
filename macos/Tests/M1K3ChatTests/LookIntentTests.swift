@@ -11,6 +11,8 @@
 //  Context: the lists here are the ones the matcher was written against. The
 //  blind score (a set written by an agent that never saw the phrases) is in
 //  the PR body, not here: a blind set stops being blind once it is a fixture.
+//  Review: Kev + claude-fable-5.2, 2026-11-09 (security review fold) — the reviewer's false hits are negatives
+//  here now: reported speech and scene-setting before an ask, "read that", and kind-of questions about ideas.
 //
 
 import M1K3Chat
@@ -34,7 +36,6 @@ struct LookIntentTests {
         "look at that",
         "Can you see this?",
         "Read this to me",
-        "read that out",
         "read this sign",
         "what does this say",
         "What does that say?",
@@ -46,6 +47,8 @@ struct LookIntentTests {
         "Identify this",
         "what kind of plant is this",
         "What type of bird is that?",
+        "which breed of dog is this",
+        "what kind of a flower is that",
         "Look at this and tell me what it is",
         "whats this in front of me",
     ])
@@ -85,6 +88,19 @@ struct LookIntentTests {
         "what kind of music is this conversation about",
         "There's a long road in front of me",
         "Set a timer for ten minutes",
+        // Reported speech and a scene set elsewhere: an ask only follows a greeting, a name or a request.
+        "she asked me what am I looking at",
+        "after the demo, what's in front of me",
+        "in the photo I took yesterday, what am I looking at here",
+        "ok so I'm in the shop and what am I holding",
+        // "that" is as often the last answer as a thing in view.
+        "can you read that out loud",
+        "read that back to me",
+        // A kind-of question about something nobody can point a camera at.
+        "what kind of a day is this",
+        "what kind of idea is that",
+        "what type of error is this",
+        "what sort of question is that",
         "What's the capital of Peru?"
     ])
     func leavesTheCameraOff(_ utterance: String) {

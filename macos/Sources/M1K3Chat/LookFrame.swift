@@ -12,6 +12,9 @@
 //  Signed: Kev + claude-fable-5.2, 2026-11-09, Confidence 0.8, Prior: none (new file)
 //  Open: eight settle frames is a guess at auto-exposure (about a quarter of a
 //  second at 30 fps), not a measurement.
+//  Review: Kev + claude-fable-5.2, 2026-11-09 (review fold) — `fresh(age:)`: a
+//  buffer older than a second is refused even by a forced read, so a stalled
+//  or interrupted session cannot hand back the past as "now".
 //
 
 import Foundation
@@ -29,6 +32,15 @@ public enum LookFrame {
 
     public static func settled(framesSeen: Int) -> Bool {
         framesSeen >= settleFrames
+    }
+
+    /// How old the newest buffer may be and still count as what the camera
+    /// sees now. Frames arrive every 33 ms; a second of silence means the
+    /// session stalled or was interrupted, and its last picture is the past.
+    public static let maxAge: Duration = .seconds(1)
+
+    public static func fresh(age: Duration) -> Bool {
+        age <= maxAge
     }
 
     /// The factor that brings the long edge to `maxEdge`. Never above 1: a

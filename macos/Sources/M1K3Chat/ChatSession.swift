@@ -104,6 +104,13 @@
 //  the user's message, the eyes get `LookPrompt` and nothing else, and the responder is never asked, so no tool can
 //  run on what the camera saw. The answer is tagged `look` (tainted: never distilled). `stopResponding` cancels it.
 //  Confidence 0.85 (ChatSessionLookTests, fakes; the camera and both brains are verify-by-launch on the phone).
+//  Review: Kev + claude-fable-5.2, 2026-11-09 (security + quality review fold, before the first push) — a look is
+//  now DISPLAY-ONLY: both messages are `contextExcluded`, it titles nothing, and a rating of it keeps no words.
+//  Before this a look's question and answer replayed as history, so they could follow a brain switch to Brain at
+//  Home, appear on a Private Cloud consent sheet, and sit in a tool-capable turn's context. Cost, Kev's to loosen:
+//  a follow-up that is not itself a look starts without the look's words. Confidence 0.85 (ChatSessionLookTests).
+//  Same fold: `lookMissed`, the turn for a look that got no frame (the question and one honest line, display-only),
+//  so the shell never has to hand those words to `send`.
 
 import Foundation
 import M1K3Inference
@@ -921,9 +928,18 @@ public final class ChatSession {
     /// rides on the user's message; `looker` gets `LookPrompt.instructions`,
     /// the question and the frame, and nothing else: no persona, no history,
     /// no memories. The responder is never asked, so no tool (web search
-    /// included) can run on a turn that carries what the camera saw, and the
-    /// answer is tagged `LookPrompt.toolName`, which `DistillationTaint` keeps
-    /// out of distilled memory. A blank question asks the default one.
+    /// included) can run on a turn that carries what the camera saw.
+    ///
+    /// A look is DISPLAY-ONLY. Both of its messages are `contextExcluded`, so
+    /// neither the question nor the answer is replayed to a later turn: the
+    /// words about the frame cannot follow a brain switch to Brain at Home,
+    /// ride a Private Cloud send, or sit in the history of a turn that can
+    /// call a tool (a sign's text is untrusted input). Neither is distilled
+    /// (the answer is tagged `LookPrompt.toolName` as well, which
+    /// `DistillationTaint` drops), the conversation is not titled from them
+    /// (a title feeds `recent_activity`), and a rating keeps the verdict
+    /// without the words. The cost: a follow-up that is not itself a look
+    /// starts without the look's words. A blank question asks the default one.
     ///
     /// Returns false when a turn was already in flight and nothing happened,
     /// so the caller can discard the frame it stored.
@@ -932,7 +948,9 @@ public final class ChatSession {
         guard !isResponding else { return false }
         let asked = LookPrompt.question(question)
 
-        messages.append(ChatMessage(role: .user, text: asked, attachments: [frame], status: .complete))
+        var asking = ChatMessage(role: .user, text: asked, attachments: [frame], status: .complete)
+        asking.contextExcluded = true
+        messages.append(asking)
         let assistantID = UUID()
         messages.append(ChatMessage(id: assistantID, role: .assistant, text: "", status: .streaming))
 
@@ -960,8 +978,28 @@ public final class ChatSession {
             finishLook(assistantID, text: partial, interrupted: true)
         }
         await persistActiveConversation()
-        scheduleTitlingIfNeeded(question: asked)
+        // No titling: a title would be made from what the camera saw. The next
+        // ordinary exchange titles the conversation from its own words.
         scheduleRollingDistillationIfNeeded()
+        return true
+    }
+
+    /// A look that was asked for and got no frame (the camera would not open,
+    /// no picture came, the bytes would not store). The words asked for the
+    /// camera, so the turn stays a look: the question and one honest line,
+    /// display-only like every look. It must not fall through to an ordinary
+    /// send, which could pick a tool for those words or answer from memory as
+    /// if it had seen. False when a turn is in flight and nothing was added.
+    @discardableResult
+    public func lookMissed(_ question: String, saying line: String) async -> Bool {
+        guard !isResponding else { return false }
+        var asking = ChatMessage(role: .user, text: LookPrompt.question(question), status: .complete)
+        asking.contextExcluded = true
+        messages.append(asking)
+        let lineID = UUID()
+        messages.append(ChatMessage(id: lineID, role: .assistant, text: "", status: .streaming))
+        finishLook(lineID, saying: line)
+        await persistActiveConversation()
         return true
     }
 
@@ -1010,6 +1048,7 @@ public final class ChatSession {
         update(id) {
             $0.text = leaked ? PersonaLeakGuard.refusal : MessageTextPolish.polish(text)
             $0.toolsUsed = [LookPrompt.toolName]
+            $0.contextExcluded = true
             $0.brain = residentBrainName?()
             $0.activityLabel = nil
             $0.interrupted = interrupted ? true : nil
@@ -1017,8 +1056,8 @@ public final class ChatSession {
         }
     }
 
-    /// A look that produced nothing: one honest line in the bubble, shown but
-    /// never replayed as history (it is about the turn, not an answer).
+    /// A look that produced nothing: one honest line in the bubble, display-only
+    /// like every look.
     private func finishLook(_ id: UUID, saying line: String) {
         update(id) {
             $0.text = line
@@ -1217,13 +1256,16 @@ public final class ChatSession {
     public func recordFeedback(messageID: UUID, verdict: FeedbackVerdict, comment: String?, brain: String) {
         guard let (index, exchange) = pairing(for: messageID) else { return }
         let toolsUsed = messages[index].toolsUsed ?? []
+        // A rated look keeps the verdict and the tag, never the words: this row
+        // outlives the conversation's delete, and what the camera saw must not.
+        let aboutAFrame = toolsUsed.contains(LookPrompt.toolName)
         let record = AnswerFeedback(
             messageID: messageID,
             conversationID: exchange.conversationID,
             verdict: verdict,
             comment: comment,
-            question: exchange.question,
-            answer: exchange.answer,
+            question: aboutAFrame ? "" : exchange.question,
+            answer: aboutAFrame ? "" : exchange.answer,
             toolsUsed: toolsUsed,
             // The brain STAMPED on the answer wins — it's who actually rendered
             // it; the caller's current selection is only the fallback for a
