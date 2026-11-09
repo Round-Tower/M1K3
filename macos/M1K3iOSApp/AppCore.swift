@@ -147,6 +147,7 @@
 //  slot, never the cloud or Home), the shared `attachmentStore`, and `settleTypedTurn`, `send`'s tail lifted out
 //  unchanged so a look lands on the avatar, the earcon and the rating ledger the same way (AppCore+Look).
 //  Confidence 0.7 (verify on the phone).
+//  Review: Kev + claude-fable-5.2, 2026-11-09 (review fold) — `isLooking`: one look at a time, from either door.
 
 import AVFoundation
 #if os(iOS)
@@ -282,6 +283,8 @@ final class AppCore {
 
     /// M1K3's eyes: on only while the Look screen or voice mode's eye is open (LookCamera).
     let lookCamera = LookCamera()
+    /// A look is taking its frame or being answered (AppCore+Look): one at a time.
+    var isLooking = false
     /// Where an attached image or a looked-at frame is kept: the app's own container, the screengrab root under
     /// the harness.
     static let attachmentStore = AttachmentStore(

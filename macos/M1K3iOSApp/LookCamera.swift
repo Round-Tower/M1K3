@@ -10,8 +10,10 @@
 //  here stores or sends anything: the caller (AppCore+Look) puts the frame in
 //  the attachment store and hands it to the on-device brain.
 //
-//  The camera closes itself when the app leaves the foreground, so the green
-//  dot never outlives the screen that asked for it.
+//  The camera closes itself when the app leaves the foreground or iOS takes the
+//  camera away, so the green dot never outlives the screen that asked for it.
+//  WHEN it is on is M1K3Chat/LookCameraLifecycle, where `swift test` holds the
+//  races (a close during the permission ask, a close during the start).
 //
 //  Upright is by gravity (`RotationCoordinator`), not by the interface: a label
 //  read with the phone turned sideways still reaches the brain the right way up.
@@ -25,6 +27,12 @@
 //  Open: capture is device work `swift test` cannot reach; the pure numbers
 //  (scale, orientation, settle) are in M1K3Chat/LookFrame. The settle count is
 //  a guess, and the heat and battery cost of an open eye is unmeasured (#768).
+//  Review: Kev + claude-fable-5.2, 2026-11-09 (review fold, before the first
+//  push) — the on/off rules moved to `LookCameraLifecycle` and were fixed there
+//  (the camera could stay on after a close during the permission ask); the
+//  observers register at init and now cover interruptions and runtime errors;
+//  a buffer older than a second is refused, forced or not. Confidence 0.7: the
+//  rules are tested, the AVFoundation notifications are untried on a phone.
 //
 
 import Foundation
@@ -40,95 +48,88 @@ import SwiftUI
 @MainActor
 @Observable
 final class LookCamera {
-    enum State: Equatable {
-        case closed, opening, open, denied, restricted, unavailable
-    }
+    typealias State = LookCameraLifecycle.State
 
-    private(set) var state: State = .closed
+    @ObservationIgnored private let worker: LookCaptureWorker
+    /// The on/off rules (M1K3Chat, held by `swift test`); this type is the capture around them.
+    @ObservationIgnored private let lifecycle: LookCameraLifecycle
+    @ObservationIgnored private var observers: [any NSObjectProtocol] = []
+
+    var state: State {
+        lifecycle.state
+    }
 
     var isOpen: Bool {
-        state == .open
+        lifecycle.isOpen
     }
 
-    @ObservationIgnored private let worker = LookCaptureWorker()
-    @ObservationIgnored private var opening: Task<Bool, Never>?
-    /// Bumped by every close, so a start that was overtaken by one stays closed.
-    @ObservationIgnored private var generation = 0
-    @ObservationIgnored private var backgroundObserver: (any NSObjectProtocol)?
+    /// Open, or opening: what a toggle reads.
+    var isOn: Bool {
+        lifecycle.isOn
+    }
 
     /// False on the Simulator and on visionOS: the eye is not offered there.
     static var deviceHasCamera: Bool {
         LookCaptureWorker.deviceHasCamera
     }
 
+    init() {
+        let worker = LookCaptureWorker()
+        self.worker = worker
+        lifecycle = LookCameraLifecycle(
+            hasCamera: { LookCaptureWorker.deviceHasCamera },
+            access: { await LookCaptureWorker.access() },
+            start: { await worker.start() },
+            stop: { worker.stop() }
+        )
+        closeWhenTheCameraIsNotOurs()
+    }
+
     /// Turn the camera on, asking for permission the first time. True once
     /// frames are flowing. Two callers at once share one start.
     func open() async -> Bool {
-        if state == .open { return true }
-        if let opening { return await opening.value }
-        let task = Task { await self.start() }
-        opening = task
-        let result = await task.value
-        opening = nil
-        return result
+        await lifecycle.open()
     }
 
     func close() {
-        generation += 1
-        worker.stop()
-        if state == .open || state == .opening { state = .closed }
+        lifecycle.close()
     }
 
-    /// One upright JPEG of what the camera sees now, or nil when it is closed.
-    /// A camera that has only just opened is given a moment to settle first.
+    /// One upright JPEG of what the camera sees now, or nil when it is closed
+    /// or its newest picture is stale. A camera that has only just opened is
+    /// given a moment to settle first.
     func frame() async -> Data? {
-        guard state == .open else { return nil }
+        guard isOpen else { return nil }
         let deadline = ContinuousClock.now + LookFrame.settleWait
         while ContinuousClock.now < deadline {
-            if let jpeg = await worker.jpeg(force: false) { return jpeg }
+            if let jpeg = await worker.jpeg(force: false) { return isOpen ? jpeg : nil }
             try? await Task.sleep(for: .milliseconds(40))
-            guard state == .open else { return nil }
+            guard isOpen else { return nil }
         }
-        return await worker.jpeg(force: true)
+        let jpeg = await worker.jpeg(force: true)
+        return isOpen ? jpeg : nil
     }
 
-    private func start() async -> Bool {
-        guard Self.deviceHasCamera else {
-            state = .unavailable
-            return false
-        }
-        state = .opening
-        switch await LookCaptureWorker.access() {
-        case .granted: break
-        case .denied:
-            state = .denied
-            return false
-        case .restricted:
-            state = .restricted
-            return false
-        }
-        let mine = generation
-        let running = await worker.start()
-        guard mine == generation else { return false } // a close won the race; it already stopped the worker
-        state = running ? .open : .unavailable
-        if running { closeWhenBackgrounded() }
-        return running
-    }
-
-    private func closeWhenBackgrounded() {
+    /// Registered once, at init, so no open can come before them: the camera
+    /// closes when the app leaves the foreground, and when iOS takes the
+    /// camera away or the session fails (a call, another app's camera, a
+    /// media-services reset). A closed eye is honest; a frozen one is not.
+    private func closeWhenTheCameraIsNotOurs() {
         #if os(iOS)
-            guard backgroundObserver == nil else { return }
-            backgroundObserver = NotificationCenter.default.addObserver(
-                forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main
-            ) { [weak self] _ in
-                Task { @MainActor in self?.close() }
+            let center = NotificationCenter.default
+            let session = worker.session
+            let reasons: [(Notification.Name, AnyObject?)] = [
+                (UIApplication.didEnterBackgroundNotification, nil),
+                (AVCaptureSession.wasInterruptedNotification, session),
+                (AVCaptureSession.runtimeErrorNotification, session),
+            ]
+            observers = reasons.map { name, object in
+                center.addObserver(forName: name, object: object, queue: .main) { [weak self] _ in
+                    Task { @MainActor in self?.close() }
+                }
             }
         #endif
     }
-}
-
-enum LookCameraAccess {
-    case granted, denied, restricted
 }
 
 #if os(iOS)
@@ -149,15 +150,15 @@ enum LookCameraAccess {
         private let context = CIContext()
         private var configured = false
         private var latest: CVPixelBuffer?
+        private var latestAt: ContinuousClock.Instant?
         private var framesSeen = 0
         private var rotation: AVCaptureDevice.RotationCoordinator?
 
-        static var deviceHasCamera: Bool {
-            AVCaptureDevice.default(for: .video) != nil
-        }
+        /// Read once: device discovery is not free, and SwiftUI bodies ask.
+        static let deviceHasCamera = AVCaptureDevice.default(for: .video) != nil
 
         /// Ask FIRST, then build the session (the pairing scanner's order).
-        static func access() async -> LookCameraAccess {
+        static func access() async -> LookCameraLifecycle.Access {
             switch AVCaptureDevice.authorizationStatus(for: .video) {
             case .authorized: .granted
             case .notDetermined: await AVCaptureDevice.requestAccess(for: .video) ? .granted : .denied
@@ -175,8 +176,7 @@ enum LookCameraAccess {
         func stop() {
             queue.async { [self] in
                 if session.isRunning { session.stopRunning() }
-                latest = nil
-                framesSeen = 0
+                forgetFrames()
             }
         }
 
@@ -207,14 +207,23 @@ enum LookCameraAccess {
                 rotation = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: nil)
                 configured = true
             }
-            latest = nil
-            framesSeen = 0
+            forgetFrames()
             if !session.isRunning { session.startRunning() }
             return session.isRunning
         }
 
+        private func forgetFrames() {
+            latest = nil
+            latestAt = nil
+            framesSeen = 0
+        }
+
         private func renderOnQueue(force: Bool) -> Data? {
-            guard let buffer = latest, force || LookFrame.settled(framesSeen: framesSeen) else { return nil }
+            // Never the past: a session that stalled (an interruption, a
+            // stop) keeps its last buffer, and even a forced read refuses it.
+            guard let buffer = latest, let latestAt, LookFrame.fresh(age: ContinuousClock.now - latestAt),
+                  force || LookFrame.settled(framesSeen: framesSeen)
+            else { return nil }
             let angle = Double(rotation?.videoRotationAngleForHorizonLevelCapture ?? 90)
             let orientation = CGImagePropertyOrientation(
                 rawValue: LookFrame.exifOrientation(forRotationAngle: angle)
@@ -234,6 +243,7 @@ enum LookCameraAccess {
         func captureOutput(_: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from _: AVCaptureConnection) {
             guard let buffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
             latest = buffer
+            latestAt = .now
             framesSeen += 1
         }
     }
@@ -258,7 +268,7 @@ enum LookCameraAccess {
     final class LookCaptureWorker: Sendable {
         static let deviceHasCamera = false
 
-        static func access() async -> LookCameraAccess {
+        static func access() async -> LookCameraLifecycle.Access {
             .denied
         }
 

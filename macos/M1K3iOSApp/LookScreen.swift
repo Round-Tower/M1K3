@@ -13,6 +13,10 @@
 //
 //  Signed: Kev + claude-fable-5.2, 2026-11-09, Confidence 0.6, Prior: none (new file)
 //  Open: the layout is compile-checked only until it has been in Kev's hand.
+//  Review: Kev + claude-fable-5.2, 2026-11-09 (review fold) — one `.task(id:
+//  scenePhase)` opens the camera, so a return-to-foreground open cannot start
+//  after the screen's close; a camera iOS took away shows a way back instead of
+//  a spinner; the ask is off while a look is taking its frame.
 //
 
 import M1K3Chat
@@ -57,17 +61,17 @@ struct LookScreen: View {
             .accessibilityLabel("Close the camera")
         }
         .preferredColorScheme(.dark)
-        .task {
-            baseline = core.chat.messages.count
+        // The camera is on only while this screen is up and the app is in
+        // front: the task opens it on arrival and again on each return to the
+        // foreground (the camera closes itself in the background), and is
+        // cancelled with the screen, so no open can start after the close below.
+        .task(id: scenePhase) {
+            if baseline == nil { baseline = core.chat.messages.count }
+            guard scenePhase == .active, !Task.isCancelled else { return }
             _ = await core.lookCamera.open()
         }
         .onDisappear {
             core.lookCamera.close()
-        }
-        // The camera closes itself in the background; open it again on return.
-        .onChange(of: scenePhase) { _, phase in
-            guard phase == .active else { return }
-            Task { _ = await core.lookCamera.open() }
         }
     }
 
@@ -79,9 +83,19 @@ struct LookScreen: View {
         case .open:
             LookPreview(camera: core.lookCamera)
                 .accessibilityLabel("Camera view")
-        case .closed, .opening:
+        case .opening:
             ProgressView()
                 .accessibilityLabel("Opening the camera")
+        case .closed:
+            // iOS took the camera away (a call, another app) and gave no way back by itself.
+            Button {
+                Task { _ = await core.lookCamera.open() }
+            } label: {
+                Label("Open the camera", systemImage: "eye")
+                    .padding(24)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
         case .denied:
             notice("Camera access is off for M1K3.", settingsLink: true)
         case .restricted:
@@ -138,7 +152,7 @@ struct LookScreen: View {
     }
 
     private var canAsk: Bool {
-        core.lookCamera.isOpen && core.isReady && core.canLook && !core.chat.isResponding
+        core.lookCamera.isOpen && core.isReady && core.canLook && !core.chat.isResponding && !core.isLooking
     }
 
     private var askBar: some View {

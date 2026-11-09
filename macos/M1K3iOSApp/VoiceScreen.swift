@@ -43,6 +43,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-09 — #768: an eye toggle top-leading, with the camera's view under it while
 //  it is on. Open, every voice turn is a look; closed, a spoken ask takes one glance (AppCore+Look). Confidence 0.6
 //  (compile-checked; the placement and the feel are verify-on-device).
+//  Review: Kev + claude-fable-5.2, 2026-11-09 (review fold) — a refused camera shows on the eye (a slashed eye and
+//  an accessibility value): the caption that says so is only on screen while voice mode is parked.
 //
 
 import M1K3Avatar
@@ -137,12 +139,14 @@ struct VoiceScreen: View {
     @ViewBuilder
     private var eyes: some View {
         let open = core.lookCamera.isOpen
+        // A refused camera shows on the eye itself: the caption only has room for it while parked.
+        let refused = core.lookCamera.state == .denied || core.lookCamera.state == .restricted
         if core.canLook || open {
             VStack(alignment: .leading, spacing: 12) {
                 Button {
                     Task { await core.toggleEyes() }
                 } label: {
-                    Image(systemName: open ? "eye.fill" : "eye")
+                    Image(systemName: open ? "eye.fill" : refused ? "eye.slash" : "eye")
                         .font(.system(size: 17, weight: .semibold))
                         .frame(width: 22, height: 22)
                         .padding(12)
@@ -150,6 +154,7 @@ struct VoiceScreen: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(open ? "Close M1K3's eyes" : "Open M1K3's eyes")
+                .accessibilityValue(refused ? "Camera access is off for M1K3" : "")
                 .accessibilityHint(
                     open
                         ? "Turns the camera off"
