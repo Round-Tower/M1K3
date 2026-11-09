@@ -79,6 +79,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-04 — #775: generateStreaming's catch yields `AFMFailure.userReply` for a
 //  language Apple's model doesn't speak, instead of an empty bubble. Verified by compile, per this file's convention;
 //  the class and reply are pinned in AFMFailureTests. Confidence 0.8: no live unsupported-language throw captured.
+//  Review: Kev + claude-fable-5.2, 2026-11-09 — #768: conforms to `ImageLooking` (the streamed look: caller's
+//  instructions, one Attachment, no persona, no tools). The shape is the spike's `mini-stream` arm, 0.5-0.9 s warm on
+//  the iPhone 17 Pro. Confidence 0.8: live-tested on the Mac (AFMImageLookingLiveTests); the phone path is the device run.
 import Foundation
 import M1K3LogCore
 import os
@@ -766,6 +769,55 @@ extension AppleFoundationModelsProvider: RawCompletionProviding {
             }
             continuation.onTermination = { _ in task.cancel() }
         }
+    }
+}
+
+// MARK: - The streamed look (#768)
+
+/// One frame, one question, the caller's instructions: a fresh session with no
+/// persona, no tools and no prewarm slot. AFM's snapshots are already
+/// CUMULATIVE, which is the seam's contract, so they pass through as they are.
+extension AppleFoundationModelsProvider: ImageLooking {
+    /// A look is a sentence or two.
+    static let lookResponseTokens = 160
+
+    public func look(image: ImageAttachment, instructions: String, prompt: String) -> AsyncThrowingStream<String, any Error> {
+        guard isAvailable, AFMToolPrompt.imagesAttachable else {
+            return AsyncThrowingStream { $0.finish(throwing: ImageLookingError.cannotLook) }
+        }
+        #if compiler(>=6.4)
+            if #available(macOS 27.0, iOS 27.0, visionOS 27.0, *) {
+                return AsyncThrowingStream { continuation in
+                    let task = Task { [self] in
+                        do {
+                            let session = try LanguageModelSession(instructions: ImageLookingError.instructions(instructions))
+                            let options = GenerationOptions(maximumResponseTokens: Self.lookResponseTokens)
+                            let stream = session.streamResponse(options: options) {
+                                prompt
+                                Attachment(imageURL: image.url)
+                            }
+                            for try await snapshot in stream {
+                                let content = snapshot.content
+                                if !content.isEmpty { continuation.yield(content) }
+                            }
+                            continuation.finish()
+                        } catch is CancellationError {
+                            // The user stopped the look: expected, never a logged failure.
+                            continuation.finish(throwing: CancellationError())
+                        } catch let error as InferenceError {
+                            continuation.finish(throwing: error)
+                        } catch {
+                            logFailure(error, streaming: true)
+                            continuation.finish(throwing: LookDeclined(
+                                reply: LookFailureReply.reply(for: AFMFailure.classify(error: error), platform: .current)
+                            ))
+                        }
+                    }
+                    continuation.onTermination = { _ in task.cancel() }
+                }
+            }
+        #endif
+        return AsyncThrowingStream { $0.finish(throwing: ImageLookingError.cannotLook) }
     }
 }
 
