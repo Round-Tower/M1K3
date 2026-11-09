@@ -9,6 +9,8 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-08-16, Confidence 0.9 (pure policy,
 //  exhaustively pinned; the spoken wiring is verify-at-⌘R). Prior: Unknown.
+//  Review: Kev + claude-fable-5.2, 2026-11-09 — a look (#768) is never announced: its tag lands with the
+//  answer, so "Using look." would be spoken after the thing it describes.
 //
 
 import M1K3Voice
@@ -45,6 +47,14 @@ struct ToolNarrationTests {
         // The list grows; only the growth is announced.
         #expect(tracker.newAnnouncements(from: ["web_search", "datetime"]) == ["datetime"])
         #expect(tracker.newAnnouncements(from: ["web_search", "datetime"]) == [])
+    }
+
+    @Test("a look is never announced: its tag arrives with the answer, not before it")
+    func lookIsUnspoken() {
+        var tracker = ToolAnnouncementTracker()
+        #expect(ToolNarration.unspoken.contains("look"))
+        #expect(tracker.newAnnouncements(from: ["look"]) == [])
+        #expect(tracker.newAnnouncements(from: ["look", "web_search"]) == ["web_search"])
     }
 
     @Test("a fresh tracker is a fresh turn — re-announces the same tool")

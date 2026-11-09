@@ -100,6 +100,10 @@
 //  the bubble holds the refusal and no reasoning; the Private Cloud stream too (`guardedLive`, pre-push review).
 //  Found by the 11-03 live-path eval: Mini recited the voice-exemplar
 //  header to leak-verbatim through the native tool loop. Confidence 0.85 (ChatSessionLeakGuardTests, stepped stream).
+//  Review: Kev + claude-fable-5.2, 2026-11-09 — `look` (#768): a turn about one camera frame. The frame rides on
+//  the user's message, the eyes get `LookPrompt` and nothing else, and the responder is never asked, so no tool can
+//  run on what the camera saw. The answer is tagged `look` (tainted: never distilled). `stopResponding` cancels it.
+//  Confidence 0.85 (ChatSessionLookTests, fakes; the camera and both brains are verify-by-launch on the phone).
 
 import Foundation
 import M1K3Inference
@@ -613,6 +617,9 @@ public final class ChatSession {
         } else if let cloudTask {
             stopRequested = true
             cloudTask.cancel()
+        } else if let lookTask {
+            stopRequested = true
+            lookTask.cancel()
         }
     }
 
@@ -896,6 +903,128 @@ public final class ChatSession {
             $0.answerOrigin = .privateCloudCompute
             $0.activityLabel = nil
             $0.interrupted = interrupted ? true : nil
+            $0.status = .complete
+        }
+    }
+
+    // MARK: - The look (#768)
+
+    private enum LookOutcome {
+        case answered(text: String, stopped: Bool)
+        case failed(any Error, partial: String)
+    }
+
+    /// The in-flight look, held only so `stopResponding()` can cancel it.
+    private var lookTask: Task<LookOutcome, Never>?
+
+    /// Answer ONE question about ONE camera frame, on this device. The frame
+    /// rides on the user's message; `looker` gets `LookPrompt.instructions`,
+    /// the question and the frame, and nothing else: no persona, no history,
+    /// no memories. The responder is never asked, so no tool (web search
+    /// included) can run on a turn that carries what the camera saw, and the
+    /// answer is tagged `LookPrompt.toolName`, which `DistillationTaint` keeps
+    /// out of distilled memory. A blank question asks the default one.
+    ///
+    /// Returns false when a turn was already in flight and nothing happened,
+    /// so the caller can discard the frame it stored.
+    @discardableResult
+    public func look(_ question: String, frame: ImageAttachment, looker: any ImageLooking) async -> Bool {
+        guard !isResponding else { return false }
+        let asked = LookPrompt.question(question)
+
+        messages.append(ChatMessage(role: .user, text: asked, attachments: [frame], status: .complete))
+        let assistantID = UUID()
+        messages.append(ChatMessage(id: assistantID, role: .assistant, text: "", status: .streaming))
+
+        isResponding = true
+        defer { isResponding = false }
+
+        stopRequested = false
+        let turn = Task { await self.streamLook(asked, frame: frame, looker: looker, assistantID: assistantID) }
+        lookTask = turn
+        let outcome = await turn.value
+        lookTask = nil
+
+        switch outcome {
+        case let .answered(text, stopped) where text.isEmpty:
+            if stopped {
+                messages.removeAll { $0.id == assistantID }
+            } else {
+                finishLook(assistantID, saying: LookFailureReply.tryAgain)
+            }
+        case let .answered(text, stopped):
+            finishLook(assistantID, text: text, interrupted: stopped)
+        case let .failed(error, partial) where partial.isEmpty:
+            finishLook(assistantID, saying: LookFailureReply.reply(for: error))
+        case let .failed(_, partial):
+            finishLook(assistantID, text: partial, interrupted: true)
+        }
+        await persistActiveConversation()
+        scheduleTitlingIfNeeded(question: asked)
+        scheduleRollingDistillationIfNeeded()
+        return true
+    }
+
+    /// Drain the eyes' cumulative snapshots into the live bubble.
+    private func streamLook(
+        _ question: String,
+        frame: ImageAttachment,
+        looker: any ImageLooking,
+        assistantID: UUID
+    ) async -> LookOutcome {
+        var latest = ""
+        var flushGate = StreamFlushGate()
+        var leakShown = false
+        let started = ContinuousClock.now
+        do {
+            let stream = looker.look(image: frame, instructions: LookPrompt.instructions, prompt: question)
+            for try await snapshot in stream {
+                if latest.isEmpty, !snapshot.isEmpty { Self.logLookFirstText(after: .now - started) }
+                latest = snapshot
+                guard flushGate.shouldFlush(at: .now) else { continue }
+                let live = Self.guardedLive(latest, tripped: &leakShown)
+                update(assistantID) { $0.text = live }
+            }
+            return .answered(text: latest, stopped: stopRequested)
+        } catch is CancellationError {
+            return .answered(text: latest, stopped: true)
+        } catch {
+            if stopRequested { return .answered(text: latest, stopped: true) }
+            Self.log.notice("look failed: \(String(describing: type(of: error)), privacy: .public)")
+            return .failed(error, partial: latest)
+        }
+    }
+
+    /// The wait a look is judged by (#768's bar: first text under about 2 s).
+    /// `.notice`, so the phone's console keeps it.
+    private static func logLookFirstText(after elapsed: Duration) {
+        let parts = elapsed.components
+        let ms = Int(parts.seconds * 1000 + parts.attoseconds / 1_000_000_000_000_000)
+        log.notice("look first text: \(ms, privacy: .public)ms")
+    }
+
+    /// Finalise a look's answer with the polish every answer gets. No sources
+    /// and no follow-ups: nothing was retrieved, and the look prompt asks for none.
+    private func finishLook(_ id: UUID, text: String, interrupted: Bool) {
+        let leaked = PersonaLeakGuard.leaks(text)
+        update(id) {
+            $0.text = leaked ? PersonaLeakGuard.refusal : MessageTextPolish.polish(text)
+            $0.toolsUsed = [LookPrompt.toolName]
+            $0.brain = residentBrainName?()
+            $0.activityLabel = nil
+            $0.interrupted = interrupted ? true : nil
+            $0.status = .complete
+        }
+    }
+
+    /// A look that produced nothing: one honest line in the bubble, shown but
+    /// never replayed as history (it is about the turn, not an answer).
+    private func finishLook(_ id: UUID, saying line: String) {
+        update(id) {
+            $0.text = line
+            $0.toolsUsed = [LookPrompt.toolName]
+            $0.contextExcluded = true
+            $0.activityLabel = nil
             $0.status = .complete
         }
     }

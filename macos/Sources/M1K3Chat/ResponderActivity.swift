@@ -12,6 +12,7 @@
 //  Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — `.note(String)` (#697): a line about the turn itself (Cool Head's
 //  eased effort), shown as a caption on the answer, never as the in-flight label. Confidence 0.85.
+//  Review: Kev + claude-fable-5.2, 2026-11-09 — the look's tag (#768) reads "the camera" in the trace row.
 
 import Foundation
 
@@ -69,6 +70,7 @@ public enum ActivityLabeler {
         case "list_documents": "documents"
         case "get_document": "document"
         case "open_link": "link"
+        case "look": "the camera"
         default: name.replacingOccurrences(of: "_", with: " ")
         }
     }

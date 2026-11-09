@@ -18,8 +18,8 @@
 //  (SwappableInferenceProvider here, RuntimeInferenceProvider in the app) or
 //  the cast fails silently in production. Only the on-device brains conform:
 //  Brain at Home and Private Cloud Compute do not, so a frame handed to this
-//  seam cannot leave the device (pinned by ImageLookingTests and
-//  LookEgressTests).
+//  seam cannot leave the device (pinned by `LookEgressTests` in
+//  M1K3BrainLinkTests and M1K3AgentTests).
 //
 //  Signed: Kev + claude-fable-5.2, 2026-11-09, Confidence 0.8, Prior: none (new file)
 //  Context: Kev, 2026-11-09: "Let's implement the vision on this research pal,
@@ -73,6 +73,17 @@ public struct LookDeclined: Error, Sendable, Equatable {
 /// a loop, a brain switch always resolves).
 public enum LookFailureReply {
     public static let tryAgain = "I couldn't get a look at that just now. Try again in a moment."
+    /// The brain that would answer has no eyes (Brain at Home, a text-only
+    /// checkpoint): "try again" would loop, so name the way out.
+    public static let cannotSee = "The brain that's answering right now can't see. Switch to one that can and ask again."
+
+    /// The line for anything a look throws: the backend's own sentence when it
+    /// declined, the way out when it has no eyes, another go for the rest.
+    public static func reply(for error: any Error) -> String {
+        if let declined = error as? LookDeclined { return declined.reply }
+        if let known = error as? InferenceError, known == ImageLookingError.cannotLook { return cannotSee }
+        return tryAgain
+    }
 
     public static func reply(for failure: AFMFailure, platform: BrainTier.DevicePlatform) -> String {
         reply(for: failure, readers: BrainTier.imageReaders(platform: platform))
