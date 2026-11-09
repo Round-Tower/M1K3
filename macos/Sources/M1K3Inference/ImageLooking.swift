@@ -29,6 +29,9 @@
 
 import Foundation
 
+/// A look's answer: cumulative snapshots, finishing by throwing on failure.
+public typealias LookStream = AsyncThrowingStream<String, any Error>
+
 /// A provider whose model can look at one image and answer about it as a
 /// stream, outside a chat turn: no persona, no tools, thinking off.
 public protocol ImageLooking: Sendable {
@@ -37,7 +40,7 @@ public protocol ImageLooking: Sendable {
     /// streams). The system turn is `instructions` and nothing else. The stream
     /// finishes by throwing when the backend cannot look or the model fails;
     /// cancelling the consumer stops the generation.
-    func look(image: ImageAttachment, instructions: String, prompt: String) -> AsyncThrowingStream<String, any Error>
+    func look(image: ImageAttachment, instructions: String, prompt: String) -> LookStream
 }
 
 public enum ImageLookingError {
@@ -75,7 +78,8 @@ public enum LookFailureReply {
     public static let tryAgain = "I couldn't get a look at that just now. Try again in a moment."
     /// The brain that would answer has no eyes (Brain at Home, a text-only
     /// checkpoint): "try again" would loop, so name the way out.
-    public static let cannotSee = "The brain that's answering right now can't see. Switch to one that can and ask again."
+    public static let cannotSee =
+        "The brain that's answering right now can't see. Switch to one that can and ask again."
 
     /// The line for anything a look throws: the backend's own sentence when it
     /// declined, the way out when it has no eyes, another go for the rest.
@@ -107,7 +111,7 @@ public enum LookFailureReply {
 extension SwappableInferenceProvider: ImageLooking {
     /// Forwards to whichever backend is active when the look STARTS. A backend
     /// without the capability fails the stream; it never answers blind.
-    public func look(image: ImageAttachment, instructions: String, prompt: String) -> AsyncThrowingStream<String, any Error> {
+    public func look(image: ImageAttachment, instructions: String, prompt: String) -> LookStream {
         guard let looker = active as? ImageLooking else {
             return AsyncThrowingStream { $0.finish(throwing: ImageLookingError.cannotLook) }
         }

@@ -40,6 +40,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (PR #525 fold) — Low Power is observed (`@State lowPower` fed by
 //  `NSProcessInfoPowerStateDidChange`, hopped to the main run loop), not read at render: a toggle mid-session
 //  triggered no render, so the hero kept its old clock. Pinned in VoiceModeFloorTests. Confidence 0.75.
+//  Review: Kev + claude-fable-5.2, 2026-11-09 — #768: an eye toggle top-leading, with the camera's view under it while
+//  it is on. Open, every voice turn is a look; closed, a spoken ask takes one glance (AppCore+Look). Confidence 0.6
+//  (compile-checked; the placement and the feel are verify-on-device).
 //
 
 import M1K3Avatar
@@ -91,6 +94,10 @@ struct VoiceScreen: View {
             .padding(20)
             .accessibilityLabel("Leave voice mode")
         }
+        .overlay(alignment: .topLeading) {
+            eyes
+                .padding(20)
+        }
         .preferredColorScheme(.dark)
         // While awaiting the answer, the first streamed tokens bump thinking →
         // generating (observable signal — no timer). Same as the Mac.
@@ -118,6 +125,43 @@ struct VoiceScreen: View {
                 .receive(on: RunLoop.main)
         ) { _ in
             lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
+        }
+    }
+
+    // MARK: - The eyes (#768)
+
+    /// The eye toggle and, while the camera is on, what it sees. Open, every
+    /// turn is a look at the newest frame; closed, a spoken "what am I looking
+    /// at?" still takes one glance. The preview is the standing sign that the
+    /// camera is on, beside the system's own green dot.
+    @ViewBuilder
+    private var eyes: some View {
+        let open = core.lookCamera.isOpen
+        if core.canLook || open {
+            VStack(alignment: .leading, spacing: 12) {
+                Button {
+                    Task { await core.toggleEyes() }
+                } label: {
+                    Image(systemName: open ? "eye.fill" : "eye")
+                        .font(.system(size: 17, weight: .semibold))
+                        .frame(width: 22, height: 22)
+                        .padding(12)
+                        .m1k3Glass(cornerRadius: 22, tint: open ? .accentColor.opacity(0.25) : nil)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(open ? "Close M1K3's eyes" : "Open M1K3's eyes")
+                .accessibilityHint(
+                    open
+                        ? "Turns the camera off"
+                        : "Turns the camera on so M1K3 answers about what you point it at"
+                )
+                if open {
+                    LookPreview(camera: core.lookCamera)
+                        .frame(width: 96, height: 128)
+                        .clipShape(.rect(cornerRadius: 14))
+                        .accessibilityLabel("Camera view")
+                }
+            }
         }
     }
 

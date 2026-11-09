@@ -649,3 +649,57 @@ cover is up (one RealityView). Source-scan tests
 (`VoiceModeFloorTests`, `WindowFieldTests`) pin the field. Verify-owed: the Simulator
 look, and the visionOS gradient under the full-bleed hero (Simulator can't be
 trusted for RealityView). Not touched: `OnboardingScreen` keeps its own floor (1.1).
+
+## Addendum — 2026-11-09: the look (#768)
+
+M1K3 on the iPhone can look at what the camera sees and answer about it, on the
+device. Two ways in:
+
+- **Chat:** an eye button beside the composer's ＋ opens `LookScreen`: a
+  full-screen viewfinder, a question field (empty asks "What am I looking at?")
+  and the answer streaming over the view. Each ask takes a fresh frame.
+- **Voice:** an eye toggle top-leading in `VoiceScreen`. Open, every voice turn
+  is a look at the newest frame, and a small preview shows what the camera sees.
+  Closed, a spoken ask that `LookIntent` recognises ("what am I looking at?")
+  takes one glance: the camera opens, one frame is taken, the camera closes.
+
+The route is the lean one the spike measured
+(`docs/evals/2026-11-09-vision-ttft-iphone/`): `ChatSession.look` hands the
+on-device brain `LookPrompt.instructions`, the question and the frame, and
+nothing else. No persona, no grounding, no history, and no responder, so no tool
+can run on a turn that carries a frame.
+
+Where the frame goes, and where it cannot:
+
+- `LookCamera` (`AVCaptureVideoDataOutput`, newest buffer only) hands back one
+  JPEG, long edge about 1,024 px. It writes nothing and sends nothing.
+- `AppCore+Look` stores that JPEG in the chat's attachment store, as the user
+  message's attachment, exactly like a photo attached from the library. It is
+  deleted with the conversation.
+- `AppCore.looker` is the local inference slot. Brain at Home and Private Cloud
+  Compute do not conform to `ImageLooking` (`LookEgressTests`), and the eye is
+  not offered while Brain at Home answers (`canLook` follows `imagesAccepted`).
+- The answer is tagged `look`, which `DistillationTaint` keeps out of distilled
+  memory.
+- The camera is on only while the Look screen is up or the voice eye is open,
+  and closes when either goes away or the app leaves the foreground.
+
+`NSCameraUsageDescription` on the iOS target now names both jobs (the pairing
+scan and the look) and says a frame asked about is saved with its chat. visionOS
+has no look (no camera access outside enterprise entitlements): `LookCamera`
+compiles to an inert stub there and `canLook` is false.
+
+Not covered here, and named in #768: a typed follow-up after a look is an
+ordinary send and can still pick `web_search` for its words; a look's answer
+text is part of the conversation a later Private Cloud consent sheet would show;
+with the eye open a question that is not about the view is still answered as a
+look. English only for the spoken ask.
+
+**Verify-owed:** the Look screen and the voice eye in Kev's hand (framing,
+orientation, the permission prompt, voice and camera running together), and the
+#768 heat and battery soak (ten minutes with camera, speech recognition and a
+brain all on) before a release tag.
+
+_Signed: Kev + claude-fable-5.2, 2026-11-09, Confidence 0.7 (the route and its
+pins are tested; the iOS target builds; the camera and the two screens are
+compile-checked until they have run on the phone)._

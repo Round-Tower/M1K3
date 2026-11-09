@@ -26,6 +26,17 @@ import Foundation
 
 public enum LookIntent {
     /// Whether `utterance` asks for a look through the camera right now.
+    /// Whether one voice turn takes the look route. While the eyes are open
+    /// every turn does: the open camera is the user's standing ask, so the
+    /// words are not second-guessed. With the eyes closed only an ask to look
+    /// does, and the shell makes that one glance (the camera closes again once
+    /// the frame is taken). Never when the answering brain or the device
+    /// cannot look.
+    public static func voiceTurnLooks(_ utterance: String, eyesOpen: Bool, canLook: Bool) -> Bool {
+        guard canLook else { return false }
+        return eyesOpen || asksToLook(utterance)
+    }
+
     public static func asksToLook(_ utterance: String) -> Bool {
         let words = normalized(utterance)
         guard !words.isEmpty, words.count <= maxWords else { return false }

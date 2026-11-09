@@ -227,7 +227,7 @@ extension RuntimeInferenceProvider: ImageCaptioning {
 /// Forwards the streamed look (#768) to the routed backend, by the same
 /// every-façade-forwards rule. A backend without eyes fails the stream.
 extension RuntimeInferenceProvider: ImageLooking {
-    func look(image: ImageAttachment, instructions: String, prompt: String) -> AsyncThrowingStream<String, any Error> {
+    func look(image: ImageAttachment, instructions: String, prompt: String) -> LookStream {
         guard let looker = active as? ImageLooking else {
             return AsyncThrowingStream { $0.finish(throwing: ImageLookingError.cannotLook) }
         }

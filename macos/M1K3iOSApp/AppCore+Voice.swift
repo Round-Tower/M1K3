@@ -84,6 +84,9 @@
 //  in between two polls is spoken before the flush, and a tripped turn returns before the rating ledger counts a win:
 //  all three were on the Mac and missing here, so a leak could be read aloud and then rated. Confidence 0.75
 //  (IOSVoiceModeLeakGuardScanTests pins the shape; the spoken refusal is verify-on-device).
+//  Review: Kev + claude-fable-5.2, 2026-11-09 — #768: a voice turn tries the look first (`voiceLook`, AppCore+Look),
+//  and leaving the mode closes the eye. Confidence 0.65 (voice + camera together is unverified until it is on the
+//  phone).
 
 import AVFoundation
 import Foundation
@@ -191,6 +194,7 @@ extension AppCore {
         soundEffects.play(.voiceExit) // dematerialising: the enter sweep, mirrored
         controller.exit()
         voiceLoop = nil
+        lookCamera.close() // the eye never outlives the mode (#768)
         (transcriber as? AppleSpeechTranscriber)?.hearsRoom = false
         voicePauseNote = nil
         removeAudioSessionObservers()
@@ -271,6 +275,9 @@ extension AppCore {
         // line only counts as said once a turn really carried it.
         let sendVoiceTurn: @MainActor (String) async -> Void = { [weak self] question in
             guard let self else { return }
+            // #768: with the eye open (or on a spoken ask to look) the turn is a look. It carries the frame to
+            // the on-device brain and nothing else, so it takes no room line and no name repair.
+            if await voiceLook(question) { return }
             let prepared = turns.prepare(question, heard: lastHeard)
             let token = chat.isResponding ? nil : Self.voiceTurnClause.set(prepared.soundClause)
             if token != nil { turns.delivered(prepared) }

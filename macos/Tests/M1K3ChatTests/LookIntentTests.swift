@@ -105,4 +105,24 @@ struct LookIntentTests {
             + "what am I looking at here"
         #expect(!LookIntent.asksToLook(ramble))
     }
+
+    // MARK: - The voice turn's route
+
+    @Test("with the eyes open every voice turn is a look, whatever the words")
+    func eyesOpenAlwaysLooks() {
+        #expect(LookIntent.voiceTurnLooks("Is it ripe?", eyesOpen: true, canLook: true))
+        #expect(LookIntent.voiceTurnLooks("", eyesOpen: true, canLook: true))
+    }
+
+    @Test("with the eyes closed only an ask to look opens them")
+    func eyesClosedNeedsTheAsk() {
+        #expect(LookIntent.voiceTurnLooks("What am I looking at?", eyesOpen: false, canLook: true))
+        #expect(!LookIntent.voiceTurnLooks("Is it ripe?", eyesOpen: false, canLook: true))
+    }
+
+    @Test("a brain or a device that cannot look never takes the look route")
+    func cannotLook() {
+        #expect(!LookIntent.voiceTurnLooks("What am I looking at?", eyesOpen: false, canLook: false))
+        #expect(!LookIntent.voiceTurnLooks("Is it ripe?", eyesOpen: true, canLook: false))
+    }
 }

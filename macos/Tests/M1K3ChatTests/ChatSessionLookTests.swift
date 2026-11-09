@@ -47,7 +47,7 @@ private final class FakeEyes: ImageLooking, @unchecked Sendable {
         lock.withLock { calls }
     }
 
-    func look(image: ImageAttachment, instructions: String, prompt: String) -> AsyncThrowingStream<String, any Error> {
+    func look(image: ImageAttachment, instructions: String, prompt: String) -> LookStream {
         lock.withLock { calls.append(Call(image: image, instructions: instructions, prompt: prompt)) }
         let snapshots = snapshots
         let failure = failure
@@ -75,7 +75,7 @@ private final class SteppedEyes: ImageLooking, @unchecked Sendable {
         lock.withLock { terminated }
     }
 
-    func look(image _: ImageAttachment, instructions _: String, prompt _: String) -> AsyncThrowingStream<String, any Error> {
+    func look(image _: ImageAttachment, instructions _: String, prompt _: String) -> LookStream {
         let (stream, continuation) = AsyncThrowingStream<String, any Error>.makeStream()
         continuation.onTermination = { [lock] _ in
             lock.withLock { self.terminated = true }

@@ -48,7 +48,8 @@ struct AFMImageLookingTests {
 
     @Test("a language Apple's model doesn't speak gets the one unsupported-language reply")
     func unsupportedLanguage() {
-        #expect(LookFailureReply.reply(for: .unsupportedLanguage, readers: [.lil]) == AFMFailure.unsupportedLanguageReply)
+        let reply = LookFailureReply.reply(for: .unsupportedLanguage, readers: [.lil])
+        #expect(reply == AFMFailure.unsupportedLanguageReply)
     }
 
     @Test("every failure class has a reply, and none is empty")
@@ -78,7 +79,8 @@ struct AFMImageLookingLiveTests {
         var snapshots: [String] = []
         let stream = provider.look(
             image: ImageAttachment(url: Self.receipt),
-            instructions: "You are looking at a photo for the person who took it. Answer briefly, from what you can see.",
+            instructions: "You are looking at a photo for the person who took it. "
+                + "Answer briefly, from what you can see.",
             prompt: "What's the total on this receipt? Reply with just the amount."
         )
         for try await snapshot in stream {
@@ -86,7 +88,8 @@ struct AFMImageLookingLiveTests {
             snapshots.append(snapshot)
         }
         let answer = snapshots.last ?? ""
-        print("AFM-LOOK first=\(String(describing: first)) total=\(clock.now - start) snapshots=\(snapshots.count) answer=\(answer.debugDescription)")
+        let timing = "first=\(String(describing: first)) total=\(clock.now - start) snapshots=\(snapshots.count)"
+        print("AFM-LOOK \(timing) answer=\(answer.debugDescription)")
         #expect(answer.contains("23.40") || answer.contains("23,40"), "look: \(answer)")
         // Cumulative: each snapshot extends (or revises) the one before; the last is the longest read.
         #expect(snapshots.count >= 1)

@@ -37,7 +37,7 @@ private struct LookerProvider: InferenceProvider, ImageLooking {
         AsyncStream { $0.finish() }
     }
 
-    func look(image: ImageAttachment, instructions: String, prompt: String) -> AsyncThrowingStream<String, any Error> {
+    func look(image: ImageAttachment, instructions: String, prompt: String) -> LookStream {
         AsyncThrowingStream { continuation in
             continuation.yield("saw")
             continuation.yield("saw \(image.url.lastPathComponent)|\(instructions)|\(prompt)")

@@ -143,6 +143,10 @@
 //  the brain-list row (`PrivateCloudRung.pickerControl`), so the org policy switch hides it as the Mac's does.
 //  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: `snag` beside the rating ledger (AppCore+Snag); the
 //  SessionGuard itself lives in the app struct, which marks before this class builds. Confidence unchanged.
+//  Review: Kev + claude-fable-5.2, 2026-11-09 — #768, the look: `lookCamera`, the `looker` accessor (the on-device
+//  slot, never the cloud or Home), the shared `attachmentStore`, and `settleTypedTurn`, `send`'s tail lifted out
+//  unchanged so a look lands on the avatar, the earcon and the rating ledger the same way (AppCore+Look).
+//  Confidence 0.7 (verify on the phone).
 
 import AVFoundation
 #if os(iOS)
@@ -270,6 +274,21 @@ final class AppCore {
     /// The single inference slot the responder holds. Re-pointed on brain switch
     /// (Mini = AFM, Lil = MLX) so the transcript is preserved across a swap.
     private let activeProvider: SwappableInferenceProvider
+    /// Who a look asks (#768): the on-device slot. Brain at Home answers through this slot too, but it does not
+    /// conform to `ImageLooking`, so a frame handed here cannot leave the phone (LookEgressTests).
+    var looker: any ImageLooking {
+        activeProvider
+    }
+
+    /// M1K3's eyes: on only while the Look screen or voice mode's eye is open (LookCamera).
+    let lookCamera = LookCamera()
+    /// Where an attached image or a looked-at frame is kept: the app's own container, the screengrab root under
+    /// the harness.
+    static let attachmentStore = AttachmentStore(
+        directory: ScreengrabHarness.current.dataRoot(
+            live: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        ).appendingPathComponent("attachments")
+    )
     private let afm = AppleFoundationModelsProvider()
     private var currentMLX: MLXBrainProvider?
     private var warmTask: Task<Void, Never>?
@@ -1286,6 +1305,11 @@ final class AppCore {
         avatar.setActivity(.thinking)
         beginAutoSpeakSession() // before the send: it pins this turn's answer (AppCore+AutoSpeak)
         await chat.send(text, images: images)
+        settleTypedTurn()
+    }
+
+    /// How a typed turn lands: the earcon, the avatar and the rating ledger. Shared by `send` and a look.
+    func settleTypedTurn() {
         // After a stop with nothing streamed, `messages.last` is the user's own
         // question (the assistant bubble is removed) — only an assistant row
         // is an answer.

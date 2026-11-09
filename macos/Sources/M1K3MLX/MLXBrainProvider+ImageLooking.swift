@@ -35,7 +35,7 @@ extension MLXBrainProvider: ImageLooking {
         try ImageLookingError.instructions(text)
     }
 
-    public func look(image: ImageAttachment, instructions: String, prompt: String) -> AsyncThrowingStream<String, any Error> {
+    public func look(image: ImageAttachment, instructions: String, prompt: String) -> LookStream {
         guard supportsImageInput else {
             return AsyncThrowingStream { $0.finish(throwing: ImageLookingError.cannotLook) }
         }
@@ -53,7 +53,8 @@ extension MLXBrainProvider: ImageLooking {
                             session.additionalContext = context
                         }
                         var answer = ""
-                        for try await event in session.streamDetails(to: prompt, images: [.url(image.url)], videos: []) {
+                        let events = session.streamDetails(to: prompt, images: [.url(image.url)], videos: [])
+                        for try await event in events {
                             try Task.checkCancellation()
                             if let piece = event.chunk, !piece.isEmpty {
                                 answer += piece

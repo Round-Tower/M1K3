@@ -38,7 +38,8 @@ struct LookEgressTests {
     @Test("a look through a façade whose brain is the cloud adapter fails on the device")
     func lookThroughTheFacadeNeverReachesTheCloud() async {
         let cloud = CountingCloud()
-        let facade = SwappableInferenceProvider(PrivateCloudInferenceAdapter(backend: cloud, instructions: { "persona" }))
+        let adapter = PrivateCloudInferenceAdapter(backend: cloud, instructions: { "persona" })
+        let facade = SwappableInferenceProvider(adapter)
         let frame = ImageAttachment(url: URL(fileURLWithPath: "/tmp/look-egress-frame.jpg"))
         var thrown: (any Error)?
         do {

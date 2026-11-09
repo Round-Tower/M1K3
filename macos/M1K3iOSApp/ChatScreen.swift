@@ -115,6 +115,8 @@
 //  transcript row's: the row left the lazy window under the keyboard and closed the note. Every brain takes the
 //  tool route, and the face is built only while the chat is on screen (`chatOnScreen`): one built under Settings
 //  never drew and came back black. Confidence 0.75.
+//  Review: Kev + claude-fable-5.2, 2026-11-09 — #768: the eye beside the ＋ opens `LookScreen` (shown only when
+//  `core.canLook`), and the attachment store is AppCore's, shared with the look. Confidence 0.7 (verify on the phone).
 
 import M1K3Avatar
 import M1K3Chat
@@ -148,6 +150,7 @@ struct ChatScreen: View {
     @State private var pickedPhotos: [PhotosPickerItem] = []
     /// The ＋ menu's Photos row presents the picker; a PhotosPicker can't live inside a Menu.
     @State private var showPhotoPicker = false
+    @State private var showLook = false
     @AppStorage(AppCore.webSearchEnabledKey) private var webSearchEnabled = true
     @State private var pendingAttachments: [ImageAttachment] = []
     @State private var pendingFiles: [FileAttachment] = []
@@ -258,6 +261,9 @@ struct ChatScreen: View {
                 set: { active in if !active { core.exitVoiceMode() } }
             )) {
                 VoiceScreen()
+            }
+            .fullScreenCover(isPresented: $showLook) {
+                LookScreen()
             }
             .alert(
                 "Attachment Error",
@@ -671,6 +677,9 @@ struct ChatScreen: View {
             M1K3GlassGroup(spacing: 10) {
                 HStack(spacing: 10) {
                     addMenu
+                    if core.canLook {
+                        lookButton
+                    }
 
                     TextField("Ask M1K3…", text: $draft, axis: .vertical)
                         .lineLimit(1 ... 4)
@@ -742,6 +751,24 @@ struct ChatScreen: View {
             webSearchOn: webSearchEnabled,
             ageBand: AgeBand(persisted: ageBandRaw)
         )
+    }
+
+    /// The eye (#768): opens the Look screen, where M1K3 answers about what the camera is pointed at. Only when
+    /// the brain that answers sees and the device has a camera.
+    private var lookButton: some View {
+        Button {
+            inputFocused = false
+            showLook = true
+        } label: {
+            Image(systemName: "eye")
+                .font(.system(size: 19, weight: .medium))
+                .frame(width: 36, height: 44)
+                .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .disabled(core.chat.isResponding || !core.isReady)
+        .accessibilityLabel("Look")
+        .accessibilityHint("Opens the camera so M1K3 can see what you point it at")
     }
 
     /// One ＋ for everything you add to a message: Files, Photos, then the brain and web switches.
@@ -1051,9 +1078,5 @@ struct ChatScreen: View {
         return failures
     }
 
-    private static let attachmentStore = AttachmentStore(
-        directory: ScreengrabHarness.current.dataRoot(
-            live: FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        ).appendingPathComponent("attachments")
-    )
+    private static let attachmentStore = AppCore.attachmentStore
 }
