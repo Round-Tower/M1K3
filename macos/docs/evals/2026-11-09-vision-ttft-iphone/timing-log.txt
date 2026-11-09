@@ -1,0 +1,135 @@
+# launch A (unsettled), console lines
+21:14:15.446965 [mlx-memory] applied budget: cacheLimit=32MB memoryLimit=4096MB
+21:14:17.889748 [vision-spike] VISION-SPIKE start brains=mini,lil runs=3 pixels=576x1024 jpeg_kb=175 ram_gb=11 was=lil question="What is in this picture? One sentence."
+21:14:18.353649 [mlx-memory] releaseMemory MB: active=3050 cache=0 peak=3546 footprint=3764
+21:14:18.457649 [afm] afm turn: body=1807 instructions=183 total=1990 chars, streaming=false, prewarmed=false warm=cold
+21:14:18.468630 [responder] turn start: 0 chunk(s) retrieved, tools=[datetime, fetch_page, get_document, list_documents, lookup_fact, search_knowledge, system_status, web_search], grounding=3054 chars
+21:14:21.155821 [memory-distill] distillation dropped 3 unanchored fact(s)
+21:14:22.170669 [chat-session] turn first chunk: 3714ms
+21:14:22.538121 [afm] afm turn: body=313 instructions=155 total=468 chars, streaming=false, prewarmed=false warm=cold
+21:14:22.539054 [afm] afm turn: body=1552 instructions=183 total=1735 chars, streaming=false, prewarmed=false warm=cold
+21:14:22.552115 [responder] turn start: 0 chunk(s) retrieved, tools=[datetime, fetch_page, get_document, list_documents, lookup_fact, search_knowledge, system_status, web_search], grounding=3054 chars
+21:14:24.220607 [chat-session] turn first chunk: 1686ms
+21:14:24.296413 [afm] afm turn: body=322 instructions=155 total=477 chars, streaming=false, prewarmed=false warm=cold
+21:14:24.303818 [responder] turn start: 0 chunk(s) retrieved, tools=[datetime, fetch_page, get_document, list_documents, lookup_fact, search_knowledge, system_status, web_search], grounding=3054 chars
+21:14:24.939444 [afm] afm turn: body=1552 instructions=4795 total=6347 chars, streaming=false, prewarmed=false warm=cold
+21:14:27.954610 [chat-session] turn first chunk: 3659ms
+21:14:28.110712 [afm] afm turn: body=468 instructions=155 total=623 chars, streaming=false, prewarmed=false warm=cold
+21:14:29.536826 [memory-distill] distilled 0 facts from 2 turn(s)
+21:14:32.408344 [vision-spike] VISION-SPIKE waiting tier=lil load=idle
+21:14:32.922299 [vision-spike] VISION-SPIKE waiting tier=lil load=preparing
+21:14:34.520843 [afm] afm turn: body=1707 instructions=183 total=1890 chars, streaming=false, prewarmed=false warm=cold
+21:14:34.529973 [responder] turn start: 0 chunk(s) retrieved, tools=[datetime, fetch_page, get_document, list_documents, lookup_fact, search_knowledge, system_status, web_search], grounding=3053 chars
+21:14:39.741920 [ttft] persona prefix built: 2753tok tools=[datetime,fetch_page,get_document,list_documents,lookup_fact,search_knowledge,system_status,web_search]
+21:14:40.605079 [mlx-load] toolTurnSession send 1: wait=0ms render=862ms (4087 tok)
+21:14:40.605160 [mlx-load] toolTurnSession reuse: 0/4087 tok from cache, prefilling 4087, seed=persona
+21:14:40.605224 [mlx-memory] toolTurnSession checkpoint step 1 (reused 0/4087) MB: active=3454 cache=34 peak=3836 footprint=4150
+21:14:51.559302 [chat-session] turn first chunk: 17040ms
+21:14:53.148009 [ttft] generate [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=1969tok prefill=7633ms decode=21tok @3tok/s
+21:14:53.163381 [mlx-memory] generate MB: active=3451 cache=0 peak=4105 footprint=4014
+21:14:53.164486 [memory-distill] distillation dropped 1 unanchored fact(s)
+21:14:55.881409 [ttft] toolTurnSession [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=4087tok prefill=10933ms decode=55tok @12tok/s
+21:14:55.897842 [mlx-memory] toolTurnSession MB: active=3187 cache=0 peak=4273 footprint=3806
+21:14:56.012970 [afm] afm turn: body=1563 instructions=183 total=1746 chars, streaming=false, prewarmed=false warm=cold
+21:14:56.018008 [responder] turn start: 0 chunk(s) retrieved, tools=[datetime, fetch_page, get_document, list_documents, lookup_fact, search_knowledge, system_status, web_search], grounding=3053 chars
+21:14:56.322251 [mlx-load] toolTurnSession send 1: wait=0ms render=303ms (4087 tok)
+21:14:56.322284 [mlx-load] toolTurnSession reuse: 0/4087 tok from cache, prefilling 4087, seed=persona
+21:14:56.322329 [mlx-memory] toolTurnSession checkpoint step 1 (reused 0/4087) MB: active=3300 cache=33 peak=4273 footprint=3980
+21:15:02.405432 [ttft] generate [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=126tok prefill=374ms decode=6tok @0tok/s
+21:15:03.306434 [mlx-memory] generate MB: active=3902 cache=0 peak=4273 footprint=4499
+21:15:05.610855 [chat-session] turn first chunk: 9600ms
+21:15:10.141590 [ttft] toolTurnSession [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=4087tok prefill=9283ms decode=73tok @16tok/s
+21:15:10.160067 [mlx-memory] toolTurnSession MB: active=3187 cache=0 peak=4394 footprint=3799
+21:15:10.241371 [responder] turn start: 0 chunk(s) retrieved, tools=[datetime, fetch_page, get_document, list_documents, lookup_fact, search_knowledge, system_status, web_search], grounding=3053 chars
+21:15:11.208309 [mlx-load] toolTurnSession send 1: wait=0ms render=966ms (4087 tok)
+21:15:11.208355 [mlx-load] toolTurnSession reuse: 0/4087 tok from cache, prefilling 4087, seed=persona
+21:15:11.208415 [mlx-memory] toolTurnSession checkpoint step 1 (reused 0/4087) MB: active=3503 cache=31 peak=4394 footprint=4206
+21:15:22.895325 [ttft] generate [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=166tok prefill=3988ms decode=6tok @0tok/s
+21:15:22.914510 [mlx-memory] generate MB: active=3467 cache=0 peak=4394 footprint=4015
+21:15:24.198000 [chat-session] turn first chunk: 13960ms
+21:15:26.143737 [ttft] generate [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=1879tok prefill=9097ms decode=26tok @3tok/s
+21:15:26.161175 [mlx-memory] generate MB: active=3451 cache=0 peak=4394 footprint=4001
+21:15:26.162109 [memory-distill] distillation dropped 1 unanchored fact(s)
+21:15:27.543182 [ttft] toolTurnSession [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=4087tok prefill=12971ms decode=46tok @13tok/s
+21:15:27.567589 [mlx-memory] toolTurnSession MB: active=3187 cache=0 peak=4394 footprint=3755
+21:15:31.287791 [ttft] generate [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=139tok prefill=676ms decode=6tok @2tok/s
+21:15:31.303406 [mlx-memory] generate MB: active=3247 cache=0 peak=4517 footprint=3839
+21:15:32.885431 [ttft] caption [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=183tok prefill=1845ms decode=37tok @11tok/s
+21:15:32.901314 [mlx-memory] caption MB: active=3187 cache=0 peak=4517 footprint=3746
+21:15:35.312033 [ttft] caption [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=183tok prefill=683ms decode=34tok @20tok/s
+21:15:35.331864 [mlx-memory] caption MB: active=3187 cache=0 peak=4517 footprint=3734
+21:15:37.379032 [ttft] caption [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=183tok prefill=653ms decode=28tok @20tok/s
+21:15:37.396120 [mlx-memory] caption MB: active=3187 cache=0 peak=4517 footprint=3735
+21:15:37.402075 [vision-spike] VISION-SPIKE done
+
+# launch B (settle 15 s), console lines
+21:17:56.733236 [mlx-memory] applied budget: cacheLimit=32MB memoryLimit=4096MB
+21:17:58.981023 [vision-spike] VISION-SPIKE start brains=mini,lil runs=3 pixels=576x1024 jpeg_kb=175 ram_gb=11 was=lil settle_s=15 question="What is in this picture? One sentence."
+21:17:59.390417 [mlx-memory] releaseMemory MB: active=3050 cache=0 peak=3457 footprint=3609
+21:17:59.431209 [afm] afm turn: body=1631 instructions=183 total=1814 chars, streaming=false, prewarmed=false warm=cold
+21:18:01.021765 [afm] afm turn: body=1631 instructions=4795 total=6426 chars, streaming=false, prewarmed=false warm=cold
+21:18:02.828616 [memory-distill] distillation dropped 1 unanchored fact(s)
+21:18:14.515985 [responder] turn start: 0 chunk(s) retrieved, tools=[datetime, fetch_page, get_document, list_documents, lookup_fact, search_knowledge, system_status, web_search], grounding=3054 chars
+21:18:16.801494 [chat-session] turn first chunk: 2299ms
+21:18:17.134595 [afm] afm turn: body=332 instructions=155 total=487 chars, streaming=false, prewarmed=false warm=cold
+21:18:17.135372 [afm] afm turn: body=1571 instructions=183 total=1754 chars, streaming=false, prewarmed=false warm=cold
+21:18:17.946946 [afm] afm turn: body=1571 instructions=4795 total=6366 chars, streaming=false, prewarmed=false warm=cold
+21:18:19.569503 [memory-distill] distilled 0 facts from 2 turn(s)
+21:18:32.176864 [responder] turn start: 0 chunk(s) retrieved, tools=[datetime, fetch_page, get_document, list_documents, lookup_fact, search_knowledge, system_status, web_search], grounding=3054 chars
+21:18:34.003837 [chat-session] turn first chunk: 1838ms
+21:18:34.232516 [afm] afm turn: body=1517 instructions=183 total=1700 chars, streaming=false, prewarmed=false warm=cold
+21:18:34.233443 [afm] afm turn: body=278 instructions=155 total=433 chars, streaming=false, prewarmed=false warm=cold
+21:18:35.058363 [afm] afm turn: body=1517 instructions=4795 total=6312 chars, streaming=false, prewarmed=false warm=cold
+21:18:36.723592 [memory-distill] distilled 0 facts from 2 turn(s)
+21:18:49.263172 [responder] turn start: 0 chunk(s) retrieved, tools=[datetime, fetch_page, get_document, list_documents, lookup_fact, search_knowledge, system_status, web_search], grounding=3054 chars
+21:18:51.189815 [chat-session] turn first chunk: 1937ms
+21:18:51.397418 [afm] afm turn: body=325 instructions=155 total=480 chars, streaming=false, prewarmed=false warm=cold
+21:18:54.076635 [vision-spike] VISION-SPIKE waiting tier=lil load=idle
+21:18:54.590914 [vision-spike] VISION-SPIKE waiting tier=lil load=preparing
+21:18:56.214829 [afm] afm turn: body=1564 instructions=183 total=1747 chars, streaming=false, prewarmed=false warm=cold
+21:19:01.483209 [ttft] generate [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=1877tok prefill=3578ms decode=17tok @20tok/s
+21:19:01.498146 [mlx-memory] generate MB: active=3050 cache=0 peak=3753 footprint=3707
+21:19:01.498601 [memory-distill] distillation dropped 1 unanchored fact(s)
+21:19:11.207056 [responder] turn start: 0 chunk(s) retrieved, tools=[datetime, fetch_page, get_document, list_documents, lookup_fact, search_knowledge, system_status, web_search], grounding=3053 chars
+21:19:16.520745 [ttft] persona prefix built: 2753tok tools=[datetime,fetch_page,get_document,list_documents,lookup_fact,search_knowledge,system_status,web_search]
+21:19:16.604348 [mlx-load] toolTurnSession send 1: wait=0ms render=82ms (4087 tok)
+21:19:16.604420 [mlx-load] toolTurnSession reuse: 0/4087 tok from cache, prefilling 4087, seed=persona
+21:19:16.604455 [mlx-memory] toolTurnSession checkpoint step 1 (reused 0/4087) MB: active=3196 cache=25 peak=3782 footprint=3813
+21:19:24.929341 [chat-session] turn first chunk: 13733ms
+21:19:28.560556 [ttft] toolTurnSession [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=4087tok prefill=8321ms decode=57tok @15tok/s
+21:19:28.588185 [mlx-memory] toolTurnSession MB: active=3187 cache=0 peak=4123 footprint=3801
+21:19:28.698586 [afm] afm turn: body=1682 instructions=183 total=1865 chars, streaming=false, prewarmed=false warm=cold
+21:19:29.440553 [ttft] generate [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=150tok prefill=457ms decode=5tok @17tok/s
+21:19:29.456251 [mlx-memory] generate MB: active=3187 cache=0 peak=4123 footprint=3817
+21:19:30.586141 [memory-distill] distillation dropped 1 unanchored fact(s)
+21:19:30.590333 [memory-distill] remembered: The user wants a one-sentence answer when asked about specific images or scenes.
+21:19:30.593597 [memory-distill] distillation wrote 1/1 fact(s)
+21:19:43.735615 [responder] turn start: 0 chunk(s) retrieved, tools=[datetime, fetch_page, get_document, list_documents, lookup_fact, search_knowledge, system_status, web_search], grounding=3450 chars
+21:19:43.774552 [mlx-load] toolTurnSession send 1: wait=0ms render=38ms (4175 tok)
+21:19:43.774595 [mlx-load] toolTurnSession reuse: 0/4175 tok from cache, prefilling 4175, seed=persona
+21:19:43.774639 [mlx-memory] toolTurnSession checkpoint step 1 (reused 0/4175) MB: active=3196 cache=0 peak=4123 footprint=3774
+21:19:52.633662 [chat-session] turn first chunk: 8907ms
+21:19:53.863650 [ttft] toolTurnSession [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=4175tok prefill=8842ms decode=24tok @19tok/s
+21:19:53.882774 [mlx-memory] toolTurnSession MB: active=3187 cache=0 peak=4123 footprint=3820
+21:19:54.063531 [afm] afm turn: body=1533 instructions=183 total=1716 chars, streaming=false, prewarmed=false warm=cold
+21:19:54.747882 [ttft] generate [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=117tok prefill=342ms decode=6tok @17tok/s
+21:19:54.764507 [mlx-memory] generate MB: active=3187 cache=0 peak=4123 footprint=3809
+21:20:00.764529 [ttft] generate [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=1870tok prefill=3881ms decode=30tok @20tok/s
+21:20:00.782310 [mlx-memory] generate MB: active=3187 cache=0 peak=4123 footprint=3757
+21:20:00.783783 [memory-distill] distillation dropped 1 unanchored fact(s)
+21:20:09.124216 [responder] turn start: 0 chunk(s) retrieved, tools=[datetime, fetch_page, get_document, list_documents, lookup_fact, search_knowledge, system_status, web_search], grounding=3450 chars
+21:20:09.160889 [mlx-load] toolTurnSession send 1: wait=0ms render=35ms (4175 tok)
+21:20:09.160935 [mlx-load] toolTurnSession reuse: 0/4175 tok from cache, prefilling 4175, seed=persona
+21:20:09.160989 [mlx-memory] toolTurnSession checkpoint step 1 (reused 0/4175) MB: active=3196 cache=0 peak=4123 footprint=3747
+21:20:18.270434 [chat-session] turn first chunk: 9155ms
+21:20:19.777632 [ttft] toolTurnSession [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=4175tok prefill=9100ms decode=29tok @19tok/s
+21:20:19.796289 [mlx-memory] toolTurnSession MB: active=3187 cache=0 peak=4123 footprint=3759
+21:20:22.328287 [ttft] generate [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=122tok prefill=1038ms decode=6tok @4tok/s
+21:20:22.343426 [mlx-memory] generate MB: active=3247 cache=0 peak=4139 footprint=3862
+21:20:23.968440 [ttft] caption [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=183tok prefill=1148ms decode=38tok @13tok/s
+21:20:23.984609 [mlx-memory] caption MB: active=3187 cache=0 peak=4139 footprint=3769
+21:20:26.000216 [ttft] caption [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=183tok prefill=651ms decode=28tok @20tok/s
+21:20:26.017392 [mlx-memory] caption MB: active=3187 cache=0 peak=4139 footprint=3755
+21:20:28.468324 [ttft] caption [mlx-community/Qwen3.5-4B-MLX-4bit]: prompt=183tok prefill=651ms decode=37tok @20tok/s
+21:20:28.484926 [mlx-memory] caption MB: active=3187 cache=0 peak=4139 footprint=3757
+21:20:28.491932 [vision-spike] VISION-SPIKE done

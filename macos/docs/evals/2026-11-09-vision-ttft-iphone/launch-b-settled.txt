@@ -1,0 +1,19 @@
+VISION-SPIKE start brains=mini,lil runs=3 pixels=576x1024 jpeg_kb=175 ram_gb=11 was=lil settle_s=15 question="What is in this picture? One sentence."
+VISION-SPIKE ambient run=1 ocr_fast_ms=108 ocr_accurate_ms=134 classify_ms=38 text_lines=4 labels=structure:97,conveyance:95,portal:95,window:92,outdoor:89 text="Luan - Soth | 0700-10.00 | 6.00 ~900 | FadeS & Blades ..." thermal=nominal battery=60
+VISION-SPIKE ambient run=2 ocr_fast_ms=7 ocr_accurate_ms=46 classify_ms=7 text_lines=4 labels=structure:97,conveyance:95,portal:95,window:92,outdoor:89 text="Luan - Soth | 0700-10.00 | 6.00 ~900 | FadeS & Blades ..." thermal=nominal battery=60
+VISION-SPIKE ambient run=3 ocr_fast_ms=7 ocr_accurate_ms=47 classify_ms=7 text_lines=4 labels=structure:97,conveyance:95,portal:95,window:92,outdoor:89 text="Luan - Soth | 0700-10.00 | 6.00 ~900 | FadeS & Blades ..." thermal=nominal battery=60
+VISION-SPIKE mini run=1 first_text_ms=2371 total_ms=2654 chars=147 status=ok thermal=nominal battery=60 answer="The image shows a three-story building with the name 'Fades & Blades' on the front, featuring a large window and a person standing on the sidewalk."
+VISION-SPIKE mini run=2 first_text_ms=1903 total_ms=2069 chars=93 status=ok thermal=nominal battery=60 answer="The picture shows a three-story building with a sign reading 'Fades & Blades' in front of it."
+VISION-SPIKE mini run=3 first_text_ms=2002 total_ms=2153 chars=140 status=ok thermal=nominal battery=60 answer="The image shows a small, weathered building with a sign reading 'Fades & Blades' on the front, featuring a woman standing near the entrance."
+VISION-SPIKE mini-stream run=1 first_text_ms=1040 total_ms=1091 chars=76 snapshots=4 status=ok thermal=nominal battery=60 answer="A three-story building with a sign that reads 'Faces & Blades' on the front."
+VISION-SPIKE mini-stream run=2 first_text_ms=730 total_ms=780 chars=72 snapshots=4 status=ok thermal=nominal battery=60 answer="A building with a sign that reads 'Fades & Blades' stands on a sidewalk."
+VISION-SPIKE mini-stream run=3 first_text_ms=781 total_ms=830 chars=86 snapshots=4 status=ok thermal=nominal battery=60 answer="A building with a sign reading 'Fades & Blades' and a person standing on the sidewalk."
+VISION-SPIKE waiting tier=lil load=idle
+VISION-SPIKE waiting tier=lil load=preparing
+VISION-SPIKE lil run=1 first_text_ms=13806 total_ms=17526 chars=258 status=ok thermal=nominal battery=60 answer="This is 'Fades & Blades,' a traditional barber's parlour with an Irish flag displayed in the window.  I'm noticing that specific barbershop sign and all those o"
+VISION-SPIKE lil run=2 first_text_ms=8952 total_ms=10356 chars=109 status=ok thermal=nominal battery=60 answer="This image shows 'Fades & Blades,' a traditional barber's parlour with an Irish flag displayed in the window."
+VISION-SPIKE lil run=3 first_text_ms=9221 total_ms=10874 chars=134 status=ok thermal=nominal battery=55 answer="This image shows 'Fades & Blades,' a traditional barber's parlour on a street corner, featuring an Irish flag displayed in its window."
+VISION-SPIKE lil-floor run=1 first_text_ms=-1 total_ms=4038 chars=187 status=ok thermal=nominal battery=55 answer="The image shows the storefront of a shop called 'Fades & Blades,' which offers haircuts and hairdressing services, located on a city street with other buildings"
+VISION-SPIKE lil-floor run=2 first_text_ms=-1 total_ms=2030 chars=133 status=ok thermal=nominal battery=55 answer="A two-story building with a grey facade and white window frames, featuring a ground-floor storefront for 'Fades & Blades' hair salon."
+VISION-SPIKE lil-floor run=3 first_text_ms=-1 total_ms=2463 chars=184 status=ok thermal=nominal battery=55 answer="The image displays the street-level facade of a two-story building housing 'Fades & Blades,' an Irish pub, situated on a city sidewalk with a satellite dish mou"
+VISION-SPIKE done
