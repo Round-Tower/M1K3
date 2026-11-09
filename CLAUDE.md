@@ -30,10 +30,12 @@ imported** — read its last block when a task continues prior work, not before.
 Anything a cold session needs on turn one belongs below, not there.
 
 ## Standing carry-forwards
-- **Code freeze after 1.3.0 (Kev, 2026-10-28):** "ratings are the lever." Only hotfixes (crashes, store
-  rejections), measurement and marketing. Feedback from a real store review counts as a hotfix (Kev,
-  2026-11-03: the first review became #772). Ideas go on #752 as comments, not new issues. No new features
-  until Kev lifts the freeze.
+- **Freeze lifted (Kev, 2026-11-09).** The code freeze after 1.3.0 (Kev, 2026-10-28: "ratings are the lever")
+  ran 10-28 → 11-09, with 1.3.0 live on both stores since 11-06. Ratings stay the measure. First 1.4 stream:
+  realtime vision on the phone (#768), nothing ships before its go/no-go latency spike (the threshold is in #768);
+  #759 is the 1.4 umbrella. Launch-week posts (Show HN Tue 11-11, r/macapps Wed, r/LocalLLaMA Thu) run alongside;
+  Kev posts. Ideas still go on #752; Kev decides when one earns an issue. A real store review still jumps the
+  queue (#772 precedent).
 - **Act fast with the house tooling (Kev, 2026-10-13, measured).** Inner loop: `macos/tools/dev/tdd.sh
   <TestTarget> [name]` builds one test bundle and runs only its tests (about 13 s; `swift test --filter`
   takes about 20 s). Run the full `swift test --parallel --disable-xctest` once before a push, never
@@ -306,3 +308,8 @@ that enforce them; this file keeps a short PR-loop bullet that paraphrases every
 the first draft against the runbook and named the five it had dropped: the master-merge exception, stack retargeting,
 `challenger` before heuristics, the two-pass mechanics, batching; all restored). No ruling changed. Confidence 0.85: the rules are unchanged and
 `pr_watch.py` enforces the ones that matter; what a cold session loses is the long form, which the runbook link restores.
+
+Review: Kev + claude-fable-5.1, 2026-11-09 (Kev: "Lift the freeze pal") — the freeze bullet becomes the record of the
+freeze (10-28 → 11-09) and names the first 1.4 stream (#768, spike first). No other ruling changed. The 11-04 Open
+(auditions vs the freeze) is moot now the freeze is over; the "Auditions are open again" bullet stands. Confidence 0.9:
+the lift is Kev's word in-session; the stream pick was my recommendation, taken.
