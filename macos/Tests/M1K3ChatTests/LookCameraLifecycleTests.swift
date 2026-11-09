@@ -12,6 +12,11 @@
 //  Signed: Kev + claude-fable-5.2, 2026-11-09, Confidence 0.85, Prior: none (new file)
 //  Context: both pre-push reviews named the race: "The camera can stay on with
 //  no screen after a close during the permission await".
+//  Review: Kev + claude-fable-5.2, 2026-11-09 — `closeBeforeTheOpenBegins`, the
+//  sequence the iPhone re-drill caught (open and close in one breath left the
+//  state at `opening`). No gate reaches the gap before the open's task first
+//  runs, so it is a 500-round race that accepts every legal ending and only
+//  those: red 2 rounds in 200 on the old rules, never red on the new.
 //
 
 import Foundation
@@ -146,6 +151,43 @@ struct LookCameraLifecycleTests {
         camera.close()
         #expect(camera.state == .closed)
         #expect(!worker.running)
+    }
+
+    @Test("a close that lands before the open has begun leaves nothing behind, not even a spinner")
+    func closeBeforeTheOpenBegins() async {
+        // Found on the iPhone (the 2026-11-09 re-drill): open and close in the
+        // same breath left the state at `opening` for good, with no camera on.
+        // The sequence is the drill's, to the letter. Run many times: which
+        // side of the first hop the close lands on is the scheduler's choice,
+        // and every landing must end closed.
+        for _ in 0 ..< 500 {
+            let worker = FakeWorker()
+            let camera = worker.lifecycle()
+            let opening = Task { await camera.open() }
+            await Task.yield()
+            let finishedFirst = camera.state == .open
+            camera.close()
+            #expect(camera.state == .closed)
+            let opened = await opening.value
+            // Whichever side of the close the open landed on, it has now ended
+            // one of three ways: it finished first and the close shut it; it
+            // began after the close, so it is the newest word and stands; or
+            // it was overtaken and nothing is on. Never in between.
+            if finishedFirst {
+                #expect(opened)
+                #expect(camera.state == .closed)
+                #expect(!worker.running)
+            } else if opened {
+                #expect(camera.state == .open)
+                #expect(worker.running)
+            } else {
+                #expect(camera.state == .closed, "a dead open left the state at \(camera.state)")
+                #expect(!camera.isOn)
+                #expect(!worker.running)
+            }
+            camera.close()
+            #expect(camera.state == .closed)
+        }
     }
 
     @Test("a close while iOS is still asking for permission never starts the camera")

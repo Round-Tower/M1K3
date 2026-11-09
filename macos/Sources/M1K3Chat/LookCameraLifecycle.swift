@@ -22,6 +22,13 @@
 //  tests, LookCameraLifecycleTests), Prior: the rules lived inline in
 //  LookCamera (184ebde0), where both pre-push reviews found the race: a close
 //  during the permission ask left the camera on with no screen.
+//  Review: Kev + claude-fable-5.2, 2026-11-09 (found on the iPhone, the re-drill
+//  on the fixed head) — a third place a close can land: BEFORE the open's task
+//  first runs. The task then said `opening` after the close had already looked,
+//  found itself overtaken and left the state at `opening` for good (no camera
+//  on, but a spinner and an eye that read as lit). `opening` is now said in
+//  `open()` itself and an overtaken task never touches the state.
+//  Confidence 0.85: the test is a 500-round race, red 2 in 200 before the fix.
 //
 
 import Foundation
@@ -78,7 +85,14 @@ public final class LookCameraLifecycle {
     public func open() async -> Bool {
         if state == .open { return true }
         if let opening { return await opening.task.value }
+        guard hasCamera() else {
+            state = .unavailable
+            return false
+        }
+        // Said HERE, in the caller's own turn, not inside the task: a close
+        // that lands before the task first runs must find `opening` to clear.
         let mine = generation
+        state = .opening
         let task = Task { await self.run(mine) }
         opening = (mine, task)
         let result = await task.value
@@ -98,11 +112,8 @@ public final class LookCameraLifecycle {
     }
 
     private func run(_ mine: Int) async -> Bool {
-        guard hasCamera() else {
-            state = .unavailable
-            return false
-        }
-        state = .opening
+        // Overtaken before it began: an overtaken open never touches the state.
+        guard mine == generation else { return false }
         let answer = await access()
         // Closed while the permission sheet was up: the session never starts.
         guard mine == generation else { return false }
