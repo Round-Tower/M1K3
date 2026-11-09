@@ -6,12 +6,14 @@
 
 What it checks, and against what the posts say (as of 2026-11-09):
 
-  store      iTunes lookup: version 1.3 live, both platforms; rating count (watch it climb)
+  store      iTunes lookup: version 1.3 live; rating count (watch it climb). One store record serves
+             Mac and iOS, and the lookup returns the same row for both: it cannot tell them apart
   issues     #179, #111, #121 still OPEN (the "rough edges" cited in every post)
   tests      @Test count in macos/Tests ≈ 6,177 ("about 6,200" in the HN comment)
   targets    non-test SwiftPM targets in macos/Package.swift = 33
   mcp        tool registrations in M1K3MCPKit = 18
-  event      the Flight Club in-app event is still PUBLISHED (optional: needs the ASC key)
+  event      the Flight Club in-app event is still PUBLISHED (needs the ASC key; without it the row
+             reads `?` UNVERIFIED, which does not fail the run and is not a pass)
 
 A number drifting is not a failure of the post; it is a line to update before you paste.
 EXPECTED below is the one place the posts' numbers live: a new launch edits it, nothing else.
@@ -51,6 +53,7 @@ class Check:
     actual: str
     ok: bool
     note: str = ""
+    verified: bool = True   # False: the read failed, so `ok` says nothing either way
 
 
 def store_lookup(fetch=None) -> dict:
@@ -75,9 +78,12 @@ def check_store(lookup: dict) -> list[Check]:
 def issue_states(numbers: list[str]) -> dict[str, str]:
     out = {}
     for n in numbers:
-        res = subprocess.run(["gh", "issue", "view", n, "--repo", GH_REPO, "--json", "state", "--jq", ".state"],
-                             capture_output=True, text=True, cwd=REPO, check=False)
-        out[n] = res.stdout.strip() or f"error: {res.stderr.strip()[:60]}"
+        try:
+            res = subprocess.run(["gh", "issue", "view", n, "--repo", GH_REPO, "--json", "state", "--jq", ".state"],
+                                 capture_output=True, text=True, cwd=REPO, check=False, timeout=30)
+            out[n] = res.stdout.strip() or f"error: {res.stderr.strip()[:60]}"
+        except (OSError, subprocess.TimeoutExpired) as e:   # no gh, or it hung: a failed row, not a traceback
+            out[n] = f"error: {e.__class__.__name__}"
     return out
 
 
@@ -94,13 +100,15 @@ def count_tests(tests_dir: Path) -> int:
 
 def count_targets(package_swift: Path) -> int:
     s = package_swift.read_text()
-    return len(re.findall(r"\.(?:target|executableTarget)\(", s))
+    # A declaration opens its own line; `.target(name: "X")` inside a dependency list does not.
+    return len(re.findall(r"^\s*\.(?:target|executableTarget)\(", s, re.MULTILINE))
 
 
 def count_mcp_tools(kit_dir: Path) -> int:
     n = 0
     for f in kit_dir.glob("*.swift"):
-        n += len(re.findall(r'^\s*name: "', f.read_text(errors="ignore"), re.MULTILINE))
+        # `Tool(` then its name: a prompt's or a resource's `name:` is not a tool.
+        n += len(re.findall(r'\bTool\(\s*name: "', f.read_text(errors="ignore")))
     return n
 
 
@@ -114,10 +122,11 @@ def check_counts(tests: int, targets: int, mcp: int) -> list[Check]:
 
 
 def event_check(returncode: int, stdout: str) -> Check:
-    """The Flight Club row from `events.py list` output. A failed read is a skip, never drift:
+    """The Flight Club row from `events.py list` output. A failed read is neither drift nor a pass:
     without the ASC key the script exits non-zero, and that says nothing about the event."""
     if returncode != 0:
-        return Check("Flight Club event", "PUBLISHED", f"skipped (exit {returncode})", True, "needs the ASC key")
+        return Check("Flight Club event", "PUBLISHED", f"exit {returncode}", True,
+                     "UNVERIFIED: needs the ASC key", verified=False)
     line = next((row for row in stdout.splitlines() if "flight-club" in row), "")
     fields = line.split()
     state = fields[1] if len(fields) > 1 else "not found"
@@ -129,7 +138,8 @@ def event_state() -> Check:
     try:
         res = subprocess.run([str(script), "list"], capture_output=True, text=True, cwd=REPO, timeout=60, check=False)
     except (OSError, subprocess.TimeoutExpired) as e:  # no uv, or the API hung: say so, don't fail the table
-        return Check("Flight Club event", "PUBLISHED", f"skipped ({e.__class__.__name__})", True, "needs the ASC key")
+        return Check("Flight Club event", "PUBLISHED", e.__class__.__name__, True,
+                     "UNVERIFIED: the event read did not run", verified=False)
     return event_check(res.returncode, res.stdout)
 
 
@@ -137,7 +147,7 @@ def render(checks: list[Check]) -> str:
     w = max(len(c.name) for c in checks)
     lines = []
     for c in checks:
-        mark = "✓" if c.ok else "✗"
+        mark = "?" if not c.verified else "✓" if c.ok else "✗"
         lines.append(f"{mark} {c.name:<{w}}  expected {c.expected:<10} actual {c.actual:<14} {c.note}")
     return "\n".join(lines)
 
@@ -159,6 +169,9 @@ def main(argv=None) -> int:
         print(json.dumps([asdict(c) for c in checks], indent=1))
     else:
         print(render(checks))
+    unverified = [c for c in checks if not c.verified]
+    if unverified:
+        print(f"\n{len(unverified)} line(s) UNVERIFIED: not read, so not checked.", file=sys.stderr)
     drift = [c for c in checks if not c.ok]
     if drift:
         print(f"\n{len(drift)} line(s) drifted: update the post before you paste.", file=sys.stderr)

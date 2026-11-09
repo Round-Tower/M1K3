@@ -34,7 +34,7 @@ def test_count_tests_and_targets_and_tools(tmp_path: Path):
     pkg.write_text(".target(name: \"A\"),\n.executableTarget(name: \"B\"),\n.testTarget(name: \"ATests\"),\n")
     assert lc.count_targets(pkg) == 2
     kit = tmp_path / "kit"; kit.mkdir()
-    (kit / "T.swift").write_text('Tool(\n  name: "speak",\n  name: "listen"\n)\nlet x = "name: \\"nope\\""\n')
+    (kit / "T.swift").write_text('Tool(\n  name: "speak",\n)\nTool(name: "listen")\nlet x = "name: \\"nope\\""\n')
     assert lc.count_mcp_tools(kit) == 2
 
 
@@ -68,8 +68,34 @@ def test_event_check_reads_the_state_column():
     assert not ended.ok and ended.actual == "PAST"
 
 
-def test_event_check_a_failed_read_is_a_skip_and_a_missing_event_is_drift():
-    skipped = lc.event_check(1, "")
-    assert skipped.ok and skipped.actual == "skipped (exit 1)"
+def test_event_check_a_failed_read_is_unverified_and_a_missing_event_is_drift():
+    unread = lc.event_check(1, "")
+    assert unread.ok and not unread.verified          # does not fail the run...
+    assert lc.render([unread]).startswith("? ")       # ...and never renders as a tick
+    assert "UNVERIFIED" in unread.note
     missing = lc.event_check(0, "6822718507  PAST  SPECIAL_EVENT  halloween-2026\n")
-    assert not missing.ok and missing.actual == "not found"
+    assert not missing.ok and missing.actual == "not found" and missing.verified
+
+
+def test_check_store_an_empty_lookup_is_drift_not_a_pass():
+    assert not lc.check_store({})[0].ok
+    assert not lc.check_store({"results": []})[0].ok
+
+
+def test_issue_states_a_missing_or_hung_gh_is_a_failed_row(monkeypatch):
+    def no_gh(*_a, **_k):
+        raise FileNotFoundError("gh")
+    monkeypatch.setattr(lc.subprocess, "run", no_gh)
+    states = lc.issue_states(["179"])
+    assert states == {"179": "error: FileNotFoundError"}
+    assert not lc.check_issues(states)[0].ok
+
+
+def test_counts_ignore_dependency_targets_and_non_tool_names(tmp_path: Path):
+    pkg = tmp_path / "Package.swift"
+    pkg.write_text('    .target(\n        name: "A",\n        dependencies: ["B", .target(name: "C")]\n    ),\n')
+    assert lc.count_targets(pkg) == 1
+    kit = tmp_path / "kit"
+    kit.mkdir()
+    (kit / "T.swift").write_text('tool: Tool(\n    name: "speak",\n)\nPrompt(\n    name: "not-a-tool",\n)\n')
+    assert lc.count_mcp_tools(kit) == 1

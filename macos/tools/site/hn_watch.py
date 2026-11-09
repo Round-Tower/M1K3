@@ -16,7 +16,12 @@ and a status line whenever the HN story's points or comment count changes:
   HN   12:45  — story: 41 points · 17 comments
 
 No keys: HN via Algolia's public search API, Reddit via the thread's public .json. Both are
-polite about rate (30 s default; Reddit asks for a descriptive User-Agent, which we send).
+polite about rate (30 s default; Reddit asks for a descriptive User-Agent, which we send; a 429
+waits out its Retry-After). Each source is read on its own, so one refusing does not silence another.
+
+Limits, on purpose: each poll reads the newest 200 HN comments and the newest 500 Reddit ones, so
+a burst bigger than that between two polls loses its oldest; Reddit's collapsed "load more" stubs
+are not expanded, so a reply buried under one is never printed. Read the thread itself for those.
 
 Signed: Kev + claude-fable-5.2, 2026-11-09, Confidence 0.75 (the parsing and the loop are pinned
 by tests against canned payloads; neither API has been watched through a live launch thread yet).
@@ -29,6 +34,7 @@ import json
 import re
 import sys
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from collections.abc import Callable, Iterable
@@ -100,7 +106,7 @@ def hn_story(item_id: int, fetch: Fetch = fetch_json) -> tuple[int, int]:
 
 def reddit_json_url(thread_url: str) -> str:
     base = thread_url.split("?", 1)[0].rstrip("/")
-    return base + ".json?limit=500&raw_json=1"
+    return base + ".json?limit=500&sort=new&raw_json=1"
 
 
 def reddit_comments(thread_url: str, fetch: Fetch = fetch_json) -> list[Comment]:
@@ -144,32 +150,53 @@ def new_comments(seen: set[str], comments: Iterable[Comment]) -> list[Comment]:
     return fresh
 
 
+def retry_after(error: Exception, interval: int) -> int:
+    """Seconds to hold off after `error`: a 429's Retry-After, or four polls when it names none; else 0."""
+    if not isinstance(error, urllib.error.HTTPError) or error.code != 429:
+        return 0
+    header = (error.headers or {}).get("Retry-After", "")
+    return int(header) if str(header).isdigit() else 4 * interval
+
+
 def run(item_id: int, reddit: list[str], interval: int, once: bool, backfill: bool,
         fetch: Fetch = fetch_json, out=sys.stdout, sleep: Callable[[float], None] = time.sleep) -> None:
+    """Each source is read on its own: a refused Reddit thread must not silence HN, and a source whose
+    FIRST read failed is still unprimed, so its backlog is marked seen (not printed) when it does answer."""
+    sources: list[tuple[str, Callable[[], list[Comment]]]] = [("HN", lambda: hn_comments(item_id, fetch))]
+    sources += [(f"RD {n}", lambda url=url: reddit_comments(url, fetch)) for n, url in enumerate(reddit, 1)]
     seen: set = set()
+    primed: set[str] = set()
     last_story: tuple[int, int] | None = None
-    first = True
+
+    def failed(what: str, e: Exception) -> int:
+        print(f"--   {time.strftime('%H:%M')}  {what} fetch failed: {e.__class__.__name__}: {e}", file=out, flush=True)
+        return retry_after(e, interval)
+
     while True:
-        try:
-            batch = hn_comments(item_id, fetch)
-            for url in reddit:
-                batch += reddit_comments(url, fetch)
-            fresh = new_comments(seen, sorted(batch, key=lambda c: c.created))
-            if first and not backfill:
-                fresh = []       # mark everything present as seen, print only what lands from now
+        hold = 0
+        for label, read in sources:
+            try:
+                fresh = new_comments(seen, read())
+            except Exception as e:  # noqa: BLE001 — any fetch or parse failure must not kill a three-hour watch
+                hold = max(hold, failed(label, e))
+                continue
+            if label not in primed:
+                primed.add(label)
+                if not backfill:
+                    continue     # present before the watch began: seen, not printed
             for c in fresh:
                 print(fmt(c), file=out, flush=True)
+        try:
             story = hn_story(item_id, fetch)
             if story != last_story:
                 print(f"HN   {time.strftime('%H:%M')}  — story: {story[0]} points · {story[1]} comments",
                       file=out, flush=True)
                 last_story = story
-        except Exception as e:  # noqa: BLE001 — any fetch or parse failure must not kill a three-hour watch
-            print(f"--   {time.strftime('%H:%M')}  fetch failed: {e.__class__.__name__}: {e}", file=out, flush=True)
-        first = False
+        except Exception as e:  # noqa: BLE001 — as above
+            hold = max(hold, failed("HN story", e))
         if once:
             return
-        sleep(interval)
+        sleep(max(interval, hold))
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -189,3 +216,5 @@ if __name__ == "__main__":
         sys.exit(main())
     except BrokenPipeError:  # `| head` closed the pipe: that's the reader's choice, not an error
         sys.exit(0)
+    except KeyboardInterrupt:  # Ctrl-C ends a watch; no traceback
+        sys.exit(130)
