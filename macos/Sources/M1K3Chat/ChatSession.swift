@@ -109,6 +109,11 @@
 //  Before this a look's question and answer replayed as history, so they could follow a brain switch to Brain at
 //  Home, appear on a Private Cloud consent sheet, and sit in a tool-capable turn's context. Cost, Kev's to loosen:
 //  a follow-up that is not itself a look starts without the look's words. Confidence 0.85 (ChatSessionLookTests).
+//  Review: Kev + claude-fable-5.2, 2026-11-10 (#768 follow-ups; Kev: "Let's do the followups pal - agree with them
+//  all") — `lookIfAboutTheView` (the brain may PASS; nothing is shown until a real answer starts; a passed turn
+//  leaves no trace), `lookAgain` (a second question about the same stored frame, a look like the first),
+//  `draftLookSearch`, and `send` withholds the web for the turn straight after a look unless its words ask for a
+//  search (`LookAftermath`). `lookMissed` holds `isResponding` like `look`. Confidence 0.8 (LookFollowUpTests).
 //  Same fold: `lookMissed`, the turn for a look that got no frame (the question and one honest line, display-only),
 //  so the shell never has to hand those words to `send`.
 
@@ -487,6 +492,8 @@ public final class ChatSession {
         // completed turns only, answer text only (reasoning/sources never leave
         // the message). HistoryWindow caps how much of it reaches the prompt.
         let history = Self.replayableHistory(messages)
+        let withholdsWeb = lastExchangeIsLook && !passedLookPending && !LookAftermath.asksToSearch(trimmed)
+        passedLookPending = false
 
         messages.append(ChatMessage(
             role: .user, text: trimmed,
@@ -499,7 +506,12 @@ public final class ChatSession {
         isResponding = true
         defer { isResponding = false }
 
-        await runLocalTurn(trimmed, images: images, history: history, assistantID: assistantID)
+        // Straight after a look this turn's words may be about the picture,
+        // and the responder knows nothing of it: the web stays out unless the
+        // words ask for a search or the seeing brain passed on them.
+        await LookAftermath.$withholdsWeb.withValue(withholdsWeb) {
+            await runLocalTurn(trimmed, images: images, history: history, assistantID: assistantID)
+        }
         await persistActiveConversation()
         scheduleTitlingIfNeeded(question: trimmed)
         // Rolling distillation: a no-op until the backlog outgrows the window,
@@ -944,24 +956,128 @@ public final class ChatSession {
     /// Returns false when a turn was already in flight and nothing happened,
     /// so the caller can discard the frame it stored.
     @discardableResult
-    public func look(_ question: String, frame: ImageAttachment, looker: any ImageLooking) async -> Bool {
-        guard !isResponding else { return false }
+    public func look(
+        _ question: String, frame: ImageAttachment, looker: any ImageLooking, knowing: String? = nil
+    ) async -> Bool {
         let asked = LookPrompt.question(question)
-
         var asking = ChatMessage(role: .user, text: asked, attachments: [frame], status: .complete)
         asking.contextExcluded = true
-        messages.append(asking)
+        return await runLook(
+            asking, frame: frame, looker: looker,
+            instructions: LookPrompt.instructions(knowing: knowing), prompt: asked, mayPass: false
+        ) == .looked
+    }
+
+    /// What became of a turn that might not have been about the view.
+    public enum LookVerdict: Sendable, Equatable {
+        /// Answered (or failed) as a look: the turn is spent.
+        case looked
+        /// The brain said the question is not about the view. Nothing was
+        /// added to the conversation: the caller sends it as an ordinary turn.
+        case passed
+        /// A turn was already in flight; nothing happened.
+        case busy
+    }
+
+    /// A look for a turn that MAY not be about the view (voice mode with the
+    /// eye open). The brain may answer PASS (`LookPrompt.passClause`). Nothing
+    /// reaches the transcript until it has started a real answer, and a passed
+    /// turn leaves no trace, so the caller can send the same words as an
+    /// ordinary turn. That send keeps the web: the brain that saw the frame
+    /// judged the words to be about something else.
+    public func lookIfAboutTheView(
+        _ question: String, frame: ImageAttachment, looker: any ImageLooking, knowing: String? = nil
+    ) async -> LookVerdict {
+        let asked = LookPrompt.question(question)
+        var asking = ChatMessage(role: .user, text: asked, attachments: [frame], status: .complete)
+        asking.contextExcluded = true
+        let verdict = await runLook(
+            asking, frame: frame, looker: looker,
+            instructions: LookPrompt.instructions(knowing: knowing, mayPass: true), prompt: asked, mayPass: true
+        )
+        if verdict == .passed { passedLookPending = true }
+        return verdict
+    }
+
+    /// The newest look, while it is still the last thing in the conversation
+    /// and its frame is known: what `lookAgain` and the search draft work from.
+    /// A chain of questions about one frame keeps finding that frame.
+    public var lastLook: (question: String, answer: String, frame: ImageAttachment)? {
+        guard messages.count >= 2, let answer = messages.last, answer.role == .assistant,
+              case .complete = answer.status, answer.toolsUsed == [LookPrompt.toolName]
+        else { return nil }
+        let question = messages[messages.count - 2]
+        var index = messages.count - 2
+        while index >= 0 {
+            let asked = messages[index]
+            guard asked.role == .user, messages[index + 1].toolsUsed == [LookPrompt.toolName] else { return nil }
+            if let frame = asked.attachments?.first {
+                return (question.text, answer.text, frame)
+            }
+            index -= 2
+        }
+        return nil
+    }
+
+    /// A second question about the frame of `lastLook`: a look like the
+    /// first. On the device, no responder, display-only, with the earlier
+    /// question and answer in the prompt. The frame stays on the message that
+    /// took it. False when there is no such look or a turn is in flight.
+    @discardableResult
+    public func lookAgain(_ question: String, looker: any ImageLooking, knowing: String? = nil) async -> Bool {
+        guard !isResponding, let earlier = lastLook else { return false }
+        let asked = LookPrompt.question(question)
+        var asking = ChatMessage(role: .user, text: asked, status: .complete)
+        asking.contextExcluded = true
+        return await runLook(
+            asking, frame: earlier.frame, looker: looker,
+            instructions: LookPrompt.instructions(knowing: knowing),
+            prompt: LookPrompt.followUp(asked, after: earlier.question, answered: earlier.answer), mayPass: false
+        ) == .looked
+    }
+
+    /// A search query about the frame of `lastLook`, drafted by the eyes on
+    /// this device (`LookSearch`). Adds nothing to the conversation and sends
+    /// nothing: the shell puts the draft in the composer for the user to send.
+    public func draftLookSearch(looker: any ImageLooking) async -> String? {
+        guard !isResponding, let earlier = lastLook else { return nil }
+        isResponding = true
+        defer { isResponding = false }
+        return await LookSearch.draft(frame: earlier.frame, question: earlier.question, looker: looker)
+    }
+
+    /// One look, start to finish. `asking` is the user's message as it will be
+    /// shown. With `mayPass` both bubbles wait until a real answer has started.
+    private func runLook(
+        _ asking: ChatMessage, frame: ImageAttachment, looker: any ImageLooking,
+        instructions: String, prompt: String, mayPass: Bool
+    ) async -> LookVerdict {
+        guard !isResponding else { return .busy }
         let assistantID = UUID()
-        messages.append(ChatMessage(id: assistantID, role: .assistant, text: "", status: .streaming))
+        heldLook = (asking, assistantID)
+        if !mayPass { revealLook() }
 
         isResponding = true
         defer { isResponding = false }
 
         stopRequested = false
-        let turn = Task { await self.streamLook(asked, frame: frame, looker: looker, assistantID: assistantID) }
+        let turn = Task {
+            await self.streamLook(
+                prompt, frame: frame, looker: looker, instructions: instructions,
+                assistantID: assistantID, holdsForPass: mayPass
+            )
+        }
         lookTask = turn
         let outcome = await turn.value
         lookTask = nil
+
+        if mayPass, case let .answered(text, stopped) = outcome, !stopped, LookPassGate.passed(text) {
+            // Not about the view. Whatever was shown goes, before anything is persisted.
+            heldLook = nil
+            messages.removeAll { $0.id == assistantID || $0.id == asking.id }
+            return .passed
+        }
+        revealLook()
 
         switch outcome {
         case let .answered(text, stopped) where text.isEmpty:
@@ -981,7 +1097,25 @@ public final class ChatSession {
         // No titling: a title would be made from what the camera saw. The next
         // ordinary exchange titles the conversation from its own words.
         scheduleRollingDistillationIfNeeded()
-        return true
+        return .looked
+    }
+
+    /// The look's two bubbles, not yet in the transcript (a turn that may pass).
+    private var heldLook: (asking: ChatMessage, assistantID: UUID)?
+    /// The last look was passed on: the very next send is that same question.
+    private var passedLookPending = false
+
+    /// Put the held bubbles in the transcript. Once per look.
+    private func revealLook() {
+        guard let held = heldLook else { return }
+        heldLook = nil
+        messages.append(held.asking)
+        messages.append(ChatMessage(id: held.assistantID, role: .assistant, text: "", status: .streaming))
+    }
+
+    /// Whether the conversation's last exchange is a look (answered, failed or missed).
+    private var lastExchangeIsLook: Bool {
+        messages.last.map { $0.role == .assistant && $0.toolsUsed == [LookPrompt.toolName] } ?? false
     }
 
     /// A look that was asked for and got no frame (the camera would not open,
@@ -993,6 +1127,8 @@ public final class ChatSession {
     @discardableResult
     public func lookMissed(_ question: String, saying line: String) async -> Bool {
         guard !isResponding else { return false }
+        isResponding = true
+        defer { isResponding = false }
         var asking = ChatMessage(role: .user, text: LookPrompt.question(question), status: .complete)
         asking.contextExcluded = true
         messages.append(asking)
@@ -1008,17 +1144,24 @@ public final class ChatSession {
         _ question: String,
         frame: ImageAttachment,
         looker: any ImageLooking,
-        assistantID: UUID
+        instructions: String,
+        assistantID: UUID,
+        holdsForPass: Bool
     ) async -> LookOutcome {
         var latest = ""
         var flushGate = StreamFlushGate()
         var leakShown = false
         let started = ContinuousClock.now
         do {
-            let stream = looker.look(image: frame, instructions: LookPrompt.instructions, prompt: question)
+            let stream = looker.look(image: frame, instructions: instructions, prompt: question)
             for try await snapshot in stream {
                 if latest.isEmpty, !snapshot.isEmpty { Self.logLookFirstText(after: .now - started) }
                 latest = snapshot
+                if holdsForPass, heldLook != nil {
+                    // Could still be the one word: show nothing yet.
+                    guard LookPassGate.reading(of: latest) == .answering else { continue }
+                    revealLook()
+                }
                 guard flushGate.shouldFlush(at: .now) else { continue }
                 let live = Self.guardedLive(latest, tripped: &leakShown)
                 update(assistantID) { $0.text = live }

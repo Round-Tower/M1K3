@@ -16,6 +16,10 @@
 //  Signed: Kev + claude-fable-5.2, 2026-11-09, Confidence 0.75, Prior: none (new file)
 //  Open: one photo of one street is thin evidence for a prompt. Re-score when
 //  the look has a fixture set of its own.
+//  Review: Kev + claude-fable-5.2, 2026-11-10 (#768 follow-ups) — the prompt
+//  can now carry what the look knows and a pass clause, and a second question
+//  about the same frame has its own wording. The base instructions are
+//  unchanged. The pass clause was scored on a blind set (the PR has the numbers).
 //
 
 import Foundation
@@ -29,6 +33,27 @@ public enum LookPrompt {
     Read any sign or text you can see when it helps. \
     Say only what you can see, and say so when you can't tell.
     """
+
+    /// Added for a turn that may not be about the view at all (voice mode
+    /// with the eye open): the brain answers with one word and the turn goes
+    /// on as an ordinary one (`LookPassGate`).
+    public static let passClause = "If the question is not about what is in view, reply with only the word PASS."
+
+    /// The system prompt with what the look knows (`LookGrounding`) and, for
+    /// a turn that may pass, the pass clause last.
+    public static func instructions(knowing: String? = nil, mayPass: Bool = false) -> String {
+        var parts = [instructions]
+        if let knowing = knowing?.trimmingCharacters(in: .whitespacesAndNewlines), !knowing.isEmpty {
+            parts.append(knowing)
+        }
+        if mayPass { parts.append(passClause) }
+        return parts.joined(separator: "\n\n")
+    }
+
+    /// A second question about the same frame, with the first exchange.
+    public static func followUp(_ question: String, after earlier: String, answered: String) -> String {
+        "Earlier about this picture I asked: \(earlier)\nYou answered: \(answered)\nNow: \(question)"
+    }
 
     /// Asked when the user points the camera and says nothing.
     public static let defaultQuestion = "What am I looking at?"
