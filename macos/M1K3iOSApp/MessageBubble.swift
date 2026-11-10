@@ -184,10 +184,10 @@ struct MessageBubble: View {
     private func activityRow(_ label: String) -> some View {
         HStack(spacing: 8) {
             ProgressView().controlSize(.small)
-            // The working line wears the pixel face (Kev, 2026-11-10): a short app-written label,
-            // at the face's 12 pt floor.
+            // The working line wears the pixel face (Kev, 2026-11-10) when it is a short app-written
+            // label, at the face's 12 pt floor. A line that quotes a search or names a site does not.
             Text(label)
-                .font(.pixel(12))
+                .font(BrainWordmark.suitsPixelFace(label) ? .pixel(12) : .caption)
                 .foregroundStyle(.secondary)
         }
     }

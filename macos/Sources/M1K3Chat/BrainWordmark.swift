@@ -26,6 +26,14 @@ public enum BrainWordmark {
         elsewhere ? nil : tier.displayName.uppercased()
     }
 
+    /// Whether a working line ("Thinking…") may wear the pixel face. The face's house rule is short
+    /// app-written strings only, and some activity labels quote the user's search or name a site:
+    /// those keep the system face. Short, no quotation marks, no dot inside a word.
+    public static func suitsPixelFace(_ label: String) -> Bool {
+        guard !label.isEmpty, label.count <= 28 else { return false }
+        return !label.contains(where: { "“”\"'‘’.".contains($0) })
+    }
+
     /// The tag as typed so far: `step` letters of it.
     public static func typed(_ tag: String, step: Int) -> String {
         String(tag.prefix(max(0, step)))

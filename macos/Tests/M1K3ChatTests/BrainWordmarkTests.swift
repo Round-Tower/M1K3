@@ -20,6 +20,19 @@ struct BrainWordmarkTests {
         #expect(BrainWordmark.tag(for: .lil, elsewhere: true) == nil)
     }
 
+    @Test("only a short label the app wrote wears the pixel face: nothing quoting the user, no site name")
+    func whichLabelsWearThePixelFace() {
+        for fixed in ["Thinking…", "Recalling what I know…", "Looking…", "Checking the time…"] {
+            #expect(BrainWordmark.suitsPixelFace(fixed), "\(fixed)")
+        }
+        for dynamic in [
+            "Searching the web for “leica m6 film camera”…", "Reading en.wikipedia.org…", "",
+            "A note that runs on for rather longer than a label should",
+        ] {
+            #expect(!BrainWordmark.suitsPixelFace(dynamic), "\(dynamic)")
+        }
+    }
+
     @Test("the tag types on one letter at a time and ends whole")
     func typing() {
         #expect(BrainWordmark.typed("MINI", step: 0) == "")

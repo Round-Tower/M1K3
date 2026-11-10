@@ -1200,12 +1200,19 @@ private struct BrainTagTypeOn: View {
 
     var body: some View {
         let done = step >= tag.count
-        Text(BrainWordmark.typed(tag, step: reduceMotion ? tag.count : step) + (done || reduceMotion ? "" : "▮"))
+        // The whole tag, hidden, holds the width: the wordmark beside it does not shift while it types.
+        Text(tag + "▮")
             .font(.pixel(14))
-            .foregroundStyle(.white.opacity(0.7))
-            .task(id: tag) {
-                guard !reduceMotion else { return }
+            .hidden()
+            .overlay(alignment: .leading) {
+                Text(BrainWordmark.typed(tag, step: reduceMotion ? tag.count : step)
+                    + (done || reduceMotion ? "" : "▮"))
+                    .font(.pixel(14))
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+            .task(id: "\(tag)-\(reduceMotion)") {
                 step = 0
+                guard !reduceMotion else { return }
                 // A beat before the first letter, so it reads as M1K3 naming its brain.
                 try? await Task.sleep(for: .milliseconds(350))
                 for next in 1 ... max(1, tag.count) {
