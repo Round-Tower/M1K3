@@ -114,6 +114,10 @@
 //  leaves no trace), `lookAgain` (a second question about the same stored frame, a look like the first),
 //  `draftLookSearch`, and `send` withholds the web for the turn straight after a look unless its words ask for a
 //  search (`LookAftermath`). `lookMissed` holds `isResponding` like `look`. Confidence 0.8 (LookFollowUpTests).
+//  Review: Kev + claude-fable-5.2, 2026-11-10 — `adopt(attachmentStore:)`: a shown conversation's photos are
+//  re-anchored to where the files are now. On Kev's phone every attached photo and look frame went blank after a
+//  reinstall: the files were there, the saved absolute paths were not (iOS moved the data container). Confidence
+//  0.8 (AttachmentStoreTests; the phone check is the proof).
 //  Same fold: `lookMissed`, the turn for a look that got no frame (the question and one honest line, display-only),
 //  so the shell never has to hand those words to `send`.
 
@@ -1377,11 +1381,33 @@ public final class ChatSession {
         historyRevision += 1
     }
 
+    /// Where this shell keeps attached photos. Once adopted, every conversation shown has its photos'
+    /// saved paths re-anchored to where the files are now (`AttachmentStore.reanchored`): the launch
+    /// restore happens before the shell can hand the store over, so adopting re-anchors that one too.
+    public func adopt(attachmentStore: AttachmentStore) {
+        self.attachmentStore = attachmentStore
+        messages = reanchored(messages)
+    }
+
+    private var attachmentStore: AttachmentStore?
+
+    private func reanchored(_ messages: [ChatMessage]) -> [ChatMessage] {
+        guard let attachmentStore else { return messages }
+        return messages.map { message in
+            guard let attachments = message.attachments else { return message }
+            let now = attachments.map(attachmentStore.reanchored)
+            guard now != attachments else { return message }
+            var moved = message
+            moved.attachments = now
+            return moved
+        }
+    }
+
     /// The one mutation point ChatSession+Conversations routes through —
     /// private(set) setters are file-scoped, so the cross-file extension
     /// cannot (and must not) touch the stored properties directly.
     func setActiveConversation(id: UUID, messages: [ChatMessage], title: String?) {
-        self.messages = messages
+        self.messages = reanchored(messages)
         activeConversationID = id
         activeTitle = title
         feedbackVerdicts = (try? history?.feedbackVerdicts(conversationID: id)) ?? [:]

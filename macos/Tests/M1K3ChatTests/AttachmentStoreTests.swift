@@ -15,6 +15,7 @@
 import Foundation
 @testable import M1K3Chat
 import M1K3Inference
+import M1K3Knowledge
 import Testing
 
 struct AttachmentStoreTests {
@@ -133,5 +134,48 @@ struct AttachmentStoreTests {
         defer { try? FileManager.default.removeItem(at: temp) }
         let store = AttachmentStore(directory: temp.appendingPathComponent("attachments"))
         #expect(throws: (any Error).self) { try store.store(data: Data(), fileExtension: "png") }
+    }
+
+    /// iOS moves the app's data container when the app is updated or reinstalled, so a saved absolute
+    /// path goes stale while the file is still there (Kev's phone, 2026-11-10: every photo went blank).
+    @Test("a stored photo whose saved path has moved is found again by its file name")
+    func reanchorsAMovedContainer() throws {
+        let temp = try makeTempDirectory()
+        let store = AttachmentStore(directory: temp.appendingPathComponent("attachments"))
+        let kept = try store.store(data: Data([1, 2, 3]), fileExtension: "jpg")
+        let stale = ImageAttachment(
+            url: URL(fileURLWithPath: "/old-container/attachments").appendingPathComponent(kept.url.lastPathComponent)
+        )
+        #expect(store.reanchored(stale) == kept)
+        #expect(store.reanchored(kept) == kept, "a path that still works is left alone")
+        let gone = ImageAttachment(url: URL(fileURLWithPath: "/old-container/attachments/never-here.jpg"))
+        #expect(store.reanchored(gone) == gone, "a file that is really gone is not invented")
+    }
+
+    @MainActor
+    @Test("a session that adopts the store re-anchors the photos of the chat it shows, and of chats it opens")
+    func theSessionReanchors() throws {
+        let temp = try makeTempDirectory()
+        let store = AttachmentStore(directory: temp.appendingPathComponent("attachments"))
+        let kept = try store.store(data: Data([1, 2, 3]), fileExtension: "jpg")
+        let stale = ImageAttachment(
+            url: URL(fileURLWithPath: "/old-container/attachments").appendingPathComponent(kept.url.lastPathComponent)
+        )
+        let session = ChatSession(responder: EchoResponder())
+        let asked = ChatMessage(role: .user, text: "What is this?", attachments: [stale], status: .complete)
+        session.setActiveConversation(id: UUID(), messages: [asked], title: nil)
+        #expect(session.messages.first?.attachments == [stale])
+
+        session.adopt(attachmentStore: store)
+        #expect(session.messages.first?.attachments == [kept])
+
+        session.setActiveConversation(id: UUID(), messages: [asked], title: nil)
+        #expect(session.messages.first?.attachments == [kept])
+    }
+}
+
+private struct EchoResponder: RAGResponding {
+    func answerStreaming(_: String) async throws -> (sources: [ChunkHit], stream: AsyncStream<String>) {
+        ([], AsyncStream { $0.finish() })
     }
 }

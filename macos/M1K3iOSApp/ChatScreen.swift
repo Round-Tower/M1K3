@@ -632,6 +632,8 @@ struct ChatScreen: View {
                 inputFocused = true
             } label: {
                 Label("Ask more", systemImage: "eye")
+                    .lineLimit(1)
+                    .fixedSize()
             }
             .accessibilityLabel("Ask about this photo")
             .accessibilityHint("Your next message is answered by looking at this photo again, on this device")
@@ -640,6 +642,8 @@ struct ChatScreen: View {
                     draftSearch()
                 } label: {
                     Label(draftingSearch ? "Drafting…" : "Search the web", systemImage: "globe")
+                        .lineLimit(1)
+                        .fixedSize()
                 }
                 .disabled(draftingSearch)
                 .accessibilityLabel("Search the web for this")
@@ -647,9 +651,9 @@ struct ChatScreen: View {
             }
             Spacer(minLength: 0)
         }
-        // One line each, the same height: the long labels wrapped on the phone (Kev, 2026-11-10).
-        .lineLimit(1)
-        .fixedSize()
+        // One line each, the same height, from the leading edge: the long labels wrapped on the phone
+        // (Kev, 2026-11-10).
+        .frame(maxWidth: .infinity, alignment: .leading)
         .font(.footnote)
         .buttonStyle(.bordered)
         .buttonBorderShape(.capsule)

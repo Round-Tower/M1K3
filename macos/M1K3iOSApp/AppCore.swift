@@ -150,6 +150,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-09 (review fold) — `isLooking`: one look at a time, from either door.
 //  Review: Kev + claude-fable-5.2, 2026-11-10 (#768 follow-ups) — the tool palette leaves the web trio out for the
 //  turn straight after a look (`LookAftermath.withholdsWeb`, set by ChatSession.send). Confidence 0.8.
+//  Review: Kev + claude-fable-5.2, 2026-11-10 — `chat.adopt(attachmentStore:)`: every attached photo went blank on
+//  Kev's phone after a reinstall (the files were there; the saved absolute paths were not). Confidence 0.8.
 
 import AVFoundation
 #if os(iOS)
@@ -808,6 +810,10 @@ final class AppCore {
             // The rolling distillation trigger follows the replay window in effect (#629).
             replayTurns: { Self.liveHistoryBudget().minimumKeptTurns }
         )
+
+        // A reinstall or update moves the data container: saved photo paths are re-anchored to where the
+        // files are now, for the restored chat and every chat opened after it.
+        chat.adopt(attachmentStore: Self.attachmentStore)
 
         // Caption memory: a deleted chat forgets its Photo memories.
         photoMemory.onChange = { [weak self] in self?.refreshCounts() }

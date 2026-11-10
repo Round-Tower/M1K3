@@ -57,6 +57,17 @@ public struct AttachmentStore: Sendable {
         return ImageAttachment(url: destination)
     }
 
+    /// The same photo at the path it has NOW. A saved path is absolute, and iOS moves the app's data
+    /// container when the app is updated or reinstalled: the file is still in this directory, under the
+    /// same name, but the saved path no longer opens. A path that still works, or a file that is really
+    /// gone, comes back unchanged.
+    public func reanchored(_ attachment: ImageAttachment) -> ImageAttachment {
+        let manager = FileManager.default
+        guard !manager.fileExists(atPath: attachment.url.path) else { return attachment }
+        let here = directory.appendingPathComponent(attachment.url.lastPathComponent)
+        return manager.fileExists(atPath: here.path) ? ImageAttachment(url: here) : attachment
+    }
+
     /// Delete stored copies. We OWN these files (they are our container-side
     /// copies, never the user's originals), so removal is safe by
     /// construction; a missing file is a quiet no-op (idempotent — a
