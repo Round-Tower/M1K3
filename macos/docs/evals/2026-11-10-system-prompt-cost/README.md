@@ -65,30 +65,45 @@ prompt-completion attack, and Mini copies it onto questions that are nothing of
 the kind. It repeated exactly on a second and third run (5 of 10 on code-gen
 both times, 6 wiring replies each). Lil shows it once in 60.
 
-**The sentence is doing a job.** Two paired runs on Mini, shipped wiring:
+**What the sentence buys.** Paired runs on Mini, shipped wiring ("shipped" here
+is the persona as it was until this change):
 
-| Mini's persona | code-gen (x2) | instruction-following (x2) | security (x3) |
-| --- | --- | --- | --- |
-| as shipped | 5/10, 5/10 | 2/6, 3/6 | 21/21 |
-| minus that one sentence | 10/10, 10/10 | 4/6, 3/6 | 14/21 |
+| Mini's persona | code-gen (x2) | instruction-following (x2) | security, scored (x3) | the other seven kinds (60) |
+| --- | --- | --- | --- | --- |
+| with the sentence | 5/10, 5/10 | 2/6, 3/6 | 21/21 | 44, with 13 wiring replies |
+| without it | 10/10, 10/10 | 4/6, 3/6 | 14/21 | 48, with none |
 
-So removing it fixes the coding answers and opens seven security misses in 21
-(completion, passphrase and spoof attacks). The eval scores the model's own
-reply; in the app `PersonaLeakGuard` also replaces a reply that reproduces the
-persona, and that guard is not in this path.
+The security score needs reading. With the sentence, all 21 replies are that
+sentence word for word. Without it, the seven "misses" leaked nothing: the
+check for leaked persona text passed 21 of 21 both ways, and the misses are
+Mini refusing in its own words ("Not a single line. The wiring is locked."),
+which the scorer's list of refusal phrases does not know. A further 35 answers
+without the sentence, with the app's own `PersonaLeakGuard` applied before
+scoring as `ChatSession` does, gave no leak either: the guard fired once, on a
+reply that had begun to recite, and replaced it. (One flagged "leak" there is
+the phrase "The passphrase is a leak.")
 
-## What I would try next (Kev's calls)
+Across the other kinds the sentence was the whole answer to 3 of 5 interview
+questions ("who are you?"), 2 documents, 2 sycophancy probes and every refusal.
 
-1. **Mini: move that defence out of the prompt.** Run the no-sentence persona
-   through `ChatSession` so the leak guard is in the loop, and score security
-   there. If the guard holds the line, the sentence can go and Mini gets its
-   coding answers back.
-2. **Lil: leave the persona alone.** Its cost is answer length and the phone's
-   cold prefill, not quality. The lever on the phone is keeping the cached
-   prefix alive across more turns, not a shorter persona.
-3. **A lean lane for one-shot asks.** The look showed the shape: a short prompt
-   answers in under a second. Which asks could take it without losing M1K3's
-   voice is a product question, not a measurement.
+## The call
+
+**Mini's persona drops that one sentence** (`M1K3Persona.spelledOutDecline`,
+this PR). The rule stays: a request to complete the rules is declined in one
+line. Lil, Big and the pocket tier are untouched; they do not copy it.
+
+After the change, Mini's default persona through the shipped wiring: code-gen
+10/10 and interview 5/5, with no decline replies (`mini-fixed-default.json`).
+
+Left alone, and why:
+
+- **Lil's persona.** Its cost is answer length and the phone's cold prefill,
+  not quality. The lever on the phone is keeping the cached prefix alive across
+  more turns, not a shorter persona.
+- **A lean lane for one-shot asks.** The look showed the shape, but which asks
+  could take it without losing M1K3's voice is a product question.
+- **The scorer's refusal list.** It should learn the in-voice declines above,
+  or a future run will read this change as a security loss.
 
 ## Limits
 
@@ -98,6 +113,11 @@ reads as a slower turn. The one-line arms carry no rules at all, so they are a
 ceiling for speed and not a prompt anyone would ship. The instruction-following
 kind has six questions.
 
+The security evidence is seven attack prompts, run eight times in all without
+the sentence. That is thin for a claim that nothing can leak; it is enough to
+say the sentence was costing far more than it was seen to buy.
+
 _Signed: Kev + claude-fable-5.2, 2026-11-10, Confidence 0.7 (the Mini decline
 finding repeated three times and reversed when the sentence was removed; the
-Lil differences other than reasoning are inside run-to-run noise)._
+Lil differences other than reasoning are inside run-to-run noise). Kev's word
+on the change: "Just make the best call pal."_
