@@ -124,6 +124,8 @@
 //  moves to the top bar beside voice mode. Confidence 0.7.
 //  Review: Kev + claude-fable-5.2, 2026-11-10 — Kev's screenshot: the two look actions wrapped and sat at different
 //  heights. They read "Ask more" and "Search the web", one line each (VoiceOver keeps the long wording). Confidence 0.8.
+//  Review: Kev + claude-fable-5.2, 2026-11-10 — the wordmark gains the brain's tag ("LIL M1K3"), typed on in the pixel
+//  face when the brain changes (`BrainTagTypeOn`, still with Reduce Motion). Confidence 0.6 until Kev has seen it.
 
 import M1K3Avatar
 import M1K3Chat
@@ -465,10 +467,20 @@ struct ChatScreen: View {
                         .frame(height: 168)
                         .padding(.horizontal, 56)
                 }
-                Text("M1K3")
-                    .font(.pixel(28))
-                    .kerning(2)
-                    .foregroundStyle(.white)
+                // "LIL M1K3": the brain that is in, typed on in the wordmark's own face (Kev, 2026-11-10).
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    let elsewhere = core.homeBrainActive || privateCloudServesNextSend
+                    if let tag = BrainWordmark.tag(for: core.selectedBrain, elsewhere: elsewhere) {
+                        BrainTagTypeOn(tag: tag)
+                    }
+                    Text("M1K3")
+                        .font(.pixel(28))
+                        .kerning(2)
+                        .foregroundStyle(.white)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("M1K3, \(core.answeringBrainName)")
+                .accessibilityAddTraits(.isHeader)
                 // In season, M1K3 greets in costume (opt-out in Settings ▸ Face).
                 if let line = SeasonalLook.greeting(for: SeasonalLook.now(enabled: seasonalLooks, offline: NetworkPathWatch.shared.isOffline)) {
                     Text(line)
@@ -1176,4 +1188,38 @@ struct ChatScreen: View {
     }
 
     private static let attachmentStore = AppCore.attachmentStore
+}
+
+/// The brain's tag beside the wordmark, typed on a letter at a time whenever it changes, with a block
+/// cursor that goes once the word is whole. Smaller and dimmer than the wordmark on purpose. Reduce
+/// Motion shows the word at once.
+private struct BrainTagTypeOn: View {
+    let tag: String
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var step = 0
+
+    var body: some View {
+        let done = step >= tag.count
+        // The whole tag, hidden, holds the width: the wordmark beside it does not shift while it types.
+        Text(tag + "▮")
+            .font(.pixel(14))
+            .hidden()
+            .overlay(alignment: .leading) {
+                Text(BrainWordmark.typed(tag, step: reduceMotion ? tag.count : step)
+                    + (done || reduceMotion ? "" : "▮"))
+                    .font(.pixel(14))
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+            .task(id: "\(tag)-\(reduceMotion)") {
+                step = 0
+                guard !reduceMotion else { return }
+                // A beat before the first letter, so it reads as M1K3 naming its brain.
+                try? await Task.sleep(for: .milliseconds(350))
+                for next in 1 ... max(1, tag.count) {
+                    guard !Task.isCancelled else { return }
+                    step = next
+                    try? await Task.sleep(for: .milliseconds(110))
+                }
+            }
+    }
 }
