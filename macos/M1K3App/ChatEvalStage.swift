@@ -137,6 +137,9 @@
 //  driver sets `_ROUTER_SEARCH=1` under dispatch unless `--no-router-search`: the eval wires like the app.
 //  Confidence 0.85.
 //
+//  Review: Kev + claude-fable-5.2, 2026-11-10 — `M1K3_SELFTEST_CHATEVAL_LEAN`: the bare arm on a one-line system
+//  prompt, for the system-prompt cost pairing (Kev: "I wonder how much our system prompt is killing perf across
+//  models? And maybe intelligence too?"). Confidence 0.8 (one line through `InferenceIntent.withInstructions`).
 
 import Foundation
 
@@ -1028,8 +1031,17 @@ enum ChatEvalStage {
                 // to ask the different question — whether M1K3-as-shipped answers
                 // a plain factual question or deflects it into "not in your
                 // documents", which is what its mustComply expectation hunts.
+                // `M1K3_SELFTEST_CHATEVAL_LEAN=<one line>`: the bare arm with that line as the WHOLE system
+                // prompt instead of the persona. Paired with the persona-only bare arm and the live path it
+                // says what the system prompt costs a brain (2026-11-10).
+                let lean = SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_LEAN")
                 let raw = try await InferenceIntent.withThinking(thinking.bareThinks) {
-                    try await provider.generate(prompt: fixture.prompt)
+                    if let lean, !lean.isEmpty {
+                        return try await InferenceIntent.withInstructions(lean) {
+                            try await provider.generate(prompt: fixture.prompt)
+                        }
+                    }
+                    return try await provider.generate(prompt: fixture.prompt)
                 }
                 let ms = milliseconds(clock.now - start)
                 // No tool is on offer here, so an avoid list skips instead of passing (#713 review).
