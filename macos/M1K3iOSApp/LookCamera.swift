@@ -203,6 +203,8 @@ final class LookCamera {
                 if session.canSetSessionPreset(.hd1280x720) { session.sessionPreset = .hd1280x720 }
                 session.addInput(input)
                 session.addOutput(output)
+                // The invariant behind `@unchecked Sendable`: the delegate queue IS this worker's queue, so
+                // every read and write of its state, the frame callback included, happens on that one queue.
                 output.setSampleBufferDelegate(self, queue: queue)
                 rotation = AVCaptureDevice.RotationCoordinator(device: device, previewLayer: nil)
                 configured = true

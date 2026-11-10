@@ -962,10 +962,22 @@ public final class ChatSession {
         let asked = LookPrompt.question(question)
         var asking = ChatMessage(role: .user, text: asked, attachments: [frame], status: .complete)
         asking.contextExcluded = true
-        return await runLook(
-            asking, frame: frame, looker: looker,
-            instructions: LookPrompt.instructions(knowing: knowing), prompt: asked, mayPass: false
-        ) == .looked
+        let ask = LookAsk(instructions: LookPrompt.instructions(knowing: knowing), prompt: asked)
+        return await runLook(asking, frame: frame, looker: looker, ask: ask) == .looked
+    }
+
+    /// One answered look: its words and the frame they were about.
+    public struct LookExchange: Sendable, Equatable {
+        public let question: String
+        public let answer: String
+        public let frame: ImageAttachment
+    }
+
+    /// How one look is put to the eyes.
+    private struct LookAsk {
+        let instructions: String
+        let prompt: String
+        var mayPass = false
     }
 
     /// What became of a turn that might not have been about the view.
@@ -991,10 +1003,10 @@ public final class ChatSession {
         let asked = LookPrompt.question(question)
         var asking = ChatMessage(role: .user, text: asked, attachments: [frame], status: .complete)
         asking.contextExcluded = true
-        let verdict = await runLook(
-            asking, frame: frame, looker: looker,
+        let ask = LookAsk(
             instructions: LookPrompt.instructions(knowing: knowing, mayPass: true), prompt: asked, mayPass: true
         )
+        let verdict = await runLook(asking, frame: frame, looker: looker, ask: ask)
         if verdict == .passed { passedLookPending = true }
         return verdict
     }
@@ -1002,7 +1014,7 @@ public final class ChatSession {
     /// The newest look, while it is still the last thing in the conversation
     /// and its frame is known: what `lookAgain` and the search draft work from.
     /// A chain of questions about one frame keeps finding that frame.
-    public var lastLook: (question: String, answer: String, frame: ImageAttachment)? {
+    public var lastLook: LookExchange? {
         guard messages.count >= 2, let answer = messages.last, answer.role == .assistant,
               case .complete = answer.status, answer.toolsUsed == [LookPrompt.toolName]
         else { return nil }
@@ -1012,7 +1024,7 @@ public final class ChatSession {
             let asked = messages[index]
             guard asked.role == .user, messages[index + 1].toolsUsed == [LookPrompt.toolName] else { return nil }
             if let frame = asked.attachments?.first {
-                return (question.text, answer.text, frame)
+                return LookExchange(question: question.text, answer: answer.text, frame: frame)
             }
             index -= 2
         }
@@ -1029,11 +1041,11 @@ public final class ChatSession {
         let asked = LookPrompt.question(question)
         var asking = ChatMessage(role: .user, text: asked, status: .complete)
         asking.contextExcluded = true
-        return await runLook(
-            asking, frame: earlier.frame, looker: looker,
+        let ask = LookAsk(
             instructions: LookPrompt.instructions(knowing: knowing),
-            prompt: LookPrompt.followUp(asked, after: earlier.question, answered: earlier.answer), mayPass: false
-        ) == .looked
+            prompt: LookPrompt.followUp(asked, after: earlier.question, answered: earlier.answer)
+        )
+        return await runLook(asking, frame: earlier.frame, looker: looker, ask: ask) == .looked
     }
 
     /// A search query about the frame of `lastLook`, drafted by the eyes on
@@ -1049,9 +1061,9 @@ public final class ChatSession {
     /// One look, start to finish. `asking` is the user's message as it will be
     /// shown. With `mayPass` both bubbles wait until a real answer has started.
     private func runLook(
-        _ asking: ChatMessage, frame: ImageAttachment, looker: any ImageLooking,
-        instructions: String, prompt: String, mayPass: Bool
+        _ asking: ChatMessage, frame: ImageAttachment, looker: any ImageLooking, ask: LookAsk
     ) async -> LookVerdict {
+        let mayPass = ask.mayPass
         guard !isResponding else { return .busy }
         let assistantID = UUID()
         heldLook = (asking, assistantID)
@@ -1062,10 +1074,7 @@ public final class ChatSession {
 
         stopRequested = false
         let turn = Task {
-            await self.streamLook(
-                prompt, frame: frame, looker: looker, instructions: instructions,
-                assistantID: assistantID, holdsForPass: mayPass
-            )
+            await self.streamLook(ask, frame: frame, looker: looker, assistantID: assistantID)
         }
         lookTask = turn
         let outcome = await turn.value
@@ -1141,23 +1150,21 @@ public final class ChatSession {
 
     /// Drain the eyes' cumulative snapshots into the live bubble.
     private func streamLook(
-        _ question: String,
+        _ ask: LookAsk,
         frame: ImageAttachment,
         looker: any ImageLooking,
-        instructions: String,
-        assistantID: UUID,
-        holdsForPass: Bool
+        assistantID: UUID
     ) async -> LookOutcome {
         var latest = ""
         var flushGate = StreamFlushGate()
         var leakShown = false
         let started = ContinuousClock.now
         do {
-            let stream = looker.look(image: frame, instructions: instructions, prompt: question)
+            let stream = looker.look(image: frame, instructions: ask.instructions, prompt: ask.prompt)
             for try await snapshot in stream {
                 if latest.isEmpty, !snapshot.isEmpty { Self.logLookFirstText(after: .now - started) }
                 latest = snapshot
-                if holdsForPass, heldLook != nil {
+                if ask.mayPass, heldLook != nil {
                     // Could still be the one word: show nothing yet.
                     guard LookPassGate.reading(of: latest) == .answering else { continue }
                     revealLook()

@@ -47,6 +47,8 @@
 //  Review: Kev + claude-opus-4-6, 2026-10-12 — Bug fix: PCC toggle now binds to
 //  `ChatEgressConsent.defaultsKey` (matching the Mac's PrivacySettingsPane), not the dead
 //  `privateCloudEnabledKey` that the rung never read. Confidence 0.9.
+//  Review: Kev + claude-fable-5.2, 2026-11-10 (#768 follow-ups) — "Open the camera when I ask aloud": the off switch
+//  for the spoken look (voice mode hears the room). Shown only where the eye is offered. Confidence 0.7.
 //  Review: Kev + claude-opus-5-5, 2026-10-13 — one control (Kev): the Grounding toggle is gone and
 //  Private Cloud Compute is a row in Brain, after Home. Picking it is the yes and the pick
 //  (`core.pickPrivateCloud`); a phone brain or Home takes both back. The Grounding footer quotes
@@ -67,6 +69,7 @@ import SwiftUI
 struct SettingsScreen: View {
     @Environment(AppCore.self) private var core
     @AppStorage(AppCore.webSearchEnabledKey) private var webSearchEnabled = true
+    @AppStorage(AppCore.spokenLookKey) private var spokenLook = true
     @AppStorage(PersistedAgeBandProvider.defaultsKey) private var ageBandRaw: String?
     /// Why the last "Set up" came back without an answer — shown under the button.
     @State private var ageRangeFailure: AgeRangeRequestFailure?
@@ -185,6 +188,16 @@ struct SettingsScreen: View {
                 }
             }
             .id(Self.groundingID)
+
+            if core.canLook {
+                Section {
+                    Toggle("Open the camera when I ask aloud", isOn: $spokenLook)
+                } footer: {
+                    Text("In voice mode, saying “what am I looking at?” takes one picture and answers on this "
+                        + "device. Voice mode hears the room, so turn this off if someone else might say it. "
+                        + "The eye button always works.")
+                }
+            }
 
             Section {
                 Toggle("Avatar backdrop in chat", isOn: $avatarBackdrop)

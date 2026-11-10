@@ -117,6 +117,9 @@
 //  never drew and came back black. Confidence 0.75.
 //  Review: Kev + claude-fable-5.2, 2026-11-09 — #768: the eye beside the ＋ opens `LookScreen` (shown only when
 //  `core.canLook`), and the attachment store is AppCore's, shared with the look. Confidence 0.7 (verify on the phone).
+//  Review: Kev + claude-fable-5.2, 2026-11-10 (#768 follow-ups) — two actions under a look's answer: "Ask about this
+//  photo" (the next send looks at the same stored frame, shown as a pill over the composer) and "Search the web for
+//  this" (drafts a query INTO the composer; the user sends it). Confidence 0.6: untried in the hand.
 
 import M1K3Avatar
 import M1K3Chat
@@ -151,6 +154,10 @@ struct ChatScreen: View {
     /// The ＋ menu's Photos row presents the picker; a PhotosPicker can't live inside a Menu.
     @State private var showPhotoPicker = false
     @State private var showLook = false
+    /// The composer is asking about the last look's photo (#768): the next send is a look at that stored frame.
+    @State private var aboutPhoto = false
+    /// The eyes are drafting a search query for the composer.
+    @State private var draftingSearch = false
     @AppStorage(AppCore.webSearchEnabledKey) private var webSearchEnabled = true
     @State private var pendingAttachments: [ImageAttachment] = []
     @State private var pendingFiles: [FileAttachment] = []
@@ -578,6 +585,9 @@ struct ChatScreen: View {
                         )
                         .id(message.id)
                     }
+                    if core.canAskAboutLastLook, !core.chat.isResponding {
+                        lookActions
+                    }
                 }
                 // Mac-parity bump (Kev's catch, 2026-07-22): flat assistant turns
                 // had zero inset of their own, so headings/code blocks sat right
@@ -595,6 +605,70 @@ struct ChatScreen: View {
                 scrollToLatest(proxy)
             }
         }
+    }
+
+    /// What can follow a look (#768), under its answer. Both are the user's own act: asking again looks at the
+    /// same stored photo on this device, and the search action only DRAFTS a query into the composer.
+    private var lookActions: some View {
+        HStack(spacing: 8) {
+            Button {
+                aboutPhoto = true
+                inputFocused = true
+            } label: {
+                Label("Ask about this photo", systemImage: "eye")
+            }
+            .accessibilityHint("Your next message is answered by looking at this photo again, on this device")
+            if webSearchEnabled {
+                Button {
+                    draftSearch()
+                } label: {
+                    Label(draftingSearch ? "Drafting…" : "Search the web for this", systemImage: "globe")
+                }
+                .disabled(draftingSearch)
+                .accessibilityHint("Writes a search for you to read and send. Nothing is sent until you send it")
+            }
+            Spacer(minLength: 0)
+        }
+        .font(.footnote)
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.capsule)
+    }
+
+    /// The eyes name what is in the photo as a short search, into the composer. The user sends it or doesn't.
+    private func draftSearch() {
+        guard !draftingSearch else { return }
+        draftingSearch = true
+        Task {
+            defer { draftingSearch = false }
+            guard let text = await core.draftLookSearch() else {
+                attachmentError = String(localized: "M1K3 couldn't name anything in the photo to search for.")
+                return
+            }
+            aboutPhoto = false
+            draft = text
+            inputFocused = true
+        }
+    }
+
+    /// Shown over the composer while the next send is a question about the last look's photo.
+    private var aboutPhotoPill: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "eye")
+            Text("Asking about the photo")
+            Button {
+                aboutPhoto = false
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Stop asking about the photo")
+        }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(.ultraThinMaterial, in: Capsule())
+        .padding(.bottom, 6)
     }
 
     private func scrollToLatest(_ proxy: ScrollViewProxy) {
@@ -668,6 +742,9 @@ struct ChatScreen: View {
         VStack(spacing: 0) {
             statusLine
                 .padding(.bottom, 6)
+            if aboutPhoto, core.canAskAboutLastLook {
+                aboutPhotoPill
+            }
             if !pendingAttachments.isEmpty {
                 pendingImagesStrip
             }
@@ -946,6 +1023,14 @@ struct ChatScreen: View {
 
     private func send() {
         guard canSend else { return }
+        // A question about the last look's photo is a look: on this device, never Private Cloud, never a tool.
+        if aboutPhoto, core.canAskAboutLastLook, pendingAttachments.isEmpty, pendingFiles.isEmpty {
+            let question = draft
+            clearDraft()
+            Task { await core.lookAgain(question) }
+            return
+        }
+        aboutPhoto = false
         let hasAttachments = !pendingAttachments.isEmpty
         let onDevice = ChatSession.onDeviceMessageIDs(core.chat.messages)
         // Voice mode answers on-device (ADR 0010); typed sends in voice never go to PCC.

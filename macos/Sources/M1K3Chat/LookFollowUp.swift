@@ -93,11 +93,13 @@ public enum LookGrounding {
     /// The date and time, in plain English for the prompt. The person's own
     /// calendar and zone by default.
     public static func now(_ date: Date = .now, calendar: Calendar = .current) -> String {
-        var format = Date.VerbatimFormatStyle(
-            format: "\(weekday: .wide) \(day: .defaultDigits) \(month: .wide) \(year: .defaultDigits), \(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased)):\(minute: .twoDigits)",
+        let format = Date.VerbatimFormatStyle(
+            format: """
+            \(weekday: .wide) \(day: .defaultDigits) \(month: .wide) \(year: .defaultDigits), \
+            \(hour: .twoDigits(clock: .twentyFourHour, hourCycle: .zeroBased)):\(minute: .twoDigits)
+            """,
             locale: Locale(identifier: "en_GB"), timeZone: calendar.timeZone, calendar: calendar
         )
-        format.locale = Locale(identifier: "en_GB")
         return "For reference only: it is \(date.formatted(format)) for the person. "
             + "Mention the date or time only if their question needs it."
     }

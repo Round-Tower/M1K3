@@ -65,6 +65,8 @@ struct LookScreen: View {
         // front: the task opens it on arrival and again on each return to the
         // foreground (the camera closes itself in the background), and is
         // cancelled with the screen, so no open can start after the close below.
+        // It re-runs on every return to active; `open()` is idempotent, so an
+        // already-open camera is left alone.
         .task(id: scenePhase) {
             if baseline == nil { baseline = core.chat.messages.count }
             guard scenePhase == .active, !Task.isCancelled else { return }

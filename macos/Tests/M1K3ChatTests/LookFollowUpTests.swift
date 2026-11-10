@@ -141,10 +141,12 @@ struct LookFollowUpTests {
         for answering in ["A", "Passengers", "PASSED", "A sign", "Pa pa"] {
             #expect(LookPassGate.reading(of: answering) == .answering, "\(answering.debugDescription)")
         }
-        for passed in ["PASS", "pass", "Pass.", " \"PASS\" ", "PASS\n", "Remind me to call the dentist. PASS."] {
+        let passes = ["PASS", "pass", "Pass.", " \"PASS\" ", "PASS\n", "Remind me to call the dentist. PASS."]
+        for passed in passes {
             #expect(LookPassGate.passed(passed), "\(passed.debugDescription)")
         }
-        for answered in ["", "A boarding pass.", "Passengers waiting", "PASSPORT", "You may pass", "A sign that says PASSING"] {
+        let answers = ["", "A boarding pass.", "Passengers waiting", "PASSPORT", "You may pass", "A sign that says PASSING"]
+        for answered in answers {
             #expect(!LookPassGate.passed(answered), "\(answered.debugDescription)")
         }
     }
@@ -251,7 +253,8 @@ struct LookFollowUpTests {
         let second = eyes.received.last
         #expect(second?.image == frame)
         #expect(second?.instructions == LookPrompt.instructions)
-        #expect(second?.prompt == LookPrompt.followUp("Does it have a basket?", after: "What is this?", answered: "A red bicycle."))
+        let followUp = LookPrompt.followUp("Does it have a basket?", after: "What is this?", answered: "A red bicycle.")
+        #expect(second?.prompt == followUp)
         // The chain keeps its frame: a third question still finds it.
         #expect(session.lastLook?.frame == frame)
         #expect(session.lastLook?.question == "Does it have a basket?")
@@ -296,10 +299,16 @@ struct LookFollowUpTests {
         await session.look("What is this?", frame: frame, looker: ScriptedEyes(["A Leica M6."]))
         await session.send("Search the web for Leica M6 film camera")
         #expect(responder.withheld == [false])
-        for asks in ["search the web for leica m6", "Look up the Leica M6", "google leica m6", "Find it online", "look it up on the internet"] {
+        for asks in [
+            "search the web for leica m6", "Look up the Leica M6", "google leica m6", "Find it online",
+            "look it up on the internet",
+        ] {
             #expect(LookAftermath.asksToSearch(asks), "\(asks)")
         }
-        for plain in ["Is there a person in the picture?", "What colour is it?", "Thanks", "I was looking up at the sky", "research is fun"] {
+        for plain in [
+            "Is there a person in the picture?", "What colour is it?", "Thanks", "I was looking up at the sky",
+            "research is fun",
+        ] {
             #expect(!LookAftermath.asksToSearch(plain), "\(plain)")
         }
     }
@@ -333,9 +342,10 @@ struct LookFollowUpTests {
     func knowingTheDate() async {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Europe/Dublin") ?? .gmt
-        let noon = calendar.date(from: DateComponents(year: 2026, month: 11, day: 10, hour: 15, minute: 4)) ?? .distantPast
-        let line = LookGrounding.now(noon, calendar: calendar)
-        #expect(line == "For reference only: it is Tuesday 10 November 2026, 15:04 for the person. Mention the date or time only if their question needs it.")
+        let parts = DateComponents(year: 2026, month: 11, day: 10, hour: 15, minute: 4)
+        let line = LookGrounding.now(calendar.date(from: parts) ?? .distantPast, calendar: calendar)
+        #expect(line == "For reference only: it is Tuesday 10 November 2026, 15:04 for the person. "
+            + "Mention the date or time only if their question needs it.")
 
         let knowing = LookPrompt.instructions(knowing: line)
         #expect(knowing.hasPrefix(LookPrompt.instructions))
@@ -357,7 +367,8 @@ struct LookFollowUpTests {
         #expect(LookSearch.clean("Leica M6 film camera") == "Leica M6 film camera")
         #expect(LookSearch.clean("  \"Leica M6 film camera\".\n") == "Leica M6 film camera")
         #expect(LookSearch.clean("Query: Leica M6\nIt is a camera.") == "Leica M6")
-        #expect(LookSearch.clean("one two three four five six seven eight nine ten eleven twelve") == "one two three four five six seven eight nine ten")
+        let long = "one two three four five six seven eight nine ten eleven twelve"
+        #expect(LookSearch.clean(long) == "one two three four five six seven eight nine ten")
         #expect(LookSearch.clean("NONE") == nil)
         #expect(LookSearch.clean("none.") == nil)
         #expect(LookSearch.clean("   ") == nil)
@@ -377,7 +388,8 @@ struct LookFollowUpTests {
 
         #expect(draft == "Leica M6 film camera")
         #expect(session.messages == before)
-        #expect(eyes.received.last == .init(image: frame, instructions: LookSearch.instructions, prompt: "What is this?"))
+        let asked = ScriptedEyes.Call(image: frame, instructions: LookSearch.instructions, prompt: "What is this?")
+        #expect(eyes.received.last == asked)
         #expect(await ChatSession(responder: WebWatchingResponder()).draftLookSearch(looker: eyes) == nil)
     }
 }

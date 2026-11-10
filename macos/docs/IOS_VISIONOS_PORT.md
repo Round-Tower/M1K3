@@ -721,3 +721,50 @@ display-only rule and the camera's lifecycle are tested; the iOS target builds;
 the camera and the two screens are compile-checked until they have run in the
 hand). Revised the same day, before the first push, after a code-quality and a
 security review of the branch._
+
+## Addendum — 2026-11-10: after the look (#768 follow-ups)
+
+Kev, after trying the look on the phone: "Let's do the followups pal - agree
+with them all. Also I wonder about an Auto mode, and adding grounding, and a
+websearch toggle or followup to allow a search for information."
+
+- **Auto (voice, eye open).** A turn whose words do not ask for the camera goes
+  to `ChatSession.lookIfAboutTheView`: the brain that sees the frame may answer
+  with the one word PASS (`LookPrompt.passClause`, read by `LookPassGate`).
+  Nothing reaches the transcript until a real answer has started, a passed turn
+  leaves no trace, its frame is discarded, and the words go on as an ordinary
+  turn. A spoken ask for the camera never passes. On a blind 90-question set
+  across three pictures Mini passed on none of 135 questions about the view and
+  handed back 69 of 135 that were not (the rest are answered as a look, as every
+  eye-open turn was before).
+- **Asking again.** "Ask about this photo" under a look's answer makes the next
+  send a look at the SAME stored frame (`lookAgain`): on the device, no tools,
+  display-only, with the first exchange in its prompt. It is decided before
+  Private Cloud arming.
+- **The next turn.** The ordinary turn straight after a look gets no web tools
+  unless its own words ask for a search (`LookAftermath`, read where the tool
+  palette is built). This closes the 11-09 finding (a question about the photo
+  went to the search provider word for word).
+- **Search follow-up.** "Search the web for this" has the brain that sees draft
+  a short query from the stored frame, on the device (`LookSearch`), and puts
+  `Search the web for …` in the composer. The app never sends it: the user
+  reads it, edits it and sends it as their own turn. Offered only while "Web
+  search in chat" is on. Chosen over a standing toggle on the challenger's
+  finding that a query drafted from a frame can carry text read off it.
+- **Grounding.** Every look is told the date and time (`LookGrounding`). Memory
+  facts do not ride a look: the phone retrieves with the hashing embedder, whose
+  floor has no clean cut, and the facts would share a prompt with whatever text
+  is in view. That waits for a paired per-question test.
+- **Smaller.** A kept frame is excluded from the device backup. The spoken ask
+  has an off switch (Settings, "Open the camera when I ask aloud"), because
+  voice mode hears the room. `lookMissed` holds `isResponding`.
+
+Still open: the spoken matcher is English only with about half recall; a look
+on Lil can queue behind other MLX work; look-only conversations stay untitled;
+ambient eyes are not started and wait on the heat and battery soak. The
+verify-owed list above stands, plus the two chat actions, the pill and the
+Settings switch in the hand.
+
+_Signed: Kev + claude-fable-5.2, 2026-11-10, Confidence 0.7 (the chat layer is
+tested against fakes, the shell is scan-pinned and builds, the pass word is
+scored on a blind set on Mini; the screens are untried in the hand)._

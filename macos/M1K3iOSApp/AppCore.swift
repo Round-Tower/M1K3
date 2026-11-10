@@ -148,6 +148,8 @@
 //  unchanged so a look lands on the avatar, the earcon and the rating ledger the same way (AppCore+Look).
 //  Confidence 0.7 (verify on the phone).
 //  Review: Kev + claude-fable-5.2, 2026-11-09 (review fold) — `isLooking`: one look at a time, from either door.
+//  Review: Kev + claude-fable-5.2, 2026-11-10 (#768 follow-ups) — the tool palette leaves the web trio out for the
+//  turn straight after a look (`LookAftermath.withholdsWeb`, set by ChatSession.send). Confidence 0.8.
 
 import AVFoundation
 #if os(iOS)
@@ -1433,7 +1435,9 @@ final class AppCore {
                     ListDocumentsTool(store: store),
                     GetDocumentTool(store: store),
                 ]
-                let webAllowed = Self.webSearchAllowed()
+                // The turn straight after a look goes without the web unless its own words asked for a
+                // search (LookAftermath, #768): it may be about the picture, and this turn cannot see it.
+                let webAllowed = Self.webSearchAllowed() && !LookAftermath.withholdsWeb
                 if webAllowed {
                     tools.insert(WikipediaTool(), at: 0)
                     tools.insert(FetchPageTool(), at: 0)

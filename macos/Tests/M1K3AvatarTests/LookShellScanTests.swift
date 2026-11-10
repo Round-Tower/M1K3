@@ -18,6 +18,11 @@
 //  observers are pinned to `init`, whitespace no longer decides a pass, and a
 //  new pin lists every `ImageLooking` conformer in the repo, so a provider
 //  that gains eyes (Brain at Home, Private Cloud) fails here by name.
+//  Review: Kev + claude-fable-5.2, 2026-11-10 (#768 follow-ups) — the "turn is spent" pin moved ON PURPOSE: with
+//  the eye open a turn may now be handed back, but only on a PASS from the brain that saw the frame, never for
+//  words that asked for the camera. New pins: asking again uses no camera, the search draft is never sent by the
+//  app, a question about the photo is decided before Private Cloud arming, and the web withhold is read where the
+//  tool palette is built.
 //
 
 import Foundation
@@ -80,7 +85,7 @@ struct LookShellScanTests {
     @Test("a frame is asked of the on-device slot through chat.look, never through a send")
     func theFrameTakesTheLeanRoute() throws {
         let wiring = try Self.code("M1K3iOSApp/AppCore+Look.swift")
-        #expect(wiring.contains("chat.look(question, frame: frame, looker: looker)"))
+        #expect(wiring.contains("chat.look(question, frame: frame, looker: looker, knowing:"))
         #expect(!wiring.contains("chat.send("), "a look must not become a send: a send can pick a tool")
         #expect(!wiring.contains("homeBrain"), "the look wiring must not reach for Brain at Home")
         // A look with no frame says so as a look; it never falls through.
@@ -88,12 +93,65 @@ struct LookShellScanTests {
         let voiceLook = try Self.body(of: "func voiceLook(", in: wiring)
         let matched = try #require(voiceLook.range(of: "LookIntent.voiceTurnLooks("))
         let after = voiceLook[matched.upperBound...]
+        // Two ways a voice turn is handed back as an ordinary send, and no third: the matcher's own
+        // guard, and a PASS from the brain that saw the frame (Auto, eye open).
+        #expect(after.components(separatedBy: "return false").count == 3)
+        let passed = try #require(after.range(of: "case .passed:"))
+        #expect(after[passed.upperBound...].contains("return false"))
         #expect(
-            after.components(separatedBy: "return false").count == 2,
-            "once the words asked for the camera the turn is spent: only the matcher's own guard may hand it back"
+            after[..<passed.lowerBound].components(separatedBy: "return false").count == 2,
+            "before the PASS case only the matcher's own guard may hand a turn back"
         )
+        // A spoken ask for the camera can never pass: it takes the plain look, decided before the gate.
+        let explicit = try #require(after.range(of: "guard eyesOpen, !LookIntent.asksToLook(question) else {"))
+        let gate = try #require(after.range(of: "chat.lookIfAboutTheView("))
+        #expect(explicit.lowerBound < gate.lowerBound)
+        // A passed frame is not kept.
+        #expect(after[passed.upperBound...].contains("AttachmentStore.discard([frame])"))
         let core = try Self.code("M1K3iOSApp/AppCore.swift")
         #expect(core.contains("var looker: any ImageLooking {\n        activeProvider\n    }"))
+    }
+
+    @Test("asking again and the search draft stay on the device, and the draft sends nothing")
+    func theFollowUpsStayHome() throws {
+        let wiring = try Self.code("M1K3iOSApp/AppCore+Look.swift")
+        let again = try Self.body(of: "func lookAgain(", in: wiring)
+        #expect(again.contains("chat.lookAgain(question, looker: looker, knowing:"))
+        #expect(!again.contains("lookCamera"), "asking again uses the stored frame: no camera")
+        let draft = try Self.body(of: "func draftLookSearch()", in: wiring)
+        #expect(draft.contains("Self.webSearchAllowed()"), "no draft while web search is off")
+        #expect(draft.contains("chat.draftLookSearch(looker: looker)"))
+        // The chat screen puts the draft in the composer; it never sends it.
+        let screen = try Self.code("M1K3iOSApp/ChatScreen.swift")
+        let drafting = try Self.body(of: "private func draftSearch()", in: screen)
+        #expect(drafting.contains("draft = text"))
+        #expect(!drafting.contains("core.send("), "a drafted search is the user's to send")
+        // A question about the photo is a look before it can be a Private Cloud or local send.
+        let send = try Self.body(of: "private func send()", in: screen)
+        let about = try #require(send.range(of: "core.lookAgain(question)"))
+        let arming = try #require(send.range(of: "privateCloudArming.action("))
+        #expect(about.lowerBound < arming.lowerBound)
+    }
+
+    @Test("a spoken ask opens the camera only while the user allows it, and a kept frame stays out of the backup")
+    func theSpokenAskHasAnOffSwitch() throws {
+        let wiring = try Self.code("M1K3iOSApp/AppCore+Look.swift")
+        let voiceLook = try Self.body(of: "func voiceLook(", in: wiring)
+        let allowed = try #require(voiceLook.range(of: "let asked = eyesOpen || Self.spokenLookAllowed()"))
+        let matcher = try #require(voiceLook.range(of: "LookIntent.voiceTurnLooks("))
+        #expect(allowed.lowerBound < matcher.lowerBound)
+        #expect(voiceLook.contains("&& !isLooking && asked"))
+        let stored = try Self.body(of: "func storedFrame()", in: wiring)
+        #expect(stored.contains("values.isExcludedFromBackup = true"))
+        let settings = try Self.code("M1K3iOSApp/SettingsScreen.swift")
+        #expect(settings.contains("@AppStorage(AppCore.spokenLookKey)"))
+    }
+
+    @Test("the turn straight after a look gets no web tools")
+    func theNextTurnHasNoWeb() throws {
+        let core = try Self.flat("M1K3iOSApp/AppCore.swift")
+        #expect(core.contains("let webAllowed = Self.webSearchAllowed() && !LookAftermath.withholdsWeb"))
+        #expect(core.components(separatedBy: "let webAllowed = Self.webSearchAllowed()").count == 2)
     }
 
     @Test("the eye is offered only when the answering brain sees on this device")
