@@ -323,6 +323,22 @@ struct LookFollowUpTests {
         }
     }
 
+    @Test("words that name the picture are about the picture; anything else is not decided here")
+    func namingThePicture() {
+        for names in [
+            "Is there a person in the picture?", "what's in the photo", "Describe the image again",
+            "Zoom in on that pic", "Any text in the photograph?", "What else is in the snapshot?",
+        ] {
+            #expect(LookAftermath.namesThePicture(names), "\(names)")
+        }
+        for other in [
+            "Is it open on Sundays?", "Thanks", "Give it a shot", "Imagine a dragon", "What's a good epic to read?",
+            "photosynthesis explained", "a picturesque town", "",
+        ] {
+            #expect(!LookAftermath.namesThePicture(other), "\(other)")
+        }
+    }
+
     @Test("a turn the brain passed on is the user's ordinary question: it keeps the web")
     func aPassedTurnKeepsTheWeb() async {
         let responder = WebWatchingResponder()

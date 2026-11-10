@@ -128,6 +128,11 @@ struct LookShellScanTests {
         #expect(!drafting.contains("core.send("), "a drafted search is the user's to send")
         // A question about the photo is a look before it can be a Private Cloud or local send.
         let send = try Self.body(of: "private func send()", in: screen)
+        #expect(send.contains("if aboutPhoto || namesIt, core.canAskAboutLastLook"))
+        let voiceLook = try Self.body(of: "func voiceLook(", in: wiring)
+        let named = try #require(voiceLook.range(of: "LookAftermath.namesThePicture(question)"))
+        let opens = try #require(voiceLook.range(of: "lookCamera.open()"))
+        #expect(named.lowerBound < opens.lowerBound, "a question that names the kept picture opens no camera")
         let about = try #require(send.range(of: "core.lookAgain(question)"))
         let arming = try #require(send.range(of: "privateCloudArming.action("))
         #expect(about.lowerBound < arming.lowerBound)

@@ -131,6 +131,16 @@ extension AppCore {
         // Voice mode's turns only: one that lands after the mode was left opens no camera.
         guard voiceLoop != nil else { return false }
         let eyesOpen = lookCamera.isOpen
+        // Eye closed, straight after a look, and the words name the picture: a second look at the kept
+        // frame. No camera, and never an ordinary turn (which answered from an unrelated photo note).
+        if !eyesOpen, canAskAboutLastLook, !chat.isResponding, !isLooking,
+           LookAftermath.namesThePicture(question), !LookAftermath.asksToSearch(question)
+        {
+            isLooking = true
+            defer { isLooking = false }
+            await chat.lookAgain(question, looker: looker, knowing: LookGrounding.now())
+            return true
+        }
         let eyeWasOn = lookCamera.isOn
         // With the eye closed a spoken ask opens the camera only while the user allows it (Settings): voice
         // mode hears the room, so someone else's "what am I looking at?" would otherwise be a glance.

@@ -1024,7 +1024,9 @@ struct ChatScreen: View {
     private func send() {
         guard canSend else { return }
         // A question about the last look's photo is a look: on this device, never Private Cloud, never a tool.
-        if aboutPhoto, core.canAskAboutLastLook, pendingAttachments.isEmpty, pendingFiles.isEmpty {
+        // So is one whose words name the picture straight after a look ("is there a person in the photo?").
+        let namesIt = LookAftermath.namesThePicture(draft) && !LookAftermath.asksToSearch(draft)
+        if aboutPhoto || namesIt, core.canAskAboutLastLook, pendingAttachments.isEmpty, pendingFiles.isEmpty {
             let question = draft
             clearDraft()
             Task { await core.lookAgain(question) }

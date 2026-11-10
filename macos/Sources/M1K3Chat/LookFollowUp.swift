@@ -91,6 +91,16 @@ public enum LookAftermath {
     "Ask about this photo" under your last answer, or to open the eye and ask again. Anything else, answer as usual.
     """
 
+    /// Whether these words name the picture ("is there a person in the
+    /// photo?"). Straight after a look that is a question about the kept
+    /// frame, so the shell answers it by looking again. Asked as an ordinary
+    /// turn on the phone, both brains answered it from an unrelated photo note
+    /// in the knowledge store (2026-11-10). Whole words only, and only these.
+    public static func namesThePicture(_ text: String) -> Bool {
+        let words = Set(text.lowercased().split(whereSeparator: { !$0.isLetter }).map(String.init))
+        return !words.isDisjoint(with: ["picture", "photo", "photograph", "image", "pic", "snapshot"])
+    }
+
     /// Whether these words ask for a search themselves. Loose on purpose: a
     /// hit only keeps the user's own setting.
     public static func asksToSearch(_ text: String) -> Bool {
