@@ -120,6 +120,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-10 (#768 follow-ups) — two actions under a look's answer: "Ask about this
 //  photo" (the next send looks at the same stored frame, shown as a pill over the composer) and "Search the web for
 //  this" (drafts a query INTO the composer; the user sends it). Confidence 0.6: untried in the hand.
+//  Review: Kev + claude-fable-5.2, 2026-11-10 — Kev, in the hand: the eye "is cluttering the chat input space". It
+//  moves to the top bar beside voice mode. Confidence 0.7.
 
 import M1K3Avatar
 import M1K3Chat
@@ -245,6 +247,18 @@ struct ChatScreen: View {
                     .disabled(core.chat.messages.isEmpty || core.chat.isResponding)
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    // The eye (#768) opens the Look screen. Up here beside voice mode, not in the composer
+                    // row, which it crowded (Kev, 2026-11-10). Only when the answering brain sees on this device.
+                    if core.canLook {
+                        Button {
+                            inputFocused = false
+                            showLook = true
+                        } label: {
+                            Label("Look", systemImage: "eye")
+                        }
+                        .disabled(core.chat.isResponding || !core.isReady)
+                        .accessibilityHint("Opens the camera so M1K3 can see what you point it at")
+                    }
                     Button {
                         inputFocused = false
                         core.enterVoiceMode()
@@ -756,9 +770,6 @@ struct ChatScreen: View {
             M1K3GlassGroup(spacing: 10) {
                 HStack(spacing: 10) {
                     addMenu
-                    if core.canLook {
-                        lookButton
-                    }
 
                     TextField("Ask M1K3…", text: $draft, axis: .vertical)
                         .lineLimit(1 ... 4)
@@ -830,24 +841,6 @@ struct ChatScreen: View {
             webSearchOn: webSearchEnabled,
             ageBand: AgeBand(persisted: ageBandRaw)
         )
-    }
-
-    /// The eye (#768): opens the Look screen, where M1K3 answers about what the camera is pointed at. Only when
-    /// the brain that answers sees and the device has a camera.
-    private var lookButton: some View {
-        Button {
-            inputFocused = false
-            showLook = true
-        } label: {
-            Image(systemName: "eye")
-                .font(.system(size: 19, weight: .medium))
-                .frame(width: 36, height: 44)
-                .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .disabled(core.chat.isResponding || !core.isReady)
-        .accessibilityLabel("Look")
-        .accessibilityHint("Opens the camera so M1K3 can see what you point it at")
     }
 
     /// One ＋ for everything you add to a message: Files, Photos, then the brain and web switches.

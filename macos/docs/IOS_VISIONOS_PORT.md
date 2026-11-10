@@ -655,7 +655,8 @@ trusted for RealityView). Not touched: `OnboardingScreen` keeps its own floor (1
 M1K3 on the iPhone can look at what the camera sees and answer about it, on the
 device. Two ways in:
 
-- **Chat:** an eye button beside the composer's ＋ opens `LookScreen`: a
+- **Chat:** an eye button in the top bar, beside voice mode (it sat beside the
+  composer's ＋ until Kev tried it, 2026-11-10), opens `LookScreen`: a
   full-screen viewfinder, a question field (empty asks "What am I looking at?")
   and the answer streaming over the view. Each ask takes a fresh frame.
 - **Voice:** an eye toggle top-leading in `VoiceScreen`. Open, every voice turn
