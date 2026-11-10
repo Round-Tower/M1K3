@@ -160,6 +160,8 @@ struct LookFollowUpTests {
         #expect(LookPassGate.withoutStrayWord("The sign says NO PASS") == "The sign says NO PASS", "no full stop before it")
         #expect(LookPassGate.withoutStrayWord("PASS") == "PASS")
         #expect(LookPassGate.withoutStrayWord("*Bold* start. PASS") == "*Bold* start.")
+        // Known cost, pinned so it is a choice: a sign that really ends on the word loses it.
+        #expect(LookPassGate.withoutStrayWord("The ticket reads: ADMIT ONE. PASS") == "The ticket reads: ADMIT ONE.")
     }
 
     @Test("a passed turn leaves no trace: no message, nothing persisted to replay, and the caller is told")

@@ -821,8 +821,9 @@ public final class ChatSession {
         // Captured before the question joins the transcript. Only the local
         // fallback uses it: the PCC request was fixed by the consent.
         let history = Self.replayableHistory(messages)
-        let fenced = lastExchangeIsLook && !LookAftermath.asksToSearch(question)
-        passedAt = nil
+        // The same rule as `send`, the passed-turn exception included (bot pass on #794).
+        let passedLook = takePassedLook()
+        let fenced = lastExchangeIsLook && !passedLook && !LookAftermath.asksToSearch(question)
         let request = PrivateCloudTurn.request(consent, includeConversation: includeConversation, now: now)
 
         messages.append(ChatMessage(role: .user, text: question, status: .complete))

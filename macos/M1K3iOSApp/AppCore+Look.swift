@@ -138,6 +138,7 @@ extension AppCore {
         {
             isLooking = true
             defer { isLooking = false }
+            // No auto-speak session here, unlike the typed `lookAgain`: the voice loop speaks its own turns.
             await chat.lookAgain(question, looker: looker, knowing: LookGrounding.now())
             return true
         }
