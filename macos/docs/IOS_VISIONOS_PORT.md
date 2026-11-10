@@ -733,18 +733,28 @@ websearch toggle or followup to allow a search for information."
   with the one word PASS (`LookPrompt.passClause`, read by `LookPassGate`).
   Nothing reaches the transcript until a real answer has started, a passed turn
   leaves no trace, its frame is discarded, and the words go on as an ordinary
-  turn. A spoken ask for the camera never passes. On a blind 90-question set
-  across three pictures Mini passed on none of 135 questions about the view and
-  handed back 69 of 135 that were not (the rest are answered as a look, as every
-  eye-open turn was before).
+  turn. Words that ask for the camera or name the picture never go through the
+  gate, so text in view cannot talk a view question out of being a look. Only
+  the word alone passes. On a blind 90-question set Mini passed on none of 135
+  questions about the view and handed back 69 of 135 that were not; Lil, on the
+  phone, none of 90 and 29 of 90 (`docs/evals/2026-11-10-look-pass-blind/`).
+  The rest are answered as a look, as every eye-open turn was before.
 - **Asking again.** "Ask about this photo" under a look's answer makes the next
   send a look at the SAME stored frame (`lookAgain`): on the device, no tools,
-  display-only, with the first exchange in its prompt. It is decided before
-  Private Cloud arming.
+  display-only, with the first exchange in its prompt (the earlier answer
+  fenced as a quote). One question per tap, decided before Private Cloud
+  arming. A question that says "the/this/that picture" (or photo, image)
+  straight after a look takes the same route without the tap, from the composer
+  or by voice with the eye closed, unless the next send is Private Cloud's.
+  Nothing can be asked again about a look that took no picture.
 - **The next turn.** The ordinary turn straight after a look gets no web tools
   unless its own words ask for a search (`LookAftermath`, read where the tool
-  palette is built). This closes the 11-09 finding (a question about the photo
-  went to the search provider word for word).
+  palette is built), and is told in one line that it cannot see the picture and
+  where to ask (`LookAftermath.clause`). This closes the 11-09 finding (a
+  question about the photo went to the search provider word for word). On the
+  phone the fenced turn ran no search but still answered "is there a person in
+  the picture?" from an unrelated photo note in the knowledge store, which is
+  why such words now look again instead.
 - **Search follow-up.** "Search the web for this" has the brain that sees draft
   a short query from the stored frame, on the device (`LookSearch`), and puts
   `Search the web for …` in the composer. The app never sends it: the user
@@ -768,4 +778,7 @@ Settings switch in the hand.
 
 _Signed: Kev + claude-fable-5.2, 2026-11-10, Confidence 0.7 (the chat layer is
 tested against fakes, the shell is scan-pinned and builds, the pass word is
-scored on a blind set on Mini; the screens are untried in the hand)._
+scored on a blind set on both brains, and the chat-layer path was drilled on the
+iPhone 17 Pro: asking again 1.4 s on Mini and 3.5 s on Lil to the full answer,
+first text with the date line 0.95–1.15 s on Lil; the screens are untried in
+the hand). Revised the same day after a code-quality and a security review._
