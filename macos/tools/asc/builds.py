@@ -9,6 +9,8 @@
                                                    newest release tag's commit), then for its Mac +
                                                    iOS builds to process VALID; prints the build number
   builds.py status --build N                       processing state per platform
+  builds.py diagnose [--commit SHA]                does Xcode Cloud list the release tags at SHA?
+                                                   (`wait` runs it once after --diagnose-after 300 s)
 
 Why: on 2026-10-04/05 this loop was hand-written four times (448, 450, 452, 453). Two merges
 seconds apart make Xcode Cloud cancel the first run; the next run carries both, so a
@@ -24,10 +26,21 @@ Review: Kev + claude-opus-5-5, 2026-10-17 (#637) — `--commit` resolves to a fu
 untagged), and a failed tag fetch is an error, not a stale local list. Confidence 0.85.
 Review: Kev + claude-opus-5-5, 2026-10-17 (review fold) — an unreadable origin stops `wait` (4) instead of reading as
 "no tag", and a failed peel of the newest tag reads as unreadable. Both pinned. Confidence 0.85.
+Review: Kev + claude-opus-5.5, 2026-11-05 — a tag Xcode Cloud never received (release-1.3.0-20261105-63446054:
+the Release workflow's repository listed 100 refs against origin's 101) now says so. After --diagnose-after
+seconds of "no run yet", `wait` compares that workflow's own repository's gitReferences with the release tags
+on origin at the commit, once, and prints the -r2 re-trigger command; it never pushes. The product's
+primaryRepositories (a stale m1k3-private) is deliberately not read. Confidence 0.8: a 100-ref page may be a cap.
+Review: Kev + claude-opus-5.5, 2026-11-05 (review fold) — the effectful half is pinned over a faked ASC and origin:
+links.next pages, isDeleted refs, and every unreadable source as a sentence, never an exit. Only TAG-kind refs can
+make a tag known (a like-named branch could). `wait` survives a diagnosis that raises. The nothing-missing case is
+met through `known=`. A live read showed limit=200 honoured (101 on one page), so the 100 caveat is conservative.
+Confidence 0.85.
 """
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 import time
 from typing import Any
@@ -60,6 +73,65 @@ def run_outcome(run: dict[str, Any]) -> str:
 
 def ready(states: dict[str, str], platforms: tuple[str, ...]) -> bool:
     return all(states.get(p) == "VALID" for p in platforms)
+
+
+def xcode_tag_names(refs: list[dict[str, Any]]) -> list[str]:
+    """Names of the TAG refs (gitReferences `kind`); a branch named like a release tag is not the tag.
+    A ref with no kind counts as a tag: a false "known" is cheaper than a false alarm."""
+    return [r["name"] for r in refs if r.get("kind", "TAG") == "TAG"]
+
+
+def missed_tags(xcode_ref_names: list[str], tags_at_commit: list[str]) -> list[str]:
+    """The tags at the commit that Xcode Cloud's repository doesn't list (bare or refs/tags/ names)."""
+    known = {name.removeprefix("refs/tags/") for name in xcode_ref_names}
+    return [tag for tag in tags_at_commit if tag not in known]
+
+
+def ref_count(ls_remote: str) -> int:
+    """Refs in `git ls-remote` output; an annotated tag's `^{}` line is the same ref, peeled."""
+    return sum(1 for line in ls_remote.splitlines() if "\t" in line and not line.endswith("^{}"))
+
+
+def retrigger_tag(missed: list[str]) -> tuple[str, str]:
+    """(base tag, the next -rN past every missed one): a missed -r2 asks for -r3, never a collision.
+    It doesn't ask origin whether that -rN exists: this runs only when Xcode Cloud knows no tag at the
+    commit, so an -rN already pushed there would be a missed one, and is counted."""
+
+    def parsed(tag: str) -> tuple[str, int]:
+        m = re.fullmatch(r"(.+)-r(\d+)", tag)
+        return (m.group(1), int(m.group(2))) if m else (tag, 1)
+
+    base, n = max((parsed(t) for t in missed), key=lambda bn: (bn[1], bn[0]))
+    return base, f"{base}-r{n + 1}"
+
+
+def format_diagnosis(missed: list[str], xcode_count: int, origin_count: int, sha: str,
+                     known: list[str] | None = None) -> str:
+    # Both sides count heads + tags (live: 3 + 98 against origin's 3 + 99 on 2026-11-05), so the pair is
+    # like for like, but it is context: the tag name is the verdict.
+    counts = f"Xcode Cloud lists {xcode_count} refs, origin has {origin_count}"
+    cap = (" 100 is a round number: the API may cap the page, so a name missing past it is a hint, not proof."
+           if xcode_count == 100 and missed else "")
+    if known:
+        line = (f"commit {sha[:8]}: Xcode Cloud knows {', '.join(known)}, so the delay is Xcode Cloud's own,"
+                f" not a dropped push ({counts}).")
+        if missed:
+            line += (f" It does not list {', '.join(missed)} — that push never reached it, but a known tag"
+                     f" did: wait on the run it starts.{cap}")
+        return line
+    if not missed:
+        return f"commit {sha[:8]}: no release tag points at it on origin ({counts})."
+    base, new = retrigger_tag(missed)
+    return (f"commit {sha[:8]}: Xcode Cloud never received {', '.join(missed)}: {counts}.{cap}\n"
+            f"Re-trigger it (Kev or Claude):\n"
+            f'  git -C ~/Development/m1k3 tag -a {new} {sha} -m "re-trigger: Xcode Cloud missed {base}"'
+            f" && git -C ~/Development/m1k3 push origin {new}\n"
+            f"then `builds.py wait --commit {sha}` follows the new run.")
+
+
+def diagnose_due(no_run_since: float | None, now: float, after: float, done: bool) -> bool:
+    """Diagnose once, when the commit has had no run for `after` seconds (None: a run exists)."""
+    return not done and no_run_since is not None and now - no_run_since >= after
 
 
 # --------------------------------------------------------------------------- #
@@ -99,6 +171,52 @@ def build_states(number: str, platforms: tuple[str, ...]) -> dict[str, str]:
     return states
 
 
+def release_repository(pid: str) -> str | None:
+    """The Release workflow's own repository id. Not the product's primaryRepositories: that one
+    lists a stale m1k3-private (2026-11-05)."""
+    flows = call("GET", f"/v1/ciProducts/{pid}/workflows", params={"limit": 50})
+    ids = [w["id"] for w in flows.get("data", []) if w["attributes"].get("name") == "Release"]
+    if "_error" in flows or not ids:
+        return None
+    repo = call("GET", f"/v1/ciWorkflows/{ids[0]}/repository")
+    return None if "_error" in repo else (repo.get("data") or {}).get("id")
+
+
+def xcode_refs(repo_id: str) -> list[dict[str, Any]] | None:
+    """Every live ref (attributes: name, canonicalName, kind) Xcode Cloud lists for the repository,
+    across `links.next` pages. limit=200 is honoured (101 on one page, 2026-11-05)."""
+    refs: list[dict[str, Any]] = []
+    page: str | None = f"/v1/scmRepositories/{repo_id}/gitReferences?limit=200"
+    while page:
+        resp = call("GET", page)
+        if "_error" in resp:
+            return None
+        refs += [r["attributes"] for r in resp.get("data", []) if not r["attributes"].get("isDeleted")]
+        page = resp.get("links", {}).get("next")
+    return refs
+
+
+def origin_ref_count() -> int | None:
+    out = git("ls-remote", "--heads", "--tags", "origin")
+    return ref_count(out.stdout) if out.returncode == 0 else None
+
+
+def diagnose_missed_tag(commit: str, pid: str | None = None) -> str:
+    """Read-only: does Xcode Cloud list the release tags origin holds at `commit`? Never pushes."""
+    repo = release_repository(pid or product_id())
+    if repo is None:
+        return "diagnosis: could not read the Release workflow's repository from ASC"
+    refs = xcode_refs(repo)
+    if refs is None:
+        return f"diagnosis: could not read gitReferences for repository {repo}"
+    tags = remote_release_tags_at(commit)
+    origin = origin_ref_count()
+    if tags is None or origin is None:
+        return "diagnosis: could not read refs from origin"
+    missed = missed_tags(xcode_tag_names(refs), tags)
+    return format_diagnosis(missed, len(refs), origin, commit, known=[t for t in tags if t not in missed])
+
+
 def resolve_commit(arg: str) -> str:
     """The full sha for a commit-ish ("" if it isn't one): ls-remote holds full oids (#637)."""
     out = git("rev-parse", "--verify", "--end-of-options", f"{arg}^{{commit}}")
@@ -117,7 +235,7 @@ def latest_release() -> tuple[str, str] | None:
     return (tags[0], peeled.stdout.strip()) if peeled.returncode == 0 else None
 
 
-def run_wait(commit: str, timeout: int) -> int:
+def run_wait(commit: str, timeout: int, diagnose_after: int = 300) -> int:
     pid = product_id()
     # Xcode Cloud starts only on release tags: an untagged commit never gets a run.
     if run_for_commit(recent_runs(pid), commit) is None:
@@ -131,6 +249,8 @@ def run_wait(commit: str, timeout: int) -> int:
             return 4
     deadline = time.monotonic() + timeout
     last = ""
+    no_run_since: float | None = None
+    diagnosed = False
     while True:
         run = run_for_commit(recent_runs(pid), commit)
         line = f"commit {commit[:8]}: " + ("no run yet" if run is None else
@@ -149,7 +269,15 @@ def run_wait(commit: str, timeout: int) -> int:
         if line != last:
             print(line, flush=True)
             last = line
-        if time.monotonic() >= deadline:
+        now = time.monotonic()
+        no_run_since = (now if no_run_since is None else no_run_since) if run is None else None
+        if diagnose_due(no_run_since, now, diagnose_after, diagnosed):
+            try:  # advisory: a git or response-shape surprise must not end an hour's wait
+                print(diagnose_missed_tag(commit, pid), flush=True)  # once; then keep waiting
+            except Exception as exc:  # noqa: BLE001
+                print(f"diagnosis failed: {exc!r}", flush=True)
+            diagnosed = True
+        if now >= deadline:
             print("timed out", flush=True)
             return 2
         time.sleep(60)
@@ -161,6 +289,10 @@ def main() -> int:
     w = sub.add_parser("wait")
     w.add_argument("--commit", default=None, help="default: the newest release tag's commit")
     w.add_argument("--timeout", type=int, default=3600)
+    w.add_argument("--diagnose-after", type=int, default=300,
+                   help="seconds of 'no run yet' before checking, once, that Xcode Cloud received the tag")
+    d = sub.add_parser("diagnose")
+    d.add_argument("--commit", default=None, help="default: the newest release tag's commit")
     s = sub.add_parser("status")
     s.add_argument("--build", required=True)
     args = ap.parse_args()
@@ -182,9 +314,12 @@ def main() -> int:
     if not commit:
         print("no release tag yet: cut one with ./release_tag.py cut --confirm", flush=True)
         return 4
+    if args.cmd == "diagnose":
+        print(diagnose_missed_tag(commit), flush=True)
+        return 0
     if tag:
         print(f"waiting on {tag}", flush=True)
-    return run_wait(commit, args.timeout)
+    return run_wait(commit, args.timeout, args.diagnose_after)
 
 
 if __name__ == "__main__":
