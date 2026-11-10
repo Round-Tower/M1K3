@@ -148,6 +148,10 @@
 //  unchanged so a look lands on the avatar, the earcon and the rating ledger the same way (AppCore+Look).
 //  Confidence 0.7 (verify on the phone).
 //  Review: Kev + claude-fable-5.2, 2026-11-09 (review fold) — `isLooking`: one look at a time, from either door.
+//  Review: Kev + claude-fable-5.2, 2026-11-10 (#768 follow-ups) — the tool palette leaves the web trio out for the
+//  turn straight after a look (`LookAftermath.withholdsWeb`, set by ChatSession.send). Confidence 0.8.
+//  Review: Kev + claude-fable-5.2, 2026-11-10 — `chat.adopt(attachmentStore:)`: every attached photo went blank on
+//  Kev's phone after a reinstall (the files were there; the saved absolute paths were not). Confidence 0.8.
 
 import AVFoundation
 #if os(iOS)
@@ -807,6 +811,10 @@ final class AppCore {
             replayTurns: { Self.liveHistoryBudget().minimumKeptTurns }
         )
 
+        // A reinstall or update moves the data container: saved photo paths are re-anchored to where the
+        // files are now, for the restored chat and every chat opened after it.
+        chat.adopt(attachmentStore: Self.attachmentStore)
+
         // Caption memory: a deleted chat forgets its Photo memories.
         photoMemory.onChange = { [weak self] in self?.refreshCounts() }
         chat.onAttachmentsDiscarded = { [weak self] in self?.photoMemory.forget($0) }
@@ -1433,7 +1441,9 @@ final class AppCore {
                     ListDocumentsTool(store: store),
                     GetDocumentTool(store: store),
                 ]
-                let webAllowed = Self.webSearchAllowed()
+                // The turn straight after a look goes without the web unless its own words asked for a
+                // search (LookAftermath, #768): it may be about the picture, and this turn cannot see it.
+                let webAllowed = Self.webSearchAllowed() && !LookAftermath.withholdsWeb
                 if webAllowed {
                     tools.insert(WikipediaTool(), at: 0)
                     tools.insert(FetchPageTool(), at: 0)

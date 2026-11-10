@@ -109,6 +109,15 @@
 //  Before this a look's question and answer replayed as history, so they could follow a brain switch to Brain at
 //  Home, appear on a Private Cloud consent sheet, and sit in a tool-capable turn's context. Cost, Kev's to loosen:
 //  a follow-up that is not itself a look starts without the look's words. Confidence 0.85 (ChatSessionLookTests).
+//  Review: Kev + claude-fable-5.2, 2026-11-10 (#768 follow-ups; Kev: "Let's do the followups pal - agree with them
+//  all") — `lookIfAboutTheView` (the brain may PASS; nothing is shown until a real answer starts; a passed turn
+//  leaves no trace), `lookAgain` (a second question about the same stored frame, a look like the first),
+//  `draftLookSearch`, and `send` withholds the web for the turn straight after a look unless its words ask for a
+//  search (`LookAftermath`). `lookMissed` holds `isResponding` like `look`. Confidence 0.8 (LookFollowUpTests).
+//  Review: Kev + claude-fable-5.2, 2026-11-10 — `adopt(attachmentStore:)`: a shown conversation's photos are
+//  re-anchored to where the files are now. On Kev's phone every attached photo and look frame went blank after a
+//  reinstall: the files were there, the saved absolute paths were not (iOS moved the data container). Confidence
+//  0.8 (AttachmentStoreTests; the phone check is the proof).
 //  Same fold: `lookMissed`, the turn for a look that got no frame (the question and one honest line, display-only),
 //  so the shell never has to hand those words to `send`.
 
@@ -487,6 +496,8 @@ public final class ChatSession {
         // completed turns only, answer text only (reasoning/sources never leave
         // the message). HistoryWindow caps how much of it reaches the prompt.
         let history = Self.replayableHistory(messages)
+        let passed = takePassedLook()
+        let withholdsWeb = lastExchangeIsLook && !passed && !LookAftermath.asksToSearch(trimmed)
 
         messages.append(ChatMessage(
             role: .user, text: trimmed,
@@ -499,7 +510,12 @@ public final class ChatSession {
         isResponding = true
         defer { isResponding = false }
 
-        await runLocalTurn(trimmed, images: images, history: history, assistantID: assistantID)
+        // Straight after a look this turn's words may be about the picture,
+        // and the responder knows nothing of it: the web stays out unless the
+        // words ask for a search or the seeing brain passed on them.
+        await LookAftermath.$withholdsWeb.withValue(withholdsWeb) {
+            await runLocalTurn(trimmed, images: images, history: history, assistantID: assistantID)
+        }
         await persistActiveConversation()
         scheduleTitlingIfNeeded(question: trimmed)
         // Rolling distillation: a no-op until the backlog outgrows the window,
@@ -809,6 +825,9 @@ public final class ChatSession {
         // Captured before the question joins the transcript. Only the local
         // fallback uses it: the PCC request was fixed by the consent.
         let history = Self.replayableHistory(messages)
+        // The same rule as `send`, the passed-turn exception included (bot pass on #794).
+        let passedLook = takePassedLook()
+        let fenced = lastExchangeIsLook && !passedLook && !LookAftermath.asksToSearch(question)
         let request = PrivateCloudTurn.request(consent, includeConversation: includeConversation, now: now)
 
         messages.append(ChatMessage(role: .user, text: question, status: .complete))
@@ -843,7 +862,10 @@ public final class ChatSession {
             }
             let localID = UUID()
             messages.append(ChatMessage(id: localID, role: .assistant, text: "", status: .streaming))
-            await runLocalTurn(question, images: [], history: history, assistantID: localID)
+            // The local fallback after a look is fenced like any send after a look.
+            await LookAftermath.$withholdsWeb.withValue(fenced) {
+                await runLocalTurn(question, images: [], history: history, assistantID: localID)
+            }
         case let .failed(failure, partial):
             // Something came: keep it, marked, and say why it stopped.
             finishCloudAnswer(assistantID, text: partial, interrupted: true)
@@ -944,24 +966,150 @@ public final class ChatSession {
     /// Returns false when a turn was already in flight and nothing happened,
     /// so the caller can discard the frame it stored.
     @discardableResult
-    public func look(_ question: String, frame: ImageAttachment, looker: any ImageLooking) async -> Bool {
-        guard !isResponding else { return false }
+    public func look(
+        _ question: String, frame: ImageAttachment, looker: any ImageLooking, knowing: String? = nil
+    ) async -> Bool {
         let asked = LookPrompt.question(question)
-
         var asking = ChatMessage(role: .user, text: asked, attachments: [frame], status: .complete)
         asking.contextExcluded = true
-        messages.append(asking)
+        let ask = LookAsk(instructions: LookPrompt.instructions(knowing: knowing), prompt: asked)
+        return await runLook(asking, frame: frame, looker: looker, ask: ask) == .looked
+    }
+
+    /// One answered look: its words and the frame they were about.
+    public struct LookExchange: Sendable, Equatable {
+        public let question: String
+        public let answer: String
+        public let frame: ImageAttachment
+    }
+
+    /// How one look is put to the eyes.
+    private struct LookAsk {
+        let instructions: String
+        let prompt: String
+        var mayPass = false
+    }
+
+    /// What became of a turn that might not have been about the view.
+    public enum LookVerdict: Sendable, Equatable {
+        /// Answered (or failed) as a look: the turn is spent.
+        case looked
+        /// The brain said the question is not about the view. Nothing was
+        /// added to the conversation: the caller sends it as an ordinary turn.
+        case passed
+        /// A turn was already in flight; nothing happened.
+        case busy
+    }
+
+    /// A look for a turn that MAY not be about the view (voice mode with the
+    /// eye open). The brain may answer PASS (`LookPrompt.passClause`). Nothing
+    /// reaches the transcript until it has started a real answer, and a passed
+    /// turn leaves no trace, so the caller can send the same words as an
+    /// ordinary turn. That send keeps the web: the brain that saw the frame
+    /// judged the words to be about something else.
+    public func lookIfAboutTheView(
+        _ question: String, frame: ImageAttachment, looker: any ImageLooking, knowing: String? = nil
+    ) async -> LookVerdict {
+        let asked = LookPrompt.question(question)
+        var asking = ChatMessage(role: .user, text: asked, attachments: [frame], status: .complete)
+        asking.contextExcluded = true
+        let ask = LookAsk(
+            instructions: LookPrompt.instructions(knowing: knowing, mayPass: true), prompt: asked, mayPass: true
+        )
+        let verdict = await runLook(asking, frame: frame, looker: looker, ask: ask)
+        if verdict == .passed { passedAt = PassMark(conversation: activeConversationID, count: messages.count) }
+        return verdict
+    }
+
+    /// The newest look, while it is still the last thing in the conversation
+    /// and its frame is known: what `lookAgain` and the search draft work from.
+    /// A chain of questions about one frame keeps finding that frame.
+    public var lastLook: LookExchange? {
+        guard messages.count >= 2, let answer = messages.last, answer.role == .assistant,
+              case .complete = answer.status, answer.toolsUsed == [LookPrompt.toolName]
+        else { return nil }
+        // A look that took no picture has nothing to ask again about, and must not reach back to an
+        // older frame: only a chain of ANSWERED questions leads to its frame.
+        guard !LookFailureReply.saysNoPicture(answer.text) else { return nil }
+        let question = messages[messages.count - 2]
+        var index = messages.count - 2
+        while index >= 0 {
+            let asked = messages[index]
+            guard asked.role == .user, messages[index + 1].toolsUsed == [LookPrompt.toolName],
+                  !LookFailureReply.saysNoPicture(messages[index + 1].text) else { return nil }
+            if let frame = asked.attachments?.first {
+                return LookExchange(question: question.text, answer: answer.text, frame: frame)
+            }
+            index -= 2
+        }
+        return nil
+    }
+
+    /// A second question about the frame of `lastLook`: a look like the
+    /// first. On the device, no responder, display-only, with the earlier
+    /// question and answer in the prompt. The frame stays on the message that
+    /// took it. False when there is no such look or a turn is in flight.
+    @discardableResult
+    public func lookAgain(_ question: String, looker: any ImageLooking, knowing: String? = nil) async -> Bool {
+        guard !isResponding, let earlier = lastLook else { return false }
+        let asked = LookPrompt.question(question)
+        var asking = ChatMessage(role: .user, text: asked, status: .complete)
+        asking.contextExcluded = true
+        let ask = LookAsk(
+            instructions: LookPrompt.instructions(knowing: knowing),
+            prompt: LookPrompt.followUp(asked, after: earlier.question, answered: earlier.answer)
+        )
+        return await runLook(asking, frame: earlier.frame, looker: looker, ask: ask) == .looked
+    }
+
+    /// A search query about the frame of `lastLook`, drafted by the eyes on
+    /// this device (`LookSearch`). Adds nothing to the conversation and sends
+    /// nothing: the shell puts the draft in the composer for the user to send.
+    public func draftLookSearch(looker: any ImageLooking) async -> String? {
+        guard !isResponding, let earlier = lastLook else { return nil }
+        isResponding = true
+        defer { isResponding = false }
+        return await LookSearch.draft(frame: earlier.frame, looker: looker)
+    }
+
+    /// One look, start to finish. `asking` is the user's message as it will be
+    /// shown. With `mayPass` both bubbles wait until a real answer has started.
+    private func runLook(
+        _ asking: ChatMessage, frame: ImageAttachment, looker: any ImageLooking, ask: LookAsk
+    ) async -> LookVerdict {
+        let mayPass = ask.mayPass
+        guard !isResponding else { return .busy }
+        passedAt = nil // a pass nobody followed up on is spent
         let assistantID = UUID()
-        messages.append(ChatMessage(id: assistantID, role: .assistant, text: "", status: .streaming))
+        heldLook = (asking, assistantID)
+        if !mayPass { revealLook() }
 
         isResponding = true
         defer { isResponding = false }
 
         stopRequested = false
-        let turn = Task { await self.streamLook(asked, frame: frame, looker: looker, assistantID: assistantID) }
+        let turn = Task {
+            await self.streamLook(ask, frame: frame, looker: looker, assistantID: assistantID)
+        }
         lookTask = turn
-        let outcome = await turn.value
+        var outcome = await turn.value
         lookTask = nil
+
+        if mayPass, case let .answered(text, stopped) = outcome {
+            outcome = .answered(text: LookPassGate.withoutStrayWord(text), stopped: stopped)
+        }
+        if mayPass, case let .answered(text, stopped) = outcome, !stopped, LookPassGate.passed(text) {
+            // Not about the view. Whatever was shown goes, before anything is persisted.
+            heldLook = nil
+            messages.removeAll { $0.id == assistantID || $0.id == asking.id }
+            return .passed
+        }
+        if mayPass, heldLook != nil, case .answered(_, stopped: true) = outcome {
+            // Stopped while the answer could still have been the word: nothing was shown, nothing is.
+            heldLook = nil
+            return .busy
+        }
+        revealLook()
 
         switch outcome {
         case let .answered(text, stopped) where text.isEmpty:
@@ -981,7 +1129,37 @@ public final class ChatSession {
         // No titling: a title would be made from what the camera saw. The next
         // ordinary exchange titles the conversation from its own words.
         scheduleRollingDistillationIfNeeded()
-        return true
+        return .looked
+    }
+
+    /// The look's two bubbles, not yet in the transcript (a turn that may pass).
+    private var heldLook: (asking: ChatMessage, assistantID: UUID)?
+    /// Where the conversation stood when a look was passed on. The send that follows at exactly that
+    /// point is the passed question; any other send (another conversation, later messages) is not.
+    private struct PassMark: Equatable {
+        let conversation: UUID
+        let count: Int
+    }
+
+    private var passedAt: PassMark?
+
+    /// Consume the pass mark: true when this send is the passed question's.
+    private func takePassedLook() -> Bool {
+        defer { passedAt = nil }
+        return passedAt == PassMark(conversation: activeConversationID, count: messages.count)
+    }
+
+    /// Put the held bubbles in the transcript. Once per look.
+    private func revealLook() {
+        guard let held = heldLook else { return }
+        heldLook = nil
+        messages.append(held.asking)
+        messages.append(ChatMessage(id: held.assistantID, role: .assistant, text: "", status: .streaming))
+    }
+
+    /// Whether the conversation's last exchange is a look (answered, failed or missed).
+    private var lastExchangeIsLook: Bool {
+        messages.last.map { $0.role == .assistant && $0.toolsUsed == [LookPrompt.toolName] } ?? false
     }
 
     /// A look that was asked for and got no frame (the camera would not open,
@@ -993,6 +1171,8 @@ public final class ChatSession {
     @discardableResult
     public func lookMissed(_ question: String, saying line: String) async -> Bool {
         guard !isResponding else { return false }
+        isResponding = true
+        defer { isResponding = false }
         var asking = ChatMessage(role: .user, text: LookPrompt.question(question), status: .complete)
         asking.contextExcluded = true
         messages.append(asking)
@@ -1005,7 +1185,7 @@ public final class ChatSession {
 
     /// Drain the eyes' cumulative snapshots into the live bubble.
     private func streamLook(
-        _ question: String,
+        _ ask: LookAsk,
         frame: ImageAttachment,
         looker: any ImageLooking,
         assistantID: UUID
@@ -1015,10 +1195,15 @@ public final class ChatSession {
         var leakShown = false
         let started = ContinuousClock.now
         do {
-            let stream = looker.look(image: frame, instructions: LookPrompt.instructions, prompt: question)
+            let stream = looker.look(image: frame, instructions: ask.instructions, prompt: ask.prompt)
             for try await snapshot in stream {
                 if latest.isEmpty, !snapshot.isEmpty { Self.logLookFirstText(after: .now - started) }
                 latest = snapshot
+                if ask.mayPass, heldLook != nil {
+                    // Could still be the one word: show nothing yet.
+                    guard LookPassGate.reading(of: latest) == .answering else { continue }
+                    revealLook()
+                }
                 guard flushGate.shouldFlush(at: .now) else { continue }
                 let live = Self.guardedLive(latest, tripped: &leakShown)
                 update(assistantID) { $0.text = live }
@@ -1196,11 +1381,33 @@ public final class ChatSession {
         historyRevision += 1
     }
 
+    /// Where this shell keeps attached photos. Once adopted, every conversation shown has its photos'
+    /// saved paths re-anchored to where the files are now (`AttachmentStore.reanchored`): the launch
+    /// restore happens before the shell can hand the store over, so adopting re-anchors that one too.
+    public func adopt(attachmentStore: AttachmentStore) {
+        self.attachmentStore = attachmentStore
+        messages = reanchored(messages)
+    }
+
+    private var attachmentStore: AttachmentStore?
+
+    private func reanchored(_ messages: [ChatMessage]) -> [ChatMessage] {
+        guard let attachmentStore else { return messages }
+        return messages.map { message in
+            guard let attachments = message.attachments else { return message }
+            let now = attachments.map(attachmentStore.reanchored)
+            guard now != attachments else { return message }
+            var moved = message
+            moved.attachments = now
+            return moved
+        }
+    }
+
     /// The one mutation point ChatSession+Conversations routes through —
     /// private(set) setters are file-scoped, so the cross-file extension
     /// cannot (and must not) touch the stored properties directly.
     func setActiveConversation(id: UUID, messages: [ChatMessage], title: String?) {
-        self.messages = messages
+        self.messages = reanchored(messages)
         activeConversationID = id
         activeTitle = title
         feedbackVerdicts = (try? history?.feedbackVerdicts(conversationID: id)) ?? [:]

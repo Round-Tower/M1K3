@@ -248,6 +248,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-02 — a content-free reply (`ToolNeedRouter.isContentFree`) turns a tools
 //  verdict into chat beside the #622 pointing-back override, logged " (content-free reply)"; with history, its user
 //  line carries `contentFreeReplyNote` (Lil had written its last reply out again after "Please."). Confidence 0.75.
+//  Review: Kev + claude-fable-5.2, 2026-11-10 — #768: `turnClauses` adds `LookAftermath.clause` on the one turn
+//  straight after a look (the turn cannot see the picture, and Lil described one anyway). Confidence 0.7: pinned in
+//  the prompt; the wording was tried on the phone on both brains, on one photo.
 //  Review: Kev + claude-fable-5.1, 2026-11-05 — `turnClauses(for:)`: every route carries the egress clause only
 //  when `EgressDisclosure.applies(to:)` reads the question as a privacy ask. Read off Kev's iPhone's chat store
 //  (build 544, 1.3.0 in review): "Me a recipe for banana bread, please." dispatched to web_search, and Mini's
@@ -1244,7 +1247,9 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             EgressDisclosure.applies(to: question) || EgressDisclosure.ridesEveryTurn(clause)
                 ? EgressDisclosure.adapted(clause, for: variant) : nil
         }
-        return [ageClauseProvider(), egress, styleClauseProvider(), voiceClauseProvider()]
+        // #768: the turn straight after a look cannot see the picture, and is told so (that turn only).
+        let afterLook = LookAftermath.withholdsWeb ? LookAftermath.clause : nil
+        return [ageClauseProvider(), egress, styleClauseProvider(), voiceClauseProvider(), afterLook]
     }
 
     /// One full agent turn into `continuation`: run the loop (conclusion tail

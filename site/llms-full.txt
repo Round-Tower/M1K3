@@ -489,6 +489,8 @@ Each one is off until you use the feature that needs it, and each one serves onl
 
 - Microphone and Speech Recognition. Used for voice input. Transcribed on your Mac and never sent anywhere.
 
+- Camera (iPhone and iPad). Used to scan the pairing code your Mac shows for Brain at Home. From the next iPhone version it is also how M1K3 looks at what you point it at when you ask. The camera is on only while the Look screen or voice mode's eye is open, or for the one picture a spoken ask takes. The frame is read by a brain on the device and sent nowhere: Brain at Home and Private Cloud Compute never receive it. A frame you ask about is saved with that chat on the device, is deleted with the chat, and is kept out of your device backup. A look runs no tools and is never turned into a memory, and its words are not passed to later messages unless you ask about the same photo again, which is answered on the device too. If you choose Search the web for this, M1K3 drafts the search words on the device and puts them in the message box. They leave only when you send them, and once sent they are an ordinary message of yours.
+
 - Local Network. Used only by Brain at Home (off by default) to serve M1K3's brain to devices you pair on your own network, encrypted.
 
 ### How can you verify any of this?

@@ -117,6 +117,13 @@
 //  never drew and came back black. Confidence 0.75.
 //  Review: Kev + claude-fable-5.2, 2026-11-09 — #768: the eye beside the ＋ opens `LookScreen` (shown only when
 //  `core.canLook`), and the attachment store is AppCore's, shared with the look. Confidence 0.7 (verify on the phone).
+//  Review: Kev + claude-fable-5.2, 2026-11-10 (#768 follow-ups) — two actions under a look's answer: "Ask about this
+//  photo" (the next send looks at the same stored frame, shown as a pill over the composer) and "Search the web for
+//  this" (drafts a query INTO the composer; the user sends it). Confidence 0.6: untried in the hand.
+//  Review: Kev + claude-fable-5.2, 2026-11-10 — Kev, in the hand: the eye "is cluttering the chat input space". It
+//  moves to the top bar beside voice mode. Confidence 0.7.
+//  Review: Kev + claude-fable-5.2, 2026-11-10 — Kev's screenshot: the two look actions wrapped and sat at different
+//  heights. They read "Ask more" and "Search the web", one line each (VoiceOver keeps the long wording). Confidence 0.8.
 
 import M1K3Avatar
 import M1K3Chat
@@ -151,6 +158,10 @@ struct ChatScreen: View {
     /// The ＋ menu's Photos row presents the picker; a PhotosPicker can't live inside a Menu.
     @State private var showPhotoPicker = false
     @State private var showLook = false
+    /// The composer is asking about the last look's photo (#768): the next send is a look at that stored frame.
+    @State private var aboutPhoto = false
+    /// The eyes are drafting a search query for the composer.
+    @State private var draftingSearch = false
     @AppStorage(AppCore.webSearchEnabledKey) private var webSearchEnabled = true
     @State private var pendingAttachments: [ImageAttachment] = []
     @State private var pendingFiles: [FileAttachment] = []
@@ -238,6 +249,18 @@ struct ChatScreen: View {
                     .disabled(core.chat.messages.isEmpty || core.chat.isResponding)
                 }
                 ToolbarItemGroup(placement: .topBarTrailing) {
+                    // The eye (#768) opens the Look screen. Up here beside voice mode, not in the composer
+                    // row, which it crowded (Kev, 2026-11-10). Only when the answering brain sees on this device.
+                    if core.canLook {
+                        Button {
+                            inputFocused = false
+                            showLook = true
+                        } label: {
+                            Label("Look", systemImage: "eye")
+                        }
+                        .disabled(core.chat.isResponding || !core.isReady)
+                        .accessibilityHint("Opens the camera so M1K3 can see what you point it at")
+                    }
                     Button {
                         inputFocused = false
                         core.enterVoiceMode()
@@ -578,6 +601,9 @@ struct ChatScreen: View {
                         )
                         .id(message.id)
                     }
+                    if core.canAskAboutLastLook, !core.chat.isResponding {
+                        lookActions
+                    }
                 }
                 // Mac-parity bump (Kev's catch, 2026-07-22): flat assistant turns
                 // had zero inset of their own, so headings/code blocks sat right
@@ -595,6 +621,79 @@ struct ChatScreen: View {
                 scrollToLatest(proxy)
             }
         }
+    }
+
+    /// What can follow a look (#768), under its answer. Both are the user's own act: asking again looks at the
+    /// same stored photo on this device, and the search action only DRAFTS a query into the composer.
+    private var lookActions: some View {
+        HStack(spacing: 8) {
+            Button {
+                aboutPhoto = true
+                inputFocused = true
+            } label: {
+                Label("Ask more", systemImage: "eye")
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .accessibilityLabel("Ask about this photo")
+            .accessibilityHint("Your next message is answered by looking at this photo again, on this device")
+            if webSearchEnabled {
+                Button {
+                    draftSearch()
+                } label: {
+                    Label(draftingSearch ? "Drafting…" : "Search the web", systemImage: "globe")
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                .disabled(draftingSearch)
+                .accessibilityLabel("Search the web for this")
+                .accessibilityHint("Writes a search for you to read and send. Nothing is sent until you send it")
+            }
+            Spacer(minLength: 0)
+        }
+        // One line each, the same height, from the leading edge: the long labels wrapped on the phone
+        // (Kev, 2026-11-10).
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .font(.footnote)
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.capsule)
+    }
+
+    /// The eyes name what is in the photo as a short search, into the composer. The user sends it or doesn't.
+    private func draftSearch() {
+        guard !draftingSearch else { return }
+        draftingSearch = true
+        Task {
+            defer { draftingSearch = false }
+            guard let text = await core.draftLookSearch() else {
+                attachmentError = String(localized: "M1K3 couldn't name anything in the photo to search for.")
+                return
+            }
+            aboutPhoto = false
+            draft = text
+            inputFocused = true
+        }
+    }
+
+    /// Shown over the composer while the next send is a question about the last look's photo.
+    private var aboutPhotoPill: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "eye")
+            Text("Asking about the photo")
+            Button {
+                aboutPhoto = false
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Stop asking about the photo")
+        }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(.ultraThinMaterial, in: Capsule())
+        .padding(.bottom, 6)
     }
 
     private func scrollToLatest(_ proxy: ScrollViewProxy) {
@@ -668,6 +767,11 @@ struct ChatScreen: View {
         VStack(spacing: 0) {
             statusLine
                 .padding(.bottom, 6)
+            if aboutPhoto, core.canAskAboutLastLook {
+                aboutPhotoPill
+                    // The pill's promise ends with the look it points at (another turn, another chat).
+                    .onDisappear { aboutPhoto = false }
+            }
             if !pendingAttachments.isEmpty {
                 pendingImagesStrip
             }
@@ -677,9 +781,6 @@ struct ChatScreen: View {
             M1K3GlassGroup(spacing: 10) {
                 HStack(spacing: 10) {
                     addMenu
-                    if core.canLook {
-                        lookButton
-                    }
 
                     TextField("Ask M1K3…", text: $draft, axis: .vertical)
                         .lineLimit(1 ... 4)
@@ -751,24 +852,6 @@ struct ChatScreen: View {
             webSearchOn: webSearchEnabled,
             ageBand: AgeBand(persisted: ageBandRaw)
         )
-    }
-
-    /// The eye (#768): opens the Look screen, where M1K3 answers about what the camera is pointed at. Only when
-    /// the brain that answers sees and the device has a camera.
-    private var lookButton: some View {
-        Button {
-            inputFocused = false
-            showLook = true
-        } label: {
-            Image(systemName: "eye")
-                .font(.system(size: 19, weight: .medium))
-                .frame(width: 36, height: 44)
-                .contentShape(.rect)
-        }
-        .buttonStyle(.plain)
-        .disabled(core.chat.isResponding || !core.isReady)
-        .accessibilityLabel("Look")
-        .accessibilityHint("Opens the camera so M1K3 can see what you point it at")
     }
 
     /// One ＋ for everything you add to a message: Files, Photos, then the brain and web switches.
@@ -946,6 +1029,20 @@ struct ChatScreen: View {
 
     private func send() {
         guard canSend else { return }
+        // A question about the last look's photo is a look: on this device, never Private Cloud, never a tool.
+        // So is one whose words name the picture straight after a look ("is there a person in the photo?").
+        // Never when the next send is Private Cloud's by the user's choice: only the pill overrides that.
+        let namesIt = LookAftermath.namesThePicture(draft) && !LookAftermath.asksToSearch(draft)
+            && !privateCloudServesNextSend
+        if aboutPhoto || namesIt, core.canAskAboutLastLook, !core.isLooking,
+           pendingAttachments.isEmpty, pendingFiles.isEmpty
+        {
+            let question = draft
+            clearDraft()
+            Task { await core.lookAgain(question) }
+            return
+        }
+        aboutPhoto = false
         let hasAttachments = !pendingAttachments.isEmpty
         let onDevice = ChatSession.onDeviceMessageIDs(core.chat.messages)
         // Voice mode answers on-device (ADR 0010); typed sends in voice never go to PCC.

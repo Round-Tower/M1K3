@@ -30,6 +30,8 @@
 //  push) — two lines for a look that never reached a brain: `noFrame` (the
 //  camera gave no picture) and `cameraOff` (access is refused). A turn that
 //  asked to look says one of them instead of becoming an ordinary send.
+//  Review: Kev + claude-fable-5.2, 2026-11-10 (#768 follow-ups) — `saysNoPicture`, so a look that took no
+//  picture is never mistaken for one that can be asked about again.
 
 import Foundation
 
@@ -90,6 +92,12 @@ public enum LookFailureReply {
     public static let noFrame = "I couldn't get a picture just then. Try again in a moment."
     /// The camera is refused: no retry helps until Settings changes.
     public static let cameraOff = "Camera access is off for M1K3. You can allow it in Settings."
+
+    /// Whether `line` says no picture was taken at all. Such a "look" has no
+    /// frame of its own, so nothing can be asked again about it.
+    public static func saysNoPicture(_ line: String) -> Bool {
+        line == noFrame || line == cameraOff
+    }
 
     /// The line for anything a look throws: the backend's own sentence when it
     /// declined, the way out when it has no eyes, another go for the rest.

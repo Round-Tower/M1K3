@@ -17,6 +17,9 @@
 //  scenePhase)` opens the camera, so a return-to-foreground open cannot start
 //  after the screen's close; a camera iOS took away shows a way back instead of
 //  a spinner; the ask is off while a look is taking its frame.
+//  Review: Kev + claude-fable-5.2, 2026-11-10 — Kev, in the hand: Return "keeps pushing the text input down" and
+//  "there's no way to dismiss the keyboard". The field is one line and Return sends; a tap on the view or a
+//  downward drag on the answer puts the keyboard down. Confidence 0.6 until it is back in his hand.
 //
 
 import M1K3Chat
@@ -38,6 +41,9 @@ struct LookScreen: View {
                 .ignoresSafeArea()
             viewfinder
                 .ignoresSafeArea()
+                // A tap on the view puts the keyboard down.
+                .contentShape(.rect)
+                .onTapGesture { questionFocused = false }
             VStack(spacing: 14) {
                 Spacer()
                 answerCaption
@@ -65,6 +71,8 @@ struct LookScreen: View {
         // front: the task opens it on arrival and again on each return to the
         // foreground (the camera closes itself in the background), and is
         // cancelled with the screen, so no open can start after the close below.
+        // It re-runs on every return to active; `open()` is idempotent, so an
+        // already-open camera is left alone.
         .task(id: scenePhase) {
             if baseline == nil { baseline = core.chat.messages.count }
             guard scenePhase == .active, !Task.isCancelled else { return }
@@ -137,6 +145,7 @@ struct LookScreen: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .textSelection(.enabled)
             }
+            .scrollDismissesKeyboard(.interactively)
             .frame(maxHeight: 220)
             .fixedSize(horizontal: false, vertical: true)
             .padding(14)
@@ -157,8 +166,10 @@ struct LookScreen: View {
 
     private var askBar: some View {
         HStack(spacing: 10) {
-            TextField("Ask about what you see…", text: $question, axis: .vertical)
-                .lineLimit(1 ... 3)
+            // One line, and Return SENDS: a growing field made Return a newline, so there was no way to ask
+            // from the keyboard and no way to put it down (Kev, in the hand, 2026-11-10).
+            TextField("Ask about what you see…", text: $question)
+                .submitLabel(.send)
                 .focused($questionFocused)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 11)

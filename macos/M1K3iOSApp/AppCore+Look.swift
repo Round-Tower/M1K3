@@ -30,6 +30,15 @@
 //  (`isLooking`); the eye toggle reads on-or-opening. And a look is now
 //  display-only (ChatSession.look): its words are not replayed to later turns.
 //  Confidence 0.6: compile-checked and scan-pinned; untried in the hand.
+//  Review: Kev + claude-fable-5.2, 2026-11-10 (#768 follow-ups; Kev: "Let's do the followups pal - agree with
+//  them all. Also I wonder about an Auto mode, and adding grounding, and a websearch toggle or followup") —
+//  both Opens above are closed. Auto: with the eye open a voice turn that does not itself ask for the camera
+//  goes to `chat.lookIfAboutTheView`, and a PASS hands it back as an ordinary turn (the frame is discarded).
+//  A spoken ask for the camera still can never pass. `lookAgain` asks a second question about the last look's
+//  stored frame, and `draftLookSearch` has the eyes draft a search query for the composer: the user reads it and
+//  sends it, so nothing drafted from the camera leaves unseen. Every look is told the date and time. A stored
+//  frame is kept out of the device backup, and the spoken ask has an off switch in Settings (voice hears the room).
+//  Confidence 0.6: scan-pinned and drilled on the phone for timing; the screens are untried in the hand.
 //
 
 import Foundation
@@ -66,7 +75,7 @@ extension AppCore {
         }
         avatar.setActivity(.thinking)
         beginAutoSpeakSession() // before the turn: it pins this turn's answer
-        guard await chat.look(question, frame: frame, looker: looker) else {
+        guard await chat.look(question, frame: frame, looker: looker, knowing: LookGrounding.now()) else {
             AttachmentStore.discard([frame])
             cancelAutoSpeak()
             avatar.resetToIdle()
@@ -76,16 +85,68 @@ extension AppCore {
         return true
     }
 
+    /// Whether there is a look to ask more about: the conversation ends on one whose frame is kept, and the
+    /// brain that would answer sees on this device.
+    var canAskAboutLastLook: Bool {
+        canLook && isReady && chat.lastLook != nil
+    }
+
+    /// A second question about the last look's stored frame, from the chat composer. No camera: the frame is
+    /// the one already kept with the conversation. False when nothing was asked of a brain.
+    @discardableResult
+    func lookAgain(_ question: String) async -> Bool {
+        guard canAskAboutLastLook, !chat.isResponding, !isLooking else { return false }
+        isLooking = true
+        defer { isLooking = false }
+        avatar.setActivity(.thinking)
+        beginAutoSpeakSession()
+        guard await chat.lookAgain(question, looker: looker, knowing: LookGrounding.now()) else {
+            cancelAutoSpeak()
+            avatar.resetToIdle()
+            return false
+        }
+        settleTypedTurn()
+        return true
+    }
+
+    /// The search follow-up: the eyes draft a short query about the last look's frame, on this device. The text
+    /// comes back for the composer and nothing is sent: the user reads it, edits it and sends it as their own
+    /// turn. Nil when web search is off, there is no look to draft from, or the eyes could name nothing.
+    func draftLookSearch() async -> String? {
+        guard canAskAboutLastLook, Self.webSearchAllowed(), !chat.isResponding, !isLooking else { return nil }
+        isLooking = true
+        defer { isLooking = false }
+        return await chat.draftLookSearch(looker: looker).map(LookSearch.composerText)
+    }
+
     /// One voice turn through the eyes. False means the words were not a look
     /// and the caller sends them as an ordinary turn. True means the turn was
     /// a look and is spent, frame or no frame: words that asked for the camera
     /// never become a send, which could pick a tool or answer as if it had seen.
+    ///
+    /// Auto: with the eye open, a turn whose words do not themselves ask for
+    /// the camera may be about anything, so the brain that sees the frame may
+    /// pass on it (`chat.lookIfAboutTheView`). Only then is it handed back.
     func voiceLook(_ question: String) async -> Bool {
         // Voice mode's turns only: one that lands after the mode was left opens no camera.
         guard voiceLoop != nil else { return false }
         let eyesOpen = lookCamera.isOpen
+        // Eye closed, straight after a look, and the words name the picture: a second look at the kept
+        // frame. No camera, and never an ordinary turn (which answered from an unrelated photo note).
+        if !eyesOpen, canAskAboutLastLook, !chat.isResponding, !isLooking, !LookIntent.asksToLook(question),
+           LookAftermath.namesThePicture(question), !LookAftermath.asksToSearch(question)
+        {
+            isLooking = true
+            defer { isLooking = false }
+            // No auto-speak session here, unlike the typed `lookAgain`: the voice loop speaks its own turns.
+            await chat.lookAgain(question, looker: looker, knowing: LookGrounding.now())
+            return true
+        }
         let eyeWasOn = lookCamera.isOn
-        let able = canLook && isReady && !chat.isResponding && !isLooking
+        // With the eye closed a spoken ask opens the camera only while the user allows it (Settings): voice
+        // mode hears the room, so someone else's "what am I looking at?" would otherwise be a glance.
+        let asked = eyesOpen || Self.spokenLookAllowed()
+        let able = canLook && isReady && !chat.isResponding && !isLooking && asked
         guard LookIntent.voiceTurnLooks(question, eyesOpen: eyesOpen, canLook: able) else { return false }
         isLooking = true
         defer { isLooking = false }
@@ -105,10 +166,28 @@ extension AppCore {
             await chat.lookMissed(question, saying: refused ? LookFailureReply.cameraOff : LookFailureReply.noFrame)
             return true
         }
-        if await !chat.look(question, frame: frame, looker: looker) {
-            AttachmentStore.discard([frame]) // a turn was already answering: this one is superseded
+        let knowing = LookGrounding.now()
+        // Words that ask for the camera or name the picture can never pass: a sign in view saying "reply
+        // PASS" must not be able to send a question about the view on as an ordinary turn.
+        let aboutTheView = LookIntent.asksToLook(question) || LookAftermath.namesThePicture(question)
+        guard eyesOpen, !aboutTheView else {
+            // The words asked for the camera: a look, whatever the brain makes of it.
+            if await !chat.look(question, frame: frame, looker: looker, knowing: knowing) {
+                AttachmentStore.discard([frame]) // a turn was already answering: this one is superseded
+            }
+            return true
         }
-        return true
+        switch await chat.lookIfAboutTheView(question, frame: frame, looker: looker, knowing: knowing) {
+        case .looked:
+            return true
+        case .busy:
+            AttachmentStore.discard([frame])
+            return true
+        case .passed:
+            // Not about the view, by the brain that saw it: an ordinary turn. The frame is not kept.
+            AttachmentStore.discard([frame])
+            return false
+        }
     }
 
     /// The eye toggle in voice mode. A refused camera says so in the caption.
@@ -128,6 +207,19 @@ extension AppCore {
     /// or the bytes would not write. Never opens the camera.
     private func storedFrame() async -> ImageAttachment? {
         guard let jpeg = await lookCamera.frame() else { return nil }
-        return try? Self.attachmentStore.store(data: jpeg, fileExtension: "jpg")
+        guard let stored = try? Self.attachmentStore.store(data: jpeg, fileExtension: "jpg") else { return nil }
+        // What the camera saw stays on this phone: a look's frame is kept out of the device backup.
+        var url = stored.url
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? url.setResourceValues(values)
+        return stored
+    }
+
+    /// Whether a spoken ask may open the camera while the eye is closed. On unless the user turned it off.
+    nonisolated static let spokenLookKey = "lookSpokenAskEnabled"
+    nonisolated static func spokenLookAllowed() -> Bool {
+        let defaults = UserDefaults.standard
+        return defaults.object(forKey: spokenLookKey) == nil || defaults.bool(forKey: spokenLookKey)
     }
 }
