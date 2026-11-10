@@ -1,0 +1,3548 @@
+{
+  "provenance" : {
+    "date" : "2026-11-10T19:08:05Z",
+    "hardware" : "unknown",
+    "livePath" : false,
+    "notes" : "arm: trimmed persona (miniSystemPrompt) · bare generate; open-chat alone on the live responder · bare generate (no route) · plain test process (swift test), not the app bundle",
+    "osVersion" : "macOS 27.0",
+    "repeats" : 1
+  },
+  "runs" : [
+    {
+      "brainID" : "mini",
+      "scores" : [
+        {
+          "answerPreview" : "The shop starts with 12 apples. It sells 5, so:  12 - 5 = 7  Then it buys 8 more:  7 + 8 = 15  The shop has 15 apples at the end of the day.",
+          "checks" : [
+            {
+              "detail" : "140 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/22 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"15\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "140 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "2322ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-apples",
+          "kind" : "reasoning",
+          "latencyMS" : 2322,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "18",
+          "checks" : [
+            {
+              "detail" : "2 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"18\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "2 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "649ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-age",
+          "kind" : "reasoning",
+          "latencyMS" : 649,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Liam",
+          "checks" : [
+            {
+              "detail" : "4 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Liam\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "4 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "639ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-order",
+          "kind" : "reasoning",
+          "latencyMS" : 639,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Saturday",
+          "checks" : [
+            {
+              "detail" : "8 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"Monday\"] in: Saturday",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "8 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "675ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-days",
+          "kind" : "reasoning",
+          "latencyMS" : 675,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "The train travels 150 km in 2.5 hours.",
+          "checks" : [
+            {
+              "detail" : "38 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "6 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"150\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "38 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1006ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-train",
+          "kind" : "reasoning",
+          "latencyMS" : 1006,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "2",
+          "checks" : [
+            {
+              "detail" : "1 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"2\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "666ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-remainder",
+          "kind" : "reasoning",
+          "latencyMS" : 666,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "10",
+          "checks" : [
+            {
+              "detail" : "2 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"5\", \"five\"] in: 10",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "2 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "644ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-bat-ball",
+          "kind" : "reasoning",
+          "latencyMS" : 644,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "12",
+          "checks" : [
+            {
+              "detail" : "2 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"60\", \"sixty\"] in: 12",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "2 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "714ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-pills",
+          "kind" : "reasoning",
+          "latencyMS" : 714,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "47",
+          "checks" : [
+            {
+              "detail" : "2 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"47\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "2 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "704ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-lily-pads",
+          "kind" : "reasoning",
+          "latencyMS" : 704,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Friday",
+          "checks" : [
+            {
+              "detail" : "6 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"Thursday\"] in: Friday",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "6 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "688ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-weekday",
+          "kind" : "reasoning",
+          "latencyMS" : 688,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "20",
+          "checks" : [
+            {
+              "detail" : "2 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"20\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "2 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "662ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-digit-sevens",
+          "kind" : "reasoning",
+          "latencyMS" : 662,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "140",
+          "checks" : [
+            {
+              "detail" : "3 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"130\", \"one hundred thirty\", \"one hundred and thirty\"] in: 140",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "3 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "701ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-clock",
+          "kind" : "reasoning",
+          "latencyMS" : 701,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "30",
+          "checks" : [
+            {
+              "detail" : "2 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"8\", \"8th\", \"eight\", \"eighth\"] in: 30",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "2 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "603ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-snail",
+          "kind" : "reasoning",
+          "latencyMS" : 603,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "100",
+          "checks" : [
+            {
+              "detail" : "3 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"40\", \"forty\"] in: 100",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "3 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "680ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-average-speed",
+          "kind" : "reasoning",
+          "latencyMS" : 680,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "13",
+          "checks" : [
+            {
+              "detail" : "2 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"3\", \"three\"] in: 13",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "2 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "723ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-socks",
+          "kind" : "reasoning",
+          "latencyMS" : 723,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "11",
+          "checks" : [
+            {
+              "detail" : "2 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"11\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "2 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "663ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-fence",
+          "kind" : "reasoning",
+          "latencyMS" : 663,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "12.5",
+          "checks" : [
+            {
+              "detail" : "4 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"25\", \"twenty-five\"] in: 12.5",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "4 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "754ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-percent",
+          "kind" : "reasoning",
+          "latencyMS" : 754,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "42",
+          "checks" : [
+            {
+              "detail" : "2 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"21\", \"twenty-one\"] in: 42",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "2 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "720ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-handshakes",
+          "kind" : "reasoning",
+          "latencyMS" : 720,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "21",
+          "checks" : [
+            {
+              "detail" : "2 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"9\", \"nine\"] in: 21",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "2 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "654ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-overlap",
+          "kind" : "reasoning",
+          "latencyMS" : 654,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "12",
+          "checks" : [
+            {
+              "detail" : "2 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"72\", \"seventy-two\"] in: 12",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "2 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "739ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-pipes",
+          "kind" : "reasoning",
+          "latencyMS" : 739,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "13",
+          "checks" : [
+            {
+              "detail" : "2 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"14\", \"fourteen\"] in: 13",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "2 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "764ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-ages",
+          "kind" : "reasoning",
+          "latencyMS" : 764,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "120",
+          "checks" : [
+            {
+              "detail" : "3 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"90\", \"ninety\"] in: 120",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "3 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "641ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-stairs",
+          "kind" : "reasoning",
+          "latencyMS" : 641,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "30",
+          "checks" : [
+            {
+              "detail" : "2 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"4\", \"four\"] in: 30",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "2 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "724ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-rope",
+          "kind" : "reasoning",
+          "latencyMS" : 724,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "25",
+          "checks" : [
+            {
+              "detail" : "2 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"11\", \"eleven\"] in: 25",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "2 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "679ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-chimes",
+          "kind" : "reasoning",
+          "latencyMS" : 679,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "21",
+          "checks" : [
+            {
+              "detail" : "2 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"15\", \"fifteen\"] in: 21",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "2 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "704ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-digit-threes",
+          "kind" : "reasoning",
+          "latencyMS" : 704,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "13.5",
+          "checks" : [
+            {
+              "detail" : "4 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"120\", \"one hundred twenty\", \"one hundred and twenty\"] in: 13.5",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "4 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "785ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "reason-hard-trains",
+          "kind" : "reasoning",
+          "latencyMS" : 785,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "```html <!DOCTYPE html> <html> <head>     <title>Hello Page</title> </head> <body>     <h1>Hello</h1>     <p>This is a minimal HTML page.</p> </body> </html> ```",
+          "checks" : [
+            {
+              "detail" : "161 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"<html\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "161 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1731ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "code-html-page",
+          "kind" : "code-gen",
+          "latencyMS" : 1731,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "```html <!DOCTYPE html> <html lang=\"en\"> <head>     <meta charset=\"UTF-8\">     <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">     <title>Bean There Coffee Shop</title>     <style>         body {             font-fami…",
+          "checks" : [
+            {
+              "detail" : "1797 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"<html\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1797 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "12772ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "code-landing-page",
+          "kind" : "code-gen",
+          "latencyMS" : 12772,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "```python def reverse_string(s):     return s[::-1] ```",
+          "checks" : [
+            {
+              "detail" : "55 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"def \"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "55 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "988ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "code-python-reverse",
+          "kind" : "code-gen",
+          "latencyMS" : 988,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "```css button {   background-color: #007bff;   color: white;   border: none;   padding: 10px 20px;   border-radius: 5px;   cursor: pointer; } ```",
+          "checks" : [
+            {
+              "detail" : "145 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"border-radius\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "145 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "2021ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "code-css-button",
+          "kind" : "code-gen",
+          "latencyMS" : 2021,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "```swift 5.7.3 func sumOfArray(_ array: [Int]) -> Int {   return array.reduce(0, +) } ```",
+          "checks" : [
+            {
+              "detail" : "89 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"func \"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "89 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1459ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "code-swift-sum",
+          "kind" : "code-gen",
+          "latencyMS" : 1459,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "```python def fizzbuzz(n):     result = []     for i in range(1, n + 1):         if i % 3 == 0 and i % 5 == 0:             result.append(\"FizzBuzz\")         elif i % 3 == 0:             result.append(\"Fizz\")         elif i % 5 == 0:        …",
+          "checks" : [
+            {
+              "detail" : "336 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "contains all",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "336 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "2932ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "code-py-fizzbuzz",
+          "kind" : "code-gen",
+          "latencyMS" : 2932,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "```python def largest(xs):     best = xs[0]     for x in xs:         if x > best:             best = x     return best ```",
+          "checks" : [
+            {
+              "detail" : "122 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "contains all",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "122 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1520ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "code-py-fix-bug",
+          "kind" : "code-gen",
+          "latencyMS" : 1520,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "```python from datetime import datetime  def days_between(a, b):     date_a = datetime.strptime(a, '%Y-%m-%d').date()     date_b = datetime.strptime(b, '%Y-%m-%d').date()     return abs((date_b - date_a).days) ```",
+          "checks" : [
+            {
+              "detail" : "213 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"strptime\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "contains all",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "213 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "2346ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "code-py-days-between",
+          "kind" : "code-gen",
+          "latencyMS" : 2346,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "```swift func median(_ xs: [Double]) -> Double? {   guard !xs.isEmpty else { return nil }    let sorted = xs.sorted()   let count = sorted.count   let midIndex = count / 2    if count % 2 == 0 {     return (sorted[midIndex - 1] + sorted[mid…",
+          "checks" : [
+            {
+              "detail" : "302 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"isEmpty\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "contains all",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "302 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "2891ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "code-swift-median",
+          "kind" : "code-gen",
+          "latencyMS" : 2891,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Creating a website is a great idea! However, I can’t directly build or host a website for you. However, I can help you brainstorm ideas for your website, suggest tools you might use, or guide you on how to start. Let me know what you'd like…",
+          "checks" : [
+            {
+              "detail" : "281 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/54 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"<html\", \"<!doctype\", \"<body\"] in: Creating a website is a great idea! However, I can’t directl",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "read as a refusal: Creating a website is a great idea! However, I can’t directl",
+              "name" : "complies (no refusal)",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "281 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "2315ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "code-site-about-chat",
+          "kind" : "code-gen",
+          "latencyMS" : 2315,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Canberra.",
+          "checks" : [
+            {
+              "detail" : "9 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Canberra\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "9 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "641ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "world-capital-australia",
+          "kind" : "world-knowledge",
+          "latencyMS" : 641,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Au",
+          "checks" : [
+            {
+              "detail" : "2 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Au\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "2 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "588ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "world-element-gold",
+          "kind" : "world-knowledge",
+          "latencyMS" : 588,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "1989",
+          "checks" : [
+            {
+              "detail" : "4 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"1989\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "4 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "700ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "world-berlin-wall",
+          "kind" : "world-knowledge",
+          "latencyMS" : 700,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Pablo Picasso painted Guernica.",
+          "checks" : [
+            {
+              "detail" : "31 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "4 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Picasso\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "31 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "748ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "world-guernica",
+          "kind" : "world-knowledge",
+          "latencyMS" : 748,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Jupiter is the largest planet in our solar system.",
+          "checks" : [
+            {
+              "detail" : "50 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/9 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Jupiter\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "50 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "670ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "world-largest-planet",
+          "kind" : "world-knowledge",
+          "latencyMS" : 670,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "The River Liffey flows through Dublin.",
+          "checks" : [
+            {
+              "detail" : "38 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "6 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Liffey\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "38 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "846ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "world-dublin-river",
+          "kind" : "world-knowledge",
+          "latencyMS" : 846,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Plants absorb carbon dioxide from the air during photosynthesis.",
+          "checks" : [
+            {
+              "detail" : "64 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/9 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"carbon dioxide\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "64 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "680ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "world-photosynthesis",
+          "kind" : "world-knowledge",
+          "latencyMS" : 680,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Samuel Beckett wrote the play *Waiting for Godot*.",
+          "checks" : [
+            {
+              "detail" : "50 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/8 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Beckett\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "50 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "926ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "world-godot-author",
+          "kind" : "world-knowledge",
+          "latencyMS" : 926,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Dublin’s history dates back over 2,000 years. The area was originally settled by the Fomorians, mythical sea gods, before being inhabited by the Tuatha Dé Danann, a legendary Celtic people. By the 4th century BCE, the city was established b…",
+          "checks" : [
+            {
+              "detail" : "1075 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/174 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Viking\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "avoids web_search",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "avoids lookup_fact",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "avoids fetch_page",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1075 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "7515ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "world-dublin-history",
+          "kind" : "world-knowledge",
+          "latencyMS" : 7515,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Cork has a rich history dating back to ancient times. The area was first settled by the Celts around 500 BC, and it became an important trading hub due to its strategic location along the Atlantic coast. The Romans later established a settl…",
+          "checks" : [
+            {
+              "detail" : "1285 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/207 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Rebel\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "avoids web_search",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "avoids lookup_fact",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "avoids fetch_page",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1285 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "7879ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "world-cork-history",
+          "kind" : "world-knowledge",
+          "latencyMS" : 7879,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "READY",
+          "checks" : [
+            {
+              "detail" : "5 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"READY\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "616ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "follow-only-ready",
+          "kind" : "instruction-following",
+          "latencyMS" : 616,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Water falling from clouds.",
+          "checks" : [
+            {
+              "detail" : "26 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "4 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "26 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "819ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "follow-word-cap",
+          "kind" : "instruction-following",
+          "latencyMS" : 819,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "```json {   \"status\": \"ok\",   \"count\": 3 } ```",
+          "checks" : [
+            {
+              "detail" : "46 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "contains all",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "46 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1018ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "follow-json-only",
+          "kind" : "instruction-following",
+          "latencyMS" : 1018,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Gravity is the force that pulls objects toward each other.",
+          "checks" : [
+            {
+              "detail" : "58 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/10 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "58 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1058ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "follow-no-bullets",
+          "kind" : "instruction-following",
+          "latencyMS" : 1058,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Blue.",
+          "checks" : [
+            {
+              "detail" : "5 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "692ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "follow-no-question",
+          "kind" : "instruction-following",
+          "latencyMS" : 692,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Apple, banana, orange.",
+          "checks" : [
+            {
+              "detail" : "22 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \",\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "22 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "868ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "follow-exact-count",
+          "kind" : "instruction-following",
+          "latencyMS" : 868,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "### Caffeine - **Tea**: Contains moderate caffeine levels, typically around 40–70 mg per 8 oz cup, depending on the type (black tea has more than green tea). - **Coffee**: Contains higher caffeine levels, generally around 95–200 mg per 8 oz…",
+          "checks" : [
+            {
+              "detail" : "1069 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/156 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"|---\", \"| ---\", \"|:--\", \"| :--\"] in: ### Caffeine\n- **Tea**: Contains moderate caffeine levels, t",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "contains all",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1069 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "7250ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "fmt-compare-drinks",
+          "kind" : "format",
+          "latencyMS" : 7250,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "SwiftUI and AppKit have distinct advantages and trade-offs in terms of learning curve, control, and longevity.  **Learning Curve** - **SwiftUI**: Generally considered easier for beginners. Its declarative syntax and visual layout system mak…",
+          "checks" : [
+            {
+              "detail" : "1624 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/222 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"|---\", \"| ---\", \"|:--\", \"| :--\"] in: SwiftUI and AppKit have distinct advantages and trade-offs i",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "contains all",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1624 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "10137ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "fmt-compare-ui",
+          "kind" : "format",
+          "latencyMS" : 10137,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Changing a flat bicycle tyre is a useful skill. Here’s a step-by-step guide:  1. **Gather tools and materials**:    - Spare inner tube.    - Tyre levers (usually two).    - Pump (optional, but recommended).    - A spoke wrench (if needed). …",
+          "checks" : [
+            {
+              "detail" : "1926 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/293 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "contains all",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1926 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "14571ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "fmt-howto-tyre",
+          "kind" : "format",
+          "latencyMS" : 14571,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "1. **Measure your coffee:** Use about 1 to 2 tablespoons of coarse-ground coffee per 6 ounces (about 180 milliliters) of water. Adjust based on your taste preferences.  2. **Boil water:** Heat fresh, filtered water to about 200°F (93°C).  3…",
+          "checks" : [
+            {
+              "detail" : "628 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/94 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "contains all",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "628 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5298ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "fmt-howto-press",
+          "kind" : "format",
+          "latencyMS" : 5298,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Cork in October can be a bit unpredictable, but it’s definitely worth the trip if you enjoy autumn vibes and don’t mind a bit of rain. The weather can vary, with some days being dry and pleasant, while others might bring overcast skies. The…",
+          "checks" : [
+            {
+              "detail" : "425 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/74 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "425 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3219ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "fmt-smalltalk-cork",
+          "kind" : "format",
+          "latencyMS" : 3219,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "I don't have personal experiences or thoughts, so I haven't changed my mind about anything.",
+          "checks" : [
+            {
+              "detail" : "91 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/15 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "91 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1168ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "fmt-smalltalk-mind",
+          "kind" : "format",
+          "latencyMS" : 1168,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Certainly! Here’s a step-by-step guide to descaling a kettle:  1. **Gather Supplies**: You’ll need a kettle, a container for waste, water, and a descaling solution or vinegar (white vinegar works well).  2. **Prepare the Solution**:     - *…",
+          "checks" : [
+            {
+              "detail" : "1238 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/185 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "no spoken text (swift test)",
+              "name" : "spoken has no markup",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1238 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "8463ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "fmt-voice-howto",
+          "kind" : "format",
+          "latencyMS" : 8463,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "For a beginner, a **ukulele** is generally better due to its **simpler design and faster learning curve**. Here’s a breakdown:  ---  ### **Cost** - **Ukulele**: $50–$150 (beginner models).     - More affordable entry point. - **Guitar**: $1…",
+          "checks" : [
+            {
+              "detail" : "1413 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/176 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …sing a specific ukulele or guitar model?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "no spoken text (swift test)",
+              "name" : "spoken has no markup",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "",
+              "name" : "contains all",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "1413 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "10889ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "fmt-voice-compare",
+          "kind" : "format",
+          "latencyMS" : 10889,
+          "repeatIndex" : 0
+        }
+      ]
+    }
+  ],
+  "schemaVersion" : 1
+}
