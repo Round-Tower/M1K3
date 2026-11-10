@@ -38,6 +38,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-02 — the thumbs-down note moves to `AnswerNoteSheet`, presented by
 //  ChatScreen: owned by a LazyVStack row, it closed when its field took focus, came back, and took no typing
 //  (Kev's phone). Pinned by PhoneAnswerActionsTests. Confidence 0.75 (verify on the phone).
+//  Review: Kev + claude-fable-5.2, 2026-11-10 — the working line ("Thinking…") wears the pixel face at its 12 pt floor
+//  (Kev: "use the pixelated font a bit more in… the thinking and loading sort of stuff"). Confidence 0.6 until seen.
 
 import M1K3AnswerBlocks
 import M1K3Chat
@@ -182,8 +184,10 @@ struct MessageBubble: View {
     private func activityRow(_ label: String) -> some View {
         HStack(spacing: 8) {
             ProgressView().controlSize(.small)
+            // The working line wears the pixel face (Kev, 2026-11-10) when it is a short app-written
+            // label, at the face's 12 pt floor. A line that quotes a search or names a site does not.
             Text(label)
-                .font(.caption)
+                .font(BrainWordmark.suitsPixelFace(label) ? .pixel(12) : .caption)
                 .foregroundStyle(.secondary)
         }
     }
