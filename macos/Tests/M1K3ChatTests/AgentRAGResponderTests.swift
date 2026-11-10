@@ -999,6 +999,26 @@ struct AgentRAGResponderTests {
         #expect(provider.allPrompts.last?.contains("VOICE-ROOM") == false)
     }
 
+    /// #768: the turn straight after a look cannot see the picture. Without this line Lil described a
+    /// music room that was never in the photo (iPhone drill, 2026-11-10).
+    @Test("the turn straight after a look is told it cannot see the picture, and only that turn")
+    func afterALookTheTurnIsToldItCannotSee() async throws {
+        let (store, embedder) = try await ingestedStore()
+        let provider = AgentScriptedProvider([
+            "CONCLUSION: The seal failed. [Plant Notes §3.2 Seals]",
+            "CONCLUSION: The seal failed. [Plant Notes §3.2 Seals]",
+        ])
+        let responder = AgentRAGResponder(store: store, embedder: embedder, provider: provider, toolsProvider: { [] })
+        let question = "What hydraulic seal failed on the conveyor under load?"
+        try await LookAftermath.$withholdsWeb.withValue(true) {
+            _ = try await collect(responder.answerStreaming(question).stream)
+        }
+        _ = try await collect(responder.answerStreaming(question).stream)
+        #expect(provider.allPrompts.first?.contains(LookAftermath.clause) == true)
+        #expect(provider.allPrompts.last?.contains(LookAftermath.clause) == false)
+        #expect(LookAftermath.clause.contains("Ask about this photo"))
+    }
+
     @Test("a stale token can't clear a newer turn's clause")
     func clauseSlotTokens() {
         let slot = TurnClauseSlot()

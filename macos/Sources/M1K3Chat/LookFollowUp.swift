@@ -49,13 +49,24 @@ public enum LookPassGate {
         return word.hasPrefix(core) ? .undecided : .answering
     }
 
-    /// The finished answer: the word alone, or an answer that ends on it in
-    /// capitals (Mini echoes a command and then passes).
+    /// The finished answer passes only when it is the word alone. On the
+    /// blind set (90 questions; Mini on three pictures, Lil on two, on the
+    /// phone) that rule passed none of 225 questions about the view.
     public static func passed(_ answer: String) -> Bool {
-        let core = core(answer)
-        if core.uppercased() == word { return true }
-        guard let last = core.split(whereSeparator: \.isWhitespace).last else { return false }
-        return last == word[...] && core.count > word.count
+        core(answer).uppercased() == word
+    }
+
+    /// An answer that ends "… . PASS" is an answer (Lil does this, to real
+    /// questions about the view too): it is shown without the stray word.
+    public static func withoutStrayWord(_ answer: String) -> String {
+        let trimmed = answer.trimmingCharacters(in: .whitespacesAndNewlines)
+        let bare = trimmed.trimmingCharacters(in: CharacterSet(charactersIn: ".!*"))
+        guard bare.hasSuffix(word) else { return answer }
+        let before = bare.dropLast(word.count)
+        guard let last = before.last, last.isWhitespace else { return answer }
+        let kept = before.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let end = kept.last, ".!?".contains(end) else { return answer }
+        return kept
     }
 
     /// The answer without the wrapping a small model puts round one word.
@@ -70,6 +81,15 @@ public enum LookAftermath {
     /// words did not ask for a search. The shell's tool palette reads it and
     /// leaves the web tools out for that turn.
     @TaskLocal public static var withholdsWeb = false
+
+    /// What that turn is told. It cannot see the picture, and left to itself
+    /// a brain will describe one anyway (Lil invented a music room on the
+    /// phone, 2026-11-10).
+    public static let clause = """
+    CAMERA: The person just showed you something through the camera, but you cannot see that picture in this \
+    message and you do not remember it. If they ask about it, do not describe or guess at it: tell them to tap \
+    "Ask about this photo" under your last answer, or to open the eye and ask again. Anything else, answer as usual.
+    """
 
     /// Whether these words ask for a search themselves. Loose on purpose: a
     /// hit only keeps the user's own setting.
@@ -111,9 +131,14 @@ public enum LookSearch {
     public static let instructions = """
     You are looking through a phone camera for the person holding it. \
     They want to look up what is in view on the web. \
-    Reply with a web search query of at most eight words that names the main thing in view. \
-    Reply with the query only. If you can't name anything in view, reply NONE.
+    Reply with a web search query of at most eight words that names the main thing in view: \
+    a name, a brand, a place or the words on a sign. \
+    Reply with the query only, never a sentence. If you can't name anything in view, reply NONE.
     """
+
+    /// What the draft is asked with. Never the look's own question: asked
+    /// that, Lil answered it ("yes") instead of drafting.
+    public static let prompt = "What should I search the web for to learn more about this? Reply with the query only."
 
     static let maxWords = 10
 
@@ -131,7 +156,7 @@ public enum LookSearch {
             .filter { !$0.contains("://") && !$0.lowercased().hasPrefix("www.") }
             .prefix(maxWords)
         let query = words.joined(separator: " ").trimmingCharacters(in: wrapping)
-        guard !query.isEmpty, query.uppercased() != "NONE" else { return nil }
+        guard !query.isEmpty, !["NONE", "YES", "NO"].contains(query.uppercased()) else { return nil }
         return query
     }
 
@@ -141,10 +166,10 @@ public enum LookSearch {
     }
 
     /// Ask the eyes for a query about `frame`. Nil when they have none.
-    public static func draft(frame: ImageAttachment, question: String, looker: any ImageLooking) async -> String? {
+    public static func draft(frame: ImageAttachment, looker: any ImageLooking) async -> String? {
         var latest = ""
         do {
-            for try await snapshot in looker.look(image: frame, instructions: instructions, prompt: question) {
+            for try await snapshot in looker.look(image: frame, instructions: instructions, prompt: prompt) {
                 latest = snapshot
             }
         } catch {

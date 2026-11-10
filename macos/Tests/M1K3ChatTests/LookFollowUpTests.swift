@@ -141,14 +141,24 @@ struct LookFollowUpTests {
         for answering in ["A", "Passengers", "PASSED", "A sign", "Pa pa"] {
             #expect(LookPassGate.reading(of: answering) == .answering, "\(answering.debugDescription)")
         }
-        let passes = ["PASS", "pass", "Pass.", " \"PASS\" ", "PASS\n", "Remind me to call the dentist. PASS."]
+        let passes = ["PASS", "pass", "Pass.", " \"PASS\" ", "PASS\n", "**PASS**"]
         for passed in passes {
             #expect(LookPassGate.passed(passed), "\(passed.debugDescription)")
         }
-        let answers = ["", "A boarding pass.", "Passengers waiting", "PASSPORT", "You may pass", "A sign that says PASSING"]
+        // Only the word alone passes. Lil sometimes answers and then adds the word (12 of 180 on the phone,
+        // three of them real answers about the view): that is an answer, shown without the stray word.
+        let answers = [
+            "", "A boarding pass.", "Passengers waiting", "PASSPORT", "You may pass", "A sign that says PASSING",
+            "It only shows a parking sign. PASS",
+        ]
         for answered in answers {
             #expect(!LookPassGate.passed(answered), "\(answered.debugDescription)")
         }
+        #expect(LookPassGate.withoutStrayWord("It only shows a parking sign. PASS") == "It only shows a parking sign.")
+        #expect(LookPassGate.withoutStrayWord("One main object (the sign).  PASS.") == "One main object (the sign).")
+        #expect(LookPassGate.withoutStrayWord("A boarding pass.") == "A boarding pass.")
+        #expect(LookPassGate.withoutStrayWord("The sign says NO PASS") == "The sign says NO PASS", "no full stop before it")
+        #expect(LookPassGate.withoutStrayWord("PASS") == "PASS")
     }
 
     @Test("a passed turn leaves no trace: no message, nothing persisted to replay, and the caller is told")
@@ -188,13 +198,13 @@ struct LookFollowUpTests {
         #expect(session.messages.allSatisfy { $0.contextExcluded == true })
     }
 
-    @Test("a late PASS takes the shown bubbles away again")
-    func latePassRemovesWhatWasShown() async {
+    @Test("an answer that ends on the word is an answer, shown without it")
+    func anAnswerThenTheWordIsAnAnswer() async {
         let session = ChatSession(responder: WebWatchingResponder())
-        let eyes = ScriptedEyes(["Remind me", "Remind me to call the dentist. PASS."])
-        let verdict = await session.lookIfAboutTheView("Remind me to call the dentist.", frame: frame, looker: eyes)
-        #expect(verdict == .passed)
-        #expect(session.messages.isEmpty)
+        let eyes = ScriptedEyes(["No, I", "No, I do not see any person. It only shows a parking sign. PASS"])
+        let verdict = await session.lookIfAboutTheView("Is there a person in the shot?", frame: frame, looker: eyes)
+        #expect(verdict == .looked)
+        #expect(session.messages.last?.text == "No, I do not see any person. It only shows a parking sign.")
     }
 
     @Test("a look that may pass and fails says so as a look, like any other")
@@ -388,8 +398,12 @@ struct LookFollowUpTests {
 
         #expect(draft == "Leica M6 film camera")
         #expect(session.messages == before)
-        let asked = ScriptedEyes.Call(image: frame, instructions: LookSearch.instructions, prompt: "What is this?")
+        // The draft is asked with its own words, never the look's question: on the phone Lil answered the
+        // question ("yes") instead of drafting.
+        let asked = ScriptedEyes.Call(image: frame, instructions: LookSearch.instructions, prompt: LookSearch.prompt)
         #expect(eyes.received.last == asked)
+        #expect(LookSearch.clean("yes") == nil)
+        #expect(LookSearch.clean("No.") == nil)
         #expect(await ChatSession(responder: WebWatchingResponder()).draftLookSearch(looker: eyes) == nil)
     }
 }

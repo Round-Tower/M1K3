@@ -1055,7 +1055,7 @@ public final class ChatSession {
         guard !isResponding, let earlier = lastLook else { return nil }
         isResponding = true
         defer { isResponding = false }
-        return await LookSearch.draft(frame: earlier.frame, question: earlier.question, looker: looker)
+        return await LookSearch.draft(frame: earlier.frame, looker: looker)
     }
 
     /// One look, start to finish. `asking` is the user's message as it will be
@@ -1077,9 +1077,12 @@ public final class ChatSession {
             await self.streamLook(ask, frame: frame, looker: looker, assistantID: assistantID)
         }
         lookTask = turn
-        let outcome = await turn.value
+        var outcome = await turn.value
         lookTask = nil
 
+        if mayPass, case let .answered(text, stopped) = outcome {
+            outcome = .answered(text: LookPassGate.withoutStrayWord(text), stopped: stopped)
+        }
         if mayPass, case let .answered(text, stopped) = outcome, !stopped, LookPassGate.passed(text) {
             // Not about the view. Whatever was shown goes, before anything is persisted.
             heldLook = nil
