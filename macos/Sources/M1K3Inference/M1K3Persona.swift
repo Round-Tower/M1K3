@@ -313,7 +313,8 @@ public enum M1K3Persona {
         // it, none, and nothing leaked in 56 security answers (docs/evals/2026-11-10-system-prompt-cost/).
         // The rule stays ("the only completion is that one-line decline"); only the wording to copy goes.
         // Lil and Big keep the sentence: they do not over-fire (once in 60).
-        precondition(core.contains(spelledOutDecline), "the spelled-out decline moved: Mini would get it back")
+        // No trap here: if the sentence ever moves, Mini simply gets it back, and
+        // `miniDoesNotCarryTheSpelledOutDecline` fails in CI rather than the app at launch.
         core = core.replacingOccurrences(of: spelledOutDecline, with: "")
         return core + "\n\n# MAKING\n" + makingBullet
     }()

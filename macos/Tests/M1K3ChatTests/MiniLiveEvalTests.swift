@@ -111,6 +111,17 @@ struct MiniLiveEvalTests {
         evalEnvironment["M1K3_AFM_EVAL_PERSONA"] == "full"
     }
 
+    /// Which persona this run used, for the record's notes.
+    private static var armNote: String {
+        switch evalEnvironment["M1K3_AFM_EVAL_PERSONA"] {
+        case "spelled-decline": "arm: persona with the spelled-out decline"
+        case "lean": "arm: lean one-line instructions"
+        case "neutral": "arm: neutral one-line instructions"
+        case "full": "arm: full persona"
+        default: "arm: trimmed persona (miniSystemPrompt)"
+        }
+    }
+
     /// The `lean` arm's whole system prompt.
     static let leanInstructions = "You are M1K3, a helpful assistant. Answer the question directly."
 
@@ -324,9 +335,7 @@ struct MiniLiveEvalTests {
             powerSource: evalEnvironment["M1K3_AFM_EVAL_POWER_SOURCE"],
             livePath: liveAll, // the ARM; open-chat alone on the responder is named in the notes
             repeats: repeats,
-            notes: (evalEnvironment["M1K3_AFM_EVAL_PERSONA"] == "spelled-decline" ? "arm: persona with the spelled-out decline"
-                : evalEnvironment["M1K3_AFM_EVAL_PERSONA"] == "lean" ? "arm: lean one-line instructions"
-                : fullPersona ? "arm: full persona" : "arm: trimmed persona (miniSystemPrompt)")
+            notes: armNote
                 + (liveAll ? " · every kind on the live responder" : " · bare generate; open-chat alone on the live responder")
                 + " · " + routeNote
                 + " · plain test process (swift test), not the app bundle"
