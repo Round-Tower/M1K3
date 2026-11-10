@@ -103,7 +103,8 @@ struct LookShellScanTests {
             "before the PASS case only the matcher's own guard may hand a turn back"
         )
         // A spoken ask for the camera can never pass: it takes the plain look, decided before the gate.
-        let explicit = try #require(after.range(of: "guard eyesOpen, !LookIntent.asksToLook(question) else {"))
+        #expect(after.contains("LookIntent.asksToLook(question) || LookAftermath.namesThePicture(question)"))
+        let explicit = try #require(after.range(of: "guard eyesOpen, !aboutTheView else {"))
         let gate = try #require(after.range(of: "chat.lookIfAboutTheView("))
         #expect(explicit.lowerBound < gate.lowerBound)
         // A passed frame is not kept.
@@ -128,7 +129,8 @@ struct LookShellScanTests {
         #expect(!drafting.contains("core.send("), "a drafted search is the user's to send")
         // A question about the photo is a look before it can be a Private Cloud or local send.
         let send = try Self.body(of: "private func send()", in: screen)
-        #expect(send.contains("if aboutPhoto || namesIt, core.canAskAboutLastLook"))
+        #expect(send.contains("if aboutPhoto || namesIt, core.canAskAboutLastLook, !core.isLooking"))
+        #expect(send.contains("&& !privateCloudServesNextSend"), "naming the picture never overrides Private Cloud")
         let voiceLook = try Self.body(of: "func voiceLook(", in: wiring)
         let named = try #require(voiceLook.range(of: "LookAftermath.namesThePicture(question)"))
         let opens = try #require(voiceLook.range(of: "lookCamera.open()"))

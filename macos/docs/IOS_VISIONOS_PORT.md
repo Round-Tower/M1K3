@@ -748,7 +748,8 @@ websearch toggle or followup to allow a search for information."
 - **Search follow-up.** "Search the web for this" has the brain that sees draft
   a short query from the stored frame, on the device (`LookSearch`), and puts
   `Search the web for …` in the composer. The app never sends it: the user
-  reads it, edits it and sends it as their own turn. Offered only while "Web
+  reads it, edits it and sends it as their own turn, and from then on it is an
+  ordinary message (stored, replayed, titled, distilled). Offered only while "Web
   search in chat" is on. Chosen over a standing toggle on the challenger's
   finding that a query drafted from a frame can carry text read off it.
 - **Grounding.** Every look is told the date and time (`LookGrounding`). Memory

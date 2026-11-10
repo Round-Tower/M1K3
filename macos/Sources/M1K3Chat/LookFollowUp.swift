@@ -59,8 +59,10 @@ public enum LookPassGate {
     /// An answer that ends "… . PASS" is an answer (Lil does this, to real
     /// questions about the view too): it is shown without the stray word.
     public static func withoutStrayWord(_ answer: String) -> String {
-        let trimmed = answer.trimmingCharacters(in: .whitespacesAndNewlines)
-        let bare = trimmed.trimmingCharacters(in: CharacterSet(charactersIn: ".!*"))
+        var bare = answer.trimmingCharacters(in: .whitespacesAndNewlines)[...]
+        while let last = bare.last, ".!*".contains(last) {
+            bare = bare.dropLast()
+        }
         guard bare.hasSuffix(word) else { return answer }
         let before = bare.dropLast(word.count)
         guard let last = before.last, last.isWhitespace else { return answer }
@@ -96,9 +98,13 @@ public enum LookAftermath {
     /// frame, so the shell answers it by looking again. Asked as an ordinary
     /// turn on the phone, both brains answered it from an unrelated photo note
     /// in the knowledge store (2026-11-10). Whole words only, and only these.
+    /// "The/this/that" must come right before the word: "draw me a picture of
+    /// a cat" and "find my photos" are not about the kept frame.
     public static func namesThePicture(_ text: String) -> Bool {
-        let words = Set(text.lowercased().split(whereSeparator: { !$0.isLetter }).map(String.init))
-        return !words.isDisjoint(with: ["picture", "photo", "photograph", "image", "pic", "snapshot"])
+        let words = text.lowercased().split(whereSeparator: { !$0.isLetter }).map(String.init)
+        let nouns: Set = ["picture", "photo", "photograph", "image", "pic", "snapshot"]
+        let pointers: Set = ["the", "this", "that"]
+        return zip(words, words.dropFirst()).contains { pointers.contains($0) && nouns.contains($1) }
     }
 
     /// Whether these words ask for a search themselves. Loose on purpose: a
@@ -163,14 +169,27 @@ public enum LookSearch {
         }
         let wrapping = CharacterSet.whitespaces.union(CharacterSet(charactersIn: "\"'`*.“”"))
         let words = line.split(whereSeparator: \.isWhitespace)
-            .filter { !$0.contains("://") && !$0.lowercased().hasPrefix("www.") }
+            .filter { !looksLikeAnAddress($0) }
             .prefix(maxWords)
         let query = words.joined(separator: " ").trimmingCharacters(in: wrapping)
         guard !query.isEmpty, !["NONE", "YES", "NO"].contains(query.uppercased()) else { return nil }
         return query
     }
 
-    /// What goes in the composer for the user to read, edit and send.
+    /// A link or a bare domain ("evil.example/p", "site.com"): a dot with
+    /// letters on both sides, or a slash. "St." and "8.5" are not.
+    private static func looksLikeAnAddress(_ word: some StringProtocol) -> Bool {
+        if word.contains("://") || word.contains("/") || word.lowercased().hasPrefix("www.") { return true }
+        let parts = word.split(separator: ".", omittingEmptySubsequences: false)
+        guard parts.count >= 2 else { return false }
+        return zip(parts, parts.dropFirst()).contains { left, right in
+            (left.last?.isLetter ?? false) && right.count >= 2 && right.prefix(2).allSatisfy(\.isLetter)
+        }
+    }
+
+    /// What goes in the composer for the user to read, edit and send. Once
+    /// sent it is an ordinary message of theirs: stored, replayed and titled
+    /// like any other.
     public static func composerText(_ query: String) -> String {
         "Search the web for \(query)"
     }

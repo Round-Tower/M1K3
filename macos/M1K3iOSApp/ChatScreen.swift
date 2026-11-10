@@ -744,6 +744,8 @@ struct ChatScreen: View {
                 .padding(.bottom, 6)
             if aboutPhoto, core.canAskAboutLastLook {
                 aboutPhotoPill
+                    // The pill's promise ends with the look it points at (another turn, another chat).
+                    .onDisappear { aboutPhoto = false }
             }
             if !pendingAttachments.isEmpty {
                 pendingImagesStrip
@@ -1025,8 +1027,12 @@ struct ChatScreen: View {
         guard canSend else { return }
         // A question about the last look's photo is a look: on this device, never Private Cloud, never a tool.
         // So is one whose words name the picture straight after a look ("is there a person in the photo?").
+        // Never when the next send is Private Cloud's by the user's choice: only the pill overrides that.
         let namesIt = LookAftermath.namesThePicture(draft) && !LookAftermath.asksToSearch(draft)
-        if aboutPhoto || namesIt, core.canAskAboutLastLook, pendingAttachments.isEmpty, pendingFiles.isEmpty {
+            && !privateCloudServesNextSend
+        if aboutPhoto || namesIt, core.canAskAboutLastLook, !core.isLooking,
+           pendingAttachments.isEmpty, pendingFiles.isEmpty
+        {
             let question = draft
             clearDraft()
             Task { await core.lookAgain(question) }

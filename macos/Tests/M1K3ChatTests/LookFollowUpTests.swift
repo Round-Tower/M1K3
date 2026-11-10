@@ -159,6 +159,7 @@ struct LookFollowUpTests {
         #expect(LookPassGate.withoutStrayWord("A boarding pass.") == "A boarding pass.")
         #expect(LookPassGate.withoutStrayWord("The sign says NO PASS") == "The sign says NO PASS", "no full stop before it")
         #expect(LookPassGate.withoutStrayWord("PASS") == "PASS")
+        #expect(LookPassGate.withoutStrayWord("*Bold* start. PASS") == "*Bold* start.")
     }
 
     @Test("a passed turn leaves no trace: no message, nothing persisted to replay, and the caller is told")
@@ -228,6 +229,19 @@ struct LookFollowUpTests {
         #expect(!LookPrompt.instructions.contains("PASS"))
     }
 
+    @Test("a stop while the answer could still be the word shows nothing and spends the turn")
+    func stopDuringTheHold() async throws {
+        let session = ChatSession(responder: WebWatchingResponder())
+        let eyes = HeldEyes()
+        let looking = Task { await session.lookIfAboutTheView("What is this?", frame: frame, looker: eyes) }
+        try await waitUntil { eyes.started }
+        eyes.yield("PA")
+        session.stopResponding()
+        #expect(await looking.value == .busy, "nothing was shown: the caller discards the frame")
+        #expect(session.messages.isEmpty)
+        #expect(!session.isResponding)
+    }
+
     @Test("a look in flight is busy, not a pass")
     func busyIsNotAPass() async throws {
         let session = ChatSession(responder: WebWatchingResponder())
@@ -265,6 +279,9 @@ struct LookFollowUpTests {
         #expect(second?.instructions == LookPrompt.instructions)
         let followUp = LookPrompt.followUp("Does it have a basket?", after: "What is this?", answered: "A red bicycle.")
         #expect(second?.prompt == followUp)
+        // The earlier answer may quote a sign: it is fenced as a quote, and the new question comes last.
+        #expect(followUp.contains("<<<A red bicycle.>>>"))
+        #expect(followUp.hasSuffix("Does it have a basket?"))
         // The chain keeps its frame: a third question still finds it.
         #expect(session.lastLook?.frame == frame)
         #expect(session.lastLook?.question == "Does it have a basket?")
@@ -286,6 +303,18 @@ struct LookFollowUpTests {
         let missed = ChatSession(responder: WebWatchingResponder())
         await missed.lookMissed("What is this?", saying: LookFailureReply.noFrame)
         #expect(missed.lastLook == nil)
+
+        // A missed look AFTER a real one must not reach back to the older frame: its line is not an answer.
+        let stale = ChatSession(responder: WebWatchingResponder())
+        let once = ScriptedEyes(["A red bicycle."])
+        await stale.look("What is this?", frame: frame, looker: once)
+        for line in [LookFailureReply.noFrame, LookFailureReply.cameraOff] {
+            await stale.lookMissed("And now?", saying: line)
+            #expect(stale.lastLook == nil, "\(line)")
+            #expect(await !stale.lookAgain("What colour is it?", looker: once))
+            #expect(await stale.draftLookSearch(looker: once) == nil)
+        }
+        #expect(once.received.count == 1)
     }
 
     // MARK: - The turn straight after a look
@@ -327,13 +356,14 @@ struct LookFollowUpTests {
     func namingThePicture() {
         for names in [
             "Is there a person in the picture?", "what's in the photo", "Describe the image again",
-            "Zoom in on that pic", "Any text in the photograph?", "What else is in the snapshot?",
+            "Zoom in on that pic", "Any text in the photograph?", "What else is in this snapshot?",
         ] {
             #expect(LookAftermath.namesThePicture(names), "\(names)")
         }
         for other in [
             "Is it open on Sundays?", "Thanks", "Give it a shot", "Imagine a dragon", "What's a good epic to read?",
-            "photosynthesis explained", "a picturesque town", "",
+            "photosynthesis explained", "a picturesque town", "", "Draw me a picture of a cat",
+            "Write a caption for an image of a dog", "I love photo walks", "Find my photos from Kerry",
         ] {
             #expect(!LookAftermath.namesThePicture(other), "\(other)")
         }
@@ -349,6 +379,12 @@ struct LookFollowUpTests {
         await session.send("What's the weather tomorrow?")
         await session.send("And the day after?")
         #expect(responder.withheld == [false, false])
+
+        // A pass nobody followed up on does not unfence a later turn after a later look.
+        #expect(await session.lookIfAboutTheView("And the weather?", frame: frame, looker: ScriptedEyes(["PASS"])) == .passed)
+        await session.look("What is this?", frame: frame, looker: ScriptedEyes(["A shopfront."]))
+        await session.send("Is it open?")
+        #expect(responder.withheld == [false, false, true])
         #expect(responder.receivedHistories.first?.isEmpty == true, "the look's words are still not replayed")
     }
 
@@ -399,6 +435,10 @@ struct LookFollowUpTests {
         #expect(LookSearch.clean("none.") == nil)
         #expect(LookSearch.clean("   ") == nil)
         #expect(LookSearch.clean("see https://evil.example/x?q=1 now") == "see now")
+        #expect(LookSearch.clean("visit evil.example/p?x=1 today") == "visit today")
+        #expect(LookSearch.clean("go to evil.example") == "go to")
+        #expect(LookSearch.clean("Fades & Blades barber Dublin 8") == "Fades & Blades barber Dublin 8")
+        #expect(LookSearch.clean("St. James's Gate brewery") == "St. James's Gate brewery")
         #expect(LookSearch.composerText("Leica M6 film camera") == "Search the web for Leica M6 film camera")
         #expect(LookAftermath.asksToSearch(LookSearch.composerText("anything")))
     }

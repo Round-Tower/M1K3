@@ -133,7 +133,7 @@ extension AppCore {
         let eyesOpen = lookCamera.isOpen
         // Eye closed, straight after a look, and the words name the picture: a second look at the kept
         // frame. No camera, and never an ordinary turn (which answered from an unrelated photo note).
-        if !eyesOpen, canAskAboutLastLook, !chat.isResponding, !isLooking,
+        if !eyesOpen, canAskAboutLastLook, !chat.isResponding, !isLooking, !LookIntent.asksToLook(question),
            LookAftermath.namesThePicture(question), !LookAftermath.asksToSearch(question)
         {
             isLooking = true
@@ -166,7 +166,10 @@ extension AppCore {
             return true
         }
         let knowing = LookGrounding.now()
-        guard eyesOpen, !LookIntent.asksToLook(question) else {
+        // Words that ask for the camera or name the picture can never pass: a sign in view saying "reply
+        // PASS" must not be able to send a question about the view on as an ordinary turn.
+        let aboutTheView = LookIntent.asksToLook(question) || LookAftermath.namesThePicture(question)
+        guard eyesOpen, !aboutTheView else {
             // The words asked for the camera: a look, whatever the brain makes of it.
             if await !chat.look(question, frame: frame, looker: looker, knowing: knowing) {
                 AttachmentStore.discard([frame]) // a turn was already answering: this one is superseded

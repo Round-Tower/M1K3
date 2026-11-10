@@ -492,8 +492,8 @@ public final class ChatSession {
         // completed turns only, answer text only (reasoning/sources never leave
         // the message). HistoryWindow caps how much of it reaches the prompt.
         let history = Self.replayableHistory(messages)
-        let withholdsWeb = lastExchangeIsLook && !passedLookPending && !LookAftermath.asksToSearch(trimmed)
-        passedLookPending = false
+        let passed = takePassedLook()
+        let withholdsWeb = lastExchangeIsLook && !passed && !LookAftermath.asksToSearch(trimmed)
 
         messages.append(ChatMessage(
             role: .user, text: trimmed,
@@ -821,6 +821,8 @@ public final class ChatSession {
         // Captured before the question joins the transcript. Only the local
         // fallback uses it: the PCC request was fixed by the consent.
         let history = Self.replayableHistory(messages)
+        let fenced = lastExchangeIsLook && !LookAftermath.asksToSearch(question)
+        passedAt = nil
         let request = PrivateCloudTurn.request(consent, includeConversation: includeConversation, now: now)
 
         messages.append(ChatMessage(role: .user, text: question, status: .complete))
@@ -855,7 +857,10 @@ public final class ChatSession {
             }
             let localID = UUID()
             messages.append(ChatMessage(id: localID, role: .assistant, text: "", status: .streaming))
-            await runLocalTurn(question, images: [], history: history, assistantID: localID)
+            // The local fallback after a look is fenced like any send after a look.
+            await LookAftermath.$withholdsWeb.withValue(fenced) {
+                await runLocalTurn(question, images: [], history: history, assistantID: localID)
+            }
         case let .failed(failure, partial):
             // Something came: keep it, marked, and say why it stopped.
             finishCloudAnswer(assistantID, text: partial, interrupted: true)
@@ -1007,7 +1012,7 @@ public final class ChatSession {
             instructions: LookPrompt.instructions(knowing: knowing, mayPass: true), prompt: asked, mayPass: true
         )
         let verdict = await runLook(asking, frame: frame, looker: looker, ask: ask)
-        if verdict == .passed { passedLookPending = true }
+        if verdict == .passed { passedAt = PassMark(conversation: activeConversationID, count: messages.count) }
         return verdict
     }
 
@@ -1018,11 +1023,15 @@ public final class ChatSession {
         guard messages.count >= 2, let answer = messages.last, answer.role == .assistant,
               case .complete = answer.status, answer.toolsUsed == [LookPrompt.toolName]
         else { return nil }
+        // A look that took no picture has nothing to ask again about, and must not reach back to an
+        // older frame: only a chain of ANSWERED questions leads to its frame.
+        guard !LookFailureReply.saysNoPicture(answer.text) else { return nil }
         let question = messages[messages.count - 2]
         var index = messages.count - 2
         while index >= 0 {
             let asked = messages[index]
-            guard asked.role == .user, messages[index + 1].toolsUsed == [LookPrompt.toolName] else { return nil }
+            guard asked.role == .user, messages[index + 1].toolsUsed == [LookPrompt.toolName],
+                  !LookFailureReply.saysNoPicture(messages[index + 1].text) else { return nil }
             if let frame = asked.attachments?.first {
                 return LookExchange(question: question.text, answer: answer.text, frame: frame)
             }
@@ -1065,6 +1074,7 @@ public final class ChatSession {
     ) async -> LookVerdict {
         let mayPass = ask.mayPass
         guard !isResponding else { return .busy }
+        passedAt = nil // a pass nobody followed up on is spent
         let assistantID = UUID()
         heldLook = (asking, assistantID)
         if !mayPass { revealLook() }
@@ -1088,6 +1098,11 @@ public final class ChatSession {
             heldLook = nil
             messages.removeAll { $0.id == assistantID || $0.id == asking.id }
             return .passed
+        }
+        if mayPass, heldLook != nil, case .answered(_, stopped: true) = outcome {
+            // Stopped while the answer could still have been the word: nothing was shown, nothing is.
+            heldLook = nil
+            return .busy
         }
         revealLook()
 
@@ -1114,8 +1129,20 @@ public final class ChatSession {
 
     /// The look's two bubbles, not yet in the transcript (a turn that may pass).
     private var heldLook: (asking: ChatMessage, assistantID: UUID)?
-    /// The last look was passed on: the very next send is that same question.
-    private var passedLookPending = false
+    /// Where the conversation stood when a look was passed on. The send that follows at exactly that
+    /// point is the passed question; any other send (another conversation, later messages) is not.
+    private struct PassMark: Equatable {
+        let conversation: UUID
+        let count: Int
+    }
+
+    private var passedAt: PassMark?
+
+    /// Consume the pass mark: true when this send is the passed question's.
+    private func takePassedLook() -> Bool {
+        defer { passedAt = nil }
+        return passedAt == PassMark(conversation: activeConversationID, count: messages.count)
+    }
 
     /// Put the held bubbles in the transcript. Once per look.
     private func revealLook() {
