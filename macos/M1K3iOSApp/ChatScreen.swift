@@ -122,6 +122,8 @@
 //  this" (drafts a query INTO the composer; the user sends it). Confidence 0.6: untried in the hand.
 //  Review: Kev + claude-fable-5.2, 2026-11-10 — Kev, in the hand: the eye "is cluttering the chat input space". It
 //  moves to the top bar beside voice mode. Confidence 0.7.
+//  Review: Kev + claude-fable-5.2, 2026-11-10 — Kev's screenshot: the two look actions wrapped and sat at different
+//  heights. They read "Ask more" and "Search the web", one line each (VoiceOver keeps the long wording). Confidence 0.8.
 
 import M1K3Avatar
 import M1K3Chat
@@ -629,20 +631,25 @@ struct ChatScreen: View {
                 aboutPhoto = true
                 inputFocused = true
             } label: {
-                Label("Ask about this photo", systemImage: "eye")
+                Label("Ask more", systemImage: "eye")
             }
+            .accessibilityLabel("Ask about this photo")
             .accessibilityHint("Your next message is answered by looking at this photo again, on this device")
             if webSearchEnabled {
                 Button {
                     draftSearch()
                 } label: {
-                    Label(draftingSearch ? "Drafting…" : "Search the web for this", systemImage: "globe")
+                    Label(draftingSearch ? "Drafting…" : "Search the web", systemImage: "globe")
                 }
                 .disabled(draftingSearch)
+                .accessibilityLabel("Search the web for this")
                 .accessibilityHint("Writes a search for you to read and send. Nothing is sent until you send it")
             }
             Spacer(minLength: 0)
         }
+        // One line each, the same height: the long labels wrapped on the phone (Kev, 2026-11-10).
+        .lineLimit(1)
+        .fixedSize()
         .font(.footnote)
         .buttonStyle(.bordered)
         .buttonBorderShape(.capsule)
