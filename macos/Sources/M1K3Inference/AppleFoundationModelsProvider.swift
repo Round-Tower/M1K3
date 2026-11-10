@@ -79,6 +79,13 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-04 — #775: generateStreaming's catch yields `AFMFailure.userReply` for a
 //  language Apple's model doesn't speak, instead of an empty bubble. Verified by compile, per this file's convention;
 //  the class and reply are pinned in AFMFailureTests. Confidence 0.8: no live unsupported-language throw captured.
+//  Review: Kev + claude-fable-5.2, 2026-11-09 — #768: conforms to `ImageLooking` (the streamed look: caller's
+//  instructions, one Attachment, no persona, no tools). The shape is the spike's `mini-stream` arm, 0.5-0.9 s warm on
+//  the iPhone 17 Pro. Confidence 0.8: live-tested on the Mac (AFMImageLookingLiveTests); the phone path is the
+//  device run.
+//  Review: Kev + claude-fable-5.2, 2026-11-09 (review fold) — a look's failure is logged by class only (the error's
+//  text can describe what was in view), and a stop that surfaces as the framework's own error is a stop, not a
+//  logged failure. Compile-checked: no live failing look was captured.
 import Foundation
 import M1K3LogCore
 import os
@@ -766,6 +773,70 @@ extension AppleFoundationModelsProvider: RawCompletionProviding {
             }
             continuation.onTermination = { _ in task.cancel() }
         }
+    }
+}
+
+// MARK: - The streamed look (#768)
+
+/// One frame, one question, the caller's instructions: a fresh session with no
+/// persona, no tools and no prewarm slot. AFM's snapshots are already
+/// CUMULATIVE, which is the seam's contract, so they pass through as they are.
+extension AppleFoundationModelsProvider: ImageLooking {
+    /// A look is a sentence or two.
+    static let lookResponseTokens = 160
+
+    public func look(image: ImageAttachment, instructions: String, prompt: String) -> LookStream {
+        guard isAvailable, AFMToolPrompt.imagesAttachable else {
+            return AsyncThrowingStream { $0.finish(throwing: ImageLookingError.cannotLook) }
+        }
+        #if compiler(>=6.4)
+            if #available(macOS 27.0, iOS 27.0, visionOS 27.0, *) {
+                return AsyncThrowingStream { continuation in
+                    let task = Task { [self] in
+                        do {
+                            let system = try ImageLookingError.instructions(instructions)
+                            let session = LanguageModelSession(instructions: system)
+                            let options = GenerationOptions(maximumResponseTokens: Self.lookResponseTokens)
+                            let stream = session.streamResponse(options: options) {
+                                prompt
+                                Attachment(imageURL: image.url)
+                            }
+                            for try await snapshot in stream {
+                                let content = snapshot.content
+                                if !content.isEmpty { continuation.yield(content) }
+                            }
+                            continuation.finish()
+                        } catch is CancellationError {
+                            // The user stopped the look: expected, never a logged failure.
+                            continuation.finish(throwing: CancellationError())
+                        } catch let error as InferenceError {
+                            continuation.finish(throwing: error)
+                        } catch {
+                            // A stop can surface as the framework's own error
+                            // rather than a CancellationError: still a stop.
+                            guard !Task.isCancelled else {
+                                continuation.finish(throwing: CancellationError())
+                                return
+                            }
+                            let failure = AFMFailure.classify(error: error)
+                            logLookFailure(failure)
+                            continuation.finish(throwing: LookDeclined(
+                                reply: LookFailureReply.reply(for: failure, platform: .current)
+                            ))
+                        }
+                    }
+                    continuation.onTermination = { _ in task.cancel() }
+                }
+            }
+        #endif
+        return AsyncThrowingStream { $0.finish(throwing: ImageLookingError.cannotLook) }
+    }
+
+    /// A look's failure is logged by CLASS only. `logFailure` prints the
+    /// error's own text, and for a look that text can describe what the camera
+    /// saw: the class is enough to count failures, and nothing in view is kept.
+    private func logLookFailure(_ failure: AFMFailure) {
+        Self.log.error("afm look failed: \(failure.rawValue, privacy: .public)")
     }
 }
 

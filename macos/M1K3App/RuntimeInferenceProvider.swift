@@ -28,6 +28,8 @@
 //  SwappableInferenceProvider's forward.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — forwards `ThinkBudgetForcing` (the responder's cut stands back to a
 //  net while Lil forces its close), the app mirror of SwappableInferenceProvider's forward.
+//  Review: Kev + claude-fable-5.2, 2026-11-09 — forwards `ImageLooking` (#768, the streamed look), the app mirror of
+//  SwappableInferenceProvider's forward. Compile-checked; the Mac has no look surface yet.
 
 import Foundation
 import M1K3Inference
@@ -219,5 +221,16 @@ extension RuntimeInferenceProvider: ImageCaptioning {
             throw InferenceError.generationFailed("active backend cannot caption images")
         }
         return try await captioner.caption(image: image, prompt: prompt)
+    }
+}
+
+/// Forwards the streamed look (#768) to the routed backend, by the same
+/// every-façade-forwards rule. A backend without eyes fails the stream.
+extension RuntimeInferenceProvider: ImageLooking {
+    func look(image: ImageAttachment, instructions: String, prompt: String) -> LookStream {
+        guard let looker = active as? ImageLooking else {
+            return AsyncThrowingStream { $0.finish(throwing: ImageLookingError.cannotLook) }
+        }
+        return looker.look(image: image, instructions: instructions, prompt: prompt)
     }
 }

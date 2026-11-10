@@ -649,3 +649,75 @@ cover is up (one RealityView). Source-scan tests
 (`VoiceModeFloorTests`, `WindowFieldTests`) pin the field. Verify-owed: the Simulator
 look, and the visionOS gradient under the full-bleed hero (Simulator can't be
 trusted for RealityView). Not touched: `OnboardingScreen` keeps its own floor (1.1).
+
+## Addendum — 2026-11-09: the look (#768)
+
+M1K3 on the iPhone can look at what the camera sees and answer about it, on the
+device. Two ways in:
+
+- **Chat:** an eye button beside the composer's ＋ opens `LookScreen`: a
+  full-screen viewfinder, a question field (empty asks "What am I looking at?")
+  and the answer streaming over the view. Each ask takes a fresh frame.
+- **Voice:** an eye toggle top-leading in `VoiceScreen`. Open, every voice turn
+  is a look at the newest frame, and a small preview shows what the camera sees.
+  Closed, a spoken ask that `LookIntent` recognises ("what am I looking at?")
+  takes one glance: the camera opens, one frame is taken, the camera closes.
+
+The route is the lean one the spike measured
+(`docs/evals/2026-11-09-vision-ttft-iphone/`): `ChatSession.look` hands the
+on-device brain `LookPrompt.instructions`, the question and the frame, and
+nothing else. No persona, no grounding, no history, and no responder, so no tool
+can run on a turn that carries a frame.
+
+Where the frame goes, and where it cannot:
+
+- `LookCamera` (`AVCaptureVideoDataOutput`, newest buffer only) hands back one
+  JPEG, long edge about 1,024 px. It writes nothing and sends nothing.
+- `AppCore+Look` stores that JPEG in the chat's attachment store, as the user
+  message's attachment, exactly like a photo attached from the library. It is
+  deleted with the conversation.
+- `AppCore.looker` is the local inference slot. Brain at Home and Private Cloud
+  Compute do not conform to `ImageLooking` (`LookEgressTests`), and the eye is
+  not offered while Brain at Home answers (`canLook` follows `imagesAccepted`).
+- A look is display-only. Both of its messages are `contextExcluded`, so its
+  question and answer are shown in the chat and replayed to nothing: not to a
+  later turn (which could call a tool, or be answered by Brain at Home or
+  Private Cloud Compute after a brain switch), not to the memory distiller, not
+  to the titler, and a rating on a look stores the verdict without the words.
+  The cost is real: a follow-up that is not itself a look starts without what
+  the look said.
+- A turn that asked for the camera and got no frame says so
+  (`ChatSession.lookMissed`) and stops there. It never becomes an ordinary
+  send, which could pick a tool for those words or answer as if it had seen.
+- The camera is on only while the newest open still stands
+  (`LookCameraLifecycle`, in M1K3Chat so the races are tested off the phone): a
+  close during the permission ask or the session start wins. It closes when
+  the Look screen or voice mode goes away, when the app leaves the foreground,
+  and when iOS interrupts the capture session (a call, another app). A frame
+  older than a second is refused, so a frozen view is never answered as "now".
+
+`NSCameraUsageDescription` on the iOS target now names both jobs (the pairing
+scan and the look) and says a frame asked about is saved with its chat. visionOS
+has no look (no camera access outside enterprise entitlements): `LookCamera`
+compiles to an inert stub there and `canLook` is false.
+
+Not covered here, and Kev's calls on #768: a typed follow-up after a look is an
+ordinary send, so its OWN words can still pick `web_search` (the look's words
+no longer ride with it); with the eye open a question that is not about the
+view is still answered as a look; voice mode hears the room, so an overheard
+"what am I looking at?" is a glance; a stored frame is in the device backup
+like any attached photo. English only for the spoken ask, and the matcher is
+tight on purpose (it misses about half of plainly worded asks on a blind set
+and opened the camera on none of 75 that did not ask).
+
+**Verify-owed:** the Look screen and the voice eye in Kev's hand (framing,
+orientation, the permission prompt, voice and camera running together, a call
+arriving while the eye is open), and the #768 heat and battery soak (ten
+minutes with camera, speech recognition and a brain all on) before a release
+tag.
+
+_Signed: Kev + claude-fable-5.2, 2026-11-09, Confidence 0.7 (the route, the
+display-only rule and the camera's lifecycle are tested; the iOS target builds;
+the camera and the two screens are compile-checked until they have run in the
+hand). Revised the same day, before the first push, after a code-quality and a
+security review of the branch._
