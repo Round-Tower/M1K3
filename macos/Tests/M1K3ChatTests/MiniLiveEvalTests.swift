@@ -183,6 +183,7 @@ struct MiniLiveEvalTests {
         let provider = switch evalEnvironment["M1K3_AFM_EVAL_PERSONA"] {
         case "full": AppleFoundationModelsProvider(instructions: { M1K3Persona.systemPrompt })
         case "lean": AppleFoundationModelsProvider(instructions: { Self.leanInstructions })
+        case "neutral": AppleFoundationModelsProvider(instructions: { "You are M1K3, a helpful assistant." })
         case "no-taught-decline": AppleFoundationModelsProvider(instructions: { Self.personaWithoutTaughtDecline })
         default: AppleFoundationModelsProvider()
         }
