@@ -2,7 +2,8 @@
 """Check the build about to be submitted is the one running on this Mac, then stamp it.
 
   verify_build.py --build N     installed /Applications/M1K3.app is build N, it is running,
-                                and its MCP server answers initialize with instructions.
+                                its MCP server answers initialize with instructions, and
+                                the process answering says it is build N.
                                 On a pass, writes the stamp `submit.py submit` requires.
 
 Why: on 2026-10-05 the Mac and iOS submissions were cancelled and resubmitted before
@@ -15,6 +16,9 @@ No third-party packages.
 
 Signed: Kev + claude-opus-5-5, 2026-10-05, Confidence 0.8, Prior: Unknown. The probe is
 the one that told build 442 (no instructions) from 453 (instructions) live on 2026-10-05.
+Review: Kev + claude-fable-5.2, 2026-11-11 (#491): the running app now names its build in
+`serverInfo.version`, and that is compared with N. The launch-time check stays only for an app
+too old to say (546 and earlier), and now fails closed. Confidence 0.8.
 """
 from __future__ import annotations
 
@@ -48,10 +52,22 @@ def parse_mcp_body(body: str) -> dict[str, Any]:
     return reply["result"]
 
 
+def running_build(server_info: dict[str, Any] | None) -> str | None:
+    """The build the RUNNING process says it is: `serverInfo.version` reads `1.4.0+546` since #491.
+    None for an older app (a static `0.1.0`) or anything that is not that shape."""
+    version = str((server_info or {}).get("version") or "")
+    _, plus, build = version.partition("+")
+    return build if plus and build.isdigit() else None
+
+
 def stale(process_started: float | None, bundle_modified: float | None) -> bool:
     """The running process predates the app on disk: a TestFlight update replaced the bundle,
-    but the old binary is still the one answering MCP (review on #490)."""
-    return process_started is not None and bundle_modified is not None and process_started < bundle_modified
+    but the old binary is still the one answering MCP (review on #490). Only for an app too old
+    to name its own build, and it fails CLOSED: a time that cannot be read is stale (#491).
+    Installers keep the build machine's mtime, so this can still pass a stale process."""
+    if process_started is None or bundle_modified is None:
+        return True
+    return process_started < bundle_modified
 
 
 def is_loopback(url: str) -> bool:
@@ -59,13 +75,15 @@ def is_loopback(url: str) -> bool:
 
 
 def problems(installed: str | None, expected: str, running: bool, instructions: str | None,
-             stale: bool = False) -> list[str]:
+             stale: bool = False, running_build: str | None = None) -> list[str]:
     found = []
     if installed != expected:
         found.append(f"installed build is {installed}, not {expected}: install {expected} from TestFlight")
     if not running:
         found.append("M1K3 is not running: launch it")
-    elif stale:
+    elif running_build is not None and running_build != expected:
+        found.append(f"the running M1K3 is build {running_build}, not {expected}: quit and relaunch it")
+    elif running_build is None and stale:
         found.append("M1K3 was launched before this build was installed: quit and relaunch it")
     elif not instructions:
         found.append("the MCP server answered without instructions")
@@ -137,19 +155,23 @@ def main() -> int:
     installed, pid = installed_build(), running_pid()
     running = pid is not None
     is_stale = running and stale(process_started(pid), bundle_modified())
-    instructions = None
+    instructions, answering = None, None
     if running:
         try:
-            instructions = mcp_initialize().get("instructions")
+            reply = mcp_initialize()
+            instructions, answering = reply.get("instructions"), running_build(reply.get("serverInfo"))
         except Exception as exc:  # noqa: BLE001 — any transport failure is a fail, reported plainly
             # The type, plus our own ValueError text (a JSON-RPC message, never a header).
             print(f"MCP initialize failed: {exc if isinstance(exc, ValueError) else type(exc).__name__}")
-    found = problems(installed, args.build, running, instructions, stale=is_stale)
-    print(f"installed {installed} · running {running} · instructions {len(instructions or '')} chars")
+    found = problems(installed, args.build, running, instructions, stale=is_stale, running_build=answering)
+    said = answering or "not named (older app: judged by launch time)"
+    print(f"installed {installed} · running {running} · answering build {said} · "
+          f"instructions {len(instructions or '')} chars")
     if found:
         print("FAIL\n  " + "\n  ".join(found))
         return 1
-    path = write_stamp(STAMP_DIR, args.build, {"installed": installed, "instructions_chars": len(instructions)})
+    path = write_stamp(STAMP_DIR, args.build, {"installed": installed, "answering_build": answering,
+                                               "instructions_chars": len(instructions)})
     print(f"PASS — stamped {path}")
     return 0
 
