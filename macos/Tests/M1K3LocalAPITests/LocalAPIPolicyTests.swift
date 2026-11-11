@@ -75,6 +75,8 @@ struct LocalAPIPolicyTests {
         #expect(LocalAPIError.modelNotFound("big-m1k3", available: ["mini-m1k3"]).status == 404)
         #expect(LocalAPIError.modelNotFound("x", available: []).code == "model_not_found")
         #expect(LocalAPIError.unauthorized.status == 401)
+        // The hint must lead to the key: the pane is "Server", the section "Local API".
+        #expect(LocalAPIError.unauthorized.message.contains("Settings ▸ Server ▸ Local API"))
         #expect(LocalAPIError.contextTooLong.code == "context_length_exceeded")
         #expect(LocalAPIError.contextTooLong.status == 400)
         #expect(LocalAPIError.refused.status == 400)

@@ -83,7 +83,7 @@ public struct LocalAPIError: Error, Sendable, Equatable {
 
     public static let unauthorized = LocalAPIError(
         status: 401, type: "invalid_request_error", code: "invalid_api_key",
-        message: "Send M1K3's Local API token as the API key (M1K3 ▸ Settings ▸ Local API)."
+        message: "Send M1K3's Local API key as the API key (M1K3 ▸ Settings ▸ Server ▸ Local API ▸ API key ▸ Copy)."
     )
 
     public static func forbidden(_ message: String) -> LocalAPIError {
