@@ -16,7 +16,8 @@
 //  Signed: Kev + claude-fable-5.2, 2026-11-11, Confidence 0.65, Prior: none (new file).
 //  The bind and read loop follow LocalMCPHTTPServer (2026-06-11), which has run
 //  in the app since; streaming writes follow Brain at Home's listener.
-//  Open: untried against a real client until the app wiring lands.
+//  Review: Kev + claude-fable-5.2, 2026-11-11 (night) — the Open is closed: the wiring landed (#801) and curl and
+//  the OpenAI Python SDK, whole and streamed, ran against this listener by launch. Confidence 0.75.
 //
 
 import Foundation

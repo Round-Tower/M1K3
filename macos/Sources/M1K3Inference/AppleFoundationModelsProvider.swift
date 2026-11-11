@@ -92,6 +92,10 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — a raw chat reports its token counts (`rawChatUsage`), taken from
 //  Apple's tokenizer after the answer (about 0.25 s, live). Before this Mini's usage read zero and the doc said Apple
 //  could not count, which was wrong. Confidence 0.8 (live test; the answer is counted as plain text, so close, not exact).
+//  Review: Kev + claude-fable-5.2, 2026-11-11 (night) — a raw chat cut at `max_tokens` now finishes `length`: Apple
+//  cuts silently, so the reason is read off the count, and the count drops the one wrapper token Apple adds (cut at
+//  8, 16 and 32 it read 9, 17 and 33, live). Before this a cut answer said `stop`. Confidence 0.8 (pure rule tested,
+//  the cut live); an answer that ends by itself on exactly the ceiling also reads `length`.
 import Foundation
 import M1K3LogCore
 import os
@@ -718,14 +722,16 @@ extension AppleFoundationModelsProvider: ToolCallingProvider {
 
 /// Mini behind the Local API: a fresh session whose instructions are the caller's system message and nothing
 /// of M1K3's. Earlier turns ride in the prompt as a labelled preamble (`RawChatPrompt.flattened`). Apple's
-/// snapshots are cumulative, so they are converted to deltas; Apple reports no stop reason, and the token counts
-/// are taken from its tokenizer once the answer is complete (`rawChatUsage`).
+/// snapshots are cumulative, so they are converted to deltas; Apple reports no stop reason, so `length` is read
+/// off the count (`rawChatFinishReason`), and the token counts are taken from its tokenizer once the answer is
+/// complete (`rawChatUsage`).
 /// A failure THROWS as a `RawChatFailure`.
 extension AppleFoundationModelsProvider: RawChatCompleting {
     public func completeRawChat(_ request: RawChatRequest) -> RawChatStream? {
         AsyncThrowingStream { continuation in
             let session = request.system.map { LanguageModelSession(instructions: $0) } ?? LanguageModelSession()
-            var options = GenerationOptions(maximumResponseTokens: Self.clampedRawResponseTokens(request.maxTokens))
+            let ceiling = Self.clampedRawResponseTokens(request.maxTokens)
+            var options = GenerationOptions(maximumResponseTokens: ceiling)
             if let temperature = request.temperature { options.temperature = min(max(0, temperature), 2) }
             let prompt = RawChatPrompt.flattened(request)
             let task = Task { [self, options] in
@@ -739,9 +745,10 @@ extension AppleFoundationModelsProvider: RawChatCompleting {
                     try Task.checkCancellation()
                     let usage = await Self.rawChatUsage(system: request.system, prompt: prompt, answer: sent)
                     try Task.checkCancellation() // a hang-up during the count ends as a cancel, not a finish
-                    continuation.yield(.finished(
-                        RawChatFinish(reason: .stop, promptTokens: usage?.prompt, completionTokens: usage?.completion)
-                    ))
+                    continuation.yield(.finished(RawChatFinish(
+                        reason: Self.rawChatFinishReason(completionTokens: usage?.completion, ceiling: ceiling),
+                        promptTokens: usage?.prompt, completionTokens: usage?.completion
+                    )))
                     continuation.finish()
                 } catch is CancellationError {
                     continuation.finish(throwing: CancellationError())
@@ -763,6 +770,17 @@ extension AppleFoundationModelsProvider {
     /// generation costs the first token seconds (see `logTokenBudget`). The answer is counted as plain
     /// text, so it is close, not exact. Nil when the system cannot count (before 26.4, or the daemon
     /// refuses): the caller then reports no usage instead of a guess.
+    /// What Apple's count adds to an answer counted as a prompt: an answer cut at a ceiling of 8, 16 and 32
+    /// counted 9, 17 and 33 (live, 2026-11-11).
+    static let rawChatAnswerWrapperTokens = 1
+
+    /// Apple cuts an answer at the ceiling silently and names no reason, so the reason is read off the count:
+    /// an answer that filled the ceiling was cut. With no count there is nothing to read, and it says `stop`.
+    static func rawChatFinishReason(completionTokens: Int?, ceiling: Int) -> RawChatFinish.Reason {
+        guard let completionTokens else { return .stop }
+        return completionTokens >= ceiling ? .length : .stop
+    }
+
     static func rawChatUsage(system: String?, prompt: String, answer: String) async -> (prompt: Int, completion: Int)? {
         guard #available(macOS 26.4, iOS 26.4, visionOS 26.4, *) else { return nil }
         do {
@@ -770,7 +788,7 @@ extension AppleFoundationModelsProvider {
             var asked = try await model.tokenCount(for: Prompt(prompt))
             if let system, !system.isEmpty { asked += try await model.tokenCount(for: Instructions(system)) }
             let answered = answer.isEmpty ? 0 : try await model.tokenCount(for: Prompt(answer))
-            return (asked, answered)
+            return (asked, max(0, answered - rawChatAnswerWrapperTokens))
         } catch {
             return nil
         }

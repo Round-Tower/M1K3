@@ -74,6 +74,10 @@ exact, and read zero on a system that cannot count. On any brain, `usage` reads
 zero when one of your `stop` sequences ends the answer: the call is cut there,
 before the count.
 
+`finish_reason` is `length` when an answer ran into `max_tokens` and `stop`
+otherwise. Apple's model names no reason, so Mini's is read off its token
+count: on a system that cannot count, a cut Mini answer says `stop`.
+
 Errors use OpenAI's shape: `{"error": {"message", "type", "code", "param"}}`.
 A conversation over 200,000 characters is refused with `400
 context_length_exceeded` before it reaches a brain, and Mini says the same when

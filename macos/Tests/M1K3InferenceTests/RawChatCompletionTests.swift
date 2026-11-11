@@ -130,6 +130,14 @@ struct RawChatCompletionTests {
         ) != nil)
     }
 
+    @Test("Mini's finish reason is read off the count: a filled ceiling is length, anything less or uncounted is stop")
+    func finishReasonFromCount() {
+        #expect(AppleFoundationModelsProvider.rawChatFinishReason(completionTokens: 16, ceiling: 16) == .length)
+        #expect(AppleFoundationModelsProvider.rawChatFinishReason(completionTokens: 17, ceiling: 16) == .length)
+        #expect(AppleFoundationModelsProvider.rawChatFinishReason(completionTokens: 15, ceiling: 16) == .stop)
+        #expect(AppleFoundationModelsProvider.rawChatFinishReason(completionTokens: nil, ceiling: 16) == .stop)
+    }
+
     @Test("the capability reaches the real backend through the façade, and a backend without it reads nil")
     func facadeForwards() async throws {
         let facade = SwappableInferenceProvider(ChatProvider())
@@ -194,6 +202,17 @@ struct RawChatLiveTests {
         let (_, finish) = try await run([.init(.user, "Say hi in five words.")])
         #expect((finish?.promptTokens ?? 0) > 0)
         #expect((finish?.completionTokens ?? 0) > 0)
+    }
+
+    @Test("Mini says length when the answer ran into the ceiling, and stop when it did not")
+    func ceilingIsReported() async throws {
+        let (cut, cutFinish) = try await run([.init(.user, "Write a 300-word story about a lighthouse.")], maxTokens: 16)
+        print("RAWCHAT-LIVE ceiling: \(cut.debugDescription) finish=\(String(describing: cutFinish))")
+        #expect(cutFinish?.reason == .length)
+        #expect(cutFinish?.completionTokens == 16)
+        let (short, shortFinish) = try await run([.init(.user, "Reply with the single word: yes")], maxTokens: 60)
+        print("RAWCHAT-LIVE under: \(short.debugDescription) finish=\(String(describing: shortFinish))")
+        #expect(shortFinish?.reason == .stop)
     }
 
     @Test("Mini reads the earlier turns")
