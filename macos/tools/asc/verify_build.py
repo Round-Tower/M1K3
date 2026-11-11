@@ -170,6 +170,9 @@ def main() -> int:
     if found:
         print("FAIL\n  " + "\n  ".join(found))
         return 1
+    if answering is None:
+        print("NOTE: this app does not name its build (546 and earlier), so the check fell back to launch time,\n"
+              "      which can pass a process from the old build. Quit and relaunch M1K3 yourself before trusting it.")
     path = write_stamp(STAMP_DIR, args.build, {"installed": installed, "answering_build": answering,
                                                "instructions_chars": len(instructions)})
     print(f"PASS — stamped {path}")
