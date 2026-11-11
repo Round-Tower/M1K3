@@ -28,7 +28,7 @@ def test_rows_are_newest_first_and_carry_kind_platform_device_and_os():
     assert [r["id"] for r in rows] == ["c1", "s1"]
     assert rows[0] == {"id": "c1", "kind": "crash", "at": "2026-11-12T10:00:00Z", "platform": "MAC_OS",
                        "device": "Mac14,6", "os": "27.0", "comment": "", "email": "other@example.com",
-                       "screenshots": 0}
+                       "screenshots": 0, "screenshot_images": []}
     assert rows[1]["kind"] == "screenshot" and rows[1]["screenshots"] == 1
 
 
@@ -75,3 +75,52 @@ def test_an_item_returned_under_both_platform_builds_is_listed_once():
     twin = ("b-mac", CRASH[1])
     again = ("b-ios", CRASH[1])
     assert [r["id"] for r in f.rows([twin, again], BUILDS)] == ["c1"]
+
+
+def test_a_testers_escape_sequences_never_reach_the_terminal():
+    nasty = submission("betaFeedbackScreenshotSubmissions", "s2", "b-ios", createdDate="2026-11-12T09:00:00Z",
+                       comment="hello\x1b]0;owned\x07 there\x1b[2J", appPlatform="IOS")
+    shown = f.line(f.rows([nasty], BUILDS)[0], show_text=True)
+    assert "\x1b" not in shown and "\x07" not in shown and "hello" in shown and "there" in shown
+
+
+def test_the_signed_screenshot_links_are_saved_and_never_printed(tmp_path):
+    rows = f.rows([SHOT], BUILDS)
+    assert "example.com" not in f.line(rows[0], show_text=True)
+    saved = json.loads(f.save(tmp_path, "546", rows, {}).read_text())
+    assert saved["items"][0]["screenshot_images"][0]["url"].startswith("https://example.com/a.png")
+
+
+def test_a_later_run_without_logs_keeps_the_logs_already_fetched(tmp_path):
+    rows = f.rows([CRASH], BUILDS)
+    f.save(tmp_path, "546", rows, {"c1": "Thread 0 crashed"})
+    again = json.loads(f.save(tmp_path, "546", rows, {}).read_text())
+    assert again["items"][0]["crash_log"] == "Thread 0 crashed"
+
+
+def run_main(monkeypatch, tmp_path, argv, found):
+    monkeypatch.setattr(f, "OUT_DIR", tmp_path / "out")
+    monkeypatch.setattr(f, "build_ids", lambda build: dict(BUILDS))
+    monkeypatch.setattr(f, "submissions", lambda kind, ids: found if "Screenshot" in kind else [])
+    monkeypatch.setattr("sys.argv", ["feedback.py", *argv])
+    return f.main()
+
+
+def test_main_prints_no_email_and_no_words_unless_asked(monkeypatch, tmp_path, capsys):
+    assert run_main(monkeypatch, tmp_path, ["list", "--build", "546"], [SHOT]) == 0
+    quiet = capsys.readouterr().out
+    assert "tester@example.com" not in quiet and "eye button" not in quiet and "SECRET" not in quiet
+    assert (tmp_path / "out" / "build-546.json").exists()
+    assert run_main(monkeypatch, tmp_path, ["list", "--build", "546", "--text"], [SHOT]) == 0
+    loud = capsys.readouterr().out
+    assert "eye button" in loud and "tester@example.com" not in loud and "SECRET" not in loud
+
+
+def test_main_writes_nothing_when_there_is_no_feedback(monkeypatch, tmp_path, capsys):
+    assert run_main(monkeypatch, tmp_path, ["list", "--build", "546"], []) == 0
+    assert "no feedback" in capsys.readouterr().out
+    assert not (tmp_path / "out").exists()
+
+
+def test_main_refuses_a_build_that_is_not_a_number(monkeypatch, tmp_path, capsys):
+    assert run_main(monkeypatch, tmp_path, ["list", "--build", "../546"], []) == 2

@@ -25,7 +25,8 @@ endpoint and attribute names are Apple's, read from the API reference on 2026-11
 
 Signed: Kev + claude-fable-5.2, 2026-11-11, Confidence 0.7, Prior: none (new file).
 Format: MurphySig v0.4 (https://murphysig.dev/spec).
-Open: the screenshot image fields (url, width, height) are saved as Apple sends them, unread.
+Open: the screenshot image entries are saved as Apple sends them; no build has had screenshot
+  feedback yet, so their fields are unread.
   Crashes on the live store build are not here: those stay in Xcode's Organizer.
 """
 from __future__ import annotations
@@ -64,6 +65,8 @@ def rows(found: list[tuple[str, dict[str, Any]]], builds: dict[str, str]) -> lis
             "platform": a.get("appPlatform") or builds[build], "device": a.get("deviceModel") or "?",
             "os": a.get("osVersion") or "?", "comment": a.get("comment") or "", "email": a.get("email") or "",
             "screenshots": len(a.get("screenshots") or []),
+            # Signed, expiring links: saved in the record, never printed.
+            "screenshot_images": a.get("screenshots") or [],
         })
     return sorted(out, key=lambda r: r["at"], reverse=True)
 
@@ -71,7 +74,8 @@ def rows(found: list[tuple[str, dict[str, Any]]], builds: dict[str, str]) -> lis
 def line(row: dict[str, Any], show_text: bool) -> str:
     """The terminal line: never an email; the comment's words only when asked for."""
     head = f"{row['at'][:16].replace('T', ' ')}  {row['kind']:<10} {row['platform']:<7} {row['device']} · {row['os']}"
-    comment = " ".join(row["comment"].split())
+    # A tester's words reach a terminal: printable characters only (no escape sequences), on one line.
+    comment = " ".join("".join(ch if ch.isprintable() else " " for ch in row["comment"]).split())
     if not comment:
         return head
     return f"{head}\n    {comment}" if show_text else f"{head}  (comment: {len(comment)} chars)"
@@ -87,8 +91,14 @@ def summary(found: list[dict[str, Any]]) -> str:
 
 def save(out_dir: Path, build: str, found: list[dict[str, Any]], logs: dict[str, str]) -> Path:
     """The full record, for the person at this Mac only (0600), outside the checkout."""
-    out_dir.mkdir(parents=True, exist_ok=True)
+    out_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
     path = out_dir / f"build-{build}.json"
+    # A run without --logs keeps the logs an earlier run fetched.
+    try:
+        kept = {i["id"]: i["crash_log"] for i in json.loads(path.read_text()).get("items", []) if "crash_log" in i}
+    except (OSError, ValueError, KeyError, TypeError):
+        kept = {}
+    logs = {**kept, **logs}
     items = [{**row, **({"crash_log": logs[row["id"]]} if row["id"] in logs else {})} for row in found]
     path.touch(mode=0o600, exist_ok=True)
     path.chmod(0o600)
@@ -109,8 +119,11 @@ def build_ids(build: str) -> dict[str, str]:
         raise SystemExit(f"reading build {build} failed: {resp['_error']}")
     platform = {i["id"]: i["attributes"]["platform"] for i in resp.get("included", [])
                 if i["type"] == "preReleaseVersions"}
-    return {b["id"]: platform.get(b["relationships"]["preReleaseVersion"]["data"]["id"], "?")
-            for b in resp["data"]}
+    def platform_of(build: dict[str, Any]) -> str:
+        version = ((build.get("relationships") or {}).get("preReleaseVersion") or {}).get("data") or {}
+        return platform.get(version.get("id"), "?")
+
+    return {b["id"]: platform_of(b) for b in resp["data"]}
 
 
 def submissions(kind: str, ids: list[str]) -> list[tuple[str, dict[str, Any]]]:
@@ -134,13 +147,21 @@ def main() -> int:
     ls.add_argument("--text", action="store_true", help="print each comment in the terminal")
     ls.add_argument("--logs", action="store_true", help="fetch each crash log into the saved record")
     args = ap.parse_args()
+    if not args.build.isascii() or not args.build.isdigit():
+        print("--build is a build number, like 546")
+        return 2
     builds = build_ids(args.build)
     if not builds:
         print(f"no build {args.build} on the record")
         return 1
     ids = sorted(builds)
-    found = rows(submissions("betaFeedbackScreenshotSubmissions", ids)
-                 + submissions("betaFeedbackCrashSubmissions", ids), builds)
+    try:
+        found = rows(submissions("betaFeedbackScreenshotSubmissions", ids)
+                     + submissions("betaFeedbackCrashSubmissions", ids), builds)
+    except RuntimeError as exc:
+        # The status only: an error body is not ours to print.
+        print(f"reading feedback failed: {str(exc).split(':')[0]}")
+        return 1
     print(f"build {args.build} ({', '.join(sorted(builds.values()))}): {summary(found)}")
     for row in found:
         print(line(row, show_text=args.text))
