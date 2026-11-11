@@ -53,6 +53,13 @@ beyond what's called out under "Local modifications" below.
 - `KittenTTS/*` — a different (non-Kokoro) TTS architecture bundled in the
   same upstream directory.
 
+## Local modification, 2026-11-11: guarded reads
+
+`KokoroModel.callAsFunction` now `throws`, and its one mid-pass read
+(`predDur.asArray`) goes through `KokoroGuardedRead.values` (a sibling,
+non-vendored file). An MLX failure there used to be a `fatalError`; a tester's
+1.3.0 crash showed it happening with the app in the background. No maths changed.
+
 ## Local modifications to `KokoroModel.swift`
 
 The upstream file is a `SpeechGenerationModel` conforming to mlx-audio-swift's

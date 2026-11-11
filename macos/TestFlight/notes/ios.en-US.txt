@@ -11,6 +11,7 @@ New in this build, please try:
 • Delete a chat that has a look in it: the picture should go with it
 • The title on the chat screen names who is answering, like "LIL M1K3"
 • Ask Mini an ordinary coding question ("write a function that reverses a string"): the answer should be code, with no line about not sharing its wiring
+• While M1K3 is speaking a long answer, lock the phone or switch to another app, then come back. Do it a few times. It should never crash, and it should speak again when you return. An earlier build could crash here
 
 And the basics:
 • Voice mode, a few turns in a row

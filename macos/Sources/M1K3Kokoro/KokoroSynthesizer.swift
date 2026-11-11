@@ -39,6 +39,10 @@
 //  xrOS slice). Confidence 0.75 (the pure/testable seams — token assembly,
 //  weight-key sanitize — are red-first pinned; live synthesis is
 //  verify-by-launch/SelfTest, the metallib wall blocks it under `swift test`).
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — `infer` runs inside MLX's error scope and reads through
+//  `KokoroGuardedRead`: a GPU failure throws and ends the stream, where it trapped (a tester's crash on
+//  1.3.0 (544) with the app in the background). Confidence 0.7: the guard is proven by launch with a forced MLX
+//  error (SelfTest); the background case itself is not reproduced.
 //
 
 import Foundation
@@ -281,9 +285,13 @@ public actor KokoroSynthesizer {
 
     /// Pure MLX forward pass on the loaded model. Runs off-actor (see `synthesize`).
     private static func infer(_ box: Loaded, tokens: [Int32], style: [Float], speed: Float) throws -> [Float] {
-        let inputIds = MLXArray(tokens).reshaped([1, -1])
-        let refS = MLXArray(style).reshaped([1, style.count])
-        let (audio, _) = box.model(inputIds: inputIds, refS: refS, speed: speed)
-        return audio.reshaped([-1]).asArray(Float.self)
+        // Inside MLX's error scope: a GPU failure (iOS refuses GPU work in the background) throws and
+        // ends the speech stream, where it used to trap (KokoroGuardedRead).
+        try KokoroGuardedRead.scope {
+            let inputIds = MLXArray(tokens).reshaped([1, -1])
+            let refS = MLXArray(style).reshaped([1, style.count])
+            let (audio, _) = try box.model(inputIds: inputIds, refS: refS, speed: speed)
+            return try KokoroGuardedRead.values(audio.reshaped([-1]), as: Float.self)
+        }
     }
 }
