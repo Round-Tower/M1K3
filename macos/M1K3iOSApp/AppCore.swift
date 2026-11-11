@@ -154,6 +154,8 @@
 //  Kev's phone after a reinstall (the files were there; the saved absolute paths were not). Confidence 0.8.
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — `stopForBackground`: an on-device answer in flight is stopped at the
 //  background exit so the shed really frees the brain (BackgroundExitPolicy). Confidence 0.8.
+//  Review fold: the shed keeps a weak hold, and the return takes a still-loaded brain back instead of loading again,
+//  whoever kept it (a turn cut before its first token, a title, a distillation).
 
 import AVFoundation
 #if os(iOS)
@@ -300,6 +302,10 @@ final class AppCore {
     )
     private let afm = AppleFoundationModelsProvider()
     private var currentMLX: MLXBrainProvider?
+    /// The brain the background shed let go of, held WEAKLY: still there on the return means something kept it
+    /// loaded (a turn that had not unwound, a title or a distillation in flight), so the return takes it back
+    /// instead of loading a second copy (`BackgroundExitPolicy.onReturn`).
+    @ObservationIgnored private weak var shedMLX: MLXBrainProvider?
     private var warmTask: Task<Void, Never>?
     /// Monotonic token: a late-arriving warm progress hop only applies if it still
     /// matches the current generation, so a brain switch mid-warm can't be clobbered
@@ -1221,6 +1227,7 @@ final class AppCore {
         warmTask?.cancel()
         warmGeneration += 1 // invalidate any in-flight warm's progress hops
         currentMLX?.releaseMemory()
+        shedMLX = currentMLX
         currentMLX = nil
         activeProvider.setProvider(afm)
         brainLoad = .idle
@@ -1243,6 +1250,14 @@ final class AppCore {
         // every app-switch. Leave the slot on Home.
         guard !homeBrainActive else { return }
         guard selectedBrain.mlxModelID != nil, currentMLX == nil, brainLoad == .idle else { return }
+        // Whoever still holds the shed brain kept its weights in memory. Loading again beside it got the app
+        // killed in front (two copies of Lil). Take the same one back: the warm below reuses `currentMLX`.
+        let stillLoaded = shedMLX.flatMap { $0.modelIdentifier == selectedBrain.mlxModelID ? $0 : nil }
+        if BackgroundExitPolicy.onReturn(shedBrainStillLoaded: stillLoaded != nil) == .takeItBack {
+            currentMLX = stillLoaded
+            Self.log.notice("the shed brain was still loaded on the return: taking it back, not loading a second")
+        }
+        shedMLX = nil
         warmSelectedBrain()
     }
 
@@ -1303,8 +1318,6 @@ final class AppCore {
 
     // MARK: - Send (drives the avatar around ChatSession's streaming send)
 
-    /// The Send button's Stop face: cut the streaming answer short. `send`
-    /// returns normally afterwards and settles the avatar itself.
     /// The app is leaving for the background: the speech stops (there is no background audio), and an answer
     /// being made on a brain loaded on this device stops too (`BackgroundExitPolicy`), before the shed.
     func stopForBackground() {
@@ -1315,6 +1328,8 @@ final class AppCore {
         }
     }
 
+    /// The Send button's Stop face: cut the streaming answer short. `send`
+    /// returns normally afterwards and settles the avatar itself.
     func stopResponding() {
         // Also the voice: an auto-spoken answer keeps talking after the text is done.
         cancelAutoSpeak()
