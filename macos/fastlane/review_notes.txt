@@ -6,15 +6,18 @@ FIRST LAUNCH:
   Mac: on most Macs, uses Apple Intelligence (instant, no download).
   iPhone/iPad: the same. Apple Intelligence where available (instant, no download); Lil (~3 GB, 8 GB devices) downloads only when chosen, on first use. After that, fully offline.
   Without Apple Intelligence on any platform, downloads a local model (~630 MB–3 GB).
-  Lil (the downloaded 4B brain) accepts image attachments: the paperclip in chat takes an image file (on iPhone/iPad, from the Files app), read on-device.
+  Images are read on-device: the paperclip takes an image file or photo.
 
-SEASONAL LOOKS (iPhone/iPad in-app events; opt-out: Settings > Face > Seasonal looks; Mac: Settings > M1K3 > Companion > Seasonal looks). Halloween, Oct 24 to Nov 1 on the device's calendar: pumpkin glow and a costume greeting (m1k3://event/halloween). Offline AI Flight Club (m1k3://event/offline-ai-flight-club), Nov 3 to Dec 1 on the device's calendar AND only while the device has no network: the fox's lattice turns runway blue at rest (amber while speaking, white while thinking, green while listening) and the chat greeting reads "Offline? I'm still right here, on your device." Back online, both go away. Airplane Mode alone shows nothing before Nov 3, because the date gates it too. To see it now: Settings > General > Date & Time, turn off Set Automatically, pick 15 Nov 2026; turn on Airplane Mode and leave Wi-Fi off; relaunch M1K3. Answering offline needs an on-device brain (Apple Intelligence, or Lil once downloaded); with neither, the look and the greeting still show. The app only asks the system whether a network path exists; nothing is sent.
+CAMERA (iPhone/iPad): scans the Brain at Home pairing code, and "Look" (the eye at the top of a chat, or in voice mode) answers about what the camera sees. Read on-device, never sent; the frame is saved with that chat on the device only.
+
+SEASONAL LOOKS (iPhone/iPad in-app events; opt-out: Settings > Face > Seasonal looks; Mac: Settings > M1K3 > Companion > Seasonal looks). Offline AI Flight Club (m1k3://event/offline-ai-flight-club), Nov 3 to Dec 1 on the device's calendar AND only while the device has no network: the fox's lattice turns runway blue at rest (amber while speaking, white while thinking, green while listening) and the chat greeting reads "Offline? I'm still right here, on your device." Back online, both go away. To see it: turn on Airplane Mode, leave Wi-Fi off, relaunch M1K3. Answering offline needs an on-device brain (Apple Intelligence, or Lil once downloaded); with neither, the look and the greeting still show. The app only asks the system whether a network path exists; nothing is sent.
 
 OUTBOUND (network.client): model download + web search (ON by default so answers can be current; one switch turns it off: Settings > Privacy > Web search (DuckDuckGo)). No analytics, tracking, or telemetry.
 
-INBOUND (network.server): two features, both OFF by default, each with its own pane in Settings (MCP Server, Brain at Home):
-  1. MCP server — loopback only (127.0.0.1:4242), needs an access token, lets AI coding agents call M1K3's tools. Verify: Settings > MCP Server > Access token > Copy; then run /Applications/M1K3.app/Contents/Helpers/m1k3 login (paste it), then .../m1k3 status
-  2. Brain at Home — LAN service for QR-paired iPhone/iPad only. TLS-PSK, private interfaces. Verify: dns-sd -B _m1k3._tcp
+INBOUND (network.server): three features, all OFF by default, in Settings (Server, Brain at Home):
+  1. MCP server — loopback only (127.0.0.1:4242), needs an access token, lets AI coding agents call M1K3's tools. Verify: Settings > Server > Access token > Copy; then run /Applications/M1K3.app/Contents/Helpers/m1k3 login (paste it), then .../m1k3 status
+  2. Local API (Mac) — loopback only (127.0.0.1:4141), its own key; other apps on this Mac use the loaded model in the OpenAI format. Verify: Settings > Server > Local API > on, Copy the key; curl -H "Authorization: Bearer KEY" http://127.0.0.1:4141/v1/models
+  3. Brain at Home — LAN service for QR-paired iPhone/iPad only. TLS-PSK, private interfaces. Verify: dns-sd -B _m1k3._tcp
 The helper (Contents/Helpers/m1k3) is a client only; no server entitlement.
 
 CONTENT CONTROLS (DeclaredAgeRange): uses Apple's Declared Age Range API (gates 13/16/18). Under 16: web tools removed from the agent palette (code gate). All minors: age-appropriate tone. Declining = full capability. Only a coarse band enum is persisted.
@@ -33,8 +36,6 @@ HOW TO TEST:
   2. Chat, then voice mode
   3. Drag in a note/PDF and ask about it
   4. Memories > "forget" an item
-  5. Content Controls:
-     Mac: Settings > Privacy tab > Content Controls > "Set up"
-     iPhone/iPad: Settings > Content Controls > "Set up"
+  5. Content Controls (paths above)
 
 Happy to clarify anything — thank you.

@@ -19,5 +19,6 @@ BUILT FOR YOUR MACHINE
 • Optimized for Apple Silicon (Metal/MLX).
 • Multiple model tiers so I run well from MacBook Air to Mac Studio.
 • A command-line client (m1k3) and a local tool server with 18 tools, so your coding agents — Claude, Cursor, VS Code, Codex, Zed — can use my knowledge and voice.
+• A local server for your other apps: switch on the Local API and any tool that speaks the OpenAI API can use the brain you have loaded. This Mac only, off by default, with its own key.
 
 Punk intelligence: yours, private, on your terms.
