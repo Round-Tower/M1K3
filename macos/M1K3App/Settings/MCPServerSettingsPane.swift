@@ -15,6 +15,8 @@
 //
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — the Local API section (switch, status, base URL, the ready model, its
 //  own API key with Copy and New Key). Kev: "the server. Swiss army Mike!" Confidence 0.6 (untried on screen).
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — Kev tried it by hand (switch, key, a curl call answered by Big) and
+//  retitled the pane "Server". The file and type keep their names.
 
 import AppKit // NSPasteboard — the Copy buttons
 import M1K3CLICore // ConnectPlan / MCPClient / MCPEndpoint — one source for the snippets

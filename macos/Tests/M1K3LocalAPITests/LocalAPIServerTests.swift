@@ -18,7 +18,7 @@ import Testing
 struct LocalAPIServerTests {
     private static func backend() -> LocalAPIBackend {
         LocalAPIBackend(
-            models: { ["m1k3-mini"] },
+            models: { ["mini-m1k3"] },
             userBusy: { false },
             complete: { _, request in
                 AsyncThrowingStream { continuation in
@@ -69,9 +69,9 @@ struct LocalAPIServerTests {
         defer { Task { await server.stop() } }
 
         let (listStatus, list) = try await call(server, "GET", "/v1/models")
-        #expect(listStatus == 200 && list.contains("\"m1k3-mini\""))
+        #expect(listStatus == 200 && list.contains("\"mini-m1k3\""))
 
-        let chat: [String: Any] = ["model": "m1k3-mini", "messages": [["role": "user", "content": "ping"]]]
+        let chat: [String: Any] = ["model": "mini-m1k3", "messages": [["role": "user", "content": "ping"]]]
         let (status, body) = try await call(server, "POST", "/v1/chat/completions", json: chat)
         #expect(status == 200)
         #expect(body.contains("\"content\":\"You said: ping\"") && body.contains("\"total_tokens\":7"))

@@ -2,12 +2,12 @@
 
 M1K3 can lend the brain it has loaded to other apps on the same Mac, through the
 wire shape OpenAI clients already speak. It is **off by default**: turn it on in
-**Settings ▸ MCP Server ▸ Local API**.
+**Settings ▸ Server ▸ Local API**.
 
 ```
 Base URL   http://127.0.0.1:4141/v1
-API key    Settings ▸ MCP Server ▸ Local API ▸ API key ▸ Copy
-Model      m1k3-mini, m1k3-lil or m1k3-big: whichever brain M1K3 has ready
+API key    Settings ▸ Server ▸ Local API ▸ API key ▸ Copy
+Model      mini-m1k3, lil-m1k3 or big-m1k3: whichever brain M1K3 has ready
 ```
 
 ```python
@@ -25,7 +25,7 @@ print(reply.choices[0].message.content)
 ```sh
 curl http://127.0.0.1:4141/v1/chat/completions \
   -H "Authorization: Bearer $M1K3_API_KEY" -H "Content-Type: application/json" \
-  -d '{"model":"m1k3-lil","stream":true,"messages":[{"role":"user","content":"Hello"}]}'
+  -d '{"model":"lil-m1k3","stream":true,"messages":[{"role":"user","content":"Hello"}]}'
 ```
 
 ## What a caller gets

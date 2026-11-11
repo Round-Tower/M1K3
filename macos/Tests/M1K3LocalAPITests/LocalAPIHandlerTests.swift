@@ -30,7 +30,7 @@ private final class FakeBrain: @unchecked Sendable {
 
     var backend: LocalAPIBackend {
         LocalAPIBackend(
-            models: { ["m1k3-mini", "m1k3-lil"] },
+            models: { ["mini-m1k3", "lil-m1k3"] },
             userBusy: { self.userBusy },
             complete: { model, request in
                 self.lock.withLock { self.asked.append((model, request)) }
@@ -72,7 +72,7 @@ struct LocalAPIHandlerTests {
         return LocalAPIRequest(method: method, path: path, headers: headers, body: data)
     }
 
-    private func chat(_ extra: [String: Any] = [:], model: String = "m1k3-lil") -> [String: Any] {
+    private func chat(_ extra: [String: Any] = [:], model: String = "lil-m1k3") -> [String: Any] {
         var body: [String: Any] = ["model": model, "messages": [["role": "user", "content": "Hi"]]]
         body.merge(extra) { _, new in new }
         return body
@@ -98,7 +98,7 @@ struct LocalAPIHandlerTests {
         let reply = await text(handler.reply(to: request("GET", "/v1/models")))
         #expect(reply.hasPrefix("HTTP/1.1 200 OK"))
         let ids = try (#require(bodyJSON(reply)["data"] as? [[String: Any]])).map { $0["id"] as? String }
-        #expect(ids == ["m1k3-mini", "m1k3-lil"])
+        #expect(ids == ["mini-m1k3", "lil-m1k3"])
         #expect(await text(handler.reply(to: request("GET", "/v1/models", auth: nil))).hasPrefix("HTTP/1.1 401"))
         #expect(await text(handler.reply(to: request("GET", "/v1/models", origin: "https://evil.example"))).hasPrefix("HTTP/1.1 403"))
     }
@@ -113,7 +113,7 @@ struct LocalAPIHandlerTests {
         let choice = try #require((object["choices"] as? [[String: Any]])?.first)
         #expect((choice["message"] as? [String: Any])?["content"] as? String == "Hello")
         #expect((object["usage"] as? [String: Any])?["total_tokens"] as? Int == 6)
-        #expect(brain.calls.map(\.0) == ["m1k3-lil"])
+        #expect(brain.calls.map(\.0) == ["lil-m1k3"])
         #expect(brain.calls.first?.1.maxTokens == 9)
     }
 
@@ -149,7 +149,7 @@ struct LocalAPIHandlerTests {
         func status(_ request: LocalAPIRequest) async -> String {
             String(await text(handler.reply(to: request)).prefix(12))
         }
-        #expect(await status(request("POST", "/v1/chat/completions", body: chat(model: "m1k3-big"))) == "HTTP/1.1 404")
+        #expect(await status(request("POST", "/v1/chat/completions", body: chat(model: "big-m1k3"))) == "HTTP/1.1 404")
         #expect(await status(request("POST", "/v1/chat/completions", body: chat(["tools": [["type": "function"]]]))) == "HTTP/1.1 400")
         #expect(await status(request("POST", "/v1/embeddings", body: [:])) == "HTTP/1.1 404")
         #expect(await status(request("OPTIONS", "/v1/chat/completions")) == "HTTP/1.1 403")

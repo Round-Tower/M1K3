@@ -72,7 +72,7 @@ struct LocalAPIPolicyTests {
         let error = try #require(object["error"] as? [String: Any])
         #expect(error["type"] as? String == "rate_limit_error")
         #expect((error["message"] as? String)?.isEmpty == false)
-        #expect(LocalAPIError.modelNotFound("m1k3-big", available: ["m1k3-mini"]).status == 404)
+        #expect(LocalAPIError.modelNotFound("big-m1k3", available: ["mini-m1k3"]).status == 404)
         #expect(LocalAPIError.modelNotFound("x", available: []).code == "model_not_found")
         #expect(LocalAPIError.unauthorized.status == 401)
         #expect(LocalAPIError.contextTooLong.code == "context_length_exceeded")
@@ -93,14 +93,14 @@ struct LocalAPIPolicyTests {
     @Test("a plain chat request parses, with content as a string or as text parts")
     func parsesChat() throws {
         let call = try ChatCompletionCall.parse(body([
-            "model": "m1k3-lil", "stream": true, "max_tokens": 64, "temperature": 0.2, "stop": ["END"],
+            "model": "lil-m1k3", "stream": true, "max_tokens": 64, "temperature": 0.2, "stop": ["END"],
             "stream_options": ["include_usage": true],
             "messages": [
                 ["role": "system", "content": "Be brief."],
                 ["role": "user", "content": [["type": "text", "text": "Hello"], ["type": "text", "text": " there"]]],
             ],
         ])).get()
-        #expect(call.model == "m1k3-lil")
+        #expect(call.model == "lil-m1k3")
         #expect(call.stream && call.includeUsage)
         #expect(call.stop == ["END"])
         #expect(call.request.system == "Be brief.")
@@ -109,7 +109,7 @@ struct LocalAPIPolicyTests {
         #expect(call.request.temperature == 0.2)
 
         let plain = try ChatCompletionCall.parse(body([
-            "model": "m1k3-mini", "max_completion_tokens": 12, "stop": "X", "user": "ignored", "seed": 1,
+            "model": "mini-m1k3", "max_completion_tokens": 12, "stop": "X", "user": "ignored", "seed": 1,
             "messages": [["role": "developer", "content": "Rules."], ["role": "user", "content": "Hi"]],
         ])).get()
         #expect(!plain.stream && !plain.includeUsage)
@@ -130,16 +130,16 @@ struct LocalAPIPolicyTests {
         }
         let hi: [[String: Any]] = [["role": "user", "content": "Hi"]]
         #expect(try failure(["messages": hi]).param == "model")
-        #expect(try failure(["model": "m1k3-lil"]).param == "messages")
-        #expect(try failure(["model": "m1k3-lil", "messages": hi, "tools": [["type": "function"]]]).param == "tools")
-        #expect(try failure(["model": "m1k3-lil", "messages": hi, "n": 2]).param == "n")
-        #expect(try failure(["model": "m1k3-lil", "messages": hi, "response_format": ["type": "json_schema"]]).param
+        #expect(try failure(["model": "lil-m1k3"]).param == "messages")
+        #expect(try failure(["model": "lil-m1k3", "messages": hi, "tools": [["type": "function"]]]).param == "tools")
+        #expect(try failure(["model": "lil-m1k3", "messages": hi, "n": 2]).param == "n")
+        #expect(try failure(["model": "lil-m1k3", "messages": hi, "response_format": ["type": "json_schema"]]).param
             == "response_format")
         let image: [[String: Any]] = [["role": "user", "content": [["type": "image_url", "image_url": ["url": "x"]]]]]
-        #expect(try failure(["model": "m1k3-lil", "messages": image]).param == "messages")
+        #expect(try failure(["model": "lil-m1k3", "messages": image]).param == "messages")
         let toolTurn: [[String: Any]] = [["role": "tool", "content": "x"], ["role": "user", "content": "Hi"]]
-        #expect(try failure(["model": "m1k3-lil", "messages": toolTurn]).param == "messages")
-        #expect(try failure(["model": "m1k3-lil", "messages": [["role": "assistant", "content": "Hi"]]]).status == 400)
+        #expect(try failure(["model": "lil-m1k3", "messages": toolTurn]).param == "messages")
+        #expect(try failure(["model": "lil-m1k3", "messages": [["role": "assistant", "content": "Hi"]]]).status == 400)
         #expect(ChatCompletionCall.parse(Data("not json".utf8)).isFailure)
         #expect(ChatCompletionCall.parse(nil).isFailure)
         // n = 1 and an empty tools list are what careful clients send by default.
@@ -186,7 +186,7 @@ struct LocalAPIPolicyTests {
     @Test("a conversation far past any brain's window is refused before it reaches one")
     func oversizeConversation() throws {
         let huge = String(repeating: "word ", count: ChatCompletionCall.maxConversationCharacters / 5 + 1)
-        let result = try ChatCompletionCall.parse(body(["model": "m1k3-lil", "messages": [["role": "user", "content": huge]]]))
+        let result = try ChatCompletionCall.parse(body(["model": "lil-m1k3", "messages": [["role": "user", "content": huge]]]))
         guard case let .failure(error) = result else {
             Issue.record("an oversize conversation parsed")
             return
@@ -200,27 +200,27 @@ struct LocalAPIPolicyTests {
 
     @Test("the list is M1K3's evaluated brains that can answer now, and nothing else")
     func models() throws {
-        let object = try json(LocalAPIWire.modelsBody(ids: ["m1k3-mini", "m1k3-lil"], created: 1))
+        let object = try json(LocalAPIWire.modelsBody(ids: ["mini-m1k3", "lil-m1k3"], created: 1))
         #expect(object["object"] as? String == "list")
         let data = try #require(object["data"] as? [[String: Any]])
-        #expect(data.map { $0["id"] as? String } == ["m1k3-mini", "m1k3-lil"])
+        #expect(data.map { $0["id"] as? String } == ["mini-m1k3", "lil-m1k3"])
         #expect(data.allSatisfy { $0["object"] as? String == "model" && $0["owned_by"] as? String == "m1k3" })
-        #expect(LocalAPIModel.id(forTier: "lil") == "m1k3-lil")
+        #expect(LocalAPIModel.id(forTier: "lil") == "lil-m1k3")
     }
 
     @Test("the person at the Mac goes first, one API call at a time, and a brain that is not loaded is not found")
     func admission() {
         func decide(_ model: String, userBusy: Bool = false, apiBusy: Bool = false) -> Int? {
             LocalAPIAdmission.decide(
-                requested: model, available: ["m1k3-mini", "m1k3-lil"], userBusy: userBusy, apiBusy: apiBusy
+                requested: model, available: ["mini-m1k3", "lil-m1k3"], userBusy: userBusy, apiBusy: apiBusy
             )?.status
         }
-        #expect(decide("m1k3-lil") == nil)
-        #expect(decide("m1k3-big") == 404, "never a brain swap on a caller's say-so")
+        #expect(decide("lil-m1k3") == nil)
+        #expect(decide("big-m1k3") == 404, "never a brain swap on a caller's say-so")
         #expect(decide("gpt-4o") == 404)
-        #expect(decide("m1k3-lil", userBusy: true) == 429)
-        #expect(decide("m1k3-lil", apiBusy: true) == 429)
-        #expect(decide("m1k3-big", userBusy: true) == 404, "an unknown model is named before the queue is")
+        #expect(decide("lil-m1k3", userBusy: true) == 429)
+        #expect(decide("lil-m1k3", apiBusy: true) == 429)
+        #expect(decide("big-m1k3", userBusy: true) == 404, "an unknown model is named before the queue is")
     }
 
     // MARK: - Wire
@@ -228,9 +228,9 @@ struct LocalAPIPolicyTests {
     @Test("a non-streamed answer is one chat.completion object")
     func completionBody() throws {
         let finish = RawChatFinish(reason: .length, promptTokens: 9, completionTokens: 3)
-        let object = try json(LocalAPIWire.completionBody(id: "chatcmpl-1", model: "m1k3-lil", created: 5, text: "Hi", finish: finish))
+        let object = try json(LocalAPIWire.completionBody(id: "chatcmpl-1", model: "lil-m1k3", created: 5, text: "Hi", finish: finish))
         #expect(object["object"] as? String == "chat.completion")
-        #expect(object["model"] as? String == "m1k3-lil")
+        #expect(object["model"] as? String == "lil-m1k3")
         let choice = try #require((object["choices"] as? [[String: Any]])?.first)
         #expect(choice["finish_reason"] as? String == "length")
         #expect((choice["message"] as? [String: Any])?["content"] as? String == "Hi")
@@ -239,7 +239,7 @@ struct LocalAPIPolicyTests {
         #expect(usage["prompt_tokens"] as? Int == 9 && usage["completion_tokens"] as? Int == 3 && usage["total_tokens"] as? Int == 12)
         // No counts from the runtime (Apple's model): zeros, so a client that reads usage does not crash.
         let unknown = RawChatFinish(reason: .stop, promptTokens: nil, completionTokens: nil)
-        let bare = try json(LocalAPIWire.completionBody(id: "c", model: "m1k3-mini", created: 5, text: "Hi", finish: unknown))
+        let bare = try json(LocalAPIWire.completionBody(id: "c", model: "mini-m1k3", created: 5, text: "Hi", finish: unknown))
         #expect((bare["usage"] as? [String: Any])?["total_tokens"] as? Int == 0)
     }
 

@@ -21,6 +21,9 @@
 //  Signed: Kev + claude-fable-5.2, 2026-11-11, Confidence 0.8, Prior: none (new file)
 //  Context: Kev, 2026-11-11: "1 more release before then with our current
 //  work, and the server. Swiss army Mike!" Challenged before it was built.
+//  Review: Kev + claude-fable-5.2, 2026-11-11: the ids read brain first
+//  ("big-m1k3", not "m1k3-big"), Kev's call after his first call from curl: "so
+//  it reads like a title. That was always the joke". Nothing had shipped.
 //
 
 import Foundation
@@ -298,9 +301,9 @@ public struct ChatCompletionCall: Sendable, Equatable {
 // MARK: - Models and admission
 
 public enum LocalAPIModel {
-    /// The API id of one of M1K3's brains, from its tier's raw name ("lil" → "m1k3-lil").
+    /// The API id of one of M1K3's brains, from its tier's raw name ("lil" → "lil-m1k3": it reads like the brain's name, Lil M1K3).
     public static func id(forTier tier: String) -> String {
-        "m1k3-" + tier.lowercased()
+        tier.lowercased() + "-m1k3"
     }
 }
 

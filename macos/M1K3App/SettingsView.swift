@@ -43,6 +43,8 @@
 //  larger text size; the harness opens a pane by id (`settingsPane`). Confidence 0.8 (verify-by-launch at narrow widths).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — a "Brains & downloads" pane after M1K3 (Kev: model downloads need one easy
 //  home); "Free up space" moved into it. The pane column holds eight rows now. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — the "MCP Server" pane is titled "Server" (Kev, on first trying the
+//  Local API: "to account for everything"): it holds the MCP server and the Local API. The case stays `.mcp`.
 //
 
 import M1K3Screengrab
@@ -59,7 +61,7 @@ struct SettingsView: View {
             case .you: "You"
             case .privacy: "Privacy"
             case .brainAtHome: "Brain at Home"
-            case .mcp: "MCP Server"
+            case .mcp: "Server"
             case .general: "General"
             case .advanced: "Advanced"
             }
