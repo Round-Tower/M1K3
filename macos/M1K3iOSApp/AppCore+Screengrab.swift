@@ -16,7 +16,9 @@
 //  first run shot "Listening…" for it. Confidence now 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-10-23 — the ask-documents beat: once the seed is indexed, a new chat and a
 //  typed question (frame 05). Verify-by-capture on the Simulator. Confidence 0.8.
-//
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — the `look` plate (Kev: "we might need to add a screenshot of the
+//  vision too"): a real look at a still the capture run names, in chat. Run by hand on an iPhone 17 Pro Max
+//  simulator through tools/screengrab/capture-look.sh. Confidence 0.7.
 
 import Foundation
 import M1K3BrainLink
@@ -102,6 +104,8 @@ extension AppCore {
             enterVoiceMode()
         } else if let question = harness.chatQuestion {
             Task { await askScreengrabQuestion(question) }
+        } else if let question = harness.lookQuestion {
+            Task { await lookAtScreengrabStill(question, path: harness.lookFramePath) }
         }
     }
 
@@ -123,5 +127,31 @@ extension AppCore {
         if !indexed() { Self.screengrabLog.error("ask-documents: the seed never landed; asking anyway") }
         chat.startNewConversation()
         await send(question)
+    }
+
+    /// The look plate: a REAL look at the still the capture run named, through the shipping chat path
+    /// (`ChatSession.look`), in a new chat. No camera is opened (a simulator has none): the still is copied
+    /// into the screengrab root's attachment store as the frame. With no still, or a brain that cannot
+    /// see, the plate says so in the log and shows an empty chat; it never fakes an answer.
+    private func lookAtScreengrabStill(_ question: String, path: String?) async {
+        guard let path else {
+            Self.screengrabLog.error("look: the run named no still (\(ScreengrabHarness.lookFrameKey, privacy: .public))")
+            return
+        }
+        guard let jpeg = FileManager.default.contents(atPath: path) else {
+            Self.screengrabLog.error("look: the still the run named could not be read (it must be inside the app's container)")
+            return
+        }
+        guard imagesAccepted else {
+            Self.screengrabLog.error("look: the brain in front cannot see here")
+            return
+        }
+        guard let frame = try? Self.attachmentStore.store(data: jpeg, fileExtension: "jpg") else {
+            Self.screengrabLog.error("look: the still could not be stored")
+            return
+        }
+        chat.startNewConversation()
+        let answered = await chat.look(question, frame: frame, looker: looker, knowing: LookGrounding.now())
+        Self.screengrabLog.notice("look: answered=\(answered, privacy: .public)")
     }
 }
