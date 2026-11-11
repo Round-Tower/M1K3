@@ -39,6 +39,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (#696) — dispatches EnergyProbeStage (M1K3_SELFTEST_ENERGY=1: the
 //  RUSAGE_INFO_V6 read inside the sandboxed app plus one Lil generation's CPU joules beside the ledger's
 //  estimate; M1K3_SELFTEST_ENERGY_MODEL overrides the model); no other change. Confidence 0.8.
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — dispatches the verify-cost probe (M1K3_SELFTEST_VERIFYCOST=1,
+//  MLXBrainProvider+VerifyCostProbe); no other change. Confidence 0.8.
 
 import Foundation
 import M1K3Chat
@@ -413,6 +415,11 @@ enum SelfTest {
             // seed longer than its sliding window.
             if SelfTestEnv.value("M1K3_SELFTEST_SEEDEQ") == "1" {
                 emit(await llm.wrappedSeedEquivalenceProbe())
+            }
+            // 3g. Optional verify cost (M1K3_SELFTEST_VERIFYCOST=1): a forward over 1…4 new tokens against
+            // one, the number the speculative-decoding verdict rests on (LONG_CONTEXT_AND_SPEED_DESIGN §2e).
+            if SelfTestEnv.value("M1K3_SELFTEST_VERIFYCOST") == "1" {
+                emit(await llm.verifyCostProbe())
             }
         } catch {
             emit("✗ MLX generate stage: \(error)")
