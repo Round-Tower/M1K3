@@ -23,6 +23,9 @@
 //  every surface tells agents how to use M1K3. Tools are read before the Server
 //  is built. Checked on the wire: the stdio initialize carries the knowledge-only
 //  text. Confidence 0.85.
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — the version default is `M1K3ServerVersion.fallback`; the Mac app
+//  passes its own version and build so `verify_build.py` can ask the running process which build it is (#491).
+//  Confidence 0.8.
 
 import Foundation
 import M1K3Knowledge
@@ -58,7 +61,7 @@ public func resolveStorePath(environment: [String: String] = ProcessInfo.process
 public func makeM1K3Server(
     registry: MCPToolRegistry,
     name: String = "m1k3",
-    version: String = "0.1.0"
+    version: String = M1K3ServerVersion.fallback
 ) async -> Server {
     let tools = registry.tools
     let server = Server(

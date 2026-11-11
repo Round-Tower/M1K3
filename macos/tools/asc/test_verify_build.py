@@ -56,3 +56,25 @@ def test_the_token_only_goes_to_this_mac():
     assert v.is_loopback("http://127.0.0.1:4242/mcp")
     assert v.is_loopback("http://localhost:4242/mcp")
     assert not v.is_loopback("https://example.com/mcp")
+
+
+def test_the_running_process_names_its_own_build():
+    assert v.running_build({"name": "m1k3", "version": "1.4.0+547"}) == "547"
+    assert v.running_build({"name": "m1k3", "version": "0.1.0"}) is None  # 546 and earlier
+    assert v.running_build({"name": "m1k3", "version": "1.4.0+"}) is None
+    assert v.running_build({"name": "m1k3"}) is None
+    assert v.running_build(None) is None
+
+
+def test_a_running_process_that_names_another_build_fails_whatever_the_clock_says():
+    # #491: 453 is installed, but the process answering is still 442.
+    found = v.problems(installed="453", expected="453", running=True, instructions="x", running_build="442")
+    assert found and "442" in found[0]
+    assert v.problems(installed="453", expected="453", running=True, instructions="x", running_build="453") == []
+    # A build that names itself is believed over the launch-time guess.
+    assert v.problems(installed="453", expected="453", running=True, instructions="x", stale=True, running_build="453") == []
+
+
+def test_an_unreadable_launch_time_is_stale():
+    assert v.stale(process_started=None, bundle_modified=200.0)
+    assert v.stale(process_started=100.0, bundle_modified=None)

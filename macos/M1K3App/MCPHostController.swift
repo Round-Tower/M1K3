@@ -58,6 +58,8 @@
 //  twin the forgotten row had superseded, as the graph's forget does. The style axis made a forgotten correction the
 //  normal case, and the bare delete left the revived ask out of retrieval (a restatement then wrote a second live
 //  row). The "NOT deleted" audit line stands. Confidence 0.85.
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — the in-app server's `initialize` reply carries this app's version and
+//  build (`M1K3ServerVersion.current`), which `verify_build.py` reads (#491). Confidence 0.8.
 
 import Foundation
 import M1K3AgentTools // OpenLinkTool.gather + PageBrief — the same brief the in-app agent gets
@@ -326,7 +328,7 @@ final class MCPHostController {
             onClientInitialize: { name in clientIdentity.set(name) }
         ) {
             let transport = StatelessHTTPServerTransport()
-            let mcpServer = await makeM1K3Server(registry: registry)
+            let mcpServer = await makeM1K3Server(registry: registry, version: M1K3ServerVersion.current)
             try await mcpServer.start(transport: transport)
             return (mcpServer, transport)
         }
