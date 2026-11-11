@@ -25,7 +25,8 @@ import Network
 import os
 
 public actor LocalAPIServer {
-    public static let defaultPort: UInt16 = 4243
+    /// Not 4242 (the MCP server) and not 4243 (Brain at Home): the first launch check found the clash.
+    public static let defaultPort: UInt16 = 4141
 
     private static let log = Logger(subsystem: "app.m1k3", category: "local-api")
 
@@ -74,7 +75,8 @@ public actor LocalAPIServer {
         }
         self.listener = listener
         isRunning = true
-        Self.log.notice("Local API listening on 127.0.0.1:\(port, privacy: .public)")
+        let bound = port // a local, so the log interpolation captures no actor state
+        Self.log.notice("Local API listening on 127.0.0.1:\(bound, privacy: .public)")
     }
 
     public func stop() async {

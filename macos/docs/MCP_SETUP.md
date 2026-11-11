@@ -1,5 +1,7 @@
 # Wiring M1K3 into Claude (MCP)
 
+> Other apps that speak the OpenAI API can use M1K3's brain too: see [the Local API](LOCAL_API.md). This page is the assistant itself, over MCP.
+
 M1K3 exposes MCP on **two surfaces**:
 
 1. **The in-app HTTP server** — the live, full-capability surface. 18 tools

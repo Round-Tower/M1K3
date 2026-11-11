@@ -304,6 +304,9 @@ targets:
         product: M1K3Todos
       - package: M1K3
         product: M1K3BrainServe
+      # The Local API: the loaded brain for other apps on this Mac (OpenAI wire shape, loopback).
+      - package: M1K3
+        product: M1K3LocalAPI
       # Shared Brain at Home wire (pairing payload compose + LAN addresses
       # for the QR) — the client half rides the mobile shells.
       - package: M1K3

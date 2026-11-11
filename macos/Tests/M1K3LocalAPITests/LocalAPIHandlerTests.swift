@@ -54,14 +54,14 @@ struct LocalAPIHandlerTests {
     private let token = "s3cret"
 
     private func handler(_ brain: FakeBrain) -> LocalAPIHandler {
-        LocalAPIHandler(port: 4243, token: { "s3cret" }, backend: brain.backend, now: { 1_700_000_000 }, newID: { "chatcmpl-test" })
+        LocalAPIHandler(port: 4141, token: { "s3cret" }, backend: brain.backend, now: { 1_700_000_000 }, newID: { "chatcmpl-test" })
     }
 
     private func request(
         _ method: String, _ path: String, body: [String: Any]? = nil, auth: String? = "Bearer s3cret",
         origin: String? = nil
     ) -> LocalAPIRequest {
-        var headers = ["host": ["127.0.0.1:4243"]]
+        var headers = ["host": ["127.0.0.1:4141"]]
         if let auth { headers["authorization"] = [auth] }
         if let origin { headers["origin"] = [origin] }
         let data = body.flatMap { try? JSONSerialization.data(withJSONObject: $0) } ?? Data()

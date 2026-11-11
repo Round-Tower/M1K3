@@ -13,6 +13,8 @@
 //  copy helpers; Kev + claude-opus-5 / claude-opus-5-5 lineage, see that file) and
 //  AdvancedSettingsPane.swift (the Agent conversation log section).
 //
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — the Local API section (switch, status, base URL, the ready model, its
+//  own API key with Copy and New Key). Kev: "the server. Swiss army Mike!" Confidence 0.6 (untried on screen).
 
 import AppKit // NSPasteboard — the Copy buttons
 import M1K3CLICore // ConnectPlan / MCPClient / MCPEndpoint — one source for the snippets
@@ -28,10 +30,14 @@ struct MCPServerSettingsPane: View {
     @State private var connectClient: MCPClient = .claude
     @State private var confirmingNewToken = false
     @State private var newTokenFailed = false
+    @State private var confirmingNewAPIToken = false
+    @State private var newAPITokenFailed = false
 
     var body: some View {
         Form {
             mcpSection
+
+            localAPISection
 
             conversationLogSection
         }
@@ -84,6 +90,70 @@ struct MCPServerSettingsPane: View {
             .font(.callout).foregroundStyle(.secondary)
         }
         .onAppear { env.mcpHost.loadAccessToken() }
+    }
+
+    /// The Local API: M1K3's loaded brain for other apps on this Mac, in the wire shape OpenAI clients speak.
+    /// Its own switch and its own token, separate from the MCP server above.
+    private var localAPISection: some View {
+        Section {
+            Toggle("Local API (OpenAI-compatible, localhost)", isOn: Binding(
+                get: { env.localAPI.isEnabled },
+                set: { env.localAPI.setEnabled($0) }
+            ))
+            if let status = env.localAPI.statusText {
+                LabeledContent("Status", value: status)
+            }
+            LabeledContent("Base URL") {
+                HStack {
+                    Text(env.localAPI.baseURL).font(.system(.caption, design: .monospaced))
+                    Button("Copy") { copyToPasteboard(env.localAPI.baseURL) }
+                        .controlSize(.small)
+                        .accessibilityLabel("Copy base URL")
+                }
+            }
+            LabeledContent("Model") {
+                Text(env.localAPI.readyModelIDs.first ?? "No brain ready yet")
+                    .font(.system(.caption, design: .monospaced))
+            }
+            localAPITokenRow
+        } header: {
+            SettingsHeader("Local API", systemImage: "server.rack")
+        } footer: {
+            Text("""
+            Lets other apps on this Mac use the brain M1K3 has loaded, with their own instructions:             no M1K3 personality, memory, knowledge or tools, and nothing they send is kept.             Point any OpenAI-compatible tool at the base URL and use the API key.             Loopback-only, one call at a time, and you always go first.             M1K3's brains are chosen and tested inside M1K3; how one behaves under another app's             instructions is for you to judge.
+            """)
+            .font(.callout).foregroundStyle(.secondary)
+        }
+        .onAppear { env.localAPI.loadAccessToken() }
+    }
+
+    @ViewBuilder private var localAPITokenRow: some View {
+        LabeledContent("API key") {
+            HStack {
+                if let token = env.localAPI.accessToken {
+                    Text(MCPAccessToken.masked(token))
+                        .font(.system(.caption, design: .monospaced))
+                    Button("Copy") { copySecret(token) }
+                        .controlSize(.small)
+                        .accessibilityLabel("Copy API key")
+                    Button("New Key…") { confirmingNewAPIToken = true }
+                        .controlSize(.small)
+                        .accessibilityLabel("New API key")
+                } else {
+                    Text("Unavailable — the Keychain couldn’t be read")
+                        .font(.callout).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .confirmationDialog("Make a new API key?", isPresented: $confirmingNewAPIToken) {
+            Button("New Key", role: .destructive) { newAPITokenFailed = !env.localAPI.rotateAccessToken() }
+        } message: {
+            Text("Every app you’ve pointed at M1K3 stops working until you give it the new key.")
+        }
+        if newAPITokenFailed {
+            Text("Couldn’t save a new key to the Keychain. The current one still works.")
+                .font(.callout).foregroundStyle(.secondary)
+        }
     }
 
     /// Shown masked; Copy is the only way to the whole token (#270).

@@ -42,13 +42,13 @@ struct LocalAPIPolicyTests {
 
     @Test("only this loopback listener, never a web page, and only with the token")
     func gate() {
-        func check(host: [String] = ["127.0.0.1:4243"], origin: String? = nil, auth: String? = "Bearer s3cret") -> Int? {
-            LocalAPIGate.check(hosts: host, origin: origin, authorization: auth, port: 4243, token: "s3cret")?.status
+        func check(host: [String] = ["127.0.0.1:4141"], origin: String? = nil, auth: String? = "Bearer s3cret") -> Int? {
+            LocalAPIGate.check(hosts: host, origin: origin, authorization: auth, port: 4141, token: "s3cret")?.status
         }
         #expect(check() == nil)
-        #expect(check(host: ["localhost:4243"]) == nil)
+        #expect(check(host: ["localhost:4141"]) == nil)
         #expect(check(host: []) == 400)
-        #expect(check(host: ["127.0.0.1:4243", "evil.example"]) == 400)
+        #expect(check(host: ["127.0.0.1:4141", "evil.example"]) == 400)
         #expect(check(host: ["evil.example"]) == 403, "DNS rebinding: a foreign Host is refused")
         #expect(check(host: ["127.0.0.1:9999"]) == 403)
         #expect(check(origin: "https://evil.example") == 403, "a web page cannot call this")
@@ -58,7 +58,7 @@ struct LocalAPIPolicyTests {
         #expect(check(auth: "s3cret") == 401)
         #expect(check(auth: "bearer s3cret") == nil, "the scheme is case-insensitive")
         // An empty configured token never opens the door.
-        #expect(LocalAPIGate.check(hosts: ["127.0.0.1:4243"], origin: nil, authorization: "Bearer ", port: 4243, token: "") != nil)
+        #expect(LocalAPIGate.check(hosts: ["127.0.0.1:4141"], origin: nil, authorization: "Bearer ", port: 4141, token: "") != nil)
     }
 
     // MARK: - Errors
@@ -265,11 +265,11 @@ struct LocalAPIPolicyTests {
 
     @Test("a request is read once its head and its whole body have arrived")
     func httpParsing() throws {
-        let raw = "POST /v1/chat/completions HTTP/1.1\r\nHost: 127.0.0.1:4243\r\nAuthorization: Bearer t\r\n"
+        let raw = "POST /v1/chat/completions HTTP/1.1\r\nHost: 127.0.0.1:4141\r\nAuthorization: Bearer t\r\n"
             + "Content-Type: application/json\r\nContent-Length: 2\r\n\r\n{}"
         let request = try #require(LocalAPIHTTP.parse(Data(raw.utf8)))
         #expect(request.method == "POST" && request.path == "/v1/chat/completions")
-        #expect(request.headers["host"] == ["127.0.0.1:4243"])
+        #expect(request.headers["host"] == ["127.0.0.1:4141"])
         #expect(request.first("Authorization") == "Bearer t")
         #expect(request.body == Data("{}".utf8))
         #expect(LocalAPIHTTP.parse(Data(raw.dropLast(1).utf8)) == nil, "the body has not all arrived")

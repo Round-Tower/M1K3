@@ -152,6 +152,7 @@
 //  ask kept riding every prompt until relaunch). Pinned by StatedStyleWiringTests. Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: `snag`, the one-time offer after a session that didn't close
 //  cleanly (AppEnvironment+Snag). Confidence unchanged.
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — `localAPI` (LocalAPIController) is created beside Brain at Home, and a local turn preempts a Local API call the same way. Confidence 0.7.
 
 import AppKit
 import Foundation
@@ -569,6 +570,8 @@ final class AppEnvironment {
     /// Brain at Home — the LAN TLS-PSK brain service + pairing ceremony
     /// (BrainServeController.swift). Set at init tail; default OFF.
     private(set) var brainServe: BrainServeController!
+    /// The Local API (OpenAI-compatible, loopback, off by default): M1K3's loaded brain for other apps on this Mac.
+    private(set) var localAPI: LocalAPIController!
     /// Menu-bar "Ask M1K3" — a headless grounded answer with no chat window.
     /// Owns its own dedicated responder (MenuBarAsk.swift); set at init tail.
     private(set) var menuBarAsk: MenuBarAsk!
@@ -1287,6 +1290,8 @@ final class AppEnvironment {
         mcpHost.startIfEnabled()
         brainServe = BrainServeController(environment: self)
         brainServe.startIfEnabled()
+        localAPI = LocalAPIController(environment: self)
+        localAPI.startIfEnabled()
         menuBarAsk = MenuBarAsk(environment: self)
         // The OPEN TODOS grounding snapshot: rendered once here and after
         // every write — the responder only ever reads it.
@@ -1442,6 +1447,7 @@ final class AppEnvironment {
         // Local preempts remote (Brain at Home, audit S2): the person at THIS
         // keyboard outranks a paired device's in-flight stream.
         brainServe?.preemptForLocalTurn()
+        localAPI?.preemptForLocalTurn() // the person at the Mac outranks a Local API caller too
         let clock = ContinuousClock()
         let started = clock.now
         avatar.setActivity(.thinking)

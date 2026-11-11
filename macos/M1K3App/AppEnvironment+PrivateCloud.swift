@@ -22,6 +22,7 @@
 //  consent read matched the views'. The real PCC path is verify-owed until the
 //  entitlement). Prior: Unknown
 //
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — a Private Cloud send preempts a Local API call, as it does a Brain at Home stream. Confidence 0.7.
 
 import Foundation
 import M1K3Agent
@@ -102,6 +103,7 @@ extension AppEnvironment {
         // ChatSession refuses the send itself unless this same gate is open.
         let gate = privateCloudState(consent: privateCloudConsentPersisted)
         brainServe?.preemptForLocalTurn()
+        localAPI?.preemptForLocalTurn() // the person at the Mac outranks a Local API caller too
         avatar.setActivity(.thinking)
         beginAutoSpeakSession()
         await chat.sendPrivateCloud(
