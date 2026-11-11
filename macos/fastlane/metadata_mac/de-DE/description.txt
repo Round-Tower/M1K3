@@ -19,5 +19,6 @@ FÜR DEINEN MAC GEBAUT
 • Optimiert für Apple Silicon (Metal/MLX).
 • Mehrere Modellstufen, damit ich vom MacBook Air bis zum Mac Studio gut laufe.
 • Ein Kommandozeilen-Client (m1k3) und ein lokaler Tool-Server mit 18 Werkzeugen für deine Coding-Agenten — Claude, Cursor, VS Code, Codex, Zed.
+• Ein lokaler Server für deine anderen Apps: Schalte die Local API ein, und jedes Werkzeug, das die OpenAI API spricht, kann das Hirn nutzen, das du geladen hast. Nur auf diesem Mac, standardmäßig aus, mit eigenem Schlüssel.
 
 Punk-Intelligenz: deine, privat, zu deinen Bedingungen.

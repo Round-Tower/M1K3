@@ -19,5 +19,6 @@
 • 为Apple Silicon（Metal/MLX）优化。
 • 多个模型级别，从MacBook Air到Mac Studio都能流畅运行。
 • 命令行客户端（m1k3）和18个工具的本地服务器，让你的编程智能体——Claude、Cursor、VS Code、Codex、Zed——可以使用我的知识和语音。
+• 给其他应用用的本地服务器：打开Local API，任何支持OpenAI API的工具都能使用你已加载的大脑。仅限这台Mac，默认关闭，有自己的密钥。
 
 朋克智能：你的，私密的，按你的规则。

@@ -1,18 +1,15 @@
-NEW IN 1.3
+NEW IN 1.4
 
-• See who answers. The line over the chat field names the brain and says whether web search is on. Tap it to switch either one.
-• One ＋ for files and photos, so the field has room to breathe.
-• Made for the folding iPhone: open or closed, the chat fits the screen you're using.
-• Tell me how you like your answers. Say "shorter, please" or "no emoji" once and I keep to it. The ask is in Memories, where you can delete it.
-• Answers shaped like the question: numbered steps for a how-to, side by side for a comparison, plain talk for small talk.
-• Honest downloads. I check there's room before a brain downloads, the bar shows real progress, and if a download fails I say why.
-• Scanned PDFs. Pages that are pictures of text are now read on your device.
-• "Are you ready?" gets a straight answer: downloading and how far, or ready.
-• Lil keeps up: no more repeating itself, and it reaches web search when you ask for news.
-• Answers, not links. When I speak a reply aloud, I stop at the sources instead of reading out every web address.
+• Show me. Tap the eye at the top of a chat and point your camera at a label, a sign, a plant or a screen, then ask. I answer about what I see, on your device. The picture is sent nowhere, and it is saved with that chat on your device.
+• Look while we talk. In voice mode, open the eye and every question is about what is in front of you. Or just ask "what am I looking at?" and I take one look. A switch in Settings turns the spoken ask off.
+• Ask again. A second question about the same picture is one tap.
+• Search, if you want it. After a look I can draft a web search for you. It lands in the message field and goes only if you send it.
+• The title says who is answering: "LIL M1K3" or "MINI M1K3".
+• Mini answers the question. Mini had picked up a habit of answering ordinary coding questions with a line about not sharing its wiring. That is fixed.
 
 NEW TO M1K3? HERE'S WHAT I DO
 
+• Show me things: point the camera or attach a photo, and I read it on your device.
 • Chat with an on-device brain: Mini starts instantly on Apple Intelligence devices, and Lil runs fully offline on iPhones and iPads with 8 GB of memory.
 • Talk to me: on-device speech recognition and a natural neural voice.
 • Bring your own knowledge: add PDFs and text files and I answer from them, on your device.

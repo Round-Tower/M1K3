@@ -19,5 +19,6 @@
 • Apple Silicon(Metal/MLX)에 최적화.
 • MacBook Air부터 Mac Studio까지 잘 돌아가는 다중 모델 레벨.
 • 커맨드라인 클라이언트(m1k3)와 18개 도구의 로컬 서버. Claude, Cursor, VS Code, Codex, Zed 등 코딩 에이전트가 지식과 음성을 사용 가능.
+• 다른 앱을 위한 로컬 서버: Local API를 켜면 OpenAI API를 쓰는 도구라면 무엇이든 불러온 두뇌를 쓸 수 있어. 이 Mac에서만, 기본은 꺼짐, 자체 키 사용.
 
 펑크 인텔리전스: 너의, 프라이빗, 네 규칙대로.

@@ -1,22 +1,20 @@
-Thanks for testing M1K3 1.3.0 on iPhone and iPad.
+Thanks for testing M1K3 1.4.0 on iPhone and iPad.
 
 New in this build, please try:
-• Start a new chat and ask for a recipe ("get me a recipe for Bolognese"). The answer should be the recipe: no "I don't share my wiring" and no sentence about DuckDuckGo before it. Then ask "does anything I type ever leave this device?": the answer should still say yes, web searches do
-• The line over the chat field says who answers and whether web search is on, like "Lil · Web on". Tap it to switch brains, or to turn web search off for the next question
-• One ＋ beside the field holds Files and Photos, plus the same brain and web switches
-• On a folding iPhone, try the chat and Settings both open and closed
-• Tell me how you like answers: say "Keep your answers short, please." Close the app, reopen it and ask an open question. The answer should stay short
-• Reply "yes", "go on" or a thumbs-up emoji to an offer: I should carry on, not repeat my last message
-• Ask Lil "what's in tech news?": it should search the web, and not repeat an earlier answer
-• Downloads: before a brain downloads I check there's room, and the bar moves the whole way. If one fails, I say why, and "Send a report" appears under it
-• Add a scanned PDF under Documents: I read it on your device and say how many pages I read
-• Ask "are you ready?" while a brain downloads: I should say how far along it is
-• Thumbs down an answer and type a note: the note box should stay open while you type
-• If M1K3 ever quits unexpectedly, the next launch shows a short note offering a report. You see the report before anything is sent, and no rating request comes for 3 days
+• The eye at the top of a chat opens the camera. Point it at a label, a sign or a screen, type a question and send. The answer should be about what you see, and come from your device: try it in Airplane Mode
+• Ask again: after a look, tap "Ask about this photo" to ask a second question about the same picture
+• Search: after a look, tap "Search the web". A search should appear in the message field and go nowhere until you send it
+• Voice mode with the eye open: every question should be about what is in front of you. Ask something that has nothing to do with the view ("what's seven times eight?") and I should just answer it
+• Voice mode with the eye closed: ask "what am I looking at?" and I should take one look and close the camera. Settings has a switch, "Open the camera when I ask aloud": turn it off and the same question should open nothing
+• The green camera dot should go out when you leave the Look screen, leave voice mode or put the app in the background. Tell us about any time it stays on
+• A long look: keep the eye open in voice mode for about ten minutes. Tell us if the phone gets hot, and how much battery it took
+• Delete a chat that has a look in it: the picture should go with it
+• The title on the chat screen names who is answering, like "LIL M1K3"
+• Ask Mini an ordinary coding question ("write a function that reverses a string"): the answer should be code, with no line about not sharing its wiring
 
 And the basics:
-• Voice mode, a few turns in a row. Sources are no longer read aloud
+• Voice mode, a few turns in a row
 • Airplane mode: chat should keep working on the device
 • Brain at Home with M1K3 on your Mac
 
-The network is used for brain downloads and web search, which is on by default. Send feedback straight from TestFlight; a screenshot of anything odd helps most.
+The camera picture is read on your device and sent nowhere. The network is used for brain downloads and web search, which is on by default. Send feedback straight from TestFlight; a screenshot of anything odd helps most.

@@ -1,16 +1,8 @@
-NEW IN 1.3
+NEW IN 1.4
 
-• A web switch in the chat. Web search sends your words to a search engine, so its switch now sits beside the brain switcher, in plain sight.
-• Tell me how you like your answers. Say "shorter, please" or "no emoji" once and I keep to it. The ask is in Memories, where you can delete it.
-• Answers shaped like the question: numbered steps for a how-to, side by side for a comparison, plain talk for small talk.
-• Scanned PDFs. Pages that are pictures of text are now read on your Mac, and I tell you how many I read.
-• "Are you ready?" gets a straight answer: downloading and how far, warming up, or ready.
-• Talk over me. In voice mode, start speaking while I'm answering and I stop and listen. Echo cancellation is now on by default, so I hear you and not myself. It works with your Mac's own mic or a USB one; Bluetooth headsets keep the old behavior.
-• Answers, not links. When I speak a reply aloud, I stop at the sources instead of reading out every web address.
-• Quicker in long chats. I pick up where the last message left off instead of rereading the whole conversation. Measured on an M1 Max, past the tenth message: Big gets to its answer about six seconds sooner, Lil nearly a second.
-• Your documents first. Ask for a number or a name that's in a manual or report you've added, like a torque, a date or who signed off, and I answer from your document, on your Mac, instead of looking it up online.
-• Send this exchange. Thumbs-down an answer and you can email us that one exchange. You see it first, and it goes only if you press Send.
-• A cool head. When your Mac runs hot or in Low Power Mode, I say once that I'm easing off.
+• A local server for your other apps. Switch on the Local API in Settings > Server and any tool that speaks the OpenAI API (an editor, a script, a chat app) can use the brain you have loaded. It listens on this Mac only, is off by default and has its own key. You go first: a call waits while you are chatting, and ends if you start a turn.
+• Settings > Server. The MCP server for your coding agents and the new Local API share one pane, each with its own switch and its own key.
+• Mini answers the question. Mini had picked up a habit of answering ordinary coding questions with a line about not sharing its wiring. That is fixed.
 
 NEW TO M1K3? HERE'S WHAT I DO
 
@@ -21,6 +13,7 @@ NEW TO M1K3? HERE'S WHAT I DO
 • Call memory: with your consent, I transcribe and summarise calls, encrypted on your Mac.
 • Brain at Home: pair your iPhone or iPad over your own Wi-Fi and use your Mac's brain from the couch.
 • Your coding agents can use my knowledge and voice through a local MCP server and the m1k3 command-line tool.
+• Your other apps can use my brain through the Local API, on this Mac only.
 • Siri and Shortcuts can ask me things and add to what I know.
 • Private Cloud Compute, if you want it: off by default, one message at a time, with your consent.
 

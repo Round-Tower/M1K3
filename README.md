@@ -94,7 +94,7 @@ belongs to M1K3.app).
 ```sh
 brew trust round-tower/tap                 # Homebrew 6: trust the tap once
 brew install --cask round-tower/tap/m1k3   # the cask symlinks Contents/Helpers/m1k3
-# Open M1K3 ▸ Settings ▸ MCP Server: switch it on, then Copy the token
+# Open M1K3 ▸ Settings ▸ Server: switch it on, then Copy the token
 m1k3 login                                 # paste the token (echo off; kept in your keychain)
 m1k3 connect claude                        # also: codex · cursor · vscode · zed
 ```
@@ -106,7 +106,7 @@ config as an `Authorization: Bearer` header. Without it the server answers 401.
 Then `m1k3 status`, `m1k3 ask "what did I decide about the pin?"`,
 `m1k3 remember "…"`, `m1k3 search "…"`, `m1k3 speak "build's green"`.
 
-Prefer clicking? **M1K3 ▸ Settings ▸ MCP Server** has the same thing:
+Prefer clicking? **M1K3 ▸ Settings ▸ Server** (named MCP Server in 1.3 and earlier) has the same thing:
 pick your agent, copy the snippet (the token is already in it). Already have M1K3 installed? The binary is
 at `/Applications/M1K3.app/Contents/Helpers/m1k3`.
 
@@ -144,9 +144,14 @@ build (the DMG and the Homebrew cask) does the write.
 
 The running Mac app serves MCP over HTTP at `http://127.0.0.1:4242/mcp` —
 knowledge search, documents, voice, and `ask_m1k3` (ask the resident AI).
-Every request carries the server's access token (Settings ▸ MCP Server);
+Every request carries the server's access token (Settings ▸ Server);
 `m1k3 login && m1k3 connect claude` wires Claude Code in. Setup for any
 client: [`macos/docs/MCP_SETUP.md`](./macos/docs/MCP_SETUP.md).
+
+Not an agent? From 1.4 the Mac app also has a **Local API**: an OpenAI-compatible
+endpoint at `http://127.0.0.1:4141/v1` that lends the brain you have loaded to
+any tool on the same Mac. Off by default, its own key, raw brain only (no memory,
+knowledge or tools). See [`macos/docs/LOCAL_API.md`](./macos/docs/LOCAL_API.md).
 
 ### Tools
 
