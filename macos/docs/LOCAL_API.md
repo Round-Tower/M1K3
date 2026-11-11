@@ -48,6 +48,11 @@ another app's instructions has not been evaluated; that is yours to judge.
 - **You go first.** One call at a time. A call that arrives while you are
   chatting or in voice mode gets `429` with `Retry-After`, and a call in flight
   ends when you start a turn. OpenAI SDKs retry a 429 by themselves.
+- **Each call re-reads the conversation.** Nothing is kept between calls, in
+  memory or on disk, so a long history costs the same wait for the first word
+  on every turn (measured 2026-11-11 on an M1 Debug build with a second brain
+  loaded: about 6 s on Lil and 8 s on Big for 2,000 tokens; a short prompt
+  starts in about 0.3 s). Keep the history short where your tool lets you.
 - **No brain swaps.** `/v1/models` lists the brain that is ready. Asking for
   another one gets `404 model_not_found`; switch brain in M1K3 itself.
 - **Reasoning is off** on this route for the brains that have a switch for it
@@ -77,3 +82,9 @@ is `400 content_filter`.
 _Signed: Kev + claude-fable-5.2, 2026-11-11, Confidence 0.7 (the behaviour
 described is pinned by M1K3LocalAPITests; a real brain behind a real client is
 verify-by-launch)._
+
+_Review: Kev + claude-fable-5.2, 2026-11-11: all three brains answered a real
+client by launch (curl and a streaming Python client; Kev's own curl on Big).
+Mini reports usage. The cost of a long conversation is stated; a cache between
+calls was challenged and deferred until after the launch (it needs its own
+memory slot, a cut at the last user turn, and Release-build numbers)._
