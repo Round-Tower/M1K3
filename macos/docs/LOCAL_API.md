@@ -63,8 +63,9 @@ another app's instructions has not been evaluated; that is yours to judge.
 | refused with a 400 | `tools` / `functions`, `n` above 1, image or audio content, tool messages, JSON-schema response formats |
 | not offered (404) | `/v1/completions`, `/v1/embeddings`, `/v1/responses`, audio and image endpoints |
 
-`usage` is reported for Lil and Big. Apple's model reports no token counts, so
-Mini's `usage` reads zero.
+`usage` is reported for every brain. Lil and Big report exact counts. Mini's are
+taken from Apple's tokenizer once the answer is complete, so they are close, not
+exact, and read zero on a system that cannot count.
 
 Errors use OpenAI's shape: `{"error": {"message", "type", "code", "param"}}`.
 A conversation over 200,000 characters is refused with `400
