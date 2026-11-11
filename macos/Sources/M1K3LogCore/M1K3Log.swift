@@ -35,6 +35,7 @@
 //
 
 //  Review: claude-opus-5-5, 2026-10-15: `sound-context` for SoundContextListener.
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — the `local-api` category (the Local API's listener and app glue). Confidence 0.9.
 import Foundation
 import os
 
@@ -139,6 +140,8 @@ public enum M1K3Log {
         /// pairing ceremony milestones, advertise, refused sources). Device
         /// display NAMES and counts only — never prompts, tokens, or keys.
         case brainServe = "brain-serve"
+        /// The Local API: M1K3's loaded brain for other apps on this Mac (starts, stops, refusals; never a request body).
+        case localAPI = "local-api"
         /// Brain at Home, the DEVICE side (M1K3BrainLink): pairing ceremony
         /// milestones, dial/host fallbacks, stream refusals. Mac display
         /// names, hosts and counts only — never prompts, tokens, or keys.

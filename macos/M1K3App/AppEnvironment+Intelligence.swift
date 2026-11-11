@@ -45,6 +45,7 @@
 //  a new caller must say who is asking); AskSurfaceCallSiteTests scans every call site.
 //  Review: Kev + claude-opus-5-5, 2026-10-13 — `intelligenceSpeak` and a visitor's queued line pass the emotion
 //  to the voice too (a VoiceMood, #576 §1); the face still follows it as before. Confidence 0.85.
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — an MCP ask that preempts remote streams preempts a Local API call too. Confidence 0.7.
 
 import Foundation
 import M1K3Avatar // AvatarEmotion
@@ -169,7 +170,10 @@ extension AppEnvironment {
         // Home remote stream first, exactly as AppEnvironment.send does (audit
         // finding 4). A LAN-originated ask does NOT (it IS a remote turn — see
         // the doc above).
-        if preemptsRemoteStreams { brainServe?.preemptForLocalTurn() }
+        if preemptsRemoteStreams {
+            brainServe?.preemptForLocalTurn()
+            localAPI?.preemptForLocalTurn()
+        }
         // Hoist members into locals before the Logger interpolation: the message is
         // an autoclosure, so a `self.` member there requires explicit self, which
         // swiftformat then strips → a build break (the documented logging landmine).

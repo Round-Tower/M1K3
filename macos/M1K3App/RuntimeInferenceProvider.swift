@@ -30,6 +30,8 @@
 //  net while Lil forces its close), the app mirror of SwappableInferenceProvider's forward.
 //  Review: Kev + claude-fable-5.2, 2026-11-09 — forwards `ImageLooking` (#768, the streamed look), the app mirror of
 //  SwappableInferenceProvider's forward. Compile-checked; the Mac has no look surface yet.
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — forwards `RawChatCompleting` (the Local API's seam), per the
+//  every-façade-forwards rule. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -209,6 +211,14 @@ extension RuntimeInferenceProvider: TurnWarmable {
 extension RuntimeInferenceProvider: RawCompletionProviding {
     func generateRawStreaming(prompt: String, maxTokens: Int?) -> AsyncStream<String>? {
         (active as? RawCompletionProviding)?.generateRawStreaming(prompt: prompt, maxTokens: maxTokens)
+    }
+}
+
+/// Forwards the Local API's chat seam (RawChatCompletion.swift) to the routed backend. The Local API holds
+/// THIS façade, so without the forward every brain would read "unavailable".
+extension RuntimeInferenceProvider: RawChatCompleting {
+    func completeRawChat(_ request: RawChatRequest) -> RawChatStream? {
+        (active as? RawChatCompleting)?.completeRawChat(request)
     }
 }
 

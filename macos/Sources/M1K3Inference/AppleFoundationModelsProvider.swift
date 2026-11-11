@@ -86,6 +86,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-09 (review fold) — a look's failure is logged by class only (the error's
 //  text can describe what was in view), and a stop that surfaces as the framework's own error is a stop, not a
 //  logged failure. Compile-checked: no live failing look was captured.
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — `RawChatCompleting` (the Local API): Mini answers a conversation with
+//  the caller's system message as its only instructions; failures throw as `RawChatFailure`. Confidence 0.7 (the
+//  mapping and the cap are tested; the generation is verify-by-launch with a real client).
 import Foundation
 import M1K3LogCore
 import os
@@ -704,6 +707,45 @@ extension AppleFoundationModelsProvider: ToolCallingProvider {
                 ))
             }
             return .text("")
+        }
+    }
+}
+
+// MARK: - Raw chat — the Local API (RawChatCompletion.swift)
+
+/// Mini behind the Local API: a fresh session whose instructions are the caller's system message and nothing
+/// of M1K3's. Earlier turns ride in the prompt as a labelled preamble (`RawChatPrompt.flattened`). Apple's
+/// snapshots are cumulative, so they are converted to deltas; Apple reports no token counts and no stop reason.
+/// A failure THROWS as a `RawChatFailure`.
+extension AppleFoundationModelsProvider: RawChatCompleting {
+    public func completeRawChat(_ request: RawChatRequest) -> RawChatStream? {
+        AsyncThrowingStream { continuation in
+            let session = request.system.map { LanguageModelSession(instructions: $0) } ?? LanguageModelSession()
+            var options = GenerationOptions(maximumResponseTokens: Self.clampedRawResponseTokens(request.maxTokens))
+            if let temperature = request.temperature { options.temperature = min(max(0, temperature), 2) }
+            let prompt = RawChatPrompt.flattened(request)
+            let task = Task { [self, options] in
+                do {
+                    var sent = ""
+                    for try await snapshot in session.streamResponse(to: prompt, options: options) {
+                        if let piece = RawChatPrompt.delta(sent: &sent, snapshot: snapshot.content) {
+                            continuation.yield(.delta(piece))
+                        }
+                    }
+                    try Task.checkCancellation()
+                    continuation.yield(.finished(RawChatFinish(reason: .stop, promptTokens: nil, completionTokens: nil)))
+                    continuation.finish()
+                } catch is CancellationError {
+                    continuation.finish(throwing: CancellationError())
+                } catch {
+                    // The class only: an error's own text can echo the caller's prompt, and nothing a
+                    // Local API caller sends is written anywhere, the log included.
+                    let failure = AFMFailure.classify(error: error)
+                    Self.log.error("afm raw chat failed: \(failure.rawValue, privacy: .public)")
+                    continuation.finish(throwing: RawChatFailure(apple: failure))
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
         }
     }
 }

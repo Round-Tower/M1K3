@@ -128,6 +128,9 @@ let package = Package(
         // Brain at Home — the LAN brain-serving layer (TLS-PSK listener,
         // pairing, Bonjour advertiser, scoped LAN MCP route).
         .library(name: "M1K3BrainServe", targets: ["M1K3BrainServe"]),
+        // The Local API: M1K3's brains for other apps on this Mac, in the wire shape OpenAI
+        // clients speak. Pure policies + the loopback listener. No MCP dependency.
+        .library(name: "M1K3LocalAPI", targets: ["M1K3LocalAPI"]),
         // Brain at Home — the shared wire (TLS-PSK channel, pairing payload)
         // + the CLIENT side: pairing ceremony, HTTP/SSE response parsing, the
         // NWConnection transport, and HomeBrainProvider (the Mac's brain as
@@ -580,6 +583,16 @@ let package = Package(
                 "M1K3BrainLink", // the shared TLS-PSK wire (PSKCredential, BrainServeTLS)
             ],
             path: "Sources/M1K3BrainServe"
+        ),
+        .target(
+            name: "M1K3LocalAPI",
+            dependencies: ["M1K3Inference", "M1K3LogCore"],
+            path: "Sources/M1K3LocalAPI"
+        ),
+        .testTarget(
+            name: "M1K3LocalAPITests",
+            dependencies: ["M1K3LocalAPI", "M1K3Inference"],
+            path: "Tests/M1K3LocalAPITests"
         ),
         .testTarget(
             name: "M1K3BrainServeTests",

@@ -42,7 +42,7 @@ struct SettingsPaneLayoutTests {
         #expect(downloads.contains("retiredWeights"))
     }
 
-    @Test("the pane list is M1K3, Brains & downloads, You, Privacy, Brain at Home, MCP Server, General, Advanced — in that order")
+    @Test("the pane list is M1K3, Brains & downloads, You, Privacy, Brain at Home, Server, General, Advanced — in that order")
     func paneOrder() throws {
         let code = try Self.code("M1K3App/SettingsView.swift")
         #expect(code.contains("case m1k3, downloads, you, privacy, brainAtHome, mcp, general, advanced"))
@@ -50,7 +50,7 @@ struct SettingsPaneLayoutTests {
         #expect(code.contains("case .downloads: \"arrow.down.circle\""))
         #expect(code.contains("case .downloads: DownloadsSettingsPane()"))
         #expect(code.contains("case .brainAtHome: \"Brain at Home\""))
-        #expect(code.contains("case .mcp: \"MCP Server\""))
+        #expect(code.contains("case .mcp: \"Server\""))
         #expect(code.contains("case .brainAtHome: BrainAtHomeSettingsPane()"))
         #expect(code.contains("case .mcp: MCPServerSettingsPane()"))
     }
