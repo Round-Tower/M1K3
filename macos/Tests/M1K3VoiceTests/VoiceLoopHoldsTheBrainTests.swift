@@ -8,6 +8,7 @@ struct VoiceLoopHoldsTheBrainTests {
     func quietMicIsFree() {
         #expect(!VoiceLoopState.listening(partial: "").holdsTheBrain)
         #expect(!VoiceLoopState.listening(partial: "  \n").holdsTheBrain)
+        #expect(!VoiceLoopState.listening(partial: "\t").holdsTheBrain)
         #expect(!VoiceLoopState.idle.holdsTheBrain)
         #expect(!VoiceLoopState.ended.holdsTheBrain)
     }
@@ -15,6 +16,7 @@ struct VoiceLoopHoldsTheBrainTests {
     @Test("from the first heard word to the last spoken one, the turn holds the brain")
     func aTurnHolds() {
         #expect(VoiceLoopState.listening(partial: "what").holdsTheBrain)
+        #expect(VoiceLoopState.listening(partial: " hi").holdsTheBrain)
         #expect(VoiceLoopState.awaitingAnswer(question: "what time is it").holdsTheBrain)
         #expect(VoiceLoopState.speaking(answer: "Half past nine.").holdsTheBrain)
     }

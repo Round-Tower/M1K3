@@ -21,7 +21,9 @@
 //  Review fold: a wait that runs out STOPS the warm instead of building beside the answer it waited for.
 //  Review: Kev + claude-fable-5.2, 2026-11-11 (later) — the app now counts a voice turn from its first heard word
 //  (`VoiceLoopState.holdsTheBrain`).
-//  Open: a Brain at Home turn from a paired device and the exit-time distillation are not counted.
+//  Open: a Brain at Home turn from a paired device and the exit-time distillation are not counted. A voice loop
+//  left in `speaking` (a voice that never reports its end, a read-aloud past the five-minute limit) stops the warm
+//  for the session: the palettes then build on first use.
 
 import Foundation
 
