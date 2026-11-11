@@ -31,6 +31,8 @@
 //  watch as the next listen with the words already heard, and every other way out of speech closes it
 //  first. The half-duplex rule above holds whenever the flag is off (the default, every older pin).
 //  Confidence 0.8: the reducer is pinned; whether the watch can hear the user over M1K3 is verify-by-launch.
+//  Review: Kev + claude-fable-5.2, 2026-11-11 (#621) — `VoiceLoopState.holdsTheBrain`: a voice turn in progress,
+//  from the first heard word to the last spoken one. The launch warm reads it and waits. Confidence 0.85 (pure).
 //
 
 import Foundation
@@ -43,6 +45,20 @@ public enum VoiceLoopState: Equatable, Sendable {
     case speaking(answer: String)
     /// Terminal — the mode was exited.
     case ended
+}
+
+public extension VoiceLoopState {
+    /// A voice turn is in progress: the person has started speaking, the answer is being made, or it is being
+    /// spoken (the voice is GPU work too). An open mic that has heard nothing is not a turn, so background
+    /// work can run between turns. The launch warm waits on this (#621: a turn that met the warm waited for
+    /// the build in flight and then decoded beside the next).
+    var holdsTheBrain: Bool {
+        switch self {
+        case let .listening(partial): !partial.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case .awaitingAnswer, .speaking: true
+        case .idle, .ended: false
+        }
+    }
 }
 
 public enum VoiceLoopEvent: Equatable, Sendable {

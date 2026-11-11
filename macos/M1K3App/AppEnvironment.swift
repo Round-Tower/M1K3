@@ -156,6 +156,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-11 (#621) — the persona warm waits for quiet before each palette
 //  (`someoneIsBeingAnswered`, `PersonaWarmYield`). Confidence 0.75: the wait is pinned in M1K3InferenceTests, the gain
 //  is measured by launch (see the PR).
+//  Review: Kev + claude-fable-5.2, 2026-11-11 (#621, the voice half) — a voice turn counts from the first heard word
+//  (`VoiceLoopState.holdsTheBrain`), the case the issue was filed on. Confidence 0.7: the rule is pinned; a voice turn
+//  at launch is verify-by-ear.
 
 import AppKit
 import Foundation
@@ -1965,10 +1968,10 @@ final class AppEnvironment {
         personaWarmTask = warm
     }
 
-    /// A chat turn, an ask from the menu bar or MCP, or a Local API call is generating right now. Voice mode
-    /// being open is not it: a voice turn counts once it is answering.
+    /// A chat turn, an ask from the menu bar or MCP, a voice turn (from the first heard word), or a Local API
+    /// call is under way right now. Voice mode being open with a quiet mic is not it.
     func someoneIsBeingAnswered() async -> Bool {
-        if chat.isResponding || intelligenceAskInFlight { return true }
+        if chat.isResponding || intelligenceAskInFlight || voiceLoop?.state.holdsTheBrain == true { return true }
         return await localAPI?.isAnswering() ?? false
     }
 
