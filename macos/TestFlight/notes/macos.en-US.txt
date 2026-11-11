@@ -8,6 +8,7 @@ New in this build, please try:
 • Tell us which tools you tried it with (an editor, a script, a chat app) and anything that did not connect. A long conversation is slow to start on every turn for now, because each call re-reads all of it
 • Ask Mini an ordinary coding question ("write a function that reverses a string"): the answer should be code, with no line about not sharing its wiring
 • Your MCP setup should work as before. The hints now say Settings > Server
+• Quit M1K3, open it again with Lil or Big, and send a chat message the moment it is ready. The answer should start promptly and run at its usual speed. Before this build a first message sent that early crawled. Try the same with voice mode
 
 And the basics:
 • Chat, then voice mode, a few turns in a row

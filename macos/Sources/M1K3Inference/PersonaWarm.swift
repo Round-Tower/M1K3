@@ -13,6 +13,14 @@
 //  cancels it on a swap. Pure, so the contract is pinned under `swift test`; the wiring is verify-by-launch.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-20, Confidence 0.85. Prior: none (new file).
+//  Review: Kev + claude-fable-5.2, 2026-11-11 (#621) — the warm waits for quiet before each palette
+//  (`PersonaWarmYield`, `beforeEach`). Measured on master that day with Big: a call 8 s after launch got its first
+//  word at 19 s, behind the build in flight, and then decoded at 5 tok/s beside the next one (25 alone); Lil 12
+//  against 70. A build in flight still finishes: only the palettes after it wait. Confidence 0.8 (the wait is
+//  pinned; the gain is verify-by-launch).
+//  Review fold: a wait that runs out STOPS the warm instead of building beside the answer it waited for.
+//  Open: voice mode's listening is not "being answered", so a voice turn can still meet a build in flight. A
+//  Brain at Home turn from a paired device and the exit-time distillation are not counted either.
 
 import Foundation
 
@@ -51,21 +59,59 @@ public struct PersonaWarmLedger<ID: Hashable & Sendable>: Sendable {
 }
 
 /// Walks the palettes in order, asking `shouldContinue` before each one, so a cancelled warm stops at the next
-/// boundary instead of prefilling every palette of a brain nobody is using.
+/// boundary instead of prefilling every palette of a brain nobody is using. `beforeEach` runs ahead of that
+/// question: the app waits there for quiet (`PersonaWarmYield`), and false ends the run.
 public enum PersonaWarmRun {
     /// Returns how many palettes were warmed.
     @discardableResult
     public static func run<Palette: Sendable>(
         _ palettes: [Palette],
+        beforeEach: () async -> Bool = { true },
         shouldContinue: () async -> Bool,
         warm: (Palette) async -> Void
     ) async -> Int {
         var warmed = 0
         for palette in palettes {
-            guard await shouldContinue() else { break }
+            // The wait first, the question after: a swap that lands during the wait must skip this palette.
+            // A wait that says no (it gave up) ends the run: the palettes left build on first use.
+            guard await beforeEach(), await shouldContinue() else { break }
             await warm(palette)
             warmed += 1
         }
         return warmed
+    }
+}
+
+/// The warm's manners: before a palette it waits while someone is being answered, so a build never starts
+/// beside a live answer. It checks every `step` and gives up at `limit`: the warm then STOPS (it never builds
+/// beside the answer it waited for), the slot frees, and the palettes left build on first use, as they did
+/// before there was a warm.
+public enum PersonaWarmYield {
+    public enum Outcome: Sendable, Equatable {
+        case quiet, limitReached, cancelled
+
+        /// Only quiet lets the next palette start.
+        public var goesOn: Bool {
+            self == .quiet
+        }
+    }
+
+    public static let defaultLimit: Duration = .seconds(300)
+    public static let defaultStep: Duration = .milliseconds(500)
+
+    @discardableResult
+    public static func untilQuiet(
+        busy: () async -> Bool,
+        limit: Duration = defaultLimit,
+        step: Duration = defaultStep,
+        pause: (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+    ) async -> Outcome {
+        var waited: Duration = .zero
+        while await busy() {
+            guard waited < limit else { return .limitReached }
+            do { try await pause(step) } catch { return .cancelled }
+            waited += step
+        }
+        return .quiet
     }
 }

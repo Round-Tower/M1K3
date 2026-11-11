@@ -24,6 +24,8 @@
 //  admission rule BrainServeController.admitRemoteTurn).
 //  Review: Kev + claude-fable-5.2, 2026-11-11 (night) — the Open is retired in part: curl and the OpenAI Python
 //  SDK ran against all three brains by launch on 11-11, and Kev's own curl against Big (#801). Confidence 0.75.
+//  Review: Kev + claude-fable-5.2, 2026-11-11 (#621) — `isAnswering()`: the launch warm asks and waits. Confidence
+//  unchanged.
 //  Open: an editor or a web UI as the client; a chat or voice turn ending a live call, in the hand.
 //
 
@@ -132,6 +134,11 @@ final class LocalAPIController {
         server = nil
         isRunning = false
         statusText = nil
+    }
+
+    /// Whether a caller is being answered right now (the launch warm waits for it, #621).
+    func isAnswering() async -> Bool {
+        await server?.isAnswering ?? false
     }
 
     /// The person at the Mac has started a turn: a Local API call in flight ends now.

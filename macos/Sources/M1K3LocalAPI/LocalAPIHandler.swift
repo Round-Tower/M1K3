@@ -16,6 +16,8 @@
 //    event once a stream has begun. Never a successful empty answer.
 //
 //  Signed: Kev + claude-fable-5.2, 2026-11-11, Confidence 0.8, Prior: none (new file)
+//  Review: Kev + claude-fable-5.2, 2026-11-11 (#621) — `isAnswering` says a call holds the brain, so the launch warm
+//  can wait for it. Confidence unchanged.
 //
 
 import Foundation
@@ -78,6 +80,11 @@ public actor LocalAPIHandler {
         self.backend = backend
         self.now = now
         self.newID = newID
+    }
+
+    /// Whether a chat call holds the brain right now. The launch warm reads it and waits (#621).
+    public var isAnswering: Bool {
+        claimed
     }
 
     /// The person at the Mac has started using M1K3: a call in flight ends now.
