@@ -22,7 +22,9 @@
 //  Signed: Kev + claude-fable-5.2, 2026-11-11, Confidence 0.6, Prior: none (new
 //  file; the lifecycle and token handling follow MCPHostController, the
 //  admission rule BrainServeController.admitRemoteTurn).
-//  Open: verify-by-launch with a real client (curl, the OpenAI SDK, one editor).
+//  Review: Kev + claude-fable-5.2, 2026-11-11 (night) — the Open is retired in part: curl and the OpenAI Python
+//  SDK ran against all three brains by launch on 11-11, and Kev's own curl against Big (#801). Confidence 0.75.
+//  Open: an editor or a web UI as the client; a chat or voice turn ending a live call, in the hand.
 //
 
 import Foundation

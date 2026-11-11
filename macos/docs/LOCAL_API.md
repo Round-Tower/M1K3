@@ -50,9 +50,11 @@ another app's instructions has not been evaluated; that is yours to judge.
   ends when you start a turn. OpenAI SDKs retry a 429 by themselves.
 - **Each call re-reads the conversation.** Nothing is kept between calls, in
   memory or on disk, so a long history costs the same wait for the first word
-  on every turn (measured 2026-11-11 on an M1 Debug build with a second brain
-  loaded: about 6 s on Lil and 8 s on Big for 2,000 tokens; a short prompt
-  starts in about 0.3 s). Keep the history short where your tool lets you.
+  on every turn (measured 2026-11-11 on an M1 Max, an optimised build with
+  the one brain loaded: about 4 s on Lil and 8.6 s on Big for 2,000 tokens; a
+  short prompt starts in about 0.15 s on Lil and 0.3 s on Big, and answers run
+  at about 70 and 25 tokens a second). Keep the history short where your tool
+  lets you.
 - **No brain swaps.** `/v1/models` lists the brain that is ready. Asking for
   another one gets `404 model_not_found`; switch brain in M1K3 itself.
 - **Reasoning is off** on this route for the brains that have a switch for it
@@ -74,6 +76,11 @@ exact, and read zero on a system that cannot count. On any brain, `usage` reads
 zero when one of your `stop` sequences ends the answer: the call is cut there,
 before the count.
 
+`finish_reason` is `length` when an answer ran into `max_tokens` and `stop`
+otherwise. Apple's model names no reason, so Mini's is read off its token
+count: an answer within one token of the ceiling says `length`, and on a system
+that cannot count, a cut Mini answer says `stop`.
+
 Errors use OpenAI's shape: `{"error": {"message", "type", "code", "param"}}`.
 A conversation over 200,000 characters is refused with `400
 context_length_exceeded` before it reaches a brain, and Mini says the same when
@@ -90,3 +97,8 @@ client by launch (curl and a streaming Python client; Kev's own curl on Big).
 Mini reports usage. The cost of a long conversation is stated; a cache between
 calls was challenged and deferred until after the launch (it needs its own
 memory slot, a cut at the last user turn, and Release-build numbers)._
+
+_Review: Kev + claude-fable-5.2, 2026-11-11 (night): the timings above are
+re-measured on an optimised build with one brain loaded (the earlier ones were
+a Debug build beside the live app). Mini says `length` when cut. The slow first
+call after idle did not recur on the optimised build (0.1 to 0.3 s)._
