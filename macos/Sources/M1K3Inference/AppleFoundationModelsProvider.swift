@@ -95,7 +95,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-11 (night) — a raw chat cut at `max_tokens` now finishes `length`: Apple
 //  cuts silently, so the reason is read off the count, and the count drops the one wrapper token Apple adds (cut at
 //  8, 16 and 32 it read 9, 17 and 33, live). Before this a cut answer said `stop`. Confidence 0.8 (pure rule tested,
-//  the cut live); an answer that ends by itself on exactly the ceiling also reads `length`.
+//  the cut live, on English prose only); an answer that ends by itself within one token of the ceiling also reads
+//  `length` (review fold: a false `stop` is the worse error for a client).
 import Foundation
 import M1K3LogCore
 import os
@@ -766,21 +767,24 @@ extension AppleFoundationModelsProvider: RawChatCompleting {
 }
 
 extension AppleFoundationModelsProvider {
-    /// What one raw chat cost, counted by Apple's own tokenizer AFTER the answer: a count beside the
-    /// generation costs the first token seconds (see `logTokenBudget`). The answer is counted as plain
-    /// text, so it is close, not exact. Nil when the system cannot count (before 26.4, or the daemon
-    /// refuses): the caller then reports no usage instead of a guess.
     /// What Apple's count adds to an answer counted as a prompt: an answer cut at a ceiling of 8, 16 and 32
     /// counted 9, 17 and 33 (live, 2026-11-11).
     static let rawChatAnswerWrapperTokens = 1
 
     /// Apple cuts an answer at the ceiling silently and names no reason, so the reason is read off the count:
-    /// an answer that filled the ceiling was cut. With no count there is nothing to read, and it says `stop`.
+    /// an answer that filled the ceiling was cut. The count is of the answer's text read again, not of the
+    /// tokens generated, so a cut that lands inside a word can read one short: within one of the ceiling is
+    /// `length`. A caller told `stop` on a cut answer never retries; one told `length` on a whole one loses
+    /// little. With no count there is nothing to read, and it says `stop`.
     static func rawChatFinishReason(completionTokens: Int?, ceiling: Int) -> RawChatFinish.Reason {
         guard let completionTokens else { return .stop }
-        return completionTokens >= ceiling ? .length : .stop
+        return completionTokens >= max(1, ceiling - 1) ? .length : .stop
     }
 
+    /// What one raw chat cost, counted by Apple's own tokenizer AFTER the answer: a count beside the
+    /// generation costs the first token seconds (see `logTokenBudget`). The answer is counted as plain
+    /// text, so it is close, not exact. Nil when the system cannot count (before 26.4, or the daemon
+    /// refuses): the caller then reports no usage instead of a guess.
     static func rawChatUsage(system: String?, prompt: String, answer: String) async -> (prompt: Int, completion: Int)? {
         guard #available(macOS 26.4, iOS 26.4, visionOS 26.4, *) else { return nil }
         do {

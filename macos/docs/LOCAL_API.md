@@ -76,7 +76,8 @@ before the count.
 
 `finish_reason` is `length` when an answer ran into `max_tokens` and `stop`
 otherwise. Apple's model names no reason, so Mini's is read off its token
-count: on a system that cannot count, a cut Mini answer says `stop`.
+count: an answer within one token of the ceiling says `length`, and on a system
+that cannot count, a cut Mini answer says `stop`.
 
 Errors use OpenAI's shape: `{"error": {"message", "type", "code", "param"}}`.
 A conversation over 200,000 characters is refused with `400

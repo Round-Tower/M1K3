@@ -134,7 +134,11 @@ struct RawChatCompletionTests {
     func finishReasonFromCount() {
         #expect(AppleFoundationModelsProvider.rawChatFinishReason(completionTokens: 16, ceiling: 16) == .length)
         #expect(AppleFoundationModelsProvider.rawChatFinishReason(completionTokens: 17, ceiling: 16) == .length)
-        #expect(AppleFoundationModelsProvider.rawChatFinishReason(completionTokens: 15, ceiling: 16) == .stop)
+        // The count re-reads the text, so a cut inside a word can read one short: still a cut.
+        #expect(AppleFoundationModelsProvider.rawChatFinishReason(completionTokens: 15, ceiling: 16) == .length)
+        #expect(AppleFoundationModelsProvider.rawChatFinishReason(completionTokens: 14, ceiling: 16) == .stop)
+        #expect(AppleFoundationModelsProvider.rawChatFinishReason(completionTokens: 1, ceiling: 1) == .length)
+        #expect(AppleFoundationModelsProvider.rawChatFinishReason(completionTokens: 0, ceiling: 1) == .stop)
         #expect(AppleFoundationModelsProvider.rawChatFinishReason(completionTokens: nil, ceiling: 16) == .stop)
     }
 
@@ -209,7 +213,7 @@ struct RawChatLiveTests {
         let (cut, cutFinish) = try await run([.init(.user, "Write a 300-word story about a lighthouse.")], maxTokens: 16)
         print("RAWCHAT-LIVE ceiling: \(cut.debugDescription) finish=\(String(describing: cutFinish))")
         #expect(cutFinish?.reason == .length)
-        #expect(cutFinish?.completionTokens == 16)
+        #expect((15 ... 17).contains(cutFinish?.completionTokens ?? 0))
         let (short, shortFinish) = try await run([.init(.user, "Reply with the single word: yes")], maxTokens: 60)
         print("RAWCHAT-LIVE under: \(short.debugDescription) finish=\(String(describing: shortFinish))")
         #expect(shortFinish?.reason == .stop)
