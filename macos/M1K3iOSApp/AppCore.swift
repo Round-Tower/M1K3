@@ -152,6 +152,8 @@
 //  turn straight after a look (`LookAftermath.withholdsWeb`, set by ChatSession.send). Confidence 0.8.
 //  Review: Kev + claude-fable-5.2, 2026-11-10 — `chat.adopt(attachmentStore:)`: every attached photo went blank on
 //  Kev's phone after a reinstall (the files were there; the saved absolute paths were not). Confidence 0.8.
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — `stopForBackground`: an on-device answer in flight is stopped at the
+//  background exit so the shed really frees the brain (BackgroundExitPolicy). Confidence 0.8.
 
 import AVFoundation
 #if os(iOS)
@@ -1303,6 +1305,16 @@ final class AppCore {
 
     /// The Send button's Stop face: cut the streaming answer short. `send`
     /// returns normally afterwards and settles the avatar itself.
+    /// The app is leaving for the background: the speech stops (there is no background audio), and an answer
+    /// being made on a brain loaded on this device stops too (`BackgroundExitPolicy`), before the shed.
+    func stopForBackground() {
+        cancelAutoSpeak()
+        Task { await stopSpeakingAnswer() }
+        if BackgroundExitPolicy.stopsTurn(turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: currentMLX != nil) {
+            chat.stopResponding()
+        }
+    }
+
     func stopResponding() {
         // Also the voice: an auto-spoken answer keeps talking after the text is done.
         cancelAutoSpeak()
