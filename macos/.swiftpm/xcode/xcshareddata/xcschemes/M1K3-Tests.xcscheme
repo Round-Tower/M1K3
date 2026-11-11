@@ -38,6 +38,9 @@
             <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "M1K3BrainServeTests" BuildableName = "M1K3BrainServeTests" BlueprintName = "M1K3BrainServeTests" ReferencedContainer = "container:"></BuildableReference>
          </TestableReference>
          <TestableReference skipped = "NO">
+            <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "M1K3LocalAPITests" BuildableName = "M1K3LocalAPITests" BlueprintName = "M1K3LocalAPITests" ReferencedContainer = "container:"></BuildableReference>
+         </TestableReference>
+         <TestableReference skipped = "NO">
             <BuildableReference BuildableIdentifier = "primary" BlueprintIdentifier = "M1K3BrainLinkTests" BuildableName = "M1K3BrainLinkTests" BlueprintName = "M1K3BrainLinkTests" ReferencedContainer = "container:"></BuildableReference>
          </TestableReference>
          <TestableReference skipped = "NO">
