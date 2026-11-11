@@ -39,7 +39,9 @@
 //  sends it, so nothing drafted from the camera leaves unseen. Every look is told the date and time. A stored
 //  frame is kept out of the device backup, and the spoken ask has an off switch in Settings (voice hears the room).
 //  Confidence 0.6: scan-pinned and drilled on the phone for timing; the screens are untried in the hand.
-//
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — the `look` plate (Kev: "we might need to add a screenshot of the
+//  vision too"): a real look at a still the capture run names, in chat. Run by hand on an iPhone 17 Pro Max
+//  simulator through tools/screengrab/capture-look.sh. Confidence 0.7.
 
 import Foundation
 import M1K3Chat
@@ -88,7 +90,9 @@ extension AppCore {
     /// Whether there is a look to ask more about: the conversation ends on one whose frame is kept, and the
     /// brain that would answer sees on this device.
     var canAskAboutLastLook: Bool {
-        canLook && isReady && chat.lastLook != nil
+        // The look plate shows the chips under its staged look; `canLook` is off under the harness (no camera).
+        let offered = canLook || (ScreengrabHarness.current.plate == .look && imagesAccepted)
+        return offered && isReady && chat.lastLook != nil
     }
 
     /// A second question about the last look's stored frame, from the chat composer. No camera: the frame is

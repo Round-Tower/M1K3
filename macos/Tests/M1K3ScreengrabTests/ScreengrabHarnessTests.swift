@@ -14,7 +14,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — pins -chat.avatarDisplay background on every plate. Confidence 0.9.
 //  Review: Kev + claude-opus-5.5, 2026-10-23 — the ask-documents plate's typed question, and the pairing route.
 //  Confidence 0.9.
-//
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — the `look` plate (Kev: "we might need to add a screenshot of the
+//  vision too"): a real look at a still the capture run names, in chat. Run by hand on an iPhone 17 Pro Max
+//  simulator through tools/screengrab/capture-look.sh. Confidence 0.7.
 
 import Foundation
 @testable import M1K3Screengrab
@@ -168,13 +170,38 @@ struct ScreengrabHarnessTests {
         #expect(ScreengrabPlate.chat.companionID == nil)
     }
 
+    /// The look plate (1.4): a REAL look at a staged still, so the frame shows a photo, the question and
+    /// an answer from the brain. The still is a file the capture run names, never a bundled asset, and no
+    /// camera is opened (a simulator has none).
+    @Test func lookPlateAsksARealQuestionOfAStagedStill() {
+        let env = [
+            "M1K3_SCREENGRAB": "1", "M1K3_SCREENGRAB_PLATE": "look", "M1K3_SCREENGRAB_LOOK_FRAME": "/tmp/still.jpg",
+        ]
+        let h = ScreengrabHarness(environment: env)
+        #expect(h.plate == .look)
+        #expect(h.lookQuestion == DemoPersona.lookQuestion)
+        #expect(h.lookFramePath == "/tmp/still.jpg")
+        #expect(!h.entersVoiceMode)
+        #expect(h.phoneRoute.isEmpty, "the look is in chat")
+        #expect(h.chatQuestion == nil)
+        // Only this plate looks, and a path alone stages nothing.
+        for plate in ScreengrabPlate.allCases where plate != .look {
+            var other = env
+            other["M1K3_SCREENGRAB_PLATE"] = plate.rawValue
+            let harness = ScreengrabHarness(environment: other)
+            #expect(harness.lookQuestion == nil, "\(plate.rawValue)")
+            #expect(harness.lookFramePath == nil, "\(plate.rawValue)")
+        }
+        #expect(ScreengrabHarness(environment: ["M1K3_SCREENGRAB_LOOK_FRAME": "/tmp/still.jpg"]).lookFramePath == nil)
+    }
+
     @Test func everyPlateInTheCapturePlanHasARawValueMatchingItsFilename() {
         // CAPTURE-PLAN.md §1 / §2 — the twelve plate files per target, plus the
         // Mac lane's constellation (2026-09-15).
         let plan = [
             "onboarding", "chat", "voice-listening", "voice-speaking", "documents", "memories",
             "brain-at-home", "companion-fox", "companion-gecko", "companion-inkfish",
-            "companion-colobus", "privacy-label", "constellation", "ask-documents",
+            "companion-colobus", "privacy-label", "constellation", "ask-documents", "look",
         ]
         #expect(ScreengrabPlate.allCases.map(\.rawValue) == plan)
     }

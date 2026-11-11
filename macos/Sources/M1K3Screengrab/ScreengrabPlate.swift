@@ -26,7 +26,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the Phosphor Fox (white lattice) is the house default via CompanionDefaults.registeredDefaults / houseCompanion (Kev, TestFlight 499). Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-23 — a fourteenth plate, `ask-documents`, for frame 05 (the
 //  Documents list backed none of its caption). Confidence 0.85 (pinned; the answer is verify-by-capture).
-//
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — the `look` plate (Kev: "we might need to add a screenshot of the
+//  vision too"): a real look at a still the capture run names, in chat. Run by hand on an iPhone 17 Pro Max
+//  simulator through tools/screengrab/capture-look.sh. Confidence 0.7.
 
 import Foundation
 
@@ -52,6 +54,11 @@ public enum ScreengrabPlate: String, CaseIterable, Sendable {
     /// Documents list (store QA, 2026-10-22). iOS only: the Mac has no beat and
     /// shows the seeded hero exchange.
     case askDocuments = "ask-documents"
+    /// The look (1.4, #768): a real look at a staged still, in chat, so the frame shows the photo, the
+    /// question and the answer. iOS only. No camera is opened: the capture run names the still's file.
+    /// Captured by `tools/screengrab/capture-look.sh`, not the XCUITest lane: a test install gives the app
+    /// a new container, so a still placed for it is gone (measured 2026-11-11).
+    case look
 
     /// The face every non-tile plate wears, so chat/voice/memories match each
     /// other across a run. The Phosphor Fox (white lattice) is the house default

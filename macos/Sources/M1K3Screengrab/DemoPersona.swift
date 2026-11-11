@@ -26,7 +26,9 @@
 //  edge recency today; this keeps the seed honest for the day something does. Confidence 0.9.
 //  Review: Kev + claude-opus-5.5, 2026-10-23 — `documentQuestion` for the ask-documents plate (frame 05).
 //  Confidence 0.85.
-//
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — the `look` plate (Kev: "we might need to add a screenshot of the
+//  vision too"): a real look at a still the capture run names, in chat. Run by hand on an iPhone 17 Pro Max
+//  simulator through tools/screengrab/capture-look.sh. Confidence 0.7.
 
 import Foundation
 import M1K3Chat
@@ -48,6 +50,10 @@ public enum DemoPersona {
     /// (the lair notes: keep the original roofline, dormers rejected), so the
     /// reply's source chip names that file.
     public static let documentQuestion = "what do my lair notes say about the roofline?"
+
+    /// The look plate's question about its staged still. Open on purpose: the still is the
+    /// capture run's to choose, so the question must suit any photo.
+    public static let lookQuestion = "What am I looking at?"
 
     public static let heroConversation: [ChatMessage] = [
         ChatMessage(role: .user, text: "who are you, and who else is listening?", status: .complete),

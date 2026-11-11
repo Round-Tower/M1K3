@@ -23,7 +23,9 @@
 //  fills the phone's Memories search the way the UI test used to type it. Confidence 0.9.
 //  Review: Kev + claude-opus-5.5, 2026-10-23 — `chatQuestion`: the ask-documents plate's typed turn; the iOS pairing
 //  plate is pushed (`.pairing`) instead of tapped to. Confidence 0.9.
-//
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — the `look` plate (Kev: "we might need to add a screenshot of the
+//  vision too"): a real look at a still the capture run names, in chat. Run by hand on an iPhone 17 Pro Max
+//  simulator through tools/screengrab/capture-look.sh. Confidence 0.7.
 
 import Foundation
 
@@ -37,6 +39,8 @@ public struct ScreengrabHarness: Sendable, Equatable {
     public static let runKey = "M1K3_SCREENGRAB_RUN"
     /// The file inside the sibling root that remembers which run it belongs to.
     public static let runStampName = ".screengrab-run"
+    /// The look plate's still: the path of a JPEG the capture run supplies (the test runner forwards it).
+    public static let lookFrameKey = "M1K3_SCREENGRAB_LOOK_FRAME"
 
     /// The process-wide read; the shells consult this at init.
     public static let current = ScreengrabHarness(environment: ProcessInfo.processInfo.environment)
@@ -45,11 +49,14 @@ public struct ScreengrabHarness: Sendable, Equatable {
     public let plate: ScreengrabPlate?
     /// The capture run this launch belongs to; nil outside a capture run.
     public let runToken: String?
+    /// The look plate's staged still; nil for every other plate and outside the harness.
+    public let lookFramePath: String?
 
     public init(environment: [String: String]) {
         isActive = environment[Self.activeKey] == "1"
         plate = isActive ? environment[Self.plateKey].flatMap(ScreengrabPlate.init(rawValue:)) : nil
         runToken = isActive ? environment[Self.runKey].flatMap { $0.isEmpty ? nil : $0 } : nil
+        lookFramePath = plate == .look ? environment[Self.lookFrameKey].flatMap { $0.isEmpty ? nil : $0 } : nil
     }
 
     /// Where the stores live for this launch: the live root when inactive, the
@@ -119,6 +126,12 @@ public struct ScreengrabHarness: Sendable, Equatable {
     /// are indexed — the ask-documents plate's real turn. Nil for every other plate.
     public var chatQuestion: String? {
         plate == .askDocuments ? DemoPersona.documentQuestion : nil
+    }
+
+    /// iOS: the question the look plate asks of its staged still, a REAL look through the
+    /// shipping chat path. Nil for every other plate.
+    public var lookQuestion: String? {
+        plate == .look ? DemoPersona.lookQuestion : nil
     }
 
     public var showsPairing: Bool {
