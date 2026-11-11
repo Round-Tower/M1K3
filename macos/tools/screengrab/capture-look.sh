@@ -15,14 +15,18 @@
 # Context: Kev, 2026-11-11: "we might need to add a screenshot of the vision too". Run once by hand on
 # an iPhone 17 Pro Max simulator (the answer appeared, with the chips); the launch flags mirror
 # ScreengrabPlate.launchRecipe by hand, so a recipe change must be copied here.
+# Review: Kev + claude-fable-5.2, 2026-11-11 (review fold): the still and the output resolve against the
+# caller's directory, the log's folder is made first, and the status bar is restored on any exit. Not re-run.
 set -euo pipefail
 
 udid=${1:?simulator udid}; still=${2:?path to a JPEG}; out=${3:-look.png}
+still=${still:A}; out=${out:A}          # absolute before the cd below: relative paths are the caller's
 root=${0:A:h:h:h}                       # macos/
 dd=${M1K3_SCREENGRAB_DD:-${TMPDIR:-/tmp}/m1k3-screengrab/dd-look}
 [[ -f $still ]] || { echo "no still at $still"; exit 2; }
 
 cd "$root"
+mkdir -p "${dd:h}"                      # the build log opens beside the derived data, before xcodebuild makes it
 xcodegen generate >/dev/null
 xcodebuild build -project M1K3.xcodeproj -scheme M1K3iOS -destination "id=$udid" -derivedDataPath "$dd" \
   -skipPackagePluginValidation -skipMacroValidation > "$dd.log" 2>&1 \
@@ -34,6 +38,7 @@ xcrun simctl install "$udid" "$dd/Build/Products/Debug-iphonesimulator/M1K3.app"
 container=$(xcrun simctl get_app_container "$udid" app.m1k3 data)
 mkdir -p "$container/tmp"
 cp "$still" "$container/tmp/look-still.jpg"
+trap 'xcrun simctl status_bar "$udid" clear 2>/dev/null || true' EXIT   # a failed run leaves no 9:41 behind
 xcrun simctl status_bar "$udid" override --time "9:41" --batteryState charged --batteryLevel 100 --cellularBars 4 2>/dev/null || true
 
 started=$(date "+%Y-%m-%d %H:%M:%S")
@@ -55,5 +60,4 @@ print -r -- "${line:-look: no line in four minutes}"
 [[ $line == *"answered=true"* ]] || { echo "the look was not answered: no frame taken"; exit 1; }
 sleep 3
 xcrun simctl io "$udid" screenshot "$out" >/dev/null
-xcrun simctl status_bar "$udid" clear 2>/dev/null || true
 echo "wrote $out"
