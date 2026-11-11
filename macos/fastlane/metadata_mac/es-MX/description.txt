@@ -19,5 +19,6 @@ HECHO PARA TU MÁQUINA
 • Optimizado para Apple Silicon (Metal/MLX).
 • Múltiples niveles de modelo para funcionar bien desde MacBook Air hasta Mac Studio.
 • Un cliente de línea de comandos (m1k3) y un servidor local con 18 herramientas para tus agentes de código — Claude, Cursor, VS Code, Codex, Zed.
+• Un servidor local para tus otras apps: activa la Local API y cualquier herramienta que hable la OpenAI API podrá usar el cerebro que tengas cargado. Solo en esta Mac, desactivada por defecto y con su propia clave.
 
 Inteligencia punk: tuya, privada, en tus términos.

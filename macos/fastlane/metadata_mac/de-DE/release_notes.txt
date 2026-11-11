@@ -1,16 +1,8 @@
-NEU IN 1.3
+NEU IN 1.4
 
-• Ein Web-Schalter im Chat. Die Websuche schickt deine Worte an eine Suchmaschine. Darum sitzt ihr Schalter jetzt gut sichtbar neben der Hirnauswahl.
-• Wie hättest du deine Antworten gern? Sag einmal „Kürzer, bitte“ oder „Keine Emojis“, und ich halte mich daran. Die Bitte landet in „Memories“, wo du sie löschen kannst.
-• Antworten, die zur Frage passen: nummerierte Schritte für eine Anleitung, eine Gegenüberstellung für einen Vergleich, ganz locker beim Smalltalk.
-• Gescannte PDFs. Seiten, die nur Bilder von Text sind, werden jetzt auf deinem Mac gelesen, und ich sage dir, wie viele ich gelesen habe.
-• „Bist du so weit?“ bekommt eine klare Antwort: ob ich noch lade und wie weit ich bin, ob ich mich aufwärme oder ob ich bereit bin.
-• Fall mir ins Wort. Sprich im Sprachmodus einfach los, während ich noch antworte: Ich verstumme und höre dir zu. Die Echounterdrückung ist jetzt standardmäßig aktiviert, damit ich dich höre und nicht mich selbst. Das klappt mit dem eingebauten Mikrofon deines Macs oder einem USB-Mikrofon; bei Bluetooth-Headsets bleibt alles wie bisher.
-• Antworten statt Links. Wenn ich eine Antwort laut vorlese, höre ich bei den Quellen auf, statt jede Webadresse mitzulesen.
-• Schneller in langen Chats. Ich mache da weiter, wo die letzte Nachricht endete, statt das ganze Gespräch noch einmal zu lesen. Gemessen auf einem M1 Max, nach der zehnten Nachricht: Big kommt etwa sechs Sekunden früher zur Antwort, Lil fast eine Sekunde.
-• Deine Dokumente zuerst. Frag nach einer Zahl oder einem Namen aus einem Handbuch oder Bericht, den du hinzugefügt hast, etwa nach einem Drehmoment, einem Datum oder danach, wer etwas abgezeichnet hat. Dann antworte ich aus deinem Dokument, auf deinem Mac, statt online nachzuschlagen.
-• Diesen Wortwechsel senden. Gib einer Antwort einen Daumen nach unten, und du kannst uns genau diesen einen Wortwechsel per E-Mail schicken. Du siehst ihn vorher, und er geht nur raus, wenn du auf „Senden“ klickst.
-• Ein kühler Kopf. Wenn dein Mac heiß läuft oder im Stromsparmodus ist, sage ich einmal Bescheid, dass ich einen Gang zurückschalte.
+• Ein lokaler Server für deine anderen Apps. Schalte die Local API unter Settings > Server ein, und jedes Werkzeug, das die OpenAI API spricht (ein Editor, ein Skript, eine Chat-App), kann das Hirn nutzen, das du geladen hast. Sie lauscht nur auf diesem Mac, ist standardmäßig aus und hat einen eigenen Schlüssel. Du bist zuerst dran: Ein Aufruf wartet, solange du chattest, und endet, sobald du eine neue Runde beginnst.
+• Settings > Server. Der MCP-Server für deine Coding-Agenten und die neue Local API teilen sich einen Bereich, jeweils mit eigenem Schalter und eigenem Schlüssel.
+• Mini beantwortet die Frage. Mini hatte sich angewöhnt, ganz normale Coding-Fragen mit einem Satz darüber zu beantworten, dass es seine Verdrahtung nicht preisgibt. Das ist behoben.
 
 NEU BEI M1K3? DAS MACHE ICH
 
@@ -21,6 +13,7 @@ NEU BEI M1K3? DAS MACHE ICH
 • Anruf-Gedächtnis: Mit deiner Zustimmung transkribiere ich Anrufe und fasse sie zusammen, verschlüsselt auf deinem Mac.
 • Brain at Home: Kopple dein iPhone oder iPad über dein eigenes WLAN und nutze das Hirn deines Macs vom Sofa aus.
 • Deine Coding-Agenten können mein Wissen und meine Stimme nutzen, über einen lokalen MCP-Server und das Kommandozeilen-Tool m1k3.
+• Deine anderen Apps können mein Hirn über die Local API nutzen, nur auf diesem Mac.
 • Siri und Kurzbefehle können mir Fragen stellen und mein Wissen ergänzen.
 • Private Cloud Compute, wenn du willst: standardmäßig aus, jede Nachricht einzeln, mit deiner Zustimmung.
 

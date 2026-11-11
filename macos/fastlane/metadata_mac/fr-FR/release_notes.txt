@@ -1,16 +1,8 @@
-NOUVEAU DANS LA 1.3
+NOUVEAU DANS LA 1.4
 
-• Un interrupteur web dans la conversation. La recherche web envoie tes mots à un moteur de recherche : son interrupteur est donc désormais à côté du sélecteur de cerveau, bien en vue.
-• Dis-moi comment tu aimes tes réponses. Un « plus court, s'il te plaît » ou un « pas d'emoji », une seule fois, et je m'y tiens. La demande est rangée dans Memories, où tu peux la supprimer.
-• Des réponses à l'image de la question : des étapes numérotées pour un « comment faire », les options côte à côte pour une comparaison, des mots simples pour bavarder.
-• PDF numérisés. Les pages qui sont des images de texte sont désormais lues sur ton Mac, et je te dis combien j'en ai lu.
-• « Tu es prêt ? » a droit à une réponse claire : en téléchargement (avec l'avancement), en préparation ou prêt.
-• Coupe-moi la parole. En mode vocal, commence à parler pendant que je réponds : je m'arrête et je t'écoute. L'annulation d'écho est maintenant activée par défaut, pour que je t'entende, toi, et pas moi. Ça marche avec le micro intégré de ton Mac ou un micro USB ; avec un casque Bluetooth, rien ne change.
-• Des réponses, pas des liens. Quand je lis une réponse à voix haute, je m'arrête aux sources au lieu d'égrener chaque adresse web.
-• Plus rapide dans les longues conversations. Je reprends là où s'est arrêté le dernier message au lieu de tout relire depuis le début. Mesuré sur un M1 Max, après le dixième message : Big répond environ six secondes plus tôt, Lil près d'une seconde plus tôt.
-• Tes documents d'abord. Demande un chiffre ou un nom qui figure dans un manuel ou un rapport que tu as ajouté, comme un couple de serrage, une date ou la personne qui a validé, et je réponds d'après ton document, sur ton Mac, au lieu de chercher en ligne.
-• Envoie cet échange. Mets un pouce vers le bas à une réponse, et tu peux nous envoyer cet échange-là par e-mail. Tu le vois d'abord, et il ne part que si tu appuies sur Envoyer.
-• La tête froide. Quand ton Mac chauffe ou passe en mode Économie d'énergie, je te dis une fois que je lève le pied.
+• Un serveur local pour tes autres apps. Active la Local API dans Settings > Server, et n'importe quel outil qui parle l'OpenAI API (un éditeur, un script, une appli de chat) peut utiliser le cerveau que tu as chargé. Le serveur n'écoute que sur ce Mac, il est désactivé par défaut et il a sa propre clé. Tu passes en premier : un appel attend pendant que tu discutes, et s'arrête si tu lances un nouvel échange.
+• Settings > Server. Le serveur MCP pour tes agents de code et la nouvelle Local API partagent un même volet, chacun avec son propre interrupteur et sa propre clé.
+• Mini répond à la question. Mini avait pris l'habitude de répondre aux questions de code ordinaires par une phrase disant qu'il ne partage pas son câblage. C'est corrigé.
 
 NOUVEAU SUR M1K3 ? VOICI CE QUE JE FAIS
 
@@ -21,6 +13,7 @@ NOUVEAU SUR M1K3 ? VOICI CE QUE JE FAIS
 • Mémoire des appels : avec ton accord, je transcris et résume tes appels, chiffrés sur ton Mac.
 • Brain at Home : associe ton iPhone ou ton iPad via ton propre Wi-Fi et utilise le cerveau de ton Mac depuis le canapé.
 • Tes agents de code peuvent utiliser mes connaissances et ma voix via un serveur MCP local et l'outil en ligne de commande m1k3.
+• Tes autres apps peuvent utiliser mon cerveau via la Local API, sur ce Mac uniquement.
 • Siri et Raccourcis peuvent me poser des questions et enrichir ce que je sais.
 • Private Cloud Compute, si tu le veux : désactivé par défaut, un message à la fois, avec ton accord.
 

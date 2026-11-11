@@ -1,18 +1,15 @@
-NOUVEAU DANS LA 1.3
+NOUVEAU DANS LA 1.4
 
-• Vois qui répond. La ligne au-dessus du champ de saisie nomme le cerveau et indique si la recherche web est activée. Touche-la pour changer l’un ou l’autre.
-• Un seul ＋ pour les fichiers et les photos : le champ de saisie respire.
-• Pensé pour l’iPhone pliable : ouvert ou fermé, la conversation s’adapte à l’écran que tu utilises.
-• Dis-moi comment tu aimes tes réponses. Un « plus court, s’il te plaît » ou un « pas d’emoji », une seule fois, et je m’y tiens. La demande est rangée dans Memories, où tu peux la supprimer.
-• Des réponses à l’image de la question : des étapes numérotées pour un « comment faire », les options côte à côte pour une comparaison, des mots simples pour bavarder.
-• Des téléchargements honnêtes. Je vérifie qu’il y a assez de place avant de télécharger un cerveau, la barre affiche la progression réelle, et si un téléchargement échoue, je te dis pourquoi.
-• PDF numérisés. Les pages qui sont des images de texte sont désormais lues sur ton appareil.
-• « Tu es prêt ? » a droit à une réponse claire : en téléchargement (avec l’avancement) ou prêt.
-• Lil tient la cadence : fini les répétitions, et il fait appel à la recherche web quand tu demandes l’actualité.
-• Des réponses, pas des liens. Quand je lis une réponse à voix haute, je m’arrête aux sources au lieu d’égrener chaque adresse web.
+• Montre-moi. Touche l’œil en haut d’une conversation et pointe ta caméra vers une étiquette, un panneau, une plante ou un écran, puis pose ta question. Je réponds sur ce que je vois, sur ton appareil. L’image n’est envoyée nulle part, et elle est enregistrée avec cette conversation sur ton appareil.
+• Regarde pendant qu’on parle. En mode vocal, ouvre l’œil et chaque question porte sur ce qui est devant toi. Ou demande en anglais « what am I looking at? » (pour l’instant, seulement en anglais) et je jette un seul coup d’œil. Un interrupteur dans les Réglages désactive la question à voix haute.
+• Redemande. Une deuxième question sur la même image, c’est un simple toucher.
+• Une recherche, si tu veux. Après un coup d’œil, je peux te rédiger une recherche web. Elle arrive dans le champ de saisie et ne part que si tu l’envoies.
+• Le titre dit qui répond : « LIL M1K3 » ou « MINI M1K3 ».
+• Mini répond à la question. Mini avait pris l’habitude de répondre aux questions de code ordinaires par une phrase disant qu’il ne partage pas son câblage. C’est corrigé.
 
 NOUVEAU SUR M1K3 ? VOICI CE QUE JE FAIS
 
+• Montre-moi des choses : pointe la caméra ou joins une photo, et je la lis sur ton appareil.
 • Discute avec un cerveau sur l’appareil : Mini démarre instantanément sur les appareils compatibles Apple Intelligence, et Lil tourne entièrement hors ligne sur les iPhone et iPad dotés de 8 Go de mémoire.
 • Parle-moi : reconnaissance vocale sur l’appareil et une voix neuronale naturelle.
 • Apporte tes connaissances : ajoute des PDF et des fichiers texte, et je réponds à partir d’eux, sur ton appareil.

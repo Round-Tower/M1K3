@@ -1,18 +1,15 @@
-NEU IN 1.3
+NEU IN 1.4
 
-• Sieh, wer antwortet. Die Zeile über dem Chatfeld nennt das Hirn und zeigt, ob die Websuche an ist. Tippe darauf, um eins davon umzustellen.
-• Ein einziges ＋ für Dateien und Fotos, damit das Eingabefeld Luft zum Atmen hat.
-• Gemacht für das faltbare iPhone: Ob auf- oder zugeklappt, der Chat passt auf den Bildschirm, den du gerade nutzt.
-• Wie hättest du deine Antworten gern? Sag einmal „Kürzer, bitte“ oder „Keine Emojis“, und ich halte mich daran. Die Bitte landet in „Memories“, wo du sie löschen kannst.
-• Antworten, die zur Frage passen: nummerierte Schritte für eine Anleitung, eine Gegenüberstellung für einen Vergleich, ganz locker beim Smalltalk.
-• Ehrliche Downloads. Bevor ein Hirn heruntergeladen wird, prüfe ich, ob genug Platz da ist. Der Balken zeigt den echten Fortschritt, und wenn ein Download fehlschlägt, sage ich dir, warum.
-• Gescannte PDFs. Seiten, die nur Bilder von Text sind, werden jetzt auf deinem Gerät gelesen.
-• „Bist du so weit?“ bekommt eine klare Antwort: ob ich noch lade und wie weit ich bin oder ob ich bereit bin.
-• Lil hält Schritt: keine Wiederholungen mehr, und wenn du nach Neuigkeiten fragst, greift Lil zur Websuche.
-• Antworten statt Links. Wenn ich eine Antwort laut vorlese, höre ich bei den Quellen auf, statt jede Webadresse mitzulesen.
+• Zeig's mir. Tippe oben im Chat auf das Auge und richte die Kamera auf ein Etikett, ein Schild, eine Pflanze oder einen Bildschirm, dann frag. Ich antworte auf das, was ich sehe, auf deinem Gerät. Das Bild wird nirgendwohin gesendet und zusammen mit diesem Chat auf deinem Gerät gespeichert.
+• Schau mit, während wir reden. Öffne im Sprachmodus das Auge, und jede Frage bezieht sich auf das, was vor dir ist. Oder frag auf Englisch „what am I looking at?“ (vorerst nur auf Englisch), dann werfe ich einen einzelnen Blick darauf. Ein Schalter in den Einstellungen schaltet das Fragen per Sprache ab.
+• Noch einmal fragen. Eine zweite Frage zum selben Bild ist ein Fingertipp.
+• Suche, wenn du willst. Nach einem Blick kann ich dir eine Websuche vorformulieren. Sie landet im Nachrichtenfeld und wird nur gesendet, wenn du sie selbst sendest.
+• Der Titel sagt, wer antwortet: „LIL M1K3“ oder „MINI M1K3“.
+• Mini beantwortet die Frage. Mini hatte sich angewöhnt, ganz normale Coding-Fragen mit einem Satz darüber zu beantworten, dass es seine Verdrahtung nicht preisgibt. Das ist behoben.
 
 NEU BEI M1K3? DAS MACHE ICH
 
+• Zeig mir Dinge: Richte die Kamera darauf oder häng ein Foto an, und ich lese es auf deinem Gerät.
 • Chatte mit einem Hirn auf dem Gerät: Mini startet sofort auf Geräten mit Apple Intelligence, und Lil läuft komplett offline auf iPhones und iPads mit 8 GB Arbeitsspeicher.
 • Sprich mit mir: Spracherkennung auf dem Gerät und eine natürliche neuronale Stimme.
 • Bring dein eigenes Wissen mit: Füge PDFs und Textdateien hinzu, und ich antworte auf ihrer Grundlage, auf deinem Gerät.
