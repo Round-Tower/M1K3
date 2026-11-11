@@ -1951,7 +1951,9 @@ final class AppEnvironment {
             // cost Big a 19 s first word and then 5 tok/s instead of 25 (measured 2026-11-11).
             await PersonaWarmRun.run(
                 [[], headlessTools, interactiveTools],
-                beforeEach: { await PersonaWarmYield.untilQuiet(busy: { await self?.someoneIsBeingAnswered() ?? false }) },
+                beforeEach: {
+                    await PersonaWarmYield.untilQuiet(busy: { await self?.someoneIsBeingAnswered() ?? false }).goesOn
+                },
                 shouldContinue: { !Task.isCancelled },
                 warm: { tools in await mlx?.warmPersonaPrefix(tools: tools) }
             )

@@ -54,11 +54,12 @@ public actor LocalAPIServer {
         self.onAbnormalStop = onAbnormalStop
     }
 
-    /// The person at the Mac has started using M1K3: a call in flight ends now.
+    /// Whether a chat call holds the brain right now.
     public var isAnswering: Bool {
         get async { await handler.isAnswering }
     }
 
+    /// The person at the Mac has started using M1K3: a call in flight ends now.
     public func preempt() async {
         await handler.preempt()
     }

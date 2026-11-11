@@ -173,7 +173,7 @@ struct PersonaWarmYieldTests {
         let order = Recorder()
         let ran = await PersonaWarmRun.run(
             [0, 8, 15],
-            beforeEach: { order.record(-1) },
+            beforeEach: { order.record(-1); return true },
             shouldContinue: { true },
             warm: { order.record($0); recorder.record($0) }
         )
@@ -186,11 +186,27 @@ struct PersonaWarmYieldTests {
         let recorder = Recorder()
         let ran = await PersonaWarmRun.run(
             [0, 8, 15],
-            beforeEach: { if recorder.recorded.count == 1 { recorder.record(-1) } },
+            beforeEach: { if recorder.recorded.count == 1 { recorder.record(-1) }; return true },
             shouldContinue: { !recorder.recorded.contains(-1) },
             warm: { recorder.record($0) }
         )
         #expect(ran == 1)
         #expect(recorder.recorded == [0, -1])
+    }
+
+    @Test("a wait that gave up ends the run: no palette is built beside the answer it waited for")
+    func givingUpEndsTheRun() async {
+        let recorder = Recorder()
+        let ran = await PersonaWarmRun.run(
+            [0, 8, 15],
+            beforeEach: { recorder.recorded.isEmpty },
+            shouldContinue: { true },
+            warm: { recorder.record($0) }
+        )
+        #expect(ran == 1)
+        #expect(recorder.recorded == [0])
+        #expect(PersonaWarmYield.Outcome.quiet.goesOn)
+        #expect(!PersonaWarmYield.Outcome.limitReached.goesOn)
+        #expect(!PersonaWarmYield.Outcome.cancelled.goesOn)
     }
 }

@@ -235,16 +235,17 @@ struct LocalAPIHandlerTests {
     }
 
     @Test("the handler says when a call holds the brain, and stops saying it when the call ends")
-    func answeringIsVisible() async {
+    func answeringIsVisible() async throws {
         let brain = FakeBrain()
         brain.holds = true
         let handler = handler(brain)
         #expect(await handler.isAnswering == false)
         let reply = await handler.reply(to: request("POST", "/v1/chat/completions", body: chat(["stream": true])))
         #expect(await handler.isAnswering)
-        brain.held?.yield(.delta("hi"))
-        brain.held?.yield(.finished(RawChatFinish(reason: .stop, promptTokens: 1, completionTokens: 1)))
-        brain.held?.finish()
+        let held = try #require(brain.held)
+        held.yield(.delta("hi"))
+        held.yield(.finished(RawChatFinish(reason: .stop, promptTokens: 1, completionTokens: 1)))
+        held.finish()
         _ = await text(reply)
         #expect(await handler.isAnswering == false)
     }
