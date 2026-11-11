@@ -74,6 +74,8 @@
 //  (`speedMultiplier`, a VoiceMood's pace), clamped by `kokoroSpeed` to 0.8...1.25. Kokoro has no
 //  pitch control, so a mood's pitch reaches Apple voices only. Confidence 0.8 (the clamp is pinned;
 //  how a paced line sounds is verify-by-launch).
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — a cancelled utterance that spoke nothing no longer falls back to the
+//  system voice (speech stopped for the background must stay stopped). Confidence 0.75.
 
 import Foundation
 import M1K3Inference
@@ -278,7 +280,8 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, SpeechPro
             continuation.onTermination = { _ in task.cancel() }
         }
         let spoke = await renderer.speak(stream: timed, sampleRate: KokoroSynthesizer.sampleRate)
-        if !spoke {
+        // A cancelled utterance (the app left for the background, speech was stopped) gets no second voice.
+        if !spoke, !Task.isCancelled {
             await renderer.speak(utterance) // nothing phonemized/synthesized → Apple fallback
         }
     }

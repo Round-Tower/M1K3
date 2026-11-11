@@ -143,7 +143,8 @@ final class KokoroModel: Module {
         try model.update(parameters: ModuleParameters.unflattened(sanitized), verify: .noUnusedKeys)
 
         model.train(false)
-        MLX.eval(model.parameters())
+        // LOCAL: guarded, as the reads are (a load that starts in the background must throw, not trap).
+        try KokoroGuardedRead.evaluate(model.parameters())
         return model
     }
 

@@ -23,8 +23,10 @@ struct KokoroGuardedReadScanTests {
         for file in files where file.lastPathComponent != "KokoroGuardedRead.swift" {
             let lines = try String(contentsOf: file, encoding: .utf8).components(separatedBy: "\n")
             for (index, line) in lines.enumerated() {
-                let code = line.components(separatedBy: "//").first ?? ""
-                if code.contains(".asArray(") || code.contains(".item(") || code.contains(".asData(") {
+                // A comment starts at a `//` that is not part of a URL.
+                let code = line.replacingOccurrences(of: "://", with: ":__").components(separatedBy: "//").first ?? ""
+                let forced = [".asArray(", ".item(", ".asData(", ".asMTLBuffer(", "eval("]
+                if forced.contains(where: code.contains) {
                     bare.append("\(file.lastPathComponent):\(index + 1)")
                 }
             }
@@ -42,6 +44,8 @@ struct KokoroGuardedReadScanTests {
         let checked = try #require(rest.range(of: "try failure.check()"))
         let read = try #require(rest.range(of: "array.asArray(type)"))
         #expect(evaluated.lowerBound < checked.lowerBound && checked.lowerBound < read.lowerBound)
+        // And again after the copy, which can evaluate a second time.
+        #expect(rest[read.upperBound...].range(of: "try failure.check()") != nil)
     }
 
     @Test("the synthesiser's forward pass runs inside the error scope")

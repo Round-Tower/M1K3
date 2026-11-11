@@ -21,7 +21,9 @@
 //  Context: found by the first run of tools/asc/feedback.py (#748) on build 544.
 //  Open: the MLX message is not in the crash log, so "GPU work refused in the
 //  background" is the reading of the evidence, not a captured error. The guard
-//  holds for any MLX failure. The brains' own generation has no such scope
+//  holds for any MLX failure that surfaces at a read. Two things are owed on a phone: whether MLX's
+//  Metal error stays set after one failure (speech would then fall back to the system voice until a
+//  relaunch), and the background case itself. The brains' own generation has no such scope
 //  (mlx-swift-lm), and a turn still generating at the background exit is the
 //  same shape: not fixed here.
 //
@@ -35,7 +37,17 @@ enum KokoroGuardedRead {
         try withError { failure in
             array.eval()
             try failure.check()
-            return array.asArray(type)
+            let copied = array.asArray(type)
+            try failure.check() // the copy can evaluate again (a strided view made contiguous)
+            return copied
+        }
+    }
+
+    /// Force an evaluation with no read (the weights at load). Throws when it fails.
+    static func evaluate(_ arrays: some Any) throws {
+        try withError { failure in
+            MLX.eval(arrays)
+            try failure.check()
         }
     }
 
@@ -46,15 +58,22 @@ enum KokoroGuardedRead {
 
     /// Verify-by-launch (MLX runs only inside the app): force an MLX error inside the scope and say what
     /// happened. A trap here would be the bug this file exists to prevent.
+    ///
+    /// It runs on a plain dispatch queue, as `infer` does: MLX's error scope is a task-local, and off a Swift
+    /// task it rides the thread. It forces a shape error, raised where the op is built. A GPU failure is
+    /// raised at the evaluation instead, on the same thread (MLX rethrows a Metal error to the thread that
+    /// waits), but that path cannot be forced here: it is owed on a phone.
     static func selfCheck() -> String {
-        do {
-            let sum: [Float] = try scope {
-                let mismatched = MLXArray(0 ..< 10, [2, 5]) + MLXArray(0 ..< 15, [3, 5])
-                return try values(mismatched.asType(.float32), as: Float.self)
+        DispatchQueue(label: "app.m1k3.kokoro.guard-check").sync {
+            do {
+                let sum: [Float] = try scope {
+                    let mismatched = MLXArray(0 ..< 10, [2, 5]) + MLXArray(0 ..< 15, [3, 5])
+                    return try values(mismatched.asType(.float32), as: Float.self)
+                }
+                return "✗ kokoro guarded read: an MLX error did not throw (\(sum.count) values)"
+            } catch {
+                return "✓ kokoro guarded read: an MLX error on a dispatch queue throws instead of trapping"
             }
-            return "✗ kokoro guarded read: an MLX error did not throw (\(sum.count) values)"
-        } catch {
-            return "✓ kokoro guarded read: an MLX error throws instead of trapping (\(String(describing: error).prefix(80)))"
         }
     }
 }
