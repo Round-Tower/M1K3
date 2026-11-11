@@ -714,8 +714,9 @@ and opened the camera on none of 75 that did not ask).
 **Verify-owed:** the Look screen and the voice eye in Kev's hand (framing,
 orientation, the permission prompt, voice and camera running together, a call
 arriving while the eye is open), and the #768 heat and battery soak (ten
-minutes with camera, speech recognition and a brain all on) before a release
-tag.
+minutes with camera, speech recognition and a brain all on) before the store
+submission. Kev cut 1.4.0 to TestFlight on 2026-11-11 with the soak still owed;
+it is a line in that build's TestFlight notes.
 
 _Signed: Kev + claude-fable-5.2, 2026-11-09, Confidence 0.7 (the route, the
 display-only rule and the camera's lifecycle are tested; the iOS target builds;

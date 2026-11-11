@@ -1,20 +1,17 @@
-Thanks for testing M1K3 1.3.0 on the Mac.
+Thanks for testing M1K3 1.4.0 on the Mac.
 
 New in this build, please try:
-• Start a new chat and ask for a recipe. The answer should be the recipe, with no sentence about what leaves your Mac before it. Then ask "does anything I type ever leave this Mac?": the answer should still say yes, web searches do
-• Web search switch: it sits beside the brain switcher in the chat toolbar. Turn it off and ask for today's news: I should answer without going to the web
-• Tell me how you like answers: say "Keep your answers to three sentences or fewer, please." Quit, reopen and ask an open question. The answer should stay short. The ask shows in Memories, where you can delete it
-• Answers take the shape of what you asked: a how-to as numbered steps, a comparison side by side, small talk as plain chat. Tell us when a shape feels wrong
-• Thumbs down an answer, then "Send this exchange…": your mail app opens with that one exchange, shown first so you can edit it. Nothing is sent unless you press Send
-• Drop a scanned PDF (photos of pages) onto the chat: I read it on your Mac and say how many pages I read. Before, it said "no readable text"
-• Ask "are you ready?" while a brain downloads: I should say how far along it is and who answers meanwhile
-• On a hot Mac, or in Low Power Mode, I say once why I'm taking it easier
-• If M1K3 ever quits unexpectedly, the next launch shows a short note offering a report. You see the report before anything is sent, and no rating request comes for 3 days
+• Settings has a pane called Server (it was MCP Server). It holds the MCP server for coding agents and the new Local API, each with its own switch and key
+• Local API: switch it on, copy the API key, and point any tool that speaks the OpenAI API at http://127.0.0.1:4141/v1 with that key. The model is named after the brain you have loaded: mini-m1k3, lil-m1k3 or big-m1k3. From Terminal: curl -H "Authorization: Bearer KEY" http://127.0.0.1:4141/v1/models
+• You go first: start a long answer through the Local API, then send a chat message in M1K3. Your message should be answered and the API call should end. Tell us if either one hangs
+• Switch the Local API off: the same call should be refused. Press New Key: the old key should stop working
+• Tell us which tools you tried it with (an editor, a script, a chat app) and anything that did not connect. A long conversation is slow to start on every turn for now, because each call re-reads all of it
+• Ask Mini an ordinary coding question ("write a function that reverses a string"): the answer should be code, with no line about not sharing its wiring
+• Your MCP setup should work as before. The hints now say Settings > Server
 
-Also new since 1.2.1:
-• Talk over me: in voice mode, start speaking while I'm answering and I should stop and listen. Use the Mac's own mic or a USB one; Bluetooth headsets keep the old behaviour. Tell us about any time I stopped when nobody spoke, or kept talking through you
-• Sources are no longer read aloud in voice mode
-• Long chats on Lil or Big: replies from the third message on should start sooner than in 1.2.1. Tell us your Mac model if it feels slower
-• Drop a manual or report onto the chat and ask for a number or name that's in it: the answer should come from your document
+And the basics:
+• Chat, then voice mode, a few turns in a row
+• Drop a note or PDF onto the chat and ask about it
+• Brain at Home from your iPhone or iPad
 
-The network is used for brain downloads and web search, which is on by default; the switch above turns it off. Flag anything that looks like it left your Mac when it shouldn't have: Settings → "Report an issue…" attaches a privacy-scrubbed diagnostic.
+The Local API listens on this Mac only and is off until you switch it on. Nothing sent to it is kept in chat history or memory. The network is used for brain downloads and web search, which is on by default; the switch beside the brain switcher turns it off. Flag anything that looks like it left your Mac when it shouldn't have: Settings → "Report an issue…" attaches a privacy-scrubbed diagnostic.
