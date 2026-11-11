@@ -70,7 +70,9 @@ another app's instructions has not been evaluated; that is yours to judge.
 
 `usage` is reported for every brain. Lil and Big report exact counts. Mini's are
 taken from Apple's tokenizer once the answer is complete, so they are close, not
-exact, and read zero on a system that cannot count.
+exact, and read zero on a system that cannot count. On any brain, `usage` reads
+zero when one of your `stop` sequences ends the answer: the call is cut there,
+before the count.
 
 Errors use OpenAI's shape: `{"error": {"message", "type", "code", "param"}}`.
 A conversation over 200,000 characters is refused with `400

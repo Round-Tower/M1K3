@@ -738,6 +738,7 @@ extension AppleFoundationModelsProvider: RawChatCompleting {
                     }
                     try Task.checkCancellation()
                     let usage = await Self.rawChatUsage(system: request.system, prompt: prompt, answer: sent)
+                    try Task.checkCancellation() // a hang-up during the count ends as a cancel, not a finish
                     continuation.yield(.finished(
                         RawChatFinish(reason: .stop, promptTokens: usage?.prompt, completionTokens: usage?.completion)
                     ))
