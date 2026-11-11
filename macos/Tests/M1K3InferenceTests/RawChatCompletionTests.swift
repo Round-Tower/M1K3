@@ -176,6 +176,26 @@ struct RawChatLiveTests {
         #expect(finish?.reason == .stop)
     }
 
+    @Test("Mini reports what the call cost, counted after the answer")
+    func usageIsCounted() async throws {
+        let clock = ContinuousClock()
+        var usage: (prompt: Int, completion: Int)?
+        let took = await clock.measure {
+            usage = await AppleFoundationModelsProvider.rawChatUsage(
+                system: "You answer in one short sentence.", prompt: "What colour is the sky on a clear day?",
+                answer: "The sky is blue on a clear day."
+            )
+        }
+        print("RAWCHAT-LIVE usage: \(String(describing: usage)) in \(took)")
+        let counted = try #require(usage)
+        // Apple counts each part with its wrapper, so a short ask reads about 65 (measured 2026-11-11).
+        #expect(counted.prompt > 8 && counted.prompt < 150)
+        #expect(counted.completion > 4 && counted.completion < 30)
+        let (_, finish) = try await run([.init(.user, "Say hi in five words.")])
+        #expect((finish?.promptTokens ?? 0) > 0)
+        #expect((finish?.completionTokens ?? 0) > 0)
+    }
+
     @Test("Mini reads the earlier turns")
     func earlierTurnsAreRead() async throws {
         let (text, _) = try await run([

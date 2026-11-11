@@ -89,6 +89,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — `RawChatCompleting` (the Local API): Mini answers a conversation with
 //  the caller's system message as its only instructions; failures throw as `RawChatFailure`. Confidence 0.7 (the
 //  mapping and the cap are tested; the generation is verify-by-launch with a real client).
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — a raw chat reports its token counts (`rawChatUsage`), taken from
+//  Apple's tokenizer after the answer (about 0.25 s, live). Before this Mini's usage read zero and the doc said Apple
+//  could not count, which was wrong. Confidence 0.8 (live test; the answer is counted as plain text, so close, not exact).
 import Foundation
 import M1K3LogCore
 import os
@@ -715,7 +718,8 @@ extension AppleFoundationModelsProvider: ToolCallingProvider {
 
 /// Mini behind the Local API: a fresh session whose instructions are the caller's system message and nothing
 /// of M1K3's. Earlier turns ride in the prompt as a labelled preamble (`RawChatPrompt.flattened`). Apple's
-/// snapshots are cumulative, so they are converted to deltas; Apple reports no token counts and no stop reason.
+/// snapshots are cumulative, so they are converted to deltas; Apple reports no stop reason, and the token counts
+/// are taken from its tokenizer once the answer is complete (`rawChatUsage`).
 /// A failure THROWS as a `RawChatFailure`.
 extension AppleFoundationModelsProvider: RawChatCompleting {
     public func completeRawChat(_ request: RawChatRequest) -> RawChatStream? {
@@ -733,7 +737,11 @@ extension AppleFoundationModelsProvider: RawChatCompleting {
                         }
                     }
                     try Task.checkCancellation()
-                    continuation.yield(.finished(RawChatFinish(reason: .stop, promptTokens: nil, completionTokens: nil)))
+                    let usage = await Self.rawChatUsage(system: request.system, prompt: prompt, answer: sent)
+                    try Task.checkCancellation() // a hang-up during the count ends as a cancel, not a finish
+                    continuation.yield(.finished(
+                        RawChatFinish(reason: .stop, promptTokens: usage?.prompt, completionTokens: usage?.completion)
+                    ))
                     continuation.finish()
                 } catch is CancellationError {
                     continuation.finish(throwing: CancellationError())
@@ -746,6 +754,25 @@ extension AppleFoundationModelsProvider: RawChatCompleting {
                 }
             }
             continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+}
+
+extension AppleFoundationModelsProvider {
+    /// What one raw chat cost, counted by Apple's own tokenizer AFTER the answer: a count beside the
+    /// generation costs the first token seconds (see `logTokenBudget`). The answer is counted as plain
+    /// text, so it is close, not exact. Nil when the system cannot count (before 26.4, or the daemon
+    /// refuses): the caller then reports no usage instead of a guess.
+    static func rawChatUsage(system: String?, prompt: String, answer: String) async -> (prompt: Int, completion: Int)? {
+        guard #available(macOS 26.4, iOS 26.4, visionOS 26.4, *) else { return nil }
+        do {
+            let model = SystemLanguageModel.default
+            var asked = try await model.tokenCount(for: Prompt(prompt))
+            if let system, !system.isEmpty { asked += try await model.tokenCount(for: Instructions(system)) }
+            let answered = answer.isEmpty ? 0 : try await model.tokenCount(for: Prompt(answer))
+            return (asked, answered)
+        } catch {
+            return nil
         }
     }
 }
