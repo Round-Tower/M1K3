@@ -1,0 +1,290 @@
+//
+//  LocalAPIPolicyTests.swift
+//  M1K3LocalAPITests
+//
+//  The Local API's pure layer: which paths exist, who gets in, what a chat
+//  request must look like, what an error looks like to an OpenAI client, the
+//  streaming frames, stop sequences and the admission rules.
+//
+//  Signed: Kev + claude-fable-5.2, 2026-11-11, Confidence 0.85, Prior: none (new file)
+//
+
+import Foundation
+import M1K3Inference
+@testable import M1K3LocalAPI
+import Testing
+
+struct LocalAPIPolicyTests {
+    private func json(_ data: Data) throws -> [String: Any] {
+        try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+    }
+
+    private func body(_ object: [String: Any]) throws -> Data {
+        try JSONSerialization.data(withJSONObject: object)
+    }
+
+    // MARK: - Routes
+
+    @Test("two routes exist; the ones tools try next get a named 404, never a guess")
+    func routes() {
+        #expect(LocalAPIRoute.classify(method: "GET", path: "/v1/models") == .models)
+        #expect(LocalAPIRoute.classify(method: "POST", path: "/v1/chat/completions") == .chatCompletions)
+        #expect(LocalAPIRoute.classify(method: "post", path: "/v1/chat/completions?x=1") == .chatCompletions)
+        for path in ["/v1/completions", "/v1/embeddings", "/v1/responses", "/v1/audio/speech", "/v1/images/generations"] {
+            #expect(LocalAPIRoute.classify(method: "POST", path: path) == .unsupported(path))
+        }
+        #expect(LocalAPIRoute.classify(method: "OPTIONS", path: "/v1/chat/completions") == .preflight)
+        #expect(LocalAPIRoute.classify(method: "GET", path: "/mcp") == .notFound)
+        #expect(LocalAPIRoute.classify(method: "GET", path: "/v1/chat/completions") == .notFound)
+    }
+
+    // MARK: - The gate
+
+    @Test("only this loopback listener, never a web page, and only with the token")
+    func gate() {
+        func check(host: [String] = ["127.0.0.1:4243"], origin: String? = nil, auth: String? = "Bearer s3cret") -> Int? {
+            LocalAPIGate.check(hosts: host, origin: origin, authorization: auth, port: 4243, token: "s3cret")?.status
+        }
+        #expect(check() == nil)
+        #expect(check(host: ["localhost:4243"]) == nil)
+        #expect(check(host: []) == 400)
+        #expect(check(host: ["127.0.0.1:4243", "evil.example"]) == 400)
+        #expect(check(host: ["evil.example"]) == 403, "DNS rebinding: a foreign Host is refused")
+        #expect(check(host: ["127.0.0.1:9999"]) == 403)
+        #expect(check(origin: "https://evil.example") == 403, "a web page cannot call this")
+        #expect(check(origin: "http://localhost:3000") == 403, "nor a page served from this Mac: v1 has no browser clients")
+        #expect(check(auth: nil) == 401)
+        #expect(check(auth: "Bearer wrong") == 401)
+        #expect(check(auth: "s3cret") == 401)
+        #expect(check(auth: "bearer s3cret") == nil, "the scheme is case-insensitive")
+        // An empty configured token never opens the door.
+        #expect(LocalAPIGate.check(hosts: ["127.0.0.1:4243"], origin: nil, authorization: "Bearer ", port: 4243, token: "") != nil)
+    }
+
+    // MARK: - Errors
+
+    @Test("an error is the shape OpenAI clients parse, with a status they treat correctly")
+    func errorShape() throws {
+        let busy = LocalAPIError.busy(retryAfter: 5)
+        #expect(busy.status == 429 && busy.retryAfter == 5)
+        let object = try json(busy.body)
+        let error = try #require(object["error"] as? [String: Any])
+        #expect(error["type"] as? String == "rate_limit_error")
+        #expect((error["message"] as? String)?.isEmpty == false)
+        #expect(LocalAPIError.modelNotFound("m1k3-big", available: ["m1k3-mini"]).status == 404)
+        #expect(LocalAPIError.modelNotFound("x", available: []).code == "model_not_found")
+        #expect(LocalAPIError.unauthorized.status == 401)
+        #expect(LocalAPIError.contextTooLong.code == "context_length_exceeded")
+        #expect(LocalAPIError.contextTooLong.status == 400)
+        #expect(LocalAPIError.refused.status == 400)
+        #expect(LocalAPIError.unsupportedEndpoint("/v1/embeddings").status == 404)
+        #expect(LocalAPIError(failure: RawChatFailure.busy).status == 429)
+        #expect(LocalAPIError(failure: RawChatFailure.contextTooLong).code == "context_length_exceeded")
+        #expect(LocalAPIError(failure: CancellationError()).status == 500)
+        // Never a status the OpenAI SDK retries by itself except the two that mean "try again".
+        for error in [LocalAPIError.unauthorized, .contextTooLong, .refused, .modelNotFound("x", available: [])] {
+            #expect(![408, 409, 429, 500, 502, 503].contains(error.status))
+        }
+    }
+
+    // MARK: - The chat request
+
+    @Test("a plain chat request parses, with content as a string or as text parts")
+    func parsesChat() throws {
+        let call = try ChatCompletionCall.parse(body([
+            "model": "m1k3-lil", "stream": true, "max_tokens": 64, "temperature": 0.2, "stop": ["END"],
+            "stream_options": ["include_usage": true],
+            "messages": [
+                ["role": "system", "content": "Be brief."],
+                ["role": "user", "content": [["type": "text", "text": "Hello"], ["type": "text", "text": " there"]]],
+            ],
+        ])).get()
+        #expect(call.model == "m1k3-lil")
+        #expect(call.stream && call.includeUsage)
+        #expect(call.stop == ["END"])
+        #expect(call.request.system == "Be brief.")
+        #expect(call.request.question == "Hello there")
+        #expect(call.request.maxTokens == 64)
+        #expect(call.request.temperature == 0.2)
+
+        let plain = try ChatCompletionCall.parse(body([
+            "model": "m1k3-mini", "max_completion_tokens": 12, "stop": "X", "user": "ignored", "seed": 1,
+            "messages": [["role": "developer", "content": "Rules."], ["role": "user", "content": "Hi"]],
+        ])).get()
+        #expect(!plain.stream && !plain.includeUsage)
+        #expect(plain.request.maxTokens == 12)
+        #expect(plain.stop == ["X"])
+        #expect(plain.request.system == "Rules.", "the developer role is the system role")
+    }
+
+    @Test("what v1 does not do is refused by name, never silently ignored")
+    func refusesWhatItCannotDo() throws {
+        func failure(_ object: [String: Any]) throws -> LocalAPIError {
+            let result = try ChatCompletionCall.parse(body(object))
+            guard case let .failure(error) = result else {
+                Issue.record("parsed: \(object.keys.sorted())")
+                return .server("parsed")
+            }
+            return error
+        }
+        let hi: [[String: Any]] = [["role": "user", "content": "Hi"]]
+        #expect(try failure(["messages": hi]).param == "model")
+        #expect(try failure(["model": "m1k3-lil"]).param == "messages")
+        #expect(try failure(["model": "m1k3-lil", "messages": hi, "tools": [["type": "function"]]]).param == "tools")
+        #expect(try failure(["model": "m1k3-lil", "messages": hi, "n": 2]).param == "n")
+        #expect(try failure(["model": "m1k3-lil", "messages": hi, "response_format": ["type": "json_schema"]]).param
+            == "response_format")
+        let image: [[String: Any]] = [["role": "user", "content": [["type": "image_url", "image_url": ["url": "x"]]]]]
+        #expect(try failure(["model": "m1k3-lil", "messages": image]).param == "messages")
+        let toolTurn: [[String: Any]] = [["role": "tool", "content": "x"], ["role": "user", "content": "Hi"]]
+        #expect(try failure(["model": "m1k3-lil", "messages": toolTurn]).param == "messages")
+        #expect(try failure(["model": "m1k3-lil", "messages": [["role": "assistant", "content": "Hi"]]]).status == 400)
+        #expect(ChatCompletionCall.parse(Data("not json".utf8)).isFailure)
+        #expect(ChatCompletionCall.parse(nil).isFailure)
+        // n = 1 and an empty tools list are what careful clients send by default.
+        #expect(try ChatCompletionCall.parse(body(["model": "m", "messages": hi, "n": 1, "tools": []])).isSuccess)
+    }
+
+    // MARK: - Models and admission
+
+    @Test("the list is M1K3's evaluated brains that can answer now, and nothing else")
+    func models() throws {
+        let object = try json(LocalAPIWire.modelsBody(ids: ["m1k3-mini", "m1k3-lil"], created: 1))
+        #expect(object["object"] as? String == "list")
+        let data = try #require(object["data"] as? [[String: Any]])
+        #expect(data.map { $0["id"] as? String } == ["m1k3-mini", "m1k3-lil"])
+        #expect(data.allSatisfy { $0["object"] as? String == "model" && $0["owned_by"] as? String == "m1k3" })
+        #expect(LocalAPIModel.id(forTier: "lil") == "m1k3-lil")
+    }
+
+    @Test("the person at the Mac goes first, one API call at a time, and a brain that is not loaded is not found")
+    func admission() {
+        func decide(_ model: String, userBusy: Bool = false, apiBusy: Bool = false) -> Int? {
+            LocalAPIAdmission.decide(
+                requested: model, available: ["m1k3-mini", "m1k3-lil"], userBusy: userBusy, apiBusy: apiBusy
+            )?.status
+        }
+        #expect(decide("m1k3-lil") == nil)
+        #expect(decide("m1k3-big") == 404, "never a brain swap on a caller's say-so")
+        #expect(decide("gpt-4o") == 404)
+        #expect(decide("m1k3-lil", userBusy: true) == 429)
+        #expect(decide("m1k3-lil", apiBusy: true) == 429)
+        #expect(decide("m1k3-big", userBusy: true) == 404, "an unknown model is named before the queue is")
+    }
+
+    // MARK: - Wire
+
+    @Test("a non-streamed answer is one chat.completion object")
+    func completionBody() throws {
+        let finish = RawChatFinish(reason: .length, promptTokens: 9, completionTokens: 3)
+        let object = try json(LocalAPIWire.completionBody(id: "chatcmpl-1", model: "m1k3-lil", created: 5, text: "Hi", finish: finish))
+        #expect(object["object"] as? String == "chat.completion")
+        #expect(object["model"] as? String == "m1k3-lil")
+        let choice = try #require((object["choices"] as? [[String: Any]])?.first)
+        #expect(choice["finish_reason"] as? String == "length")
+        #expect((choice["message"] as? [String: Any])?["content"] as? String == "Hi")
+        #expect((choice["message"] as? [String: Any])?["role"] as? String == "assistant")
+        let usage = try #require(object["usage"] as? [String: Any])
+        #expect(usage["prompt_tokens"] as? Int == 9 && usage["completion_tokens"] as? Int == 3 && usage["total_tokens"] as? Int == 12)
+        // No counts from the runtime (Apple's model): zeros, so a client that reads usage does not crash.
+        let unknown = RawChatFinish(reason: .stop, promptTokens: nil, completionTokens: nil)
+        let bare = try json(LocalAPIWire.completionBody(id: "c", model: "m1k3-mini", created: 5, text: "Hi", finish: unknown))
+        #expect((bare["usage"] as? [String: Any])?["total_tokens"] as? Int == 0)
+    }
+
+    @Test("a stream is role first, content deltas, a final chunk with the finish reason, then [DONE]")
+    func streamFrames() throws {
+        func chunk(_ data: Data) throws -> [String: Any] {
+            let text = try #require(String(data: data, encoding: .utf8))
+            #expect(text.hasPrefix("data: ") && text.hasSuffix("\n\n"))
+            return try json(Data(text.dropFirst(6).utf8))
+        }
+        let role = try chunk(LocalAPIWire.chunk(id: "c", model: "m", created: 1, role: true))
+        let first = try #require((role["choices"] as? [[String: Any]])?.first)
+        #expect(role["object"] as? String == "chat.completion.chunk")
+        #expect((first["delta"] as? [String: Any])?["role"] as? String == "assistant")
+        #expect(first["finish_reason"] is NSNull)
+
+        let delta = try chunk(LocalAPIWire.chunk(id: "c", model: "m", created: 1, content: "He said \"hi\"\n"))
+        #expect(((delta["choices"] as? [[String: Any]])?.first?["delta"] as? [String: Any])?["content"] as? String == "He said \"hi\"\n")
+
+        let last = try chunk(LocalAPIWire.chunk(id: "c", model: "m", created: 1, finish: .stop))
+        let lastChoice = try #require((last["choices"] as? [[String: Any]])?.first)
+        #expect(lastChoice["finish_reason"] as? String == "stop")
+        #expect((lastChoice["delta"] as? [String: Any])?.isEmpty == true)
+
+        let usage = try chunk(LocalAPIWire.usageChunk(
+            id: "c", model: "m", created: 1, finish: RawChatFinish(reason: .stop, promptTokens: 2, completionTokens: 3)
+        ))
+        #expect((usage["choices"] as? [Any])?.isEmpty == true)
+        #expect((usage["usage"] as? [String: Any])?["total_tokens"] as? Int == 5)
+
+        #expect(String(data: LocalAPIWire.done, encoding: .utf8) == "data: [DONE]\n\n")
+        let head = try #require(String(data: LocalAPIWire.sseHead, encoding: .utf8))
+        #expect(head.hasPrefix("HTTP/1.1 200 OK\r\n") && head.contains("text/event-stream") && head.hasSuffix("\r\n\r\n"))
+        let failed = try chunk(LocalAPIWire.errorEvent(.busy(retryAfter: 3)))
+        #expect(failed["error"] != nil)
+    }
+
+    @Test("a buffered response carries its length, its type and a retry hint when there is one")
+    func bufferedResponse() throws {
+        let text = try #require(String(data: LocalAPIWire.response(for: .busy(retryAfter: 7)), encoding: .utf8))
+        #expect(text.hasPrefix("HTTP/1.1 429 "))
+        #expect(text.contains("Retry-After: 7\r\n"))
+        #expect(text.contains("Content-Type: application/json\r\n"))
+        #expect(text.contains("Connection: close\r\n"))
+        let parts = text.components(separatedBy: "\r\n\r\n")
+        #expect(text.contains("Content-Length: \(parts.dropFirst().joined(separator: "\r\n\r\n").utf8.count)\r\n"))
+    }
+
+    // MARK: - Stop sequences
+
+    @Test("a stop sequence ends the answer before it, even split across deltas")
+    func stopSequences() {
+        var filter = StopSequenceFilter(stops: ["END", "\n\nUser:"])
+        var out = ""
+        var stopped = false
+        for piece in ["Hello", " wor", "ld E", "ND and more"] {
+            let step = filter.push(piece)
+            out += step.emit
+            if step.stopped { stopped = true; break }
+        }
+        #expect(stopped)
+        #expect(out == "Hello world ")
+
+        var none = StopSequenceFilter(stops: [])
+        #expect(none.push("abc").emit == "abc")
+        #expect(none.flush().isEmpty)
+
+        var held = StopSequenceFilter(stops: ["STOP"])
+        #expect(held.push("so ST").emit == "so ", "a possible start of the sequence is held back")
+        #expect(held.flush() == "ST", "and released when the stream ends without it")
+    }
+
+    // MARK: - HTTP
+
+    @Test("a request is read once its head and its whole body have arrived")
+    func httpParsing() throws {
+        let raw = "POST /v1/chat/completions HTTP/1.1\r\nHost: 127.0.0.1:4243\r\nAuthorization: Bearer t\r\n"
+            + "Content-Type: application/json\r\nContent-Length: 2\r\n\r\n{}"
+        let request = try #require(LocalAPIHTTP.parse(Data(raw.utf8)))
+        #expect(request.method == "POST" && request.path == "/v1/chat/completions")
+        #expect(request.headers["host"] == ["127.0.0.1:4243"])
+        #expect(request.first("Authorization") == "Bearer t")
+        #expect(request.body == Data("{}".utf8))
+        #expect(LocalAPIHTTP.parse(Data(raw.dropLast(1).utf8)) == nil, "the body has not all arrived")
+        #expect(LocalAPIHTTP.parse(Data("GET /v1/models HTTP/1.1\r\nHost: a\r\nHost: b\r\n\r\n".utf8))?.headers["host"] == ["a", "b"])
+        #expect(LocalAPIHTTP.parse(Data("garbage".utf8)) == nil)
+        #expect(LocalAPIHTTP.declaredLength(Data("POST / HTTP/1.1\r\nContent-Length: 999999999\r\n\r\n".utf8)) == 999_999_999)
+    }
+}
+
+private extension Result {
+    var isSuccess: Bool {
+        if case .success = self { true } else { false }
+    }
+
+    var isFailure: Bool {
+        !isSuccess
+    }
+}
