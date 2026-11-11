@@ -39,11 +39,14 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (#696) — dispatches EnergyProbeStage (M1K3_SELFTEST_ENERGY=1: the
 //  RUSAGE_INFO_V6 read inside the sandboxed app plus one Lil generation's CPU joules beside the ledger's
 //  estimate; M1K3_SELFTEST_ENERGY_MODEL overrides the model); no other change. Confidence 0.8.
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — emits `KokoroLaunchChecks.guardedRead()` (a forced MLX error must
+//  throw, not trap); no other change. Confidence 0.8.
 
 import Foundation
 import M1K3Chat
 import M1K3Inference
 import M1K3Knowledge
+import M1K3Kokoro
 import M1K3LanguageModel
 import M1K3MLX
 import MLXEmbedders
@@ -411,6 +414,9 @@ enum SelfTest {
             // 3f. Optional wrapped-seed equivalence (M1K3_SELFTEST_SEEDEQ=1): fresh prefill vs
             // persona seed + suffix, logits and greedy tokens — the proof before gemma reuses a
             // seed longer than its sliding window.
+            // 3f'. Always: an MLX error inside Kokoro's guarded read throws instead of trapping (the 1.3.0
+            // background crash). One tiny array op: no model, no weights.
+            emit(KokoroLaunchChecks.guardedRead())
             if SelfTestEnv.value("M1K3_SELFTEST_SEEDEQ") == "1" {
                 emit(await llm.wrappedSeedEquivalenceProbe())
             }

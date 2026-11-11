@@ -18,7 +18,9 @@
 //  string remap now delegates to `KokoroMLXWeightKeyMap.remap(_:)` (a
 //  sibling, non-vendored, pure function — same rules, same order, byte-
 //  identical output) so the remap is red-first unit-tested without the
-//  metallib wall.
+//  metallib wall. ALSO (2026-11-11): `callAsFunction` throws, and its one
+//  mid-pass read goes through `KokoroGuardedRead` (a tester's background
+//  crash on 1.3.0; see that file).
 //
 
 import Foundation
@@ -65,7 +67,7 @@ final class KokoroModel: Module {
 
     func callAsFunction(
         inputIds: MLXArray, refS: MLXArray, speed: Float = 1.0
-    ) -> (audio: MLXArray, predDur: MLXArray) {
+    ) throws -> (audio: MLXArray, predDur: MLXArray) {
         let seqLen = inputIds.shape[inputIds.ndim - 1]
         let inputLengths = MLXArray([Int32(seqLen)])
         var textMask = MLXArray(Array(0 ..< Int32(seqLen))).reshaped([1, -1])
@@ -89,7 +91,8 @@ final class KokoroModel: Module {
         let predDur = MLX.clip(MLX.round(durSafe), min: 1, max: Float(maxFramesPerPhoneme))
             .asType(.int32)[0]
 
-        let durArray: [Int32] = predDur.asArray(Int32.self)
+        // LOCAL: a guarded read, so a failed evaluation throws instead of trapping (KokoroGuardedRead).
+        let durArray: [Int32] = try KokoroGuardedRead.values(predDur, as: Int32.self)
         var indices = [MLXArray]()
         for (i, n) in durArray.enumerated() {
             let count = min(max(Int(n), 0), maxFramesPerPhoneme)
