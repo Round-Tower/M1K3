@@ -146,6 +146,28 @@ quantized-matmul kernel that reads each weight once, ahead of any drafter. Re-ru
 same bench on an M4 Pro / M5 before any Swift port (upstream DFlash2 is #607, open).
 Rig + raw runs: the 2026-09-26 session scratchpad (`dspark/bench2.py`, `qmm3.py`).
 
+**Relook, 2026-11-11 (Kev: "a relook at MTP for speedups"): still parked on M1, on a
+better number.** The Python rig above is gone, and the app's weights sit in a closed
+container, so the verify cost is now read inside the app on the real brains
+(`M1K3_SELFTEST_VERIFYCOST=1`, `MLXBrainProvider+VerifyCostProbe`; an optimised build,
+mlx-swift 0.32.x, best of 12 on a persona-length prefix):
+
+| new tokens in one forward | Lil (Qwen3.5-4B) | Big (gemma-4-12B) |
+|---|---|---|
+| 1 | 14.4 ms | 36.3 ms |
+| 2 | 1.47× | 1.60× |
+| 3 | 1.95× | 2.17× |
+| 4 | 2.44× | 2.72× |
+
+Two tokens cost 1.47× one in the Swift runtime, not the 1.86× the Python rig read, so the
+ceiling for a perfect one-token drafter rises from about 1.07× to 1.36× on Lil (1.25× on
+Big). At the acceptance the 09-26 runs saw (0.62 to 0.71) that is about 1.10× to 1.16×
+on Lil before the drafter's own cost, and a three-token draft at the same acceptance is
+below 1×. That does not clear the ≥1.15× ship gate on real prompts, so nothing changes
+on M1: no port. It does make the M4/M5 re-bench the right next step rather than a
+formality, and the probe is the first thing to run there. Lil's single-token step
+(14.4 ms) agrees with its 70 tok/s decode.
+
 ### 2f. Prefill while the user is still talking — DON'T as written
 Grounding is retrieved FROM the question and sits before it in the render
 (`AgentRAGResponder`), so the only tokens a partial transcript could prefill early are
@@ -291,3 +313,6 @@ Review: Kev + claude-fable-5.1, 2026-10-26 — §2a status (block eviction shipp
 lever) and §3's third table (block 1 vs 6, both brains, 30 messages, live window; the battery caveat on Big's block-1 clock).
 Review: Kev + claude-fable-5.1, 2026-10-26 (later) — the stable-prefix marker: §2a's lag is closed (two hits in three past the
 window, 58/58 cuts at the marker) and §3 carries the fourth table (block 6 with and without the marker, both brains).
+Review: Kev + claude-fable-5.2, 2026-11-11 — §2e relook: the verify cost re-read inside the app (Lil 1.47×, Big 1.60× for
+two tokens; the Python rig's 1.86× is retired). Verdict unchanged on M1; the M4/M5 re-bench stands. Confidence 0.75: one
+prefix length, one Mac, an optimised Debug-configuration build rather than the Release archive.

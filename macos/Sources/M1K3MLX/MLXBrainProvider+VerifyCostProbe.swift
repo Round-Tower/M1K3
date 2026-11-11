@@ -49,7 +49,10 @@ extension MLXBrainProvider {
                     return "verify cost: the probe text is too short"
                 }
                 let base = try context.model.newCache(parameters: parameters)
-                try Self.prefillExactly(prefix, into: base, state: nil, parameters: parameters, model: context.model)
+                // Lil (the Qwen3.5 VLM) refuses to continue a warm cache without the state its prefill returns.
+                let state = try Self.prefillExactly(
+                    prefix, into: base, state: nil, parameters: parameters, model: context.model
+                )
                 var best = [Int: Double]()
                 // One unmeasured pass per width first: the first use of a shape compiles its kernels.
                 for round in 0 ... Self.verifyCostRounds {
@@ -59,7 +62,7 @@ extension MLXBrainProvider {
                         let text = LMInput.Text(tokens: MLXArray(Array(next.prefix(width))))
                         let clock = ContinuousClock()
                         let took = clock.measure {
-                            let output = context.model(text[text: .newAxis], cache: cache, state: nil)
+                            let output = context.model(text[text: .newAxis], cache: cache, state: state)
                             eval(output.logits)
                         }
                         guard round > 0 else { continue }
