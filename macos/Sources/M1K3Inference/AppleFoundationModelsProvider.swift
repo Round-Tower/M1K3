@@ -726,14 +726,11 @@ extension AppleFoundationModelsProvider: RawChatCompleting {
             let prompt = RawChatPrompt.flattened(request)
             let task = Task { [self, options] in
                 do {
-                    var previous = ""
+                    var sent = ""
                     for try await snapshot in session.streamResponse(to: prompt, options: options) {
-                        let content = snapshot.content
-                        // A token wire cannot retract: emit only what extends the text so far.
-                        if content.count > previous.count {
-                            continuation.yield(.delta(String(content.dropFirst(previous.count))))
+                        if let piece = RawChatPrompt.delta(sent: &sent, snapshot: snapshot.content) {
+                            continuation.yield(.delta(piece))
                         }
-                        previous = content
                     }
                     try Task.checkCancellation()
                     continuation.yield(.finished(RawChatFinish(reason: .stop, promptTokens: nil, completionTokens: nil)))
@@ -741,8 +738,11 @@ extension AppleFoundationModelsProvider: RawChatCompleting {
                 } catch is CancellationError {
                     continuation.finish(throwing: CancellationError())
                 } catch {
-                    logFailure(error, streaming: true)
-                    continuation.finish(throwing: RawChatFailure(apple: AFMFailure.classify(error: error)))
+                    // The class only: an error's own text can echo the caller's prompt, and nothing a
+                    // Local API caller sends is written anywhere, the log included.
+                    let failure = AFMFailure.classify(error: error)
+                    Self.log.error("afm raw chat failed: \(failure.rawValue, privacy: .public)")
+                    continuation.finish(throwing: RawChatFailure(apple: failure))
                 }
             }
             continuation.onTermination = { _ in task.cancel() }

@@ -29,7 +29,16 @@ public enum LocalAPIHTTP {
     /// The largest body the listener reads. A chat request is text; this is generous for it.
     public static let maxBodyBytes = 4 * 1024 * 1024
 
+    /// The largest request head. Read before anyone has shown a key, so it is small.
+    public static let maxHeadBytes = 16 * 1024
+
     private static let separator = Data("\r\n\r\n".utf8)
+
+    /// Whether the head is over the cap: no end of head within it, or an end beyond it.
+    public static func headIsTooLarge(_ data: Data) -> Bool {
+        guard let range = data.range(of: separator) else { return data.count > maxHeadBytes }
+        return range.lowerBound - data.startIndex > maxHeadBytes
+    }
 
     /// The Content-Length a head declares, once the head has arrived (nil before; 0 when absent).
     public static func declaredLength(_ data: Data) -> Int? {
@@ -50,9 +59,9 @@ public enum LocalAPIHTTP {
         guard words.count == 3, words[2].hasPrefix("HTTP/1.") else { return nil }
         var headers: [String: [String]] = [:]
         for line in head.lines.dropFirst() where !line.isEmpty {
-            let parts = line.split(separator: ":", maxSplits: 1)
-            guard parts.count == 2 else { return nil }
-            headers[parts[0].lowercased(), default: []].append(parts[1].trimmingCharacters(in: .whitespaces))
+            guard let colon = line.firstIndex(of: ":"), colon != line.startIndex else { return nil }
+            let value = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
+            headers[line[..<colon].lowercased(), default: []].append(value)
         }
         let length = headers["content-length"]?.first.flatMap(Int.init) ?? 0
         guard length >= 0, data.count - head.bodyStart >= length else { return nil }
@@ -73,7 +82,8 @@ public enum LocalAPIWire {
 
     public static func response(status: Int, body: Data, retryAfter: Int? = nil) -> Data {
         let reason = [200: "OK", 400: "Bad Request", 401: "Unauthorized", 403: "Forbidden", 404: "Not Found",
-                      413: "Payload Too Large", 429: "Too Many Requests", 500: "Internal Server Error"][status] ?? "Error"
+                      413: "Payload Too Large", 429: "Too Many Requests", 431: "Request Header Fields Too Large",
+                      500: "Internal Server Error", 503: "Service Unavailable"][status] ?? "Error"
         var head = "HTTP/1.1 \(status) \(reason)\r\nContent-Type: application/json\r\nContent-Length: \(body.count)\r\n"
         if let retryAfter { head += "Retry-After: \(retryAfter)\r\n" }
         head += "Cache-Control: no-store\r\nConnection: close\r\n\r\n"

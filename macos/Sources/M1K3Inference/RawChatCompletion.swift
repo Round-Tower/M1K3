@@ -155,6 +155,17 @@ public enum RawChatFailure: Error, Sendable, Equatable {
 }
 
 public enum RawChatPrompt {
+    /// One cumulative snapshot as a delta, for a runtime that streams the whole answer so far (Apple's).
+    /// A token wire cannot retract, so only text that EXTENDS what was sent is emitted: a snapshot that
+    /// shrinks sends nothing and is not remembered, and a revised one sends just its extra length.
+    /// `sent` is what the client has, in length if not always in letters.
+    public static func delta(sent: inout String, snapshot: String) -> String? {
+        guard snapshot.count > sent.count else { return nil }
+        let piece = String(snapshot.dropFirst(sent.count))
+        sent = snapshot.hasPrefix(sent) ? snapshot : sent + piece
+        return piece
+    }
+
     /// The conversation as ONE prompt, for a runtime with no way to seed earlier
     /// turns: a labelled preamble, then the question. A single-turn request is
     /// the question alone.

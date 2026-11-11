@@ -194,6 +194,10 @@ public struct ChatCompletionCall: Sendable, Equatable {
     public let includeUsage: Bool
     public let stop: [String]
 
+    /// The most text one conversation may carry: far past any shipped brain's window, and small enough
+    /// that a caller cannot hand a brain a prefill that exhausts the Mac's memory.
+    public static let maxConversationCharacters = 200_000
+
     public static func parse(_ body: Data?) -> Result<ChatCompletionCall, LocalAPIError> {
         guard let body, let object = try? JSONSerialization.jsonObject(with: body) as? [String: Any] else {
             return .failure(.invalid("The request body must be a JSON object."))
@@ -229,9 +233,21 @@ public struct ChatCompletionCall: Sendable, Equatable {
             guard let text = textContent(raw["content"]) else {
                 return .failure(.invalid("Only text content is supported.", param: "messages"))
             }
+            // Clients send empty system messages and empty assistant turns: they say nothing, so they are dropped.
+            if role != .user, text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { continue }
             messages.append(RawChatMessage(role, text))
         }
-        let maxTokens = (object["max_completion_tokens"] as? Int) ?? (object["max_tokens"] as? Int)
+        guard messages.reduce(0, { $0 + $1.content.count }) <= maxConversationCharacters else {
+            return .failure(.contextTooLong)
+        }
+        var maxTokens: Int?
+        for key in ["max_completion_tokens", "max_tokens"] where maxTokens == nil {
+            guard let raw = object[key], !(raw is NSNull) else { continue }
+            guard let number = raw as? NSNumber, !(raw is Bool), number.doubleValue == number.doubleValue.rounded(),
+                  number.intValue >= 1
+            else { return .failure(.invalid("\(key) must be a positive integer", param: "max_tokens")) }
+            maxTokens = number.intValue
+        }
         let temperature = (object["temperature"] as? NSNumber)?.doubleValue
         let request: RawChatRequest
         do {

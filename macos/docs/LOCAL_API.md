@@ -6,7 +6,7 @@ wire shape OpenAI clients already speak. It is **off by default**: turn it on in
 
 ```
 Base URL   http://127.0.0.1:4141/v1
-API key    Settings ▸ Local API ▸ API key ▸ Copy
+API key    Settings ▸ MCP Server ▸ Local API ▸ API key ▸ Copy
 Model      m1k3-mini, m1k3-lil or m1k3-big: whichever brain M1K3 has ready
 ```
 
@@ -50,7 +50,8 @@ another app's instructions has not been evaluated; that is yours to judge.
   ends when you start a turn. OpenAI SDKs retry a 429 by themselves.
 - **No brain swaps.** `/v1/models` lists the brain that is ready. Asking for
   another one gets `404 model_not_found`; switch brain in M1K3 itself.
-- **Reasoning is off** on this route, so no thinking text arrives in an answer.
+- **Reasoning is off** on this route for the brains that have a switch for it
+  (Lil), so no thinking text arrives in an answer.
 
 ## What v1 offers
 
@@ -66,8 +67,11 @@ another app's instructions has not been evaluated; that is yours to judge.
 Mini's `usage` reads zero.
 
 Errors use OpenAI's shape: `{"error": {"message", "type", "code", "param"}}`.
-A conversation too long for the brain is `400 context_length_exceeded`; a
-request Apple's safety filter declines is `400 content_filter`.
+A conversation over 200,000 characters is refused with `400
+context_length_exceeded` before it reaches a brain, and Mini says the same when
+a conversation overflows its window. Lil and Big do not yet check a shorter
+conversation against their own window. A request Apple's safety filter declines
+is `400 content_filter`.
 
 _Signed: Kev + claude-fable-5.2, 2026-11-11, Confidence 0.7 (the behaviour
 described is pinned by M1K3LocalAPITests; a real brain behind a real client is

@@ -36,6 +36,11 @@ public actor LocalAPIServer {
     private let onAbnormalStop: (@Sendable (String) -> Void)?
     private var listener: NWListener?
     public private(set) var isRunning = false
+    /// Connections being read or answered. Capped: a local process cannot pile up sockets here.
+    private var openConnections = 0
+    static let maxConnections = 8
+    /// How long one write may stall before the connection is dropped (a client that stops reading).
+    static let writeStallSeconds: Double = 60
 
     public init(
         port: UInt16 = LocalAPIServer.defaultPort, handler: LocalAPIHandler, readDeadline: Double = 30,
@@ -124,6 +129,12 @@ public actor LocalAPIServer {
     // MARK: - One connection, one request
 
     private func handle(_ connection: NWConnection) async {
+        guard openConnections < Self.maxConnections else {
+            connection.cancel()
+            return
+        }
+        openConnections += 1
+        defer { openConnections -= 1 }
         connection.start(queue: .global(qos: .userInitiated))
         // A socket that never finishes its request must not hold this task: cancelling the
         // connection makes the pending receive return nil.
@@ -141,6 +152,13 @@ public actor LocalAPIServer {
         while isRunning, request == nil {
             guard let chunk = await receive(connection) else { return }
             buffer.append(chunk)
+            if LocalAPIHTTP.headIsTooLarge(buffer) {
+                let tooLarge = LocalAPIError(
+                    status: 431, type: "invalid_request_error", code: nil, message: "The request headers are too large."
+                )
+                await send(LocalAPIWire.response(for: tooLarge), over: connection)
+                return
+            }
             if let declared = LocalAPIHTTP.declaredLength(buffer), declared > LocalAPIHTTP.maxBodyBytes {
                 let tooLarge = LocalAPIError(
                     status: 413, type: "invalid_request_error", code: nil, message: "The request body is too large."
@@ -154,19 +172,29 @@ public actor LocalAPIServer {
         guard let request else { return }
         deadline.cancel()
 
+        // The client hanging up must stop the generation, during a long silent prefill and on a call
+        // that writes nothing until the end too. Two signals, both armed BEFORE the reply is asked for:
+        // the connection's state, and a read that only returns when the peer closes.
+        let hangUp = HangUp()
+        connection.stateUpdateHandler = { state in
+            switch state {
+            case .failed, .cancelled: hangUp.fire()
+            default: break
+            }
+        }
+        let watcher = Task {
+            while await self.receive(connection) != nil {} // extra bytes are ignored: one request per connection
+            hangUp.fire()
+        }
+        defer { watcher.cancel() }
+
         let reply = await handler.reply(to: request)
-        // The client hanging up ends the reply's stream, which cancels the generation behind it.
         let writer = Task {
             for await piece in reply.pieces {
                 guard await self.send(piece, over: connection) else { return }
             }
         }
-        connection.stateUpdateHandler = { state in
-            switch state {
-            case .failed, .cancelled: writer.cancel()
-            default: break
-            }
-        }
+        hangUp.onFire { writer.cancel() }
         await withTaskCancellationHandler {
             await writer.value
         } onCancel: {
@@ -189,11 +217,39 @@ public actor LocalAPIServer {
     /// False when the write failed (the client went away).
     @discardableResult
     private func send(_ data: Data, over connection: NWConnection) async -> Bool {
-        await withCheckedContinuation { continuation in
+        // A client that stops reading must not hold a connection and its writer for ever.
+        let stalled = Task {
+            try await Task.sleep(for: .seconds(Self.writeStallSeconds))
+            connection.cancel()
+        }
+        defer { stalled.cancel() }
+        return await withCheckedContinuation { continuation in
             connection.send(content: data, completion: .contentProcessed { error in
                 continuation.resume(returning: error == nil)
             })
         }
+    }
+}
+
+/// One-shot "the client has gone": remembers a hang-up that arrives before anyone is listening for it.
+private final class HangUp: Sendable {
+    private let state = OSAllocatedUnfairLock<(fired: Bool, action: (@Sendable () -> Void)?)>(initialState: (false, nil))
+
+    func fire() {
+        let action = state.withLock { state -> (@Sendable () -> Void)? in
+            state.fired = true
+            defer { state.action = nil }
+            return state.action
+        }
+        action?()
+    }
+
+    func onFire(_ action: @escaping @Sendable () -> Void) {
+        let already = state.withLock { state -> Bool in
+            if !state.fired { state.action = action }
+            return state.fired
+        }
+        if already { action() }
     }
 }
 

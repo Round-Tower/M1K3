@@ -91,6 +91,21 @@ struct RawChatCompletionTests {
         #expect(RawChatPrompt.flattened(many) == "Earlier in this conversation:\nUser: Hi\nAssistant: Hello\n\nUser: Bye")
     }
 
+    @Test("cumulative snapshots become deltas that never repeat text, even when a snapshot shrinks or diverges")
+    func snapshotDeltas() {
+        var sent = ""
+        func feed(_ snapshot: String) -> String? {
+            RawChatPrompt.delta(sent: &sent, snapshot: snapshot)
+        }
+        #expect(feed("Hello") == "Hello")
+        #expect(feed("Hello wor") == " wor")
+        #expect(feed("Hello") == nil, "a shrink sends nothing and forgets nothing")
+        #expect(feed("Hello world") == "ld", "only what extends the text already sent")
+        #expect(feed("Hello world") == nil)
+        #expect(feed("Jello world!") == "!", "a revision cannot be retracted: only the extra length is sent")
+        #expect(sent.count == "Hello world!".count)
+    }
+
     @Test("an Apple-model failure becomes a reason a client can act on, never an empty answer")
     func appleFailuresMap() {
         #expect(RawChatFailure(apple: .contextOverflow) == .contextTooLong)

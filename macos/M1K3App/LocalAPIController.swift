@@ -62,17 +62,32 @@ final class LocalAPIController {
 
     func startIfEnabled() {
         guard isEnabled else { return }
-        Task { await start() }
+        settle()
     }
 
     func setEnabled(_ enabled: Bool) {
         isEnabled = enabled
         UserDefaults.standard.set(enabled, forKey: Self.enabledKey)
-        Task { enabled ? await start() : await stop() }
+        settle()
+    }
+
+    /// Starts and stops run ONE AT A TIME, each after the one before, and each reads the switch when its
+    /// turn comes. A quick off-on-off can therefore never leave the server running with the switch off.
+    private var lifecycle: Task<Void, Never>?
+
+    private func settle() {
+        let previous = lifecycle
+        lifecycle = Task { [weak self] in
+            await previous?.value
+            guard let self else { return }
+            if isEnabled { await start() } else { await stop() }
+        }
     }
 
     /// The model ids a caller can use right now: the selected brain, once it is ready. Never more: this
-    /// surface does not load or swap brains.
+    /// surface does not load or swap brains. `isReady` is the app's own "the selected brain is loaded and
+    /// can answer" (the reading Brain at Home refuses on), so the provider's load call inside a raw chat
+    /// finds the brain already there. During a brain swap `isReady` is false and the list is empty.
     var readyModelIDs: [String] {
         env.isReady ? [LocalAPIModel.id(forTier: env.selectedBrain.rawValue)] : []
     }

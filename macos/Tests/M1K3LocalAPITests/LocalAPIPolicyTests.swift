@@ -145,6 +145,45 @@ struct LocalAPIPolicyTests {
         #expect(try ChatCompletionCall.parse(body(["model": "m", "messages": hi, "n": 1, "tools": []])).isSuccess)
     }
 
+    @Test("empty system and assistant messages are dropped, as clients send them; a number that is not a count is refused")
+    func lenientWhereClientsAre() throws {
+        let call = try ChatCompletionCall.parse(body([
+            "model": "m", "max_tokens": 64.0,
+            "messages": [
+                ["role": "system", "content": ""], ["role": "user", "content": "Hi"],
+                ["role": "assistant", "content": ""], ["role": "user", "content": "Again"],
+            ],
+        ])).get()
+        #expect(call.request.system == nil)
+        #expect(call.request.turns.map(\.content) == ["Hi", "Again"])
+        #expect(call.request.maxTokens == 64)
+        for bad: Any in [100.5, "100", -3, 0] {
+            let result = try ChatCompletionCall.parse(body([
+                "model": "m", "max_tokens": bad, "messages": [["role": "user", "content": "Hi"]],
+            ]))
+            guard case let .failure(error) = result else {
+                Issue.record("max_tokens \(bad) was accepted")
+                continue
+            }
+            #expect(error.param == "max_tokens", "\(bad)")
+        }
+        // A blank USER message is still an error: there is nothing to answer.
+        #expect(try ChatCompletionCall.parse(body(["model": "m", "messages": [["role": "user", "content": " "]]])).isFailure)
+    }
+
+    @Test("a conversation far past any brain's window is refused before it reaches one")
+    func oversizeConversation() throws {
+        let huge = String(repeating: "word ", count: ChatCompletionCall.maxConversationCharacters / 5 + 1)
+        let result = try ChatCompletionCall.parse(body(["model": "m1k3-lil", "messages": [["role": "user", "content": huge]]]))
+        guard case let .failure(error) = result else {
+            Issue.record("an oversize conversation parsed")
+            return
+        }
+        #expect(error.code == "context_length_exceeded" && error.status == 400)
+        let fine = String(repeating: "word ", count: 1000)
+        #expect(try ChatCompletionCall.parse(body(["model": "m", "messages": [["role": "user", "content": fine]]])).isSuccess)
+    }
+
     // MARK: - Models and admission
 
     @Test("the list is M1K3's evaluated brains that can answer now, and nothing else")
@@ -256,6 +295,16 @@ struct LocalAPIPolicyTests {
         #expect(none.push("abc").emit == "abc")
         #expect(none.flush().isEmpty)
 
+        // Split across three deltas, overlapping stops, and characters wider than a byte.
+        var three = StopSequenceFilter(stops: ["###", "##!"])
+        #expect(three.push("a#").emit == "a")
+        #expect(three.push("#").emit.isEmpty)
+        let cut = three.push("#b")
+        #expect(cut.stopped && cut.emit.isEmpty)
+        var wide = StopSequenceFilter(stops: ["fin🙂"])
+        #expect(wide.push("café fin").emit == "café ")
+        #expect(wide.push("🙂 après").stopped)
+
         var held = StopSequenceFilter(stops: ["STOP"])
         #expect(held.push("so ST").emit == "so ", "a possible start of the sequence is held back")
         #expect(held.flush() == "ST", "and released when the stream ends without it")
@@ -275,7 +324,16 @@ struct LocalAPIPolicyTests {
         #expect(LocalAPIHTTP.parse(Data(raw.dropLast(1).utf8)) == nil, "the body has not all arrived")
         #expect(LocalAPIHTTP.parse(Data("GET /v1/models HTTP/1.1\r\nHost: a\r\nHost: b\r\n\r\n".utf8))?.headers["host"] == ["a", "b"])
         #expect(LocalAPIHTTP.parse(Data("garbage".utf8)) == nil)
+        let emptyValue = try #require(LocalAPIHTTP.parse(Data("GET /v1/models HTTP/1.1\r\nHost: a\r\nAccept:\r\n\r\n".utf8)))
+        #expect(emptyValue.headers["accept"] == [""], "a header with no value is a header, not a broken request")
         #expect(LocalAPIHTTP.declaredLength(Data("POST / HTTP/1.1\r\nContent-Length: 999999999\r\n\r\n".utf8)) == 999_999_999)
+        // A head that never ends is cut off early, before anyone has shown a key.
+        #expect(!LocalAPIHTTP.headIsTooLarge(Data(raw.utf8)))
+        #expect(LocalAPIHTTP.headIsTooLarge(Data(repeating: 0x41, count: LocalAPIHTTP.maxHeadBytes + 1)))
+        var longHead = Data("GET /v1/models HTTP/1.1\r\nX: ".utf8)
+        longHead.append(Data(repeating: 0x41, count: LocalAPIHTTP.maxHeadBytes))
+        longHead.append(Data("\r\n\r\n".utf8))
+        #expect(LocalAPIHTTP.headIsTooLarge(longHead), "a complete head over the cap is refused too")
     }
 }
 

@@ -82,9 +82,11 @@ public actor LocalAPIHandler {
 
     /// The person at the Mac has started using M1K3: a call in flight ends now.
     public func preempt() {
-        guard let inFlight else { return }
+        // A call still being admitted has claimed the slot but has no task yet: mark it, and it
+        // is stopped the moment it would start.
+        guard claimed else { return }
         preempted = true
-        inFlight.cancel()
+        inFlight?.cancel()
     }
 
     public func reply(to request: LocalAPIRequest) async -> LocalAPIReply {
@@ -118,7 +120,10 @@ public actor LocalAPIHandler {
         }
         // Claim the slot BEFORE the first suspension, so two calls cannot both pass admission.
         let mine = !claimed
-        if mine { claimed = true }
+        if mine {
+            claimed = true
+            preempted = false
+        }
         let available = await backend.models()
         let userBusy = await backend.userBusy()
         if let refusal = LocalAPIAdmission.decide(
@@ -127,13 +132,21 @@ public actor LocalAPIHandler {
             if mine { claimed = false }
             return .refusal(refusal)
         }
+        // The person at the Mac started a turn while this call was being admitted.
+        if preempted {
+            claimed = false
+            return .refusal(.busy(retryAfter: 10))
+        }
         guard let stream = await backend.complete(call.model, call.request) else {
             claimed = false
             return .refusal(.modelNotFound(call.model, available: available.filter { $0 != call.model }))
         }
+        if preempted {
+            claimed = false
+            return .refusal(.busy(retryAfter: 10))
+        }
         let (pieces, continuation) = AsyncStream<Data>.makeStream()
         let identity = (id: newID(), created: now())
-        preempted = false
         let task = Task {
             await self.run(call, stream: stream, identity: identity, into: continuation)
             await self.release()
@@ -203,8 +216,9 @@ public actor LocalAPIHandler {
                     finish = done
                 }
             }
-            // A cancelled stream ends quietly: tell a preemption from a finished answer.
-            if await wasPreempted { return fail(.busy(retryAfter: 10)) }
+            // A cancelled stream ends quietly: tell a preemption from a finished answer. An answer that
+            // DID finish stands, even if the person at the Mac started a turn a moment later.
+            if finish == nil, !stopped, await wasPreempted { return fail(.busy(retryAfter: 10)) }
             if Task.isCancelled { return }
             if !stopped { emit(filter.flush()) }
             let done = finish ?? RawChatFinish(reason: .stop, promptTokens: nil, completionTokens: nil)

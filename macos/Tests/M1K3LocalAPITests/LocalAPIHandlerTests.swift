@@ -50,6 +50,10 @@ private final class FakeBrain: @unchecked Sendable {
     }
 }
 
+private final class HandlerBox: @unchecked Sendable {
+    var handler: LocalAPIHandler?
+}
+
 struct LocalAPIHandlerTests {
     private let token = "s3cret"
 
@@ -200,6 +204,27 @@ struct LocalAPIHandlerTests {
         brain.holds = false
         let third = await text(handler.reply(to: request("POST", "/v1/chat/completions", body: chat())))
         #expect(third.hasPrefix("HTTP/1.1 200 OK"))
+    }
+
+    @Test("a turn that starts while a call is still being admitted stops it too")
+    func preemptedBeforeItStarts() async {
+        let brain = FakeBrain()
+        let box = HandlerBox()
+        var backend = brain.backend
+        let inner = backend.userBusy
+        // The person at the Mac starts a turn while this call is between its claim and its start.
+        backend.userBusy = {
+            await box.handler?.preempt()
+            return await inner()
+        }
+        let handler = LocalAPIHandler(port: 4141, token: { "s3cret" }, backend: backend)
+        box.handler = handler
+        let reply = await text(handler.reply(to: request("POST", "/v1/chat/completions", body: chat())))
+        #expect(reply.hasPrefix("HTTP/1.1 429"), "\(reply.prefix(40))")
+        // And the slot is free again afterwards.
+        box.handler = nil
+        let after = await text(handler.reply(to: request("POST", "/v1/chat/completions", body: chat())))
+        #expect(after.hasPrefix("HTTP/1.1 200 OK"))
     }
 
     @Test("the person at the Mac takes the brain back: a live call ends with a busy event")
