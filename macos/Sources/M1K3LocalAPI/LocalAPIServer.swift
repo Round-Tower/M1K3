@@ -18,6 +18,7 @@
 //  in the app since; streaming writes follow Brain at Home's listener.
 //  Review: Kev + claude-fable-5.2, 2026-11-11 (night) — the Open is closed: the wiring landed (#801) and curl and
 //  the OpenAI Python SDK, whole and streamed, ran against this listener by launch. Confidence 0.75.
+//  Review: Kev + claude-fable-5.2, 2026-11-11 (#621) — `isAnswering` forwards the handler's. Confidence unchanged.
 //
 
 import Foundation
@@ -54,6 +55,10 @@ public actor LocalAPIServer {
     }
 
     /// The person at the Mac has started using M1K3: a call in flight ends now.
+    public var isAnswering: Bool {
+        get async { await handler.isAnswering }
+    }
+
     public func preempt() async {
         await handler.preempt()
     }

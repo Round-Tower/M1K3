@@ -153,6 +153,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-29 — #750: `snag`, the one-time offer after a session that didn't close
 //  cleanly (AppEnvironment+Snag). Confidence unchanged.
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — `localAPI` (LocalAPIController) is created beside Brain at Home, and a local turn preempts a Local API call the same way. Confidence 0.7.
+//  Review: Kev + claude-fable-5.2, 2026-11-11 (#621) — the persona warm waits for quiet before each palette
+//  (`someoneIsBeingAnswered`, `PersonaWarmYield`). Confidence 0.75: the wait is pinned in M1K3InferenceTests, the gain
+//  is measured by launch (see the PR).
 
 import AppKit
 import Foundation
@@ -1944,8 +1947,11 @@ final class AppEnvironment {
             // IDENTICAL keys — two concurrent builds of different keys would just
             // queue on the actor anyway, with the loser's ordering unpredictable.
             // Checked between palettes, so a cancel stops at the next boundary.
+            // Before each palette, wait while someone is being answered (#621): a build beside a live answer
+            // cost Big a 19 s first word and then 5 tok/s instead of 25 (measured 2026-11-11).
             await PersonaWarmRun.run(
                 [[], headlessTools, interactiveTools],
+                beforeEach: { await PersonaWarmYield.untilQuiet(busy: { await self?.someoneIsBeingAnswered() ?? false }) },
                 shouldContinue: { !Task.isCancelled },
                 warm: { tools in await mlx?.warmPersonaPrefix(tools: tools) }
             )
@@ -1955,6 +1961,13 @@ final class AppEnvironment {
             await MainActor.run { self?.personaWarmLedger.finished(provider) }
         }
         personaWarmTask = warm
+    }
+
+    /// A chat turn, an ask from the menu bar or MCP, or a Local API call is generating right now. Voice mode
+    /// being open is not it: a voice turn counts once it is answering.
+    func someoneIsBeingAnswered() async -> Bool {
+        if chat.isResponding || intelligenceAskInFlight { return true }
+        return await localAPI?.isAnswering() ?? false
     }
 
     /// A preload's caller was cancelled (a window closed mid-load) while it still owned the current brain's load:

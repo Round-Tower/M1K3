@@ -234,6 +234,21 @@ struct LocalAPIHandlerTests {
         #expect(after.hasPrefix("HTTP/1.1 200 OK"))
     }
 
+    @Test("the handler says when a call holds the brain, and stops saying it when the call ends")
+    func answeringIsVisible() async {
+        let brain = FakeBrain()
+        brain.holds = true
+        let handler = handler(brain)
+        #expect(await handler.isAnswering == false)
+        let reply = await handler.reply(to: request("POST", "/v1/chat/completions", body: chat(["stream": true])))
+        #expect(await handler.isAnswering)
+        brain.held?.yield(.delta("hi"))
+        brain.held?.yield(.finished(RawChatFinish(reason: .stop, promptTokens: 1, completionTokens: 1)))
+        brain.held?.finish()
+        _ = await text(reply)
+        #expect(await handler.isAnswering == false)
+    }
+
     @Test("the person at the Mac takes the brain back: a live call ends with a busy event")
     func preemption() async {
         let brain = FakeBrain()
