@@ -162,7 +162,7 @@ public enum LocalAPIGate {
         guard hosts.count == 1, let host = hosts.first?.lowercased() else {
             return .invalid(hosts.isEmpty ? "Host header required" : "More than one Host header")
         }
-        guard ["127.0.0.1:\(port)", "localhost:\(port)", "[::1]:\(port)"].contains(host) else {
+        guard ["127.0.0.1:\(port)", "localhost:\(port)"].contains(host) else {
             return .forbidden("This is M1K3's loopback listener; the Host header names something else.")
         }
         if origin != nil { return .forbidden("M1K3's Local API does not serve web pages.") }
@@ -243,12 +243,19 @@ public struct ChatCompletionCall: Sendable, Equatable {
         var maxTokens: Int?
         for key in ["max_completion_tokens", "max_tokens"] where maxTokens == nil {
             guard let raw = object[key], !(raw is NSNull) else { continue }
-            guard let number = raw as? NSNumber, !(raw is Bool), number.doubleValue == number.doubleValue.rounded(),
-                  number.intValue >= 1
+            // A JSON 1 bridges to Bool as readily as to Int: ask CoreFoundation which it really is.
+            guard let number = raw as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(),
+                  number.doubleValue == number.doubleValue.rounded(), number.intValue >= 1
             else { return .failure(.invalid("\(key) must be a positive integer", param: "max_tokens")) }
             maxTokens = number.intValue
         }
-        let temperature = (object["temperature"] as? NSNumber)?.doubleValue
+        var temperature: Double?
+        if let raw = object["temperature"], !(raw is NSNull) {
+            guard let number = raw as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID() else {
+                return .failure(.invalid("temperature must be a number", param: "temperature"))
+            }
+            temperature = number.doubleValue
+        }
         let request: RawChatRequest
         do {
             request = try RawChatRequest(messages: messages, maxTokens: maxTokens, temperature: temperature)
@@ -258,8 +265,15 @@ public struct ChatCompletionCall: Sendable, Equatable {
             return .failure(.invalid("The messages could not be read.", param: "messages"))
         }
         var stop: [String] = []
-        if let one = object["stop"] as? String { stop = [one] }
-        if let many = object["stop"] as? [String] { stop = many }
+        if let raw = object["stop"], !(raw is NSNull) {
+            if let one = raw as? String {
+                stop = [one]
+            } else if let many = raw as? [String] {
+                stop = many
+            } else {
+                return .failure(.invalid("stop must be a string or a list of strings", param: "stop"))
+            }
+        }
         let options = object["stream_options"] as? [String: Any]
         return .success(ChatCompletionCall(
             model: model, request: request, stream: object["stream"] as? Bool ?? false,

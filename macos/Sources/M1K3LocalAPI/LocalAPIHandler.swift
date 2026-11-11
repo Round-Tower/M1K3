@@ -113,6 +113,10 @@ public actor LocalAPIHandler {
     }
 
     private func chat(_ request: LocalAPIRequest) async -> LocalAPIReply {
+        // The reader takes Content-Length bodies only: say so, rather than "the body must be JSON".
+        if request.first("transfer-encoding") != nil {
+            return .refusal(.invalid("Send the body with a Content-Length header; chunked uploads are not supported."))
+        }
         let call: ChatCompletionCall
         switch ChatCompletionCall.parse(request.body) {
         case let .success(parsed): call = parsed
@@ -165,6 +169,8 @@ public actor LocalAPIHandler {
         inFlight = nil
     }
 
+    /// Reset only when the next call claims the slot (`chat`), so a finished call's flag can never
+    /// be read by another.
     private var wasPreempted: Bool {
         preempted
     }

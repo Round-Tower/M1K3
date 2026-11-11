@@ -154,6 +154,13 @@ struct LocalAPIHandlerTests {
         #expect(await status(request("POST", "/v1/embeddings", body: [:])) == "HTTP/1.1 404")
         #expect(await status(request("OPTIONS", "/v1/chat/completions")) == "HTTP/1.1 403")
         #expect(await status(request("GET", "/nope")) == "HTTP/1.1 404")
+        var chunked = request("POST", "/v1/chat/completions", body: chat())
+        chunked = LocalAPIRequest(
+            method: chunked.method, path: chunked.path,
+            headers: chunked.headers.merging(["transfer-encoding": ["chunked"]]) { _, new in new }, body: Data()
+        )
+        let chunkedReply = await text(handler.reply(to: chunked))
+        #expect(chunkedReply.hasPrefix("HTTP/1.1 400") && chunkedReply.contains("Content-Length"))
         brain.userBusy = true
         let busy = await text(handler.reply(to: request("POST", "/v1/chat/completions", body: chat())))
         #expect(busy.hasPrefix("HTTP/1.1 429") && busy.contains("Retry-After: 10"))

@@ -47,6 +47,7 @@ struct LocalAPIPolicyTests {
         }
         #expect(check() == nil)
         #expect(check(host: ["localhost:4141"]) == nil)
+        #expect(check(host: ["[::1]:4141"]) == 403, "the listener is IPv4 only: an IPv6 Host names nothing here")
         #expect(check(host: []) == 400)
         #expect(check(host: ["127.0.0.1:4141", "evil.example"]) == 400)
         #expect(check(host: ["evil.example"]) == 403, "DNS rebinding: a foreign Host is refused")
@@ -157,7 +158,18 @@ struct LocalAPIPolicyTests {
         #expect(call.request.system == nil)
         #expect(call.request.turns.map(\.content) == ["Hi", "Again"])
         #expect(call.request.maxTokens == 64)
-        for bad: Any in [100.5, "100", -3, 0] {
+        // One token is a real request (a yes/no probe), and JSON's 1 must not be mistaken for `true`.
+        let one = try ChatCompletionCall.parse(body(["model": "m", "max_tokens": 1, "messages": [["role": "user", "content": "Hi"]]])).get()
+        #expect(one.request.maxTokens == 1)
+        for (key, value): (String, Any) in [("temperature", "hot"), ("stop", 7), ("stop", ["a", 3])] {
+            let result = try ChatCompletionCall.parse(body(["model": "m", key: value, "messages": [["role": "user", "content": "Hi"]]]))
+            guard case let .failure(error) = result else {
+                Issue.record("\(key) = \(value) was accepted")
+                continue
+            }
+            #expect(error.param == key)
+        }
+        for bad: Any in [100.5, "100", -3, 0, true] {
             let result = try ChatCompletionCall.parse(body([
                 "model": "m", "max_tokens": bad, "messages": [["role": "user", "content": "Hi"]],
             ]))
