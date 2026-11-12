@@ -1,0 +1,153 @@
+{
+  "manifest_version": "0.3",
+  "name": "m1k3",
+  "display_name": "M1K3",
+  "version": "0.1.0",
+  "description": "Give Claude your private, on-device memory, documents and voice, through the M1K3 app on this Mac.",
+  "long_description": "M1K3 is a free, private AI assistant that runs on your Mac. This extension connects Claude to the M1K3 app you already have running: Claude can search your documents and notes, save and recall memories, ask M1K3's local brain, and speak aloud in M1K3's voice.\n\nIt needs the M1K3 app (free on the Mac App Store) open, with Settings > Server > MCP server switched on, and the access token from that screen.\n\nWhat leaves your Mac: this extension talks only to M1K3 on this Mac. But whatever a tool returns to Claude (a memory, a document excerpt, a transcript) becomes part of your conversation with Claude, like anything else you share with it. M1K3 serves one connected client at a time.",
+  "author": {
+    "name": "Round Tower",
+    "url": "https://round-tower.ie"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Round-Tower/M1K3"
+  },
+  "homepage": "https://m1k3.app",
+  "documentation": "https://github.com/Round-Tower/M1K3/blob/master/integrations/mcpb/README.md",
+  "support": "https://github.com/Round-Tower/M1K3/issues",
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/server/index.js"
+      ],
+      "env": {
+        "M1K3_MCP_TOKEN": "${user_config.access_token}",
+        "M1K3_MCP_PORT": "${user_config.port}"
+      }
+    }
+  },
+  "user_config": {
+    "access_token": {
+      "type": "string",
+      "title": "M1K3 access token",
+      "description": "In M1K3, open Settings > Server and copy the access token. It stays on this Mac.",
+      "sensitive": true,
+      "required": true
+    },
+    "port": {
+      "type": "number",
+      "title": "Port",
+      "description": "The port M1K3's MCP server listens on. Leave it at 4242 unless you changed it in M1K3.",
+      "default": 4242,
+      "min": 1,
+      "max": 65535,
+      "required": false
+    }
+  },
+  "tools": [
+    {
+      "name": "search_knowledge",
+      "description": "Search your documents and notes in M1K3."
+    },
+    {
+      "name": "list_documents",
+      "description": "List the documents M1K3 holds."
+    },
+    {
+      "name": "get_document",
+      "description": "Read one document from M1K3."
+    },
+    {
+      "name": "remember",
+      "description": "Save a fact to M1K3's memory."
+    },
+    {
+      "name": "recall_memory",
+      "description": "Recall memories by meaning."
+    },
+    {
+      "name": "related_memory",
+      "description": "Find memories linked to one you name."
+    },
+    {
+      "name": "memory_stats",
+      "description": "Count what M1K3 remembers."
+    },
+    {
+      "name": "forget_memory",
+      "description": "Remove a memory."
+    },
+    {
+      "name": "ask_m1k3",
+      "description": "Ask M1K3's local brain a question, grounded in your knowledge."
+    },
+    {
+      "name": "get_answer",
+      "description": "Fetch the answer to a question that was still running."
+    },
+    {
+      "name": "list_jobs",
+      "description": "List recent questions put to M1K3."
+    },
+    {
+      "name": "ask_private_cloud",
+      "description": "Ask Apple's Private Cloud Compute through M1K3 (off unless you switch it on)."
+    },
+    {
+      "name": "speak",
+      "description": "Say something aloud in M1K3's voice."
+    },
+    {
+      "name": "stop_speaking",
+      "description": "Stop M1K3 speaking."
+    },
+    {
+      "name": "listen",
+      "description": "Listen on M1K3's microphone and return what was said."
+    },
+    {
+      "name": "get_status",
+      "description": "See what M1K3 is doing right now."
+    },
+    {
+      "name": "propose_todo",
+      "description": "Propose a todo for you to accept or dismiss."
+    },
+    {
+      "name": "list_todos",
+      "description": "List your todos."
+    },
+    {
+      "name": "open_link",
+      "description": "Open a web link in M1K3's side panel."
+    }
+  ],
+  "tools_generated": false,
+  "keywords": [
+    "memory",
+    "notes",
+    "documents",
+    "voice",
+    "local",
+    "private",
+    "on-device",
+    "knowledge"
+  ],
+  "license": "FSL-1.1-ALv2",
+  "privacy_policies": [
+    "https://m1k3.app/privacy"
+  ],
+  "compatibility": {
+    "platforms": [
+      "darwin"
+    ],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}
