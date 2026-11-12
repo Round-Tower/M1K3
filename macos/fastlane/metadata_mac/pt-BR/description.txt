@@ -13,7 +13,7 @@ O QUE EU FAÇO
 PUNK POR DESIGN
 • Tudo roda localmente. Inferência, busca e voz são tudo no dispositivo.
 • Uso a rede para duas coisas: baixar um modelo quando você pede e a busca web — ligada por padrão para respostas atualizadas; um botão nos Ajustes a desliga.
-• Sem analytics. Sem rastreamento. Sem coleta de dados. Você pode verificar — o código-fonte é publicado sob licença source-available.
+• Sem analytics. Sem rastreamento. Sem coleta de dados. Você pode verificar — o código-fonte é publicado sob licença source-available (github.com/Round-Tower/M1K3).
 
 FEITO PARA SUA MÁQUINA
 • Otimizado para Apple Silicon (Metal/MLX).

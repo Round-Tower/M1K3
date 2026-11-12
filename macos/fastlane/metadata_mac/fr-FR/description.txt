@@ -13,7 +13,7 @@ CE QUE JE FAIS
 PUNK PAR DESIGN
 • Tout tourne en local. Inférence, recherche et voix sont sur l’appareil.
 • J’utilise le réseau pour deux choses : télécharger un modèle quand tu le demandes, et la recherche web — activée par défaut pour des réponses à jour, un seul interrupteur dans les Réglages la coupe.
-• Pas d’analytics. Pas de suivi. Pas de collecte de données. Tu peux le vérifier — le code source est publié sous une licence source-available.
+• Pas d’analytics. Pas de suivi. Pas de collecte de données. Tu peux le vérifier — le code source est publié sous une licence source-available (github.com/Round-Tower/M1K3).
 
 CONÇU POUR TA MACHINE
 • Optimisé pour Apple Silicon (Metal/MLX).

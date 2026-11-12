@@ -13,7 +13,7 @@ WAS ICH KANN
 PUNK BY DESIGN
 • Alles läuft lokal. Inferenz, Suche und Stimme sind alle On-Device.
 • Das Netzwerk nutze ich für zwei Dinge: ein Modell herunterladen, wenn du willst, und die Websuche — standardmäßig an, damit Antworten aktuell sind, mit einem Schalter in den Einstellungen abschaltbar.
-• Keine Analytik. Kein Tracking. Keine Datensammlung. Du kannst es überprüfen — der Quellcode ist unter einer Source-Available-Lizenz veröffentlicht.
+• Keine Analytik. Kein Tracking. Keine Datensammlung. Du kannst es überprüfen — der Quellcode ist unter einer Source-Available-Lizenz veröffentlicht (github.com/Round-Tower/M1K3).
 
 FÜR DEINEN MAC GEBAUT
 • Optimiert für Apple Silicon (Metal/MLX).

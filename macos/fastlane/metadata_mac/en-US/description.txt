@@ -13,7 +13,7 @@ WHAT I DO
 PUNK BY DESIGN
 • Everything runs locally. Inference, search, and voice are all on-device.
 • I use the network for two things: downloading models when you ask (brains, speech and voice), and web search — on by default so answers can be current, one switch in Settings to turn it off.
-• No analytics. No tracking. No data collection. You can verify it — the source code is published under a source-available licence.
+• No analytics. No tracking. No data collection. You can verify it — the source code is published under a source-available licence (github.com/Round-Tower/M1K3).
 
 BUILT FOR YOUR MACHINE
 • Optimized for Apple Silicon (Metal/MLX).
