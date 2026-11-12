@@ -1,1 +1,1 @@
-LLM,chatbot,assistant,MCP,server,coding,on-device,PDF,summarise,transcribe,MLX,secure,model,privacy
+LLM,chatbot,memory,MCP,server,coding,on-device,PDF,summarise,transcribe,MLX,secure,model,privacy
