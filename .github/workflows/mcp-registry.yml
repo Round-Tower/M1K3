@@ -1,0 +1,146 @@
+# Publish the M1K3 MCP Bundle: a GitHub Release carrying m1k3.mcpb, then the listing
+# on the MCP Registry (registry.modelcontextprotocol.io) under io.github.Round-Tower.
+#
+# Run by hand only (Actions ▸ MCP Registry ▸ Run workflow). The default is a dry
+# run: it tests, builds and prints the listing, and creates nothing. A real run is
+# Kev's call: it creates a public release and a public registry entry, and a
+# published version cannot be changed, only superseded (bump manifest.json and
+# server.json together; the manifest test holds them equal).
+#
+# No secret is used. The registry trusts this repository's GitHub OIDC token for
+# the io.github.<owner>/ namespace; mcp-publisher is pinned and Sigstore-verified,
+# as the registry's own guide does it.
+#
+# Signed: Kev + claude-fable-5.2, 2026-11-12, Confidence 0.6. Prior: none (new file).
+# Context: Kev, 2026-11-12, on listing M1K3 for Claude users: "Let's go it pal".
+# Open: never run. Unproven on the runner: zsh from apt for build.sh, the OIDC
+# login for an organisation namespace, and whether the registry matches the owner's
+# case ("Round-Tower") exactly. The dry run proves the first; only a real run
+# proves the other two.
+name: MCP Registry
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Create the public release and publish the listing (off = dry run)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mcp-registry
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04 # not -latest: move deliberately (#582)
+    timeout-minutes: 10
+    permissions:
+      id-token: write # the registry's GitHub OIDC login
+      contents: write # the release that carries the bundle
+    env:
+      MCP_PUBLISHER_VERSION: v1.8.1
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Refuse anything but master
+        if: github.ref != 'refs/heads/master'
+        run: |
+          echo "::error::Publish from master only (this run is on $GITHUB_REF)."
+          exit 1
+
+      - uses: actions/checkout@v5
+
+      - name: Test and build the bundle
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y --no-install-recommends zsh > /dev/null
+          zsh integrations/mcpb/build.sh
+          test -s integrations/mcpb/dist/m1k3.mcpb
+
+      - name: Fill in the listing
+        id: listing
+        run: |
+          set -euo pipefail
+          cd integrations/mcpb
+          VERSION="$(jq -r .version manifest.json)"
+          SHA="$(sha256sum dist/m1k3.mcpb | cut -d' ' -f1)"
+          jq --arg sha "$SHA" '.packages[0].fileSha256 = $sha' server.json > dist/server.json
+          # The listing must point at the release this run creates, and nowhere else.
+          WANT="https://github.com/${GITHUB_REPOSITORY}/releases/download/mcpb-v${VERSION}/m1k3.mcpb"
+          GOT="$(jq -r '.packages[0].identifier' dist/server.json)"
+          if [ "$GOT" != "$WANT" ] || [ "$(jq -r .version dist/server.json)" != "$VERSION" ]; then
+            echo "::error::server.json does not match manifest version $VERSION ($GOT)."
+            exit 1
+          fi
+          {
+            echo "version=$VERSION"
+            echo "tag=mcpb-v$VERSION"
+            echo "sha=$SHA"
+          } >> "$GITHUB_OUTPUT"
+          cat dist/server.json
+
+      - name: Refuse a version that is already released
+        env:
+          TAG: ${{ steps.listing.outputs.tag }}
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "::error::$TAG is already released. Bump manifest.json and server.json."
+            exit 1
+          fi
+
+      - name: Dry run ends here
+        if: ${{ !inputs.publish }}
+        run: echo "Dry run. Nothing was released or published. Re-run with 'publish' ticked."
+
+      # --latest=false: "latest" on this repo is the nightly DMG, which the Homebrew
+      # cask and the site's download link follow. A bundle release must never take it.
+      - name: Create the release
+        if: ${{ inputs.publish }}
+        env:
+          TAG: ${{ steps.listing.outputs.tag }}
+          VERSION: ${{ steps.listing.outputs.version }}
+          SHA: ${{ steps.listing.outputs.sha }}
+        run: |
+          set -euo pipefail
+          gh release create "$TAG" integrations/mcpb/dist/m1k3.mcpb \
+            --target "$GITHUB_SHA" --latest=false \
+            --title "M1K3 for Claude (MCP Bundle) $VERSION" \
+            --notes "The M1K3 MCP Bundle: connects Claude to the M1K3 app running on this Mac. See integrations/mcpb/README.md. SHA-256: $SHA"
+          GOT="$(gh release view "$TAG" --json assets -q '.assets[] | select(.name=="m1k3.mcpb") | .digest // empty' | sed 's/^sha256://')"
+          if [ -n "$GOT" ] && [ "$GOT" != "$SHA" ]; then
+            echo "::error::The uploaded bundle's digest ($GOT) is not the built one ($SHA)."
+            exit 1
+          fi
+
+      - name: Install cosign
+        if: ${{ inputs.publish }}
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Download and verify mcp-publisher
+        if: ${{ inputs.publish }}
+        run: |
+          set -euo pipefail
+          os="$(uname -s | tr '[:upper:]' '[:lower:]')"
+          arch="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"
+          archive="mcp-publisher_${os}_${arch}.tar.gz"
+          base_url="https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}"
+          curl --fail --location --silent --show-error --output "$archive" "$base_url/$archive"
+          curl --fail --location --silent --show-error --output "$archive.sigstore.json" "$base_url/$archive.sigstore.json"
+          cosign verify-blob \
+            --bundle "$archive.sigstore.json" \
+            --certificate-identity "https://github.com/modelcontextprotocol/registry/.github/workflows/release.yml@refs/tags/${MCP_PUBLISHER_VERSION}" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "$archive"
+          tar xzf "$archive" mcp-publisher
+          rm -f "$archive" "$archive.sigstore.json"
+
+      - name: Publish the listing
+        if: ${{ inputs.publish }}
+        run: |
+          set -euo pipefail
+          cp integrations/mcpb/dist/server.json server.json
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish

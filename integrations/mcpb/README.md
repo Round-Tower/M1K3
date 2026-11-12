@@ -53,6 +53,15 @@ integrations/mcpb/build.sh        # writes dist/m1k3.mcpb and prints its SHA-256
 A bundle is a zip of `manifest.json`, `icon.png` (the site's icon, copied in by the
 build) and `server/index.js`.
 
+## Publishing
+
+`server.json` is the listing for the [MCP Registry](https://registry.modelcontextprotocol.io).
+The **MCP Registry** workflow (run by hand, a dry run unless `publish` is ticked)
+tests and builds the bundle, creates the `mcpb-v<version>` release that carries
+it, writes the bundle's SHA-256 into the listing and publishes it. A published
+version cannot be changed: bump `version` in `manifest.json` and `server.json`
+together (a test holds them equal). Not yet run.
+
 ## Privacy Policy
 
 The bridge collects nothing, stores nothing and sends nothing off your Mac. The
