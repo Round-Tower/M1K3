@@ -735,6 +735,9 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
     @MainActor
     func notePlayerStartRefused(_ reason: String) {
         Self.log.notice("audio player start refused: \(reason, privacy: .public); the engine will be rebuilt")
+        // Counted as not spoken, as a route change mid-utterance is: a waited MCP speak must not read success.
+        // Not the stall streak: the engine is not known to be broken.
+        stallLock.withLock { _playbackStallCount += 1 }
         tearDownEngine()
     }
 

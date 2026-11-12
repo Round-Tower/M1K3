@@ -39,10 +39,32 @@ struct AudioPlayerStartTests {
         var bare: [String] = []
         for case let file as URL in walker where file.pathExtension == "swift" && file.lastPathComponent != "AudioPlayerStart.swift" {
             for (index, line) in try String(contentsOf: file, encoding: .utf8).components(separatedBy: "\n").enumerated() {
-                let code = line.components(separatedBy: "//").first ?? ""
-                if code.contains("player.play()") || code.contains("Node.play()") { bare.append("\(file.lastPathComponent):\(index + 1)") }
+                // Any receiver: `player.play()`, `node.play()`, `self.playerNode.play()`.
+                let code = line.components(separatedBy: " //").first ?? ""
+                if code.contains(".play()") { bare.append("\(file.lastPathComponent):\(index + 1)") }
             }
         }
         #expect(bare.isEmpty, "bare player starts: \(bare)")
+    }
+
+    private static func streaming() throws -> String {
+        let file = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("Sources/M1K3Voice/EffectfulSpeechProvider+Streaming.swift")
+        return try String(contentsOf: file, encoding: .utf8)
+    }
+
+    @Test("a start refused before anything was heard reports not spoken, so the fallback voice gets its turn")
+    func aSilentRefusalFallsBack() throws {
+        let source = try Self.streaming()
+        #expect(source.contains("return started && (heard || !startRefused)"))
+        let refused = try #require(source.range(of: "startRefused = true"))
+        let heard = try #require(source.range(of: "heard = true"))
+        #expect(refused.lowerBound < heard.lowerBound, "heard is set only after a start that was not refused")
+    }
+
+    @Test("a refused start does not also end the stream (the session would complete twice)")
+    func noDoubleCompletion() throws {
+        #expect(try Self.streaming().contains("if !startRefused { session.markStreamEnded() }"))
     }
 }

@@ -142,6 +142,7 @@ extension EffectfulSpeechProvider {
 
         var started = false
         var startRefused = false
+        var heard = false // a start has succeeded, so some of this utterance reached the speaker
         do {
             for try await chunk in stream {
                 guard !session.isCancelled else { break }
@@ -161,11 +162,14 @@ extension EffectfulSpeechProvider {
                     startRefused = true
                     break
                 }
+                heard = true
             }
         } catch {
             // Synthesis failed mid-utterance — keep what's already scheduled.
         }
-        session.markStreamEnded()
+        // A refused start already cancelled the session (which completes it): ending the stream as well would
+        // complete it twice and queue a second deferred stop that can land on the next utterance.
+        if !startRefused { session.markStreamEnded() }
         if started, !startRefused {
             let outcome = await session.awaitCompletion(policy: PlaybackDeadlinePolicy(), sleep: playbackSleeper)
             if outcome == .timedOut {
@@ -180,7 +184,10 @@ extension EffectfulSpeechProvider {
         }
         if streamingSession === session { streamingSession = nil }
         if started { fireSpeakingEnded() }
-        return started
+        // Refused before anything was heard: say "not spoken", so the caller's fallback voice gets its turn on
+        // the rebuilt engine (a route change in front recovers; in the background it is refused again, guarded).
+        // Refused after some audio: the utterance stands as spoken; re-speaking it whole would repeat it.
+        return started && (heard || !startRefused)
     }
 }
 

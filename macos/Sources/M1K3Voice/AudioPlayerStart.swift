@@ -7,7 +7,7 @@
 //  running. `engine.isRunning` does not rule it out (the engine can read running
 //  with its IO stopped), and on the phone it is a race with the background exit:
 //  the app was aborted when it left for the background just as a spoken sentence
-//  was about to start (iPhone 17 Pro drill, 2026-11-11, one run in about nine).
+//  was about to start (iPhone 17 Pro drill, 2026-11-11: 2 of 10 runs).
 //
 //  So the start goes through the ObjC shim, and a refused start is a value the
 //  renderer acts on: stop the utterance and rebuild the engine for the next one.

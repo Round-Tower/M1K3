@@ -10,7 +10,8 @@
 //  (iPhone 17 Pro drill, 2026-11-11: uncaught, SIGABRT).
 //
 //  Keep its use narrow: an exception unwinds past Swift frames without running
-//  their cleanup, so the block must be a single call into the framework.
+//  their cleanup (expect a small leak per catch), so the block must be a single
+//  call into the framework.
 //
 //  Signed: Kev + claude-fable-5.2, 2026-11-12, Confidence 0.8, Prior: none (new file).
 //
