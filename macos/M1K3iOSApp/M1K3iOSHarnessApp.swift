@@ -25,6 +25,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-29 (pre-push review fold) — the app owns the guard and marks before AppCore
 //  builds (a live applicationState read, not the task's scenePhase copy); a mark found first is held until the core
 //  exists; the background clear runs before the brain is shed. Confidence 0.75.
+//  Review: Kev + claude-fable-5.2, 2026-11-11 — a true background also stops an on-device answer in flight and the
+//  speech properly (`stopForBackground`), before the shed. Drilled on the iPhone 17 Pro: without it, returning mid-answer
+//  on Lil got the app killed for memory. Confidence 0.8 (see BackgroundExitPolicy; the drill is in the PR).
 
 import M1K3Avatar
 import M1K3Diagnostics
@@ -81,7 +84,10 @@ struct M1K3iOSApp: App {
                     // and audio session are torn down by the OS) — leave cleanly
                     // BEFORE shedding the brain, so the loop never sees a dead mic.
                     core?.exitVoiceMode()
-                    core?.cancelAutoSpeak() // no background audio: a half-read answer just stops
+                    // No background audio and no background GPU: the speech stops, and an answer being
+                    // made on this device stops with it, BEFORE the shed, or the turn keeps the brain
+                    // alive and the return loads a second copy (BackgroundExitPolicy).
+                    core?.stopForBackground()
                     core?.releaseForBackground()
                 case .active:
                     markSessionActive()

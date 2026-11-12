@@ -11,6 +11,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-15 — `sessionHeldBetweenSentences`: master's #597 follow-up releases the
 //  audio session whenever speech ends outside voice mode, and an auto-spoken answer ends one utterance per sentence,
 //  so that release must wait while auto-speak holds the session. Confidence 0.6 (a text tripwire; verify-by-ear).
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — leaving the app now goes through `stopForBackground` (it ends auto-speak
+//  first, then stops an on-device turn before the shed); the pin follows it. Confidence unchanged.
 //
 
 import Foundation
@@ -143,8 +145,12 @@ struct IOSAutoSpeakWiringScanTests {
         let core = try Self.code("M1K3iOSApp/AppCore.swift")
         let stop = core.components(separatedBy: "func stopResponding()").dropFirst().first ?? ""
         #expect(stop.prefix(400).contains("cancelAutoSpeak()"))
+        // Leaving the app goes through `stopForBackground`, which ends the auto-speak session first (2026-11-11:
+        // it also stops an on-device turn before the brain is shed, BackgroundExitPolicy).
         let app = try Self.code("M1K3iOSApp/M1K3iOSHarnessApp.swift")
-        #expect(app.contains("core?.cancelAutoSpeak()"))
+        #expect(app.contains("core?.stopForBackground()"))
+        let leave = core.components(separatedBy: "func stopForBackground()").dropFirst().first ?? ""
+        #expect(leave.prefix(200).contains("cancelAutoSpeak()"))
         let section = try Self.code("M1K3iOSApp/VoiceOutputSection.swift")
         #expect(section.contains("@AppStorage(VoiceModeDefaults.autoSpeakKey)"))
         #expect(section.contains("Toggle(\"Speak answers\""))
