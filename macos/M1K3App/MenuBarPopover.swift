@@ -12,6 +12,9 @@
 //  Signed: Kev + claude-opus-4-8, 2026-06-16, Confidence 0.7, Prior: Unknown
 //  Review: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 — Todos v1: a one-line todo count (open ·
 //  suggested) under the heartbeat line, tap → the Todos destination; store read off-main on todosRevision.
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — Kev, on a screenshot of the popover with agent activity in it: "the
+//  Avatar looks poor and it isn't very readable". The pet now recedes while there are lines to read (the pulse,
+//  agent activity), and an activity line wraps to two lines instead of truncating. Verify-by-launch.
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — the footer's Settings opens the main window's
 //  Settings screen (the Settings scene retired). Confidence 0.85.
 
@@ -48,7 +51,7 @@ struct MenuBarPopover: View {
             // backdrop uses (scrim, reduce-motion, low-power, hit-testing
             // and VoiceOver-hidden all inherited).
             if let env, hasChosenBrain {
-                AvatarChatBackground(env: env, isTyping: composing(env))
+                AvatarChatBackground(env: env, isTyping: composing(env) || hasLinesToRead(env))
             }
             content
         }
@@ -71,6 +74,13 @@ struct MenuBarPopover: View {
         case .idle: return false
         case .asking, .answer, .failed: return true
         }
+    }
+
+    /// The pet fills the popover, so any line of text sits on top of it. While there is something to READ
+    /// here (the latest pulse, what agents did), the pet recedes the same way it does for a draft: the
+    /// words win. With nothing to read it has the stage.
+    private func hasLinesToRead(_ env: AppEnvironment) -> Bool {
+        !env.agentActivity.entries.isEmpty || (env.heartbeatEnabled && latestPulse != nil)
     }
 
     private var content: some View {
@@ -253,10 +263,16 @@ struct MenuBarPopover: View {
                 Label("Agent activity", systemImage: "person.badge.shield.checkmark")
                     .font(.caption2.weight(.semibold))
                 ForEach(recent) { entry in
-                    HStack(spacing: 4) {
+                    // The line wraps instead of truncating ("…tried to ask Private Cloud Comput…"), and the
+                    // time keeps its own width beside it.
+                    HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text(entry.summary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                         Spacer(minLength: 4)
                         Text(entry.at, style: .relative)
+                            .lineLimit(1)
+                            .layoutPriority(1)
                     }
                     .font(.caption2)
                     .foregroundStyle(entry.outcome == .refused ? .orange : .secondary)

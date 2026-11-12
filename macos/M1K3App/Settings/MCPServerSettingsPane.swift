@@ -18,6 +18,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — Kev tried it by hand (switch, key, a curl call answered by Big) and
 //  retitled the pane "Server". The file and type keep their names.
 
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — the Local API footer rendered with wide gaps mid-sentence (Kev's
+//  screenshot): its line continuations had been flattened into runs of spaces. Now a joined string. Seen fixed by launch.
+
 import AppKit // NSPasteboard — the Copy buttons
 import M1K3CLICore // ConnectPlan / MCPClient / MCPEndpoint — one source for the snippets
 import M1K3LanguageModel // PrivateCloudLending (the lending rows) + ChatEgressConsent (the Privacy pane's switch)
@@ -137,9 +140,14 @@ struct MCPServerSettingsPane: View {
         } header: {
             SettingsHeader("Local API", systemImage: "server.rack")
         } footer: {
-            Text("""
-            Lets other apps on this Mac use the brain M1K3 has loaded, with their own instructions:             no M1K3 personality, memory, knowledge or tools, and nothing they send is kept.             Point any OpenAI-compatible tool at the base URL and use the API key.             Loopback-only, one call at a time, and you always go first.             M1K3's brains are chosen and tested inside M1K3; how one behaves under another app's             instructions is for you to judge.
-            """)
+            Text(
+                "Lets other apps on this Mac use the brain M1K3 has loaded, with their own instructions: "
+                    + "no M1K3 personality, memory, knowledge or tools, and nothing they send is kept. "
+                    + "Point any OpenAI-compatible tool at the base URL and use the API key. "
+                    + "Loopback-only, one call at a time, and you always go first. "
+                    + "M1K3's brains are chosen and tested inside M1K3; how one behaves under another app's "
+                    + "instructions is for you to judge."
+            )
             .font(.callout).foregroundStyle(.secondary)
         }
         .onAppear { env.localAPI.loadAccessToken() }
