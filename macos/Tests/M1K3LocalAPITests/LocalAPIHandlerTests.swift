@@ -101,7 +101,8 @@ struct LocalAPIHandlerTests {
         let off = await text(handler.reply(to: request("POST", "/v1/chat/completions", body: chat(model: "cloud-m1k3"))))
         #expect(off.hasPrefix("HTTP/1.1 404"))
         #expect(off.contains("Settings ▸ Server"))
-        let unknown = await text(handler.reply(to: request("POST", "/v1/chat/completions", body: chat(model: "gpt-9"))))
+        let stranger = request("POST", "/v1/chat/completions", body: chat(model: "gpt-9"))
+        let unknown = await text(handler.reply(to: stranger))
         #expect(unknown.hasPrefix("HTTP/1.1 404") && unknown.contains("is not loaded in M1K3"))
         #expect(brain.calls.isEmpty)
         // The slot was given back: an ordinary call still goes through.
