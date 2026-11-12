@@ -12,7 +12,7 @@ LO QUE HAGO
 PRIVADO POR DISEÑO
 • Los cerebros, la búsqueda en tus documentos y la voz funcionan en el dispositivo.
 • Uso la red para dos cosas: descargar un cerebro cuando eliges uno y la búsqueda web — activada por defecto para que las respuestas estén al día; un interruptor en Configuración la apaga.
-• Sin analíticas. Sin rastreo. Sin recopilación de datos. El código fuente está publicado con una licencia source-available: puedes comprobarlo.
+• Sin analíticas. Sin rastreo. Sin recopilación de datos. El código fuente está publicado con una licencia source-available: puedes comprobarlo (github.com/Round-Tower/M1K3).
 
 Funciona sin conexión — en un avión, en la montaña, donde no llegue la cobertura.
 

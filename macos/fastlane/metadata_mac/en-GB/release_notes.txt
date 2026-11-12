@@ -1,6 +1,7 @@
 NEW IN 1.4
 
 • A local server for your other apps. Switch on the Local API in Settings > Server and any tool that speaks the OpenAI API (an editor, a script, a chat app) can use the brain you have loaded. It listens on this Mac only, is off by default and has its own key. You go first: a call waits while you are chatting, and ends if you start a turn.
+• Apple's private cloud for your other apps, if you want it. Switch on "Also offer Private Cloud Compute" and a second model, cloud-m1k3, answers from Apple's Private Cloud Compute: a bigger brain for the jobs that need one. Your coding agents get the same through MCP, with a switch of their own. Both are off by default. Only what the app sends goes out, nothing of yours from me, and Settings counts every call.
 • Settings > Server. The MCP server for your coding agents and the new Local API share one pane, each with its own switch and its own key.
 • Mini answers the question. Mini had picked up a habit of answering ordinary coding questions with a line about not sharing its wiring. That is fixed.
 
@@ -17,4 +18,4 @@ NEW TO M1K3? HERE'S WHAT I DO
 • Siri and Shortcuts can ask me things and add to what I know.
 • Private Cloud Compute, if you want it: off by default, one message at a time, with your consent.
 
-Everything else runs on your Mac. No account, no telemetry. The network is used for model downloads, web search and the optional private cloud. Settings > Brains & downloads names every download; web search and the private cloud are switches in Settings > Privacy.
+Everything else runs on your Mac. No account, no telemetry. The network is used for model downloads, web search and the optional private cloud. Settings > Brains & downloads names every download; web search and the private cloud are switches in Settings > Privacy, and lending the private cloud to other apps is its own switch in Settings > Server.

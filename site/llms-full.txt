@@ -383,7 +383,11 @@ The consent gates are deliberate and asymmetric: an agent can remember and it ca
 
 ### Not an agent? The Local API
 
-From version 1.4, M1K3 on the Mac can also lend the brain you have loaded to any tool that speaks the OpenAI API: an editor, a script, a chat app. Switch on Settings ▸ Server ▸ Local API, copy its key, and point the tool at http://127.0.0.1:4141/v1. It listens on your Mac only, is off by default, and has a key of its own, separate from the MCP token. The caller gets the raw brain under its own instructions, with none of M1K3's memory, knowledge or tools: those stay behind the MCP server. You go first: a call waits while you are chatting. The details are in LOCAL_API.md (https://github.com/Round-Tower/M1K3/blob/master/macos/docs/LOCAL_API.md).
+From version 1.4, M1K3 on the Mac can also lend the brain you have loaded to any tool that speaks the OpenAI API: an editor, a script, a chat app. Switch on Settings ▸ Server ▸ Local API, copy its key, and point the tool at http://127.0.0.1:4141/v1. It listens on your Mac only, is off by default, and has a key of its own, separate from the MCP token. The caller gets the raw brain under its own instructions, with none of M1K3's memory, knowledge or tools: those stay behind the MCP server. You go first: a call waits while you are chatting.
+
+And when the job is bigger than your Mac: switch on Also offer Private Cloud Compute and the same endpoint gains a second model, cloud-m1k3, answered by Apple's Private Cloud Compute. Same base URL, same key, one model name changed. Agents get it too, as the ask_private_cloud tool, behind a switch of its own. Both switches are off by default and both need Private Cloud Compute on in Privacy. Only what the caller sends goes out: nothing from your memory or knowledge is added by M1K3, though an agent can include what it has read. The Settings pane counts every call that leaves, and M1K3 caps them at 30 an hour so a script in a loop cannot spend your day's allowance. What Apple says about Private Cloud Compute is on Apple's own page (https://security.apple.com/blog/private-cloud-compute/); M1K3 claims nothing beyond it.
+
+The details are in LOCAL_API.md (https://github.com/Round-Tower/M1K3/blob/master/macos/docs/LOCAL_API.md).
 
 ### Frequently asked questions
 

@@ -1,6 +1,7 @@
 NEU IN 1.4
 
 • Ein lokaler Server für deine anderen Apps. Schalte die Local API unter Settings > Server ein, und jedes Werkzeug, das die OpenAI API spricht (ein Editor, ein Skript, eine Chat-App), kann das Hirn nutzen, das du geladen hast. Sie lauscht nur auf diesem Mac, ist standardmäßig aus und hat einen eigenen Schlüssel. Du bist zuerst dran: Ein Aufruf wartet, solange du chattest, und endet, sobald du eine neue Runde beginnst.
+• Apples private Cloud für deine anderen Apps, wenn du willst. Schalte „Also offer Private Cloud Compute“ ein, und ein zweites Modell, cloud-m1k3, antwortet aus Apples Private Cloud Compute: ein größeres Hirn für die Jobs, die eins brauchen. Deine Coding-Agenten bekommen dasselbe über MCP, mit einem eigenen Schalter. Beide sind standardmäßig aus. Es geht nur hinaus, was die App sendet; ich füge nichts von dir hinzu, und Settings zählt jeden Aufruf.
 • Settings > Server. Der MCP-Server für deine Coding-Agenten und die neue Local API teilen sich einen Bereich, jeweils mit eigenem Schalter und eigenem Schlüssel.
 • Mini beantwortet die Frage. Mini hatte sich angewöhnt, ganz normale Coding-Fragen mit einem Satz darüber zu beantworten, dass es seine Verdrahtung nicht preisgibt. Das ist behoben.
 
@@ -17,4 +18,4 @@ NEU BEI M1K3? DAS MACHE ICH
 • Siri und Kurzbefehle können mir Fragen stellen und mein Wissen ergänzen.
 • Private Cloud Compute, wenn du willst: standardmäßig aus, jede Nachricht einzeln, mit deiner Zustimmung.
 
-Alles andere läuft auf deinem Mac. Kein Konto, keine Telemetrie. Das Netzwerk nutze ich für Modell-Downloads, die Websuche und die optionale Private Cloud. Settings > Brains & downloads nennt jeden Download; Websuche und Private Cloud sind Schalter unter Settings > Privacy.
+Alles andere läuft auf deinem Mac. Kein Konto, keine Telemetrie. Das Netzwerk nutze ich für Modell-Downloads, die Websuche und die optionale Private Cloud. Settings > Brains & downloads nennt jeden Download; Websuche und Private Cloud sind Schalter unter Settings > Privacy, und die Private Cloud an andere Apps zu verleihen ist ein eigener Schalter unter Settings > Server.

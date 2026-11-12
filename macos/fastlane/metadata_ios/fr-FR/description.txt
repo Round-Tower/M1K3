@@ -12,7 +12,7 @@ CE QUE JE FAIS
 PRIVÉ PAR CONCEPTION
 • Les cerveaux, la recherche dans tes documents et la voix tournent tous sur l’appareil.
 • J’utilise le réseau pour deux choses : télécharger un cerveau quand tu en choisis un, et la recherche web — activée par défaut pour des réponses à jour, un seul interrupteur dans les Réglages la coupe.
-• Pas d’analytique. Pas de pistage. Aucune donnée collectée. Le code source est publié sous une licence source-available : tu peux vérifier.
+• Pas d’analytique. Pas de pistage. Aucune donnée collectée. Le code source est publié sous une licence source-available : tu peux vérifier (github.com/Round-Tower/M1K3).
 
 Fonctionne hors ligne — en avion, en montagne, partout où le réseau ne passe pas.
 

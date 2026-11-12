@@ -153,6 +153,13 @@ endpoint at `http://127.0.0.1:4141/v1` that lends the brain you have loaded to
 any tool on the same Mac. Off by default, its own key, raw brain only (no memory,
 knowledge or tools). See [`macos/docs/LOCAL_API.md`](./macos/docs/LOCAL_API.md).
 
+One endpoint, two sizes of brain: with a second switch (also off by default) the
+same API offers `cloud-m1k3`, answered by Apple's Private Cloud Compute, and the
+MCP server gains `ask_private_cloud` for agents. Only what the caller sends
+leaves the Mac, every call is counted in Settings, and M1K3 caps them at 30 an
+hour. The why and the limits:
+[ADR 0011](./macos/docs/adr/0011-private-cloud-compute-lent-to-other-apps.md).
+
 ### Tools
 
 <!-- MCP-TOOLS:START -->

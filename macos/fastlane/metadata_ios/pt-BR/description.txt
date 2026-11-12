@@ -12,7 +12,7 @@ O QUE EU FAÇO
 PRIVADO POR PRINCÍPIO
 • Os cérebros, a busca nos seus documentos e a voz rodam no aparelho.
 • Uso a rede para duas coisas: baixar um cérebro quando você escolhe um, e a busca web — ligada por padrão para respostas atualizadas; um botão nos Ajustes a desliga.
-• Sem análises. Sem rastreamento. Nenhum dado coletado. O código-fonte é publicado sob uma licença source-available: você pode conferir.
+• Sem análises. Sem rastreamento. Nenhum dado coletado. O código-fonte é publicado sob uma licença source-available: você pode conferir (github.com/Round-Tower/M1K3).
 
 Funciona offline — no avião, na montanha, onde o sinal não chega.
 

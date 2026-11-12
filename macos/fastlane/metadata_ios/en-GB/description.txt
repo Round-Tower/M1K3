@@ -12,7 +12,7 @@ WHAT I DO
 PRIVATE BY DESIGN
 • The brains, the search over your documents and the voice all run on the device.
 • I use the network for two things: downloading models when you choose them (brains and my voice), and web search — on by default so answers can be current, one switch in Settings to turn it off.
-• No analytics. No tracking. No data collected. The source code is published under a source-available licence, so you can check.
+• No analytics. No tracking. No data collected. The source code is published under a source-available licence, so you can check (github.com/Round-Tower/M1K3).
 
 Works offline — on a plane, up a mountain, anywhere the signal isn't.
 
