@@ -20,6 +20,7 @@
 //  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the Display picker has two choices (Background, Off) and reads the stored value through AvatarDisplay(persisted:) so a legacy panel shows as Background. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — adds the "Seasonal looks" opt-out toggle. Confidence 0.85.
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — adds the "Glow when speaking" opt-out toggle, shown when a creature is chosen. Confidence 0.8.
 //  Review: Kev + claude-sonnet-5.5, 2026-10-22 — the toggle's help names Flight Club (copy only; the string is
 //  English-only like the rest of this help). Confidence 0.85.
 //
@@ -33,6 +34,7 @@ struct CompanionSettingsSection: View {
     @AppStorage(AppEnvironment.voiceCompanionKey) private var voiceCompanion = CompanionDefaults.houseCompanion.id
     @AppStorage(AppEnvironment.avatarDisplayKey) private var avatarDisplayRaw = AvatarDisplay.defaultValue.rawValue
     @AppStorage(CompanionDefaults.seasonalLooksKey) private var seasonalLooks = true
+    @AppStorage(CompanionDefaults.speakingGlowKey) private var speakingGlow = true
     @AppStorage(AppEnvironment.companionShadingKey) private var companionShading =
         CompanionDefaults.houseShading.rawValue
 
@@ -89,6 +91,11 @@ struct CompanionSettingsSection: View {
             }
             Toggle("Seasonal looks", isOn: $seasonalLooks)
                 .help("Dress M1K3 up for the occasional holiday — Halloween, and flight colours while you are offline.")
+            // The glow is a creature's halo; the pixel face and the constellation have none.
+            if creatureChosen {
+                Toggle("Glow when speaking", isOn: $speakingGlow)
+                    .help("A soft halo around the creature while M1K3's voice is speaking. It holds still when Reduce Motion is on.")
+            }
         } header: {
             SettingsHeader("Companion", systemImage: "pawprint")
         } footer: {

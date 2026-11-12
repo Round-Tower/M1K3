@@ -94,3 +94,79 @@ void celSurface(realitykit::surface_parameters params)
     surface.set_metallic(0.0h);
     surface.set_roughness(1.0h);
 }
+
+// The speaking glow (SpeakingGlow, PhosphorMaterial halo): a soft halo around the
+// creature while M1K3's voice is speaking. It is drawn on a SHELL: a second copy of
+// the creature's own skinned geometry, added at load, so it rides the skeleton.
+// `haloGeometry` pushes the shell out along its (smoothed) normals; the material
+// culls FRONT faces, so the body hides the shell everywhere except just beyond the
+// silhouette; `haloSurface` fades it to nothing at its outer edge.
+//
+// The motion runs on the shader's own clock: a slow breath, and a band of light
+// that travels across the creature. The app writes only a level, on change.
+//
+//   custom_parameter().x  the level, 0 (off) to 1; NEGATIVE means hold still
+//                         (Reduce Motion, a parked creature)
+//   custom_parameter().y  the shell's width, in the mesh's own units
+//   custom_parameter().z  the shell's opacity at full level (the halo is nested
+//                         shells, each wider and fainter: SpeakingGlow.shells)
+//   emissive_color        the glow's colour
+//
+// Signed: Kev + claude-fable-5.2, 2026-11-12, Confidence 0.6 (compiles against the
+// RealityKit headers; the look is judged by launch). Prior: Unknown.
+
+// normalize() of a zero vector is NaN, and a NaN offset or opacity is undefined on screen.
+static inline float3 haloSafeNormal(float3 v)
+{
+    return v * rsqrt(max(dot(v, v), 1e-12));
+}
+
+static inline float haloBreath(float signedLevel, float time)
+{
+    return signedLevel > 0.0 ? 0.88 + 0.12 * sin(time * 4.6) : 1.0;
+}
+
+[[visible]]
+void haloGeometry(realitykit::geometry_parameters params)
+{
+    auto geometry = params.geometry();
+    float4 custom = params.uniforms().custom_parameter();
+    float level = saturate(fabs(custom.x));
+    float width = custom.y * mix(0.45, 1.0, level) * haloBreath(custom.x, params.uniforms().time());
+    geometry.set_model_position_offset(haloSafeNormal(geometry.normal()) * width);
+}
+
+[[visible]]
+void haloSurface(realitykit::surface_parameters params)
+{
+    auto surface = params.surface();
+    auto geometry = params.geometry();
+    float4 custom = params.uniforms().custom_parameter();
+    float level = saturate(fabs(custom.x));
+    float time = params.uniforms().time();
+
+    // Back faces of the shell: nearly edge-on at the shell's own outline (fade to
+    // nothing there), turning toward the camera where the shell meets the body.
+    float3 n = haloSafeNormal(geometry.normal());
+    float3 view = haloSafeNormal(geometry.view_direction());
+    float edge = smoothstep(0.0, 0.5, fabs(dot(n, view)));
+
+    // A band of light travelling across the creature, in units of the shell's
+    // width so it scales with the mesh. Still when the level is negative.
+    float travel = 1.0;
+    if (custom.x > 0.0) {
+        float span = max(custom.y, 1e-5) * 9.0;
+        float phase = dot(geometry.model_position(), normalize(float3(0.5, 1.0, 0.3))) / span;
+        float band = pow(0.5 + 0.5 * sin(phase * 6.2832 - time * 3.2), 3.0);
+        travel = 0.6 + 0.4 * band;
+    }
+
+    float glow = edge * level * travel * haloBreath(custom.x, time) * custom.z;
+    float3 colour = params.material_constants().emissive_color();
+    // The unlit lighting model shows the BASE colour (an emissive-only halo drew black).
+    surface.set_base_color(half3(colour));
+    surface.set_emissive_color(half3(colour));
+    surface.set_opacity(half(glow));
+    surface.set_metallic(0.0h);
+    surface.set_roughness(1.0h);
+}

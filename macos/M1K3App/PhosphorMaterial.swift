@@ -38,6 +38,15 @@
 //  with a baked lattice part paints its body unlit black and its lattice unlit (white, or the season's colour under
 //  phosphor), by mesh-part name via SiteFoxPaint. Seen on the iPhone Simulator; the Mac is verify-by-launch.
 //  Confidence 0.8.
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — the speaking halo (`SpeakingGlow`; Kev: "so the Phosphor fox
+//  almost glows - and could do something similar for the other Avatars"). `addHalo` gives a loaded creature a
+//  SHELL: a copy of every mesh part with smoothed normals, in one extra material slot, so it rides the skeleton.
+//  `apply` re-seats the shell's material after every repaint (each paint path rewrites the slots), and
+//  `setHalo` writes the level. With no shell (the mesh could not be rebuilt) nothing changes. Confidence 0.6:
+//  the shell following a skinned mesh is tried by launch on the Mac; the iPhone is owed.
+//  Review: Kev + claude-fable-5.2, 2026-11-12 (review fold) — the shelled mesh is on the entity only while the halo
+//  is shown (`showHalo` / `hideHalo`): a silent creature is drawn from its original mesh, so it costs and looks as
+//  before. Gap slots are padded with the creature's own material. Confidence 0.65 (Mac by launch).
 //
 
 import M1K3Avatar
@@ -107,8 +116,20 @@ enum PhosphorMaterial {
         _ style: CompanionShadingStyle,
         treatment: PhosphorTreatment,
         originals: [ObjectIdentifier: [any RealityKit.Material]],
+        halo: Halo? = nil,
+        glow: (shape: SpeakingGlow, level: Float) = (.off, 0),
         to root: Entity
     ) -> Bool {
+        // Every paint path below rewrites the material slots, the shell's included: put the
+        // halo back afterwards, whatever was painted.
+        defer {
+            if let halo {
+                setHalo(
+                    halo, glow: glow.shape, level: glow.level,
+                    colour: SpeakingGlow.colour(style: style, treatment: treatment)
+                )
+            }
+        }
         // The site Fox (SiteFoxPaint): a model with a baked lattice part gets black unlit triangles
         // and an unlit lattice, white by default and the season's colour under phosphor.
         if SiteFoxPaint.applies(toParts: meshPartNames(of: root), style: style) {
@@ -236,6 +257,224 @@ enum PhosphorMaterial {
         }
         for child in entity.children {
             restore(originals, onto: child)
+        }
+    }
+}
+
+// MARK: - The speaking halo
+
+extension PhosphorMaterial {
+    /// A loaded creature's halo: for each mesh entity, the mesh as it loaded and the same mesh
+    /// with the shells beside it. The shelled mesh is on the entity ONLY while the halo is shown
+    /// (`showHalo` / `hideHalo`), so a silent creature is drawn from its original mesh, at its
+    /// original cost, and every paint path sees the parts it always saw.
+    final class Halo {
+        fileprivate struct Seat {
+            let entity: Entity
+            let plain: MeshResource
+            let shelled: MeshResource
+            /// The first shell slot; shell `n` sits in slot `first + n`.
+            let first: Int
+            /// How many materials the entity held when the halo was shown, to put back on hide.
+            var plainCount = 0
+        }
+
+        fileprivate var seats: [Seat]
+        /// The nested shells, innermost first (`SpeakingGlow.shells`).
+        let shells: [SpeakingGlow.Shell]
+        fileprivate(set) var isShown = false
+
+        fileprivate init(seats: [Seat], shells: [SpeakingGlow.Shell]) {
+            self.seats = seats
+            self.shells = shells
+        }
+    }
+
+    /// The prefix of a shell part's id. It must never read as a lattice part (SiteFoxPaint).
+    private static let haloPartPrefix = "m1k3_halo_"
+
+    /// Build `root`'s halo: every body mesh model copied as nested shells with smoothed normals.
+    /// Nothing on screen changes until `showHalo`. Returns nil when a mesh cannot be rebuilt or
+    /// the shader is missing.
+    static func addHalo(to root: Entity) -> Halo? {
+        guard haloMaterial(glow: .zero, colour: SiteFoxPaint.siteWhite) != nil else { return nil }
+        var extent: Float = 0
+        func measure(_ entity: Entity) {
+            if let model = entity.components[ModelComponent.self] {
+                extent = max(extent, model.mesh.bounds.extents.max())
+            }
+            for child in entity.children {
+                measure(child)
+            }
+        }
+        measure(root)
+        let shells = SpeakingGlow.shells(forExtent: extent)
+        var seats: [Halo.Seat] = []
+        func walk(_ entity: Entity) {
+            if let model = entity.components[ModelComponent.self] {
+                let first = max(model.materials.count, (maxMaterialIndex(of: model.mesh) ?? -1) + 1)
+                if let shelled = meshWithShells(model.mesh, firstSlot: first, count: shells.count) {
+                    seats.append(Halo.Seat(entity: entity, plain: model.mesh, shelled: shelled, first: first))
+                }
+            }
+            for child in entity.children {
+                walk(child)
+            }
+        }
+        walk(root)
+        guard !seats.isEmpty else { return nil }
+        log.notice("halo: \(shells.count, privacy: .public) shell(s) built for \(seats.count, privacy: .public) mesh(es), extent \(extent, privacy: .public)")
+        return Halo(seats: seats, shells: shells)
+    }
+
+    /// Put the shelled mesh on screen. Follow it with `setHalo` (the shells need their materials).
+    static func showHalo(_ halo: Halo) {
+        guard !halo.isShown else { return }
+        for index in halo.seats.indices {
+            let seat = halo.seats[index]
+            guard var model = seat.entity.components[ModelComponent.self] else { continue }
+            halo.seats[index].plainCount = model.materials.count
+            model.mesh = seat.shelled
+            seat.entity.components.set(model)
+        }
+        halo.isShown = true
+    }
+
+    /// Back to the mesh as it loaded, with the materials it had: the silent creature, exactly.
+    static func hideHalo(_ halo: Halo) {
+        guard halo.isShown else { return }
+        for seat in halo.seats {
+            guard var model = seat.entity.components[ModelComponent.self] else { continue }
+            model.mesh = seat.plain
+            model.materials = Array(model.materials.prefix(seat.plainCount))
+            seat.entity.components.set(model)
+        }
+        halo.isShown = false
+    }
+
+    /// Seat the shells' materials with this level and colour; a no-op while the halo is hidden.
+    /// Cheap enough for a ramp's few steps; never call it per frame.
+    static func setHalo(_ halo: Halo, glow: SpeakingGlow, level: Float, colour: SIMD3<Float>) {
+        guard halo.isShown else { return }
+        let layers = halo.shells.compactMap {
+            haloMaterial(glow: glow.customValue(level: level, shell: $0), colour: colour)
+        }
+        guard layers.count == halo.shells.count else { return }
+        for seat in halo.seats {
+            guard var model = seat.entity.components[ModelComponent.self] else { continue }
+            var materials = model.materials
+            // A gap below the first shell slot (a mesh that indexes past its materials) is padded
+            // with the creature's own last material, never with a shell's.
+            while materials.count < seat.first, let last = materials.last {
+                materials.append(last)
+            }
+            while materials.count < seat.first + layers.count {
+                materials.append(layers[0])
+            }
+            for (offset, layer) in layers.enumerated() {
+                materials[seat.first + offset] = layer
+            }
+            model.materials = materials
+            seat.entity.components.set(model)
+        }
+    }
+
+    private static var haloBase: CustomMaterial?
+    private static var haloFailed = false
+
+    private static func haloMaterial(glow: SIMD4<Float>, colour: SIMD3<Float>) -> CustomMaterial? {
+        if haloBase == nil, !haloFailed {
+            do {
+                guard let lib = loadedLibrary() else { throw CocoaError(.fileNoSuchFile) }
+                var material = try CustomMaterial(
+                    surfaceShader: .init(named: "haloSurface", in: lib),
+                    geometryModifier: .init(named: "haloGeometry", in: lib),
+                    lightingModel: .unlit
+                )
+                // Front faces culled: the body hides the shell except beyond its outline.
+                material.faceCulling = .front
+                material.blending = .transparent(opacity: 1.0)
+                haloBase = material
+            } catch {
+                haloFailed = true
+                log.error("halo: material failed (\(error.localizedDescription, privacy: .public))")
+            }
+        }
+        guard var material = haloBase else { return nil }
+        material.custom.value = glow
+        material.emissiveColor = .init(color: RealityKit.Material.Color(
+            red: CGFloat(colour.x), green: CGFloat(colour.y), blue: CGFloat(colour.z), alpha: 1
+        ))
+        return material
+    }
+
+    private static func maxMaterialIndex(of mesh: MeshResource) -> Int? {
+        mesh.contents.models.flatMap { $0.parts.map(\.materialIndex) }.max()
+    }
+
+    /// `mesh` with `count` shells beside it: every body model copied as shell MODELS (same skeleton
+    /// and joint influences, smoothed normals, one material slot per shell from `firstSlot`), each
+    /// placed by a copy of the model's instances. A part added to an existing model is dropped by
+    /// the rebuild (probed 2026-11-12), so the shells are their own models. nil when it cannot
+    /// be rebuilt.
+    private static func meshWithShells(_ mesh: MeshResource, firstSlot: Int, count: Int) -> MeshResource? {
+        var contents = mesh.contents
+        var models = contents.models
+        var instances = contents.instances
+        var added = 0
+        for model in contents.models where !model.id.hasPrefix(haloPartPrefix) {
+            // The body only: a wire lattice has no outside to push toward, and its shell is shards.
+            let body = model.parts.filter { SiteFoxPaint.role(ofPart: $0.id) == .body }
+            guard !body.isEmpty else { continue }
+            let smoothed = body.map { smoothedNormals(of: $0) }
+            for layer in 0 ..< count {
+                let prefix = "\(haloPartPrefix)\(layer)_"
+                let parts = zip(body, smoothed).map { part, normals in
+                    var shell = part
+                    shell.id = prefix + part.id
+                    shell.materialIndex = firstSlot + layer
+                    shell.normals = MeshBuffers.Normals(normals)
+                    return shell
+                }
+                models.insert(MeshResource.Model(id: prefix + model.id, parts: parts))
+                for instance in contents.instances where instance.model == model.id {
+                    instances.insert(MeshResource.Instance(
+                        id: prefix + instance.id, model: prefix + model.id, at: instance.transform
+                    ))
+                    added += 1
+                }
+            }
+        }
+        guard added > 0 else { return nil }
+        contents.models = models
+        contents.instances = instances
+        do {
+            return try MeshResource.generate(from: contents)
+        } catch {
+            log.error("halo: mesh rebuild failed (\(error.localizedDescription, privacy: .public))")
+            return nil
+        }
+    }
+
+    /// One normal per POSITION: a faceted mesh splits its vertices per face, and a shell pushed
+    /// out along split normals cracks open at every edge. Averaging by position keeps it closed.
+    private static func smoothedNormals(of part: MeshResource.Part) -> [SIMD3<Float>] {
+        let positions = part.positions.elements
+        let normals = part.normals?.elements ?? []
+        guard normals.count == positions.count else {
+            return positions.map { simd_length($0) > 0 ? simd_normalize($0) : SIMD3(0, 1, 0) }
+        }
+        struct Key: Hashable { let x, y, z: Int32 }
+        func key(_ p: SIMD3<Float>) -> Key {
+            Key(x: Int32((p.x * 10000).rounded()), y: Int32((p.y * 10000).rounded()), z: Int32((p.z * 10000).rounded()))
+        }
+        var sums: [Key: SIMD3<Float>] = [:]
+        for (position, normal) in zip(positions, normals) {
+            sums[key(position), default: .zero] += normal
+        }
+        return zip(positions, normals).map { position, normal in
+            let sum = sums[key(position)] ?? normal
+            return simd_length(sum) > 1e-6 ? simd_normalize(sum) : normal
         }
     }
 }
