@@ -95,6 +95,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-13 — `defaultVoiceIdentifier` (#584), the same seam as
 //  AVSpeechProvider's: the render path speaks utterances that name no voice in the best installed one.
 //  Confidence 0.8.
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — both player starts go through `AudioPlayerStart`; a refused start is
+//  logged and rebuilds the engine (`notePlayerStartRefused`). Confidence 0.75.
 
 import AVFoundation
 import Foundation
@@ -614,7 +616,11 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
             ) { [weak self] _ in
                 Task { @MainActor in self?.playbackPlayedBack(generation) }
             }
-            player.play()
+            // A refused start plays nothing, so `.dataPlayedBack` never comes: end the wait here.
+            if let refused = AudioPlayerStart.play(player) {
+                notePlayerStartRefused(refused)
+                finishPlayback()
+            }
         }
         fireSpeakingEnded()
     }
@@ -723,6 +729,16 @@ public final class EffectfulSpeechProvider: NSObject, SpeechProviderWithWordTimi
     @available(visionOS, deprecated: 27.0)
     private static func legacyAUAudioUnit(of node: AVAudioNode) -> AUAudioUnit {
         node.auAudioUnit
+    }
+
+    /// The player would not start (`AudioPlayerStart`): logged, and the engine is rebuilt for the next utterance.
+    @MainActor
+    func notePlayerStartRefused(_ reason: String) {
+        Self.log.notice("audio player start refused: \(reason, privacy: .public); the engine will be rebuilt")
+        // Counted as not spoken, as a route change mid-utterance is: a waited MCP speak must not read success.
+        // Not the stall streak: the engine is not known to be broken.
+        stallLock.withLock { _playbackStallCount += 1 }
+        tearDownEngine()
     }
 
     /// Stop + reset the engine and force the next utterance to reconnect and
