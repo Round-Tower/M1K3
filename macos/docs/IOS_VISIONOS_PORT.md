@@ -718,6 +718,14 @@ minutes with camera, speech recognition and a brain all on) before the store
 submission. Kev cut 1.4.0 to TestFlight on 2026-11-11 with the soak still owed;
 it is a line in that build's TestFlight notes.
 
+**The heat half of the soak ran on 2026-11-12** (an iPhone 17 Pro on its cable,
+`docs/evals/2026-11-11-iphone-background-and-soak/`): ten minutes of voice mode
+listening, the eye open and a look every six seconds. No look failed, the first
+word stayed under a second, and the phone never reported `critical`. Mini took
+it to `fair` in the last minute; Lil took it to `serious` by eight minutes.
+Still owed: the same on battery (the drill needs the cable), and a voice turn
+running beside the looks.
+
 _Signed: Kev + claude-fable-5.2, 2026-11-09, Confidence 0.7 (the route, the
 display-only rule and the camera's lifecycle are tested; the iOS target builds;
 the camera and the two screens are compile-checked until they have run in the
@@ -784,3 +792,8 @@ scored on a blind set on both brains, and the chat-layer path was drilled on the
 iPhone 17 Pro: asking again 1.4 s on Mini and 3.5 s on Lil to the full answer,
 first text with the date line 0.95–1.15 s on Lil; the screens are untried in
 the hand). Revised the same day after a code-quality and a security review._
+
+_Review: Kev + claude-fable-5.2, 2026-11-12: the #768 soak's heat half is recorded
+above with its limits (on the cable, a quiet dark room); the battery half stays
+owed. The same night's drills found and fixed three ways the phone app died at
+the background exit (#809, #812, #813). Confidence 0.8._
