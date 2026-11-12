@@ -155,3 +155,74 @@ test('serve: lines in, replies out in order, a broken line answered as a parse e
     m1k3.server.close();
   }
 });
+
+test('M1K3 quitting mid-answer: that request gets the plain sentence and the next one is still served', async () => {
+  let calls = 0;
+  const dropsFirst = async () => {
+    calls += 1;
+    if (calls === 1) {
+      return { status: 200, ok: true, headers: new Headers(), text: async () => { throw new TypeError('terminated'); } };
+    }
+    return new Response(JSON.stringify({ jsonrpc: '2.0', id: 2, result: { ok: true } }), { headers: { 'Content-Type': 'application/json' } });
+  };
+  const input = new PassThrough();
+  const output = new PassThrough();
+  let written = '';
+  output.on('data', (c) => (written += c));
+  const done = serve({ input, output, env: { M1K3_MCP_TOKEN: 'tok' }, fetchImpl: dropsFirst });
+  input.end(JSON.stringify(call(1, 'tools/call')) + '\n' + JSON.stringify(call(2, 'tools/list')) + '\n');
+  await done;
+  const lines = written.trim().split('\n').map((l) => JSON.parse(l));
+  assert.equal(lines[0].id, 1);
+  assert.equal(lines[0].error.message, MESSAGES.notRunning);
+  assert.deepEqual(lines[1].result, { ok: true });
+});
+
+test('serve: a relay that throws still answers the request and keeps the queue alive', async () => {
+  const input = new PassThrough();
+  const output = new PassThrough();
+  let written = '';
+  output.on('data', (c) => (written += c));
+  // A response object with no `headers` makes relay itself throw after the body read.
+  const broken = async () => ({ status: 200, ok: true, text: async () => '{}' });
+  const done = serve({ input, output, env: { M1K3_MCP_TOKEN: 'tok' }, fetchImpl: broken });
+  input.end(JSON.stringify(call(1, 'a')) + '\n' + JSON.stringify(call(2, 'b')) + '\n');
+  await done;
+  const lines = written.trim().split('\n').map((l) => JSON.parse(l));
+  assert.deepEqual(lines.map((l) => l.id), [1, 2]);
+  assert.ok(lines.every((l) => l.error));
+});
+
+test('a redirect is refused, so the token cannot follow one off this Mac', async () => {
+  const m1k3 = await fakeM1K3(() => ({ status: 307, text: '' }));
+  m1k3.server.removeAllListeners('request');
+  m1k3.server.on('request', (req, res) => {
+    m1k3.seen.push(req.url);
+    // Back to this same server: a followed redirect would show up in `seen`.
+    res.writeHead(req.url === '/mcp' ? 307 : 200, { Location: '/elsewhere', 'Content-Type': 'application/json' });
+    res.end(req.url === '/mcp' ? '' : '{"jsonrpc":"2.0","id":1,"result":{}}');
+  });
+  try {
+    const deps = { env: { M1K3_MCP_TOKEN: 'tok', M1K3_MCP_PORT: m1k3.port }, fetchImpl: fetch, state: {} };
+    const [reply] = await relay(call(1, 'tools/list'), deps);
+    assert.equal(reply.error.message, MESSAGES.notRunning);
+    assert.deepEqual(m1k3.seen, ['/mcp']);
+  } finally {
+    m1k3.server.close();
+  }
+});
+
+test('a call M1K3 never answers ends with a plain sentence instead of blocking the queue for ever', async () => {
+  const sockets = new Set();
+  const silent = http.createServer(() => {});
+  silent.on('connection', (s) => sockets.add(s));
+  await new Promise((resolve) => silent.listen(0, '127.0.0.1', resolve));
+  try {
+    const deps = { env: { M1K3_MCP_TOKEN: 'tok', M1K3_MCP_PORT: String(silent.address().port) }, fetchImpl: fetch, state: {}, timeoutMs: 100 };
+    const [reply] = await relay(call(1, 'tools/call'), deps);
+    assert.equal(reply.error.message, MESSAGES.timedOut);
+  } finally {
+    for (const s of sockets) s.destroy();
+    silent.close();
+  }
+});

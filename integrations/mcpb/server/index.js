@@ -12,12 +12,18 @@
 // Signed: Kev + claude-fable-5.2, 2026-11-12, Confidence 0.75 (pinned by
 // test/bridge.test.js against a fake server; tried against the live app by hand).
 // Prior: Unknown.
+// Review: Kev + claude-fable-5.2, 2026-11-12 (PR #823 bot pass): the body read is
+// guarded like the dial (M1K3 quitting mid-answer crashed the bridge), a relay
+// fault cannot poison the queue, redirects are refused, and a call ends after ten
+// minutes. Open: a cancellation still queues behind the call it cancels.
 // Context: Kev, 2026-11-12, on listing M1K3 for Claude users: "Let's go it pal".
 // M1K3's full server lives inside the app behind a token; a listing needs
 // something a client can launch.
 'use strict';
 
 const DEFAULT_PORT = '4242';
+// A local brain can take minutes over a long answer; ten is a hang, not an answer.
+const DEFAULT_TIMEOUT_MS = 10 * 60 * 1000;
 
 const MESSAGES = {
   notRunning:
@@ -27,6 +33,8 @@ const MESSAGES = {
   badToken:
     'M1K3 refused the access token. In M1K3, open Settings > Server, copy the access token again, and paste it into this extension\'s settings.',
   badPort: 'The M1K3 port must be a number between 1 and 65535.',
+  timedOut: 'M1K3 took too long to answer, so this call was dropped. Check the M1K3 app and try again.',
+  bridgeFault: 'The M1K3 bridge hit a fault relaying this call. Try again.',
 };
 
 /** The token as configured; a placeholder the host never filled in counts as none. */
@@ -70,7 +78,7 @@ function parseEventStream(text) {
  * Relay one parsed message. Returns the messages to write back (possibly none).
  * `state.protocolVersion` is filled from the initialize result and sent thereafter.
  */
-async function relay(message, { env, fetchImpl, state }) {
+async function relay(message, { env, fetchImpl, state, timeoutMs = DEFAULT_TIMEOUT_MS }) {
   const id = message && Object.prototype.hasOwnProperty.call(message, 'id') ? message.id : undefined;
   const wantsReply = id !== undefined && id !== null && typeof message.method === 'string';
   const fail = (text) => (wantsReply ? [errorFor(id, text)] : []);
@@ -87,16 +95,24 @@ async function relay(message, { env, fetchImpl, state }) {
   };
   if (state.protocolVersion) headers['MCP-Protocol-Version'] = state.protocolVersion;
 
+  // The body read sits inside the same guard as the dial: M1K3 quitting mid-answer
+  // rejects there, not at fetch. A redirect is an error, so the token stays on loopback.
   let response;
+  let body = '';
   try {
-    response = await fetchImpl(url, { method: 'POST', headers, body: JSON.stringify(message) });
-  } catch {
-    return fail(MESSAGES.notRunning);
+    response = await fetchImpl(url, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(message),
+      redirect: 'error',
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    if (response.status === 401) return fail(MESSAGES.badToken);
+    if (response.status === 202 || response.status === 204) return [];
+    body = await response.text();
+  } catch (error) {
+    return fail(error && error.name === 'TimeoutError' ? MESSAGES.timedOut : MESSAGES.notRunning);
   }
-
-  if (response.status === 401) return fail(MESSAGES.badToken);
-  if (response.status === 202 || response.status === 204) return [];
-  const body = await response.text();
   if (!response.ok) {
     return fail(`M1K3 answered with an error (HTTP ${response.status}).`);
   }
@@ -141,8 +157,15 @@ function serve({ input, output, env, fetchImpl }) {
       return;
     }
     // One at a time, in order: M1K3 serves one request per connection.
+    // A fault in one relay answers that request and never poisons the queue.
     chain = chain.then(async () => {
-      const replies = await relay(message, { env, fetchImpl, state });
+      let replies;
+      try {
+        replies = await relay(message, { env, fetchImpl, state });
+      } catch {
+        const id = message && typeof message === 'object' ? message.id : undefined;
+        replies = id === undefined || id === null ? [] : [errorFor(id, MESSAGES.bridgeFault)];
+      }
       for (const reply of replies) output.write(JSON.stringify(reply) + '\n');
     });
   };
