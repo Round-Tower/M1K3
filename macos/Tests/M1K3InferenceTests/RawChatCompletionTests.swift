@@ -204,10 +204,11 @@ struct RawChatLiveTests {
             ("Reply with JSON only.", "Give me an object with keys name and age for a cat called Tom, aged 3."),
             (nil, "Summarise the plot of Cinderella in one sentence."),
         ]
-        let echoes = ["acceptable use", "provided under", "sexually explicit", "hateful", "defraud", "within that"]
+        let echoes = ["acceptable use", "provided under", "foundation models", "deceptive", "within that"]
         var echoed = 0
         for (system, user) in asks {
             let messages = (system.map { [RawChatMessage(.system, $0)] } ?? []) + [RawChatMessage(.user, user)]
+            // A refusal here is the finding the first wording produced (3 of 10): it fails the test by throwing.
             let (text, _) = try await run(messages, maxTokens: 160)
             let found = echoes.filter { text.lowercased().contains($0) }
             if !found.isEmpty { echoed += 1 }

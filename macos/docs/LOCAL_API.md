@@ -38,10 +38,9 @@ The **raw brain**. On Lil and Big your system message is the whole system
 prompt. On the two Apple models (Mini, and `cloud-m1k3`) one fixed line of
 M1K3's comes first, then your system message, whole:
 
-> This model is provided under Apple's acceptable use requirements. Do not
-> produce content that is illegal, sexually explicit, hateful or harassing,
-> that promotes violence or self-harm, that exploits children, or that helps
-> deceive or defraud people.
+> This model is provided under Apple's acceptable use requirements for the
+> Foundation Models framework. Keep every answer within them: nothing unlawful,
+> harmful, hateful or deceptive.
 
 Apple's licence asks an app that lends its models to keep a guardrail for
 [Apple's acceptable use requirements](https://developer.apple.com/apple-intelligence/acceptable-use-requirements-for-the-foundation-models-framework);

@@ -27,11 +27,16 @@ struct LentAppleModelGuardrailTests {
         #expect(combined.contains(LentAppleModelGuardrail.handover))
     }
 
-    @Test("The rule names Apple's categories and spells out no reply a model could recite")
-    func ruleNamesCategoriesAndNoScript() {
+    @Test("The rule names the requirements, lists none of the words that trip Apple's filter, and scripts no reply")
+    func ruleIsPlainAndUnscripted() {
         let rule = LentAppleModelGuardrail.rule.lowercased()
-        for word in ["illegal", "sexually explicit", "hateful", "violence", "self-harm", "children", "defraud"] {
+        #expect(rule.contains("acceptable use requirements"))
+        for word in ["unlawful", "harmful", "hateful", "deceptive"] {
             #expect(rule.contains(word), "\(word)")
+        }
+        // Measured 2026-11-12: a rule that listed these made Apple's safety filter refuse 3 of 10 ordinary asks.
+        for trigger in ["sexual", "explicit", "violence", "self-harm", "children", "exploit", "weapon"] {
+            #expect(!rule.contains(trigger), "\(trigger)")
         }
         // #799: Mini copied a spelled-out decline onto ordinary coding asks. No quoted reply, no "say".
         #expect(!rule.contains("\""))
