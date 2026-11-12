@@ -12,6 +12,8 @@
 //  Review: claude-fable-5, 2026-08-19 — MCPCallLogEntry gained `clientName` +
 //  `stamped(clientName:)` (the Agent Log identity column; registry itself
 //  stays identity-blind — the transport-side sink stamps).
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — `tools` lists each declaration with its title and hints
+//  (`MCPToolAnnotations`). Dispatch is unchanged. Confidence 0.9.
 //
 
 import Foundation
@@ -85,9 +87,10 @@ public struct MCPToolRegistry: Sendable {
         self.logSink = logSink
     }
 
-    /// Declarations in registration order (ListTools).
+    /// Declarations in registration order (ListTools), each with its title and hints
+    /// (`MCPToolAnnotations`).
     public var tools: [Tool] {
-        definitions.map(\.tool)
+        definitions.map { MCPToolAnnotations.annotated($0.tool) }
     }
 
     /// Run a tool by name. Unknown names and handler throws both surface as
