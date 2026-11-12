@@ -48,6 +48,12 @@
 //  other caller (the user's own bubble, the reasoning panel, the Settings previews)
 //  renders exactly as before, so a fence a user pastes stays the code they typed and a
 //  block drafted in a thought never turns into a dead card.
+//  Review: Kev + claude-fable-5.2, 2026-11-12, Confidence 0.7 — the sizes and spacing
+//  now come from `ReadingTypography` (M1K3AnswerBlocks), one tested table. On the Mac
+//  every face is larger (15 pt, 16 in the dyslexia face, up from the system's 13) with
+//  looser lines and letters; touch keeps its values, so Dynamic Type still governs
+//  there. Kev, on a Mac screenshot in the serif face: "it needs to be bigger, with
+//  better kerning, and more padding on the border". Tried by launch on the Mac only.
 
 import M1K3AnswerBlocks
 import M1K3Chat
@@ -77,6 +83,10 @@ struct ReadingText: View {
         forcedMode ?? ReadingMode(rawValue: savedModeRaw) ?? .standard
     }
 
+    private var type: ReadingTypography {
+        .resolve(mode.face)
+    }
+
     /// The text split around typed answer blocks; usually one markdown run, and
     /// always exactly one when the caller didn't opt in.
     private var segments: [AnswerBlockSegment] {
@@ -85,7 +95,7 @@ struct ReadingText: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: type.paragraphSpacing) {
             ForEach(Array(segments.enumerated()), id: \.offset) { _, segment in
                 segmentView(segment)
             }
@@ -104,8 +114,8 @@ struct ReadingText: View {
             // The reading mode's typeface and spacing carry into the card.
             AnswerBlockView(block)
                 .font(baseFont)
-                .lineSpacing(mode == .dyslexia ? 6 : 2)
-                .tracking(mode == .dyslexia ? 0.5 : 0)
+                .lineSpacing(type.lineSpacing)
+                .tracking(type.tracking)
         case let .pending(kind):
             AnswerBlockSkeletonView(kind: kind)
         }
@@ -189,21 +199,22 @@ struct ReadingText: View {
         // Dyslexia mode's roomier spacing applies to every prose block, headings
         // included. (Nothing here touches CodeBlockView — code stays code
         // regardless of ReadingMode.)
-        .lineSpacing(mode == .dyslexia ? 6 : 2)
-        .tracking(mode == .dyslexia ? 0.5 : 0)
+        .lineSpacing(type.lineSpacing)
+        .tracking(type.tracking)
     }
 
     private var baseFont: Font {
-        switch mode {
-        case .standard, .bionic: .body
-        case .serif: .system(.body, design: .serif)
-        case .dyslexia: .dyslexic(15)
+        switch (mode, type.bodySize) {
+        case let (.dyslexia, size): .dyslexic(size ?? 15)
+        case let (.serif, size?): .system(size: size, design: .serif)
+        case (.serif, nil): .system(.body, design: .serif)
+        case let (_, size?): .system(size: size)
+        case (_, nil): .body
         }
     }
 
     private func headingFont(_ level: Int) -> Font {
-        let sizeByLevel: [Int: CGFloat] = [1: 22, 2: 19, 3: 17, 4: 15, 5: 14, 6: 13]
-        let size = sizeByLevel[level] ?? 15
+        let size = type.headingSize(level: level)
         switch mode {
         case .standard, .bionic: return .system(size: size, weight: .bold)
         case .serif: return .system(size: size, weight: .bold, design: .serif)
@@ -223,7 +234,7 @@ struct ReadingText: View {
             if let inline = run.inlinePresentationIntent {
                 if inline.contains(.stronglyEmphasized) { font = font.bold() }
                 if inline.contains(.emphasized) { font = font.italic() }
-                if inline.contains(.code) { font = .system(.callout, design: .monospaced) }
+                if inline.contains(.code) { font = inlineCodeFont }
                 if inline.contains(.strikethrough) {
                     result[run.range].strikethroughStyle = .single
                 }
@@ -235,6 +246,11 @@ struct ReadingText: View {
             }
         }
         return result
+    }
+
+    /// A code span sits one point under the prose around it, as callout sits under body.
+    private var inlineCodeFont: Font {
+        type.bodySize.map { .system(size: $0 - 1, design: .monospaced) } ?? .system(.callout, design: .monospaced)
     }
 
     /// Build an AttributedString that bolds the leading characters of each word.

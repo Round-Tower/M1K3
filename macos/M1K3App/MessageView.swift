@@ -45,6 +45,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-26 (code-review fold) — `onSendExchange` is optional and the button
 //  exists only when ContentView wires it, which it does only for an age band allowed the field report
 //  (`AgeAppropriateness.fieldReportAllowed`). Unwired means hidden. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — the bubbles' inset grows with the larger Mac text
+//  (`ReadingTypography`: 18 by 14 behind an answer, 16 by 12 on the user's own bubble). Kev: "more
+//  padding on the border". Confidence 0.7 (judged on one screen by launch).
 
 import AppKit
 import M1K3AnswerBlocks
@@ -184,8 +187,8 @@ struct MessageView: View {
 
     private var bubble: some View {
         ReadingText(message.text)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
     }
 
     /// Per-turn generation stats (context tokens · output · tok/s) — a testing aid,
@@ -649,11 +652,13 @@ private struct FollowUpChip: View {
 /// old .glassEffect card; opacity is the knob if it wants tuning.
 private struct LegibilityScrim: ViewModifier {
     let active: Bool
+    /// The inset is the same for every face; it grew on the Mac with the text (2026-11-12).
+    private let inset = ReadingTypography.resolve(.standard)
 
     func body(content: Content) -> some View {
         content
-            .padding(.horizontal, active ? 12 : 0)
-            .padding(.vertical, active ? 8 : 4)
+            .padding(.horizontal, active ? inset.insetHorizontal : 0)
+            .padding(.vertical, active ? inset.insetVertical : 4)
             .background {
                 if active {
                     // .thinMaterial, not a flat black fill: the old
@@ -662,7 +667,7 @@ private struct LegibilityScrim: ViewModifier {
                     // 07-25 report). Material adapts to the scheme and keeps
                     // the scrim in the app's glass language; legibility over
                     // the moving avatar is what it exists for either way.
-                    RoundedRectangle(cornerRadius: 14)
+                    RoundedRectangle(cornerRadius: 16)
                         .fill(.thinMaterial)
                 }
             }
