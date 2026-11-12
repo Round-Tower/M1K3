@@ -9,6 +9,10 @@
 //
 //  Signed: Kev + claude-sonnet-4-6, 2026-06-08, Confidence 0.85, Prior: Unknown
 
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — `face` maps a mode onto
+//  `ReadingTypography`'s table, where the sizes and spacing now live.
+
+import M1K3AnswerBlocks
 import SwiftUI
 
 enum ReadingMode: String, CaseIterable, Identifiable {
@@ -22,6 +26,15 @@ enum ReadingMode: String, CaseIterable, Identifiable {
 
     var id: String {
         rawValue
+    }
+
+    var face: ReadingTypography.Face {
+        switch self {
+        case .standard: .standard
+        case .serif: .serif
+        case .dyslexia: .dyslexia
+        case .bionic: .bionic
+        }
     }
 
     var displayName: String {
