@@ -20,6 +20,10 @@
 //  (returns false) while the engine path is in plain fallback; a COMPLETED wait clears the stall streak;
 //  a late .dataPlayedBack after a cancel is inert (it used to re-run complete() and could stop() the next
 //  utterance's playback on the shared player). Confidence now 0.75.
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — the player's start goes through `AudioPlayerStart`: a refused start
+//  (an NSException, "player did not see an IO cycle", seen when the phone left for the background) ends the utterance
+//  and rebuilds the engine for the next, where it aborted the app. Confidence 0.75 (the catch is pinned; the refusal
+//  itself is device-only, drilled on the iPhone).
 //
 
 import AVFoundation
@@ -137,6 +141,7 @@ extension EffectfulSpeechProvider {
         streamingSession = session
 
         var started = false
+        var startRefused = false
         do {
             for try await chunk in stream {
                 guard !session.isCancelled else { break }
@@ -148,13 +153,20 @@ extension EffectfulSpeechProvider {
                     fireSpeakingStarted()
                 }
                 session.schedule(samples: processed, timeline: chunk.timeline, format: format)
-                player.play() // no-op while already playing; restarts after engine reconfig
+                // No-op while already playing; restarts after engine reconfig. The start can be REFUSED with
+                // an exception Swift cannot catch (the phone leaving for the background): end the utterance.
+                if let refused = AudioPlayerStart.play(player) {
+                    notePlayerStartRefused(refused)
+                    session.cancel()
+                    startRefused = true
+                    break
+                }
             }
         } catch {
             // Synthesis failed mid-utterance — keep what's already scheduled.
         }
         session.markStreamEnded()
-        if started {
+        if started, !startRefused {
             let outcome = await session.awaitCompletion(policy: PlaybackDeadlinePolicy(), sleep: playbackSleeper)
             if outcome == .timedOut {
                 // The engine is running but not delivering audio (live 2026-10-02:

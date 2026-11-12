@@ -468,8 +468,15 @@ let package = Package(
             // (M1K3LogCore) instead of a hand-built Logger(subsystem:category:), and
             // SpeechTextPolish speaks typed answer blocks as sentences through
             // M1K3AnswerBlocks (#717) — never M1K3Chat or M1K3Inference.
-            dependencies: ["M1K3LogCore", "M1K3AnswerBlocks"],
+            // M1K3ObjCTry: the one ObjC shim, for the audio player's start (an NSException Swift cannot catch).
+            dependencies: ["M1K3LogCore", "M1K3AnswerBlocks", "M1K3ObjCTry"],
             path: "Sources/M1K3Voice"
+        ),
+        // The package's only Objective-C: one @try/@catch around a single framework call. No product:
+        // it rides inside M1K3Voice.
+        .target(
+            name: "M1K3ObjCTry",
+            path: "Sources/M1K3ObjCTry"
         ),
         .testTarget(
             name: "M1K3VoiceTests",
