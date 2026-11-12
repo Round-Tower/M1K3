@@ -62,7 +62,7 @@ public struct ReadingTypography: Equatable, Sendable {
         switch (idiom, face) {
         case (.mac, .dyslexia):
             ReadingTypography(
-                bodySize: 16, lineSpacing: 8, tracking: 0.6, paragraphSpacing: 14,
+                bodySize: 16, lineSpacing: 6, tracking: 0.6, paragraphSpacing: 14,
                 insetHorizontal: 18, insetVertical: 14, headingSizes: [24, 21, 19, 17, 16, 16]
             )
         case (.mac, _):
