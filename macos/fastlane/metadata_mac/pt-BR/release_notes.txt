@@ -1,6 +1,7 @@
 NOVIDADES DA 1.4
 
 • Um servidor local para seus outros apps. Ligue a Local API em Settings > Server e qualquer ferramenta que fale a OpenAI API (um editor, um script, um app de chat) pode usar o cérebro que você carregou. Ela escuta só neste Mac, vem desligada por padrão e tem a própria chave. Você vem primeiro: uma chamada espera enquanto você conversa e é encerrada se você começar uma rodada.
+• A nuvem privada da Apple para seus outros apps, se você quiser. Ligue “Also offer Private Cloud Compute” e um segundo modelo, cloud-m1k3, responde a partir do Private Cloud Compute da Apple: um cérebro maior para os trabalhos que precisam. Seus agentes de código recebem o mesmo pelo MCP, com um interruptor próprio. Os dois vêm desligados por padrão. Só sai o que o app envia, não acrescento nada seu, e Settings conta cada chamada.
 • Settings > Server. O servidor MCP para seus agentes de código e a nova Local API dividem um único painel, cada um com o próprio interruptor e a própria chave.
 • O Mini responde à pergunta. O Mini tinha pegado o hábito de responder perguntas comuns de programação com uma frase dizendo que não revela a sua fiação. Isso foi corrigido.
 
@@ -17,4 +18,4 @@ NOVO NO M1K3? O QUE EU FAÇO
 • A Siri e os Atalhos podem me fazer perguntas e acrescentar coisas ao que eu sei.
 • Private Cloud Compute, se você quiser: desligado por padrão, uma mensagem por vez, com o seu consentimento.
 
-Todo o resto roda no seu Mac. Sem conta, sem telemetria. A rede é usada para downloads de modelos, busca na web e a nuvem privada opcional. Settings > Brains & downloads nomeia cada download; a busca na web e a nuvem privada são interruptores em Settings > Privacy.
+Todo o resto roda no seu Mac. Sem conta, sem telemetria. A rede é usada para downloads de modelos, busca na web e a nuvem privada opcional. Settings > Brains & downloads nomeia cada download; a busca na web e a nuvem privada são interruptores em Settings > Privacy, e emprestar a nuvem privada a outros apps é um interruptor à parte em Settings > Server.

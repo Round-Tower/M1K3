@@ -1,4 +1,4 @@
-Mis amigos me llaman Mike. Soy un agente de IA local que se ejecuta en tu Mac — sin cuenta, sin telemetría. Tus conversaciones, notas y documentos se quedan en el dispositivo de forma predeterminada. Dos cosas pueden salir, cada una con su interruptor en Configuración: la búsqueda web (activada por defecto, para que las respuestas estén al día) y el cerebro opcional Private Cloud Compute, que eliges tú y autorizas una sola vez.
+Mis amigos me llaman Mike. Soy un agente de IA local que se ejecuta en tu Mac — sin cuenta, sin telemetría. Tus conversaciones, notas y documentos se quedan en el dispositivo de forma predeterminada. Dos cosas pueden salir, cada una con su interruptor en Configuración: la búsqueda web (activada por defecto, para que las respuestas estén al día) y el cerebro opcional Private Cloud Compute, que eliges tú y autorizas una sola vez. Esa nube privada también puedes prestarla a tus otras apps; es un interruptor aparte, desactivado por defecto.
 
 QUÉ HAGO
 • Chatea con un potente modelo de lenguaje en el dispositivo — rápido en Apple Silicon.
@@ -20,5 +20,6 @@ HECHO PARA TU MÁQUINA
 • Múltiples niveles de modelo para funcionar bien desde MacBook Air hasta Mac Studio.
 • Un cliente de línea de comandos (m1k3) y un servidor local con 18 herramientas para tus agentes de código — Claude, Cursor, VS Code, Codex, Zed.
 • Un servidor local para tus otras apps: activa la Local API y cualquier herramienta que hable la OpenAI API podrá usar el cerebro que tengas cargado. Solo en esta Mac, desactivada por defecto y con su propia clave.
+• La nube privada de Apple también para esas apps, si la activas: un cerebro más grande cuando el trabajo lo pide. Solo sale lo que envía la app, y Configuración cuenta cada llamada.
 
 Inteligencia punk: tuya, privada, en tus términos.

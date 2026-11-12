@@ -1,6 +1,7 @@
 NOVEDADES DE LA 1.4
 
 • Un servidor local para tus otras apps. Activa la Local API en Settings > Server y cualquier herramienta que hable la OpenAI API (un editor, un script, una app de chat) podrá usar el cerebro que tengas cargado. Escucha solo en este Mac, viene desactivada por defecto y tiene su propia clave. Tú vas primero: una llamada espera mientras chateas y se corta si empiezas un turno.
+• La nube privada de Apple para tus otras apps, si la quieres. Activa “Also offer Private Cloud Compute” y un segundo modelo, cloud-m1k3, responde desde Private Cloud Compute de Apple: un cerebro más grande para los trabajos que lo necesitan. Tus agentes de código lo reciben igual a través de MCP, con un interruptor propio. Ambos vienen desactivados por defecto. Solo sale lo que envía la app, yo no añado nada tuyo, y Settings cuenta cada llamada.
 • Settings > Server. El servidor MCP para tus agentes de código y la nueva Local API comparten un mismo panel, cada uno con su propio interruptor y su propia clave.
 • Mini responde a la pregunta. Mini había cogido la costumbre de contestar preguntas de programación normales con una frase sobre que no comparte su cableado. Ya está arreglado.
 
@@ -17,4 +18,4 @@ NOVEDADES DE LA 1.4
 • Siri y Atajos pueden preguntarme cosas y ampliar lo que sé.
 • Private Cloud Compute, si lo quieres: desactivado por defecto, un mensaje cada vez y con tu consentimiento.
 
-Todo lo demás se ejecuta en tu Mac. Sin cuenta, sin telemetría. La red se usa para descargar modelos, la búsqueda web y la nube privada opcional. Settings > Brains & downloads muestra cada descarga por su nombre; la búsqueda web y la nube privada son interruptores en Settings > Privacy.
+Todo lo demás se ejecuta en tu Mac. Sin cuenta, sin telemetría. La red se usa para descargar modelos, la búsqueda web y la nube privada opcional. Settings > Brains & downloads muestra cada descarga por su nombre; la búsqueda web y la nube privada son interruptores en Settings > Privacy, y prestar la nube privada a otras apps es un interruptor propio en Settings > Server.

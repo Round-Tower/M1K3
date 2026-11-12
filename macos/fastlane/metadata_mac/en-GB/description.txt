@@ -1,4 +1,4 @@
-My friends call me Mike. I'm a local AI agent that runs on your Mac — no account, no telemetry. Your conversations, notes, and documents stay on the device by default. Beyond the models you ask me to download, two things can go out, each a switch in Settings: web search (on by default, so answers can be current) and the optional Private Cloud Compute brain, which you pick and consent to once.
+My friends call me Mike. I'm a local AI agent that runs on your Mac — no account, no telemetry. Your conversations, notes, and documents stay on the device by default. Beyond the models you ask me to download, two things can go out, each a switch in Settings: web search (on by default, so answers can be current) and the optional Private Cloud Compute brain, which you pick and consent to once. You can lend that private cloud to your other apps too; that is a separate switch, off by default.
 
 WHAT I DO
 • Chat with a capable on-device language model — fast on Apple Silicon.
@@ -20,5 +20,6 @@ BUILT FOR YOUR MACHINE
 • Multiple model tiers so I run well from MacBook Air to Mac Studio.
 • A command-line client (m1k3) and a local tool server with 18 tools, so your coding agents — Claude, Cursor, VS Code, Codex, Zed — can use my knowledge and voice.
 • A local server for your other apps: switch on the Local API and any tool that speaks the OpenAI API can use the brain you have loaded. This Mac only, off by default, with its own key.
+• Apple's private cloud for those apps too, if you switch it on: a bigger brain when the job needs one. Only what the app sends goes out, and Settings counts every call.
 
 Punk intelligence: yours, private, on your terms.

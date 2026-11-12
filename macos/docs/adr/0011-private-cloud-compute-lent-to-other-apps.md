@@ -92,10 +92,21 @@ never an empty answer), Apple's claims cited rather than paraphrased.
     Models framework" for the uses listed, nor "encourage or enable others to
     do the same". A caller's own instructions are outside M1K3's guardrails
     here, as they already are for Mini on the Local API (1.4.0).
-  - The Developer Program License Agreement was reported, from a summary and
-    NOT checked word for word, to restrict programmatic access to Apple models
-    "except as expressly permitted" (section 3.2). Read the section itself
-    before a build with lending goes to App Review.
+  - The Developer Program License Agreement, read word for word on 2026-11-12.
+    Section 3.2: "You will not ... (3) programmatically access or use Apple
+    models through Apple Software or Services except as expressly permitted."
+    Section 3.3.11 A: "By accessing, prompting, or otherwise using the
+    Foundation Models Framework, or a model accessed by the Foundation Models
+    Framework, You agree to follow, and to maintain reasonable guardrails
+    supporting, the Foundation Models Framework Acceptable Use Requirements."
+    The Acceptable Use Requirements address "developers that wish to use,
+    prompt, or expose" the framework, so exposing it is contemplated; what is
+    asked for is guardrails. Our reading, not legal advice: M1K3 reaches the
+    models through the framework Apple documents, which is the permitted
+    route. The open point is "reasonable guardrails": a lent call runs under
+    the caller's instructions, with Apple's own safety filter and nothing of
+    M1K3's on top. That holds for Mini on the Local API as well as for the
+    cloud model. The agreement does not mention Private Cloud Compute by name.
 
   The entitlement is granted to the account; losing it would take PCC from
   chat too.
@@ -127,3 +138,7 @@ never an empty answer), Apple's claims cited rather than paraphrased.
      it: that other apps offer the same "doesn't make it okay", so the switches,
      the count and the cap are the terms it ships on. Still open: the terms
      question above (two Apple pages read, one clause unverified). Confidence 0.7. -->
+<!-- Review: Kev + claude-fable-5.2, 2026-11-12 (later) — Kev: "Let's read that section". The
+     licence clauses are now quoted word for word from Apple's page, and the lending was
+     tried against the real service on Kev's Mac (both surfaces answered). The open
+     point is narrowed to "reasonable guardrails" on a lent Apple model. Confidence 0.7. -->

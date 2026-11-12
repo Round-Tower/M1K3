@@ -1,4 +1,4 @@
-Meine Freunde nennen mich Mike. Ich bin ein lokaler KI-Agent, der auf deinem Mac läuft — kein Konto, keine Telemetrie. Deine Gespräche, Notizen und Dokumente bleiben standardmäßig auf dem Gerät. Zwei Dinge können nach draußen gehen, jedes mit einem Schalter in den Einstellungen: die Websuche (standardmäßig an, damit Antworten aktuell sind) und das optionale Private-Cloud-Compute-Hirn, das du selbst auswählst und einmal bestätigst.
+Meine Freunde nennen mich Mike. Ich bin ein lokaler KI-Agent, der auf deinem Mac läuft — kein Konto, keine Telemetrie. Deine Gespräche, Notizen und Dokumente bleiben standardmäßig auf dem Gerät. Zwei Dinge können nach draußen gehen, jedes mit einem Schalter in den Einstellungen: die Websuche (standardmäßig an, damit Antworten aktuell sind) und das optionale Private-Cloud-Compute-Hirn, das du selbst auswählst und einmal bestätigst. Diese Private Cloud kannst du auch deinen anderen Apps leihen; das ist ein eigener Schalter, standardmäßig aus.
 
 WAS ICH KANN
 • Chatte mit einem leistungsstarken On-Device-Sprachmodell — schnell auf Apple Silicon.
@@ -20,5 +20,6 @@ FÜR DEINEN MAC GEBAUT
 • Mehrere Modellstufen, damit ich vom MacBook Air bis zum Mac Studio gut laufe.
 • Ein Kommandozeilen-Client (m1k3) und ein lokaler Tool-Server mit 18 Werkzeugen für deine Coding-Agenten — Claude, Cursor, VS Code, Codex, Zed.
 • Ein lokaler Server für deine anderen Apps: Schalte die Local API ein, und jedes Werkzeug, das die OpenAI API spricht, kann das Hirn nutzen, das du geladen hast. Nur auf diesem Mac, standardmäßig aus, mit eigenem Schlüssel.
+• Apples private Cloud auch für diese Apps, wenn du sie einschaltest: ein größeres Hirn, wenn die Aufgabe eins braucht. Es geht nur hinaus, was die App sendet, und die Einstellungen zählen jeden Aufruf.
 
 Punk-Intelligenz: deine, privat, zu deinen Bedingungen.

@@ -1,6 +1,7 @@
 NOUVEAU DANS LA 1.4
 
 • Un serveur local pour tes autres apps. Active la Local API dans Settings > Server, et n'importe quel outil qui parle l'OpenAI API (un éditeur, un script, une appli de chat) peut utiliser le cerveau que tu as chargé. Le serveur n'écoute que sur ce Mac, il est désactivé par défaut et il a sa propre clé. Tu passes en premier : un appel attend pendant que tu discutes, et s'arrête si tu lances un nouvel échange.
+• Le cloud privé d'Apple pour tes autres apps, si tu le veux. Active « Also offer Private Cloud Compute » et un second modèle, cloud-m1k3, répond depuis Private Cloud Compute d'Apple : un cerveau plus grand pour les tâches qui en ont besoin. Tes agents de code y accèdent aussi via MCP, avec leur propre interrupteur. Les deux sont désactivés par défaut. Seul ce que l'appli envoie sort, je n'ajoute rien de toi, et Settings compte chaque appel.
 • Settings > Server. Le serveur MCP pour tes agents de code et la nouvelle Local API partagent un même volet, chacun avec son propre interrupteur et sa propre clé.
 • Mini répond à la question. Mini avait pris l'habitude de répondre aux questions de code ordinaires par une phrase disant qu'il ne partage pas son câblage. C'est corrigé.
 
@@ -17,4 +18,4 @@ NOUVEAU SUR M1K3 ? VOICI CE QUE JE FAIS
 • Siri et Raccourcis peuvent me poser des questions et enrichir ce que je sais.
 • Private Cloud Compute, si tu le veux : désactivé par défaut, un message à la fois, avec ton accord.
 
-Tout le reste tourne sur ton Mac. Pas de compte, pas de télémétrie. Le réseau sert aux téléchargements de modèles, à la recherche web et au cloud privé optionnel. Settings > Brains & downloads nomme chaque téléchargement ; la recherche web et le cloud privé sont des interrupteurs dans Settings > Privacy.
+Tout le reste tourne sur ton Mac. Pas de compte, pas de télémétrie. Le réseau sert aux téléchargements de modèles, à la recherche web et au cloud privé optionnel. Settings > Brains & downloads nomme chaque téléchargement ; la recherche web et le cloud privé sont des interrupteurs dans Settings > Privacy, et prêter le cloud privé à d'autres apps est un interrupteur à part dans Settings > Server.

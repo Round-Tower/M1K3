@@ -1,6 +1,7 @@
 1.4 新内容
 
 • 为你其他应用准备的本地服务器。在 Settings > Server 里打开 Local API，任何支持 OpenAI API 的工具（编辑器、脚本、聊天应用）都能使用你已加载的大脑。它只在这台 Mac 上监听，默认关闭，并且有自己的密钥。你优先：你在聊天时，调用会等待；你一发起新一轮对话，调用就会结束。
+• 给你其他应用用的 Apple 私有云，想用才开。打开“Also offer Private Cloud Compute”，第二个模型 cloud-m1k3 就会由 Apple 的 Private Cloud Compute 来回答：遇到需要的任务，就有一个更大的大脑。你的编程智能体通过 MCP 也能用，有单独的开关。两者默认都是关闭的。只有应用发送的内容会发出去，我不加入你的任何内容，Settings 会统计每一次调用。
 • Settings > Server。给编程智能体用的 MCP 服务器和新的 Local API 共用一个面板，各有各的开关和密钥。
 • Mini 直接回答问题。Mini 曾养成一个习惯：普通的编程问题也用一句“我不透露自己的内部构造”来回应。这个问题已修复。
 
@@ -17,4 +18,4 @@
 • Siri 和快捷指令可以向我提问，也能往我的知识里添加内容。
 • Private Cloud Compute，想用才用：默认关闭，一次一条消息，经你同意才发送。
 
-其余一切都在你的 Mac 上运行。无需账户，无遥测。网络只用于模型下载、网页搜索和可选的私有云。Settings > Brains & downloads 列出每一项下载；网页搜索和私有云是 Settings > Privacy 里的开关。
+其余一切都在你的 Mac 上运行。无需账户，无遥测。网络只用于模型下载、网页搜索和可选的私有云。Settings > Brains & downloads 列出每一项下载；网页搜索和私有云是 Settings > Privacy 里的开关，把私有云借给其他应用则是 Settings > Server 里单独的开关。
