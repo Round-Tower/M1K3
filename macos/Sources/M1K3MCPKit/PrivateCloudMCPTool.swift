@@ -45,7 +45,8 @@ public func makePrivateCloudToolDefinitions(handlers: PrivateCloudToolHandlers) 
                 name: PrivateCloudMCPTool.name,
                 description: "Ask Apple's Private Cloud Compute, a larger model than the ones on this Mac. "
                     + "NOT local: your prompt and instructions are sent to Apple's Private Cloud Compute "
-                    + "(Apple states it keeps nothing). Only what you pass is sent: nothing from M1K3's "
+                    + "(Apple states it keeps nothing), under Apple's acceptable use requirements. Only what you "
+                    + "pass is sent, behind one fixed line saying so: nothing from M1K3's "
                     + "memory or knowledge is added, so include any context the answer needs, and send "
                     + "nothing the user would not want to leave this Mac. Each call counts against the "
                     + "user's daily Private Cloud Compute limit. For a private, local answer use ask_m1k3.",

@@ -63,7 +63,7 @@ private func collect(_ stream: RawChatStream) async throws -> (text: String, fin
 }
 
 struct PrivateCloudRawChatTests {
-    @Test("The caller's system text is the instructions and its one question is the prompt: nothing of M1K3's is added")
+    @Test("The caller's system text follows the acceptable-use rule, its question is the prompt: nothing else is added")
     func carriesOnlyTheCallersWords() async throws {
         let cloud = RecordingCloud(snapshots: ["Hi."])
         let request = try RawChatRequest(
@@ -71,18 +71,19 @@ struct PrivateCloudRawChatTests {
         )
         _ = try await collect(PrivateCloudRawChat.stream(request, backend: cloud))
         #expect(cloud.seen.count == 1)
-        #expect(cloud.seen.first?.instructions == "Be brief.")
+        #expect(cloud.seen.first?.instructions == LentAppleModelGuardrail.instructions(callerSystem: "Be brief."))
+        #expect(cloud.seen.first?.instructions.hasSuffix("Be brief.") == true)
         #expect(cloud.seen.first?.prompt == "Hello?")
     }
 
-    @Test("No system message means empty instructions, and earlier turns ride in the prompt, labelled")
+    @Test("No system message means the rule alone, and earlier turns ride in the prompt, labelled")
     func flattensEarlierTurns() async throws {
         let cloud = RecordingCloud(snapshots: ["4"])
         let request = try RawChatRequest(messages: [
             RawChatMessage(.user, "What is 1+1?"), RawChatMessage(.assistant, "2"), RawChatMessage(.user, "Double it."),
         ], maxTokens: nil)
         _ = try await collect(PrivateCloudRawChat.stream(request, backend: cloud))
-        #expect(cloud.seen.first?.instructions == "")
+        #expect(cloud.seen.first?.instructions == LentAppleModelGuardrail.rule)
         #expect(cloud.seen.first?.prompt == RawChatPrompt.flattened(request))
         #expect(cloud.seen.first?.prompt.contains("Assistant: 2") == true)
     }
@@ -163,7 +164,7 @@ struct PrivateCloudRawChatTests {
         let cloud = RecordingCloud(snapshots: ["A", "An answer."])
         let answer = try await PrivateCloudRawChat.ask(prompt: "Q", instructions: "I", backend: cloud)
         #expect(answer == "An answer.")
-        #expect(cloud.seen.first?.instructions == "I")
+        #expect(cloud.seen.first?.instructions == LentAppleModelGuardrail.instructions(callerSystem: "I"))
         #expect(cloud.seen.first?.prompt == "Q")
     }
 

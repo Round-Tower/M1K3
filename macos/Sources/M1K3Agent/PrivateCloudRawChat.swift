@@ -4,10 +4,11 @@
 //
 //  Private Cloud Compute as a raw chat, for the surfaces that lend it to other
 //  apps on this Mac (ADR 0011; the policy is `PrivateCloudLending`). It carries
-//  the caller's own words and nothing of M1K3's: the caller's system text is
-//  the instructions, its turns are the prompt (`RawChatPrompt.flattened`: the
-//  seam takes two strings and no history). No persona, memory, knowledge or
-//  tools, and nothing is written anywhere.
+//  the caller's own words behind ONE line of M1K3's, the acceptable-use rule
+//  Apple's licence asks for (`LentAppleModelGuardrail`): that rule and the
+//  caller's system text are the instructions, its turns are the prompt
+//  (`RawChatPrompt.flattened`: the seam takes two strings and no history). No
+//  persona, memory, knowledge or tools, and nothing is written anywhere.
 //
 //  The seam has no options, so a caller's `max_tokens` and `temperature` are
 //  not honoured here and no token counts come back.
@@ -15,6 +16,8 @@
 //  Signed: Kev + claude-fable-5.2, 2026-11-12, Confidence 0.75 (pinned against a
 //  fake backend; the real service behind it is verify-by-launch on a store-lane
 //  build), Prior: none (new file).
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — the acceptable-use rule rides ahead of the caller's instructions on
+//  both paths (Kev: "Please do that"). Confidence unchanged.
 //
 
 import Foundation
@@ -26,7 +29,7 @@ public enum PrivateCloudRawChat {
     /// The send starts when this is called, not when the stream is first read: call it only once the call
     /// is going ahead.
     public static func stream(_ request: RawChatRequest, backend: any PrivateCloudAnswering) -> RawChatStream {
-        let instructions = request.system ?? ""
+        let instructions = LentAppleModelGuardrail.instructions(callerSystem: request.system)
         let prompt = RawChatPrompt.flattened(request)
         return RawChatStream { continuation in
             let task = Task {
@@ -80,7 +83,8 @@ public enum PrivateCloudRawChat {
         prompt: String, instructions: String, backend: any PrivateCloudAnswering
     ) async throws -> String {
         var answer = ""
-        for try await snapshot in backend.answer(instructions: instructions, prompt: prompt) {
+        let guarded = LentAppleModelGuardrail.instructions(callerSystem: instructions)
+        for try await snapshot in backend.answer(instructions: guarded, prompt: prompt) {
             answer = snapshot
         }
         // A cancelled backend can end its stream quietly: a cut answer is never handed back as whole.
