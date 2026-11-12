@@ -34,7 +34,19 @@ curl http://127.0.0.1:4141/v1/chat/completions \
 
 ## What a caller gets
 
-The **raw brain**. Your system message is the whole system prompt. There is no
+The **raw brain**. On Lil and Big your system message is the whole system
+prompt. On the two Apple models (Mini, and `cloud-m1k3`) one fixed line of
+M1K3's comes first, then your system message, whole:
+
+> This model is provided under Apple's acceptable use requirements. Do not
+> produce content that is illegal, sexually explicit, hateful or harassing,
+> that promotes violence or self-harm, that exploits children, or that helps
+> deceive or defraud people.
+
+Apple's licence asks an app that lends its models to keep a guardrail for
+[Apple's acceptable use requirements](https://developer.apple.com/apple-intelligence/acceptable-use-requirements-for-the-foundation-models-framework);
+that line is it, on top of Apple's own safety filter. Those requirements apply
+to what you send, too. Mini's `usage` counts the line. There is no
 M1K3 personality, no memory, no knowledge base and no tools in the context, and
 nothing you send is written to chat history or turned into a memory. If you want
 the assistant itself (memory, knowledge, voice), that is the
@@ -56,8 +68,9 @@ that names it is answered by Apple's Private Cloud Compute, a larger model than
 the ones on your Mac. The id stays listed while Private Cloud Compute is
 unreachable or its limit is spent; a call then gets the error below.
 
-- **What leaves your Mac:** the messages in that call, and nothing else. M1K3
-  adds no personality, memory, knowledge or history, and keeps nothing.
+- **What leaves your Mac:** the messages in that call, behind the one fixed
+  acceptable-use line above, and nothing else. M1K3 adds no personality,
+  memory, knowledge or history, and keeps nothing.
 - **What Apple says about it:** see Apple's own
   [Private Cloud Compute](https://security.apple.com/blog/private-cloud-compute/)
   page. M1K3 makes no claim beyond it.
@@ -147,3 +160,8 @@ _Review: Kev + claude-fable-5.2, 2026-11-12: the optional `cloud-m1k3` model
 (ADR 0011). The first paragraph now says the one way a call can
 leave the Mac. Pinned by the package tests and tried by launch against the
 Debug stand-in; the real service is verify-owed on a store-lane build._
+
+_Review: Kev + claude-fable-5.2, 2026-11-12 (later): a lent Apple model (Mini,
+`cloud-m1k3`) now runs behind one fixed acceptable-use line of M1K3's, quoted
+above (`LentAppleModelGuardrail`; Kev: "Please do that"). "Your system message
+is the whole system prompt" is true of Lil and Big only._

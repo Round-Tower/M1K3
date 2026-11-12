@@ -721,7 +721,8 @@ extension AppleFoundationModelsProvider: ToolCallingProvider {
 
 // MARK: - Raw chat — the Local API (RawChatCompletion.swift)
 
-/// Mini behind the Local API: a fresh session whose instructions are the caller's system message and nothing
+/// Mini behind the Local API: a fresh session whose instructions are the caller's system message behind one
+/// line of M1K3's, the acceptable-use rule Apple's licence asks for (`LentAppleModelGuardrail`), and nothing else
 /// of M1K3's. Earlier turns ride in the prompt as a labelled preamble (`RawChatPrompt.flattened`). Apple's
 /// snapshots are cumulative, so they are converted to deltas; Apple reports no stop reason, so `length` is read
 /// off the count (`rawChatFinishReason`), and the token counts are taken from its tokenizer once the answer is
@@ -730,7 +731,8 @@ extension AppleFoundationModelsProvider: ToolCallingProvider {
 extension AppleFoundationModelsProvider: RawChatCompleting {
     public func completeRawChat(_ request: RawChatRequest) -> RawChatStream? {
         AsyncThrowingStream { continuation in
-            let session = request.system.map { LanguageModelSession(instructions: $0) } ?? LanguageModelSession()
+            let instructions = LentAppleModelGuardrail.instructions(callerSystem: request.system)
+            let session = LanguageModelSession(instructions: instructions)
             let ceiling = Self.clampedRawResponseTokens(request.maxTokens)
             var options = GenerationOptions(maximumResponseTokens: ceiling)
             if let temperature = request.temperature { options.temperature = min(max(0, temperature), 2) }
@@ -744,7 +746,7 @@ extension AppleFoundationModelsProvider: RawChatCompleting {
                         }
                     }
                     try Task.checkCancellation()
-                    let usage = await Self.rawChatUsage(system: request.system, prompt: prompt, answer: sent)
+                    let usage = await Self.rawChatUsage(system: instructions, prompt: prompt, answer: sent)
                     try Task.checkCancellation() // a hang-up during the count ends as a cancel, not a finish
                     continuation.yield(.finished(RawChatFinish(
                         reason: Self.rawChatFinishReason(completionTokens: usage?.completion, ceiling: ceiling),

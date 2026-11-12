@@ -15,6 +15,10 @@
 //  (`PrivateCloudArming`, which shows the M1K3 history about to leave) is not
 //  on this path: there is no M1K3 history on it to show.
 //
+//  One fixed line of M1K3's does ride along since 2026-11-12: the acceptable-use
+//  rule Apple's licence asks for (`LentAppleModelGuardrail`). It is a rule for
+//  the model, not anything of the owner's.
+//
 //  Signed: Kev + claude-fable-5.2, 2026-11-12, Confidence 0.8 (pure and pinned),
 //  Prior: none (new file). Context: Kev, 2026-11-12: "people want PCC available
 //  via the OpenAI server, and via MCP".

@@ -188,6 +188,37 @@ struct RawChatLiveTests {
         #expect(finish?.reason == .stop)
     }
 
+    /// #799's lesson: Mini copied a spelled-out line from its instructions onto ordinary coding asks. The
+    /// acceptable-use rule (`LentAppleModelGuardrail`) rides ahead of every lent call, so it must not surface.
+    @Test("Mini does not recite the acceptable-use rule on ordinary asks, with or without a caller's system prompt")
+    func theRuleIsNotRecited() async throws {
+        let asks: [(String?, String)] = [
+            (nil, "Write a Python function that reverses a string."),
+            (nil, "What is the capital of Ireland?"),
+            (nil, "Explain what a mutex is in two sentences."),
+            (nil, "Write a haiku about rain."),
+            (nil, "Fix this: for i in range(10) print(i)"),
+            ("You are a terse code reviewer.", "Review: def add(a,b): return a-b"),
+            ("Answer in French.", "What colour is the sky?"),
+            ("You are a ship captain. Answer in one sentence.", "What is a lighthouse for?"),
+            ("Reply with JSON only.", "Give me an object with keys name and age for a cat called Tom, aged 3."),
+            (nil, "Summarise the plot of Cinderella in one sentence."),
+        ]
+        let echoes = ["acceptable use", "provided under", "sexually explicit", "hateful", "defraud", "within that"]
+        var echoed = 0
+        for (system, user) in asks {
+            let messages = (system.map { [RawChatMessage(.system, $0)] } ?? []) + [RawChatMessage(.user, user)]
+            let (text, _) = try await run(messages, maxTokens: 160)
+            let found = echoes.filter { text.lowercased().contains($0) }
+            if !found.isEmpty { echoed += 1 }
+            let flat = text.replacingOccurrences(of: "\n", with: " ").prefix(140)
+            print("RAWCHAT-LIVE rule \(found.isEmpty ? "ok  " : "ECHO") | \(user.prefix(36)) => \(flat)")
+            #expect(!text.isEmpty)
+        }
+        print("RAWCHAT-LIVE rule: \(echoed) of \(asks.count) answers echoed the rule")
+        #expect(echoed == 0)
+    }
+
     @Test("Mini reports what the call cost, counted after the answer")
     func usageIsCounted() async throws {
         let clock = ContinuousClock()
