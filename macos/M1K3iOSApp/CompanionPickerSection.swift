@@ -39,6 +39,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-03 (pre-push review) — chosen but not shown (picked on the opened Duo,
 //  then folded): the footer, Say hi and the grid's highlight follow the pixel face that stands in
 //  (`constellationShown`), and the pick comes back with the space. Confidence 0.8 (verify on the Duo sim).
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — adds the "Glow when speaking" toggle (hidden on visionOS, like
+//  the skin picker: the halo is a CustomMaterial shell). Confidence 0.7 (not yet seen on a phone).
 //
 
 import M1K3Avatar
@@ -50,6 +52,7 @@ struct CompanionPickerSection: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @AppStorage(CompanionDefaults.companionKey) private var companion = CompanionDefaults.houseCompanion.id
     @AppStorage(CompanionDefaults.seasonalLooksKey) private var seasonalLooks = true
+    @AppStorage(CompanionDefaults.speakingGlowKey) private var speakingGlow = true
     @AppStorage(CompanionDefaults.shadingStyleKey) private var shadingRaw =
         CompanionDefaults.houseShading.rawValue
     /// The creature the preview's creature view holds while Pixel face or None shows: the
@@ -133,6 +136,12 @@ struct CompanionPickerSection: View {
                 }
             #endif
             Toggle("Seasonal looks", isOn: $seasonalLooks)
+            // The halo is a CustomMaterial shell, like the skins: none on visionOS.
+            #if !os(visionOS)
+                if creatureChosen {
+                    Toggle("Glow when speaking", isOn: $speakingGlow)
+                }
+            #endif
         } header: {
             Text("Face")
         } footer: {

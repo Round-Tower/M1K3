@@ -20,6 +20,7 @@
 //  Mac used to register skin "phosphor", so a user who picked a face but never touched Skin saw the glow;
 //  under the `.off` house default they'd silently lose it. One-time, Mac-only. Confidence 0.8.
 //  Review: Kev + claude-sonnet-5.5, 2026-10-22 — the seasonalLooksKey doc names Flight Club (comment only). Confidence 0.9.
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — adds `speakingGlowKey` (the opt-out for the speaking glow). Confidence 0.9.
 //
 
 public enum CompanionDefaults {
@@ -72,6 +73,9 @@ public enum CompanionDefaults {
 
     /// Opt-out for seasonal looks (Halloween, and Offline AI Flight Club while offline). Bool, default true.
     public static let seasonalLooksKey = "avatar.seasonalLooks"
+
+    /// Opt-out for the glow while M1K3's voice is speaking (`SpeakingGlow`). Bool, default true.
+    public static let speakingGlowKey = "avatar.speakingGlow"
 
     /// Sentinel `companionKey` value meaning NO avatar at all — the shell shows
     /// just the conversation (no hero face, no live backdrop, no preview).
