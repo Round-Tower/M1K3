@@ -19,8 +19,11 @@
 //  against 70. A build in flight still finishes: only the palettes after it wait. Confidence 0.8 (the wait is
 //  pinned; the gain is verify-by-launch).
 //  Review fold: a wait that runs out STOPS the warm instead of building beside the answer it waited for.
-//  Open: voice mode's listening is not "being answered", so a voice turn can still meet a build in flight. A
-//  Brain at Home turn from a paired device and the exit-time distillation are not counted either.
+//  Review: Kev + claude-fable-5.2, 2026-11-11 (later) — the app now counts a voice turn from its first heard word
+//  (`VoiceLoopState.holdsTheBrain`).
+//  Open: a Brain at Home turn from a paired device and the exit-time distillation are not counted. A voice loop
+//  left in `speaking` (a voice that never reports its end, a read-aloud past the five-minute limit) stops the warm
+//  for the session: the palettes then build on first use.
 
 import Foundation
 
