@@ -86,7 +86,7 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-02 — a load into a hidden view leaves the choreographer `.unmounted`
 //  (`scene.mounted`), so views the pixel face replaced stop playing clips nobody sees; `.notice` load lines carry
 //  a per-view tag. Confidence 0.75 (read off Kev's phone log).
-//  Review: Kev + claude-fable-5.2, 2026-11-12 — the speaking glow: a halo shell added at load (`PhosphorMaterial.addHalo`),
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — the speaking glow: halo shells built at load, on screen only while glowing (`PhosphorMaterial.addHalo` / `showHalo` / `hideHalo`),
 //  resolved in `sync` (`SpeakingGlow`) and eased by one short task (`easeGlow`); the pulse runs in the shader, so this
 //  view still has no per-frame clock. Off under the Settings switch; steady under Reduce Motion or when parked.
 //  Confidence 0.6 (tried by launch on the Mac; the iPhone is owed).
@@ -640,7 +640,9 @@ struct CompanionAvatarView: View {
             // The speaking halo's shell, after the snapshot so Off still restores the baked
             // materials. A fresh creature starts dark; sync() eases the glow in if it is speaking.
             scene.glowTask?.cancel()
-            scene.halo = PhosphorMaterial.addHalo(to: host)
+            // Built now (only when the glow is switched on) so the first word does not wait for it;
+            // nothing on screen changes until the creature speaks.
+            scene.halo = speakingGlow ? PhosphorMaterial.addHalo(to: host) : nil
             scene.lastGlow = .off
             scene.glowLevel = 0
             scene.glowShape = .off
@@ -812,6 +814,10 @@ struct CompanionAvatarView: View {
         /// replaced by the next change; the pulse itself runs in the shader.
         private func easeGlow(to glow: SpeakingGlow) {
             scene.glowTask?.cancel()
+            // Switched on after the creature loaded: build the halo at its first glow.
+            if scene.halo == nil, glow.isOn, let host = scene.host {
+                scene.halo = PhosphorMaterial.addHalo(to: host)
+            }
             guard let halo = scene.halo else { return }
             Self.log.notice("companion [\(scene.tag, privacy: .public)] glow → \(glow.level, privacy: .public) pulses=\(glow.pulses, privacy: .public)")
             // Fading out keeps the shape it had, so a pulsing glow does not freeze as it leaves.
@@ -821,6 +827,7 @@ struct CompanionAvatarView: View {
             let colour = SpeakingGlow.colour(
                 style: shadingStyle, treatment: controller.state.activity.phosphorTreatment(season: season)
             )
+            if glow.isOn { PhosphorMaterial.showHalo(halo) }
             scene.glowTask = Task { @MainActor in
                 for level in steps {
                     guard !Task.isCancelled else { return }
@@ -828,6 +835,8 @@ struct CompanionAvatarView: View {
                     PhosphorMaterial.setHalo(halo, glow: scene.glowShape, level: level, colour: colour)
                     try? await Task.sleep(for: SpeakingGlow.rampInterval)
                 }
+                // Faded right out: back to the creature's own mesh, so a silent one costs nothing extra.
+                if !Task.isCancelled, scene.glowLevel == 0 { PhosphorMaterial.hideHalo(halo) }
             }
         }
     #endif

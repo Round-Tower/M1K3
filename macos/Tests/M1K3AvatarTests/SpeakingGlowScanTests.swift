@@ -51,10 +51,34 @@ struct SpeakingGlowScanTests {
         #expect(body.contains("#else") && body.contains("false"))
     }
 
-    @Test("every repaint re-seats the halo, and a shell part can never read as the fox's lattice body")
+    @Test("every repaint re-seats the halo, and only body parts are shelled (never the fox's lattice)")
     func repaintKeepsTheHalo() throws {
         let src = try Self.app("PhosphorMaterial.swift")
-        #expect(src.contains("defer {\n            if let halo {"))
+        let apply = try #require(src.range(of: "static func apply("))
+        let body = src[apply.upperBound...].prefix(900)
+        #expect(body.contains("defer {") && body.contains("setHalo("), "apply no longer re-seats the halo")
         #expect(src.contains("SiteFoxPaint.role(ofPart: $0.id) == .body"))
+    }
+
+    @Test("a silent creature wears its own mesh: the shells go on at the first glow and come off at zero")
+    func silentCreatureIsUntouched() throws {
+        let view = try Self.app("CompanionAvatarView.swift")
+        #expect(view.contains("if glow.isOn { PhosphorMaterial.showHalo(halo) }"))
+        #expect(view.contains("scene.glowLevel == 0 { PhosphorMaterial.hideHalo(halo) }"))
+        let glue = try Self.app("PhosphorMaterial.swift")
+        let set = try #require(glue.range(of: "static func setHalo("))
+        #expect(glue[set.upperBound...].prefix(160).contains("guard halo.isShown else { return }"))
+    }
+
+    @Test("the glow acts on a change only, a reload starts it dark, and it all sits behind the visionOS guard")
+    func changeOnlyAndGuarded() throws {
+        let src = try Self.app("CompanionAvatarView.swift")
+        #expect(src.contains("if glow != scene.lastGlow {"))
+        let reload = try #require(src.range(of: "scene.bakedMaterials = PhosphorMaterial.snapshotMaterials(of: host)"))
+        let after = src[reload.upperBound...].prefix(700)
+        #expect(after.contains("scene.glowTask?.cancel()"))
+        #expect(after.contains("scene.lastGlow = .off") && after.contains("scene.glowLevel = 0"))
+        let guarded = try #require(src.range(of: "#if !os(visionOS)\n        /// The displayed creature's halo"))
+        #expect(!guarded.isEmpty)
     }
 }

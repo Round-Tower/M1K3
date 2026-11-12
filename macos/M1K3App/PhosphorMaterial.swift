@@ -44,6 +44,9 @@
 //  `apply` re-seats the shell's material after every repaint (each paint path rewrites the slots), and
 //  `setHalo` writes the level. With no shell (the mesh could not be rebuilt) nothing changes. Confidence 0.6:
 //  the shell following a skinned mesh is tried by launch on the Mac; the iPhone is owed.
+//  Review: Kev + claude-fable-5.2, 2026-11-12 (review fold) — the shelled mesh is on the entity only while the halo
+//  is shown (`showHalo` / `hideHalo`): a silent creature is drawn from its original mesh, so it costs and looks as
+//  before. Gap slots are padded with the creature's own material. Confidence 0.65 (Mac by launch).
 //
 
 import M1K3Avatar
@@ -261,20 +264,38 @@ enum PhosphorMaterial {
 // MARK: - The speaking halo
 
 extension PhosphorMaterial {
-    /// A loaded creature's halo shell: which entities carry it, and in which material slot.
-    struct Halo {
-        /// Each entity's FIRST shell slot; shell `n` sits in slot `first + n`.
-        fileprivate var slots: [(entity: Entity, first: Int)]
+    /// A loaded creature's halo: for each mesh entity, the mesh as it loaded and the same mesh
+    /// with the shells beside it. The shelled mesh is on the entity ONLY while the halo is shown
+    /// (`showHalo` / `hideHalo`), so a silent creature is drawn from its original mesh, at its
+    /// original cost, and every paint path sees the parts it always saw.
+    final class Halo {
+        fileprivate struct Seat {
+            let entity: Entity
+            let plain: MeshResource
+            let shelled: MeshResource
+            /// The first shell slot; shell `n` sits in slot `first + n`.
+            let first: Int
+            /// How many materials the entity held when the halo was shown, to put back on hide.
+            var plainCount = 0
+        }
+
+        fileprivate var seats: [Seat]
         /// The nested shells, innermost first (`SpeakingGlow.shells`).
         let shells: [SpeakingGlow.Shell]
+        fileprivate(set) var isShown = false
+
+        fileprivate init(seats: [Seat], shells: [SpeakingGlow.Shell]) {
+            self.seats = seats
+            self.shells = shells
+        }
     }
 
     /// The prefix of a shell part's id. It must never read as a lattice part (SiteFoxPaint).
     private static let haloPartPrefix = "m1k3_halo_"
 
-    /// Give `root` a halo shell: every mesh part copied with smoothed normals into one new
-    /// material slot per entity. Call once, right after `snapshotMaterials`. Returns nil,
-    /// leaving the creature untouched, when a mesh cannot be rebuilt or the shader is missing.
+    /// Build `root`'s halo: every body mesh model copied as nested shells with smoothed normals.
+    /// Nothing on screen changes until `showHalo`. Returns nil when a mesh cannot be rebuilt or
+    /// the shader is missing.
     static func addHalo(to root: Entity) -> Halo? {
         guard haloMaterial(glow: .zero, colour: SiteFoxPaint.siteWhite) != nil else { return nil }
         var extent: Float = 0
@@ -288,14 +309,12 @@ extension PhosphorMaterial {
         }
         measure(root)
         let shells = SpeakingGlow.shells(forExtent: extent)
-        var slots: [(entity: Entity, first: Int)] = []
+        var seats: [Halo.Seat] = []
         func walk(_ entity: Entity) {
-            if var model = entity.components[ModelComponent.self] {
+            if let model = entity.components[ModelComponent.self] {
                 let first = max(model.materials.count, (maxMaterialIndex(of: model.mesh) ?? -1) + 1)
-                if let mesh = meshWithShells(model.mesh, firstSlot: first, count: shells.count) {
-                    model.mesh = mesh
-                    entity.components.set(model)
-                    slots.append((entity, first))
+                if let shelled = meshWithShells(model.mesh, firstSlot: first, count: shells.count) {
+                    seats.append(Halo.Seat(entity: entity, plain: model.mesh, shelled: shelled, first: first))
                 }
             }
             for child in entity.children {
@@ -303,29 +322,60 @@ extension PhosphorMaterial {
             }
         }
         walk(root)
-        guard !slots.isEmpty else { return nil }
-        log.notice("halo: \(shells.count, privacy: .public) shell(s) on \(slots.count, privacy: .public) mesh(es), extent \(extent, privacy: .public)")
-        return Halo(slots: slots, shells: shells)
+        guard !seats.isEmpty else { return nil }
+        log.notice("halo: \(shells.count, privacy: .public) shell(s) built for \(seats.count, privacy: .public) mesh(es), extent \(extent, privacy: .public)")
+        return Halo(seats: seats, shells: shells)
     }
 
-    /// Seat the shell's material with this level and colour. Cheap enough for a ramp's few
-    /// steps; never call it per frame.
+    /// Put the shelled mesh on screen. Follow it with `setHalo` (the shells need their materials).
+    static func showHalo(_ halo: Halo) {
+        guard !halo.isShown else { return }
+        for index in halo.seats.indices {
+            let seat = halo.seats[index]
+            guard var model = seat.entity.components[ModelComponent.self] else { continue }
+            halo.seats[index].plainCount = model.materials.count
+            model.mesh = seat.shelled
+            seat.entity.components.set(model)
+        }
+        halo.isShown = true
+    }
+
+    /// Back to the mesh as it loaded, with the materials it had: the silent creature, exactly.
+    static func hideHalo(_ halo: Halo) {
+        guard halo.isShown else { return }
+        for seat in halo.seats {
+            guard var model = seat.entity.components[ModelComponent.self] else { continue }
+            model.mesh = seat.plain
+            model.materials = Array(model.materials.prefix(seat.plainCount))
+            seat.entity.components.set(model)
+        }
+        halo.isShown = false
+    }
+
+    /// Seat the shells' materials with this level and colour; a no-op while the halo is hidden.
+    /// Cheap enough for a ramp's few steps; never call it per frame.
     static func setHalo(_ halo: Halo, glow: SpeakingGlow, level: Float, colour: SIMD3<Float>) {
+        guard halo.isShown else { return }
         let layers = halo.shells.compactMap {
             haloMaterial(glow: glow.customValue(level: level, shell: $0), colour: colour)
         }
-        guard layers.count == halo.shells.count, let filler = layers.first else { return }
-        for (entity, first) in halo.slots {
-            guard var model = entity.components[ModelComponent.self] else { continue }
+        guard layers.count == halo.shells.count else { return }
+        for seat in halo.seats {
+            guard var model = seat.entity.components[ModelComponent.self] else { continue }
             var materials = model.materials
-            while materials.count < first + layers.count {
-                materials.append(filler)
+            // A gap below the first shell slot (a mesh that indexes past its materials) is padded
+            // with the creature's own last material, never with a shell's.
+            while materials.count < seat.first, let last = materials.last {
+                materials.append(last)
+            }
+            while materials.count < seat.first + layers.count {
+                materials.append(layers[0])
             }
             for (offset, layer) in layers.enumerated() {
-                materials[first + offset] = layer
+                materials[seat.first + offset] = layer
             }
             model.materials = materials
-            entity.components.set(model)
+            seat.entity.components.set(model)
         }
     }
 

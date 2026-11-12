@@ -115,6 +115,12 @@ void celSurface(realitykit::surface_parameters params)
 // Signed: Kev + claude-fable-5.2, 2026-11-12, Confidence 0.6 (compiles against the
 // RealityKit headers; the look is judged by launch). Prior: Unknown.
 
+// normalize() of a zero vector is NaN, and a NaN offset or opacity is undefined on screen.
+static inline float3 haloSafeNormal(float3 v)
+{
+    return v * rsqrt(max(dot(v, v), 1e-12));
+}
+
 static inline float haloBreath(float signedLevel, float time)
 {
     return signedLevel > 0.0 ? 0.88 + 0.12 * sin(time * 4.6) : 1.0;
@@ -127,7 +133,7 @@ void haloGeometry(realitykit::geometry_parameters params)
     float4 custom = params.uniforms().custom_parameter();
     float level = saturate(fabs(custom.x));
     float width = custom.y * mix(0.45, 1.0, level) * haloBreath(custom.x, params.uniforms().time());
-    geometry.set_model_position_offset(normalize(geometry.normal()) * width);
+    geometry.set_model_position_offset(haloSafeNormal(geometry.normal()) * width);
 }
 
 [[visible]]
@@ -141,8 +147,8 @@ void haloSurface(realitykit::surface_parameters params)
 
     // Back faces of the shell: nearly edge-on at the shell's own outline (fade to
     // nothing there), turning toward the camera where the shell meets the body.
-    float3 n = normalize(geometry.normal());
-    float3 view = normalize(geometry.view_direction());
+    float3 n = haloSafeNormal(geometry.normal());
+    float3 view = haloSafeNormal(geometry.view_direction());
     float edge = smoothstep(0.0, 0.5, fabs(dot(n, view)));
 
     // A band of light travelling across the creature, in units of the shell's

@@ -49,6 +49,9 @@ struct SpeakingGlowTests {
         #expect(SpeakingGlow.speaking.customValue(level: 0.5, shell: shell) == SIMD4<Float>(0.5, 0.2, 0.3, 0))
         #expect(SpeakingGlow.steady.customValue(level: 0.5, shell: shell) == SIMD4<Float>(-0.5, 0.2, 0.3, 0))
         #expect(SpeakingGlow.off.customValue(level: 0, shell: shell).x == 0)
+        // Level zero reads as off (and still) whatever the shape: the shader gates motion on x > 0.
+        #expect(SpeakingGlow.speaking.customValue(level: 0, shell: shell).x == 0)
+        #expect(SpeakingGlow.steady.customValue(level: 0, shell: shell).x == 0)
     }
 
     @Test("The ramp eases to its target, lands on it exactly, and never overshoots")
