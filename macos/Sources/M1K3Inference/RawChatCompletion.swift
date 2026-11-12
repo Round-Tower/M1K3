@@ -147,6 +147,8 @@ public enum RawChatFailure: Error, Sendable, Equatable {
     case limitReached
     /// The app's own ceiling on calls to a service off this Mac is spent for now: try again after the wait.
     case overBudget(retryAfter: Int)
+    /// The owner has not switched this model on for other apps (Private Cloud Compute).
+    case notOffered
     /// Anything else.
     case failed
 

@@ -152,7 +152,7 @@ struct PrivateCloudRawChatTests {
         #expect(PrivateCloudRawChat.refusal(for: .ready) == nil)
         #expect(PrivateCloudRawChat.refusal(for: .unavailable) == .unavailable)
         #expect(PrivateCloudRawChat.refusal(for: .exhausted(resetsAt: nil)) == .limitReached)
-        #expect(PrivateCloudRawChat.refusal(for: .notOffered) == .unavailable)
+        #expect(PrivateCloudRawChat.refusal(for: .notOffered) == .notOffered)
         await #expect(throws: RawChatFailure.limitReached) {
             for try await _ in PrivateCloudRawChat.refused(.limitReached) {}
         }

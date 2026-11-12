@@ -436,9 +436,6 @@ final class MCPHostController {
     /// One at a time: an agent in a loop cannot fan calls out to Apple.
     private var privateCloudAskInFlight = false
 
-    /// Calls that left for Private Cloud Compute since launch: shown in Settings, so the traffic is never unseen.
-    private(set) var privateCloudCalls = 0
-
     /// How long one call may take: under an MCP client's own ~60 s request deadline.
     private nonisolated static let privateCloudAskSeconds: Double = 50
 
@@ -475,8 +472,7 @@ final class MCPHostController {
         if let wait = env.privateCloudLendingBudget.spend(now: Date()) {
             throw MCPVoiceError(PrivateCloudLending.overBudgetLine(retryAfter: wait))
         }
-        privateCloudCalls += 1
-        let calls = privateCloudCalls
+        let calls = env.privateCloudLendingTally.countAgent()
         Self.securityLog.notice(
             "ask_private_cloud: a call left for Private Cloud Compute (\(calls, privacy: .public) since launch)"
         )

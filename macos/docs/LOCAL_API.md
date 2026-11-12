@@ -144,6 +144,6 @@ a Debug build beside the live app). Mini says `length` when cut. The slow first
 call after idle did not recur on the optimised build (0.1 to 0.3 s)._
 
 _Review: Kev + claude-fable-5.2, 2026-11-12: the optional `cloud-m1k3` model
-(ADR 0011, proposed). The first paragraph now says the one way a call can
+(ADR 0011). The first paragraph now says the one way a call can
 leave the Mac. Pinned by the package tests and tried by launch against the
 Debug stand-in; the real service is verify-owed on a store-lane build._

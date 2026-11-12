@@ -69,7 +69,8 @@ public enum PrivateCloudRawChat {
     public static func refusal(for offer: PrivateCloudLending.Offer) -> RawChatFailure? {
         switch offer {
         case .ready: nil
-        case .unavailable, .notOffered: .unavailable
+        case .notOffered: .notOffered
+        case .unavailable: .unavailable
         case .exhausted: .limitReached
         }
     }

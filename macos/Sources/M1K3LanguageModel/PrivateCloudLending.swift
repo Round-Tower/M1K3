@@ -112,7 +112,33 @@ public enum PrivateCloudLending {
                 return nil
             }
             let oldest = spent.first ?? now
-            return max(1, Int((Self.window - now.timeIntervalSince(oldest)).rounded(.up)))
+            // Never more than the window: a clock set backwards must not turn an hour's wait into a day's.
+            let wait = Int((Self.window - now.timeIntervalSince(oldest)).rounded(.up))
+            return min(Int(Self.window), max(1, wait))
+        }
+    }
+
+    /// The calls that have left for Private Cloud Compute since launch, by surface: one tally beside the one
+    /// budget, shown on the Settings pane so the traffic is never unseen.
+    public struct Tally: Sendable, Equatable {
+        public private(set) var localAPI = 0
+        public private(set) var agents = 0
+
+        public init() {}
+
+        public var total: Int {
+            localAPI + agents
+        }
+
+        /// Counts one call and returns the new total.
+        public mutating func countLocalAPI() -> Int {
+            localAPI += 1
+            return total
+        }
+
+        public mutating func countAgent() -> Int {
+            agents += 1
+            return total
         }
     }
 

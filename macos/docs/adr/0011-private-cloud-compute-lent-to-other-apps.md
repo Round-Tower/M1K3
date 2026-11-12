@@ -1,7 +1,7 @@
 # 0011. Private Cloud Compute can be lent to other apps on this Mac, behind its own switches
 
 Date: 2026-11-12
-Status: PROPOSED. Kev asked for the feature (2026-11-12, from Reddit feedback: "people want PCC available via the OpenAI server, and via MCP"); the rule changes below are his to accept.
+Status: ACCEPTED — Kev, 2026-11-12 ("Option 1 pal - other apps do offer similar, but that doesn't make it okay.. no timing, we don't want to annoy users either"). The ask came from Reddit feedback: "people want PCC available via the OpenAI server, and via MCP".
 Deciders: Kev + claude-fable-5.2
 Supersedes: [ADR 0006](0006-private-cloud-compute-rung-and-the-private-by-design-posture.md), in part (two of its constraints, named below, for these two paths only)
 
@@ -84,9 +84,21 @@ never an empty answer), Apple's claims cited rather than paraphrased.
   Any later PCC change has to keep both true.
 - **Unknown, and Kev's risk to weigh:** Apple's public PCC page is silent on an
   app serving the model to other processes (read 2026-11-12). The Apple
-  Intelligence Terms and Conditions it points to have not been read. The
-  entitlement is granted to the account; losing it would take PCC from chat
-  too.
+  Intelligence Terms and Conditions it points to could not be found (the
+  guessed URL is a 404). Two other Apple pages were read the same day and bear
+  on it; neither names proxying or re-serving:
+  - The Foundation Models framework's Acceptable Use Requirements open their
+    prohibited-uses list with "You may not use, prompt, or expose the Foundation
+    Models framework" for the uses listed, nor "encourage or enable others to
+    do the same". A caller's own instructions are outside M1K3's guardrails
+    here, as they already are for Mini on the Local API (1.4.0).
+  - The Developer Program License Agreement was reported, from a summary and
+    NOT checked word for word, to restrict programmatic access to Apple models
+    "except as expressly permitted" (section 3.2). Read the section itself
+    before a build with lending goes to App Review.
+
+  The entitlement is granted to the account; losing it would take PCC from
+  chat too.
 - Not honoured on the cloud model: `max_tokens`, `temperature`, token counts
   (the seam is two strings on purpose, ADR 0006). `stop` works.
 - v1 keeps the Local API's admission rules for the cloud model too: one call at
@@ -96,8 +108,8 @@ never an empty answer), Apple's claims cited rather than paraphrased.
 ## Alternatives considered
 
 - **A timed arming** ("lend PCC for the next hour", then off by itself). Keeps
-  "an explicit, visible action" closer to literal. More friction for the people
-  who asked; cheap to add later on the same switch.
+  "an explicit, visible action" closer to literal. Rejected by Kev: "no timing,
+  we don't want to annoy users either".
 - **Local API only, no MCP tool.** The challenger's pick: an MCP caller is
   usually a cloud agent with a cloud brain already. Kev asked for both.
 - **An option on `ask_m1k3`.** Rejected: its grounding is the owner's private
@@ -110,3 +122,8 @@ never an empty answer), Apple's claims cited rather than paraphrased.
      conflict and the first-model trap. Confidence 0.6: the code is pinned, the
      posture change and the terms question are Kev's to settle. Prior: ADRs
      0006, 0010. -->
+<!-- Review: Kev + claude-fable-5.2, 2026-11-12 — ACCEPTED as proposed (Kev: option 1,
+     the persistent switch, both surfaces, no timed arming). His note stands beside
+     it: that other apps offer the same "doesn't make it okay", so the switches,
+     the count and the cap are the terms it ships on. Still open: the terms
+     question above (two Apple pages read, one clause unverified). Confidence 0.7. -->

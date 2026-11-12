@@ -132,6 +132,14 @@ public struct LocalAPIError: Error, Sendable, Equatable {
         message: "This Mac has reached its Private Cloud Compute limit for now. The brains on this Mac still answer."
     )
 
+    /// The cloud model was asked for by name but is not switched on: say where, not "not loaded".
+    public static let cloudNotOffered = LocalAPIError(
+        status: 404, type: "invalid_request_error", code: "model_not_found",
+        message: "Private Cloud Compute is not offered to other apps on this Mac. M1K3's owner can switch it on in "
+            + "M1K3 ▸ Settings ▸ Server ▸ Local API (it also needs Private Cloud Compute on in Settings ▸ Privacy).",
+        param: "model"
+    )
+
     /// M1K3's own hourly ceiling on lent Private Cloud Compute calls: a loop must not spend the owner's day.
     public static func cloudOverBudget(retryAfter: Int) -> LocalAPIError {
         .init(
@@ -166,6 +174,7 @@ public struct LocalAPIError: Error, Sendable, Equatable {
         case .unavailable?: self = .cloudUnavailable
         case .limitReached?: self = .cloudLimitReached
         case let .overBudget(retryAfter)?: self = .cloudOverBudget(retryAfter: retryAfter)
+        case .notOffered?: self = .cloudNotOffered
         case .failed?, nil: self = .server("The brain could not finish this answer.")
         }
     }

@@ -63,8 +63,6 @@ final class LocalAPIController {
     private(set) var statusText: String?
     private(set) var accessToken: String?
     private(set) var lendsPrivateCloud: Bool
-    /// Calls that left for Private Cloud Compute since launch: shown on the pane, so the traffic is never unseen.
-    private(set) var privateCloudCalls = 0
 
     /// What a client is told to use as its base URL.
     var baseURL: String {
@@ -139,7 +137,8 @@ final class LocalAPIController {
         let backend = LocalAPIBackend(
             models: { [weak self] in await self?.readyModelIDs ?? [] },
             userBusy: { [weak self] in await self?.userBusy ?? true },
-            complete: { [weak self] model, request in await self?.stream(model: model, request: request) }
+            complete: { [weak self] model, request in await self?.stream(model: model, request: request) },
+            whyUnlisted: { [weak self] model in await self?.whyUnlisted(model) }
         )
         let tokenBox = tokenBox
         let handler = LocalAPIHandler(port: Self.port, token: { tokenBox.current() }, backend: backend)
@@ -195,22 +194,27 @@ final class LocalAPIController {
         return raw.completeRawChat(request)
     }
 
+    /// The cloud model exists in this build but is not offered right now (a switch is off): the caller is told
+    /// where the switch is. Any other unlisted model is simply not found.
+    private func whyUnlisted(_ model: String) -> RawChatFailure? {
+        model == PrivateCloudLending.modelID && AppEnvironment.privateCloudBackend != nil ? .notOffered : nil
+    }
+
     /// The one path on this surface that leaves the Mac. The gate is read again HERE, after a fresh status, so
-    /// a switch turned off since the model list was read ends it. Nil (the handler says "not found") when it is
-    /// not offered; a stream that throws its reason when it is offered but cannot serve.
+    /// a switch turned off since the model list was read ends it. Nil (the handler's plain "not found") only
+    /// where Private Cloud Compute cannot exist in this build; otherwise a stream that throws its reason:
+    /// not switched on, unreachable, the limit spent, or M1K3's own hourly cap.
     private func privateCloudStream(_ request: RawChatRequest) async -> RawChatStream? {
         guard let backend = AppEnvironment.privateCloudBackend else { return nil }
         await env.refreshPrivateCloudStatus()
         let offer = privateCloudOffer
-        guard offer.isListed else { return nil }
         if let refusal = PrivateCloudRawChat.refusal(for: offer) { return PrivateCloudRawChat.refused(refusal) }
         if let wait = env.privateCloudLendingBudget.spend(now: Date()) {
             return PrivateCloudRawChat.refused(.overBudget(retryAfter: wait))
         }
         // The send starts with the stream below. A person starting a turn in the instant after this returns
         // has the handler drop the stream, which cancels it: that call is counted here but answers nobody.
-        privateCloudCalls += 1
-        let calls = privateCloudCalls // a local: the formatter strips `self.` inside the log interpolation
+        let calls = env.privateCloudLendingTally.countLocalAPI()
         Self.log.notice("a call left for Private Cloud Compute (\(calls, privacy: .public) since launch)")
         return PrivateCloudRawChat.stream(request, backend: backend)
     }

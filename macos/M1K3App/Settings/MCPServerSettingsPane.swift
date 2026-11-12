@@ -149,7 +149,7 @@ struct MCPServerSettingsPane: View {
         "An agent’s own prompt is sent to Apple’s Private Cloud Compute (the ask_private_cloud tool). M1K3 adds "
             + "nothing from your memory or knowledge, but an agent can include what it has read. Calls count "
             + "against this Mac’s daily limit, and each shows in the menu bar. With the agent conversation log on, "
-            + "the prompt and answer are kept in it. \(Self.tally(env.mcpHost.privateCloudCalls))"
+            + "the prompt and answer are kept in it. \(Self.tally(env.privateCloudLendingTally.agents))"
     }
 
     private static func tally(_ calls: Int) -> String {
@@ -162,7 +162,7 @@ struct MCPServerSettingsPane: View {
 
     /// What the lent model is called, and how many calls have left since launch: traffic to Apple is never unseen.
     private var localAPICloudDetail: String {
-        let tally = Self.tally(env.localAPI.privateCloudCalls)
+        let tally = Self.tally(env.privateCloudLendingTally.localAPI)
         return "Model \(PrivateCloudLending.modelID): an app that asks for it by name sends its own messages to "
             + "Apple’s Private Cloud Compute, and they count against this Mac’s daily limit. \(tally)"
     }

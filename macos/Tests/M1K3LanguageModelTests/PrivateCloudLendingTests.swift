@@ -102,6 +102,25 @@ struct PrivateCloudLendingTests {
         #expect(budget.spend(now: start.addingTimeInterval(3600)) == 1)
     }
 
+    @Test("A clock set backwards never makes the wait longer than the hour")
+    func budgetSurvivesAClockSetBack() {
+        var budget = PrivateCloudLending.Budget()
+        let start = Date(timeIntervalSince1970: 100_000)
+        for _ in 0 ..< PrivateCloudLending.Budget.callsPerHour {
+            #expect(budget.spend(now: start) == nil)
+        }
+        #expect(budget.spend(now: start.addingTimeInterval(-50000)) == 3600)
+    }
+
+    @Test("One tally counts both surfaces and hands back the total")
+    func tally() {
+        var tally = PrivateCloudLending.Tally()
+        #expect(tally.countLocalAPI() == 1)
+        #expect(tally.countAgent() == 2)
+        #expect(tally.countAgent() == 3)
+        #expect(tally.localAPI == 1 && tally.agents == 2 && tally.total == 3)
+    }
+
     @Test("The over-budget sentence names the limit and a wait in whole minutes")
     func overBudgetLine() {
         #expect(PrivateCloudLending.overBudgetLine(retryAfter: 3500).contains("about 59 minutes"))

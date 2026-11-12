@@ -89,6 +89,8 @@ struct LocalAPIPolicyTests {
         #expect(LocalAPIError(failure: RawChatFailure.unavailable).status == 503)
         let spent = LocalAPIError(failure: RawChatFailure.limitReached)
         #expect(spent.status == 429 && spent.code == "insufficient_quota" && spent.retryAfter == nil)
+        let off = LocalAPIError(failure: RawChatFailure.notOffered)
+        #expect(off.status == 404 && off.code == "model_not_found" && off.message.contains("Settings ▸ Server"))
         let over = LocalAPIError(failure: RawChatFailure.overBudget(retryAfter: 120))
         #expect(over.status == 429 && over.code == "rate_limit_exceeded" && over.retryAfter == 120)
         // Never a status the OpenAI SDK retries by itself except the two that mean "try again".
