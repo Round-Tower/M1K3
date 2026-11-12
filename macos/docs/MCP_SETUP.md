@@ -77,6 +77,17 @@ as you, which can read any client's config file — the per-tool switches
 When the app is closed the server is down — clients report the connection as
 failed. That's benign; launch M1K3 and reconnect.
 
+`ask_private_cloud` (optional, off by default): with **Settings ▸ Server ▸ Let
+agents ask Private Cloud Compute** on, an agent can send its own prompt to
+Apple's Private Cloud Compute through M1K3. It is the one tool here that is
+not local. M1K3 adds nothing from your memory or knowledge to the call, but an
+agent can include whatever it has read, and each call counts against your
+daily Private Cloud Compute limit. It needs the App Store build, and **Settings
+▸ Privacy ▸ Private Cloud Compute** on. The pane counts the calls that have
+left since M1K3 opened, each one shows in the menu bar's agent activity, and
+M1K3 caps them at 30 an hour, one at a time. With the agent conversation log
+on, the prompt and the answer are kept in that log on this Mac (ADR 0011).
+
 Notes for agents: `ask_m1k3` is submit-and-poll — ~8s inline grace, then a
 `job_id` you poll via `get_answer`. Since 2026-08-19 a slow turn is never
 cancelled on your behalf: the generation runs to completion (600s runaway

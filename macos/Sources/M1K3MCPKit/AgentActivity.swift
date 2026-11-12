@@ -17,6 +17,8 @@ import Foundation
 public struct AgentActivityEntry: Sendable, Equatable, Identifiable {
     public enum Kind: Sendable, Equatable {
         case microphone, deletedMemory, savedMemory
+        /// `ask_private_cloud`: the agent's prompt left for Apple's Private Cloud Compute (ADR 0011).
+        case privateCloud
     }
 
     public enum Outcome: Sendable, Equatable {
@@ -56,6 +58,8 @@ public struct AgentActivityEntry: Sendable, Equatable, Identifiable {
         case (.deletedMemory, _): "tried to delete a memory"
         case (.savedMemory, .ran): "saved a memory"
         case (.savedMemory, _): "tried to save a memory"
+        case (.privateCloud, .ran): "asked Private Cloud Compute"
+        case (.privateCloud, _): "tried to ask Private Cloud Compute"
         }
         return outcome == .refused ? "\(who) \(what) — not allowed" : "\(who) \(what)"
     }
@@ -66,6 +70,7 @@ public enum AgentActivity {
     /// a planted "fact" outlives the session, so the owner should see it arrive.
     public static let noticedTools: [String: AgentActivityEntry.Kind] = [
         "listen": .microphone, "forget_memory": .deletedMemory, "remember": .savedMemory,
+        "ask_private_cloud": .privateCloud, // it leaves the Mac: the owner sees each one, by client
     ]
 }
 

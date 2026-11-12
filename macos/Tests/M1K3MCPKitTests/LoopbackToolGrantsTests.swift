@@ -42,7 +42,7 @@ struct LoopbackToolGrantsTests {
         "search_knowledge", "list_documents", "get_document",
         "speak", "stop_speaking", "get_status", "listen",
         "ask_m1k3", "get_answer", "list_jobs", "remember",
-        "open_link",
+        "open_link", "ask_private_cloud",
         "recall_memory", "related_memory", "memory_stats", "forget_memory",
         "list_todos", "propose_todo",
     ]
@@ -54,10 +54,11 @@ struct LoopbackToolGrantsTests {
         #expect(gated.union(LoopbackToolGrants.servedTools) == Self.everyTool)
     }
 
-    @Test("the microphone, memory deletes and on-screen links are the gated three")
-    func gatedThree() {
+    @Test("the microphone, memory deletes, on-screen links and Private Cloud Compute are the gated four")
+    func gatedFour() {
         #expect(LoopbackToolGrants.gatedTools == [
             "listen": .microphone, "forget_memory": .deleteMemories, "open_link": .openLinks,
+            "ask_private_cloud": .privateCloud,
         ])
     }
 

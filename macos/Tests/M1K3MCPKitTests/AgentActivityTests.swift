@@ -40,7 +40,10 @@ private func noticed(
 struct AgentActivityTests {
     @Test("the noticed three: the microphone, deleting a memory, saving one")
     func noticedTools() {
-        #expect(AgentActivity.noticedTools == ["listen": .microphone, "forget_memory": .deletedMemory, "remember": .savedMemory])
+        #expect(AgentActivity.noticedTools == [
+            "listen": .microphone, "forget_memory": .deletedMemory, "remember": .savedMemory,
+            "ask_private_cloud": .privateCloud,
+        ])
     }
 
     @Test("a noticed call that runs is recorded with the agent, what and when — and no arguments")
@@ -85,6 +88,8 @@ struct AgentActivityTests {
         #expect(entry(.deletedMemory, .refused) == "Codex tried to delete a memory — not allowed")
         #expect(entry(.savedMemory, .ran, client: nil) == "An agent saved a memory")
         #expect(entry(.savedMemory, .failed) == "Codex tried to save a memory")
+        #expect(entry(.privateCloud, .ran) == "Codex asked Private Cloud Compute")
+        #expect(entry(.privateCloud, .refused) == "Codex tried to ask Private Cloud Compute — not allowed")
     }
 
     @Test("the feed keeps the newest few, newest first, and counts what's unseen")

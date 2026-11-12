@@ -13,6 +13,9 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-09-27, Confidence 0.85 (pure, test-pinned; the gated three
 //  are Kev's call after the challenger pass on #270). Prior: none (new file).
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — a fourth grant, `privateCloud`, for `ask_private_cloud` (ADR 0011):
+//  an agent's own prompt leaving for Apple's Private Cloud Compute needs the owner's yes like the other three.
+//  Confidence 0.85.
 //
 
 public struct LoopbackToolGrants: OptionSet, Sendable, Hashable {
@@ -28,11 +31,14 @@ public struct LoopbackToolGrants: OptionSet, Sendable, Hashable {
     public static let deleteMemories = LoopbackToolGrants(rawValue: 1 << 1)
     /// `open_link`: put a page on the owner's screen and read it back.
     public static let openLinks = LoopbackToolGrants(rawValue: 1 << 2)
-    public static let all: LoopbackToolGrants = [.microphone, .deleteMemories, .openLinks]
+    /// `ask_private_cloud`: send the agent's own prompt to Apple's Private Cloud Compute (ADR 0011).
+    public static let privateCloud = LoopbackToolGrants(rawValue: 1 << 3)
+    public static let all: LoopbackToolGrants = [.microphone, .deleteMemories, .openLinks, .privateCloud]
 
     /// The tools a grant gates.
     public static let gatedTools: [String: LoopbackToolGrants] = [
         "listen": .microphone, "forget_memory": .deleteMemories, "open_link": .openLinks,
+        "ask_private_cloud": .privateCloud,
     ]
 
     /// Served with no grant. `remember` stays here by the same ruling: agent-written facts
@@ -53,6 +59,7 @@ public struct LoopbackToolGrants: OptionSet, Sendable, Hashable {
         case .microphone?: what = "use the microphone"
         case .deleteMemories?: what = "delete memories"
         case .openLinks?: what = "open links on screen"
+        case .privateCloud?: what = "ask Private Cloud Compute"
         default: return "Not available: \(tool) isn't open to agents in this version of M1K3."
         }
         return "Not allowed: M1K3's owner hasn't let agents \(what). "

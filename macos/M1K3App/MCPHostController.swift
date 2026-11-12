@@ -60,12 +60,18 @@
 //  row). The "NOT deleted" audit line stands. Confidence 0.85.
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — the in-app server's `initialize` reply carries this app's version and
 //  build (`M1K3ServerVersion.current`), which `verify_build.py` reads (#491). Confidence 0.8.
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — `ask_private_cloud` (ADR 0011) on the LOOPBACK palette only, and only
+//  where a Private Cloud Compute backend exists: behind its own grant (off by default) and the chat rung's gate,
+//  re-read on every call. It carries the agent's own words only. Each call that leaves is counted and logged at
+//  notice. Confidence 0.6: the real service is verify-by-launch on a store-lane build.
 
 import Foundation
+import M1K3Agent // PrivateCloudRawChat — ask_private_cloud's one send
 import M1K3AgentTools // OpenLinkTool.gather + PageBrief — the same brief the in-app agent gets
 import M1K3Avatar
 import M1K3Chat // HeadlessAsk + RAGResponding (the ask_m1k3 core)
 import M1K3Knowledge // KnowledgeStore — forget_memory deletes the dual-written corpus twin too
+import M1K3LanguageModel // PrivateCloudLending / PrivateCloudRung — ask_private_cloud's gate
 import M1K3MCPKit
 import M1K3Memory // MemoryStore, Memory — the temporal memory graph the new tools expose
 import M1K3Preview // ReviewTargetResolver — validate the open_link URL (web-only)
@@ -83,6 +89,7 @@ final class MCPHostController {
     nonisolated static let grantMicrophoneKey = "mcpServer.grant.microphone"
     nonisolated static let grantDeleteMemoriesKey = "mcpServer.grant.deleteMemories"
     nonisolated static let grantOpenLinksKey = "mcpServer.grant.openLinks"
+    nonisolated static let grantPrivateCloudKey = "mcpServer.grant.privateCloud"
 
     /// Read on every gated call, so a Settings toggle takes effect at the next one.
     nonisolated static func currentGrants(_ defaults: UserDefaults = .standard) -> LoopbackToolGrants {
@@ -90,6 +97,7 @@ final class MCPHostController {
         if defaults.bool(forKey: grantMicrophoneKey) { grants.insert(.microphone) }
         if defaults.bool(forKey: grantDeleteMemoriesKey) { grants.insert(.deleteMemories) }
         if defaults.bool(forKey: grantOpenLinksKey) { grants.insert(.openLinks) }
+        if defaults.bool(forKey: grantPrivateCloudKey) { grants.insert(.privateCloud) }
         return grants
     }
 
@@ -303,7 +311,9 @@ final class MCPHostController {
             // activity notice wraps OUTSIDE the gate, so a refused attempt reaches the menu bar too.
             noticedToolDefinitions(
                 grantGatedToolDefinitions(
-                    makeAllToolDefinitions(jobStore: intelligenceJobStore),
+                    // Loopback only: `makeAllToolDefinitions` also feeds Brain at Home's LAN palette, and a
+                    // paired phone never reaches Private Cloud Compute through this Mac.
+                    makeAllToolDefinitions(jobStore: intelligenceJobStore) + privateCloudToolDefinitions(),
                     grants: { MCPHostController.currentGrants() }
                 ),
                 client: { clientIdentity.current() },
@@ -419,6 +429,65 @@ final class MCPHostController {
                 )
             }
         )
+    }
+
+    // MARK: - ask_private_cloud (ADR 0011)
+
+    /// One at a time: an agent in a loop cannot fan calls out to Apple.
+    private var privateCloudAskInFlight = false
+
+    /// Calls that left for Private Cloud Compute since launch: shown in Settings, so the traffic is never unseen.
+    private(set) var privateCloudCalls = 0
+
+    /// How long one call may take: under an MCP client's own ~60 s request deadline.
+    private nonisolated static let privateCloudAskSeconds: Double = 50
+
+    /// Empty where no backend exists (this build, this OS, no entitlement): the tool is then not listed at all.
+    private func privateCloudToolDefinitions() -> [MCPToolDefinition] {
+        guard AppEnvironment.privateCloudBackend != nil else { return [] }
+        return makePrivateCloudToolDefinitions(handlers: PrivateCloudToolHandlers { [weak self] prompt, instructions in
+            guard let self else { throw MCPVoiceError("M1K3 is shutting down") }
+            return try await self.askPrivateCloud(prompt: prompt, instructions: instructions)
+        })
+    }
+
+    /// The grant was checked by the gate around this tool. The chat rung's own gate (the Privacy pane's
+    /// switch, an organisation's policy, availability, the limit) is read HERE, fresh, on every call.
+    private func askPrivateCloud(prompt: String, instructions: String) async throws -> String {
+        guard let backend = AppEnvironment.privateCloudBackend else {
+            throw MCPVoiceError(PrivateCloudLending.refusal(.notOffered, now: Date()) ?? "")
+        }
+        guard !privateCloudAskInFlight else {
+            throw MCPVoiceError("M1K3 is already asking Private Cloud Compute for an agent. Try again when it finishes.")
+        }
+        privateCloudAskInFlight = true
+        defer { privateCloudAskInFlight = false }
+        await env.refreshPrivateCloudStatus()
+        // The grant gate ran before that suspension: read the grant again, so a switch turned off since holds.
+        guard Self.currentGrants().contains(.privateCloud) else {
+            throw LoopbackGrantRefusal(tool: PrivateCloudMCPTool.name)
+        }
+        let control = PrivateCloudRung.control(env.privateCloudState(consent: env.privateCloudConsentPersisted))
+        let offer = PrivateCloudLending.offer(switchOn: true, control: control)
+        if let refusal = PrivateCloudLending.refusal(offer, now: Date()) { throw MCPVoiceError(refusal) }
+        if let wait = env.privateCloudLendingBudget.spend(now: Date()) {
+            throw MCPVoiceError(PrivateCloudLending.overBudgetLine(retryAfter: wait))
+        }
+        privateCloudCalls += 1
+        Self.securityLog.notice(
+            "ask_private_cloud: a call left for Private Cloud Compute (\(privateCloudCalls, privacy: .public) since launch)"
+        )
+        do {
+            return try await withTimeout(seconds: Self.privateCloudAskSeconds) {
+                try await PrivateCloudRawChat.ask(prompt: prompt, instructions: instructions, backend: backend)
+            }
+        } catch is TimeoutError {
+            throw MCPVoiceError("Private Cloud Compute took too long to answer. Try a shorter prompt.")
+        } catch is CancellationError {
+            throw MCPVoiceError("The call to Private Cloud Compute was cancelled.")
+        } catch {
+            throw MCPVoiceError(PrivateCloudLending.failureLine(PrivateCloudError.failure(for: error), now: Date()))
+        }
     }
 
     // MARK: - Open-link tool handler

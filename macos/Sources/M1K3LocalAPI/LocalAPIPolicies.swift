@@ -119,6 +119,29 @@ public struct LocalAPIError: Error, Sendable, Equatable {
         message: "This brain declined the request (its safety filter, or a language it does not speak)."
     )
 
+    /// 503, which OpenAI clients retry by themselves: a network blip clears.
+    public static let cloudUnavailable = LocalAPIError(
+        status: 503, type: "server_error", code: "service_unavailable",
+        message: "Private Cloud Compute can't be reached right now. The brains on this Mac still answer."
+    )
+
+    /// The Mac's Private Cloud Compute limit is spent. OpenAI's own code for "retrying will not help"; no
+    /// Retry-After, because the reset can be hours away.
+    public static let cloudLimitReached = LocalAPIError(
+        status: 429, type: "insufficient_quota", code: "insufficient_quota",
+        message: "This Mac has reached its Private Cloud Compute limit for now. The brains on this Mac still answer."
+    )
+
+    /// M1K3's own hourly ceiling on lent Private Cloud Compute calls: a loop must not spend the owner's day.
+    public static func cloudOverBudget(retryAfter: Int) -> LocalAPIError {
+        .init(
+            status: 429, type: "rate_limit_error", code: "rate_limit_exceeded",
+            message: "M1K3 limits how many calls other apps can send to Private Cloud Compute in an hour, and that "
+                + "limit is reached. The brains on this Mac still answer.",
+            retryAfter: retryAfter
+        )
+    }
+
     public static func unsupportedEndpoint(_ path: String) -> LocalAPIError {
         .init(
             status: 404, type: "invalid_request_error", code: "unsupported_endpoint",
@@ -140,6 +163,9 @@ public struct LocalAPIError: Error, Sendable, Equatable {
         case .contextTooLong?: self = .contextTooLong
         case .refused?: self = .refused
         case .busy?: self = .busy(retryAfter: 5)
+        case .unavailable?: self = .cloudUnavailable
+        case .limitReached?: self = .cloudLimitReached
+        case let .overBudget(retryAfter)?: self = .cloudOverBudget(retryAfter: retryAfter)
         case .failed?, nil: self = .server("The brain could not finish this answer.")
         }
     }

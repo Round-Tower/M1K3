@@ -84,6 +84,13 @@ struct LocalAPIPolicyTests {
         #expect(LocalAPIError(failure: RawChatFailure.busy).status == 429)
         #expect(LocalAPIError(failure: RawChatFailure.contextTooLong).code == "context_length_exceeded")
         #expect(LocalAPIError(failure: CancellationError()).status == 500)
+        // Private Cloud Compute's two own failures: a blip is retried (503); a spent limit says retrying
+        // will not help, with no Retry-After (the reset can be hours away).
+        #expect(LocalAPIError(failure: RawChatFailure.unavailable).status == 503)
+        let spent = LocalAPIError(failure: RawChatFailure.limitReached)
+        #expect(spent.status == 429 && spent.code == "insufficient_quota" && spent.retryAfter == nil)
+        let over = LocalAPIError(failure: RawChatFailure.overBudget(retryAfter: 120))
+        #expect(over.status == 429 && over.code == "rate_limit_exceeded" && over.retryAfter == 120)
         // Never a status the OpenAI SDK retries by itself except the two that mean "try again".
         for error in [LocalAPIError.unauthorized, .contextTooLong, .refused, .modelNotFound("x", available: [])] {
             #expect(![408, 409, 429, 500, 502, 503].contains(error.status))
