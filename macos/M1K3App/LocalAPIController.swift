@@ -210,7 +210,8 @@ final class LocalAPIController {
         // The send starts with the stream below. A person starting a turn in the instant after this returns
         // has the handler drop the stream, which cancels it: that call is counted here but answers nobody.
         privateCloudCalls += 1
-        Self.log.notice("a call left for Private Cloud Compute (\(privateCloudCalls, privacy: .public) since launch)")
+        let calls = privateCloudCalls // a local: the formatter strips `self.` inside the log interpolation
+        Self.log.notice("a call left for Private Cloud Compute (\(calls, privacy: .public) since launch)")
         return PrivateCloudRawChat.stream(request, backend: backend)
     }
 
