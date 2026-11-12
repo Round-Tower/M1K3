@@ -60,7 +60,10 @@ The **MCP Registry** workflow (run by hand, a dry run unless `publish` is ticked
 tests and builds the bundle, creates the `mcpb-v<version>` release that carries
 it, writes the bundle's SHA-256 into the listing and publishes it. A published
 version cannot be changed: bump `version` in `manifest.json` and `server.json`
-together (a test holds them equal). Not yet run.
+together (a test holds them equal). A run that fails after the release reuses
+that release's bundle when run again. Not yet run. Before the first real run,
+restrict the repository's `mcp-registry` environment to `master` with a required
+reviewer.
 
 ## Privacy Policy
 
