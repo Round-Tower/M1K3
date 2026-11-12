@@ -6,6 +6,8 @@ New in this build, please try:
 • You go first: start a long answer through the Local API, then send a chat message in M1K3. Your message should be answered and the API call should end. Tell us if either one hangs
 • Switch the Local API off: the same call should be refused. Press New Key: the old key should stop working
 • Tell us which tools you tried it with (an editor, a script, a chat app) and anything that did not connect. A long conversation is slow to start on every turn for now, because each call re-reads all of it
+• Private Cloud Compute for other apps (off by default, App Store and TestFlight builds, needs Private Cloud Compute on in Settings > Privacy). Settings > Server > Local API > "Also offer Private Cloud Compute": the model list gains cloud-m1k3, always last, and a call that names it is answered by Apple's Private Cloud Compute. Only that call's messages are sent. The pane counts the calls that have left. Switch it off, or switch Privacy's Private Cloud Compute off: the same call should be refused
+• Agents: Settings > Server > "Let agents ask Private Cloud Compute" adds the ask_private_cloud tool for a connected agent. Each call should show in the menu bar's agent activity. With the switch off the tool should say it is not allowed
 • Ask Mini an ordinary coding question ("write a function that reverses a string"): the answer should be code, with no line about not sharing its wiring
 • Your MCP setup should work as before. The hints now say Settings > Server
 • Quit M1K3, open it again with Lil or Big, and send a chat message the moment it is ready. The answer should start promptly and run at its usual speed. Before this build a first message sent that early crawled. Try the same with voice mode
@@ -15,4 +17,4 @@ And the basics:
 • Drop a note or PDF onto the chat and ask about it
 • Brain at Home from your iPhone or iPad
 
-The Local API listens on this Mac only and is off until you switch it on. Nothing sent to it is kept in chat history or memory. The network is used for brain downloads and web search, which is on by default; the switch beside the brain switcher turns it off. Flag anything that looks like it left your Mac when it shouldn't have: Settings → "Report an issue…" attaches a privacy-scrubbed diagnostic.
+The Local API listens on this Mac only and is off until you switch it on. Nothing sent to it is kept in chat history or memory. A call to a brain on this Mac goes nowhere else; only the cloud-m1k3 model, which you switch on yourself, sends a call to Apple. The network is used for brain downloads and web search, which is on by default; the switch beside the brain switcher turns it off. Flag anything that looks like it left your Mac when it shouldn't have: Settings → "Report an issue…" attaches a privacy-scrubbed diagnostic.
