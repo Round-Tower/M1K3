@@ -63,7 +63,9 @@ public func makePrivateCloudToolDefinitions(handlers: PrivateCloudToolHandlers) 
             ),
             handler: { args in
                 let tool = PrivateCloudMCPTool.name
-                let prompt = try MCPInput.text(args, "prompt", tool: tool, maxLength: PrivateCloudMCPTool.maxPrompt) ?? ""
+                let prompt = try MCPInput.text(
+                    args, "prompt", tool: tool, maxLength: PrivateCloudMCPTool.maxPrompt
+                ) ?? ""
                 guard !prompt.isEmpty else { throw MCPVoiceError("\(tool) requires a non-empty prompt") }
                 let instructions = try MCPInput.text(
                     args, "instructions", tool: tool, maxLength: PrivateCloudMCPTool.maxInstructions

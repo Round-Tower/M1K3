@@ -18,16 +18,23 @@ private final class Asked: Sendable {
     let calls = Mutex<[(prompt: String, instructions: String)]>([])
 }
 
+private struct Outcome {
+    let isError: Bool
+    let text: String
+    let asked: [(prompt: String, instructions: String)]
+}
+
 private func run(
     _ args: [String: Value]?, answer: String = "An answer.", asked: Asked = Asked()
-) async -> (isError: Bool, text: String, asked: [(prompt: String, instructions: String)]) {
-    let registry = MCPToolRegistry(makePrivateCloudToolDefinitions(handlers: PrivateCloudToolHandlers { prompt, instructions in
+) async -> Outcome {
+    let handlers = PrivateCloudToolHandlers { prompt, instructions in
         asked.calls.withLock { $0.append((prompt, instructions)) }
         return answer
-    }))
+    }
+    let registry = MCPToolRegistry(makePrivateCloudToolDefinitions(handlers: handlers))
     let result = await registry.call(name: "ask_private_cloud", arguments: args)
     let text: String = if case let .text(text, _, _) = result.content.first { text } else { "" }
-    return (result.isError == true, text, asked.calls.withLock { $0 })
+    return Outcome(isError: result.isError == true, text: text, asked: asked.calls.withLock { $0 })
 }
 
 struct PrivateCloudMCPToolTests {
@@ -64,7 +71,8 @@ struct PrivateCloudMCPToolTests {
 
     @Test("The tool says in its own description that it is not local, and what is sent")
     func descriptionSaysItLeavesTheMac() throws {
-        let tool = try #require(makePrivateCloudToolDefinitions(handlers: PrivateCloudToolHandlers { _, _ in "" }).first?.tool)
+        let handlers = PrivateCloudToolHandlers { _, _ in "" }
+        let tool = try #require(makePrivateCloudToolDefinitions(handlers: handlers).first?.tool)
         let description = tool.description ?? ""
         #expect(tool.name == PrivateCloudMCPTool.name)
         #expect(description.contains("NOT local"))

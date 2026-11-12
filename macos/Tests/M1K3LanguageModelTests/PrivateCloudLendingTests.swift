@@ -32,7 +32,8 @@ struct PrivateCloudLendingTests {
         let reset = Date(timeIntervalSince1970: 1000)
         #expect(PrivateCloudLending.offer(switchOn: true, control: .ready) == .ready)
         #expect(PrivateCloudLending.offer(switchOn: true, control: .unavailable) == .unavailable)
-        #expect(PrivateCloudLending.offer(switchOn: true, control: .exhausted(resetsAt: reset)) == .exhausted(resetsAt: reset))
+        let spent = PrivateCloudLending.offer(switchOn: true, control: .exhausted(resetsAt: reset))
+        #expect(spent == .exhausted(resetsAt: reset))
     }
 
     @Test("The model is listed whenever it is offered, ready or not, so a client is told why instead of 'not found'")
@@ -59,8 +60,9 @@ struct PrivateCloudLendingTests {
         #expect(PrivateCloudLending.row(switchOn: true, setting: .hidden) == .hidden)
         #expect(PrivateCloudLending.row(switchOn: true, setting: .managedOff) == .managedOff)
         // The stored answer still shows: it would resume the moment Privacy is switched back on.
-        #expect(PrivateCloudLending.row(switchOn: true, setting: .shown(isOn: false)) == .needsPrivacySwitch(isOn: true))
-        #expect(PrivateCloudLending.row(switchOn: false, setting: .shown(isOn: false)) == .needsPrivacySwitch(isOn: false))
+        let privacyOff = PrivateCloudRung.Setting.shown(isOn: false)
+        #expect(PrivateCloudLending.row(switchOn: true, setting: privacyOff) == .needsPrivacySwitch(isOn: true))
+        #expect(PrivateCloudLending.row(switchOn: false, setting: privacyOff) == .needsPrivacySwitch(isOn: false))
         #expect(PrivateCloudLending.row(switchOn: false, setting: .shown(isOn: true)) == .toggle(isOn: false))
         #expect(PrivateCloudLending.row(switchOn: true, setting: .shown(isOn: true)) == .toggle(isOn: true))
     }

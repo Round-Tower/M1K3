@@ -43,7 +43,8 @@ public enum PrivateCloudRawChat {
                         // Never an empty success: a stream that ends with no text is a failure.
                         continuation.finish(throwing: RawChatFailure.failed)
                     } else {
-                        continuation.yield(.finished(RawChatFinish(reason: .stop, promptTokens: nil, completionTokens: nil)))
+                        let finish = RawChatFinish(reason: .stop, promptTokens: nil, completionTokens: nil)
+                        continuation.yield(.finished(finish))
                         continuation.finish()
                     }
                 } catch is CancellationError where Task.isCancelled {
@@ -74,7 +75,9 @@ public enum PrivateCloudRawChat {
     }
 
     /// One whole answer (the last snapshot), for a tool call. Throws the backend's own `PrivateCloudError`.
-    public static func ask(prompt: String, instructions: String, backend: any PrivateCloudAnswering) async throws -> String {
+    public static func ask(
+        prompt: String, instructions: String, backend: any PrivateCloudAnswering
+    ) async throws -> String {
         var answer = ""
         for try await snapshot in backend.answer(instructions: instructions, prompt: prompt) {
             answer = snapshot

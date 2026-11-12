@@ -458,7 +458,9 @@ final class MCPHostController {
             throw MCPVoiceError(PrivateCloudLending.refusal(.notOffered, now: Date()) ?? "")
         }
         guard !privateCloudAskInFlight else {
-            throw MCPVoiceError("M1K3 is already asking Private Cloud Compute for an agent. Try again when it finishes.")
+            throw MCPVoiceError(
+                "M1K3 is already asking Private Cloud Compute for an agent. Try again when it finishes."
+            )
         }
         privateCloudAskInFlight = true
         defer { privateCloudAskInFlight = false }
@@ -474,8 +476,9 @@ final class MCPHostController {
             throw MCPVoiceError(PrivateCloudLending.overBudgetLine(retryAfter: wait))
         }
         privateCloudCalls += 1
+        let calls = privateCloudCalls
         Self.securityLog.notice(
-            "ask_private_cloud: a call left for Private Cloud Compute (\(privateCloudCalls, privacy: .public) since launch)"
+            "ask_private_cloud: a call left for Private Cloud Compute (\(calls, privacy: .public) since launch)"
         )
         do {
             return try await withTimeout(seconds: Self.privateCloudAskSeconds) {
