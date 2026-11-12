@@ -31,7 +31,8 @@
 //  ADR 0011). It carries the caller's words only. Every call that leaves is counted on the pane and logged at
 //  notice. Confidence 0.6: pinned in the packages; the real service is verify-by-launch on a store-lane build.
 //  Review: Kev + claude-fable-5.2, 2026-11-12 (later) — "its own system message is the whole system prompt" now holds
-//  for Lil and Big; a lent Apple model (Mini, the cloud) runs behind one acceptable-use line (`LentAppleModelGuardrail`).
+//  for Lil and Big; a lent Apple model (Mini, the cloud) runs behind one acceptable-use line
+//  (`LentAppleModelGuardrail`).
 //  Open: an editor or a web UI as the client; a chat or voice turn ending a live call, in the hand; `cloud-m1k3`
 //  against the real service.
 //

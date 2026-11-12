@@ -63,7 +63,7 @@ private func collect(_ stream: RawChatStream) async throws -> (text: String, fin
 }
 
 struct PrivateCloudRawChatTests {
-    @Test("The caller's system text follows the acceptable-use rule, and its one question is the prompt: nothing else is added")
+    @Test("The caller's system text follows the acceptable-use rule, its question is the prompt: nothing else is added")
     func carriesOnlyTheCallersWords() async throws {
         let cloud = RecordingCloud(snapshots: ["Hi."])
         let request = try RawChatRequest(

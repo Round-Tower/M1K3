@@ -42,8 +42,9 @@ PCC is lent on two surfaces, each behind its own switch, both off by default.
   pane's Private Cloud Compute switch on. The gate is read again on every call.
   Turning the Privacy switch off means no new call is served (one in flight
   finishes).
-- **Only the caller's words leave.** The caller's system text and messages, or
-  the agent's prompt and instructions. No M1K3 persona, memory, knowledge,
+- **Only the caller's words leave,** behind one fixed line of M1K3's: the
+  acceptable-use rule Apple's licence asks for (see the Reviews below). The
+  caller's system text and messages, or the agent's prompt and instructions. No M1K3 persona, memory, knowledge,
   tools or chat history is added, and nothing is stored. This is why
   `ask_private_cloud` is a separate tool and not an option on `ask_m1k3`.
 - **The chat consent sheet is not on these paths.** It exists to show the M1K3
@@ -142,3 +143,10 @@ never an empty answer), Apple's claims cited rather than paraphrased.
      licence clauses are now quoted word for word from Apple's page, and the lending was
      tried against the real service on Kev's Mac (both surfaces answered). The open
      point is narrowed to "reasonable guardrails" on a lent Apple model. Confidence 0.7. -->
+<!-- Review: Kev + claude-fable-5.2, 2026-11-12 (guardrail) — Kev, asked whether to add a
+     short acceptable-use instruction of M1K3's own to a lent Apple model before App
+     Review: "Please do that." `LentAppleModelGuardrail` puts one fixed line ahead of the
+     caller's instructions on Mini (Local API) and on Private Cloud Compute (Local API and
+     MCP). "Only the caller's words leave" now reads "the caller's words behind that one
+     line". It is our answer to "reasonable guardrails"; whether Apple finds it reasonable
+     is not something we can know from here. Confidence 0.7. -->
