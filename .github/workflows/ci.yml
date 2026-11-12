@@ -353,6 +353,12 @@ jobs:
         run: |
           python3 -m pip install --quiet 'pytest>=8,<9' 'pyyaml>=6,<7' 'numpy>=1.26,<3'
           python3 -m pytest -q tools/ci tools/eval tools/weights tools/site tools/asc tools/router tools/dev
+      # The Claude bundle's bridge and manifest (integrations/mcpb): Node's own test runner, no
+      # dependencies. The manifest test reads the MCP kit's tool names, so a tool added to the app
+      # without the bundle listing it fails here.
+      - name: Test the MCP bundle (bridge + manifest)
+        working-directory: .
+        run: node --test integrations/mcpb/test/bridge.test.js integrations/mcpb/test/manifest.test.js
       # llms-full.txt is generated from the site pages; a page edit without a
       # regenerate would leave the AI-readable copy stale.
       - name: llms-full.txt is current
@@ -476,3 +482,5 @@ jobs:
 # Review: Kev + claude-opus-5.5, 2026-11-05 — the guards job also runs tools/dev's pytest (branch_audit.py), whose
 # throwaway-repo tests pin hooks and signing off; verified green under a main-default, sign-everything git config.
 # Confidence 0.85: CI's own run on ubuntu-24.04 (git 2.43) is the proof still owed.
+# Review: Kev + claude-fable-5.2, 2026-11-12 — the guards job also runs the MCP bundle's Node tests
+# (integrations/mcpb: the stdio bridge and its manifest). Confidence 0.8 (the step is new to CI).
