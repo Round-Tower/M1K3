@@ -17,7 +17,10 @@ test('the required fields are there, and the entry point and icon exist', () => 
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
   assert.equal(manifest.server.type, 'node');
   assert.ok(fs.existsSync(path.join(root, manifest.server.entry_point)));
-  assert.ok(fs.existsSync(path.join(root, manifest.icon)));
+  // The icon is copied in by build.sh from the site's, so there is one source.
+  assert.equal(manifest.icon, 'icon.png');
+  assert.ok(fs.existsSync(path.join(root, '..', '..', 'site', 'icon-512.png')));
+  assert.match(fs.readFileSync(path.join(root, 'build.sh'), 'utf8'), /site\/icon-512\.png \$stage\/icon\.png/);
   assert.deepEqual(manifest.server.mcp_config.args, ['${__dirname}/' + manifest.server.entry_point]);
 });
 

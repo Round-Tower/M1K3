@@ -50,7 +50,8 @@ node --test integrations/mcpb/test/bridge.test.js integrations/mcpb/test/manifes
 integrations/mcpb/build.sh        # writes dist/m1k3.mcpb and prints its SHA-256
 ```
 
-A bundle is a zip of `manifest.json`, `icon.png` and `server/index.js`.
+A bundle is a zip of `manifest.json`, `icon.png` (the site's icon, copied in by the
+build) and `server/index.js`.
 
 ## Privacy Policy
 
