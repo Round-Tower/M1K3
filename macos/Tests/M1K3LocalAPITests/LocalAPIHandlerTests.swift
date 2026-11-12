@@ -92,6 +92,24 @@ struct LocalAPIHandlerTests {
         return try #require(JSONSerialization.jsonObject(with: Data(body.utf8)) as? [String: Any])
     }
 
+    @Test("a call for a model the app knows but is not offering is told why, and never reaches a brain")
+    func knownButUnlistedModelIsToldWhy() async {
+        let brain = FakeBrain()
+        var backend = brain.backend
+        backend.whyUnlisted = { $0 == "cloud-m1k3" ? .notOffered : nil }
+        let handler = LocalAPIHandler(port: 4141, token: { "s3cret" }, backend: backend)
+        let off = await text(handler.reply(to: request("POST", "/v1/chat/completions", body: chat(model: "cloud-m1k3"))))
+        #expect(off.hasPrefix("HTTP/1.1 404"))
+        #expect(off.contains("Settings ▸ Server"))
+        let stranger = request("POST", "/v1/chat/completions", body: chat(model: "gpt-9"))
+        let unknown = await text(handler.reply(to: stranger))
+        #expect(unknown.hasPrefix("HTTP/1.1 404") && unknown.contains("is not loaded in M1K3"))
+        #expect(brain.calls.isEmpty)
+        // The slot was given back: an ordinary call still goes through.
+        let fine = await text(handler.reply(to: request("POST", "/v1/chat/completions", body: chat())))
+        #expect(fine.hasPrefix("HTTP/1.1 200 OK"))
+    }
+
     @Test("the model list needs the token and names the brains that are ready")
     func models() async throws {
         let handler = handler(FakeBrain())

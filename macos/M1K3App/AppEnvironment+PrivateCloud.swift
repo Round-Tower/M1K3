@@ -22,6 +22,9 @@
 //  consent read matched the views'. The real PCC path is verify-owed until the
 //  entitlement). Prior: Unknown
 //
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — in a Debug build M1K3_PCC_ECHO now wins over the real backend. It was
+//  read second, so on a ⌘R build (which holds the entitlement) the stand-in could never be reached, and a trial
+//  launched "against the echo" would have used the real service. Release is unchanged. Confidence 0.85.
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — a Private Cloud send preempts a Local API call, as it does a Brain at Home stream. Confidence 0.7.
 
 import Foundation
@@ -38,12 +41,12 @@ extension AppEnvironment {
     /// (`PrivateCloudBackends.live()`); in a Debug build, the echo stand-in when
     /// launched with M1K3_PCC_ECHO. nil everywhere else.
     nonisolated static let privateCloudBackend: (any PrivateCloudAnswering)? = {
-        if let live = PrivateCloudBackends.live() { return live }
         #if DEBUG
-            return PrivateCloudEchoBackend.fromEnvironment(ProcessInfo.processInfo.environment)
-        #else
-            return nil
+            // A Debug launch that ASKS for the stand-in gets it, even where the real one exists (a ⌘R build
+            // carries the entitlement): a failure mode can then be tried by launch with nothing leaving the Mac.
+            if let echo = PrivateCloudEchoBackend.fromEnvironment(ProcessInfo.processInfo.environment) { return echo }
         #endif
+        return PrivateCloudBackends.live()
     }()
 
     /// The rung's inputs right now. `consent` is passed in by the view that

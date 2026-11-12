@@ -141,6 +141,14 @@ public enum RawChatFailure: Error, Sendable, Equatable {
     case refused
     /// The runtime is rate-limited, timed out or down for the moment: try again.
     case busy
+    /// A service off this Mac cannot be reached, or is not serving (Private Cloud Compute).
+    case unavailable
+    /// The service's usage limit is spent: trying again shortly will not help (Private Cloud Compute).
+    case limitReached
+    /// The app's own ceiling on calls to a service off this Mac is spent for now: try again after the wait.
+    case overBudget(retryAfter: Int)
+    /// The owner has not switched this model on for other apps (Private Cloud Compute).
+    case notOffered
     /// Anything else.
     case failed
 

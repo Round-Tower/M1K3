@@ -18,6 +18,8 @@
 //  Signed: Kev + claude-fable-5.2, 2026-11-11, Confidence 0.8, Prior: none (new file)
 //  Review: Kev + claude-fable-5.2, 2026-11-11 (#621) — `isAnswering` says a call holds the brain, so the launch warm
 //  can wait for it. Confidence unchanged.
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — `whyUnlisted`: a call for a model the app knows but is not offering
+//  (the cloud model with its switch off) is told why, before admission. Confidence unchanged.
 //
 
 import Foundation
@@ -30,15 +32,20 @@ public struct LocalAPIBackend: Sendable {
     public var userBusy: @Sendable () async -> Bool
     /// Nil when that brain cannot serve a raw chat right now.
     public var complete: @Sendable (_ model: String, _ request: RawChatRequest) async -> RawChatStream?
+    /// Why a model the app KNOWS is not in `models` right now, or nil for a model it has never heard of.
+    /// Lets a call for a switched-off model be told where the switch is instead of "not loaded".
+    public var whyUnlisted: @Sendable (_ model: String) async -> RawChatFailure?
 
     public init(
         models: @escaping @Sendable () async -> [String],
         userBusy: @escaping @Sendable () async -> Bool,
-        complete: @escaping @Sendable (String, RawChatRequest) async -> RawChatStream?
+        complete: @escaping @Sendable (String, RawChatRequest) async -> RawChatStream?,
+        whyUnlisted: @escaping @Sendable (String) async -> RawChatFailure? = { _ in nil }
     ) {
         self.models = models
         self.userBusy = userBusy
         self.complete = complete
+        self.whyUnlisted = whyUnlisted
     }
 }
 
@@ -136,6 +143,10 @@ public actor LocalAPIHandler {
             preempted = false
         }
         let available = await backend.models()
+        if !available.contains(call.model), let why = await backend.whyUnlisted(call.model) {
+            if mine { claimed = false }
+            return .refusal(LocalAPIError(failure: why))
+        }
         let userBusy = await backend.userBusy()
         if let refusal = LocalAPIAdmission.decide(
             requested: call.model, available: available, userBusy: userBusy, apiBusy: !mine

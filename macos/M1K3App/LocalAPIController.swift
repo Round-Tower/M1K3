@@ -26,11 +26,18 @@
 //  SDK ran against all three brains by launch on 11-11, and Kev's own curl against Big (#801). Confidence 0.75.
 //  Review: Kev + claude-fable-5.2, 2026-11-11 (#621) — `isAnswering()`: the launch warm asks and waits. Confidence
 //  unchanged.
-//  Open: an editor or a web UI as the client; a chat or voice turn ending a live call, in the hand.
+//  Review: Kev + claude-fable-5.2, 2026-11-12 — a second model id, `cloud-m1k3`: Apple's Private Cloud Compute, lent
+//  behind its OWN switch (off by default) and the chat rung's gate, re-read on every call (`PrivateCloudLending`,
+//  ADR 0011). It carries the caller's words only. Every call that leaves is counted on the pane and logged at
+//  notice. Confidence 0.6: pinned in the packages; the real service is verify-by-launch on a store-lane build.
+//  Open: an editor or a web UI as the client; a chat or voice turn ending a live call, in the hand; `cloud-m1k3`
+//  against the real service.
 //
 
 import Foundation
+import M1K3Agent // PrivateCloudRawChat
 import M1K3Inference
+import M1K3LanguageModel // PrivateCloudLending / PrivateCloudRung
 import M1K3LocalAPI
 import M1K3MCPKit // LoopbackAccessTokenVault / Box: the token's mint, store and constant holder
 import Observation
@@ -41,6 +48,8 @@ import os
 final class LocalAPIController {
     nonisolated static let enabledKey = "localAPI.enabled"
     nonisolated static let accessTokenAccount = "localapi.access-token"
+    /// The lending switch for Private Cloud Compute on THIS surface. Off by default.
+    nonisolated static let lendPrivateCloudKey = "localAPI.lendPrivateCloud"
     nonisolated static let port = LocalAPIServer.defaultPort
 
     private static let log = Logger(subsystem: "app.m1k3", category: "local-api")
@@ -53,6 +62,7 @@ final class LocalAPIController {
     private(set) var isRunning = false
     private(set) var statusText: String?
     private(set) var accessToken: String?
+    private(set) var lendsPrivateCloud: Bool
 
     /// What a client is told to use as its base URL.
     var baseURL: String {
@@ -62,6 +72,21 @@ final class LocalAPIController {
     init(environment: AppEnvironment) {
         env = environment
         isEnabled = UserDefaults.standard.bool(forKey: Self.enabledKey)
+        lendsPrivateCloud = UserDefaults.standard.bool(forKey: Self.lendPrivateCloudKey)
+    }
+
+    func setLendsPrivateCloud(_ on: Bool) {
+        lendsPrivateCloud = on
+        UserDefaults.standard.set(on, forKey: Self.lendPrivateCloudKey)
+    }
+
+    /// What a caller is offered of Private Cloud Compute right now: this surface's switch AND the chat rung's
+    /// gate (a backend, no organisation policy against it, the Privacy pane's switch), read fresh each time.
+    var privateCloudOffer: PrivateCloudLending.Offer {
+        PrivateCloudLending.offer(
+            switchOn: lendsPrivateCloud,
+            control: PrivateCloudRung.control(env.privateCloudState(consent: env.privateCloudConsentPersisted))
+        )
     }
 
     func startIfEnabled() {
@@ -93,6 +118,11 @@ final class LocalAPIController {
     /// can answer" (the reading Brain at Home refuses on), so the provider's load call inside a raw chat
     /// finds the brain already there. During a brain swap `isReady` is false and the list is empty.
     var readyModelIDs: [String] {
+        PrivateCloudLending.modelIDs(local: localModelIDs, offer: privateCloudOffer)
+    }
+
+    /// The brain on this Mac that can answer now. Listed first, always.
+    var localModelIDs: [String] {
         env.isReady ? [LocalAPIModel.id(forTier: env.selectedBrain.rawValue)] : []
     }
 
@@ -107,7 +137,8 @@ final class LocalAPIController {
         let backend = LocalAPIBackend(
             models: { [weak self] in await self?.readyModelIDs ?? [] },
             userBusy: { [weak self] in await self?.userBusy ?? true },
-            complete: { [weak self] model, request in await self?.stream(model: model, request: request) }
+            complete: { [weak self] model, request in await self?.stream(model: model, request: request) },
+            whyUnlisted: { [weak self] model in await self?.whyUnlisted(model) }
         )
         let tokenBox = tokenBox
         let handler = LocalAPIHandler(port: Self.port, token: { tokenBox.current() }, backend: backend)
@@ -157,9 +188,35 @@ final class LocalAPIController {
 
     /// A raw chat on the loaded brain. Nil when the model asked for is not the ready one, or the brain
     /// cannot serve a raw chat: the handler says "not found".
-    private func stream(model: String, request: RawChatRequest) -> RawChatStream? {
-        guard readyModelIDs.contains(model), let raw = env.provider as? RawChatCompleting else { return nil }
+    private func stream(model: String, request: RawChatRequest) async -> RawChatStream? {
+        if model == PrivateCloudLending.modelID { return await privateCloudStream(request) }
+        guard localModelIDs.contains(model), let raw = env.provider as? RawChatCompleting else { return nil }
         return raw.completeRawChat(request)
+    }
+
+    /// The cloud model exists in this build but is not offered right now (a switch is off): the caller is told
+    /// where the switch is. Any other unlisted model is simply not found.
+    private func whyUnlisted(_ model: String) -> RawChatFailure? {
+        model == PrivateCloudLending.modelID && AppEnvironment.privateCloudBackend != nil ? .notOffered : nil
+    }
+
+    /// The one path on this surface that leaves the Mac. The gate is read again HERE, after a fresh status, so
+    /// a switch turned off since the model list was read ends it. Nil (the handler's plain "not found") only
+    /// where Private Cloud Compute cannot exist in this build; otherwise a stream that throws its reason:
+    /// not switched on, unreachable, the limit spent, or M1K3's own hourly cap.
+    private func privateCloudStream(_ request: RawChatRequest) async -> RawChatStream? {
+        guard let backend = AppEnvironment.privateCloudBackend else { return nil }
+        await env.refreshPrivateCloudStatus()
+        let offer = privateCloudOffer
+        if let refusal = PrivateCloudRawChat.refusal(for: offer) { return PrivateCloudRawChat.refused(refusal) }
+        if let wait = env.privateCloudLendingBudget.spend(now: Date()) {
+            return PrivateCloudRawChat.refused(.overBudget(retryAfter: wait))
+        }
+        // The send starts with the stream below. A person starting a turn in the instant after this returns
+        // has the handler drop the stream, which cancels it: that call is counted here but answers nobody.
+        let calls = env.privateCloudLendingTally.countLocalAPI()
+        Self.log.notice("a call left for Private Cloud Compute (\(calls, privacy: .public) since launch)")
+        return PrivateCloudRawChat.stream(request, backend: backend)
     }
 
     // MARK: - Access token

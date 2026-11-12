@@ -349,6 +349,11 @@ final class AppEnvironment {
     /// until read — the rung treats that as available with an unknown quota.
     /// See AppEnvironment+PrivateCloud.swift.
     var privateCloudStatus: PrivateCloudStatus?
+    /// The hourly ceiling on Private Cloud Compute calls lent to other apps (ADR 0011), shared by the Local API
+    /// and the MCP tool: one limit, because they spend one quota. In memory, per launch.
+    var privateCloudLendingBudget = PrivateCloudLending.Budget()
+    /// The lent calls that have left since launch, by surface: one tally beside the one budget.
+    var privateCloudLendingTally = PrivateCloudLending.Tally()
     /// Bumped every 2 s while the chat gate is up (ModelGateView): AFM's availability
     /// isn't observable, so a render that read "not ready" would otherwise stay frozen
     /// on it after Mini recovered (2026-09-27). Nothing ticks while the gate is down.

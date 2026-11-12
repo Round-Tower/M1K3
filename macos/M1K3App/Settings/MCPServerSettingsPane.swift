@@ -20,6 +20,7 @@
 
 import AppKit // NSPasteboard — the Copy buttons
 import M1K3CLICore // ConnectPlan / MCPClient / MCPEndpoint — one source for the snippets
+import M1K3LanguageModel // PrivateCloudLending (the lending rows) + ChatEgressConsent (the Privacy pane's switch)
 import M1K3Screengrab // the harness shows the shipped helper path, not the build's
 import SwiftUI
 
@@ -28,7 +29,10 @@ struct MCPServerSettingsPane: View {
     @AppStorage(MCPHostController.grantMicrophoneKey) private var agentsUseMicrophone = false
     @AppStorage(MCPHostController.grantDeleteMemoriesKey) private var agentsDeleteMemories = false
     @AppStorage(MCPHostController.grantOpenLinksKey) private var agentsOpenLinks = false
+    @AppStorage(MCPHostController.grantPrivateCloudKey) private var agentsAskPrivateCloud = false
     @AppStorage(AppEnvironment.conversationLogEnabledKey) private var conversationLogEnabled = false
+    /// Read here so the lending rows follow the Privacy pane's switch the moment it flips.
+    @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
     @State private var connectClient: MCPClient = .claude
     @State private var confirmingNewToken = false
     @State private var newTokenFailed = false
@@ -79,6 +83,12 @@ struct MCPServerSettingsPane: View {
             Toggle("Let agents use the microphone", isOn: $agentsUseMicrophone)
             Toggle("Let agents delete memories", isOn: $agentsDeleteMemories)
             Toggle("Let agents open links on screen", isOn: $agentsOpenLinks)
+            privateCloudLendingRows(
+                isOn: agentsAskPrivateCloud,
+                title: "Let agents ask Private Cloud Compute",
+                set: { agentsAskPrivateCloud = $0 },
+                detail: mcpCloudDetail
+            )
             accessTokenRow
             connectAnAgent
         } header: {
@@ -114,10 +124,16 @@ struct MCPServerSettingsPane: View {
                 }
             }
             LabeledContent("Model") {
-                Text(env.localAPI.readyModelIDs.first ?? "No brain ready yet")
+                Text(env.localAPI.localModelIDs.first ?? "No brain ready yet")
                     .font(.system(.caption, design: .monospaced))
             }
             localAPITokenRow
+            privateCloudLendingRows(
+                isOn: env.localAPI.lendsPrivateCloud,
+                title: "Also offer Private Cloud Compute",
+                set: { env.localAPI.setLendsPrivateCloud($0) },
+                detail: localAPICloudDetail
+            )
         } header: {
             SettingsHeader("Local API", systemImage: "server.rack")
         } footer: {
@@ -127,6 +143,55 @@ struct MCPServerSettingsPane: View {
             .font(.callout).foregroundStyle(.secondary)
         }
         .onAppear { env.localAPI.loadAccessToken() }
+    }
+
+    private var mcpCloudDetail: String {
+        "An agent’s own prompt is sent to Apple’s Private Cloud Compute (the ask_private_cloud tool). M1K3 adds "
+            + "nothing from your memory or knowledge, but an agent can include what it has read. Calls count "
+            + "against this Mac’s daily limit, and each shows in the menu bar. With the agent conversation log on, "
+            + "the prompt and answer are kept in it. \(Self.tally(env.privateCloudLendingTally.agents))"
+    }
+
+    private static func tally(_ calls: Int) -> String {
+        switch calls {
+        case 0: "No calls have left this Mac since M1K3 opened."
+        case 1: "1 call has left this Mac since M1K3 opened."
+        default: "\(calls) calls have left this Mac since M1K3 opened."
+        }
+    }
+
+    /// What the lent model is called, and how many calls have left since launch: traffic to Apple is never unseen.
+    private var localAPICloudDetail: String {
+        let tally = Self.tally(env.privateCloudLendingTally.localAPI)
+        return "Model \(PrivateCloudLending.modelID): an app that asks for it by name sends its own messages to "
+            + "Apple’s Private Cloud Compute, and they count against this Mac’s daily limit. \(tally)"
+    }
+
+    /// One lending switch (ADR 0011). Gone where Private Cloud Compute cannot exist, a fact under an
+    /// organisation's policy, and locked until the Privacy pane's own switch is on.
+    @ViewBuilder
+    private func privateCloudLendingRows(
+        isOn: Bool, title: String, set: @escaping (Bool) -> Void, detail: String
+    ) -> some View {
+        let setting = PrivateCloudRung.setting(env.privateCloudState(consent: privateCloudConsent))
+        switch PrivateCloudLending.row(switchOn: isOn, setting: setting) {
+        case .hidden:
+            EmptyView()
+        case .managedOff:
+            LabeledContent(title, value: "Turned off by your organisation")
+        case let .needsPrivacySwitch(isOn):
+            // Still switchable, and showing the stored answer: it resumes when Privacy is switched back on.
+            Toggle(title, isOn: Binding(get: { isOn }, set: set))
+            Text(isOn
+                ? "Paused: Private Cloud Compute is off in Settings ▸ Privacy. Turning that on resumes this."
+                : "Needs Private Cloud Compute on in Settings ▸ Privacy.")
+                .font(.callout).foregroundStyle(.secondary)
+        case let .toggle(isOn):
+            Toggle(title, isOn: Binding(get: { isOn }, set: set))
+            if isOn {
+                Text(detail).font(.callout).foregroundStyle(.secondary)
+            }
+        }
     }
 
     @ViewBuilder private var localAPITokenRow: some View {
