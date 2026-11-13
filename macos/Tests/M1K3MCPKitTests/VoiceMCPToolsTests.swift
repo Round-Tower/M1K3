@@ -235,6 +235,16 @@ struct VoiceMCPToolsTests {
         #expect(log.all == ["listen:30.0"])
     }
 
+    @Test("a listen that heard nothing says so, instead of an empty result an agent can't read")
+    func listenHeardNothing() async {
+        let log = HandlerLog()
+        let registry = MCPToolRegistry(makeVoiceToolDefinitions(handlers: makeHandlers(log: log, listenResult: "")))
+        let result = await registry.call(name: "listen", arguments: nil)
+        #expect(text(result) == heardNothingLine)
+        #expect(heardNothingLine.hasPrefix("Heard nothing"))
+        #expect(result.isError != true) // silence is an answer, not a failure
+    }
+
     @Test("listen clamps the timeout to 5…120 seconds")
     func listenClamped() async {
         let log = HandlerLog()

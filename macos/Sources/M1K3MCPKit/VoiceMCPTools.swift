@@ -27,6 +27,9 @@
 //  Wording only. Confidence 0.9.
 //  Review: Kev + claude-opus-5-5, 2026-10-16 — MCPVoiceError is a LocalizedError: the registry's log line read
 //  "MCPVoiceError error 1" on a live refused speak, hiding why. Confidence 0.95.
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — a listen that heard nothing returns `heardNothingLine`, not an
+//  empty result (two silent listens came back as "you you"; the ghost is dropped in the shell by
+//  M1K3Voice.ListenEndpoint, and this is what the caller then reads). Confidence 0.85.
 //
 
 import Foundation
@@ -135,6 +138,10 @@ public struct VoiceToolHandlers: Sendable {
         self.listen = listen
     }
 }
+
+/// What `listen` returns when nobody spoke. An empty result reads to an agent as
+/// a broken tool; this says what happened and is not an error.
+public let heardNothingLine = "Heard nothing: nobody spoke before the listen ended."
 
 /// Bounds for the `listen` tool's timeout — long enough for a real sentence,
 /// short enough that a forgotten call cannot hold the mic open for minutes.
@@ -284,7 +291,8 @@ public func makeVoiceToolDefinitions(
                     + "pauses (or the timeout passes). Waits for any in-progress speech to finish "
                     + "before opening the mic — that wait comes OUT of timeout_s (at least 5s of "
                     + "real listening is always kept), so the call is bounded by roughly timeout_s "
-                    + "overall. This is how you hear the user.",
+                    + "overall. This is how you hear the user. When nobody speaks it says so "
+                    + "(\"Heard nothing\") rather than returning words.",
                 inputSchema: [
                     "type": "object",
                     "properties": [
@@ -294,7 +302,8 @@ public func makeVoiceToolDefinitions(
             ),
             handler: { args in
                 let timeout = clampListenTimeout(doubleArg(args, "timeout_s") ?? 30)
-                return try await handlers.listen(timeout)
+                let heard = try await handlers.listen(timeout)
+                return heard.isEmpty ? heardNothingLine : heard
             }
         ),
     ]
