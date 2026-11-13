@@ -46,16 +46,17 @@ and each tool group stay off until you turn them on in M1K3.
 ## Build and test
 
 ```sh
-node --test integrations/mcpb/test/bridge.test.js integrations/mcpb/test/manifest.test.js
+node --test integrations/mcpb/test/bridge.test.js integrations/mcpb/test/manifest.test.js integrations/mcpb/test/claude-plugin.test.js
 integrations/mcpb/build.sh        # writes dist/m1k3.mcpb and prints its SHA-256
 ```
 
 A bundle is a zip of `manifest.json`, `icon.png` (the site's icon, copied in by the
 build) and `server/index.js`.
 
-The same bridge ships as a Claude Code plugin in `integrations/claude-plugin`
-(a test holds the two copies equal): change `server/index.js` here, then copy it
-there.
+The Claude Code plugin in `integrations/claude-plugin` does not carry the
+bridge: Claude Code speaks HTTP, so the plugin is one loopback server entry.
+Its test lives here (`test/claude-plugin.test.js`), outside the plugin's folder,
+because the directory reads every file a plugin ships.
 
 ## Publishing
 

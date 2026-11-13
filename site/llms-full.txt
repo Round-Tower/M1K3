@@ -275,7 +275,7 @@ Or install it as a plugin, without leaving Claude Code. The M1K3 repository is i
 /plugin install m1k3@m1k3
 /reload-plugins
 ```
-Claude Code asks for the access token when the plugin is enabled and keeps it in your system's credential store. It needs Node 18 or later, and it is one file that passes tool calls to the app on this Mac: what it runs and sends (https://github.com/Round-Tower/M1K3/tree/master/integrations/claude-plugin). Use the plugin or m1k3 connect claude, not both: with both, every tool is listed twice.
+Claude Code asks for the access token when the plugin is enabled and keeps it in your system's credential store. It runs no code and needs nothing else installed; it is one setting that points Claude Code at the app on this Mac: what it sends (https://github.com/Round-Tower/M1K3/tree/master/integrations/claude-plugin). Use the plugin or m1k3 connect claude, not both: with both, every tool is listed twice.
 
 #### Cursor — ~/.cursor/mcp.json
 

@@ -55,11 +55,10 @@ own plugin marketplace:
 ```
 
 Claude Code asks for the access token when the plugin is enabled and keeps it in
-your system's credential store; leave the port at 4242 unless you changed it in
-M1K3. It needs Node 18 or later on your PATH, and nothing else: the plugin is one
-file that passes tool calls to the app on loopback
+your system's credential store. The plugin runs no code and needs nothing else
+installed: it is one setting that points Claude Code at the app on loopback
 ([`integrations/claude-plugin`](../../integrations/claude-plugin) says exactly
-what it runs and sends). Its tools appear as `mcp__plugin_m1k3_m1k3__…`.
+what it sends). Its tools appear as `mcp__plugin_m1k3_m1k3__…`.
 
 Pick **one** route for Claude Code. The plugin and `m1k3 connect claude` each
 register the whole tool list, so with both every tool is there twice (and M1K3
@@ -219,3 +218,7 @@ commands, the token prompt, one route not two), written from Kev's own install
 that day: the plugin answered every tool, and with the `connect` entry still in
 place each tool was listed twice. Confidence 0.85; `claude mcp remove m1k3 -s user`
 was not run in that session.*
+
+*Review: Kev + claude-fable-5.2, 2026-11-13 — plugin 0.2.0 carries no bridge (Claude's
+directory holds a plugin that runs a script): the Node and port sentences are gone.
+Confidence 0.6 until 0.2.0 has answered a live tool call.*

@@ -157,9 +157,9 @@ session. This repo is its own marketplace:
 /reload-plugins
 ```
 
-Paste the access token when asked (it goes into your system's credential store)
-and leave the port at 4242. Use the plugin **or** `m1k3 connect claude`, not
-both: with both, every tool is listed twice. What the plugin runs and sends:
+Paste the access token when asked (it goes into your system's credential store).
+Use the plugin **or** `m1k3 connect claude`, not
+both: with both, every tool is listed twice. What the plugin sends:
 [`integrations/claude-plugin`](./integrations/claude-plugin).
 
 Not an agent? From 1.4 the Mac app also has a **Local API**: an OpenAI-compatible

@@ -1,6 +1,6 @@
 {
   "name": "m1k3",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Give Claude your private, on-device memory, documents and voice, through the M1K3 app on this Mac.",
   "author": {
     "name": "Round Tower",
@@ -20,13 +20,6 @@
       "description": "In M1K3, open Settings > Server and copy the access token. It stays on this Mac.",
       "sensitive": true,
       "required": true
-    },
-    "port": {
-      "type": "string",
-      "title": "Port",
-      "description": "The port M1K3's MCP server listens on. Leave it at 4242 unless you changed it in M1K3.",
-      "default": "4242",
-      "required": false
     }
   }
 }
