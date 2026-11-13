@@ -26,6 +26,7 @@
 //  per-frame main-thread work, no re-raster, no _adjustLength). The label only asks once per transition
 //  (`.task(id:)`); the static dim stays as the fallback for Reduce Motion or a button it can't find.
 //  Confidence 0.75 (verify-by-launch: sampled main thread during a warm, the glyph captured breathing).
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — the glyph keeps no label of its own (the status item is named on the label that holds it); the lint rule is waived there by name. Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
 
 import AppKit
 import Foundation
@@ -182,6 +183,8 @@ private struct BreathingGlyph: View {
     let breathes: Bool
 
     var body: some View {
+        // The status item is named by `accessibilityLabel` on the label that holds this glyph.
+        // swiftlint:disable:next accessibility_label_for_image
         Image(nsImage: image)
             .opacity(breathes ? 0.6 : 1.0)
     }

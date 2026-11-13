@@ -50,6 +50,7 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — the 10-09 UNVERIFIED is answered: the transcript and sidebar DID
 //  ghost through (541, Kev), so ContentView now fades the split view under this overlay. The glass here stays as
 //  the hero's floor. Confidence 0.7 (verify-by-launch owed).
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — the face says it is a button to assistive tech, and the mic's breathe sits out under Reduce Motion like the chat mic's. Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
 
 import M1K3Avatar
 import M1K3Voice
@@ -57,6 +58,7 @@ import SwiftUI
 
 struct VoiceModeView: View {
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// The hero must CLAIM first-responder on appear, or Space/Esc go nowhere —
     /// it's mounted as a full-window overlay over the chat, so `.focusable()`
     /// alone doesn't route key presses here until something grants focus.
@@ -87,6 +89,7 @@ struct VoiceModeView: View {
                 .onTapGesture(perform: primaryAction)
                 .accessibilityLabel("M1K3")
                 .accessibilityHint("Tap to start talking, or to interrupt")
+                .accessibilityAddTraits(.isButton)
 
             // Floating chrome, bottom-anchored on glass so the spoken line stays
             // legible over the avatar. The outer VStack/Spacer is non-interactive
@@ -299,7 +302,8 @@ struct VoiceModeView: View {
                     // Smooth mic↔mic.fill swap, and a gentle living breathe while
                     // M1K3 is actually listening — the chrome reflects the loop.
                     .contentTransition(.symbolEffect(.replace))
-                    .symbolEffect(.breathe, isActive: isListening)
+                    // Breathe scales, so it sits out under Reduce Motion (as the chat mic does).
+                    .symbolEffect(.breathe, isActive: isListening && !reduceMotion)
             }
             .buttonStyle(.glass).buttonBorderShape(.circle)
             .tint(isListening ? .red : nil)

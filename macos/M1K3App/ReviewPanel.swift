@@ -15,6 +15,7 @@
 //  syntax-highlights source — so the panel grows into a code reviewer for free.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-19, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — the address-bar buttons are named for VoiceOver (Clear, Open in browser, Choose a file); the address icon is hidden. Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
 
 import AppKit
 import M1K3Preview
@@ -72,6 +73,7 @@ struct ReviewPanel: View {
         @Bindable var review = review
         return HStack(spacing: 12) {
             Image(systemName: addressIcon)
+                .accessibilityHidden(true)
                 .foregroundStyle(.secondary)
                 .font(.title3)
             TextField("Paste a link or path…", text: $review.input)
@@ -81,6 +83,7 @@ struct ReviewPanel: View {
             if !review.input.isEmpty {
                 Button { review.clear() } label: {
                     Image(systemName: "xmark.circle.fill")
+                        .accessibilityLabel("Clear")
                         .foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
@@ -89,11 +92,13 @@ struct ReviewPanel: View {
             if let url = review.currentWebURL {
                 Button { NSWorkspace.shared.open(url) } label: {
                     Image(systemName: "safari")
+                        .accessibilityLabel("Open in browser")
                 }
                 .help("Open in browser")
             }
             Button { showImporter = true } label: {
                 Image(systemName: "folder")
+                    .accessibilityLabel("Choose a file to review")
             }
             .help("Choose a file to review")
         }

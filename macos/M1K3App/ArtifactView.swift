@@ -6,6 +6,9 @@
 //  (live WKWebView) and Code (syntax-highlighted source) — plus an Export
 //  button. The WebView uses a non-persistent data store (same privacy stance
 //  as WebReviewView), and loads the HTML string directly rather than from a URL.
+//
+//  Signed: Kev + claude-fable-5.2, 2026-11-13 — only the Export button's VoiceOver name (lint-driven,
+//  not yet heard in VoiceOver). Confidence 0.8. Prior: Unknown (the rest of this file is unsigned).
 
 import AppKit
 import M1K3Preview
@@ -82,6 +85,7 @@ struct ArtifactView: View {
                 showExporter = true
             } label: {
                 Image(systemName: "square.and.arrow.down")
+                    .accessibilityLabel("Export \(artifact.filename)")
             }
             .help("Export \(artifact.filename)")
 

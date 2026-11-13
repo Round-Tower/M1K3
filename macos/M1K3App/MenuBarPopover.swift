@@ -17,6 +17,7 @@
 //  agent activity), and an activity line wraps to two lines instead of truncating. Verify-by-launch.
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — the footer's Settings opens the main window's
 //  Settings screen (the Settings scene retired). Confidence 0.85.
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — decorative glyphs (the pixel mark, label icons, the tile icon above its title) are hidden from accessibility. Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
 
 import AppKit
 import M1K3Avatar
@@ -132,6 +133,7 @@ struct MenuBarPopover: View {
         let treatment = env.avatar.state.activity.glyphTreatment(isRecording: env.isRecording)
         return HStack(spacing: 9) {
             Image(nsImage: MenuBarGlyphStyle.pixelM.image(pointSize: 20))
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
                 Text(env.selectedBrain.displayName).font(.pixelTitle)
                 Text(Self.runtimeLabel(env.selectedRuntime))
@@ -211,6 +213,7 @@ struct MenuBarPopover: View {
                     Text(pulse.createdAt, style: .relative) + Text(" ago")
                 } icon: {
                     Image(systemName: "waveform.path.ecg")
+                        .accessibilityHidden(true)
                 }
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -242,6 +245,7 @@ struct MenuBarPopover: View {
                         Text(todoCountLine)
                     } icon: {
                         Image(systemName: "checklist")
+                            .accessibilityHidden(true)
                     }
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -485,6 +489,7 @@ private struct BarToggle: View {
         Button(action: action) {
             VStack(spacing: 3) {
                 Image(systemName: systemImage).font(.system(size: iconSize, weight: .medium))
+                    .accessibilityHidden(true)
                 Text(title).font(.caption2)
             }
             .frame(maxWidth: .infinity)

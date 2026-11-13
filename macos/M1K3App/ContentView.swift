@@ -124,6 +124,7 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-03 — a web search toggle beside the brain switcher (Kev: "a toggle on the
 //  chat screen to enable web search, just so it's clear, like the brain toggle"). Same key as Settings ▸ Privacy
 //  and the menu bar. Confidence 0.8 (verify-by-launch).
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — banner and strip icons that sit beside their own text are hidden from accessibility. Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
 
 import M1K3Avatar
 import M1K3Chat
@@ -988,6 +989,7 @@ struct ContentView: View {
                 ForEach(pendingFiles) { file in
                     HStack(spacing: 6) {
                         Image(systemName: "doc.text")
+                            .accessibilityHidden(true)
                             .foregroundStyle(.secondary)
                         Text(file.filename)
                             .lineLimit(1)
@@ -1910,6 +1912,7 @@ private struct SnagBanner: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "bandage")
+                .accessibilityHidden(true)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.tint)
             Text("I hit a snag last time. Send Round Tower a short report? You'll see it first.")
@@ -1938,6 +1941,7 @@ private struct VoiceUpgradeBanner: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "waveform.badge.plus")
+                .accessibilityHidden(true)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.tint)
             Text("That was my everyday voice. Want to hear my proper one?")
@@ -2060,6 +2064,7 @@ private struct VoicePermissionBanner: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "mic.slash")
+                .accessibilityHidden(true)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.orange)
             VStack(alignment: .leading, spacing: 2) {
@@ -2103,6 +2108,7 @@ private struct IngestBanner: View {
                 // Insertion transition, not a Bool-keyed bounce (Bools
                 // double-fire and the view is freshly inserted on the flip).
                 Image(systemName: icon)
+                    .accessibilityHidden(true)
                     .foregroundStyle(iconColor)
                     .transition(.symbolEffect)
             }

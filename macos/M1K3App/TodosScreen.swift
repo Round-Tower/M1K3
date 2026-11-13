@@ -16,6 +16,7 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-08, Confidence 0.85 — first-drive review: Dismiss on open rows is
 //  hover-only (+ a context menu with Done/Dismiss); the Add field parses a trailing due phrase via
 //  DueDateParser ("by Friday", "in 3 days", "3 oct") — package-pinned; the placeholder teaches it.
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — the circle button reads "Mark done" and a resolved row's symbol reads Done / Dismissed (state was symbol-only). Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
 
 import M1K3Todos
 import SwiftUI
@@ -140,6 +141,7 @@ struct TodosScreen: View {
                 Task { await env?.completeTodo(todo) }
             } label: {
                 Image(systemName: "circle")
+                    .accessibilityLabel("Mark done")
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
@@ -165,6 +167,7 @@ struct TodosScreen: View {
     private func resolvedRow(_ todo: Todo) -> some View {
         HStack(alignment: .firstTextBaseline) {
             Image(systemName: todo.state == .done ? "checkmark.circle.fill" : "xmark.circle")
+                .accessibilityLabel(todo.state == .done ? "Done" : "Dismissed")
                 .foregroundStyle(.tertiary)
             Text(todo.title)
                 .strikethrough(todo.state == .done)

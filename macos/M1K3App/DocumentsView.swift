@@ -22,6 +22,7 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — Photo rows (caption memory): `photo` icon, "Photo" label, no
 //  quarantine button (restore would make it Spotlight-donatable), privacy line in the empty state. TDD_SKIP: view
 //  body.
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — the lock toggle is named for VoiceOver with the words its tooltip already used. Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
 
 import M1K3Knowledge
 import SwiftUI
@@ -107,6 +108,7 @@ struct DocumentsView: View {
                 reload()
             } label: {
                 Image(systemName: showInternal ? "lock.open" : "lock")
+                    .accessibilityLabel(showInternal ? "Hide internal items" : "Show quarantined items")
             }
             .buttonStyle(.borderless)
             .help(showInternal ? "Hide internal items" : "Show quarantined items")
