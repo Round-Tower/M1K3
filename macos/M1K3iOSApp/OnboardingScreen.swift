@@ -32,6 +32,10 @@
 //
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — earcons (Kev's iPhone list): a selection tick on each brain and face pick,
 //  the done chord on "Say hello". Ambient session, so they honour the silent switch. Verify-on-device.
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — Xcode's accessibility audit found 23 issues here (contrast 9, clipped 9,
+//  not scaling 5). The supporting copy is plain white at a fixed opacity instead of the vibrancy styles, the column
+//  scrolls when it outgrows the screen (it could only compress), and the wordmark scales with text size. Measured by
+//  re-running the audit on a Simulator; the look is verify-on-device. Confidence 0.65.
 
 import M1K3Avatar
 import M1K3Inference
@@ -40,6 +44,7 @@ import SwiftUI
 
 struct OnboardingScreen: View {
     @Environment(AppCore.self) private var core
+    @Environment(\.dynamicTypeSize) private var typeSize
     @AppStorage(CompanionDefaults.companionKey) private var companion = CompanionDefaults.houseCompanion.id
     let onDone: () -> Void
 
@@ -57,47 +62,24 @@ struct OnboardingScreen: View {
         core.brainMenu
     }
 
+    /// Supporting copy on this screen. `.secondary` / `.tertiary` are vibrancy styles: over the
+    /// avatar and the glass cards they measured under the 4.5:1 contrast floor (Xcode's audit,
+    /// 2026-11-13: nine failures here). Plain white at a fixed opacity holds on the dark scrim.
+    private static let copy = Color.white.opacity(0.82)
+    /// The cards' footnote line: quieter than `copy`, still above the floor.
+    private static let quietCopy = Color.white.opacity(0.68)
+
     var body: some View {
         ZStack {
             backdrop
-            VStack(spacing: 20) {
-                Spacer(minLength: 12)
-                Text("M1K3")
-                    .font(.pixel(34))
-                    .kerning(3)
-                    .foregroundStyle(.white)
-                HStack(spacing: 8) {
-                    Text(step == .brain ? "Pick a brain." : "Pick a face.")
-                    if faceLoading {
-                        ProgressView().controlSize(.small)
-                        Text("Loading…")
-                    }
+            // Scrolls when the cards outgrow the screen (larger text sizes, a small phone);
+            // `minHeight` keeps the column centred exactly as before when they fit.
+            GeometryReader { screen in
+                ScrollView {
+                    column.frame(minHeight: screen.size.height)
                 }
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .animation(.easeInOut(duration: 0.2), value: faceLoading)
-
-                switch step {
-                case .brain: brainStep
-                case .face: faceStep
-                }
-
-                // Honest on a Home-only device: the brain is your Mac, not this iPad.
-                Label(
-                    !menu.hasLocalBrain
-                        ? "Runs on your own Mac, over your own Wi‑Fi"
-                        : "Private by design",
-                    systemImage: "lock.fill"
-                )
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .padding(.top, 6)
-
-                Spacer()
+                .scrollBounceBehavior(.basedOnSize)
             }
-            .frame(maxWidth: 520)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .animation(.easeInOut(duration: 0.3), value: step)
         }
         .preferredColorScheme(.dark)
         .sheet(isPresented: $pairing, onDismiss: pairingDismissed) {
@@ -120,6 +102,49 @@ struct OnboardingScreen: View {
                 core.avatar.setEmotion(.happy)
             }
         }
+    }
+
+    /// The title, the step's instruction, its cards and the privacy line.
+    private var column: some View {
+        VStack(spacing: 20) {
+            Spacer(minLength: 12)
+            // The wordmark scales with the reader's text size like the copy under it.
+            Text("M1K3")
+                .font(.custom(BundledFonts.pixelFamily, size: 34, relativeTo: .largeTitle))
+                .kerning(3)
+                .foregroundStyle(.white)
+            HStack(spacing: 8) {
+                Text(step == .brain ? "Pick a brain." : "Pick a face.")
+                if faceLoading {
+                    ProgressView().controlSize(.small)
+                    Text("Loading…")
+                }
+            }
+            .font(.callout)
+            .foregroundStyle(Self.copy)
+            .animation(.easeInOut(duration: 0.2), value: faceLoading)
+
+            switch step {
+            case .brain: brainStep
+            case .face: faceStep
+            }
+
+            // Honest on a Home-only device: the brain is your Mac, not this iPad.
+            Label(
+                !menu.hasLocalBrain
+                    ? "Runs on your own Mac, over your own Wi‑Fi"
+                    : "Private by design",
+                systemImage: "lock.fill"
+            )
+            .font(.caption)
+            .foregroundStyle(Self.copy)
+            .padding(.top, 6)
+
+            Spacer()
+        }
+        .frame(maxWidth: 520)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .animation(.easeInOut(duration: 0.3), value: step)
     }
 
     // MARK: - Backdrop
@@ -235,24 +260,36 @@ struct OnboardingScreen: View {
     private func cardBody(
         glyph: String, title: String, detail: String, footnote: String
     ) -> some View {
-        HStack(spacing: 14) {
+        // At the accessibility text sizes the glyph sits above the copy: beside it, the copy was
+        // left a column a few letters wide (verified on a Simulator at the largest size).
+        let stacked = typeSize.isAccessibilitySize
+        let layout = stacked
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 10))
+            : AnyLayout(HStackLayout(spacing: 14))
+        return layout {
             Image(systemName: glyph)
                 .font(.largeTitle)
                 .foregroundStyle(.tint)
-                .frame(width: 44)
+                .frame(width: stacked ? nil : 44)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 3) {
                 Text(title).font(.headline).foregroundStyle(.white)
                 Text(detail)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Self.copy)
                     .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(footnote)
                     .font(.caption2)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(Self.quietCopy)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.right").foregroundStyle(.secondary)
+            if !stacked {
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right").foregroundStyle(.secondary).accessibilityHidden(true)
+            }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .m1k3Glass(cornerRadius: 18)
     }
