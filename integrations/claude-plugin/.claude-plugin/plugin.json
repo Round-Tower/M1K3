@@ -1,6 +1,7 @@
 {
   "name": "m1k3",
-  "version": "0.2.0",
+  "displayName": "M1K3",
+  "version": "0.2.1",
   "description": "Give Claude your private, on-device memory, documents and voice, through the M1K3 app on this Mac.",
   "author": {
     "name": "Round Tower",

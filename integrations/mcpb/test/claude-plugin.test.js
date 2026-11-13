@@ -34,6 +34,7 @@ test('the plugin ships four files and nothing that runs', () => {
 
 test('the manifest names the plugin, its licence and where its policy and help live', () => {
   assert.equal(plugin.name, 'm1k3');
+  assert.equal(plugin.displayName, 'M1K3', 'the directory title-cases the name to "M1k3" without it');
   assert.match(plugin.version, /^\d+\.\d+\.\d+$/);
   assert.equal(plugin.license, bundle.license);
   assert.ok(plugin.description.length > 20);
