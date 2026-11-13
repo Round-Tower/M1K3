@@ -150,6 +150,8 @@ bundletool-all-*.jar
 !macos/M1K3visionOS/**/*.png
 # Explainer figures (Anatomy builds) and their stills are docs, not test artifacts.
 !macos/docs/figures/**/*.png
+# The Claude plugin's listing icon: a copy of site/icon-512.png (a test holds them equal).
+!integrations/claude-plugin/.claude-plugin/icon.png
 # Launch site is self-contained (no CDN): its og card + favicons must travel.
 !site/**/*.png
 # Brand/icon assets (app-icon iconset + previews, labyrinth marks) must travel.

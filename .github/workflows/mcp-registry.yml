@@ -25,6 +25,9 @@
 # `mcp-registry` environment: until Kev restricts it to master with a required
 # reviewer (Settings ▸ Environments), the master check below is a courtesy, not a
 # boundary, for anyone with write access.
+# Review: Kev + claude-fable-5.2, 2026-11-13 (#824's second pass, folded): the
+# release token sits on the gh steps only, apt updates its index first, and a
+# reused release must carry the bundle. Still never run.
 name: MCP Registry
 
 on:
@@ -62,6 +65,7 @@ jobs:
       - name: Test and build the bundle
         run: |
           set -euo pipefail
+          sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends zsh > /dev/null
           zsh integrations/mcpb/build.sh
           test -s integrations/mcpb/dist/m1k3.mcpb
@@ -108,7 +112,6 @@ jobs:
       contents: write # the release that carries the bundle
     env:
       MCP_PUBLISHER_VERSION: v1.8.1
-      GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
       TAG: mcpb-v${{ needs.build.outputs.version }}
       VERSION: ${{ needs.build.outputs.version }}
@@ -147,9 +150,15 @@ jobs:
       # A release that already exists is a run that failed after this step: reuse its
       # bundle, never rebuild over it (a zip's bytes differ from build to build).
       - name: Create the release, or reuse the one a failed run left
+        env:
+          GH_TOKEN: ${{ github.token }} # on the gh steps only: mcp-publisher never sees it
         run: |
           set -euo pipefail
           if gh release view "$TAG" > /dev/null 2>&1; then
+            if ! gh release view "$TAG" --json assets -q '.assets[].name' | grep -qx 'm1k3.mcpb'; then
+              echo "::error::$TAG exists but carries no m1k3.mcpb. Delete it with its tag (gh release delete $TAG --cleanup-tag) and run again."
+              exit 1
+            fi
             echo "::notice::$TAG already exists: publishing the bundle it carries."
           else
             gh release create "$TAG" m1k3.mcpb \
@@ -159,7 +168,9 @@ jobs:
           fi
 
       # The hash in the listing is the hash of what a client will download.
-      - name: Hash the released bundle and publish the listing
+      - name: Hash the released bundle into the listing
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           mkdir released
@@ -168,4 +179,6 @@ jobs:
           jq --arg sha "$SHA" '.packages[0].fileSha256 = $sha' server.json > listing.json
           mv listing.json server.json
           cat server.json
-          ./mcp-publisher publish
+
+      - name: Publish the listing
+        run: ./mcp-publisher publish

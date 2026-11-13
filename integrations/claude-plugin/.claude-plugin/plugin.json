@@ -1,0 +1,32 @@
+{
+  "name": "m1k3",
+  "version": "0.1.0",
+  "description": "Give Claude your private, on-device memory, documents and voice, through the M1K3 app on this Mac.",
+  "author": {
+    "name": "Round Tower",
+    "url": "https://round-tower.ie"
+  },
+  "homepage": "https://m1k3.app",
+  "repository": "https://github.com/Round-Tower/M1K3",
+  "license": "FSL-1.1-ALv2",
+  "keywords": ["memory", "documents", "voice", "local", "privacy", "mac"],
+  "privacyPolicyUrl": "https://m1k3.app/privacy",
+  "supportUrl": "https://github.com/Round-Tower/M1K3/issues",
+  "documentationUrl": "https://github.com/Round-Tower/M1K3/blob/master/integrations/claude-plugin/README.md",
+  "userConfig": {
+    "access_token": {
+      "type": "string",
+      "title": "M1K3 access token",
+      "description": "In M1K3, open Settings > Server and copy the access token. It stays on this Mac.",
+      "sensitive": true,
+      "required": true
+    },
+    "port": {
+      "type": "string",
+      "title": "Port",
+      "description": "The port M1K3's MCP server listens on. Leave it at 4242 unless you changed it in M1K3.",
+      "default": "4242",
+      "required": false
+    }
+  }
+}

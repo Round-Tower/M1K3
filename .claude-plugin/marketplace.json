@@ -1,0 +1,15 @@
+{
+  "name": "m1k3",
+  "description": "M1K3 for Claude: connect Claude to the private, on-device M1K3 app on your Mac.",
+  "owner": {
+    "name": "Round Tower",
+    "url": "https://round-tower.ie"
+  },
+  "plugins": [
+    {
+      "name": "m1k3",
+      "source": "./integrations/claude-plugin",
+      "description": "Give Claude your private, on-device memory, documents and voice, through the M1K3 app on this Mac."
+    }
+  ]
+}
