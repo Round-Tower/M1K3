@@ -24,7 +24,13 @@ In Claude Code:
 /plugin install m1k3@m1k3
 ```
 
-Then paste the access token when asked.
+Then paste the access token when asked. If the tools do not appear at once,
+run `/reload-plugins`.
+
+Already connected M1K3 with `m1k3 connect claude`? Keep one of the two. With
+both, every tool is listed twice (once as `mcp__m1k3__…`, once as
+`mcp__plugin_m1k3_m1k3__…`). To keep the plugin:
+`claude mcp remove m1k3 -s user`.
 
 ## What this plugin runs, sends and fetches
 
@@ -65,8 +71,13 @@ Signed: Kev + claude-fable-5.2, 2026-11-13, Confidence 0.6. Prior: none (new fil
 Context: Kev, 2026-11-12, on listing M1K3 for Claude users: "Let's go it pal".
 Open: the Cowork and chat limits are as Anthropic's platform-support page read
 on 2026-11-12.
-Review: Kev + claude-fable-5.2, 2026-11-13 — 0.1.0 installed from the marketplace
-and answered a tool call (Kev, by hand). The directory's validator then held it
-for running a script (only Verified organisations may), so 0.2.0 drops the Node
-bridge for a direct loopback HTTP entry: no code, no Node, no port option.
-Confidence 0.6. Open: the directory's verdict on a loopback address.
+
+Review: Kev + claude-fable-5.2, 2026-11-13 — installed from the marketplace by hand (Kev, in a live Claude Code
+session: marketplace add, install, reload): the bridge answered and every tool was driven through it the same day
+(the run that found #826's six bugs). Added `/reload-plugins` and the one-route note: that session had the
+`connect` entry too, and listed each tool twice. Confidence 0.8.
+
+Review: Kev + claude-fable-5.2, 2026-11-13 — the directory's validator held 0.1.0 for running a script (only
+Verified organisations may), so 0.2.0 drops the Node bridge for a direct loopback HTTP entry: no code, no Node,
+no port option. Confidence 0.6: 0.2.0 has not answered a live tool call yet. Open: the directory's verdict on a
+loopback address.

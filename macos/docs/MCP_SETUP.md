@@ -44,6 +44,33 @@ that means running `claude mcp add … --header`, so the token sits in that
 process's arguments for the moment it runs — visible to your own user's
 processes, which is inside what the token doesn't claim to defend (below).
 
+**Claude Code as a plugin.** If you are already in a Claude Code session, you
+can install M1K3 from there instead of from Terminal. The M1K3 repository is its
+own plugin marketplace:
+
+```
+/plugin marketplace add Round-Tower/M1K3
+/plugin install m1k3@m1k3
+/reload-plugins
+```
+
+Claude Code asks for the access token when the plugin is enabled and keeps it in
+your system's credential store. The plugin runs no code and needs nothing else
+installed: it is one setting that points Claude Code at the app on loopback
+([`integrations/claude-plugin`](../../integrations/claude-plugin) says exactly
+what it sends). Its tools appear as `mcp__plugin_m1k3_m1k3__…`.
+
+Pick **one** route for Claude Code. The plugin and `m1k3 connect claude` each
+register the whole tool list, so with both every tool is there twice (and M1K3
+serves one client at a time). To drop the `connect` entry and keep the plugin:
+
+```bash
+claude mcp remove m1k3 -s user
+```
+
+The plugin updates with the marketplace; the `connect` entry is a plain line in
+Claude Code's own config. Either is fine.
+
 **Claude Code by hand** (Settings' Copy button fills the token in):
 
 ```bash
@@ -185,3 +212,13 @@ open_link 1), not 15; the curl smoke test now shows the Authorization header
 #448 made mandatory. Confidence 0.85 (the tokenless call was checked against
 the running app: 401; the tokened curl was not run, to keep the token out of
 argv here).*
+
+*Review: claude-fable-5.2, 2026-11-13 — the Claude Code plugin route (three slash
+commands, the token prompt, one route not two), written from Kev's own install
+that day: the plugin answered every tool, and with the `connect` entry still in
+place each tool was listed twice. Confidence 0.85; `claude mcp remove m1k3 -s user`
+was not run in that session.*
+
+*Review: Kev + claude-fable-5.2, 2026-11-13 — plugin 0.2.0 carries no bridge (Claude's
+directory holds a plugin that runs a script): the Node and port sentences are gone.
+Confidence 0.6 until 0.2.0 has answered a live tool call.*
