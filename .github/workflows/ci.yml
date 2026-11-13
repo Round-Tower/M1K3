@@ -358,7 +358,7 @@ jobs:
       # without the bundle listing it fails here.
       - name: Test the MCP bundle (bridge + manifest)
         working-directory: .
-        run: node --test integrations/mcpb/test/bridge.test.js integrations/mcpb/test/manifest.test.js
+        run: node --test integrations/mcpb/test/bridge.test.js integrations/mcpb/test/manifest.test.js integrations/claude-plugin/test/plugin.test.js
       # llms-full.txt is generated from the site pages; a page edit without a
       # regenerate would leave the AI-readable copy stale.
       - name: llms-full.txt is current
@@ -484,3 +484,5 @@ jobs:
 # Confidence 0.85: CI's own run on ubuntu-24.04 (git 2.43) is the proof still owed.
 # Review: Kev + claude-fable-5.2, 2026-11-12 — the guards job also runs the MCP bundle's Node tests
 # (integrations/mcpb: the stdio bridge and its manifest). Confidence 0.8 (the step is new to CI).
+# Review: Kev + claude-fable-5.2, 2026-11-13 — the same step also runs the Claude plugin's test
+# (integrations/claude-plugin: its bridge is the bundle's, byte for byte).

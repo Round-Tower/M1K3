@@ -53,6 +53,10 @@ integrations/mcpb/build.sh        # writes dist/m1k3.mcpb and prints its SHA-256
 A bundle is a zip of `manifest.json`, `icon.png` (the site's icon, copied in by the
 build) and `server/index.js`.
 
+The same bridge ships as a Claude Code plugin in `integrations/claude-plugin`
+(a test holds the two copies equal): change `server/index.js` here, then copy it
+there.
+
 ## Publishing
 
 `server.json` is the listing for the [MCP Registry](https://registry.modelcontextprotocol.io).
