@@ -282,6 +282,21 @@ struct MemoryFactValidatorTests {
         #expect(!MemoryFactValidator.isAcceptable("The user is a language model"))
     }
 
+    /// Live witness, 2026-11-13: "The user's name is not provided." was a stored profile fact.
+    @Test("rejects a fact whose whole content is that something is not known")
+    func rejectsAbsence() {
+        #expect(!MemoryFactValidator.isAcceptable("The user's name is not provided."))
+        #expect(!MemoryFactValidator.isAcceptable("The user\u{2019}s name is unknown"))
+        #expect(!MemoryFactValidator.isAcceptable("The user's location has not yet been specified."))
+        #expect(!MemoryFactValidator.isAcceptable("The user's occupation was never mentioned"))
+        // A sentence that goes on to say something is a fact.
+        #expect(MemoryFactValidator.isAcceptable("The user is not given to exaggeration."))
+        #expect(MemoryFactValidator.isAcceptable("The cause of the user's allergy was not known until 2019."))
+        #expect(MemoryFactValidator.isAcceptable("The user's father is unknown to most of his colleagues."))
+        #expect(MemoryFactValidator.isAcceptable("The user is not available on Fridays."))
+        #expect(MemoryFactValidator.isAcceptable("The user's employer did not provide a laptop."))
+    }
+
     @Test("keeps genuine user facts, including near-keyword phrasings (no false positives)")
     func keepsGenuineFacts() {
         #expect(MemoryFactValidator.isAcceptable("Kev's sister is called Aoife."))

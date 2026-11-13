@@ -30,6 +30,9 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-10 — the dedupe bar is `EmbedderFloors.dedupe` for the
 //  embedder in use (0.90 stays for Qwen and hashing; EmbeddingGemma 2 carries its own), via
 //  `semanticDedupeThreshold(for:)`.
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — `fenceDrop` also runs `UserNameFence`: a fact naming the user
+//  needs the account's name or a self-introduction (the live store held "Mike", "paL" and "not provided" as
+//  the user's name). Confidence 0.8 (wiring pinned in MemoryDistillationCoordinatorTests).
 //  Review: Kev + claude-fable-5.1, 2026-09-11 (review 10 fold on #288) — `selfNames` is injected
 //  like every other collaborator (default: the account's names); tests pass `.none` and stop
 //  depending on the machine's user name.
@@ -271,6 +274,9 @@ public struct MemoryDistillationCoordinator: Sendable {
         if let count = dropped[.unanchored] {
             Self.log.info("distillation dropped \(count) unanchored fact(s)")
         }
+        if let count = dropped[.unsupportedName] {
+            Self.log.info("distillation dropped \(count) fact(s) naming the user with no introduction behind it")
+        }
         if let count = dropped[.unasked] {
             Self.log.info("distillation dropped \(count) style fact(s) the user never asked for")
         }
@@ -345,13 +351,18 @@ public struct MemoryDistillationCoordinator: Sendable {
     }
 
     /// Why a fence dropped a fact.
-    private enum FenceDrop { case unanchored, unasked }
+    private enum FenceDrop { case unanchored, unasked, unsupportedName }
 
     /// #284's anchor rule, then (#699) the explicit-ask rule a style fact also needs: it
     /// renders into every system prompt. Nil when the fact passes.
     private func fenceDrop(_ fact: DistilledFact, userTurns: [String]) -> FenceDrop? {
         guard DistillationAttribution.isAnchored(fact: fact.text, userTurns: userTurns, selfNames: selfNames) else {
             return .unanchored
+        }
+        // A name is said most often to ADDRESS someone ("Hey Mike"), so sharing the word is not enough
+        // for a fact that names the user (UserNameFence).
+        guard UserNameFence.isSupported(fact: fact.text, userTurns: userTurns, selfNames: selfNames) else {
+            return .unsupportedName
         }
         guard fact.kind == .style else { return nil }
         let asked = StyleAskFence.isExplicitAsk(fact: fact.text, userTurns: userTurns, selfNames: selfNames)
