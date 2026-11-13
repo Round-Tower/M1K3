@@ -46,7 +46,7 @@ and each tool group stay off until you turn them on in M1K3.
 ## Build and test
 
 ```sh
-node --test integrations/mcpb/test/bridge.test.js integrations/mcpb/test/manifest.test.js
+node --test integrations/mcpb/test/bridge.test.js integrations/mcpb/test/manifest.test.js integrations/mcpb/test/claude-plugin.test.js
 integrations/mcpb/build.sh        # writes dist/m1k3.mcpb and prints its SHA-256
 ```
 

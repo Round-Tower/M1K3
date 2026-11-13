@@ -356,7 +356,7 @@ jobs:
       # The Claude bundle's bridge and manifest (integrations/mcpb): Node's own test runner, no
       # dependencies. The manifest test reads the MCP kit's tool names, so a tool added to the app
       # without the bundle listing it fails here.
-      - name: Test the MCP bundle (bridge + manifest)
+      - name: Test the MCP bundle (bridge + manifest) and the Claude plugin
         working-directory: .
         run: node --test integrations/mcpb/test/bridge.test.js integrations/mcpb/test/manifest.test.js integrations/mcpb/test/claude-plugin.test.js
       # llms-full.txt is generated from the site pages; a page edit without a
