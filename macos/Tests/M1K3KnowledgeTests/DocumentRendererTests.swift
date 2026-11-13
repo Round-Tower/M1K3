@@ -92,6 +92,30 @@ struct DocumentRendererTests {
         #expect(out.components(separatedBy: "-").count - 1 == 450)
     }
 
+    @Test("repeating text errs toward printing twice, never toward deleting")
+    func repeatingTextIsNeverShortened() {
+        // A refrain: every 80-character line is the same. The chunker's real overlap is ~200,
+        // but shorter and longer runs fit too. Nothing the document holds may go missing.
+        let line = String(repeating: "la ", count: 26) + "hey "
+        let body = String(repeating: line, count: 40).trimmingCharacters(in: .whitespaces)
+        let windows = DocumentChunker.splitIntoWindows(body)
+        #expect(windows.count > 2)
+        let out = DocumentRenderer.render(title: "Song", kind: .document, chunks: chunks(windows), maxChars: 1_000_000)
+        let rendered = out.replacingOccurrences(of: "# Song  [document]\n\n", with: "")
+        #expect(rendered.count >= body.count)
+    }
+
+    @Test("a call transcript is never stitched: its chunks do not overlap, so a repeat is real speech")
+    func callsAreNotStitched() {
+        let loop = String(repeating: "I think we should ship it on Friday and see what happens. ", count: 3)
+            .trimmingCharacters(in: .whitespaces)
+        let out = DocumentRenderer.render(
+            title: "Standup", kind: .call, chunks: chunks([loop, loop], heading: "Speaker 1"), maxChars: 1_000_000
+        )
+        #expect(out.components(separatedBy: "ship it on Friday").count - 1 == 6)
+        #expect(out.components(separatedBy: "## Speaker 1").count - 1 == 2)
+    }
+
     @Test("sections with different headings are never stitched, even when their text repeats")
     func differentHeadingsNeverStitch() {
         let repeated = "This exact sentence closes one section and opens the next one."

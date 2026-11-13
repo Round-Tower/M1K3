@@ -14,7 +14,7 @@
 //  TodoMCPToolsTests; the store/ceiling wiring is app glue). Prior: none
 //  (new file).
 //  Review: Kev + claude-fable-5.2, 2026-11-13 — propose_todo refuses a title that names no task and reads a
-//  duplicate back as "already has this one, or has dismissed it" (`.duplicate`). Confidence 0.85.
+//  duplicate back as "already has this one" (`.duplicate`). Confidence 0.85.
 //
 
 import Foundation
@@ -94,7 +94,7 @@ public func makeTodoToolDefinitions(
                     + "your client name; only the user can accept, complete, or dismiss it. This never "
                     + "opens a todo, never marks anything done, and is refused when the user has turned "
                     + "suggestions off, the inbox is full, the title names no task, or the user already has "
-                    + "(or dismissed) the same one. Use it for something the user said they "
+                    + "the same one. Use it for something the user said they "
                     + "still need to do — not for your own work.",
                 inputSchema: [
                     "type": "object",
@@ -135,7 +135,7 @@ public func makeTodoToolDefinitions(
                 case .disabled:
                     return "Not proposed: the user has turned suggestions off. Nothing was written."
                 case .duplicate:
-                    return "Not proposed: the user already has this one, or has dismissed it. Nothing was written."
+                    return "Not proposed: the user already has this one. Nothing was written."
                 }
             }
         ),

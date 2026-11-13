@@ -27,7 +27,8 @@
 //  above every memory (found live through the Claude Code plugin: limit 3 gave 4, an unrelated paper's
 //  figure caption above the memory titled like the query). `run` is unchanged for the agent tool and the
 //  App Intent. Confidence 0.8: the order is pinned in GroundedSearchPageTests; margin-over-floor as the
-//  cross-lane score is a heuristic with no blind set behind it yet.
+//  cross-lane score is a heuristic with no blind set behind it yet. Challenged the same day: Gemma's and
+//  Qwen's lanes have comparable margins; hashing's do not, so on hashing floors the lanes take turns.
 //  Open: score `page`'s order on a held-out query set (KEYEVAL's fixtures would do) before the agent adopts it.
 //
 
@@ -90,6 +91,17 @@ public enum GroundedSearch {
     ) -> [ChunkHit] {
         let limit = KnowledgeStore.clampedSearchLimit(limit)
         guard limit > 0 else { return [] }
+        // Hashing's lanes are not comparable by margin: its memory floor (0.10) sits far under
+        // its own noise ceiling (0.408), so a stray memory out-margins the weakest TRUE chunk
+        // (0.402 − 0.35). There the lanes take turns, best of each first.
+        if floors == .hashing {
+            var turns: [ChunkHit] = []
+            for index in 0 ..< Swift.max(knowledge.count, memories.count) {
+                if index < knowledge.count { turns.append(knowledge[index]) }
+                if index < memories.count { turns.append(memories[index]) }
+            }
+            return Array(turns.prefix(limit))
+        }
         func margin(_ hit: ChunkHit) -> Float {
             guard let similarity = hit.similarity else { return -.infinity }
             return similarity - (hit.kind == .memory ? floors.memory : floors.chunk)

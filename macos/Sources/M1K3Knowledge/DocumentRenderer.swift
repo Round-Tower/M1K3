@@ -36,7 +36,7 @@ public enum DocumentRenderer {
         offset: Int = 0
     ) -> String {
         let header = "# \(title)  [\(kind.rawValue)]"
-        let body = stitchedBody(chunks)
+        let body = stitchedBody(chunks, stitching: kind != .call)
         guard !body.isEmpty else {
             return "\(header)\n\n(No readable text — this item was indexed by title only, "
                 + "with no extractable body content. Nothing to return.)"
@@ -73,12 +73,16 @@ public enum DocumentRenderer {
     /// The chunks as one readable body. Consecutive windows of the SAME section
     /// are joined on their overlap, so the text reads once and the heading
     /// prints once; everything else stays a blank line apart, as before.
-    static func stitchedBody(_ chunks: [KnowledgeChunk]) -> String {
+    ///
+    /// `stitching` is off for a call: CallChunker packs speaker turns with NO
+    /// overlap, and a recogniser's repeat loop gives identical long segments
+    /// either side of a boundary — real text, which stitching would delete.
+    static func stitchedBody(_ chunks: [KnowledgeChunk], stitching: Bool = true) -> String {
         var body = ""
         var previous: KnowledgeChunk?
         for chunk in chunks {
             defer { previous = chunk }
-            if let previous, previous.heading == chunk.heading,
+            if stitching, let previous, previous.heading == chunk.heading,
                let remainder = remainderAfterOverlap(previous: previous.content, next: chunk.content)
             {
                 body += remainder
@@ -96,8 +100,12 @@ public enum DocumentRenderer {
     static func remainderAfterOverlap(previous: String, next: String) -> String? {
         let tail = Array(previous.suffix(maximumOverlap))
         let head = Array(next.prefix(maximumOverlap))
-        var length = min(tail.count, head.count)
-        while length >= minimumOverlap {
+        // SHORTEST first. For prose there is one run that fits, so the order is moot. For
+        // repeating text (a refrain, table cells) several fit, and the shortest errs toward
+        // printing a little twice; the longest deleted up to 600 characters in a blind set.
+        let longest = min(tail.count, head.count)
+        var length = minimumOverlap
+        while length <= longest {
             // The chunker ends a window on a word boundary, so after a real overlap
             // `next` carries on with whitespace (or ends). A match that stops
             // mid-word is periodic text, not a window.
@@ -105,7 +113,7 @@ public enum DocumentRenderer {
             if endsOnBoundary, tail[(tail.count - length)...].elementsEqual(head[..<length]) {
                 return String(next.dropFirst(length))
             }
-            length -= 1
+            length += 1
         }
         return nil
     }

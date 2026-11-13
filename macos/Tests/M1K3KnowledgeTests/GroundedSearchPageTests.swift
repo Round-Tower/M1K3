@@ -96,6 +96,19 @@ struct GroundedSearchPageTests {
         #expect(titles == ["d1", "d2", "m1", "m2"])
     }
 
+    @Test("on hashing floors the lanes take turns: a stray memory's margin cannot outrank a true chunk")
+    func hashingInterleaves() {
+        // Measured (EmbedderFloors.hashing): memory noise reaches 0.408 over a 0.10 floor; the
+        // weakest true chunk is 0.402 over 0.35. By margin the page would open with two strays.
+        let knowledge = [hit("true chunk", .document, 0.402)]
+        let memories = [hit("stray 1", .memory, 0.40), hit("stray 2", .memory, 0.30)]
+        let titles = GroundedSearch.page(knowledge: knowledge, memories: memories, limit: 2, floors: .hashing)
+            .map(\.itemTitle)
+        #expect(titles == ["true chunk", "stray 1"])
+        let wide = GroundedSearch.page(knowledge: knowledge, memories: memories, limit: 5, floors: .hashing)
+        #expect(wide.map(\.itemTitle) == ["true chunk", "stray 1", "stray 2"])
+    }
+
     @Test("a zero or negative limit is an empty page, not a trap")
     func degenerateLimits() {
         let knowledge = [hit("doc", .document, 0.80)]

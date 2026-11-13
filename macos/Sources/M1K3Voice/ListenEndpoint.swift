@@ -10,10 +10,12 @@
 //
 //  Three readings of a transcript, when the recogniser gave no confidence
 //  (WhisperKit) or a low one:
-//   - a bare ghost word, once or repeated ("you", "you you"): nothing was said;
-//   - a lone pleasantry ("thank you", "bye"): UNCONFIRMED. It is the other
-//     classic silence ghost and also a perfectly good reply, and a listen has
-//     no re-prompt, so it is neither dropped nor asserted: it comes back marked;
+//   - the bare ghost word REPEATED ("you you"), or marks with no word in them
+//     ("…", "♪"): nothing was said;
+//   - a lone pleasantry ("thank you", "bye") or the ghost word ONCE ("You." is
+//     an answer to "me or you?"): UNCONFIRMED. Each is a classic silence ghost
+//     and also a perfectly good reply, and a listen has no re-prompt, so it is
+//     neither dropped nor asserted: it comes back marked;
 //   - anything else: speech.
 //  Only speech ends the listen on a pause. The other two wait for the timeout,
 //  because the user may not have spoken yet — the cost of a real lone "thanks"
@@ -25,6 +27,9 @@
 //  Signed: Kev + claude-fable-5.2, 2026-11-13, Confidence 0.8 (the policy is
 //  pinned in ListenEndpointTests; that a real silent mic now returns nothing is
 //  verify-by-launch). Prior: none (new file; the 2 s pause moved from the shell).
+//  Known, not handled (challenger's blind set of base.en silence ghosts, 13 of 22 still read as speech):
+//  "Okay.", "I'm sorry.", "So", "Thank you so much." — each is also ordinary speech, and the sanitiser's
+//  phrase list drives voice mode's DROP too, so it is not grown here.
 //  Open: the cause is upstream — WhisperKitProvider reads the stream's in-progress text, which
 //  arrives before the engine's own no-speech verdict. This filters the symptom.
 //
@@ -46,10 +51,12 @@ public enum ListenEndpoint {
     public static func heard(_ transcript: String, confidence: Float? = nil) -> Heard {
         // Pleasantries are judged HERE, not dropped by the sanitiser.
         let text = TranscriptSanitizer.clean(transcript, confidence: confidence, dropPleasantries: false)
-        guard !text.isEmpty else { return .nothing }
+        // "." / "…" / "♪": marks with no word in them are not speech from any recogniser.
+        guard text.contains(where: { $0.isLetter || $0.isNumber }) else { return .nothing }
         guard (confidence ?? 0) < TranscriptSanitizer.confidenceFloor else { return .speech(text) }
-        if TranscriptSanitizer.isGhostWordOnly(transcript, minimumRepeats: 1) { return .nothing }
-        if TranscriptSanitizer.isPleasantryOnly(text) { return .unconfirmed(text) }
+        if TranscriptSanitizer.isGhostWordOnly(transcript, minimumRepeats: 2) { return .nothing }
+        let loneGhost = TranscriptSanitizer.isGhostWordOnly(transcript, minimumRepeats: 1)
+        if loneGhost || TranscriptSanitizer.isPleasantryOnly(text) { return .unconfirmed(text) }
         return .speech(text)
     }
 

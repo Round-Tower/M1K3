@@ -110,22 +110,31 @@ public final class TodoStore: @unchecked Sendable {
     /// `addProposal`, saying WHY nothing was filed. A proposal whose title the
     /// user already has (open or pending) or already turned down (dismissed) is
     /// refused: the heartbeat proposed "Renew passport" twice and "Complete open
-    /// task" twice, because nothing compared a new title with the list. A DONE
-    /// title may be proposed again — tasks recur.
+    /// task" twice, because nothing compared a new title with the list. A
+    /// dismissal blocks the resident only, and a DONE title may always be
+    /// proposed again — tasks recur.
     public func fileProposal(_ todo: Todo, ifPendingCountBelow max: Int) throws -> ProposalFiling {
         guard todo.state == .pending, todo.source.kind != .user else { throw TodoStoreError.notAProposal }
         let key = TodoProposalLine.duplicateKey(todo.title)
+        // A "no" was said to the RESIDENT's unprompted suggestion; it must not gag a visitor
+        // the user has since asked to add the same thing.
+        var blocking = [TodoState.pending, .open]
+        if todo.source.kind == .resident { blocking.append(.dismissed) }
         return try dbQueue.write { db in
+            // The duplicate is read BEFORE the ceiling: "you already have this" is the truer answer.
+            let marks = blocking.map { _ in "?" }.joined(separator: ", ")
+            let known = try String.fetchAll(
+                db, sql: "SELECT title FROM todos WHERE state IN (\(marks))",
+                arguments: StatementArguments(blocking.map(\.rawValue))
+            )
+            // An all-noise title ("The") has an empty key, which is nobody's duplicate.
+            let duplicate = !key.isEmpty && known.contains { TodoProposalLine.duplicateKey($0) == key }
+            guard !duplicate else { return .duplicate }
             let pending = try Int.fetchOne(
                 db, sql: "SELECT COUNT(*) FROM todos WHERE state = ? AND source = ?",
                 arguments: [TodoState.pending.rawValue, todo.source.kind.rawValue]
             ) ?? 0
             guard pending < max else { return .atCeiling }
-            let known = try String.fetchAll(
-                db, sql: "SELECT title FROM todos WHERE state IN (?, ?, ?)",
-                arguments: [TodoState.pending.rawValue, TodoState.open.rawValue, TodoState.dismissed.rawValue]
-            )
-            guard !known.contains(where: { TodoProposalLine.duplicateKey($0) == key }) else { return .duplicate }
             try Self.insert(todo, db)
             return .filed
         }

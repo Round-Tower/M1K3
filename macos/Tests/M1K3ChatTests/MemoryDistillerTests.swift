@@ -286,7 +286,10 @@ struct MemoryFactValidatorTests {
     @Test("rejects a fact whose whole content is that something is not known")
     func rejectsAbsence() {
         #expect(!MemoryFactValidator.isAcceptable("The user's name is not provided."))
-        #expect(!MemoryFactValidator.isAcceptable("The user\u{2019}s name is unknown"))
+        #expect(!MemoryFactValidator.isAcceptable("The user\u{2019}s age was not mentioned in the conversation."))
+        // What is not KNOWN is a fact about a life, not about this chat.
+        #expect(MemoryFactValidator.isAcceptable("The user's biological father is unknown."))
+        #expect(MemoryFactValidator.isAcceptable("The user's diagnosis is not yet known."))
         #expect(!MemoryFactValidator.isAcceptable("The user's location has not yet been specified."))
         #expect(!MemoryFactValidator.isAcceptable("The user's occupation was never mentioned"))
         // A sentence that goes on to say something is a fact.

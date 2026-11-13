@@ -108,7 +108,8 @@ public enum TodoProposalLine {
     /// there is about the LIST, none about the task. A title needs at least one
     /// word that is not list vocabulary.
     public static func isSpecific(_ title: String) -> Bool {
-        titleWords(title).contains { !listVocabulary.contains($0) }
+        // A bare number is the digest's count coming back ("Complete 1 open task").
+        titleWords(title).contains { !listVocabulary.contains($0) && !$0.allSatisfy(\.isNumber) }
     }
 
     /// The form two titles are compared in: case, punctuation and spacing do not
@@ -118,9 +119,12 @@ public enum TodoProposalLine {
         title.lowercased()
             .split(whereSeparator: \.isWhitespace)
             .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: ".,;:!?\"'()[]“”‘’")) }
-            .filter { !$0.isEmpty }
+            .filter { !$0.isEmpty && !keyNoise.contains($0) }
             .joined(separator: " ")
     }
+
+    /// Words a paraphrase adds or drops without changing the task ("Renew my passport").
+    private static let keyNoise: Set<String> = ["a", "an", "the", "my", "your"]
 
     private static func titleWords(_ title: String) -> [String] {
         title.lowercased()
@@ -133,7 +137,8 @@ public enum TodoProposalLine {
         "complete", "finish", "do", "done", "handle", "address", "resolve", "review", "check", "close", "clear",
         "the", "a", "an", "your", "my", "this", "that", "all", "any", "some", "one", "up", "on", "of", "to", "it",
         "open", "pending", "overdue", "outstanding", "remaining", "unfinished", "incomplete", "new", "next",
-        "task", "tasks", "todo", "todos", "item", "items", "list", "thing", "things", "work", "stuff",
-        "follow", "followup", "reminder", "reminders",
+        "task", "tasks", "todo", "todos", "item", "items", "list", "thing", "things", "stuff",
+        "follow", "followup", "reminder", "reminders", "issue", "issues", "something", "everything", "anything",
+        "get", "look", "into", "take", "care", "sort", "out", "deal", "with",
     ]
 }

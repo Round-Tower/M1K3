@@ -21,7 +21,7 @@ struct ListenEndpointTests {
 
     @Test("a ghost or a lone pleasantry does not end the listen: the user may not have spoken yet")
     func ghostDoesNotEndpoint() {
-        for ghost in ["you", "you you", "Thank you.", "thanks for watching", "  "] {
+        for ghost in ["you", "you you", "Thank you.", "thanks for watching", "  ", "…"] {
             #expect(!ListenEndpoint.shouldStop(waited: 6, timeout: 30, transcript: ghost, quiet: 20), "\(ghost)")
         }
     }
@@ -33,14 +33,21 @@ struct ListenEndpointTests {
         #expect(ListenEndpoint.shouldStop(waited: 30, timeout: 30, transcript: "still talking", quiet: 0.1))
     }
 
-    @Test("the bare ghost word, once or repeated, is nothing")
-    func ghostWordIsNothing() {
+    @Test("the ghost word repeated, or marks with no word in them, is nothing")
+    func ghostsAreNothing() {
         // Found live 2026-11-13: two silent listens both returned "you you".
-        for ghost in ["you", "You.", "you you", "you you you you"] {
+        for ghost in ["you you", "You. You.", "you you you you", ".", "...", "…", "♪", "♪ ♪"] {
             #expect(ListenEndpoint.heard(ghost) == .nothing, "\(ghost)")
             #expect(ListenEndpoint.report(ghost).isEmpty, "\(ghost)")
         }
         #expect(ListenEndpoint.heard("you go first") == .speech("you go first"))
+    }
+
+    @Test("the ghost word ONCE is an answer the recogniser could not vouch for: kept, marked")
+    func loneGhostWordIsUnconfirmed() {
+        // "Me or you?" — "You." A listen never drops what might be the reply.
+        #expect(ListenEndpoint.heard("You.") == .unconfirmed("You."))
+        #expect(ListenEndpoint.report("you").contains("unconfirmed"))
     }
 
     @Test("a lone pleasantry is never reported as silence: it comes back, marked unconfirmed")
