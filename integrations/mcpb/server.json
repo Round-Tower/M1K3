@@ -1,0 +1,22 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.Round-Tower/m1k3",
+  "title": "M1K3",
+  "description": "Private, on-device memory, documents and voice from the M1K3 app on your Mac.",
+  "version": "0.1.0",
+  "websiteUrl": "https://m1k3.app",
+  "repository": {
+    "url": "https://github.com/Round-Tower/M1K3",
+    "source": "github",
+    "subfolder": "integrations/mcpb"
+  },
+  "packages": [
+    {
+      "registryType": "mcpb",
+      "identifier": "https://github.com/Round-Tower/M1K3/releases/download/mcpb-v0.1.0/m1k3.mcpb",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

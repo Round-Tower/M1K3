@@ -56,3 +56,23 @@ test('the tool list is the app\'s: the same names as the MCP kit serves', () => 
   assert.deepEqual([...listed].sort(), [...declared].sort());
   assert.ok(manifest.tools.every((t) => t.description && t.description.length <= 120));
 });
+
+// The MCP Registry listing (server.json). The publish workflow adds the bundle's
+// SHA-256 at release time, because a zip's bytes differ from build to build.
+test('the registry listing matches the bundle and keeps the registry\'s rules', () => {
+  const listing = JSON.parse(fs.readFileSync(path.join(root, 'server.json'), 'utf8'));
+  assert.equal(listing.name, 'io.github.Round-Tower/m1k3');
+  assert.equal(listing.version, manifest.version);
+  assert.ok(listing.description.length <= 100, `description is ${listing.description.length} characters`);
+  assert.equal(listing.repository.url, manifest.repository.url);
+  assert.equal(listing.packages.length, 1);
+  const [pkg] = listing.packages;
+  assert.equal(pkg.registryType, 'mcpb');
+  assert.equal(pkg.transport.type, 'stdio');
+  assert.equal(
+    pkg.identifier,
+    `https://github.com/Round-Tower/M1K3/releases/download/mcpb-v${manifest.version}/m1k3.mcpb`,
+  );
+  assert.ok(pkg.identifier.includes('mcp'));
+  assert.equal(pkg.fileSha256, undefined, 'the hash is set by the publish workflow, never by hand');
+});
