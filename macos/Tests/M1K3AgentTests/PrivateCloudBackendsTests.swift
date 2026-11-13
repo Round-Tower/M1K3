@@ -77,5 +77,14 @@ struct PrivateCloudBackendsTests {
             #expect(PrivateCloudComputeBackend.failure(for: limited) == .rateLimited)
             #expect(PrivateCloudComputeBackend.failure(for: CancellationError()) == .other)
         }
+
+        /// Found live 2026-11-13: the cloud answered twice and both replies were discarded, because the
+        /// on-device model that checks them was not installed. Nothing should be sent in that state.
+        @available(macOS 27.0, iOS 27.0, visionOS 27.0, *)
+        @Test("without the on-device model that checks replies, the send is refused before it leaves")
+        func preflightRefusesWithoutOnDeviceModel() {
+            #expect(PrivateCloudComputeBackend.preflight(onDeviceModelReady: false) == .replyCheckUnavailable)
+            #expect(PrivateCloudComputeBackend.preflight(onDeviceModelReady: true) == nil)
+        }
     }
 #endif

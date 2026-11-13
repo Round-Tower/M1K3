@@ -43,6 +43,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-13 — `sendReady`: a send that goes to PCC doesn't wait for the
 //  local brain (#585 follow-up: the phone's send button stayed disabled while Lil warmed, PCC picked).
 //  Confidence 0.9.
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — `PrivateCloudFailure.replyCheckUnavailable`: the on-device model that
+//  checks every reply is not installed, so nothing is sent (see PrivateCloudComputeBackend). Confidence 0.8.
 //
 
 import Foundation
@@ -229,6 +231,11 @@ public enum PrivateCloudFailure: Sendable, Equatable {
     case quotaLimitReached(resetsAt: Date?)
     case network
     case unavailable
+    /// The Mac cannot check a reply: Apple runs its on-device safety model over
+    /// everything Private Cloud Compute sends back, and that model is not
+    /// installed here. The cloud itself may be fine (found live 2026-11-13: it
+    /// answered twice and both answers were discarded on arrival).
+    case replyCheckUnavailable
     case other
 }
 
@@ -247,6 +254,9 @@ public enum PrivateCloudFallback {
             return "I couldn't reach Private Cloud Compute" + tail
         case .unavailable:
             return "Private Cloud Compute isn't available right now" + tail
+        case .replyCheckUnavailable:
+            return "Private Cloud Compute can't be used on this Mac yet (Apple Intelligence's on-device model, "
+                + "which checks its replies, isn't installed)" + tail
         case .other:
             return "Private Cloud Compute couldn't answer that one" + tail
         }
@@ -261,6 +271,7 @@ public enum PrivateCloudFallback {
         case .quotaLimitReached: "you've reached your limit for now"
         case .network: "the connection dropped"
         case .unavailable: "it became unavailable"
+        case .replyCheckUnavailable: "this Mac can't check its replies"
         case .other: "something went wrong on its side"
         }
         return "Private Cloud Compute stopped partway (\(reason)). Ask again without it and \(localBrain) will "
