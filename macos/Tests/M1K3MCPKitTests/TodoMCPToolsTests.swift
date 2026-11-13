@@ -77,6 +77,21 @@ struct TodoMCPToolsTests {
         #expect(try store.list(states: Set(TodoState.allCases)).isEmpty)
     }
 
+    @Test("propose_todo refuses a title that names no task, and reads a duplicate back plainly")
+    func genericAndDuplicate() async throws {
+        let store = try TodoStore()
+        let generic = await registry(store: store)
+            .call(name: "propose_todo", arguments: ["title": .string("Complete open task")])
+        #expect(generic.isError == true)
+        #expect(text(generic)?.contains("doesn't name a task") == true)
+        #expect(try store.list(states: Set(TodoState.allCases)).isEmpty)
+        let again = await registry(store: store, outcome: .duplicate)
+            .call(name: "propose_todo", arguments: ["title": .string("Renew passport")])
+        #expect(again.isError != true)
+        #expect(text(again)?.contains("already has this one") == true)
+        #expect(text(again)?.contains("Nothing was written") == true)
+    }
+
     @Test("an empty title or a bad due date is an isError")
     func badInput() async throws {
         let registry = try registry(store: TodoStore())

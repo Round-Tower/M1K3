@@ -13,6 +13,8 @@
 //  outcomes, due parsing and the propose-only contract pinned by
 //  TodoMCPToolsTests; the store/ceiling wiring is app glue). Prior: none
 //  (new file).
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — propose_todo refuses a title that names no task and reads a
+//  duplicate back as "already has this one, or has dismissed it" (`.duplicate`). Confidence 0.85.
 //
 
 import Foundation
@@ -34,6 +36,8 @@ public enum TodoProposeOutcome: Sendable, Equatable {
     case atCeiling
     /// The user turned suggestions off; nothing written.
     case disabled
+    /// The same title is already on the list, waiting, or was dismissed; nothing written.
+    case duplicate
 }
 
 public struct TodoToolHandlers: Sendable {
@@ -89,7 +93,8 @@ public func makeTodoToolDefinitions(
                 description: "PROPOSE a todo for the user. It lands in their inbox as pending, stamped with "
                     + "your client name; only the user can accept, complete, or dismiss it. This never "
                     + "opens a todo, never marks anything done, and is refused when the user has turned "
-                    + "suggestions off or the inbox is full. Use it for something the user said they "
+                    + "suggestions off, the inbox is full, the title names no task, or the user already has "
+                    + "(or dismissed) the same one. Use it for something the user said they "
                     + "still need to do — not for your own work.",
                 inputSchema: [
                     "type": "object",
@@ -110,6 +115,9 @@ public func makeTodoToolDefinitions(
                 guard title.count <= TodoProposalLine.maxTitleLength else {
                     throw MCPTodoError("propose_todo: title is over \(TodoProposalLine.maxTitleLength) characters")
                 }
+                guard TodoProposalLine.isSpecific(title) else {
+                    throw MCPTodoError("propose_todo: “\(MCPInput.echo(title))” doesn't name a task. Say what needs doing.")
+                }
                 let note = stringArg(args, "note")?.trimmingCharacters(in: .whitespacesAndNewlines)
                 var due: Date?
                 if let raw = stringArg(args, "due")?.trimmingCharacters(in: .whitespaces), !raw.isEmpty {
@@ -126,6 +134,8 @@ public func makeTodoToolDefinitions(
                     return "Not proposed: the inbox already holds unanswered proposals. Nothing was written."
                 case .disabled:
                     return "Not proposed: the user has turned suggestions off. Nothing was written."
+                case .duplicate:
+                    return "Not proposed: the user already has this one, or has dismissed it. Nothing was written."
                 }
             }
         ),
