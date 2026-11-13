@@ -16,6 +16,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — the completeness guard: a store holding
 //  ONLY a Photo reads as empty through every MCP tool (photoOnlyStoreIsEmptyToMCP); search withholds in
 //  the query (Photos crowding FTS top-K cannot starve the page).
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — the hybrid page honours `limit` as a total across both
+//  lanes (searchHybridLimitIsTheTotal). Confidence 0.85.
 
 import Foundation
 import M1K3Knowledge
@@ -168,6 +170,34 @@ struct KnowledgeMCPToolsTests {
         // FTS-only phrasing) and never top-K garbage.
         let out = try await tools.searchKnowledge(query: "zzzznotpresent gibberish", limit: 5)
         #expect(out.contains("don't cover this"))
+    }
+
+    @Test("search_knowledge (hybrid) counts limit across documents and memories together")
+    func searchHybridLimitIsTheTotal() async throws {
+        // Found live 2026-11-13: each lane took the whole limit, so limit 3 returned 4.
+        let embedder = HashingEmbeddingService()
+        let store = try await seededStore()
+        let sentence = "The hydraulic seal on the conveyor failed under load."
+        for n in 1 ... 3 {
+            let id = UUID()
+            let fact = "\(sentence) Noted \(n)."
+            try await store.index(
+                item: KnowledgeItem(id: id, kind: .memory, title: "Seal fact \(n)", sourceRef: "sha:m\(n)"),
+                chunks: [KnowledgeChunk(itemID: id, ordinal: 0, content: fact)],
+                embeddings: embedder.embedBatch([fact])
+            )
+        }
+        let tools = KnowledgeMCPTools(store: store, embedder: embedder)
+        let wide = try await tools.searchKnowledge(query: sentence, limit: 10)
+        #expect(wide.contains("(document)") && wide.contains("(memory)")) // both lanes really answer
+        let two = try await tools.searchKnowledge(query: sentence, limit: 2)
+        #expect(two.contains("\n\n2. "))
+        #expect(!two.contains("\n\n3. "))
+        // Each lane that answered keeps a seat on a two-seat page.
+        #expect(two.contains("(document)") && two.contains("(memory)"))
+        let one = try await tools.searchKnowledge(query: sentence, limit: 1)
+        #expect(one.hasPrefix("1. "))
+        #expect(!one.contains("\n\n2. "))
     }
 
     @Test("list_documents lists every indexed item with its id")

@@ -28,6 +28,8 @@
 //  (`allItems(excluding:)`), so a page is never eaten by newer Photos.
 //  Review: Kev + claude-fable-5.1, 2026-10-09 (#523 second-pass fold) — search withholds in the query too
 //  (`GroundedSearch.run(excludedKinds:)`), replacing the post-`limit` filter that could empty a page.
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — search serves `GroundedSearch.page`: `limit` is the total
+//  and the order is relevance across both lanes (was up to 2 × limit, documents always first). Confidence 0.85.
 //
 
 import Foundation
@@ -49,7 +51,7 @@ struct KnowledgeMCPTools {
         guard !trimmed.isEmpty else { throw MCPInputError("search_knowledge requires a non-empty query") }
         // Photo captions describe private images: withheld from MCP clients,
         // in the query (never a post-filter that could empty the page).
-        let hits = try await GroundedSearch.run(
+        let hits = try await GroundedSearch.page(
             store: store, embedder: embedder, query: trimmed, limit: limit,
             excludedKinds: KnowledgeKind.withheldFromMCP
         )
