@@ -148,6 +148,20 @@ Every request carries the server's access token (Settings ▸ Server);
 `m1k3 login && m1k3 connect claude` wires Claude Code in. Setup for any
 client: [`macos/docs/MCP_SETUP.md`](./macos/docs/MCP_SETUP.md).
 
+Already inside Claude Code? Install it as a plugin instead, without leaving the
+session. This repo is its own marketplace:
+
+```
+/plugin marketplace add Round-Tower/M1K3
+/plugin install m1k3@m1k3
+/reload-plugins
+```
+
+Paste the access token when asked (it goes into your system's credential store)
+and leave the port at 4242. Use the plugin **or** `m1k3 connect claude`, not
+both: with both, every tool is listed twice. What the plugin runs and sends:
+[`integrations/claude-plugin`](./integrations/claude-plugin).
+
 Not an agent? From 1.4 the Mac app also has a **Local API**: an OpenAI-compatible
 endpoint at `http://127.0.0.1:4141/v1` that lends the brain you have loaded to
 any tool on the same Mac. Off by default, its own key, raw brain only (no memory,
@@ -299,4 +313,6 @@ human-and-AI collaboration on the record.
      M1K3MCPKit + M1K3BrainServe the same day). Prior: Unknown.
 Review: Kev + claude-fable-5.1, 2026-11-07, Confidence 0.9 — a "Rough edges" line under Get M1K3 links BUGS.md and the public evals
 (the honesty about model limits is a selling point and was unlinked from the README; a reviewer's note, 2026-11-07).
+Review: Kev + claude-fable-5.2, 2026-11-13, Confidence 0.85 — MCP integration gains the Claude Code plugin route
+(the three slash commands, the token prompt, plugin OR connect), as Kev installed it by hand the same day.
 -->
