@@ -267,6 +267,13 @@
         <div class="term-bar"><span></span><span></span><span></span></div>
         <div class="term-body"><pre><span class="p">$</span> claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp --header "Authorization: Bearer m1k3_…"</pre></div>
       </div>
+      <p>Already in a Claude Code session? Install M1K3 as a plugin there instead (one route, not both); it asks for the token itself:</p>
+      <div class="term">
+        <div class="term-bar"><span></span><span></span><span></span></div>
+        <div class="term-body"><pre>/plugin marketplace add Round-Tower/M1K3
+/plugin install m1k3@m1k3
+/reload-plugins</pre></div>
+      </div>
     </div>
 
     <div class="client-panel client-cursor">
@@ -523,6 +530,8 @@ m1k3 ask "what can you do?"</pre></div>
      Review: Kev + claude-fable-5.1, 2026-11-06 — the CTA rows: Apple's own badges (site/badges, as supplied) replace the
      drawn-logo buttons, a download glyph sits on the DMG button and GitHub's mark on Source, labels are terse ("DMG",
      "Install", "Send to my Mac", "Mac App Store"); the footer credits the service marks. Verified in a local render
-     on the Mac and the iOS door. Confidence 0.85. -->
+     on the Mac and the iOS door. Confidence 0.85.
+     Review: Kev + claude-fable-5.2, 2026-11-13 — the Claude Code panel gains the plugin route under the two terminal lines, as Kev installed it by hand
+     the same day. Confidence 0.85. -->
 </body>
 </html>

@@ -26,7 +26,12 @@ In Claude Code:
 ```
 
 Then paste the access token when asked. Leave the port at 4242 unless you
-changed it in M1K3.
+changed it in M1K3. If the tools do not appear at once, run `/reload-plugins`.
+
+Already connected M1K3 with `m1k3 connect claude`? Keep one of the two. With
+both, every tool is listed twice (once as `mcp__m1k3__…`, once as
+`mcp__plugin_m1k3_m1k3__…`). To keep the plugin:
+`claude mcp remove m1k3 -s user`.
 
 ## What this plugin runs, sends and fetches
 
@@ -67,3 +72,9 @@ Context: Kev, 2026-11-12, on listing M1K3 for Claude users: "Let's go it pal".
 Open: not yet installed from the marketplace by hand, and not yet submitted to
 Claude's directory (Kev's, through the portal). The Cowork and chat limits are
 as Anthropic's platform-support page read on 2026-11-12.
+
+Review: Kev + claude-fable-5.2, 2026-11-13 — installed from the marketplace by hand (Kev, in a live Claude Code
+session: marketplace add, install, reload): the bridge answered and every tool was driven through it the same day
+(the run that found #826's six bugs). That retires the first half of the Open; the directory submission is still
+Kev's. Added `/reload-plugins` and the one-route note: that session had the `connect` entry too, and listed each
+tool twice. Confidence 0.8.

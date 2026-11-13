@@ -81,6 +81,13 @@ connect runs Claude Code's own registration for you — this, at user scope so i
 ```
 $ claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp --header "Authorization: Bearer m1k3_…"
 ```
+Already in a Claude Code session? Install M1K3 as a plugin there instead (one route, not both); it asks for the token itself:
+
+```
+/plugin marketplace add Round-Tower/M1K3
+/plugin install m1k3@m1k3
+/reload-plugins
+```
 ```
 $ m1k3 connect cursor
 ```
@@ -260,6 +267,15 @@ the two it edits keep every other server in the file, and get one .bak beside th
 $ claude mcp add --transport http -s user m1k3 http://127.0.0.1:4242/mcp --header "Authorization: Bearer m1k3_…"
 ```
 -s user registers it once for every project, which is the point of a resident. If an m1k3 entry is already there, connect removes it and adds it again, so an entry from before the token gets the header.
+
+Or install it as a plugin, without leaving Claude Code. The M1K3 repository is its own plugin marketplace:
+
+```
+/plugin marketplace add Round-Tower/M1K3
+/plugin install m1k3@m1k3
+/reload-plugins
+```
+Claude Code asks for the access token when the plugin is enabled and keeps it in your system's credential store. It needs Node 18 or later, and it is one file that passes tool calls to the app on this Mac: what it runs and sends (https://github.com/Round-Tower/M1K3/tree/master/integrations/claude-plugin). Use the plugin or m1k3 connect claude, not both: with both, every tool is listed twice.
 
 #### Cursor — ~/.cursor/mcp.json
 
@@ -738,6 +754,15 @@ Step 3 — use it. Ask Claude something your documents answer:
   ⎿ 3 chunks, retrieved on-device
 ```
 Claude now cites your files, not its training data. The remember / recall_memory tools work the same way — an agent can persist a fact today and another agent can recall it next week, all from the same local store.
+
+Already inside Claude Code? Install M1K3 as a plugin instead; the repository is its own plugin marketplace. Claude Code asks for the access token when the plugin is enabled:
+
+```
+/plugin marketplace add Round-Tower/M1K3
+/plugin install m1k3@m1k3
+/reload-plugins
+```
+Use the plugin or m1k3 connect claude, not both: with both, every tool is listed twice.
 
 ### How do I connect Claude Desktop or other clients?
 
