@@ -22,6 +22,8 @@
 //  Signed: Kev + claude-fable-5.2, 2026-11-12, Confidence 0.8 (pure and pinned),
 //  Prior: none (new file). Context: Kev, 2026-11-12: "people want PCC available
 //  via the OpenAI server, and via MCP".
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — the `.other` failure line says the reason is in M1K3's log and
+//  where (two live tool calls read only "couldn't answer that one"). Confidence 0.85.
 //
 
 import Foundation
@@ -86,7 +88,8 @@ public enum PrivateCloudLending {
         case let .quotaLimitReached(resetsAt): refusal(.exhausted(resetsAt: resetsAt), now: now) ?? ""
         case .network: "M1K3 couldn't reach Private Cloud Compute."
         case .unavailable: refusal(.unavailable, now: now) ?? ""
-        case .other: "Private Cloud Compute couldn't answer that one."
+        case .other: "Private Cloud Compute couldn't answer that one, and gave M1K3 no reason it can name. "
+            + "The error is in M1K3's log (Console, subsystem app.m1k3, category afm)."
         }
     }
 

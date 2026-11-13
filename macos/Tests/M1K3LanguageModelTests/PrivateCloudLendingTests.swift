@@ -88,6 +88,16 @@ struct PrivateCloudLendingTests {
         #expect(line.contains("Private Cloud Compute"))
     }
 
+    @Test("An unexplained failure says where the reason is, and no two failures read the same")
+    func unexplainedFailurePointsAtTheLog() {
+        let now = Date(timeIntervalSince1970: 0)
+        let other = PrivateCloudLending.failureLine(.other, now: now)
+        #expect(other.contains("M1K3's log"))
+        #expect(other.contains("app.m1k3"))
+        let all: [PrivateCloudFailure] = [.rateLimited, .quotaLimitReached(resetsAt: nil), .network, .unavailable, .other]
+        #expect(Set(all.map { PrivateCloudLending.failureLine($0, now: now) }).count == all.count)
+    }
+
     @Test("The hourly budget lets thirty calls go, refuses the next with a wait, and frees up as the hour rolls")
     func budget() {
         var budget = PrivateCloudLending.Budget()

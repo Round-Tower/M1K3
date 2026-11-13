@@ -33,6 +33,10 @@
 //  now #if canImport(FoundationModels). Confidence now 0.85.
 //  Review: Kev + claude-opus-4-6, 2026-10-12 — `live()` returns a backend on iOS/visionOS (no
 //  `processHasEntitlement()` — the system enforces it). Confidence 0.8.
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — the failure line logs `ErrorChain.summary` ahead of the
+//  preview: two live ask_private_cloud failures logged `LanguageModelError -1` and were cut off before the
+//  underlying errors. Confidence 0.8 (the helper is pinned; this file compiles only where FoundationModels 27 does).
+//  Open: read the chain off the next live failure and map that cause to its own `PrivateCloudFailure` case.
 //
 
 import Foundation
@@ -94,7 +98,10 @@ import M1K3LanguageModel
                     } catch {
                         let described = String(describing: error)
                         let preview = LogPreview.preview(described, max: Self.errorPreviewCap)
-                        Self.log.error("pcc failed: \(preview, privacy: .public)")
+                        // The chain FIRST: the preview spends its 200 characters on the outer
+                        // wrapper and stops before the underlying errors, which are the cause.
+                        let chain = ErrorChain.summary(error)
+                        Self.log.error("pcc failed: \(chain, privacy: .public) | \(preview, privacy: .public)")
                         continuation.finish(throwing: PrivateCloudError(Self.failure(for: error)))
                     }
                 }
