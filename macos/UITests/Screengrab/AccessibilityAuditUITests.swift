@@ -13,6 +13,11 @@
 //  What it cannot check: whether VoiceOver or Voice Control lets someone finish
 //  a task. That stays a hand run before any store accessibility label is claimed.
 //
+//  It also cannot prove WHICH screen it audited. The plate suite found that a
+//  text query over the main window aborts XCTest's snapshot, so these tests
+//  settle on a timer like the plates do and name no anchor: read a clean
+//  report beside the app, never as proof by itself that the screen was up.
+//
 //  Output: a text attachment per screen named `a11y-<screen>`, and the same
 //  report written to `M1K3_A11Y_OUT/<screen>.txt` when that names a directory
 //  (`tools/dev/a11y_audit.sh` sets it and prints the combined report).
@@ -82,13 +87,15 @@ final class AccessibilityAuditUITests: XCTestCase {
         app.activate()
 
         let collected = Collected()
+        var incomplete = ""
         do {
             try app.performAccessibilityAudit(for: .all) { issue in
                 collected.findings.append(AccessibilityAuditFinding(
                     screen: plate.rawValue,
                     kind: Self.name(of: issue.auditType),
                     element: Self.name(of: issue.element),
-                    detail: issue.compactDescription
+                    detail: issue.compactDescription,
+                    place: Self.place(of: issue.element)
                 ))
                 return true // handled: keep going, the report carries it
             }
@@ -96,16 +103,18 @@ final class AccessibilityAuditUITests: XCTestCase {
             // The audit itself could not run (a tree snapshot timed out): say so
             // rather than report a clean screen.
             XCTFail("\(plate.rawValue): the audit did not complete: \(error.localizedDescription)")
+            incomplete = "AUDIT DID NOT COMPLETE: \(error.localizedDescription) — the list below is partial, not a clean screen.\n"
         }
 
-        let report = AccessibilityAuditReport.render(collected.findings)
+        let report = incomplete + AccessibilityAuditReport.render(collected.findings)
         let attachment = XCTAttachment(string: report)
         attachment.name = "a11y-\(plate.rawValue)"
         attachment.lifetime = .keepAlways
         add(attachment)
         if let out = ProcessInfo.processInfo.environment["M1K3_A11Y_OUT"], !out.isEmpty {
             let url = URL(fileURLWithPath: out, isDirectory: true).appendingPathComponent("\(plate.rawValue).txt")
-            try report.write(to: url, atomically: true, encoding: .utf8)
+            // Best-effort: the attachment above is the record if the runner cannot write here.
+            try? report.write(to: url, atomically: true, encoding: .utf8)
         }
         let found = AccessibilityAuditReport.unique(collected.findings)
         XCTAssert(found.isEmpty, "\(plate.rawValue): \(AccessibilityAuditReport.summary(found))")
@@ -116,6 +125,11 @@ final class AccessibilityAuditUITests: XCTestCase {
         guard let element, element.exists else { return "" }
         let label = element.label
         return label.isEmpty ? element.identifier : label
+    }
+
+    private static func place(of element: XCUIElement?) -> String {
+        guard let element, element.exists else { return "" }
+        return "\(element.frame)"
     }
 
     private static func name(of type: XCUIAccessibilityAuditType) -> String {

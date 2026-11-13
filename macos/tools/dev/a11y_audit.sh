@@ -65,7 +65,7 @@ if (( largest )); then
   xcrun simctl bootstatus "$udid" -b >/dev/null
   previous=$(xcrun simctl ui "$udid" content_size)
   xcrun simctl ui "$udid" content_size accessibility-extra-extra-extra-large
-  trap restore_text EXIT
+  trap restore_text EXIT INT TERM   # an aborted run must not leave the Simulator at the largest size
   echo ">>> text size: accessibility-extra-extra-extra-large (was $previous)"
 fi
 
@@ -88,7 +88,7 @@ if [[ -d $xcresult ]]; then
   rm -rf "$export_dir"; mkdir -p "$export_dir"
   xcrun xcresulttool export attachments --path "$xcresult" --output-path "$export_dir" >/dev/null 2>&1 || true
   if [[ -f $export_dir/manifest.json ]]; then
-    python3 "$root/tools/dev/a11y_collect.py" "$export_dir" "$out"
+    python3 "$root/tools/dev/a11y_collect.py" "$export_dir" "$out" || echo "warn: could not file the reports from the xcresult"
   fi
 fi
 
@@ -99,7 +99,10 @@ for report in "$out"/*.txt(N); do
   found=1
   echo; echo "--- ${report:t:r}"; cat "$report"
 done
-(( found )) || echo "no report was written — the tests did not reach the audit (xcodebuild exit=$rc)"
+if (( ! found )); then
+  echo "no report was written — no screen was audited (xcodebuild exit=$rc)"
+  (( rc )) || rc=3   # nothing audited is never a pass, whatever xcodebuild said
+fi
 echo
 echo "xcodebuild test exit=$rc · reports in $out"
 exit $rc

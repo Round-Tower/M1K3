@@ -498,5 +498,7 @@ private struct BarToggle: View {
         }
         .buttonStyle(.glass)
         .help(isOn ? "\(title): on" : "\(title): off")
+        // On/off was colour and a tooltip only; say it to assistive tech too.
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 }

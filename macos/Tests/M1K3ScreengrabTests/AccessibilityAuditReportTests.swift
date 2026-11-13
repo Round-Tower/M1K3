@@ -55,6 +55,23 @@ struct AccessibilityAuditReportTests {
         #expect(AccessibilityAuditReport.unique(findings).count == 3)
     }
 
+    @Test("two unnamed elements with the same issue in different places are two findings")
+    func unnamedElementsStayApart() {
+        let first = AccessibilityAuditFinding(
+            screen: "chat", kind: "description", element: "", detail: "No description", place: "{{0, 0}, {44, 44}}"
+        )
+        var second = first
+        second.place = "{{60, 0}, {44, 44}}"
+        #expect(AccessibilityAuditReport.unique([first, second, first]).count == 2)
+        #expect(AccessibilityAuditReport.summary([first, second, first]) == "2 issues on 1 screen: description 2")
+    }
+
+    @Test("kinds with the same count are listed by name, so the summary never reorders between runs")
+    func summaryTieBreak() {
+        let findings = [finding("chat", "trait", "A"), finding("chat", "contrast", "B"), finding("chat", "hit region", "C")]
+        #expect(AccessibilityAuditReport.summary(findings) == "3 issues on 1 screen: contrast 1, hit region 1, trait 1")
+    }
+
     @Test("the report groups by screen in first-seen order, one line per finding")
     func renderGroups() {
         let findings = [

@@ -22,18 +22,23 @@ public struct AccessibilityAuditFinding: Sendable, Hashable {
     public var element: String
     /// Xcode's description of the issue.
     public var detail: String
+    /// Where the element sits (its frame, as text). Never printed: it is what keeps two
+    /// different unnamed buttons with the same issue from collapsing into one finding.
+    public var place: String
 
-    public init(screen: String, kind: String, element: String, detail: String) {
+    public init(screen: String, kind: String, element: String, detail: String, place: String = "") {
         self.screen = screen
         self.kind = kind
         self.element = element
         self.detail = detail
+        self.place = place
     }
 }
 
 public enum AccessibilityAuditReport {
     /// Findings with exact repeats removed, first-seen order kept. The audit
-    /// can raise the same issue on the same element more than once in a pass.
+    /// can raise the same issue on the same element more than once in a pass;
+    /// the same issue on a different element (another `place`) is another finding.
     public static func unique(_ findings: [AccessibilityAuditFinding]) -> [AccessibilityAuditFinding] {
         var seen = Set<AccessibilityAuditFinding>()
         return findings.filter { seen.insert($0).inserted }

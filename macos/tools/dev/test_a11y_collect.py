@@ -86,3 +86,23 @@ def test_a_name_that_would_leave_the_report_folder_is_refused(tmp_path: Path) ->
     out = tmp_path / "out"
     assert m.collect(export, out) == []
     assert not (tmp_path / "evil.txt").exists()
+
+
+def test_a_malformed_manifest_files_nothing_and_does_not_crash(tmp_path: Path) -> None:
+    for manifest in ({"not": "a list"}, [None, "x", {"attachments": None}, {"attachments": [None, {"exportedFileName": None}]}]):
+        export = tmp_path / f"export-{len(list(tmp_path.iterdir()))}"
+        export.mkdir()
+        (export / "manifest.json").write_text(json.dumps(manifest))
+        assert m.collect(export, tmp_path / "out") == []
+
+
+def test_a_source_outside_the_export_is_never_read(tmp_path: Path) -> None:
+    (tmp_path / "secret.txt").write_text("not yours")
+    export = _export(
+        tmp_path,
+        [{"attachments": [{"exportedFileName": "../secret.txt", "suggestedHumanReadableName": "a11y-chat_0_AA.txt"}]}],
+        {},
+    )
+    out = tmp_path / "out"
+    assert m.collect(export, out) == []
+    assert not (out / "chat.txt").exists()

@@ -37,12 +37,19 @@ def screen_of(name: str) -> str | None:
 def collect(export_dir: Path, out_dir: Path) -> list[str]:
     """Copy each audit report to `<out_dir>/<screen>.txt`; return the screens filed, in manifest order."""
     filed: list[str] = []
-    for test in json.loads((export_dir / "manifest.json").read_text()):
-        for attachment in test.get("attachments", []):
-            exported = attachment.get("exportedFileName", "")
-            screen = screen_of(attachment.get("suggestedHumanReadableName") or exported)
+    manifest = json.loads((export_dir / "manifest.json").read_text())
+    for test in manifest if isinstance(manifest, list) else []:
+        for attachment in (test.get("attachments") if isinstance(test, dict) else None) or []:
+            if not isinstance(attachment, dict):
+                continue
+            exported = attachment.get("exportedFileName")
+            named = attachment.get("suggestedHumanReadableName") or exported
+            # A bare file name only: the manifest is xcresulttool's, but nothing here reads outside the export.
+            if not isinstance(exported, str) or not isinstance(named, str) or Path(exported).name != exported:
+                continue
+            screen = screen_of(named)
             source = export_dir / exported
-            if screen is None or not exported or not source.is_file():
+            if screen is None or not source.is_file():
                 continue
             out_dir.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(source, out_dir / f"{screen}.txt")

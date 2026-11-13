@@ -29,7 +29,7 @@ import XCTest
 @MainActor
 final class AccessibilityAuditiOSUITests: XCTestCase {
     func testOnboarding() throws {
-        try audit(.onboarding, anchor: "brain", timeout: 30)
+        try audit(.onboarding, anchor: "Pick a brain", timeout: 30)
     }
 
     func testChat() throws {
@@ -45,7 +45,7 @@ final class AccessibilityAuditiOSUITests: XCTestCase {
     }
 
     func testSettingsBrainAtHome() throws {
-        try audit(.brainAtHome, anchor: "Mac", timeout: 180)
+        try audit(.brainAtHome, anchor: "Codes expire", timeout: 180)
     }
 
     func testSettingsPrivacy() throws {
@@ -80,22 +80,25 @@ final class AccessibilityAuditiOSUITests: XCTestCase {
         RunLoop.current.run(until: Date().addingTimeInterval(3))
 
         let collected = Collected()
+        var incomplete = ""
         do {
             try app.performAccessibilityAudit(for: .all) { issue in
                 collected.findings.append(AccessibilityAuditFinding(
                     screen: plate.rawValue,
                     kind: Self.name(of: issue.auditType),
                     element: Self.name(of: issue.element),
-                    detail: issue.compactDescription
+                    detail: issue.compactDescription,
+                    place: Self.place(of: issue.element)
                 ))
                 return true // handled: keep going, the report carries it
             }
         } catch {
             XCTFail("\(plate.rawValue): the audit did not complete: \(error.localizedDescription)")
+            incomplete = "AUDIT DID NOT COMPLETE: \(error.localizedDescription) — the list below is partial, not a clean screen.\n"
         }
 
         let heading = reached ? "" : "NOT REACHED: '\(anchor)' never appeared, so this is another screen's audit.\n"
-        let report = heading + AccessibilityAuditReport.render(collected.findings)
+        let report = heading + incomplete + AccessibilityAuditReport.render(collected.findings)
         let attachment = XCTAttachment(string: report)
         attachment.name = "a11y-\(plate.rawValue)"
         attachment.lifetime = .keepAlways
@@ -109,6 +112,11 @@ final class AccessibilityAuditiOSUITests: XCTestCase {
         guard let element, element.exists else { return "" }
         let label = element.label
         return label.isEmpty ? element.identifier : label
+    }
+
+    private static func place(of element: XCUIElement?) -> String {
+        guard let element, element.exists else { return "" }
+        return "\(element.frame)"
     }
 
     private static func name(of type: XCUIAccessibilityAuditType) -> String {
