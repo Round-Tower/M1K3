@@ -95,7 +95,7 @@ public enum PrivateCloudRawChat {
     public static func failure(for failure: PrivateCloudFailure) -> RawChatFailure {
         switch failure {
         case .rateLimited: .busy
-        case .network, .unavailable: .unavailable
+        case .network, .unavailable, .replyCheckUnavailable: .unavailable
         case .quotaLimitReached: .limitReached
         case .other: .failed
         }

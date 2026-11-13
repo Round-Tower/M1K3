@@ -8,6 +8,8 @@
 //  "" for an all-noise utterance so the caller's empty-guard parks the mic.
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-17, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — the bare pronoun REPEATED ("you you") is a ghost and
+//  drops; a single "you" is still kept (ghostPronounRepeated). Confidence 0.85.
 
 import M1K3Voice
 import Testing
@@ -50,6 +52,22 @@ struct TranscriptSanitizerTests {
     func barePronounKept() {
         // "you" is a known whisper ghost but also a real command opener — kept.
         #expect(TranscriptSanitizer.clean("you") == "you")
+    }
+
+    @Test("the bare pronoun repeated is a silence ghost and drops; one alone is still kept")
+    func ghostPronounRepeated() {
+        // Found live 2026-11-13: two silent MCP listens both returned "you you".
+        #expect(TranscriptSanitizer.clean("you you") == "")
+        #expect(TranscriptSanitizer.clean("You. You.") == "")
+        // Three or more must not collapse to a surviving single "you".
+        #expect(TranscriptSanitizer.clean("you you you you") == "")
+        #expect(TranscriptSanitizer.clean("you") == "you")
+        // Only as the WHOLE utterance, and only when the recogniser isn't confident.
+        #expect(TranscriptSanitizer.clean("you you go first") == "you you go first")
+        #expect(TranscriptSanitizer.clean("you you", confidence: 0.9) == "you you")
+        #expect(TranscriptSanitizer.clean("you you", dropPleasantries: false) == "you you")
+        // Other natural doublings are untouched.
+        #expect(TranscriptSanitizer.clean("no no") == "no no")
     }
 
     @Test("keeps a genuine pleasantry when the recognizer is confident")

@@ -119,4 +119,39 @@ struct TodoProposalLineTests {
         #expect(TodoProposalLine.extract(from: "Prose.\ntodo: \(long)").title == nil)
         #expect(TodoProposalLine.extract(from: "Prose.\n- TODO: Book the dentist.").title == "Book the dentist")
     }
+
+    @Test("a title made only of list vocabulary is not a proposal; the narrative still loses the line")
+    func genericTitleDropped() {
+        // Found live 2026-11-13: two pending todos titled exactly this, from a digest that said "1 open".
+        let out = TodoProposalLine.extract(from: "Quiet day.\nTODO: Complete open task")
+        #expect(out.title == nil)
+        #expect(out.narrative == "Quiet day.")
+        for generic in [
+            "Complete open task", "Finish the pending tasks.", "Review overdue todos", "Do it", "Follow up",
+            // The challenger's blind set: the digest's own count coming back, and the shrugs.
+            "Complete 1 open task", "Finish remaining 2 items", "Complete overdue tasks (3)",
+            "Get it done", "Look into it", "Take care of it", "Address the issue", "Deal with it",
+        ] {
+            #expect(!TodoProposalLine.isSpecific(generic), "\(generic)")
+        }
+        for real in [
+            "Renew passport", "Review wire-drawing updates", "Book flights to Denis's wedding",
+            "Call Pat", "Free up disk space", "Follow up with Pat", "test m1k3", "Finish the grant draft",
+            "Finish work", "Take care of mum", "Get milk", "Look into pensions", "Pay 50 to Pat", "Sort out the shed",
+        ] {
+            #expect(TodoProposalLine.isSpecific(real), "\(real)")
+        }
+    }
+
+    @Test("titles are compared without case, punctuation or spacing")
+    func duplicateKeys() {
+        #expect(TodoProposalLine.duplicateKey("Renew passport.") == TodoProposalLine.duplicateKey("  renew   Passport"))
+        // A paraphrase's article or possessive is not a different task.
+        #expect(TodoProposalLine.duplicateKey("Renew passport") == TodoProposalLine.duplicateKey("Renew my passport"))
+        #expect(TodoProposalLine.duplicateKey("Renew passport") != TodoProposalLine.duplicateKey("Renew driving licence"))
+        // A mark inside a word is part of the task.
+        #expect(TodoProposalLine.duplicateKey("Learn C++") != TodoProposalLine.duplicateKey("Learn C#"))
+        #expect(TodoProposalLine.duplicateKey("Pay £50 to Pat") != TodoProposalLine.duplicateKey("Pay €50 to Pat"))
+        #expect(TodoProposalLine.duplicateKey("“Renew passport”!") == TodoProposalLine.duplicateKey("renew passport"))
+    }
 }

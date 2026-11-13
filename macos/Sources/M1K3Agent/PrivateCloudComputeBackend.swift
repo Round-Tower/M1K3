@@ -33,6 +33,15 @@
 //  now #if canImport(FoundationModels). Confidence now 0.85.
 //  Review: Kev + claude-opus-4-6, 2026-10-12 — `live()` returns a backend on iOS/visionOS (no
 //  `processHasEntitlement()` — the system enforces it). Confidence 0.8.
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — the failure line logs `ErrorChain.summary` ahead of the
+//  preview: two live ask_private_cloud failures logged `LanguageModelError -1` and were cut off before the
+//  underlying errors. Confidence 0.8 (the helper is pinned; this file compiles only where FoundationModels 27 does).
+//  Review: Kev + claude-fable-5.2, 2026-11-13 (same day) — the cause, read from the system log: the cloud answered,
+//  then the on-device safety model's asset was missing and the reply was discarded. `answer` now refuses BEFORE
+//  sending when `SystemLanguageModel.default.availability` is not `.available` (this Mac reads
+//  `unavailable(modelNotReady)`), as `.replyCheckUnavailable`. Confidence 0.7: two failures and one mechanism;
+//  that every reply needs the on-device model is inferred from them, not documented by Apple.
+//  Open: if Apple ever serves PCC without the on-device model, this refuses a send that would have worked.
 //
 
 import Foundation
@@ -79,6 +88,12 @@ import M1K3LanguageModel
         /// and nothing else. No tools (`tools: []`), per ADR 0006.
         public func answer(instructions: String, prompt: String) -> AsyncThrowingStream<String, any Error> {
             AsyncThrowingStream { continuation in
+                // Nothing leaves the Mac for an answer it could not read (`preflight`).
+                if let refusal = Self.preflight(onDeviceModelReady: Self.onDeviceModelReady()) {
+                    Self.log.notice("pcc not sent: the on-device model that checks replies is not ready")
+                    continuation.finish(throwing: PrivateCloudError(refusal))
+                    return
+                }
                 let session = LanguageModelSession(model: model, tools: [], instructions: instructions)
                 let task = Task {
                     do {
@@ -94,12 +109,33 @@ import M1K3LanguageModel
                     } catch {
                         let described = String(describing: error)
                         let preview = LogPreview.preview(described, max: Self.errorPreviewCap)
-                        Self.log.error("pcc failed: \(preview, privacy: .public)")
+                        // The chain FIRST: the preview spends its 200 characters on the outer
+                        // wrapper and stops before the underlying errors, which are the cause.
+                        let chain = ErrorChain.summary(error)
+                        Self.log.error("pcc failed: \(chain, privacy: .public) | \(preview, privacy: .public)")
                         continuation.finish(throwing: PrivateCloudError(Self.failure(for: error)))
                     }
                 }
                 continuation.onTermination = { _ in task.cancel() }
             }
+        }
+
+        /// Whether to refuse before sending. The framework runs the ON-DEVICE safety
+        /// model over every reply, so without it a send costs the user's quota and
+        /// their prompt's trip to Apple for an answer that is discarded on arrival
+        /// (`InferenceError::inferenceFailed::Asset bundle
+        /// com.apple.fm.language.instruct_300m.safety does not contain metadata`,
+        /// twice, 2026-11-13) — while `PrivateCloudComputeLanguageModel.availability`
+        /// still reads available.
+        static func preflight(onDeviceModelReady: Bool) -> PrivateCloudFailure? {
+            onDeviceModelReady ? nil : .replyCheckUnavailable
+        }
+
+        /// The live read `preflight` is handed. A system call that does real work,
+        /// made here on the stream's own task, never the main actor.
+        static func onDeviceModelReady() -> Bool {
+            if case .available = SystemLanguageModel.default.availability { return true }
+            return false
         }
 
         static func quota(from usage: PrivateCloudComputeLanguageModel.QuotaUsage) -> PrivateCloudQuota {

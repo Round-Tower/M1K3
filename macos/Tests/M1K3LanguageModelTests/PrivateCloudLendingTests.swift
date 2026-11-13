@@ -81,11 +81,25 @@ struct PrivateCloudLendingTests {
     }
 
     @Test("Every failure on the cloud's side has a sentence for the caller", arguments: [
-        PrivateCloudFailure.rateLimited, .quotaLimitReached(resetsAt: nil), .network, .unavailable, .other,
+        PrivateCloudFailure.rateLimited, .quotaLimitReached(resetsAt: nil), .network, .unavailable, .replyCheckUnavailable, .other,
     ])
     func failureLines(failure: PrivateCloudFailure) {
         let line = PrivateCloudLending.failureLine(failure, now: Date(timeIntervalSince1970: 0))
         #expect(line.contains("Private Cloud Compute"))
+    }
+
+    @Test("An unexplained failure says where the reason is, and no two failures read the same")
+    func unexplainedFailurePointsAtTheLog() {
+        let now = Date(timeIntervalSince1970: 0)
+        let other = PrivateCloudLending.failureLine(.other, now: now)
+        #expect(other.contains("M1K3's log"))
+        #expect(other.contains("app.m1k3"))
+        let all: [PrivateCloudFailure] = [.rateLimited, .quotaLimitReached(resetsAt: nil), .network, .unavailable, .replyCheckUnavailable, .other]
+        #expect(Set(all.map { PrivateCloudLending.failureLine($0, now: now) }).count == all.count)
+        // The one found live: it names the cause and says nothing left the Mac.
+        let missing = PrivateCloudLending.failureLine(.replyCheckUnavailable, now: now)
+        #expect(missing.contains("on-device model"))
+        #expect(missing.contains("Nothing was sent"))
     }
 
     @Test("The hourly budget lets thirty calls go, refuses the next with a wait, and frees up as the hour rolls")

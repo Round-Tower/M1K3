@@ -39,6 +39,11 @@
 //  "The user prefers/wants…" (FactDurabilityPolicy drops "asked for" and "the assistant"), with no
 //  example fact to parrot. The coordinator's StyleAskFence is the deterministic backstop. Style is the
 //  one kind NOT in `MemoryKind.catalogued` (MCP may not write it). Confidence 0.8.
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — `MemoryFactValidator.statesAbsence`: a fact that only says something
+//  is not known ("The user's name is not provided.", live in the store) is rejected, end-anchored so a sentence that
+//  goes on survives. Confidence 0.85 (pinned with its near-misses in MemoryDistillerTests' validator suite).
+//  Narrow on purpose (challenger, same day): verbs of TELLING only, so "…is unknown" and "…is not yet known"
+//  stay; a no-name "name" is UserNameFence's business. Active wordings ("did not provide their name") pass.
 
 import Foundation
 import M1K3Inference
@@ -247,7 +252,22 @@ public enum MemoryFactValidator {
 
     /// True when the fact is a genuine user fact worth storing.
     public static func isAcceptable(_ fact: String) -> Bool {
-        !conflatesUserWithAssistant(fact)
+        !conflatesUserWithAssistant(fact) && !statesAbsence(fact)
+    }
+
+    /// A "fact" whose whole content is that something was not SAID ("The user's
+    /// name is not provided." — live in the store, 2026-11-13). It records a gap
+    /// in one conversation as a standing truth about the person. Two guards keep
+    /// real facts: only verbs of telling count (a diagnosis that "is not yet
+    /// known" or a father who "is unknown" is a fact about a life, not a chat),
+    /// and the phrase must END the sentence ("the user is not given to
+    /// exaggeration" goes on to say something).
+    static func statesAbsence(_ fact: String) -> Bool {
+        let norm = straightenedApostrophes(MemoryFactNormalizer.normalize(fact))
+        let pattern = #"\b(?:is|are|was|were|has|have|had) (?:not|never)(?: yet)?(?: been)? "#
+            + #"(?:provided|specified|given|mentioned|stated|disclosed|shared)"#
+            + #"(?: (?:in|during) (?:the|this) conversation)?$"#
+        return norm.range(of: pattern, options: .regularExpression) != nil
     }
 
     /// The copulas that bind a NAME to its subject, longest-first because

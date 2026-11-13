@@ -64,6 +64,10 @@
 //  where a Private Cloud Compute backend exists: behind its own grant (off by default) and the chat rung's gate,
 //  re-read on every call. It carries the agent's own words only. Each call that leaves is counted and logged at
 //  notice. Confidence 0.6: the real service is verify-by-launch on a store-lane build.
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — `listenForTranscript` ends on, and returns, the SANITISED
+//  transcript (M1K3Voice.ListenEndpoint): a silent mic came back as "you you" twice, and a ghost ended the
+//  listen 2 s after it appeared. Confidence 0.75: the policy is pinned in ListenEndpointTests; this wiring and
+//  a real silent listen are verify-by-launch.
 
 import Foundation
 import M1K3Agent // PrivateCloudRawChat — ask_private_cloud's one send
@@ -688,9 +692,10 @@ final class MCPHostController {
             var accumulator = TranscriptAccumulator()
             for await segment in stream {
                 accumulator.ingest(segment)
-                session.update(text: accumulator.text)
+                session.update(text: accumulator.text, confidence: accumulator.confidence)
             }
-            return accumulator.text
+            // A silence ghost ("you you" on a quiet mic) is not speech: it reads as nothing.
+            return ListenEndpoint.report(accumulator.text, confidence: accumulator.confidence)
         }
         // Watchdog: endpoint on silence-after-speech or the hard timeout.
         let watchdog = Task { @MainActor in
@@ -699,7 +704,12 @@ final class MCPHostController {
                 try? await Task.sleep(for: .milliseconds(200))
                 let waited = Date().timeIntervalSince(started)
                 let quiet = Date().timeIntervalSince(session.lastChange)
-                if waited >= timeout || (!session.text.isEmpty && quiet >= 2.0) {
+                // The pause only counts after REAL speech (ListenEndpoint): a ghost two
+                // seconds in used to end a 30 s listen before the user had spoken.
+                if ListenEndpoint.shouldStop(
+                    waited: waited, timeout: timeout, transcript: session.text,
+                    confidence: session.confidence, quiet: quiet
+                ) {
                     provider.stopListening() // stream drains → consumer returns
                     break
                 }
@@ -726,10 +736,12 @@ final class MCPHostController {
 @MainActor
 private final class ListenProgress {
     var text = ""
+    var confidence: Float?
     var lastChange = Date()
     var finished = false
 
-    func update(text newText: String) {
+    func update(text newText: String, confidence newConfidence: Float?) {
+        confidence = newConfidence
         guard newText != text else { return }
         text = newText
         lastChange = Date()

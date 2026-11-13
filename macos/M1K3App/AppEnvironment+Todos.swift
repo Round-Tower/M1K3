@@ -18,6 +18,9 @@
 //  policies and the block are package-TDD'd; this file is glue, verify at
 //  ⌘R: propose over MCP → inbox → Accept → grounded answer). Prior: none
 //  (new file).
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — proposals go through `TodoStore.fileProposal`, so a title the
+//  user already has or dismissed is refused (logged "duplicate"; a visitor reads `.duplicate`). Confidence 0.8:
+//  the store rule is pinned in TodoStoreTests; this glue compiles in the app-shell job only.
 //
 
 import Foundation
@@ -107,11 +110,15 @@ extension AppEnvironment {
         )
         // Count + insert in ONE store transaction (review fold: two racing
         // proposals could both pass a separate read).
-        guard let filed = await propose(todo, max: ProposalCeiling.residentMax, label: "resident proposal") else {
-            Self.todosLog.notice("resident proposal refused: ceiling")
+        switch await propose(todo, max: ProposalCeiling.residentMax, label: "resident proposal") {
+        case let .filed(filed):
+            return filed.id
+        case let .refused(why):
+            Self.todosLog.notice("resident proposal refused: \(why == .duplicate ? "duplicate" : "ceiling", privacy: .public)")
+            return nil
+        case .failed:
             return nil
         }
-        return filed.id
     }
 
     /// An MCP client's proposal. Stamped with its self-reported name (a
@@ -129,30 +136,43 @@ extension AppEnvironment {
             title: title, note: note, source: source,
             state: TodoConsentPolicy.initialState(for: source), due: due
         )
-        guard let filed = await propose(todo, max: Self.visitorPendingMax, label: "visitor proposal") else {
+        switch await propose(todo, max: Self.visitorPendingMax, label: "visitor proposal") {
+        case let .filed(filed):
+            return .proposed(filed)
+        case .refused(.duplicate):
+            Self.todosLog.notice("visitor proposal refused: duplicate")
+            return .duplicate
+        case .refused, .failed:
+            // A write failure reads to the visitor as it did before: nothing was written.
             Self.todosLog.notice("visitor proposal refused: ceiling")
             return .atCeiling
         }
-        return .proposed(filed)
     }
 
     /// The transactional door: the store counts the proposer's pending items
-    /// and inserts under the same write lock. nil = at the ceiling (or a
-    /// write failure, logged).
-    private func propose(_ todo: Todo, max: Int, label: String) async -> Todo? {
-        guard let store = todoStore else { return nil }
-        let filed: Bool? = await Task.detached(priority: .utility) {
-            try? store.addProposal(todo, ifPendingCountBelow: max)
+    /// and inserts under the same write lock, refusing a duplicate title. A
+    /// failed write is logged and reads as `.failed`.
+    private func propose(_ todo: Todo, max: Int, label: String) async -> ProposalAttempt {
+        guard let store = todoStore else { return .failed }
+        let filing: ProposalFiling? = await Task.detached(priority: .utility) {
+            try? store.fileProposal(todo, ifPendingCountBelow: max)
         }.value
-        guard let filed else {
+        guard let filing else {
             Self.todosLog.error("todo write failed: \(label, privacy: .public)")
-            return nil
+            return .failed
         }
-        guard filed else { return nil }
+        guard filing == .filed else { return .refused(filing) }
         Self.todosLog.notice("todo write: \(label, privacy: .public)")
         await refreshTodoGrounding()
         todosRevision += 1
-        return todo
+        return .filed(todo)
+    }
+
+    /// `propose`'s three ends: filed, refused by the store (ceiling or duplicate), or a failed write.
+    private enum ProposalAttempt {
+        case filed(Todo)
+        case refused(ProposalFiling)
+        case failed
     }
 
     // MARK: - Plumbing

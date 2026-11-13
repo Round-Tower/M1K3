@@ -15,11 +15,23 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.9 (round-trip,
 //  filters, resolvedAt, per-source counts and clearResolved pinned against
 //  the in-memory store). Prior: none (new file).
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — `fileProposal` refuses a proposal whose title is already open,
+//  pending or dismissed, in the ceiling's own transaction (the inbox held "Complete open task" twice and
+//  "Renew passport" twice, all from the heartbeat). `addProposal` keeps its Bool. Confidence 0.85.
 //
 
 import Foundation
 import GRDB
 import M1K3LogCore
+
+/// What became of a proposal handed to `TodoStore.fileProposal`.
+public enum ProposalFiling: Sendable, Equatable {
+    case filed
+    /// The proposer already has as many unanswered proposals as it may.
+    case atCeiling
+    /// The same title is already open, pending, or was dismissed.
+    case duplicate
+}
 
 public enum TodoStoreError: Error, Equatable {
     /// `addProposal` only files PENDING todos — the user's own go through `add`.
@@ -92,15 +104,39 @@ public final class TodoStore: @unchecked Sendable {
     /// whether it was filed.
     @discardableResult
     public func addProposal(_ todo: Todo, ifPendingCountBelow max: Int) throws -> Bool {
+        try fileProposal(todo, ifPendingCountBelow: max) == .filed
+    }
+
+    /// `addProposal`, saying WHY nothing was filed. A proposal whose title the
+    /// user already has (open or pending) or already turned down (dismissed) is
+    /// refused: the heartbeat proposed "Renew passport" twice and "Complete open
+    /// task" twice, because nothing compared a new title with the list. A
+    /// dismissal blocks the resident only, and a DONE title may always be
+    /// proposed again — tasks recur.
+    public func fileProposal(_ todo: Todo, ifPendingCountBelow max: Int) throws -> ProposalFiling {
         guard todo.state == .pending, todo.source.kind != .user else { throw TodoStoreError.notAProposal }
+        let key = TodoProposalLine.duplicateKey(todo.title)
+        // A "no" was said to the RESIDENT's unprompted suggestion; it must not gag a visitor
+        // the user has since asked to add the same thing.
+        var blocking = [TodoState.pending, .open]
+        if todo.source.kind == .resident { blocking.append(.dismissed) }
         return try dbQueue.write { db in
+            // The duplicate is read BEFORE the ceiling: "you already have this" is the truer answer.
+            let marks = blocking.map { _ in "?" }.joined(separator: ", ")
+            let known = try String.fetchAll(
+                db, sql: "SELECT title FROM todos WHERE state IN (\(marks))",
+                arguments: StatementArguments(blocking.map(\.rawValue))
+            )
+            // An all-noise title ("The") has an empty key, which is nobody's duplicate.
+            let duplicate = !key.isEmpty && known.contains { TodoProposalLine.duplicateKey($0) == key }
+            guard !duplicate else { return .duplicate }
             let pending = try Int.fetchOne(
                 db, sql: "SELECT COUNT(*) FROM todos WHERE state = ? AND source = ?",
                 arguments: [TodoState.pending.rawValue, todo.source.kind.rawValue]
             ) ?? 0
-            guard pending < max else { return false }
+            guard pending < max else { return .atCeiling }
             try Self.insert(todo, db)
-            return true
+            return .filed
         }
     }
 

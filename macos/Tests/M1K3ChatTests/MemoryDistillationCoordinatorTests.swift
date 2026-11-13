@@ -119,6 +119,24 @@ private let someTurns = [
 ]
 
 struct MemoryDistillationCoordinatorTests {
+    @Test("a fact naming the user after the name they ADDRESSED the assistant by is dropped; an introduced name lands")
+    func userNameFenceIsWired() async throws {
+        // Found live 2026-11-13: "The user is named Mike." — M1K3's spoken name — stored as a profile fact.
+        let (addressed, addressedStore) = try makeFixture(facts: .success(["The user is named Mike."]))
+        _ = try await addressed.distillAndStore(turns: [
+            ChatTurn(role: .user, text: "Hey Mike, what is the weather in Cork today?"),
+            ChatTurn(role: .assistant, text: "Mostly cloudy."),
+        ])
+        #expect(try addressedStore.allItems(kind: .memory).isEmpty)
+
+        let (introduced, introducedStore) = try makeFixture(facts: .success(["The user is named Mike."]))
+        _ = try await introduced.distillAndStore(turns: [
+            ChatTurn(role: .user, text: "My name is Mike and I live in Cork."),
+            ChatTurn(role: .assistant, text: "Nice to meet you."),
+        ])
+        #expect(try introducedStore.allItems(kind: .memory).map(\.title) == ["The user is named Mike."])
+    }
+
     @Test("N facts land as N memory items with distilled provenance")
     func factsBecomeMemories() async throws {
         let (coordinator, store) = try makeFixture(facts: .success([

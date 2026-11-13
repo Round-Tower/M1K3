@@ -16,6 +16,9 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-07, Confidence 0.85 (format and
 //  ordering pinned; wording awaits the live A/B every grounding block gets).
 //  Prior: none (new file).
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — `TodoProposalLine.isSpecific`: a title made only of list
+//  vocabulary ("Complete open task") is no proposal; `duplicateKey` is the form titles are compared in.
+//  Confidence 0.8: the word list is hand-picked from the two live cases plus obvious siblings, not measured.
 //
 
 import Foundation
@@ -96,7 +99,46 @@ public enum TodoProposalLine {
         while title.hasSuffix(".") {
             title.removeLast()
         }
-        guard !title.isEmpty, title.count <= maxTitleLength else { return (body, nil) }
+        guard !title.isEmpty, title.count <= maxTitleLength, isSpecific(title) else { return (body, nil) }
         return (body, title)
     }
+
+    /// Whether a proposed title names a task at all. The digest says "Todos: 1
+    /// open" and a small model answers `TODO: Complete open task`: every word
+    /// there is about the LIST, none about the task. A title needs at least one
+    /// word that is not list vocabulary.
+    public static func isSpecific(_ title: String) -> Bool {
+        // A bare number is the digest's count coming back ("Complete 1 open task").
+        titleWords(title).contains { !listVocabulary.contains($0) && !$0.allSatisfy(\.isNumber) }
+    }
+
+    /// The form two titles are compared in: case, punctuation and spacing do not
+    /// make a different task ("Renew passport." is "renew  Passport").
+    /// Marks INSIDE a word are part of the task: "Learn C++" is not "Learn C#".
+    public static func duplicateKey(_ title: String) -> String {
+        title.lowercased()
+            .split(whereSeparator: \.isWhitespace)
+            .map { $0.trimmingCharacters(in: CharacterSet(charactersIn: ".,;:!?\"'()[]“”‘’")) }
+            .filter { !$0.isEmpty && !keyNoise.contains($0) }
+            .joined(separator: " ")
+    }
+
+    /// Words a paraphrase adds or drops without changing the task ("Renew my passport").
+    private static let keyNoise: Set<String> = ["a", "an", "the", "my", "your"]
+
+    private static func titleWords(_ title: String) -> [String] {
+        title.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+    }
+
+    /// Words that describe a todo list rather than anything on it.
+    private static let listVocabulary: Set<String> = [
+        "complete", "finish", "do", "done", "handle", "address", "resolve", "review", "check", "close", "clear",
+        "the", "a", "an", "your", "my", "this", "that", "all", "any", "some", "one", "up", "on", "of", "to", "it",
+        "open", "pending", "overdue", "outstanding", "remaining", "unfinished", "incomplete", "new", "next",
+        "task", "tasks", "todo", "todos", "item", "items", "list", "thing", "things", "stuff",
+        "follow", "followup", "reminder", "reminders", "issue", "issues", "something", "everything", "anything",
+        "get", "look", "into", "take", "care", "sort", "out", "deal", "with",
+    ]
 }

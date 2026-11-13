@@ -92,6 +92,40 @@ struct TodoStoreTests {
         }
     }
 
+    @Test("a proposal whose title the user already has is refused; a dismissal blocks only the resident")
+    func proposalDuplicates() throws {
+        // Found live 2026-11-13: "Renew passport" proposed twice, "Complete open task" twice.
+        let store = try TodoStore()
+        let resident = TodoSource.resident
+        let visitor = TodoSource.visitor(clientName: "Claude")
+        #expect(try store.fileProposal(todo("Renew passport", source: resident), ifPendingCountBelow: 9) == .filed)
+        // Pending already — whoever proposes it, however it is spelled or paraphrased.
+        #expect(try store.fileProposal(todo("renew  my passport.", source: resident), ifPendingCountBelow: 9) == .duplicate)
+        #expect(try store.fileProposal(todo("Renew Passport", source: visitor), ifPendingCountBelow: 9) == .duplicate)
+        let id = try #require(store.list(states: [.pending]).first?.id)
+        try store.setState(id: id, .open)
+        #expect(try store.fileProposal(todo("Renew passport", source: resident), ifPendingCountBelow: 9) == .duplicate)
+        #expect(try store.fileProposal(todo("Renew passport", source: visitor), ifPendingCountBelow: 9) == .duplicate)
+        // Dismissed: the resident may not ask again, but an agent the user has since asked may.
+        try store.setState(id: id, .dismissed)
+        #expect(try store.fileProposal(todo("Renew passport", source: resident), ifPendingCountBelow: 9) == .duplicate)
+        #expect(try store.list(states: Set(TodoState.allCases)).count == 1)
+        #expect(try store.fileProposal(todo("Renew passport", source: visitor), ifPendingCountBelow: 9) == .filed)
+        // A duplicate reads as a duplicate even at the ceiling; a new title there reads as the ceiling.
+        #expect(try store.fileProposal(todo("Renew passport", source: visitor), ifPendingCountBelow: 1) == .duplicate)
+        #expect(try store.fileProposal(todo("Book flights", source: visitor), ifPendingCountBelow: 1) == .atCeiling)
+        #expect(try !store.addProposal(todo("Renew passport", source: resident), ifPendingCountBelow: 9))
+    }
+
+    @Test("a done title may be proposed again: tasks recur")
+    func doneTitleMayRecur() throws {
+        let store = try TodoStore()
+        #expect(try store.fileProposal(todo("Renew passport", source: .resident), ifPendingCountBelow: 9) == .filed)
+        let id = try #require(store.list(states: [.pending]).first?.id)
+        try store.setState(id: id, .done)
+        #expect(try store.fileProposal(todo("Renew passport", source: .resident), ifPendingCountBelow: 9) == .filed)
+    }
+
     @Test("a corrupt row is skipped by list and counted, never blanks the healthy rows; a single lookup surfaces it")
     func corruptRow() throws {
         let store = try TodoStore()
