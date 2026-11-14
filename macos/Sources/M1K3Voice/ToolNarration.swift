@@ -27,7 +27,8 @@ public enum ToolNarration {
     /// `LookPrompt.toolName`, spelled here because M1K3Voice imports nothing)
     /// is tagged when its answer lands: there is no wait to fill, and the
     /// camera being on is already on screen.
-    public static let unspoken: Set<String> = ["look"]
+    /// A read ("read", `ReadPrompt.toolName`) is the same: tagged as its answer lands.
+    public static let unspoken: Set<String> = ["look", "read"]
 
     public static func phrase(forTool name: String) -> String {
         switch name {

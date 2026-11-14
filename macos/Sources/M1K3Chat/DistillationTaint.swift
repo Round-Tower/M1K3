@@ -31,8 +31,10 @@ public enum DistillationTaint {
     /// look (2026-11-09, #768) is not a callable tool: it is the tag on an
     /// answer about a camera frame (`LookPrompt.toolName`). What the camera saw
     /// (a label, a screen, a face described) must not become a lasting fact.
+    /// read (2026-11-14) is its text twin (`ReadPrompt.toolName`): someone else's words (a
+    /// paste, a file, a shared page) become a document only when the user keeps them.
     public static let taintedToolNames: Set<String> = [
-        "execute_script", "calendar_peek", "current_location", "recent_activity", "look",
+        "execute_script", "calendar_peek", "current_location", "recent_activity", "look", "read",
     ]
 
     public static func isTainted(toolsUsed: [String]?) -> Bool {
