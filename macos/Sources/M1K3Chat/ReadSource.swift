@@ -8,6 +8,10 @@
 //  (`ReadSanitizer`): what is stored, re-read and kept is what the brain saw.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-14, Confidence 0.85, Prior: none (new file)
+//  Review: Kev + claude-opus-5.5, 2026-11-14 (the summoned pass on #833) — a source says when the cap
+//  cut it (`capped`, so Keep's banner names the part kept), and decoding re-runs the sanitiser's
+//  injection stages (`ReadSanitizer.recleaned`): "cleaned once" held only at `init?(title:raw:)`, so an
+//  edited payload could hand a tokenizer raw text on "Ask more". Confidence 0.85.
 //
 
 import Foundation
@@ -18,6 +22,8 @@ public struct ReadSource: Codable, Sendable, Equatable {
     public let title: String
     /// The cleaned text.
     public let text: String
+    /// True when the cap cut the text: Keep files only the first `characterCap` characters.
+    public let capped: Bool
 
     /// The most text a source keeps after cleaning. A read sees a few thousand characters of it,
     /// and the source is stored with the conversation it was read in (the pre-push review: every
@@ -27,14 +33,42 @@ public struct ReadSource: Codable, Sendable, Equatable {
     /// A source from raw text, cleaned and capped; nil when nothing readable is left.
     public init?(title: String, raw: String) {
         let bounded = raw.count > Self.characterCap * 2 ? String(raw.prefix(Self.characterCap * 2)) : raw
-        let cleaned = String(ReadSanitizer.clean(bounded).prefix(Self.characterCap))
+        let whole = ReadSanitizer.clean(bounded)
+        let cleaned = String(whole.prefix(Self.characterCap))
         guard !cleaned.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
-        // The title reaches grounding, Spotlight and the banner (the security pass): cleaned like
-        // the text, one line, capped.
-        let name = ReadSanitizer.clean(title)
-            .split(whereSeparator: \.isWhitespace).joined(separator: " ")
-        self.title = name.isEmpty ? Self.pastedTitle : String(name.prefix(Self.titleCap))
+        self.title = Self.cleanTitle(ReadSanitizer.clean(title))
         text = cleaned
+        capped = bounded.count < raw.count || whole.count > Self.characterCap
+    }
+
+    /// The title reaches grounding, Spotlight and the banner (the security pass): cleaned like
+    /// the text, one line, capped.
+    private static func cleanTitle(_ cleaned: String) -> String {
+        let name = cleaned.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        return name.isEmpty ? pastedTitle : String(name.prefix(titleCap))
+    }
+
+    private enum CodingKeys: String, CodingKey { case title, text, capped }
+
+    /// A stored source is cleaned AGAIN on the way back in: the payload is a file on disk, and
+    /// everything downstream ("Ask more", Keep) trusts `text` to be clean. Only the injection
+    /// stages run (`ReadSanitizer.recleaned`: invisibles, template tokens), which leave clean text
+    /// unchanged, so an honest record decodes to itself. A record from before `capped` reads false.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let storedText = try container.decode(String.self, forKey: .text)
+        text = String(ReadSanitizer.recleaned(storedText).prefix(Self.characterCap))
+        title = try Self.cleanTitle(ReadSanitizer.recleaned(container.decode(String.self, forKey: .title)))
+        capped = try container.decodeIfPresent(Bool.self, forKey: .capped) ?? false
+    }
+
+    /// The banner after "Keep this", saying so when only the first part of the text was kept.
+    public func keptStatus(chunkCount: Int, deduped: Bool) -> String {
+        let dedup = deduped ? String(localized: " (already kept)") : ""
+        let part = capped
+            ? String(localized: " (the first \(Self.characterCap.formatted()) characters)")
+            : ""
+        return String(localized: "Kept “\(title)”\(part) in Documents — \(chunkCount) chunks\(dedup).")
     }
 
     public static let pastedTitle = String(localized: "Pasted text")

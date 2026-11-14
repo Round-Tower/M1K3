@@ -130,6 +130,8 @@
 //  Not yet seen by Kev's eye.
 //  Review: Kev + claude-opus-5.5, 2026-11-14 — a send with files and no pictures is a READ (`env.read`: instructions only,
 //  on this Mac, display-only) instead of FILE blocks prepended to a full chat turn; a read's answers offer "Keep this".
+//  Review: Kev + claude-opus-5.5, 2026-11-14 (the summoned pass on #833) — a read that cannot start hands the question
+//  and the files back to the composer instead of dropping them. Confidence 0.7 (compile-checked).
 
 import M1K3Avatar
 import M1K3Chat
@@ -1348,7 +1350,11 @@ struct ContentView: View {
         {
             let question = draft
             draft = ""
-            Task { await env.readAgain(question) }
+            Task {
+                // Could not start (the brain changed under the pill): the question comes back, unsent.
+                let started = await env.readAgain(question)
+                if !started, draft.isEmpty, pendingFiles.isEmpty, pendingAttachments.isEmpty { draft = question }
+            }
             return
         }
         aboutText = nil
@@ -1388,7 +1394,12 @@ struct ContentView: View {
                 // Cleaning a long file is real work: off the main actor.
                 let source = await Task.detached(priority: .userInitiated) { ReadSource(files: files) }.value
                 if let source {
-                    await env.read(question, source: source)
+                    // Could not start (the brain changed, a turn in flight): the words and the files
+                    // come back to the composer, never silently dropped (the summoned pass).
+                    if await !env.read(question, source: source), draft.isEmpty, pendingFiles.isEmpty {
+                        draft = question
+                        pendingFiles = files
+                    }
                 } else {
                     await env.send(question)
                 }

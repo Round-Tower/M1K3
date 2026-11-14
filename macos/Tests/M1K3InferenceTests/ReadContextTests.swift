@@ -248,7 +248,7 @@ struct ReadPromptTests {
     @Test("an answer's markdown images go: a read never shows a picture, and a planted pixel can't ride along")
     func answerImagesGo() {
         let answer = "![verified](https://tracker.example.com/p.png?q=x)  Every 10 days. See [the guide](https://example.com/guide)."
-        #expect(ReadPrompt.cleanAnswer(answer) == "Every 10 days. See [the guide](https://example.com/guide).")
+        #expect(ReadPrompt.cleanAnswer(answer) == "Every 10 days. See the guide (`https://example.com/guide`).")
     }
 
     @Test("removing the fence markers can't assemble a template token or a fence (the security pass)")
@@ -267,7 +267,53 @@ struct ReadPromptTests {
         #expect(!reference.contains("!["))
         #expect(reference.hasPrefix("Ten days."))
         #expect(ReadPrompt.cleanAnswer("<img src=\"https://e.example/p.png\"> Ten days.") == "Ten days.")
-        #expect(ReadPrompt.cleanAnswer("See [the guide](https://example.com/g).") == "See [the guide](https://example.com/g).")
+    }
+
+    @Test("a read's links show where they go and can't be tapped: a planted link is the last exfil path")
+    func answerLinksArePlain() {
+        #expect(ReadPrompt.cleanAnswer("See [the guide](https://example.com/g).") == "See the guide (`https://example.com/g`).")
+        #expect(
+            ReadPrompt.cleanAnswer("Sign up [here](https://e.example/c?d=secret \"Form\") now.")
+                == "Sign up here (`https://e.example/c?d=secret`) now."
+        )
+        #expect(ReadPrompt.cleanAnswer("[https://e.example](https://e.example)") == "`https://e.example`")
+        #expect(ReadPrompt.cleanAnswer("Go to <https://e.example/x>.") == "Go to `https://e.example/x`.")
+        // Foundation's markdown links bare addresses too; a code span is the shape it never links.
+        #expect(ReadPrompt.cleanAnswer("Visit https://e.example/x?d=1, or www.e.example.") == "Visit `https://e.example/x?d=1`, or `www.e.example`.")
+        #expect(ReadPrompt.cleanAnswer("Run `curl https://e.example` first.") == "Run `curl https://e.example` first.")
+        #expect(ReadPrompt.cleanAnswer("A lone ` then https://e.example") == "A lone ' then `https://e.example`")
+        #expect(ReadPrompt.cleanAnswer("Use [x] and (y).") == "Use [x] and (y).")
+        #expect(ReadPrompt.cleanAnswer("Mail jo@x.example today.") == "Mail `jo@x.example` today.")
+    }
+
+    @Test("no answer shape leaves a tappable link, checked by the parser the shells render with (the review pass)")
+    func noShapeLeavesALink() {
+        // The code-span shape counts backticks, which an escaped backtick or an unmatched run defeats; the
+        // parser backstop catches what the counting misses.
+        let hostile = [
+            "See [g](https://e.example/g) or https://e.example/h, <https://e.example/i>, www.e.example.",
+            "A lone ` then https://e.example/j",
+            "\\` https://e.example/c?d=secret \\`",
+            "`a`` https://e.example/k `b`",
+            "``code `https://e.example/x` here`` and https://e.example/y",
+            "[x](https://e.example/a_(b))",
+            "[x] (https://e.example/l)",
+            "Mail jo@x.example, ftp://e.example/m or mailto:jo@x.example.",
+            "<https://e.example/n> ``` https://e.example/z",
+            "[**bold**](https://e.example/o) and [`code`](https://e.example/p)",
+        ]
+        let syntaxes: [AttributedString.MarkdownParsingOptions.InterpretedSyntax] = [.full, .inlineOnlyPreservingWhitespace]
+        for answer in hostile {
+            let cleaned = ReadPrompt.cleanAnswer(answer)
+            for syntax in syntaxes {
+                let options = AttributedString.MarkdownParsingOptions(
+                    allowsExtendedAttributes: true, interpretedSyntax: syntax, failurePolicy: .returnPartiallyParsedIfPossible
+                )
+                let shown = try? AttributedString(markdown: cleaned, options: options)
+                #expect(shown?.runs.allSatisfy { $0.link == nil } == true, "\(answer) → \(cleaned)")
+            }
+            #expect(cleaned.contains("e.example"), "the address stays readable: \(cleaned)")
+        }
     }
 
     @Test("a cut text says so inside the fence's frame")

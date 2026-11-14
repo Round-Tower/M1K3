@@ -131,6 +131,8 @@
 //  Measured by re-running the audit on a Simulator; the look is verify-on-device. Confidence 0.7.
 //  Review: Kev + claude-opus-5.5, 2026-11-14 — a send with files and no photos is a READ (`core.read`), and a read's
 //  answers offer "Keep this". Compile-checked; owes a try in the hand.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 (the summoned pass on #833) — a read that cannot start hands the question
+//  and the files back to the composer instead of dropping them. Compile-checked.
 
 import M1K3Avatar
 import M1K3Chat
@@ -1128,7 +1130,11 @@ struct ChatScreen: View {
         {
             let question = draft
             clearDraft()
-            Task { await core.readAgain(question) }
+            Task {
+                // Could not start (the brain changed under the pill): the question comes back, unsent.
+                let started = await core.readAgain(question)
+                if !started, draft.isEmpty, pendingFiles.isEmpty, pendingAttachments.isEmpty { draft = question }
+            }
             return
         }
         aboutText = nil
@@ -1145,7 +1151,12 @@ struct ChatScreen: View {
                 // Cleaning a long file is real work: off the main actor.
                 let source = await Task.detached(priority: .userInitiated) { ReadSource(files: files) }.value
                 if let source {
-                    await core.read(question, source: source)
+                    // Could not start (the brain changed, a turn in flight): the words and the files
+                    // come back to the composer, never silently dropped (the summoned pass).
+                    if await !core.read(question, source: source), draft.isEmpty, pendingFiles.isEmpty {
+                        draft = question
+                        pendingFiles = files
+                    }
                 } else {
                     await core.send(question)
                 }

@@ -158,6 +158,8 @@
 //  whoever kept it (a turn cut before its first token, a title, a distillation).
 //  Review: Kev + claude-opus-5.5, 2026-11-14 — `keep(_:)`: "Keep this" files a read's text in Documents with the
 //  ingest banner (the read itself is AppCore+Read). Compile-checked; owes a try in the hand.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 (the summoned pass on #833) — Keep's banner comes from
+//  `ReadSource.keptStatus`, which names the part kept when the cap cut the text. Compile-checked.
 
 import AVFoundation
 #if os(iOS)
@@ -1431,8 +1433,7 @@ final class AppCore {
     func keep(_ source: ReadSource) async -> Bool {
         do {
             let result = try await ingester.ingest(title: source.title, text: source.text)
-            let dedup = result.wasDeduped ? " (already kept)" : ""
-            lastIngestStatus = "Kept “\(source.title)” in Documents — \(result.chunkCount) chunks\(dedup)."
+            lastIngestStatus = source.keptStatus(chunkCount: result.chunkCount, deduped: result.wasDeduped)
             refreshCounts()
             scheduleIngestStatusClear()
             return true

@@ -123,6 +123,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-14 — the read (a text, instructions only): `read`, `readAgain`, `lastRead`,
 //  `readSource(answeredBy:)`, display-only like the look (contextExcluded, tag `read`, no title, a rating keeps no
 //  words); `ChatMessage.readSource` (Optional, strip-key decode pinned). Confidence 0.8: ChatSessionReadTests.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 (follow-ups) — `ChatMessage.isRead`, so the shells keep a read's links
+//  untappable. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -313,6 +315,13 @@ public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
     /// keyNotFound reason above: every earlier transcript decodes nil.
     public var readSource: ReadSource?
     public var status: Status
+
+    /// A read's answer (`ReadPrompt.toolName`): its words came from someone else's text, so the shells
+    /// show its links as text, never as something to tap or fetch (a planted link is the read's last
+    /// exfil path).
+    public var isRead: Bool {
+        role == .assistant && toolsUsed == [ReadPrompt.toolName]
+    }
 
     /// An off-device producer of an answer. One case, deliberately: a new rung
     /// is a new case and a new label, never a silent reuse of this one.
@@ -1418,7 +1427,8 @@ public final class ChatSession {
                 }
                 latest = snapshot
                 guard flushGate.shouldFlush(at: .now) else { continue }
-                let live = Self.guardedLive(latest, tripped: &leakShown)
+                // Cleaned while it streams too: a link or a picture is never tappable, even for a moment.
+                let live = ReadPrompt.cleanAnswer(Self.guardedLive(latest, tripped: &leakShown))
                 update(assistantID) { $0.text = live }
             }
             return .answered(text: latest, stopped: stopRequested)
@@ -1435,7 +1445,8 @@ public final class ChatSession {
         let text = ReadPrompt.cleanAnswer(raw)
         let leaked = PersonaLeakGuard.leaks(text)
         update(id) {
-            $0.text = leaked ? PersonaLeakGuard.refusal : MessageTextPolish.polish(text)
+            // Cleaned again after the polish, so nothing after `cleanAnswer` can bring a link back.
+            $0.text = leaked ? PersonaLeakGuard.refusal : ReadPrompt.cleanAnswer(MessageTextPolish.polish(text))
             $0.toolsUsed = [ReadPrompt.toolName]
             $0.contextExcluded = true
             $0.brain = residentBrainName?()

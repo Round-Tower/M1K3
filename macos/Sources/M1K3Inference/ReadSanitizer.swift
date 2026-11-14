@@ -27,6 +27,8 @@
 //  (nested tokens reassembled after one pass), covers Gemma 4's `<|"|>`, `<pad>`, `<unusedN>` and the
 //  start/end markers, and no longer eats F#'s `<|`; literals match case exactly. Joiners between non-ASCII
 //  scalars stay (emoji families, Persian ZWNJ); form feeds become line breaks.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 (the summoned pass on #833) — `recleaned`: the injection stages
+//  alone, for a stored source on decode. Confidence 0.85.
 //  Open: hidden HTML that is not a comment (display:none, the hidden attribute) is kept as
 //  text; the fence and the eval's injection set decide whether that needs its own strip.
 //
@@ -39,6 +41,14 @@ public enum ReadSanitizer {
         work = droppingInvisibles(work)
         work = neutralisingTemplateTokens(work)
         return tidyingWhitespace(work)
+    }
+
+    /// The injection stages alone, for text that was cleaned once and stored (a read's source
+    /// decoded from disk): invisibles and template tokens. Both leave clean text unchanged, so
+    /// running them again is safe; the HTML and whitespace stages are not repeated (an entity
+    /// decoded the first time must not be read as markup the second).
+    public static func recleaned(_ text: String) -> String {
+        neutralisingTemplateTokens(droppingInvisibles(text))
     }
 
     /// Markup worth stripping: a document opener, or several common tags. Prose that

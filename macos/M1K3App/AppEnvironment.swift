@@ -163,6 +163,9 @@
 //  (a file sent from the composer is read on this Mac with instructions only, display-only) and `keep(_:)` ("Keep
 //  this" files the text in Documents, with the ingest banner). Confidence 0.75: the turn is pinned in
 //  ChatSessionReadTests; the buttons are verify-by-launch.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 (the summoned pass on #833) — `read`/`readAgain` return whether they
+//  started (a brain swap between the route and the call no longer drops the question); Keep's banner comes from
+//  `ReadSource.keptStatus`, which names the part kept when the cap cut the text. Confidence 0.75 (compile-checked).
 
 import AppKit
 import Foundation
@@ -1453,20 +1456,21 @@ final class AppEnvironment {
     }
 
     /// Read one text and answer one question about it, on this Mac (`ChatSession.read`):
-    /// instructions only, no persona, no tools, display-only.
-    func read(_ question: String, source: ReadSource) async {
-        guard isReady, let reader else { return }
+    /// instructions only, no persona, no tools, display-only. False when it could not start (the
+    /// brain changed, or a turn is in flight): the caller hands the words and the file back.
+    func read(_ question: String, source: ReadSource) async -> Bool {
+        guard isReady, let reader else { return false }
         brainServe?.preemptForLocalTurn()
         localAPI?.preemptForLocalTurn()
-        await chat.read(question, source: source, reader: reader)
+        return await chat.read(question, source: source, reader: reader)
     }
 
-    /// Another question about the last read's text (`ChatSession.readAgain`).
-    func readAgain(_ question: String) async {
-        guard isReady, let reader else { return }
+    /// Another question about the last read's text (`ChatSession.readAgain`). False as for `read`.
+    func readAgain(_ question: String) async -> Bool {
+        guard isReady, let reader else { return false }
         brainServe?.preemptForLocalTurn()
         localAPI?.preemptForLocalTurn()
-        await chat.readAgain(question, reader: reader)
+        return await chat.readAgain(question, reader: reader)
     }
 
     /// "Keep this": file a read's text in Documents, where search and grounding can find it.
@@ -1478,8 +1482,7 @@ final class AppEnvironment {
         defer { isIngesting = false }
         do {
             let result = try await ingester.ingest(title: source.title, text: source.text)
-            let dedup = result.wasDeduped ? " (already kept)" : ""
-            lastIngestStatus = "Kept “\(source.title)” in Documents — \(result.chunkCount) chunks\(dedup)."
+            lastIngestStatus = source.keptStatus(chunkCount: result.chunkCount, deduped: result.wasDeduped)
             lastIngestedTitle = source.title
             lastIngestFailed = false
             refreshCounts()
