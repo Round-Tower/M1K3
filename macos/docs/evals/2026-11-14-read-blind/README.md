@@ -132,6 +132,31 @@ phone figure follows the phone's prefill rate (about 470 tokens a second, so
 2,560 is about 4 s before the first word for Lil there) and is unmeasured for
 answers.
 
+## The density constants on fresh text (held out, 2026-11-14)
+
+`ReadBudget.charsPerToken(of:)` was fitted after this set's CSV overflowed, so it was
+checked on 13 texts it never saw (`density-heldout.tsv`): the store description in
+English, German, Russian, Arabic, Japanese, Korean and Chinese, a Swift and a Python
+file, a markdown doc, a 400 KB JSON, and two numbers-only CSVs (sklearn's wine and
+breast-cancer sets), each cut to its first 4,000 characters. Real counts came from
+Qwen3.5-4B's and gemma-4-12B's own `tokenizer.json` (`tokenizers`, the file alone,
+downloaded to a scratch folder) and from Mini's `SystemLanguageModel.tokenCount`
+(less a one-character prompt's count).
+
+- **The budget held everywhere but one shape.** A budget overflows when the estimate
+  times the margin (0.85) is above the real characters a token. Code, JSON, markdown
+  and every language came in under it. The numbers-only CSVs ran **1.00 on all
+  three brains** against a promised 1.02 (the floor was 1.2): about 2% over, absorbed
+  by the answer's 400-token room, but wrong. The floor is now 1.0 (estimate 1.01 to
+  1.02, so 0.86 to 0.87 promised).
+- **Non-Latin alphabets are read short, not overflowed.** Russian runs 3.3 real
+  against 1.46 estimated, Arabic 2.8 against 1.49: the formula counts every non-Latin
+  letter as CJK, so a Russian or Arabic file gets about half the text it could. CJK
+  itself is close (Japanese 1.9 vs 1.3, Chinese 1.75 vs 1.46). Not changed: a fix would
+  be fitted on this check, and the cost is text unread, never an error.
+- Mini's counts equal Gemma 4's tokenizer's on all 13 texts, and Qwen3.5's run 0 to
+  10% lower, so a constant safe for Gemma 4 is safe for all three brains.
+
 ## Limits
 
 One run per question; Mac timings, not the phone's; a Debug app build for Lil;
@@ -141,8 +166,8 @@ strategy (extractive) was chosen before the set was written, and the head arm is
 the baseline it was meant to beat. Nothing was tuned on the injection docs: the
 image strip answers a failure class, and the fence wording was not changed. The
 density constants in `ReadBudget.charsPerToken(of:)` were fitted after this set's
-CSV overflowed and checked on the same CSV: a held-out check runs the brains'
-own tokenizers over fresh code, JSON, CSV and CJK. No question here is blank or
+CSV overflowed; the held-out check above found one shape over (numbers-only CSV,
+fixed) and non-Latin alphabets read short. No question here is blank or
 "summarise this", the commonest real ask; a blank ask now spreads across the
 whole text (`ChatSession.runRead`) and wants its own held-out set. Big has no
 rows, and nothing was timed on the phone: both UNVERIFIED.
@@ -156,3 +181,6 @@ asks keep the chat turn, and so does a brain that cannot read on the device
 
 _Signed: Kev + claude-opus-5.5, 2026-11-14, Confidence 0.75 (one run per
 question, 67 questions; the phone owes its own timing)._
+_Review: Kev + claude-opus-5.5, 2026-11-14 — the held-out density check (13 fresh texts,
+three tokenizers); the numeric floor moved 1.2 → 1.0. Confidence 0.85 for the budget
+(real counts), 4,000-character prefixes only._

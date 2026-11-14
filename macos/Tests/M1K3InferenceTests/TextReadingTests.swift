@@ -7,6 +7,7 @@
 //  budget a read is fitted to comes from the brain that will read it.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-14, Confidence 0.85, Prior: none (new file)
+//  Review: Kev + claude-opus-5.5, 2026-11-14 (follow-ups) — the numeric floor, from the held-out tokenizer check.
 //
 
 import Foundation
@@ -108,6 +109,16 @@ struct TextReadingTests {
         let proseBudget = ReadBudget.characters(windowTokens: 4096, question: "q", text: prose)
         let csvBudget = ReadBudget.characters(windowTokens: 4096, question: "q", text: csv)
         #expect(csvBudget < proseBudget * 3 / 4)
+    }
+
+    @Test("a numbers-only CSV is budgeted at a character a token: three brains' tokenizers measured 1.00 on fresh CSVs")
+    func numericFloor() {
+        // docs/evals/2026-11-14-read-blind/README.md, "The density constants on fresh text": sklearn's wine and
+        // breast-cancer CSVs ran 1.00 to 1.003 characters a token on Qwen3.5, Gemma 4 and Mini; a floor of 1.2
+        // with the 0.85 margin promised 1.02.
+        let numeric = String(repeating: "14.23,1.71,2.43,15.6,127,2.8,3.06,.28,2.29,5.64,1.04,3.92,1065,0\n", count: 60)
+        #expect(ReadBudget.charsPerToken(of: numeric) * 0.85 <= 1.0) // the budget's margin
+        #expect(ReadBudget.charsPerToken(of: numeric) >= 1.0)
     }
 
     @Test("a declined read keeps the backend's sentence; anything else asks for another try")

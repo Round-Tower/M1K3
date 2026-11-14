@@ -1,0 +1,14 @@
+sample	source	chars	estimate	estimate_x_margin	qwen35_tokens	gemma4_tokens	mini_tokens	worst_real_chars_per_token
+code-python.py	macos/tools/ci/pr_watch.py	4000	3.50	2.98	1058	1097	1097	3.65
+code-swift.swift	macos/Sources/M1K3Inference/ReadCompressor.swift	4000	3.50	2.98	1076	1099	1099	3.64
+csv-cancer.csv	sklearn breast_cancer.csv	4000	1.01	0.86	3989	3989	3989	1.00
+csv-wine.csv	sklearn wine_data.csv	4000	1.02	0.87	3985	3988	3988	1.00
+json-brains.json	site/brains.json	4000	2.93	2.49	1428	1436	1436	2.79
+prose-en-markdown.md	macos/docs/MODEL_CHOICES.md	4000	2.95	2.51	1320	1352	1352	2.96
+prose-en-store.txt	fastlane/metadata_ios/en-US/description.txt	1761	3.50	2.98	421	430	430	4.10
+store-ar-SA.txt	fastlane/metadata_ios/ar-SA/description.txt	1637	1.49	1.27	533	594	594	2.76
+store-de-DE.txt	fastlane/metadata_ios/de-DE/description.txt	1974	3.50	2.98	485	488	488	4.05
+store-ja.txt	fastlane/metadata_ios/ja/description.txt	837	1.32	1.12	431	433	433	1.93
+store-ko.txt	fastlane/metadata_ios/ko/description.txt	887	1.66	1.41	428	478	478	1.86
+store-ru.txt	fastlane/metadata_ios/ru/description.txt	1942	1.46	1.24	586	575	575	3.31
+store-zh-Hans.txt	fastlane/metadata_ios/zh-Hans/description.txt	698	1.46	1.24	377	400	400	1.75

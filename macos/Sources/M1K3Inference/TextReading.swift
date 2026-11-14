@@ -13,7 +13,7 @@
 //  (SwappableInferenceProvider here, RuntimeInferenceProvider in the app), and
 //  only the on-device brains conform: Brain at Home and Private Cloud Compute
 //  do not, so a pasted text handed to this seam cannot leave the device. The
-//  conformer set is pinned by name (`ReadEgressScanTests`).
+//  conformer set is pinned by name (`LookShellScanTests.theReaderSetIsClosed`).
 //
 //  `readContextTokens` is the window the conformer will read in: the compressor
 //  fits the text to it (`ReadBudget`), so the brain never sees an overflow.
@@ -22,6 +22,11 @@
 //  the shape is ImageLooking's (#768).
 //  Context: Kev, 2026-11-14: "Context ingestion & compression / sanitization, and analysis
 //  without system prompt - similar to vision"; "Instructions only pal. Yes to the Keep This workflow."
+//  Review: Kev + claude-opus-5.5, 2026-11-14 (follow-ups) — the held-out tokenizer check (13 fresh samples, Qwen3.5,
+//  Gemma 4 and Mini's own counts; docs/evals/2026-11-14-read-blind/README.md): every estimate times the margin sat
+//  at or under the real figure except a numbers-only CSV (1.00 real against 1.2 × 0.85 = 1.02), so the floor drops
+//  to 1.0. Non-Latin alphabets (Cyrillic, Arabic) run 2 to 2.3 times more cautious than they need; left as is (the
+//  cost is text unread, never an overflow). The egress pin's name corrected. Confidence 0.85.
 //
 
 import Foundation
@@ -77,7 +82,8 @@ public enum ReadBudget {
     /// half to a token, while digits and punctuation cost about one each (tokenizers split numbers,
     /// some digit by digit). Prose comes out at about 3.5; a CSV export near 2. The blind set's CSV
     /// overflowed Mini's window on the prose figure (docs/evals/2026-11-14-read-blind/). Clamped to
-    /// 1.2…3.5, read from the first 20,000 characters.
+    /// 1.0…3.5 (a numbers-only CSV measured a character a token on all three brains), read from the
+    /// first 20,000 characters.
     public static func charsPerToken(of text: String) -> Double {
         var letters = 0.0, wide = 0.0, dense = 0.0, spaces = 0.0, count = 0.0
         for character in text.prefix(20000) {
@@ -93,7 +99,7 @@ public enum ReadBudget {
         }
         guard count > 0 else { return proseCharsPerToken }
         let tokens = letters / 4.5 + wide / 1.2 + dense + spaces / 10
-        return min(proseCharsPerToken, max(1.2, count / max(tokens, 1)))
+        return min(proseCharsPerToken, max(1.0, count / max(tokens, 1)))
     }
 
     /// How many characters of `text` (or of prose, when no text is given) fit beside the
