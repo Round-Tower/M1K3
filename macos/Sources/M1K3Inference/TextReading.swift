@@ -99,7 +99,8 @@ public enum ReadBudget {
     /// How many characters of `text` (or of prose, when no text is given) fit beside the
     /// instructions, the question and the answer in `windowTokens`.
     public static func characters(windowTokens: Int, question: String, text: String? = nil) -> Int {
-        let fixedChars = ReadPrompt.instructions.count + ReadPrompt.prompt(text: "", question: question, cut: true).count
+        let fixedChars = ReadPrompt.instructions.count
+            + ReadPrompt.prompt(text: "", question: question, cut: true).count
         let fixedTokens = Int((Double(fixedChars) / proseCharsPerToken).rounded(.up)) + 32 // the template's own turns
         let free = windowTokens - answerTokens - fixedTokens
         guard free > 0 else { return 0 }

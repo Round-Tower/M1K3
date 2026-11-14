@@ -1334,7 +1334,9 @@ struct ContentView: View {
         // "Ask more" under a read: the question goes to the same text, on this Mac, before any
         // Private Cloud arming (a read never leaves the device). STICKY (Kev, 2026-11-14): the pill
         // stays for a chain of questions until its ✕, a new attachment, or the read is no longer last.
-        if aboutText != nil, env.chat.lastRead != nil, pendingAttachments.isEmpty, pendingFiles.isEmpty, env.reader != nil {
+        if aboutText != nil, env.chat.lastRead != nil, pendingAttachments.isEmpty, pendingFiles.isEmpty,
+           env.reader != nil
+        {
             let question = draft
             draft = ""
             Task { await env.readAgain(question) }

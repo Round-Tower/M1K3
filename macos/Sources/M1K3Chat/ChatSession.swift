@@ -120,6 +120,9 @@
 //  0.8 (AttachmentStoreTests; the phone check is the proof).
 //  Same fold: `lookMissed`, the turn for a look that got no frame (the question and one honest line, display-only),
 //  so the shell never has to hand those words to `send`.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — the read (a text, instructions only): `read`, `readAgain`, `lastRead`,
+//  `readSource(answeredBy:)`, display-only like the look (contextExcluded, tag `read`, no title, a rating keeps no
+//  words); `ChatMessage.readSource` (Optional, strip-key decode pinned). Confidence 0.8: ChatSessionReadTests.
 
 import Foundation
 import M1K3Inference
@@ -1351,7 +1354,9 @@ public final class ChatSession {
         isResponding = true
         defer { isResponding = false }
 
-        let budget = ReadBudget.characters(windowTokens: reader.readContextTokens, question: question, text: source.text)
+        let budget = ReadBudget.characters(
+            windowTokens: reader.readContextTokens, question: question, text: source.text
+        )
         guard budget > 0 else {
             finishRead(assistantID, saying: ReadFailureReply.cannotRead)
             await persistActiveConversation()
@@ -1368,7 +1373,7 @@ public final class ChatSession {
         }.value
         let prompt = ReadPrompt.prompt(text: fit.text, question: question, cut: fit.cut)
         Self.log.notice(
-            "read: \(fit.text.count, privacy: .public) of \(source.text.count, privacy: .public) chars, cut \(fit.cut, privacy: .public)"
+            "read: \(fit.text.count, privacy: .public)/\(source.text.count, privacy: .public) cut \(fit.cut, privacy: .public)"
         )
 
         stopRequested = false
@@ -1654,9 +1659,11 @@ public final class ChatSession {
     /// The words a rating row keeps. A rated look or read keeps the verdict and the tag, never the
     /// words: the row outlives the conversation's delete, and what the camera saw or the pasted text
     /// said must not.
-    static func feedbackWords(toolsUsed: [String], question: String, answer: String) -> (question: String, answer: String) {
-        let private_ = toolsUsed.contains(LookPrompt.toolName) || toolsUsed.contains(ReadPrompt.toolName)
-        return private_ ? ("", "") : (question, answer)
+    static func feedbackWords(
+        toolsUsed: [String], question: String, answer: String
+    ) -> (question: String, answer: String) {
+        let withheld = toolsUsed.contains(LookPrompt.toolName) || toolsUsed.contains(ReadPrompt.toolName)
+        return withheld ? ("", "") : (question, answer)
     }
 
     /// Record Kev's judgement on one assistant answer. Captures the paired

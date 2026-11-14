@@ -46,7 +46,8 @@ extension MLXBrainProvider: TextReading {
                         let container = try await ensureLoaded()
                         defer { MLXMemoryBudget.reclaim(label: "read") }
                         var parameters = generateParameters
-                        parameters.maxTokens = min(parameters.maxTokens ?? ReadBudget.answerTokens, ReadBudget.answerTokens)
+                        let cap = ReadBudget.answerTokens
+                        parameters.maxTokens = min(parameters.maxTokens ?? cap, cap)
                         let session = ChatSession(container, instructions: system, generateParameters: parameters)
                         if let context = Self.captionAdditionalContext(supportsThinkingToggle: supportsThinkingToggle) {
                             session.additionalContext = context

@@ -193,13 +193,18 @@ public enum ReadCompressor {
 
         if let lead = passages.first, lead.count <= budget / leadShare { tryAdd(0) }
 
-        let hits = scores.indices.filter { scores[$0] > 0 }.sorted { scores[$0] > scores[$1] || (scores[$0] == scores[$1] && $0 < $1) }
+        // Best first; a tie keeps the document's order.
+        let hits = scores.indices
+            .filter { scores[$0] > 0 }
+            .sorted { scores[$0] > scores[$1] || (scores[$0] == scores[$1] && $0 < $1) }
         if hits.isEmpty {
             // Nothing in common with the question: an even spread over the whole text.
             let average = max(1, passages.reduce(0) { $0 + $1.count } / max(1, total))
             let slots = max(1, budget / (average + passageSeparator.count + gapMarker.count))
             let picks = slots >= total ? Array(0 ..< total)
-                : (0 ..< slots).map { slots == 1 ? 0 : Int((Double($0) * Double(total - 1) / Double(slots - 1)).rounded()) }
+                : (0 ..< slots).map { slot in
+                    slots == 1 ? 0 : Int((Double(slot) * Double(total - 1) / Double(slots - 1)).rounded())
+                }
             picks.forEach(tryAdd)
         } else {
             hits.forEach(tryAdd)
@@ -214,9 +219,15 @@ public enum ReadCompressor {
             let best = hits.first.map { passages[$0] } ?? passages.first ?? ""
             let text = headCut(best, budget: budget - gapMarker.count - passageSeparator.count)
             let lead = hits.first == 0 ? "" : gapMarker + passageSeparator
-            return Fit(text: text.isEmpty ? "" : lead + text, cut: true, keptPassages: text.isEmpty ? 0 : 1, totalPassages: total)
+            return Fit(
+                text: text.isEmpty ? "" : lead + text, cut: true,
+                keptPassages: text.isEmpty ? 0 : 1, totalPassages: total
+            )
         }
-        return Fit(text: render(passages, chosen: chosen), cut: chosen.count < total, keptPassages: chosen.count, totalPassages: total)
+        return Fit(
+            text: render(passages, chosen: chosen), cut: chosen.count < total,
+            keptPassages: chosen.count, totalPassages: total
+        )
     }
 
     /// Every index of `count` once, in an order that covers the whole range evenly at any point

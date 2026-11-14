@@ -15,6 +15,7 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-10 — recent_activity joins the taint set: its digest is DERIVED from
 //  memories / chat titles / visitor names; distilling the answer would feed the next digest (pinned to the tool).
 //  Review: Kev + claude-fable-5.2, 2026-11-09 — `look` joins (#768): the answer to a camera frame is never distilled.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — `read` joins: someone else's words become a document only when kept.
 
 import Foundation
 

@@ -17,6 +17,7 @@
 //  ToolNarrationTests; the speak wiring is verify-at-⌘R). Prior: Unknown.
 //  Review: Kev + claude-fable-5.2, 2026-11-09 — `unspoken` (#768): the look's tag is set when its answer is
 //  final, so the tracker drops it rather than say "Using look." after the answer it names.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — `read` joins `unspoken`: tagged as its answer lands, like a look.
 //
 
 import Foundation

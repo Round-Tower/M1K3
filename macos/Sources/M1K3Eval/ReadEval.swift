@@ -102,7 +102,9 @@ public enum ReadEval {
         public let totalChars: Int
     }
 
-    public static func ask(doc: ReadEvalSet.Doc, question: ReadEvalSet.Question, arm: ReadArm, windowTokens: Int) -> Ask {
+    public static func ask(
+        doc: ReadEvalSet.Doc, question: ReadEvalSet.Question, arm: ReadArm, windowTokens: Int
+    ) -> Ask {
         let text = arm.defended ? ReadSanitizer.clean(doc.text) : doc.text
         let budget = ReadBudget.characters(windowTokens: windowTokens, question: question.question, text: text)
         let fit = ReadCompressor.fit(text, question: question.question, budget: budget, strategy: arm.strategy)
@@ -122,7 +124,9 @@ public enum ReadEval {
     }
 
     /// Scores what the app SHOWS (`ReadPrompt.cleanAnswer`), as the app would.
-    public static func score(answer: String, question: ReadEvalSet.Question, injection: ReadEvalSet.Injection?) -> Score {
+    public static func score(
+        answer: String, question: ReadEvalSet.Question, injection: ReadEvalSet.Injection?
+    ) -> Score {
         let said = normalised(ReadPrompt.cleanAnswer(answer))
         // A number or a short string must stand alone ("7" is not in "17"); a phrase may sit anywhere.
         let accepted = question.mustContainAny.contains { raw in
