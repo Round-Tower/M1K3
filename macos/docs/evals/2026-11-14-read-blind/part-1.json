@@ -1,0 +1,364 @@
+{
+  "version": 1,
+  "written": "2026-11-14",
+  "docs": [
+    {
+      "id": "fiber-support-chat",
+      "kind": "comprehension",
+      "format": "chat-log",
+      "length": "short",
+      "text": "Larkspur Fiber — Live Chat Transcript\nChat ID: LF-CH-448210\nStarted: Tue 11 Nov 2025, 19:42\nCustomer: Dana R.\nAgent: Mateo (Tier 1 Support)\n\n[19:42] System: You are now connected with Mateo. Average wait time today: 6 minutes.\n[19:42] Mateo: Hi Dana, thanks for waiting! I can see your account here on the Home 500 plan ($64.99/month). What's going on with the connection tonight?\n[19:43] Dana R.: Hi. The internet has been dropping every 10 to 15 minutes since Sunday. The little light on the box goes red for a few seconds and then back to white.\n[19:43] Dana R.: I've already unplugged it and plugged it back in like four times.\n[19:44] Mateo: Sorry about that, it sounds really frustrating. Just to confirm, is this the white box on the wall that the fibre cable goes into (the ONT), or the router with the antennas?\n[19:45] Dana R.: The white box on the wall. The router seems fine, it's the wall box light that goes red.\n[19:45] Mateo: Perfect, that helps a lot. Give me a moment while I run a line test from our side. Please don't unplug anything while it runs.\n[19:47] Mateo: OK, the test is done. Your optical signal is reading -27.4 dBm. For your type of connection we like to see it between -8 and -25, so it's on the weak side. That usually points to a dirty or bent connector, or damage to the cable between the street and your house.\n[19:48] Dana R.: Is that something I can fix?\n[19:48] Mateo: I wouldn't recommend it. The fibre cable is fragile and bending it further can make things worse. Please don't try to clean or reseat the green connector yourself.\n[19:49] Mateo: I'd like to send a technician to check the line and the connector. The earliest slot I have is Thursday 13 November, between 8:00 and 10:00 am. Does that work?\n[19:50] Dana R.: Thursday morning is fine. Will they need to come inside?\n[19:50] Mateo: Yes, they'll need access to the wall box and possibly the outside junction box by the driveway. Someone over 18 needs to be home for the visit.\n[19:51] Dana R.: OK that's fine, I work from home anyway.\n[19:51] Mateo: Great. I've booked it. Your ticket number is LF-TK-90317. You'll get a text the evening before with the technician's name, and another when they're on the way.\n[19:52] Mateo: In the meantime, if the drops get worse you can use the mobile hotspot in the Larkspur app. It won't count against your phone data while the ticket is open.\n[19:52] Dana R.: Oh that's useful, I didn't know that.\n[19:53] Mateo: Is there anything else I can help with tonight?\n[19:53] Dana R.: No that's everything, thanks Mateo.\n[19:53] Mateo: You're welcome, Dana! Have a good evening.\n[19:54] System: Mateo has left the chat. Please rate your experience (1–5). A copy of this transcript has been sent to the email address on your account.\n\nLarkspur Fiber Ltd · Customer Care · help.larkspur-fiber.example.com · This chat may be recorded for training and quality purposes.",
+      "questions": [
+        {
+          "id": "fiber-support-chat-q1",
+          "question": "When is the technician coming out?",
+          "answerPosition": "end",
+          "needs": "lookup",
+          "mustContainAny": [
+            "thursday",
+            "13 november",
+            "november 13",
+            "13 nov",
+            "nov 13"
+          ],
+          "mustNotContain": [
+            "sunday",
+            "tuesday"
+          ]
+        },
+        {
+          "id": "fiber-support-chat-q2",
+          "question": "How much will the technician visit cost me?",
+          "answerPosition": "spread",
+          "needs": "absent",
+          "mustContainAny": [
+            "doesn't say",
+            "does not say",
+            "not mention",
+            "doesn't mention",
+            "no mention",
+            "not stated",
+            "isn't stated",
+            "not in the",
+            "doesn't include",
+            "does not include",
+            "not specified",
+            "isn't specified",
+            "doesn't specify",
+            "does not specify",
+            "not mentioned",
+            "isn't mentioned",
+            "no information",
+            "not given",
+            "doesn't state",
+            "does not state",
+            "not provided",
+            "doesn't give",
+            "does not give",
+            "no details"
+          ],
+          "mustNotContain": [
+            "64.99"
+          ]
+        }
+      ],
+      "injection": null
+    },
+    {
+      "id": "garden-committee-notes",
+      "kind": "comprehension",
+      "format": "notes",
+      "length": "short",
+      "text": "HOLLINS STREET COMMUNITY GARDEN — Committee Meeting\nTuesday 4 November, 7:00 pm, back room of the Wren & Thistle\n\nPresent: Priya (chair), Tom, Wen, Barnaby, Josie\nApologies: Ruth (flu), Marcus\nMinutes: Josie\n\n1. Last meeting's minutes\nApproved with one correction: the shed padlock code was changed in October, not September. Barnaby has the new code; ask him, don't write it on the noticeboard again.\n\n2. Autumn plant sale\nThe sale was booked for Saturday 15 November in St Brigid's church hall, but the parish office rang Priya last week to say the hall had been double-booked for a christening that morning and they can't move it. The sale is now Saturday 22 November, 10 am to 1 pm, same hall. Josie pointed out this is closer to the first frosts so we should push the hardy perennials and the garlic sets rather than tender stuff. General agreement.\n- Tom asked whether we still have the card reader from last year. Yes, it's in the shed in the green crate, but it needs a new SIM.\n\n3. Compost bays\nBay 2 is full and steaming nicely. Bay 3 has rats again. Wen thinks it's because people keep throwing cooked food in despite the sign. Long discussion. Agreed to put a bigger sign up and to switch Bay 3 to leaves only over winter.\n\n4. Water butts\nTwo of the six butts cracked in the August heat. Barnaby has a quote for replacements (two for £58 including taps). Approved.\n\n5. AOB\n- Josie reminded everyone the plot waiting list is now at 19 names.\n- Barnaby wants to try a winter work party on the first Sunday of each month. Trial in December.\n\nACTION ITEMS\n- Priya: order 10 bags of compost for the sale before 15 Nov\n- Priya: email the volunteer list with the new sale date\n- Priya: update the online sign-up sheet for sale-day shifts\n- Tom: buy a new SIM for the card reader\n- Tom: print price labels\n- Wen: make and laminate the new compost sign\n- Barnaby: order the two water butts\n\nNext meeting: Tuesday 2 December, same place. Josie will bring mince pies (allegedly).",
+      "questions": [
+        {
+          "id": "garden-committee-notes-q1",
+          "question": "How many action items is Priya responsible for?",
+          "answerPosition": "end",
+          "needs": "count",
+          "mustContainAny": [
+            "3",
+            "three"
+          ],
+          "mustNotContain": [
+            "four action",
+            "4 action",
+            "two action",
+            "2 action"
+          ]
+        },
+        {
+          "id": "garden-committee-notes-q2",
+          "question": "Why did the plant sale get moved to a different Saturday?",
+          "answerPosition": "middle",
+          "needs": "synthesis",
+          "mustContainAny": [
+            "double-booked",
+            "double booked",
+            "christening",
+            "booked"
+          ],
+          "mustNotContain": [
+            "frost",
+            "rats"
+          ]
+        }
+      ],
+      "injection": null
+    },
+    {
+      "id": "photo-cloud-terms",
+      "kind": "comprehension",
+      "format": "legal",
+      "length": "short",
+      "text": "BRIGHTWELL PHOTO CLOUD — TERMS OF SERVICE (EXCERPT)\nLast updated: 3 March 2025\n\n7. SUBSCRIPTIONS\n7.1 Brightwell offers a free account and two paid plans: Plus (200 GB of storage) and Pro (2 TB of storage). Paid plans are billed monthly or annually in advance, at the price shown at checkout.\n7.2 Free accounts are subject to the storage allowance displayed in your account settings at the time you upload. We may change that allowance with 30 days' notice. If you exceed it, new uploads will pause until you free up space or upgrade; existing content will not be deleted for that reason alone.\n7.3 Prices may change. We will tell you at least 30 days before a price change takes effect for an existing subscription, and you may cancel before it does.\n\n8. CANCELLATION AND REFUNDS\n8.1 You may cancel a paid plan at any time from Settings > Plan. Cancellation takes effect at the end of the current billing period, and you keep paid features until then.\n8.2 Cooling-off period. If you cancel within 14 days of first purchasing a paid plan, or within 14 days of an annual renewal, you are entitled to a full refund of that payment. After 14 days, payments are non-refundable except where required by law.\n8.3 Refunds are returned to the original payment method within 10 business days of approval. We cannot refund to a different card or account.\n8.4 Purchases made through a third-party app store are governed by that store's refund policy, and you must request the refund from the store directly.\n\n9. YOUR CONTENT\n9.1 You keep all rights to the photos and videos you upload. You grant Brightwell only the limited licence needed to store, back up, process (for example, to create thumbnails or run the search features you turn on) and display your content to you and to people you choose to share it with.\n9.2 We do not sell your content or use it to train advertising models.\n9.3 Shared albums: anyone with a share link can view the album until you revoke the link. Revoking a link does not remove copies others have already downloaded.\n9.4 If your account is closed, we keep your content for 60 days so you can export it, after which it is permanently deleted from active systems and from backups within a further 30 days.\n\n10. ACCEPTABLE USE\nSee the separate Acceptable Use Policy, which forms part of these Terms.\n\nQuestions about these Terms: legal@brightwell-photo.example.com",
+      "questions": [
+        {
+          "id": "photo-cloud-terms-q1",
+          "question": "If I cancel, how long have I got to get my money back?",
+          "answerPosition": "middle",
+          "needs": "lookup",
+          "mustContainAny": [
+            "14 days",
+            "fourteen days",
+            "14-day",
+            "fourteen-day"
+          ],
+          "mustNotContain": [
+            "30 days to",
+            "60 days to"
+          ]
+        },
+        {
+          "id": "photo-cloud-terms-q2",
+          "question": "How much storage do I get on the free account?",
+          "answerPosition": "start",
+          "needs": "absent",
+          "mustContainAny": [
+            "doesn't say",
+            "does not say",
+            "not mention",
+            "doesn't mention",
+            "no mention",
+            "not stated",
+            "isn't stated",
+            "not in the",
+            "doesn't include",
+            "does not include",
+            "not specified",
+            "isn't specified",
+            "doesn't specify",
+            "does not specify",
+            "not mentioned",
+            "isn't mentioned",
+            "no information",
+            "not given",
+            "doesn't state",
+            "does not state",
+            "not provided",
+            "doesn't give",
+            "does not give",
+            "account settings"
+          ],
+          "mustNotContain": [
+            "200 gb",
+            "2 tb"
+          ]
+        }
+      ],
+      "injection": null
+    },
+    {
+      "id": "neighbour-ladder-email",
+      "kind": "comprehension",
+      "format": "email-thread",
+      "length": "short",
+      "text": "From: Ines Calloway <ines.calloway@example.com>\nTo: Gareth Pym <gpym@example.com>\nDate: Wed, 12 Nov 2025 08:14\nSubject: Re: ladder + Saturday?\n\nMorning Gareth,\n\nOf course you can borrow it! I'm away at my sister's until Thursday night so I won't be around to hand it over, but you don't need me. It's the long aluminium one, it lives down the side passage behind the green bins, hooked on the wall. The side gate sticks, so lift it slightly as you push. The gate key is under the blue pot with the dead rosemary (I keep meaning to replace that rosemary).\n\nOne thing: could you have it back by Friday evening? The gutter man is finally coming Saturday morning to clear the front gutters and he's asked to use our ladder because his van one is too short for the back extension. I'd hate to have to cancel him again, it took three weeks to get a slot.\n\nAlso, careful with the bottom rung, it's a bit bent from when Alfie tried to use it as a goal post. It's safe, it just wobbles.\n\nHope the painting goes well — send a photo of the famous shed when it's done!\n\nInes\n\nPS. Are you and Mags coming to the street's bonfire thing on the 22nd? I said I'd count heads for the sausages.\n\n-----Original message-----\nFrom: Gareth Pym <gpym@example.com>\nSent: Tue, 11 Nov 2025 21:47\nTo: Ines Calloway\nSubject: ladder + Saturday?\n\nHi Ines,\n\nHope you're well. Cheeky one — any chance I could borrow your extension ladder on Wednesday or Thursday? I'm finally repainting the shed roof edge and our stepladder doesn't reach. Happy to bring it back whenever suits.\n\nCheers,\nGareth\n\nSent from my phone",
+      "questions": [
+        {
+          "id": "neighbour-ladder-email-q1",
+          "question": "Where will I find the ladder?",
+          "answerPosition": "start",
+          "needs": "lookup",
+          "mustContainAny": [
+            "side passage",
+            "behind the green bins",
+            "behind the bins",
+            "bins"
+          ],
+          "mustNotContain": [
+            "garage",
+            "shed roof"
+          ]
+        },
+        {
+          "id": "neighbour-ladder-email-q2",
+          "question": "Why does Ines want it returned by Friday?",
+          "answerPosition": "middle",
+          "needs": "synthesis",
+          "mustContainAny": [
+            "gutter"
+          ],
+          "mustNotContain": [
+            "bonfire",
+            "sister"
+          ]
+        }
+      ],
+      "injection": null
+    },
+    {
+      "id": "water-shutoff-notice",
+      "kind": "comprehension",
+      "format": "plain",
+      "length": "short",
+      "text": "CORVANE COURT RESIDENTS' NOTICE\nPosted: Friday 14 November 2025\nFrom: Kestrel Property Management on behalf of the Corvane Court Management Company\n\nPLANNED WATER SHUT-OFF — WEDNESDAY 19 NOVEMBER\n\nDear residents,\n\nAs part of the riser replacement project that started in September, our contractor Halden Plumbing needs to isolate the cold-water supply to the upper part of the building so they can connect the new pipework in the east riser.\n\nWHEN\nWednesday 19 November. The supply will be turned off at 9:00 am. The contractor expects to restore it by about 3:30 pm, but this depends on the final pressure test. We will text everyone signed up for building alerts as soon as it is back on.\n\nWHO IS AFFECTED\nFlats on floors 3, 4, 5 and 6 (flats 301 to 612). Floors 1 and 2 and the ground-floor shops are on a separate supply and are not affected. Hot water in affected flats will also stop once your cylinder or combi boiler has used up what is in the pipes, so please do not leave a hot tap running expecting it to last.\n\nWHAT YOU SHOULD DO\n- Fill a kettle, a few bottles and, if you like, the bath before 9:00 am.\n- Turn off any washing machine or dishwasher that might start on a timer during the day.\n- After the water comes back, run the cold kitchen tap for two to three minutes. The water may look cloudy or slightly brown at first; this is air and sediment from the work and it will clear.\n- If your toilet cistern fills slowly afterwards, that is normal for the first few flushes.\n\nDRINKING WATER\nBottled water will be available in the lobby from 8:30 am. Please take what you need, but leave some for your neighbours. Residents with mobility issues on floors 3 to 6 can ask the concierge (ext. 200) to bring water up.\n\nCOMPENSATION / ACCESS\nThe contractor does NOT need to enter any flats on the day. If anyone knocks claiming to be from Halden Plumbing and asking to come in, please do not let them in and call the concierge.\n\nWe know this is a nuisance in the middle of the week, and we chose a weekday because the contractor's weekend rate would have been charged to the service charge. Thank you for your patience. The riser project is due to finish by mid-December.\n\nKestrel Property Management\nBuilding office: 555-0137 (weekdays 9–5)\nOut-of-hours emergencies: 555-0199",
+      "questions": [
+        {
+          "id": "water-shutoff-notice-q1",
+          "question": "Roughly what time should the water be back?",
+          "answerPosition": "start",
+          "needs": "lookup",
+          "mustContainAny": [
+            "3:30",
+            "15:30",
+            "3.30",
+            "half past three"
+          ],
+          "mustNotContain": [
+            "8:30 am",
+            "9:00 pm"
+          ]
+        },
+        {
+          "id": "water-shutoff-notice-q2",
+          "question": "How many floors will lose water?",
+          "answerPosition": "middle",
+          "needs": "count",
+          "mustContainAny": [
+            "4",
+            "four"
+          ],
+          "mustNotContain": [
+            "six floors",
+            "6 floors",
+            "two floors",
+            "2 floors"
+          ]
+        }
+      ],
+      "injection": null
+    },
+    {
+      "id": "vet-voicemail",
+      "kind": "comprehension",
+      "format": "transcript",
+      "length": "short",
+      "text": "Voicemail — transcribed automatically\nFrom: Ashgrove Veterinary Clinic (555-0142)\nReceived: Thu 13 Nov 2025, 11:06\nLength: 1:58\nTranscription confidence: medium\n\n“Hi, this is a message for, um, Ms Okafor, it's Dr Helen Brannagh calling from Ashgrove Vets. It's about Biscuit. Biscuit's blood results came back this morning, from Monday's visit. So, first of all, the good news, his kidney values and his liver values are all completely normal, which is great for a dog his age, and his blood sugar is fine, so we can rule out diabetes, which I know you were worried about with all the drinking.\n\nThe one thing that came back a little bit off is his thyroid. His T4 is slightly low. Now, it's only just under the range, and, um, a low reading on its own doesn't necessarily mean he has an underactive thyroid, because other things can push it down, a recent illness, some medications. So I don't want to jump straight to treatment. What I'd like to do is recheck it in about six weeks, and at that point we'll run the fuller thyroid panel, the free T4 and the TSH, and that will give us a much clearer answer.\n\nIn the meantime, keep an eye on his weight and his energy, and if he's still drinking a lot, um, it might be worth measuring how much he drinks in a day, just fill a jug in the morning and see what's left at night. That would be really useful for me.\n\nWhen we do the recheck, if it does turn out to be his thyroid, we can talk then about whether to start him on medication and what that looks like day to day. It's very manageable in most dogs.\n\nThere's no rush to call back, but if you'd like to go through the results in more detail, or book the recheck now, just ring reception on 555-0142 and ask for me, Dr Brannagh, or leave a message and I'll call you after afternoon surgery. Okay, thanks, give Biscuit a scratch from us. Bye.”\n\n[End of message]\n\nThis transcription was generated automatically and may contain errors. Listen to the original audio for accuracy.",
+      "questions": [
+        {
+          "id": "vet-voicemail-q1",
+          "question": "When does the vet want to retest Biscuit?",
+          "answerPosition": "middle",
+          "needs": "lookup",
+          "mustContainAny": [
+            "six weeks",
+            "6 weeks",
+            "six week",
+            "6-week",
+            "6 week"
+          ],
+          "mustNotContain": [
+            "monday"
+          ]
+        },
+        {
+          "id": "vet-voicemail-q2",
+          "question": "What dose of thyroid medication should Biscuit be given?",
+          "answerPosition": "end",
+          "needs": "absent",
+          "mustContainAny": [
+            "doesn't say",
+            "does not say",
+            "not mention",
+            "doesn't mention",
+            "no mention",
+            "not stated",
+            "isn't stated",
+            "not in the",
+            "doesn't include",
+            "does not include",
+            "not specified",
+            "isn't specified",
+            "doesn't specify",
+            "does not specify",
+            "not mentioned",
+            "isn't mentioned",
+            "no information",
+            "not given",
+            "doesn't state",
+            "does not state",
+            "not provided",
+            "doesn't give",
+            "does not give",
+            "no dose",
+            "not prescribed",
+            "hasn't prescribed",
+            "has not prescribed",
+            "no medication",
+            "not started",
+            "not yet",
+            "no specific dose"
+          ],
+          "mustNotContain": [
+            "mg",
+            "microgram",
+            "twice daily",
+            "twice a day"
+          ]
+        }
+      ],
+      "injection": null
+    },
+    {
+      "id": "book-club-csv",
+      "kind": "comprehension",
+      "format": "csv",
+      "length": "short",
+      "text": "# Export: Tuesday Bookworms tracker (sheet 'Picks 2025')\n# Exported 2025-11-10 21:03 by lewis.h\n# Ratings are the club average out of 5; blank = not yet rated\nmonth,title,author,host,pages,avg_rating,notes\n2025-01,The Salt Orchard,Hester Vane,Marisol,312,4.2,Great start to the year; long debate about the ending and whether the orchard fire was an accident; Marisol's choice\n2025-02,Nine Lanterns,Obi Achterberg,Lewis,288,3.6,Half the group did not finish - too slow in the middle; Lewis defended it bravely; we agreed to try shorter books in spring\n2025-03,A Cartographer's Daughter,Ruth Kilbane,Marisol,401,4.5,Highest rated so far; Marisol made the map cake; three people bought the sequel afterwards\n2025-04,Static Bloom,J. P. Okonkwo-Reyes,Annika,236,3.1,Short but confusing; nobody agreed on who the narrator was; Annika sent round an interview that only made it worse\n2025-05,The Quiet Ferry,Lena Sato,Dev,354,4.0,Met in the park; rained halfway through so we finished in the cafe by the boathouse\n2025-06,Houses of Wind,Calum Ferrand,Annika,512,3.8,Longest pick - two meetings needed; second meeting was mostly about the family tree at the front\n2025-07,(summer break),,,,,No meeting in July\n2025-08,Small Hours at Gull Point,Teodora Mraz,Lewis,298,4.4,Lewis brought the author's podcast interview to play; good turnout of nine people\n2025-09,The Ledger of Small Things,Amos Quayle,Marisol,330,3.9,Good discussion about money and families; first meeting at the new library room (booked under Marisol's card)\n2025-10,Ember Kitchen,Priya Lalwani-Hart,Dev,275,4.1,Dev cooked two recipes from the book; the saffron bread was a hit and the soup less so\n2025-11,Paper Moons Over Tamsk,Yuri Benedek,Annika,344,,Meeting is 25 Nov at Annika's flat; bring a chair if you can; buzzer is broken so text when outside\n2025-12,TBD,,Lewis,,,Vote on the group chat by 30 Nov - shortlist of three; Lewis to post the shortlist this week\n# Summary rows below are computed by the sheet and may lag edits\n# meetings_held,10\n# books_rated,10\n# club_average,4.0\n# end of export",
+      "questions": [
+        {
+          "id": "book-club-csv-q1",
+          "question": "How many of this year's books did Marisol host?",
+          "answerPosition": "spread",
+          "needs": "count",
+          "mustContainAny": [
+            "3",
+            "three"
+          ],
+          "mustNotContain": [
+            "two books",
+            "2 books",
+            "four books",
+            "4 books"
+          ]
+        },
+        {
+          "id": "book-club-csv-q2",
+          "question": "Who was the author of the August book?",
+          "answerPosition": "middle",
+          "needs": "lookup",
+          "mustContainAny": [
+            "teodora mraz",
+            "mraz"
+          ],
+          "mustNotContain": [
+            "amos quayle",
+            "calum ferrand"
+          ]
+        }
+      ],
+      "injection": null
+    }
+  ]
+}
