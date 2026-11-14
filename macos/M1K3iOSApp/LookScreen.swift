@@ -20,6 +20,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-10 — Kev, in the hand: Return "keeps pushing the text input down" and
 //  "there's no way to dismiss the keyboard". The field is one line and Return sends; a tap on the view or a
 //  downward drag on the answer puts the keyboard down. Confidence 0.6 until it is back in his hand.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
+//  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
 //
 
 import M1K3Chat
@@ -103,7 +105,7 @@ struct LookScreen: View {
                     .padding(24)
             }
             .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.readableSecondary)
         case .denied:
             notice("Camera access is off for M1K3.", settingsLink: true)
         case .restricted:
@@ -116,7 +118,7 @@ struct LookScreen: View {
     private func notice(_ text: LocalizedStringKey, settingsLink: Bool) -> some View {
         VStack(spacing: 12) {
             Label(text, systemImage: "eye.slash")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
             #if os(iOS)
                 if settingsLink, let url = URL(string: UIApplication.openSettingsURLString) {
                     Link("Allow the camera in Settings", destination: url)

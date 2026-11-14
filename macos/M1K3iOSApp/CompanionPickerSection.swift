@@ -41,6 +41,8 @@
 //  (`constellationShown`), and the pick comes back with the space. Confidence 0.8 (verify on the Duo sim).
 //  Review: Kev + claude-fable-5.2, 2026-11-12 — adds the "Glow when speaking" toggle (hidden on visionOS, like
 //  the skin picker: the halo is a CustomMaterial shell). Confidence 0.7 (not yet seen on a phone).
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
+//  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
 //
 
 import M1K3Avatar
@@ -186,7 +188,7 @@ struct CompanionPickerSection: View {
             if noneChosen {
                 Text("No face")
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
         }
         .onAppear { if creatureChosen { lastCreature = companion } }

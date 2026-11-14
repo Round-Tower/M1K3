@@ -29,6 +29,8 @@
 //  `AccessibilityAuditReport.elementName` and say its kind. It also attaches a picture of the window and heads
 //  the report with the window's frame, for a11y_contrast.py; the picture is now the answer to "which screen was
 //  this".
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — a finding's detail carries the element's frame, so a labelled
+//  element's contrast can be measured too.
 //
 
 import AppKit
@@ -147,11 +149,11 @@ final class AccessibilityAuditUITests: XCTestCase {
         app.terminate()
     }
 
-    /// Xcode's wording plus what kind of element it is: a named element ("bolt.fill") is
-    /// otherwise impossible to place.
+    /// Xcode's wording plus what kind of element it is and where: a labelled element is otherwise
+    /// impossible to place, and `a11y_contrast.py` measures a contrast finding on that frame.
     private static func detail(of issue: XCUIAccessibilityAuditIssue) -> String {
         guard let element = issue.element, element.exists else { return issue.compactDescription }
-        return "\(issue.compactDescription) (\(name(of: element.elementType)))"
+        return "\(issue.compactDescription) (\(name(of: element.elementType)) at \(element.frame))"
     }
 
     private static func name(of element: XCUIElement?) -> String {

@@ -16,6 +16,8 @@
 //  `source` tag (the App Store plate showed "demo:screengrab"; real rows read "distilled"). Confidence now 0.8.
 //  Review: Kev + claude-opus-5-5, 2026-10-03 — the memories screengrab plate runs `ScreengrabHarness.memoryQuery` on
 //  appear (a broad recall), so App Preview footage shows the persona without typing. Inert otherwise. Confidence 0.8.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
+//  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
 
 import M1K3Knowledge
 import M1K3Memory
@@ -59,7 +61,7 @@ struct MemoriesScreen: View {
                         // stamp like "demo:screengrab" in a store screenshot).
                         Text(Self.caption(for: hit.memory))
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.readableSecondary)
                     }
                 }
             }

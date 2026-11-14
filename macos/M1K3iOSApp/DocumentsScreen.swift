@@ -13,6 +13,10 @@
 //
 //  Review: Kev + claude-fable-5.1, 2026-10-09 — Photo rows (caption memory): `photo` icon + accessibility label,
 //  privacy line in the empty state. TDD_SKIP: view body.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
+//  (ReadableSecondary.swift), as on the Mac in #831. A row is one accessibility element and its date is `.caption`
+//  (the phone audit: hit area too small, text that does not scale at `.caption2`). Not yet measured on the phone at
+//  the time of writing.
 
 import M1K3Knowledge
 import SwiftUI
@@ -47,9 +51,12 @@ struct DocumentsScreen: View {
                                 Text(item.title).font(.body)
                             }
                             Text(item.createdAt, format: .dateTime.day().month().year())
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .font(.caption)
+                                .foregroundStyle(.readableSecondary)
                         }
+                        // One element a row: on the phone the audit found the title and the date as
+                        // two separate targets, each too small to hit.
+                        .accessibilityElement(children: .combine)
                     }
                     .onDelete(perform: delete)
                 }

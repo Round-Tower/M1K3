@@ -129,6 +129,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-13 — the status line over the composer is near-primary, not `.secondary`
 //  (it failed Xcode's contrast audit over the thin material), and its separator dot is hidden from accessibility.
 //  Measured by re-running the audit on a Simulator; the look is verify-on-device. Confidence 0.7.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
+//  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
 //  Review: Kev + claude-opus-5.5, 2026-11-14 — a send with files and no photos is a READ (`core.read`), and a read's
 //  answers offer "Keep this". Compile-checked; owes a try in the hand.
 //  Review: Kev + claude-opus-5.5, 2026-11-14 (the summoned pass on #833) — a read that cannot start hands the question
@@ -494,7 +496,7 @@ struct ChatScreen: View {
                 if let line = SeasonalLook.greeting(for: SeasonalLook.now(enabled: seasonalLooks, offline: NetworkPathWatch.shared.isOffline)) {
                     Text(line)
                         .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                         .multilineTextAlignment(.center)
                         .colorScheme(.dark)
                         .padding(.horizontal, 24)
@@ -577,7 +579,7 @@ struct ChatScreen: View {
                             ? "\(name) keeps downloading if you leave M1K3."
                             : "Keep M1K3 open while \(name) downloads.")
                             .font(.caption2)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.readableSecondary)
                     }
                 }
             } else {
@@ -760,7 +762,7 @@ struct ChatScreen: View {
             .accessibilityLabel("Stop asking about the photo")
         }
         .font(.footnote)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(.readableSecondary)
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(.ultraThinMaterial, in: Capsule())
@@ -902,13 +904,13 @@ struct ChatScreen: View {
                     Image(systemName: symbol)
                 }
                 Text(line.brainText)
-                Text("·").foregroundStyle(.tertiary).accessibilityHidden(true)
+                Text("·").foregroundStyle(.readableSecondary).accessibilityHidden(true)
                 Image(systemName: ChatStatusLine.webSymbol)
                     .opacity(line.webSearchOn ? 1 : 0.4)
                 Text(line.webText)
                 Image(systemName: "chevron.up.chevron.down")
                     .imageScale(.small)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.readableSecondary)
             }
             .font(.caption)
             // Not `.secondary`: over the thin material it measured under the contrast floor
@@ -1078,7 +1080,7 @@ struct ChatScreen: View {
                         } label: {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.caption2)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.readableSecondary)
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("Remove \(file.filename)")

@@ -8,6 +8,8 @@
 //
 //  Signed: Kev + claude-opus-4-6, 2026-10-12, Confidence 0.75 (verify on device).
 //  Prior: the Mac's PrivateCloudConsentSheet (M1K3App/).
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
+//  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
 //
 
 import M1K3Chat
@@ -58,7 +60,7 @@ struct PrivateCloudConsentSheet: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(PrivateCloudTurn.appleGuarantee)
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.readableSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                         Link("How Apple protects it", destination: PrivateCloudTurn.appleGuaranteeURL)
                             .font(.caption)

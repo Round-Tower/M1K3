@@ -14,19 +14,22 @@ audit wrote, finds every contrast finding's frame, and measures it on `<screen>.
 text is the darkest or lightest half-percent of the patch, the background is its median.
 
 It prints one line per finding, lowest ratio first, and exits 1 when any measures under 4.5:1.
+A patch with no text in it at all (under 1.5:1) is said to be that, not a failure: the screen
+moved between the audit reading the frame and the picture being taken.
 
 What it is not: proof. Thin text never reaches its full colour once anti-aliased, which reads
 low; a stray dark or light mark in the patch (a border, a neighbouring glyph) reads high; a
 patch that holds two backgrounds measures the busier one. Treat a pass well clear of the bar as
 fine and anything near it, or failed, as worth a look in Accessibility Inspector.
 
-A finding is only measured when its line carries a frame, which a labelled element's does not,
-and when its screen has a WINDOW heading and a picture. Whatever was left out is counted and
-named at the end, never passed over. Mac only: the phone audit writes neither.
+A finding is only measured when its line carries a frame and its screen has a WINDOW heading
+and a picture. Whatever was left out is counted and named at the end, never passed over.
 
 Signed: Kev + claude-fable-5.2, 2026-11-14, Confidence 0.75 (the arithmetic is pinned by
 test_a11y_contrast.py; the text/background split is a heuristic, checked by eye on seven
 screens in both appearances), Prior: Unknown
+Review: Kev + claude-fable-5.2, 2026-11-14 — reads the frame from the finding's detail, so labelled
+elements (nearly every finding on the phone) are measured, and the phone's reports are read too.
 """
 
 from __future__ import annotations
@@ -37,12 +40,18 @@ from dataclasses import dataclass
 from pathlib import Path
 
 BAR = 4.5
+#: Under this a patch is flat: no text is where the finding said. The screen moved between the
+#: audit reading the frame and the picture (a scrolled list), so there is nothing to judge.
+FLAT = 1.5
 Frame = tuple[float, float, float, float]
 
 _FRAME = r"\(([\d.-]+), ([\d.-]+), ([\d.-]+), ([\d.-]+)\)"
 _WINDOW = re.compile(rf"^WINDOW {_FRAME}$", re.MULTILINE)
 _ANY_CONTRAST = re.compile(r"^- \[contrast\] ", re.MULTILINE)
-_FINDING = re.compile(rf"^- \[contrast\] (.*?) at {_FRAME}: (.*)$", re.MULTILINE)
+#: The frame rides at the end of the detail: `…: Contrast failed (static text at (x, y, w, h))`.
+_FINDING = re.compile(rf"^- \[contrast\] (.*): (.*? at {_FRAME}\))$", re.MULTILINE)
+#: Reports written before 2026-11-14 carried it only in an UNLABELLED element's name.
+_OLD_FINDING = re.compile(rf"^- \[contrast\] (.*?) at {_FRAME}: (.*)$", re.MULTILINE)
 
 
 @dataclass(frozen=True)
@@ -53,17 +62,30 @@ class Finding:
 
 
 def window_of(report: str) -> Frame | None:
-    """The window's frame from the report's `WINDOW (x, y, w, h)` heading."""
+    """The window's frame from the report's `WINDOW (x, y, w, h)` heading; None when absent or empty."""
     found = _WINDOW.search(report)
-    return tuple(float(v) for v in found.groups()) if found else None  # type: ignore[return-value]
+    if not found:
+        return None
+    frame = tuple(float(v) for v in found.groups())
+    # A window that had gone (the app died, the audit did not complete) reports an empty frame:
+    # that is no window to place anything on.
+    return frame if frame[2] > 0 and frame[3] > 0 else None  # type: ignore[return-value]
 
 
 def findings_of(report: str) -> list[Finding]:
-    """Every contrast finding that carries a frame. A named element's finding has none."""
-    return [
-        Finding(name=g[0], frame=(float(g[1]), float(g[2]), float(g[3]), float(g[4])), said=g[5])
-        for g in _FINDING.findall(report)
-    ]
+    """Every contrast finding whose line says where its element is."""
+    found: list[Finding] = []
+    for line_text in report.splitlines():
+        if (new := _FINDING.match(line_text)) is not None:
+            name, said, *frame = new.groups()
+            # An unlabelled element's name repeats the frame: keep the name a reader would say.
+            name = re.sub(rf" at {_FRAME}$", "", name)
+        elif (old := _OLD_FINDING.match(line_text)) is not None:
+            name, *frame, said = old.groups()
+        else:
+            continue
+        found.append(Finding(name=name, frame=tuple(float(v) for v in frame), said=said))  # type: ignore[arg-type]
+    return found
 
 
 def pixel_box(frame: Frame, window: Frame, size: tuple[int, int]) -> tuple[int, int, int, int] | None:
@@ -101,11 +123,13 @@ def ratio(luminances: list[float]) -> float:
 def line(screen: str, name: str, measured: float | None) -> str:
     if measured is None:
         return f"{screen:<16}     –    off-picture  {name}"
+    if measured < FLAT:
+        return f"{screen:<16} {measured:4.1f}:1  no text there (the screen moved)  {name}"
     return f"{screen:<16} {measured:4.1f}:1  {'passes' if measured >= BAR else 'FAILS':<7}  {name}"
 
 
 def unplaced(report: str) -> int:
-    """How many contrast findings carry no frame (a labelled element's line), so cannot be measured."""
+    """How many contrast findings carry no frame, so cannot be measured."""
     return len(_ANY_CONTRAST.findall(report)) - len(findings_of(report))
 
 
@@ -125,7 +149,7 @@ def measure(report_dir: Path) -> tuple[list[tuple[str, str, float | None]], list
                 notes.append(f"{screen}: {flagged} contrast finding(s) NOT measured ({missing})")
             continue
         if left := unplaced(report):
-            notes.append(f"{screen}: {left} contrast finding(s) NOT measured (a labelled element has no frame)")
+            notes.append(f"{screen}: {left} contrast finding(s) NOT measured (its line carries no frame)")
         image = Image.open(picture).convert("RGB")
         for finding in findings_of(report):
             box = pixel_box(finding.frame, window, image.size)
@@ -147,9 +171,13 @@ def main(argv: list[str]) -> int:
         print("no contrast findings")
     for screen, name, measured in rows:
         print(line(screen, name, measured))
+    if blank := sum(1 for _, _, m in rows if m is not None and m < FLAT):
+        # Said out loud: a flat patch is nearly always a moved screen, but text too pale to
+        # register would read the same, so these are unjudged, not cleared.
+        print(f"{blank} contrast finding(s) NOT measured (no text at the frame: look at these by eye)")
     for note in notes:
         print(note)
-    return 1 if any(m is not None and m < BAR for _, _, m in rows) else 0
+    return 1 if any(m is not None and FLAT <= m < BAR for _, _, m in rows) else 0
 
 
 if __name__ == "__main__":

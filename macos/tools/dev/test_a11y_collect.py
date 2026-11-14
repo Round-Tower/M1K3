@@ -126,3 +126,22 @@ def test_a_screen_picture_is_filed_beside_its_report_and_is_not_a_report(tmp_pat
     out = tmp_path / "out"
     assert m.collect(export, out) == ["brain-at-home"]
     assert sorted(p.name for p in out.iterdir()) == ["brain-at-home.png", "brain-at-home.txt"]
+
+
+def test_an_element_tree_goes_to_its_own_folder_and_is_not_a_report(tmp_path: Path) -> None:
+    export = _export(
+        tmp_path,
+        [
+            {
+                "attachments": [
+                    {"exportedFileName": "T.txt", "suggestedHumanReadableName": "a11y-tree-chat_0_AA.txt"},
+                    {"exportedFileName": "R.txt", "suggestedHumanReadableName": "a11y-chat_0_BB.txt"},
+                ]
+            }
+        ],
+        {"T.txt": "Window (Main)\n", "R.txt": "0 issues\n"},
+    )
+    out = tmp_path / "out"
+    assert m.collect(export, out) == ["chat"]
+    assert (out / "trees" / "chat.txt").read_text() == "Window (Main)\n"
+    assert sorted(p.name for p in out.iterdir()) == ["chat.txt", "trees"]

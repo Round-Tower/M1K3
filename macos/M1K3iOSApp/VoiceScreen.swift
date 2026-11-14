@@ -47,6 +47,8 @@
 //  an accessibility value): the caption that says so is only on screen while voice mode is parked.
 //  Review: Kev + claude-fable-5.2, 2026-11-13 — the "end with please" hint is plain white at 0.82, not `.secondary`
 //  (it failed Xcode's contrast audit over the avatar). Measured on a Simulator; the look is verify-on-device. Confidence 0.7.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
+//  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
 //
 
 import M1K3Avatar
@@ -293,7 +295,7 @@ struct VoiceScreen: View {
             ForEach(spokenBubbles) { bubble in
                 Text(bubble.text)
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                     .lineLimit(2)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
@@ -317,7 +319,7 @@ struct VoiceScreen: View {
             } else if spokenBubbles.isEmpty {
                 Text("Speaking…")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
         }
         .animation(.easeOut(duration: 0.3), value: spokenBubbles)

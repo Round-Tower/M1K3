@@ -40,6 +40,8 @@
 //  (Kev's phone). Pinned by PhoneAnswerActionsTests. Confidence 0.75 (verify on the phone).
 //  Review: Kev + claude-fable-5.2, 2026-11-10 — the working line ("Thinking…") wears the pixel face at its 12 pt floor
 //  (Kev: "use the pixelated font a bit more in… the thinking and loading sort of stuff"). Confidence 0.6 until seen.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
+//  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
 //  Review: Kev + claude-opus-5.5, 2026-11-14 — `onKeep`: a read's answer offers "Keep this" (files its text in Documents).
 
 import M1K3AnswerBlocks
@@ -115,7 +117,7 @@ struct MessageBubble: View {
                 if message.interrupted == true {
                     Label("Stopped", systemImage: "stop.fill")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                 }
                 if case let .failed(reason) = message.status {
                     Text(reason)
@@ -170,7 +172,7 @@ struct MessageBubble: View {
             .accessibilityAddTraits(verdict == .bad ? .isSelected : [])
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(.readableSecondary)
         .sensoryFeedback(.selection, trigger: verdict)
     }
 
@@ -200,7 +202,7 @@ struct MessageBubble: View {
             // label, at the face's 12 pt floor. A line that quotes a search or names a site does not.
             Text(label)
                 .font(BrainWordmark.suitsPixelFace(label) ? .pixel(12) : .caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
         }
     }
 
@@ -209,7 +211,7 @@ struct MessageBubble: View {
         if let tools = message.toolsUsed, !tools.isEmpty {
             Label(ActivityLabeler.traceLabel(for: tools), systemImage: "wrench.and.screwdriver")
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .animation(.easeOut(duration: 0.2), value: tools)
                 .padding(.top, 2)
         }
@@ -220,10 +222,10 @@ struct MessageBubble: View {
         return HStack(spacing: 6) {
             Image(systemName: "text.quote")
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
             Text(titles.joined(separator: " · "))
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .lineLimit(1)
         }
         .padding(.top, 2)
