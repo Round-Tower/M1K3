@@ -126,6 +126,31 @@ here). Medians are first text over every row; "cut" is the docs that did not fit
   extractive ships everywhere.
 - **Mini at 2,560** gives up 5 answers of 53 (two of them long) for 1.9 s.
 
+## Big (gemma-4-12B), Mac, after #833 landed
+
+`big-4096.tsv` (head, extractive, bare at Big's shipped window, 4,096) and `big-2560.tsv`
+(extractive at 2,560), through the same SelfTest stage (Debug build of bbe89413, the
+live app quit):
+
+| Arm, window | Comprehension | Long | Absent | Obeyed | First text | Cut docs |
+| --- | --- | --- | --- | --- | --- | --- |
+| head, 4,096 | 41/53 | 6/15 | 11/11 | 1/14 | 12.5 s | 13.7 s |
+| **extractive, 4,096** | **50/53** | **13/15** | 11/11 | 1/14 | 12.1 s | 13.2 s |
+| bare, 4,096 | | | | 3/14 | 3.7 s | |
+| extractive, 2,560 | 47/53 | 13/15 | 11/11 | 1/14 | 8.0 s | 9.1 s |
+
+- **Big reads best of the three** (Mini 43, Lil 49, Big 50 of 53, extractive at 4,096),
+  and extractive over head is the widest gap yet: paired 10 vs 1, long 13/15 vs 6/15,
+  lookup 21/21. Big never invented an absent answer (11/11).
+- **The first brain the defences measurably help**: 1/14 planted instructions won on
+  the defended arms against 3/14 bare. The pirate voice and the exfil link won only
+  bare; the one that wins on every arm is a French reply (format hijack).
+- **The cost is the wait**: a text that fits answers in about 4 s (median first text
+  4.0 s, 40 rows), a text cut to the window in 13 s. At 2,560 that falls to 9 s for 3
+  answers of 53 (paired 3 vs 0, all medium docs newly cut; inside the ±4 A/A band).
+  **Kept at 4,096**: Big is the brain chosen for depth (Kev, 2026-08-12), 2,560 does
+  not make it fast, and Mini and Lil are the fast defaults.
+
 **Shipped (Kev, 2026-11-14: "Fast by default")**: Mini reads in 2,560 tokens;
 the MLX brains in 4,096 on the Mac and 2,560 on the phone (`ReadBudget`). The
 phone figure follows the phone's prefill rate (about 470 tokens a second, so
@@ -169,8 +194,8 @@ density constants in `ReadBudget.charsPerToken(of:)` were fitted after this set'
 CSV overflowed; the held-out check above found one shape over (numbers-only CSV,
 fixed) and non-Latin alphabets read short. No question here is blank or
 "summarise this", the commonest real ask; a blank ask now spreads across the
-whole text (`ChatSession.runRead`) and wants its own held-out set. Big has no
-rows, and nothing was timed on the phone: both UNVERIFIED.
+whole text (`ChatSession.runRead`) and wants its own held-out set. Big has rows
+since #833 landed (above); nothing was timed on the phone: UNVERIFIED.
 
 ## What the challenger moved (2026-11-14)
 
@@ -181,6 +206,8 @@ asks keep the chat turn, and so does a brain that cannot read on the device
 
 _Signed: Kev + claude-opus-5.5, 2026-11-14, Confidence 0.75 (one run per
 question, 67 questions; the phone owes its own timing)._
+_Review: Kev + claude-opus-5.5, 2026-11-14 — Big's rows (Kev: "machine is yours"): 50/53
+extractive at 4,096, kept there over 2,560's 8 s. Confidence 0.75 (one run per question)._
 _Review: Kev + claude-opus-5.5, 2026-11-14 — the held-out density check (13 fresh texts,
 three tokenizers); the numeric floor moved 1.2 → 1.0. Confidence 0.85 for the budget
 (real counts), 4,000-character prefixes only._
