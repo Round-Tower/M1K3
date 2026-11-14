@@ -51,6 +51,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — `onKeep`: a read's answer offers "Keep this" (files its text in Documents).
+//  Review: Kev + claude-opus-5.5, 2026-11-14 (follow-ups) — no link chips under a read's answer: a chip fetches the page
+//  in the side panel, so a planted link would be one tap from sending its query. Confidence 0.8.
 
 import AppKit
 import M1K3AnswerBlocks
@@ -74,6 +77,9 @@ struct MessageView: View {
     /// The view never builds or sends anything — ContentView composes the draft and the sheet.
     /// nil hides the button: ContentView wires it only for an age band allowed the offer.
     var onSendExchange: ((String?) -> Void)?
+    /// "Keep this": file the text this read answered about in Documents. nil (the default, and
+    /// every answer that is not a read's) hides the button.
+    var onKeep: (() async -> Bool)?
     /// Called with the message text when the user taps speak.
     let onSpeak: (String) -> Void
     /// Called with a link found in the turn when the user taps its chip — opens it
@@ -110,6 +116,7 @@ struct MessageView: View {
     @State private var showSources = false
     @State private var showReasoning = false
     @State private var didCopy = false
+    @State private var didKeep = false
     @State private var showComment = false
     @State private var commentDraft = ""
     /// A "Send this exchange…" waiting for the popover to close before the sheet is raised (#708).
@@ -342,6 +349,22 @@ struct MessageView: View {
                     .accessibilityLabel("Share this answer")
                     .help("Share this answer")
 
+                    if let onKeep {
+                        Button {
+                            // The check shows only once the text is in Documents.
+                            Task { didKeep = await onKeep() }
+                        } label: {
+                            Image(systemName: didKeep ? "checkmark" : "tray.and.arrow.down")
+                                .symbolRenderingMode(.hierarchical)
+                                .font(.caption)
+                                .contentTransition(.symbolEffect(.replace))
+                        }
+                        .buttonStyle(.glass)
+                        .disabled(didKeep)
+                        .accessibilityLabel(didKeep ? "Kept in Documents" : "Keep this text in Documents")
+                        .help(didKeep ? "Kept in Documents" : "Keep this text in Documents, where M1K3 can search it later")
+                    }
+
                     Divider().frame(height: 14).opacity(0.4)
 
                     // Feedback: one-tap thumbs-up; thumbs-down commits the bad
@@ -506,7 +529,9 @@ struct MessageView: View {
     /// panel (stays on-device, no jump to an external browser).
     @ViewBuilder
     private var linkChips: some View {
-        if !links.isEmpty {
+        // Never under a read: its words came from someone else's text, and a chip opens the page in
+        // the side panel, which fetches the address a planted link chose (`ChatMessage.isRead`).
+        if !links.isEmpty, !message.isRead {
             VStack(alignment: .leading, spacing: 4) {
                 ForEach(links, id: \.self) { url in
                     LinkChip(url: url) { onOpenLink(url) }

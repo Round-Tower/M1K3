@@ -32,6 +32,8 @@
 //  SwappableInferenceProvider's forward. Compile-checked; the Mac has no look surface yet.
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — forwards `RawChatCompleting` (the Local API's seam), per the
 //  every-façade-forwards rule. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — forwards `TextReading` (the read) and its window, the app mirror of
+//  the package façade's forward (TextReadingTests). Compile-checked.
 
 import Foundation
 import M1K3Inference
@@ -242,5 +244,20 @@ extension RuntimeInferenceProvider: ImageLooking {
             return AsyncThrowingStream { $0.finish(throwing: ImageLookingError.cannotLook) }
         }
         return looker.look(image: image, instructions: instructions, prompt: prompt)
+    }
+}
+
+/// Forwards the read (text, instructions only) to the routed backend, by the same
+/// every-façade-forwards rule. A backend that cannot read on this device fails the stream.
+extension RuntimeInferenceProvider: TextReading {
+    func read(instructions: String, prompt: String) -> LookStream {
+        guard let reader = active as? TextReading else {
+            return AsyncThrowingStream { $0.finish(throwing: TextReadingError.cannotRead) }
+        }
+        return reader.read(instructions: instructions, prompt: prompt)
+    }
+
+    var readContextTokens: Int {
+        (active as? TextReading)?.readContextTokens ?? 0
     }
 }
