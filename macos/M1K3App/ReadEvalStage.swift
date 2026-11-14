@@ -8,7 +8,7 @@
 //  so the set arrives on STDIN, and the rows leave on stdout:
 //
 //      M1K3_SELFTEST=1 M1K3_SELFTEST_OUT=- M1K3_SELFTEST_READEVAL=1 \
-//      M1K3_SELFTEST_MODEL=mlx-community/Qwen3.5-4B-MLX-4bit \
+//      M1K3_SELFTEST_READEVAL_MODEL=mlx-community/gemma-4-12B-it-4bit  (optional; Lil by default) \
 //      M1K3_SELFTEST_READEVAL_ARMS=head,extractive,filled,bare  (optional) \
 //      M1K3_SELFTEST_READEVAL_WINDOW=8192                     (optional; the brain's read window by default) \
 //      M1K3.app/Contents/MacOS/M1K3 < blind-set.json | grep '^READEVAL' | cut -f2-
@@ -20,6 +20,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-14, Confidence 0.7 (compiles in the app
 //  shell; the first launch is the run itself). Prior: none (new file; EnergyProbeStage's shape).
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — the usage named M1K3_SELFTEST_MODEL, which this stage never reads
+//  (the Lil runs got Lil by default); it reads M1K3_SELFTEST_READEVAL_MODEL, as Big's run did.
 //
 
 import Foundation
