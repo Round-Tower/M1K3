@@ -83,7 +83,7 @@ final class AccessibilityAuditUITests: XCTestCase {
         if let run = ProcessInfo.processInfo.environment[ScreengrabHarness.runKey], !run.isEmpty {
             app.launchEnvironment[ScreengrabHarness.runKey] = run
         }
-        app.launchArguments = recipe.flatArguments
+        app.launchArguments = recipe.flatArguments + Self.appearanceArguments
         addTeardownBlock { app.terminate() }
         app.launch()
         app.activate()
@@ -101,6 +101,14 @@ final class AccessibilityAuditUITests: XCTestCase {
         picture.name = "a11y-shot-\(plate.rawValue)"
         picture.lifetime = .keepAlways
         add(picture)
+
+        // The element tree as XCTest saw it: what an unnamed "group" finding is can only be read here.
+        // The WINDOW's tree, never the application's: that one carries the system menu bar, whose
+        // Recent Items are the owner's apps and document names (caught on the first dump, 2026-11-14).
+        let tree = XCTAttachment(string: app.windows.firstMatch.debugDescription)
+        tree.name = "a11y-tree-\(plate.rawValue)"
+        tree.lifetime = .keepAlways
+        add(tree)
 
         let collected = Collected()
         var incomplete = ""
@@ -177,6 +185,17 @@ final class AccessibilityAuditUITests: XCTestCase {
     private static func place(of element: XCUIElement?) -> String {
         guard let element, element.exists else { return "" }
         return "\(element.frame)"
+    }
+
+    /// `M1K3_A11Y_APPEARANCE=light|dark` pins the app's appearance for the run, whatever the Mac
+    /// is set to, so both get measured (the Mac went dark between two runs on 2026-11-14 and the
+    /// light figures went stale). AppKit reads both keys from the argument domain.
+    private static var appearanceArguments: [String] {
+        switch ProcessInfo.processInfo.environment["M1K3_A11Y_APPEARANCE"] {
+        case "light": ["-NSRequiresAquaSystemAppearance", "YES"]
+        case "dark": ["-NSRequiresAquaSystemAppearance", "NO", "-AppleInterfaceStyle", "Dark"]
+        default: []
+        }
     }
 
     private static func name(of type: XCUIAccessibilityAuditType) -> String {

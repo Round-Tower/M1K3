@@ -24,8 +24,8 @@
 //  the creature needs the middle of the sheet). Same width, radius, tint and material rule. Confidence 0.8.
 //
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — the card's wash is white in the light appearance (it was a dark wash
-//  under dark text, 3.3:1 over the fox). The dark appearance keeps the dark wash and measured 7.3:1 after; the light
-//  one is UNMEASURED since the change (the Mac had gone dark by the next run).
+//  under dark text, 3.3:1 over the fox). Measured after with the appearance pinned: the intro
+//  reads 7.7:1 in light (it was 3.3:1) and 7.8:1 in dark, which keeps the dark wash.
 
 import SwiftUI
 
