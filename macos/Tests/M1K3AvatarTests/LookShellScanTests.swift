@@ -223,6 +223,24 @@ struct LookShellScanTests {
         // The egress rule rests on WHO conforms to `ImageLooking`: a frame
         // handed to the seam reaches only these. A new conformer is a privacy
         // decision, so it fails here by name until this list is edited on purpose.
+        #expect(try Self.conformers(of: "ImageLooking") == Self.onDevice)
+    }
+
+    @Test("only the on-device brains and their two façades can read a pasted text")
+    func theReaderSetIsClosed() throws {
+        // The read's twin of the rule above: a paste handed to `TextReading` stays on the device.
+        #expect(try Self.conformers(of: "TextReading") == Self.onDevice)
+    }
+
+    private static let onDevice: Set<String> = [
+        "AppleFoundationModelsProvider", // Mini: Apple's on-device model
+        "MLXBrainProvider", // Lil and Big: MLX on this device
+        "SwappableInferenceProvider", // the package façade: forwards to the active one
+        "RuntimeInferenceProvider", // the Mac app's façade: the same forward
+    ]
+
+    /// Every type in the shipping sources declared (or extended) as conforming to `proto`.
+    private static func conformers(of proto: String) throws -> Set<String> {
         var conformers: Set<String> = []
         for directory in ["Sources", "M1K3App", "M1K3iOSApp"] {
             for file in try Self.swiftFiles(under: directory) {
@@ -235,7 +253,7 @@ struct LookShellScanTests {
                     else { continue }
                     let inherited = trimmed[trimmed.index(after: colon) ..< brace]
                         .split(whereSeparator: { $0 == "," || $0.isWhitespace })
-                    guard inherited.contains("ImageLooking") else { continue }
+                    guard inherited.contains(Substring(proto)) else { continue }
                     let declared = trimmed[..<colon].split(separator: " ")
                     guard let keyword = declared.first(where: {
                         ["extension", "class", "struct", "actor", "enum"].contains(String($0))
@@ -244,12 +262,7 @@ struct LookShellScanTests {
                 }
             }
         }
-        #expect(conformers == [
-            "AppleFoundationModelsProvider", // Mini: Apple's on-device model
-            "MLXBrainProvider", // Lil and Big: MLX on this device
-            "SwappableInferenceProvider", // the package façade: forwards to the active one
-            "RuntimeInferenceProvider", // the Mac app's façade: the same forward
-        ])
+        return conformers
     }
 
     @Test("the camera holds no file handle and no network: it hands back bytes")

@@ -120,6 +120,11 @@
 //  0.8 (AttachmentStoreTests; the phone check is the proof).
 //  Same fold: `lookMissed`, the turn for a look that got no frame (the question and one honest line, display-only),
 //  so the shell never has to hand those words to `send`.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — the read (a text, instructions only): `read`, `readAgain`, `lastRead`,
+//  `readSource(answeredBy:)`, display-only like the look (contextExcluded, tag `read`, no title, a rating keeps no
+//  words); `ChatMessage.readSource` (Optional, strip-key decode pinned). Confidence 0.8: ChatSessionReadTests.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 (follow-ups) — `ChatMessage.isRead`, so the shells keep a read's links
+//  untappable. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -305,7 +310,18 @@ public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
     /// guard, speech and share never see it. Persisted so a reload still says why that answer was
     /// lighter; OPTIONAL for the keyNotFound reason above, so every earlier transcript decodes nil.
     public var turnNote: String?
+    /// The text a read was about (a paste, a file, a shared page), on the question that brought it, so
+    /// it can be asked again and kept. Only a read's first question carries it. OPTIONAL for the
+    /// keyNotFound reason above: every earlier transcript decodes nil.
+    public var readSource: ReadSource?
     public var status: Status
+
+    /// A read's answer (`ReadPrompt.toolName`): its words came from someone else's text, so the shells
+    /// show its links as text, never as something to tap or fetch (a planted link is the read's last
+    /// exfil path).
+    public var isRead: Bool {
+        role == .assistant && toolsUsed == [ReadPrompt.toolName]
+    }
 
     /// An off-device producer of an answer. One case, deliberately: a new rung
     /// is a new case and a new label, never a silent reuse of this one.
@@ -315,7 +331,7 @@ public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
 
     enum CodingKeys: String, CodingKey {
         case id, role, text, sources, status, reasoning, attachments, toolsUsed, brain, contextExcluded, interrupted
-        case answerOrigin, turnNote
+        case answerOrigin, turnNote, readSource
     }
 
     public init(
@@ -643,6 +659,9 @@ public final class ChatSession {
         } else if let lookTask {
             stopRequested = true
             lookTask.cancel()
+        } else if let readTask {
+            stopRequested = true
+            readTask.cancel()
         }
     }
 
@@ -1253,6 +1272,200 @@ public final class ChatSession {
         }
     }
 
+    // MARK: - The read (a text, instructions only)
+
+    /// The in-flight read, held only so `stopResponding()` can cancel it.
+    private var readTask: Task<LookOutcome, Never>?
+
+    /// Which compressor strategy a read ships with. `extractive` until the blind set's
+    /// paired arms say otherwise (docs/evals/2026-11-14-read-blind/).
+    static let readStrategy = ReadCompressor.Strategy.extractive
+
+    /// Answer ONE question about ONE text the user handed over, on this device. The
+    /// reader gets `ReadPrompt.instructions` and one prompt: the text, cleaned (by
+    /// `ReadSource`), fitted to the reader's window (`ReadBudget`, `ReadCompressor`)
+    /// and fenced, then the question. Nothing else: no persona, no history, no
+    /// memories, and the responder is never asked, so no tool can run on a turn that
+    /// carries someone else's words.
+    ///
+    /// DISPLAY-ONLY, like a look: both messages are `contextExcluded` and the answer
+    /// is tagged `ReadPrompt.toolName` (`DistillationTaint` drops it); no title; a
+    /// rating keeps no words. The text rides on the question (`readSource`), where
+    /// `readAgain` and "Keep this" find it. False when a turn was already in flight.
+    @discardableResult
+    public func read(_ question: String, source: ReadSource, reader: any TextReading) async -> Bool {
+        let asked = ReadPrompt.question(question)
+        var asking = ChatMessage(role: .user, text: asked, status: .complete)
+        asking.contextExcluded = true
+        asking.readSource = source
+        return await runRead(asking, source: source, question: asked, reader: reader)
+    }
+
+    /// The newest read, while it is still the last thing in the conversation: its text
+    /// and its newest question and answer. A chain of `readAgain`s keeps finding the text.
+    public var lastRead: ReadSource.Exchange? {
+        guard messages.count >= 2, let answer = messages.last, answer.role == .assistant,
+              case .complete = answer.status, answer.toolsUsed == [ReadPrompt.toolName]
+        else { return nil }
+        let question = messages[messages.count - 2]
+        var index = messages.count - 2
+        while index >= 0 {
+            let asked = messages[index]
+            guard asked.role == .user, messages[index + 1].toolsUsed == [ReadPrompt.toolName] else { return nil }
+            if let source = asked.readSource {
+                return ReadSource.Exchange(source: source, question: question.text, answer: answer.text)
+            }
+            index -= 2
+        }
+        return nil
+    }
+
+    /// The text behind a read's answer, for "Keep this": found from any answer in a chain of
+    /// reads, at any later point. nil for a question, or for an answer that is not a read's.
+    public func readSource(answeredBy id: UUID) -> ReadSource? {
+        guard let at = messages.firstIndex(where: { $0.id == id }), messages[at].role == .assistant,
+              messages[at].toolsUsed == [ReadPrompt.toolName]
+        else { return nil }
+        var index = at - 1
+        while index >= 0 {
+            let asked = messages[index]
+            guard asked.role == .user else { return nil }
+            if let source = asked.readSource { return source }
+            // A read-again's question has no text of its own: step back over the read before it.
+            guard index >= 1, messages[index - 1].role == .assistant,
+                  messages[index - 1].toolsUsed == [ReadPrompt.toolName] else { return nil }
+            index -= 2
+        }
+        return nil
+    }
+
+    /// Another question about the text of `lastRead`: a read like the first, on the
+    /// device, display-only. The text stays on the message that brought it. False when
+    /// there is no such read or a turn is in flight.
+    @discardableResult
+    public func readAgain(_ question: String, reader: any TextReading) async -> Bool {
+        guard !isResponding, let earlier = lastRead else { return false }
+        let asked = ReadPrompt.question(question)
+        var asking = ChatMessage(role: .user, text: asked, status: .complete)
+        asking.contextExcluded = true
+        return await runRead(asking, source: earlier.source, question: asked, reader: reader)
+    }
+
+    /// One read, start to finish. False only when a turn was already in flight.
+    private func runRead(
+        _ asking: ChatMessage, source: ReadSource, question: String, reader: any TextReading
+    ) async -> Bool {
+        guard !isResponding else { return false }
+        passedAt = nil
+        let assistantID = UUID()
+        messages.append(asking)
+        messages.append(ChatMessage(id: assistantID, role: .assistant, text: "", status: .streaming))
+        isResponding = true
+        defer { isResponding = false }
+
+        let budget = ReadBudget.characters(
+            windowTokens: reader.readContextTokens, question: question, text: source.text
+        )
+        guard budget > 0 else {
+            finishRead(assistantID, saying: ReadFailureReply.cannotRead)
+            await persistActiveConversation()
+            return true
+        }
+        // Off the main actor: a long source is a few hundred thousand characters of scoring.
+        let strategy = Self.readStrategy
+        let text = source.text
+        // The default ask ("what are its main points?") is a summary: no words to rank by, so the
+        // compressor spreads across the whole text instead of chasing passages that say "point".
+        let query = question == ReadPrompt.defaultQuestion ? "" : question
+        let fit = await Task.detached(priority: .userInitiated) {
+            ReadCompressor.fit(text, question: query, budget: budget, strategy: strategy)
+        }.value
+        let prompt = ReadPrompt.prompt(text: fit.text, question: question, cut: fit.cut)
+        Self.log.notice(
+            "read: \(fit.text.count, privacy: .public)/\(source.text.count, privacy: .public) cut \(fit.cut, privacy: .public)"
+        )
+
+        stopRequested = false
+        let turn = Task {
+            await self.streamRead(prompt, reader: reader, assistantID: assistantID)
+        }
+        readTask = turn
+        let outcome = await turn.value
+        readTask = nil
+
+        switch outcome {
+        case let .answered(text, stopped) where text.isEmpty:
+            // A line either way: the question carries the text, and a read with no answer
+            // would strand it (`lastRead` and Keep look for a read's answer).
+            finishRead(assistantID, saying: stopped ? ReadFailureReply.stopped : ReadFailureReply.tryAgain)
+            if stopped { update(assistantID) { $0.interrupted = true } }
+        case let .answered(text, stopped):
+            finishRead(assistantID, text: text, interrupted: stopped)
+        case let .failed(error, partial) where partial.isEmpty:
+            finishRead(assistantID, saying: ReadFailureReply.reply(for: error))
+        case let .failed(_, partial):
+            finishRead(assistantID, text: partial, interrupted: true)
+        }
+        await persistActiveConversation()
+        // No titling: a title would be made from someone else's text.
+        scheduleRollingDistillationIfNeeded()
+        return true
+    }
+
+    /// Drain the reader's cumulative snapshots into the live bubble.
+    private func streamRead(_ prompt: String, reader: any TextReading, assistantID: UUID) async -> LookOutcome {
+        var latest = ""
+        var flushGate = StreamFlushGate()
+        var leakShown = false
+        let started = ContinuousClock.now
+        do {
+            for try await snapshot in reader.read(instructions: ReadPrompt.instructions, prompt: prompt) {
+                if latest.isEmpty, !snapshot.isEmpty {
+                    let parts = (ContinuousClock.now - started).components
+                    let ms = Int(parts.seconds * 1000 + parts.attoseconds / 1_000_000_000_000_000)
+                    Self.log.notice("read first text: \(ms, privacy: .public)ms")
+                }
+                latest = snapshot
+                guard flushGate.shouldFlush(at: .now) else { continue }
+                // Cleaned while it streams too: a link or a picture is never tappable, even for a moment.
+                let live = ReadPrompt.cleanAnswer(Self.guardedLive(latest, tripped: &leakShown))
+                update(assistantID) { $0.text = live }
+            }
+            return .answered(text: latest, stopped: stopRequested)
+        } catch is CancellationError {
+            return .answered(text: latest, stopped: true)
+        } catch {
+            if stopRequested { return .answered(text: latest, stopped: true) }
+            Self.log.notice("read failed: \(String(describing: type(of: error)), privacy: .public)")
+            return .failed(error, partial: latest)
+        }
+    }
+
+    private func finishRead(_ id: UUID, text raw: String, interrupted: Bool) {
+        let text = ReadPrompt.cleanAnswer(raw)
+        let leaked = PersonaLeakGuard.leaks(text)
+        update(id) {
+            // Cleaned again after the polish, so nothing after `cleanAnswer` can bring a link back.
+            $0.text = leaked ? PersonaLeakGuard.refusal : ReadPrompt.cleanAnswer(MessageTextPolish.polish(text))
+            $0.toolsUsed = [ReadPrompt.toolName]
+            $0.contextExcluded = true
+            $0.brain = residentBrainName?()
+            $0.activityLabel = nil
+            $0.interrupted = interrupted ? true : nil
+            $0.status = .complete
+        }
+    }
+
+    private func finishRead(_ id: UUID, saying line: String) {
+        update(id) {
+            $0.text = line
+            $0.toolsUsed = [ReadPrompt.toolName]
+            $0.contextExcluded = true
+            $0.activityLabel = nil
+            $0.status = .complete
+        }
+    }
+
     /// Deliver a BACKGROUND answer (delegate_deep's landing pad, 2026-07-25)
     /// as a completed assistant message: no user bubble, no streaming
     /// placeholder, no responder call — the delegated agent already ran on the
@@ -1454,6 +1667,16 @@ public final class ChatSession {
         return (index, exchange)
     }
 
+    /// The words a rating row keeps. A rated look or read keeps the verdict and the tag, never the
+    /// words: the row outlives the conversation's delete, and what the camera saw or the pasted text
+    /// said must not.
+    static func feedbackWords(
+        toolsUsed: [String], question: String, answer: String
+    ) -> (question: String, answer: String) {
+        let withheld = toolsUsed.contains(LookPrompt.toolName) || toolsUsed.contains(ReadPrompt.toolName)
+        return withheld ? ("", "") : (question, answer)
+    }
+
     /// Record Kev's judgement on one assistant answer. Captures the paired
     /// question + the answer's tools/text at rate-time so the row is a
     /// self-contained curation datum, persists it (replacing any prior verdict
@@ -1463,16 +1686,14 @@ public final class ChatSession {
     public func recordFeedback(messageID: UUID, verdict: FeedbackVerdict, comment: String?, brain: String) {
         guard let (index, exchange) = pairing(for: messageID) else { return }
         let toolsUsed = messages[index].toolsUsed ?? []
-        // A rated look keeps the verdict and the tag, never the words: this row
-        // outlives the conversation's delete, and what the camera saw must not.
-        let aboutAFrame = toolsUsed.contains(LookPrompt.toolName)
+        let words = Self.feedbackWords(toolsUsed: toolsUsed, question: exchange.question, answer: exchange.answer)
         let record = AnswerFeedback(
             messageID: messageID,
             conversationID: exchange.conversationID,
             verdict: verdict,
             comment: comment,
-            question: aboutAFrame ? "" : exchange.question,
-            answer: aboutAFrame ? "" : exchange.answer,
+            question: words.question,
+            answer: words.answer,
             toolsUsed: toolsUsed,
             // The brain STAMPED on the answer wins — it's who actually rendered
             // it; the caller's current selection is only the fallback for a

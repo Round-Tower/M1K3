@@ -15,6 +15,7 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-10 — recent_activity joins the taint set: its digest is DERIVED from
 //  memories / chat titles / visitor names; distilling the answer would feed the next digest (pinned to the tool).
 //  Review: Kev + claude-fable-5.2, 2026-11-09 — `look` joins (#768): the answer to a camera frame is never distilled.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — `read` joins: someone else's words become a document only when kept.
 
 import Foundation
 
@@ -31,8 +32,10 @@ public enum DistillationTaint {
     /// look (2026-11-09, #768) is not a callable tool: it is the tag on an
     /// answer about a camera frame (`LookPrompt.toolName`). What the camera saw
     /// (a label, a screen, a face described) must not become a lasting fact.
+    /// read (2026-11-14) is its text twin (`ReadPrompt.toolName`): someone else's words (a
+    /// paste, a file, a shared page) become a document only when the user keeps them.
     public static let taintedToolNames: Set<String> = [
-        "execute_script", "calendar_peek", "current_location", "recent_activity", "look",
+        "execute_script", "calendar_peek", "current_location", "recent_activity", "look", "read",
     ]
 
     public static func isTainted(toolsUsed: [String]?) -> Bool {

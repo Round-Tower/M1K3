@@ -129,6 +129,10 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-13 — the status line over the composer is near-primary, not `.secondary`
 //  (it failed Xcode's contrast audit over the thin material), and its separator dot is hidden from accessibility.
 //  Measured by re-running the audit on a Simulator; the look is verify-on-device. Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — a send with files and no photos is a READ (`core.read`), and a read's
+//  answers offer "Keep this". Compile-checked; owes a try in the hand.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 (the summoned pass on #833) — a read that cannot start hands the question
+//  and the files back to the composer instead of dropping them. Compile-checked.
 
 import M1K3Avatar
 import M1K3Chat
@@ -165,6 +169,8 @@ struct ChatScreen: View {
     @State private var showLook = false
     /// The composer is asking about the last look's photo (#768): the next send is a look at that stored frame.
     @State private var aboutPhoto = false
+    /// Sends are more questions about the last read's text ("Ask more" under it), until the pill's ✕.
+    @State private var aboutText: String?
     /// The eyes are drafting a search query for the composer.
     @State private var draftingSearch = false
     @AppStorage(AppCore.webSearchEnabledKey) private var webSearchEnabled = true
@@ -602,6 +608,9 @@ struct ChatScreen: View {
                                 )
                             },
                             onSpeak: { core.readAloud($0) },
+                            onKeep: core.chat.readSource(answeredBy: message.id).map { source in
+                                { await core.keep(source) }
+                            },
                             onSendFollowUp: { question in
                                 // Same gate the starter chips use (brainReady) — chips
                                 // carry their own prompt, so no draft dependency; chips
@@ -618,6 +627,9 @@ struct ChatScreen: View {
                     }
                     if core.canAskAboutLastLook, !core.chat.isResponding {
                         lookActions
+                    }
+                    if core.chat.lastRead != nil, !core.chat.isResponding, aboutText == nil {
+                        readActions
                     }
                 }
                 // Mac-parity bump (Kev's catch, 2026-07-22): flat assistant turns
@@ -688,6 +700,50 @@ struct ChatScreen: View {
             draft = text
             inputFocused = true
         }
+    }
+
+    /// Under the newest read: the next question goes to the same text.
+    private var readActions: some View {
+        HStack(spacing: 8) {
+            Button {
+                aboutText = core.chat.lastRead?.source.title
+                inputFocused = true
+            } label: {
+                Label("Ask more", systemImage: "doc.text.magnifyingglass")
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .accessibilityLabel("Ask more about this text")
+            .accessibilityHint("Your next message is answered from this text again, on this device")
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .font(.footnote)
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.capsule)
+    }
+
+    /// Over the composer while the next send is a question about the last read's text.
+    private func aboutTextPill(_ title: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "doc.text.magnifyingglass")
+                .accessibilityHidden(true)
+            Text("Asking about “\(title)”")
+                .lineLimit(1)
+            Button {
+                aboutText = nil
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Stop asking about this text")
+        }
+        .font(.footnote)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(.ultraThinMaterial, in: Capsule())
+        .padding(.bottom, 6)
     }
 
     /// Shown over the composer while the next send is a question about the last look's photo.
@@ -786,6 +842,12 @@ struct ChatScreen: View {
                 aboutPhotoPill
                     // The pill's promise ends with the look it points at (another turn, another chat).
                     .onDisappear { aboutPhoto = false }
+            }
+            // The pill holds its own title: `lastRead` is nil while a follow-up streams, and the
+            // chain must survive that. It ends on its ✕, an ordinary send, or another conversation.
+            if let aboutText {
+                aboutTextPill(aboutText)
+                    .onChange(of: core.chat.activeConversationID) { self.aboutText = nil }
             }
             if !pendingAttachments.isEmpty {
                 pendingImagesStrip
@@ -1060,6 +1122,47 @@ struct ChatScreen: View {
             return
         }
         aboutPhoto = false
+        // "Ask more" under a read: the question goes to the same text, on this phone, before any
+        // Private Cloud arming (a read never leaves the device). STICKY (Kev, 2026-11-14): the pill
+        // stays for a chain of questions until its ✕, a new attachment, or the read is no longer last.
+        if aboutText != nil, core.chat.lastRead != nil, pendingAttachments.isEmpty, pendingFiles.isEmpty,
+           core.reader.readContextTokens > 0
+        {
+            let question = draft
+            clearDraft()
+            Task {
+                // Could not start (the brain changed under the pill): the question comes back, unsent.
+                let started = await core.readAgain(question)
+                if !started, draft.isEmpty, pendingFiles.isEmpty, pendingAttachments.isEmpty { draft = question }
+            }
+            return
+        }
+        aboutText = nil
+        // Prose files asked ABOUT are READ (instructions only, on this phone, display-only) rather than
+        // prepended to a chat turn that carries the persona, the tools and the history. Code, a
+        // "write"/"draft"/"translate" ask, or a brain that can't read here (Brain at Home) keeps the chat turn.
+        if pendingAttachments.isEmpty, core.reader.readContextTokens > 0,
+           ReadRoute.reads(files: pendingFiles, draft: draft)
+        {
+            let question = draft
+            let files = pendingFiles
+            clearDraft()
+            Task {
+                // Cleaning a long file is real work: off the main actor.
+                let source = await Task.detached(priority: .userInitiated) { ReadSource(files: files) }.value
+                if let source {
+                    // Could not start (the brain changed, a turn in flight): the words and the files
+                    // come back to the composer, never silently dropped (the summoned pass).
+                    if await !core.read(question, source: source), draft.isEmpty, pendingFiles.isEmpty {
+                        draft = question
+                        pendingFiles = files
+                    }
+                } else {
+                    await core.send(question)
+                }
+            }
+            return
+        }
         let hasAttachments = !pendingAttachments.isEmpty
         let onDevice = ChatSession.onDeviceMessageIDs(core.chat.messages)
         // Voice mode answers on-device (ADR 0010); typed sends in voice never go to PCC.

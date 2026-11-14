@@ -17,6 +17,7 @@
 //  ToolNarrationTests; the speak wiring is verify-at-⌘R). Prior: Unknown.
 //  Review: Kev + claude-fable-5.2, 2026-11-09 — `unspoken` (#768): the look's tag is set when its answer is
 //  final, so the tracker drops it rather than say "Using look." after the answer it names.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — `read` joins `unspoken`: tagged as its answer lands, like a look.
 //
 
 import Foundation
@@ -27,7 +28,8 @@ public enum ToolNarration {
     /// `LookPrompt.toolName`, spelled here because M1K3Voice imports nothing)
     /// is tagged when its answer lands: there is no wait to fill, and the
     /// camera being on is already on screen.
-    public static let unspoken: Set<String> = ["look"]
+    /// A read ("read", `ReadPrompt.toolName`) is the same: tagged as its answer lands.
+    public static let unspoken: Set<String> = ["look", "read"]
 
     public static func phrase(forTool name: String) -> String {
         switch name {
