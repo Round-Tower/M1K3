@@ -23,6 +23,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — `compact`: tighter padding for the deck's face strip (TestFlight 505,
 //  the creature needs the middle of the sheet). Same width, radius, tint and material rule. Confidence 0.8.
 //
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — the card's wash is white in the light appearance (it was a dark wash
+//  under dark text, 3.3:1 over the fox). Measured after with the appearance pinned: the intro
+//  reads 7.7:1 in light (it was 3.3:1) and 7.8:1 in dark, which keeps the dark wash.
 
 import SwiftUI
 
@@ -44,7 +47,15 @@ private struct OnboardingCardStyle: ViewModifier {
 
     /// A light dark wash so body text holds up over the fox's moving lattice; clear glass alone
     /// let the wireframe run through the copy (the 2026-09-23 readability note).
-    private static let tint = Color.black.opacity(0.18)
+    ///
+    /// The wash follows the appearance. Dark text over a DARK wash is what the Mac audit failed in
+    /// the light appearance (3.3:1 where the fox sat behind the intro, 2026-11-14): there the wash
+    /// is white, so it lifts the card under the copy instead of dimming it.
+    @Environment(\.colorScheme) private var colorScheme
+    private var tint: Color {
+        colorScheme == .dark ? Color.black.opacity(0.18) : Color.white.opacity(0.55)
+    }
+
     private static let shape = RoundedRectangle(cornerRadius: 26, style: .continuous)
 
     func body(content: Content) -> some View {
@@ -55,7 +66,7 @@ private struct OnboardingCardStyle: ViewModifier {
         if nearLiveProgress {
             padded.background(.regularMaterial, in: Self.shape)
         } else {
-            padded.glassEffect(.regular.tint(Self.tint), in: .rect(cornerRadius: 26))
+            padded.glassEffect(.regular.tint(tint), in: .rect(cornerRadius: 26))
         }
     }
 }

@@ -45,7 +45,7 @@ struct LicensesView: View {
 
             if licenses.isEmpty {
                 Text("No third-party licenses found.")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                     .padding()
             } else {
                 List(licenses) { entry in
@@ -55,11 +55,11 @@ struct LicensesView: View {
                             Spacer()
                             Text(entry.license)
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.readableSecondary)
                         }
                         Text(entry.purpose)
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.readableSecondary)
                         if let link = entry.url {
                             Link("View on GitHub", destination: link)
                                 .font(.caption)

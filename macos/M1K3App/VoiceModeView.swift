@@ -51,6 +51,9 @@
 //  ghost through (541, Kev), so ContentView now fades the split view under this overlay. The glass here stays as
 //  the hero's floor. Confidence 0.7 (verify-by-launch owed).
 //  Review: Kev + claude-fable-5.2, 2026-11-13 — the face says it is a button to assistive tech, and the mic's breathe sits out under Reduce Motion like the chat mic's. Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Avatar
 import M1K3Voice
@@ -166,7 +169,7 @@ struct VoiceModeView: View {
     private func glassBubble(_ text: String, dimmed: Bool) -> some View {
         Text(text)
             .font(.callout)
-            .foregroundStyle(dimmed ? .secondary : .primary)
+            .foregroundStyle(dimmed ? Color.readableSecondary : Color.primary)
             .multilineTextAlignment(.leading)
             .lineLimit(3)
             .lineSpacing(5)
@@ -186,7 +189,7 @@ struct VoiceModeView: View {
             VStack(spacing: 8) {
                 Text(partial.isEmpty ? "Listening…" : partial)
                     .font(.title3)
-                    .foregroundStyle(partial.isEmpty ? .secondary : .primary)
+                    .foregroundStyle(partial.isEmpty ? Color.readableSecondary : Color.primary)
                     .multilineTextAlignment(.center)
                     .lineLimit(4)
                     .lineSpacing(5)
@@ -198,9 +201,11 @@ struct VoiceModeView: View {
                 // Teach the spoken submit button (PoliteEndpoint): end on
                 // "please" and M1K3 takes its turn on the short window instead
                 // of waiting out the conversational pause.
+                // Full strength: caption-size text on a small glass capsule measured 4.8:1 in the
+                // quiet colour, too close to the 4.5:1 line for the one instruction on this screen.
                 Text(PoliteEndpoint.uiHint)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 5)
                     .glassEffect(.regular, in: .capsule)
@@ -211,7 +216,7 @@ struct VoiceModeView: View {
                 ProgressView().controlSize(.small)
                 Text(env.chat.messages.last?.activityLabel ?? "Thinking…")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
@@ -249,7 +254,7 @@ struct VoiceModeView: View {
                 } else if spokenBubbles.isEmpty {
                     Text("Speaking…")
                         .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
                         .glassEffect(.regular, in: .capsule)
@@ -262,7 +267,7 @@ struct VoiceModeView: View {
             VStack(spacing: 6) {
                 Text("Tap the face or press Space to talk")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                 if let error = env.voiceLoop?.lastError {
                     Text(error)
                         .font(.caption)
@@ -277,7 +282,7 @@ struct VoiceModeView: View {
                 if case .preparing = env.whisperLoad {
                     Label("Warming up sharper voice…", systemImage: "waveform")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                         .symbolEffect(.variableColor.iterative)
                 }
             }

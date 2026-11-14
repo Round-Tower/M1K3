@@ -48,6 +48,9 @@
 //  column is capped at `pickerWidth` (520, the onboarding card's content width) and centred. Confidence 0.85.
 //  Review: Kev + claude-opus-4-6, 2026-10-12 — removed `isRecommended:` from BrainCard init (the badge is gone;
 //  the tier's policy role stays in MobileBrainMenu.recommended). Confidence 0.9.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Avatar
 import M1K3Inference
@@ -137,7 +140,7 @@ struct BrainPickerView: View {
                 .kerning(2)
             Text(subtitle)
                 .font(.title3)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 460)
         }
@@ -188,7 +191,7 @@ struct BrainPickerView: View {
                     ProgressView(value: fraction).frame(maxWidth: 320)
                     Text(env.modelLoad.label(modelName: selectedBrain.displayName))
                         .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
 
                     DialUpMuteButton()
                     Spacer()
@@ -213,7 +216,7 @@ struct BrainPickerView: View {
                         }
                         .buttonStyle(.plain)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                     }
                 }
             case .idle, .ready, .preparing:

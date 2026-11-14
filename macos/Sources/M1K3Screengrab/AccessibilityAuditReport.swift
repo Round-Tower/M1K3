@@ -10,6 +10,9 @@
 //
 //  Signed: Kev + claude-fable-5.2, 2026-11-13, Confidence 0.85 (pinned by
 //  AccessibilityAuditReportTests; what Xcode's audit reports is not ours), Prior: Unknown
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — `elementName`: an element with no label is now
+//  named by its type, what it shows and its frame. The first Mac run reported 59 of 78 findings
+//  as "(unnamed element)". Confidence 0.85 (pinned).
 //
 
 /// One issue Xcode's accessibility audit raised on one screen.
@@ -36,6 +39,37 @@ public struct AccessibilityAuditFinding: Sendable, Hashable {
 }
 
 public enum AccessibilityAuditReport {
+    /// The name a finding prints for its element: its label when it has one. An element with
+    /// none is described by what it is, its identifier, the text it shows and where it sits,
+    /// so a reader can find it on the screen. Empty when nothing is known.
+    public static func elementName(
+        label: String, identifier: String, title: String, value: String, type: String, frame: String
+    ) -> String {
+        let label = oneLine(label)
+        if !label.isEmpty { return label }
+        let title = oneLine(title)
+        var parts: [String] = []
+        let type = oneLine(type)
+        if !type.isEmpty { parts.append(type) }
+        // An identifier is not a name a person hears (a toolbar menu's is its symbol, "bolt.fill"):
+        // it places the element, after what the element is.
+        let identifier = oneLine(identifier)
+        if !identifier.isEmpty { parts.append("#\(identifier)") }
+        let shown = title.isEmpty ? oneLine(value) : title
+        if !shown.isEmpty {
+            parts.append("\"" + (shown.count > shownLimit ? shown.prefix(shownLimit) + "…" : shown) + "\"")
+        }
+        let frame = oneLine(frame)
+        if !frame.isEmpty, !parts.isEmpty { parts.append("at \(frame)") }
+        return parts.joined(separator: " ")
+    }
+
+    private static let shownLimit = 60
+
+    private static func oneLine(_ text: String) -> String {
+        text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+    }
+
     /// Findings with exact repeats removed, first-seen order kept. The audit
     /// can raise the same issue on the same element more than once in a pass;
     /// the same issue on a different element (another `place`) is another finding.

@@ -20,6 +20,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-12 — the Local API footer rendered with wide gaps mid-sentence (Kev's
 //  screenshot): its line continuations had been flattened into runs of spaces. Now a joined string. Seen fixed
 //  by launch.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import AppKit // NSPasteboard — the Copy buttons
 import M1K3CLICore // ConnectPlan / MCPClient / MCPEndpoint — one source for the snippets
@@ -69,7 +72,7 @@ struct MCPServerSettingsPane: View {
             Text("Off by default. When on, M1K3 keeps the last 500 tool calls a "
                 + "connected agent makes — see them in Window → Agent Log, or the "
                 + "Heartbeat timeline.")
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.readableSecondary)
         }
     }
 
@@ -102,7 +105,7 @@ struct MCPServerSettingsPane: View {
             Loopback-only, one client at a time. An agent needs the access token to connect. \
             Listening, deleting memories and opening links stay off until you allow them.
             """)
-            .font(.callout).foregroundStyle(.secondary)
+            .font(.callout).foregroundStyle(.readableSecondary)
         }
         .onAppear { env.mcpHost.loadAccessToken() }
     }
@@ -148,7 +151,7 @@ struct MCPServerSettingsPane: View {
                     + "M1K3's brains are chosen and tested inside M1K3; how one behaves under another app's "
                     + "instructions is for you to judge."
             )
-            .font(.callout).foregroundStyle(.secondary)
+            .font(.callout).foregroundStyle(.readableSecondary)
         }
         .onAppear { env.localAPI.loadAccessToken() }
     }
@@ -193,11 +196,11 @@ struct MCPServerSettingsPane: View {
             Text(isOn
                 ? "Paused: Private Cloud Compute is off in Settings ▸ Privacy. Turning that on resumes this."
                 : "Needs Private Cloud Compute on in Settings ▸ Privacy.")
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.readableSecondary)
         case let .toggle(isOn):
             Toggle(title, isOn: Binding(get: { isOn }, set: set))
             if isOn {
-                Text(detail).font(.callout).foregroundStyle(.secondary)
+                Text(detail).font(.callout).foregroundStyle(.readableSecondary)
             }
         }
     }
@@ -216,7 +219,7 @@ struct MCPServerSettingsPane: View {
                         .accessibilityLabel("New API key")
                 } else {
                     Text("Unavailable — the Keychain couldn’t be read")
-                        .font(.callout).foregroundStyle(.secondary)
+                        .font(.callout).foregroundStyle(.readableSecondary)
                 }
             }
         }
@@ -227,7 +230,7 @@ struct MCPServerSettingsPane: View {
         }
         if newAPITokenFailed {
             Text("Couldn’t save a new key to the Keychain. The current one still works.")
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.readableSecondary)
         }
     }
 
@@ -248,7 +251,7 @@ struct MCPServerSettingsPane: View {
                         .accessibilityLabel("New access token")
                 } else {
                     Text("Unavailable — the Keychain couldn’t be read")
-                        .font(.callout).foregroundStyle(.secondary)
+                        .font(.callout).foregroundStyle(.readableSecondary)
                 }
             }
         }
@@ -260,7 +263,7 @@ struct MCPServerSettingsPane: View {
         if newTokenFailed {
             // Fails safe — the old token stays in force — but say so, or it looks like it worked.
             Text("Couldn’t save a new token to the Keychain. The current one still works.")
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.readableSecondary)
         }
     }
 
@@ -279,7 +282,7 @@ struct MCPServerSettingsPane: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             HStack {
                 Text(ConnectPlan.destination(client: connectClient))
-                    .font(.caption2).foregroundStyle(.secondary)
+                    .font(.caption2).foregroundStyle(.readableSecondary)
                 Spacer()
                 Button("Copy") {
                     if let token = env.mcpHost.accessToken { copySecret(connectSnippet(token: token)) }
@@ -291,7 +294,7 @@ struct MCPServerSettingsPane: View {
         }
         VStack(alignment: .leading, spacing: 6) {
             Text("Or from Terminal — it asks for the token, so Copy that first:")
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.readableSecondary)
             HStack {
                 Text(terminalCommand)
                     .font(.system(.caption, design: .monospaced))

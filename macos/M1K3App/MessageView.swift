@@ -48,6 +48,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-12 — the bubbles' inset grows with the larger Mac text
 //  (`ReadingTypography`: 18 by 14 behind an answer, 16 by 12 on the user's own bubble). Kev: "more
 //  padding on the border". Confidence 0.7 (judged on one screen by launch).
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 //  Review: Kev + claude-opus-5.5, 2026-11-14 — `onKeep`: a read's answer offers "Keep this" (files its text in Documents).
 
 import AppKit
@@ -213,7 +216,7 @@ struct MessageView: View {
             Text("\(context) · \(metrics.generationTokens.formatted()) out · "
                 + "\(Int(metrics.tokensPerSecond.rounded())) tok/s")
                 .font(.caption2.monospacedDigit())
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .textSelection(.enabled)
         }
     }
@@ -230,7 +233,7 @@ struct MessageView: View {
         if let tools = message.toolsUsed, !tools.isEmpty {
             Label(ActivityLabeler.traceLabel(for: tools), systemImage: "wrench.and.screwdriver")
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .textSelection(.enabled)
                 .animation(.easeOut(duration: 0.2), value: tools)
         }
@@ -243,7 +246,7 @@ struct MessageView: View {
             if let note = message.turnNote {
                 Text(note)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                     .textSelection(.enabled)
             }
 
@@ -267,7 +270,7 @@ struct MessageView: View {
                         // house rule keeps off the bitmap font (review 1, #248).
                         Text(activity)
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.readableSecondary)
                             .contentTransition(.opacity)
                     }
                 }
@@ -276,14 +279,14 @@ struct MessageView: View {
                 // as a state, not a hollow glass bubble.
                 Text("No response.")
                     .italic()
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
 
             if message.interrupted == true {
                 Label("Stopped", systemImage: "stop.fill")
                     .symbolRenderingMode(.hierarchical)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                     .accessibilityLabel("Answer stopped early")
             }
 
@@ -293,7 +296,7 @@ struct MessageView: View {
                 Label(PrivateCloudLabel.text, systemImage: PrivateCloudLabel.symbolName)
                     .symbolRenderingMode(.hierarchical)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                     .accessibilityLabel(PrivateCloudLabel.accessibilityLabel)
             }
 
@@ -433,7 +436,7 @@ struct MessageView: View {
                 .font(.headline)
             Text("A quick note — e.g. \"should have searched the web\" — so this can be fixed later. Optional.")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             TextField("Note (optional)", text: $commentDraft, axis: .vertical)
                 .lineLimit(2 ... 5)
@@ -500,7 +503,7 @@ struct MessageView: View {
             // overlapping), over a re-parse that grew with every token. The rule the
             // answer body states below; the settled panel shows the full thought.
             ReadingText(isThinkingLive ? ReasoningTail.live(reasoning) : reasoning)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .padding(.top, 4)
                 .frame(maxWidth: .infinity, alignment: .leading)
         } label: {
@@ -511,7 +514,7 @@ struct MessageView: View {
             Label(isThinkingLive ? "THINKING…" : "MODEL REASONING", systemImage: "ellipsis.bubble")
                 .font(.pixel(13))
                 .kerning(0.5)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .contentTransition(.opacity)
                 // The bubble's dots iterate like a typing indicator while the
                 // model reasons; the collapsed resting state stays still.
@@ -580,7 +583,7 @@ struct MessageView: View {
             Label("\(citedSources.count) source\(citedSources.count == 1 ? "" : "s")",
                   systemImage: "doc.text.magnifyingglass")
                 .font(.caption.weight(.medium).monospacedDigit())
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
         }
         .padding(.horizontal, 6)
     }
@@ -595,7 +598,7 @@ private struct SourceRow: View {
                 .font(.caption.weight(.semibold))
             Text(hit.content)
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .lineLimit(2)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -627,7 +630,7 @@ private struct LinkChip: View {
                     .truncationMode(.middle)
                 Image(systemName: "arrow.up.forward.app")
                     .imageScale(.small)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
             .font(.caption.weight(.medium))
         }

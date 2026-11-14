@@ -16,6 +16,9 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-06-19, Confidence 0.8, Prior: Unknown
 //  Review: Kev + claude-fable-5.2, 2026-11-13 — the address-bar buttons are named for VoiceOver (Clear, Open in browser, Choose a file); the address icon is hidden. Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import AppKit
 import M1K3Preview
@@ -74,7 +77,7 @@ struct ReviewPanel: View {
         return HStack(spacing: 12) {
             Image(systemName: addressIcon)
                 .accessibilityHidden(true)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .font(.title3)
             TextField("Paste a link or path…", text: $review.input)
                 .textFieldStyle(.plain)
@@ -84,7 +87,7 @@ struct ReviewPanel: View {
                 Button { review.clear() } label: {
                     Image(systemName: "xmark.circle.fill")
                         .accessibilityLabel("Clear")
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.readableSecondary)
                 }
                 .buttonStyle(.plain)
                 .help("Clear")

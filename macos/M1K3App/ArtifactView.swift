@@ -9,6 +9,9 @@
 //
 //  Signed: Kev + claude-fable-5.2, 2026-11-13 — only the Export button's VoiceOver name (lint-driven,
 //  not yet heard in VoiceOver). Confidence 0.8. Prior: Unknown (the rest of this file is unsigned).
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import AppKit
 import M1K3Preview
@@ -79,7 +82,7 @@ struct ArtifactView: View {
 
             Text(artifact.displayTitle)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
 
             Button {
                 showExporter = true

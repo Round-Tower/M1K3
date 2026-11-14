@@ -125,6 +125,9 @@
 //  chat screen to enable web search, just so it's clear, like the brain toggle"). Same key as Settings ▸ Privacy
 //  and the menu bar. Confidence 0.8 (verify-by-launch).
 //  Review: Kev + claude-fable-5.2, 2026-11-13 — banner and strip icons that sit beside their own text are hidden from accessibility. Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 //  Review: Kev + claude-opus-5.5, 2026-11-14 — a send with files and no pictures is a READ (`env.read`: instructions only,
 //  on this Mac, display-only) instead of FILE blocks prepended to a full chat turn; a read's answers offer "Keep this".
 
@@ -806,6 +809,10 @@ struct ContentView: View {
                             readActions
                         }
                     }
+                    // The messages' own container: unnamed, the Mac audit found it as an element
+                    // with no description sitting between the window and every message.
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("Conversation")
                     // Horizontal > vertical on purpose — flat assistant turns (no
                     // card, see MessageView's LegibilityScrim) had ZERO inset of
                     // their own outside this padding, so headings/code blocks sat
@@ -1034,7 +1041,7 @@ struct ContentView: View {
             .accessibilityLabel("Stop asking about this text")
         }
         .font(.caption)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(.readableSecondary)
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .background(.ultraThinMaterial, in: Capsule())
@@ -1048,7 +1055,7 @@ struct ContentView: View {
                     HStack(spacing: 6) {
                         Image(systemName: "doc.text")
                             .accessibilityHidden(true)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.readableSecondary)
                         Text(file.filename)
                             .lineLimit(1)
                             .font(.caption)
@@ -1078,7 +1085,7 @@ struct ContentView: View {
             HStack(spacing: 12) {
                 if env.isListening {
                     Text(env.liveTranscript.isEmpty ? "Listening…" : env.liveTranscript)
-                        .foregroundStyle(env.liveTranscript.isEmpty ? .secondary : .primary)
+                        .foregroundStyle(env.liveTranscript.isEmpty ? Color.readableSecondary : Color.primary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .lineLimit(1 ... 5)
                         .padding(.horizontal, 16)
@@ -1086,6 +1093,8 @@ struct ContentView: View {
                         .glassEffect(.regular, in: .rect(cornerRadius: 22))
                 } else {
                     TextField("Ask M1K3…", text: $draft, axis: .vertical)
+                        // A placeholder is not a name: the Mac audit found this field with no description.
+                        .accessibilityLabel("Ask M1K3")
                         .focused($inputFocused)
                         .textFieldStyle(.plain)
                         .lineLimit(1 ... 5)
@@ -1318,7 +1327,7 @@ struct ContentView: View {
                 if !compact.isEmpty {
                     Text(compact)
                         .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                 }
             }
         } else if !env.providerAvailable {
@@ -1682,6 +1691,9 @@ struct ContentView: View {
         }
         .disabled(autoRouteBrain && privateCloudControl == .hidden)
         .help(brainSwitcherHelp)
+        // In the toolbar the menu shows its icon alone, and its name fell back to the symbol's:
+        // the Mac audit (and VoiceOver) read this control as "bolt.fill".
+        .accessibilityLabel("Brain")
         .accessibilityValue(privateCloudServesNextSend ? PrivateCloudLabel.text : env.selectedBrain.displayName)
     }
 
@@ -1849,7 +1861,7 @@ private struct ModelGateView: View {
                 }
                 Text(loadingLabel(state))
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                 DialUpMuteButton()
             }
         case let .failed(message):
@@ -1858,7 +1870,7 @@ private struct ModelGateView: View {
                     .font(.headline)
                 Text(message)
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                     .multilineTextAlignment(.center)
                 HStack(spacing: 12) {
                     Button("Try again", action: retry)
@@ -1876,7 +1888,7 @@ private struct ModelGateView: View {
                         : "Apple Intelligence isn’t available on this Mac. M1K3’s own Mini runs here after a one-time download."
                 )
                 .font(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .multilineTextAlignment(.center)
                 // Two ways out of the dead end, neither a Settings expedition:
                 // the #237 download offer (the restore held a needed download
@@ -1938,7 +1950,7 @@ private struct InterimMiniBanner: View {
                     .font(.callout.weight(.medium))
                 Text(progressLine)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                     .monospacedDigit()
             }
         }
@@ -1976,14 +1988,14 @@ private struct IntroductionOfferCard: View {
                 .font(.callout.weight(.semibold))
             Text("Tell me a bit about yourself and I'll keep what matters in mind.")
                 .font(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 12) {
                 Button("Introduce yourself", action: onAccept)
                     .buttonStyle(.glassProminent)
                 Button("Not now", action: onDismiss)
                     .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
             .padding(.top, 4)
         }
@@ -2013,7 +2025,7 @@ private struct SnagBanner: View {
                 .buttonStyle(.glassProminent)
             Button("Not now", action: onDismiss)
                 .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -2042,7 +2054,7 @@ private struct VoiceUpgradeBanner: View {
                 .buttonStyle(.glassProminent)
             Button("Not now", action: onDismiss)
                 .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
@@ -2114,7 +2126,7 @@ private struct BrainUpgradeNudgeCard: View {
                 .font(.callout.weight(.semibold))
             Text(pitch)
                 .font(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             SemanticMemoryOfferToggle(isOn: $alsoSemanticMemory, slot: semanticMemorySlot, brainName: target.displayName)
                 .padding(.top, 2)
@@ -2126,7 +2138,7 @@ private struct BrainUpgradeNudgeCard: View {
                 .buttonStyle(.glassProminent)
                 Button("Maybe later", action: onDismiss)
                     .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
             .padding(.top, 4)
         }
@@ -2165,14 +2177,14 @@ private struct VoicePermissionBanner: View {
                     ? "Your Mac is blocking the mic. Flip M1K3 on in System Settings, then try me again."
                     : "Your Mac is blocking Speech Recognition for M1K3. Flip it on in System Settings, then try me again.")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
             Spacer()
             Button("Open System Settings", action: onOpenSettings)
                 .buttonStyle(.glassProminent)
             Button("Not now", action: onDismiss)
                 .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)

@@ -17,6 +17,9 @@
 //  inside Privacy; copy unchanged. Confidence 0.85.
 //  Review: Kev + claude-fable-5.2, 2026-11-13 — the pairing glyph is hidden from accessibility. Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
 //
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3BrainServe
 import SwiftUI
@@ -50,7 +53,7 @@ struct BrainAtHomeSection: View {
                             Text(device.name)
                             Text("Paired \(device.addedAt, format: .relative(presentation: .named))")
                                 .font(.callout)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.readableSecondary)
                         }
                         Spacer()
                         Button("Revoke", role: .destructive) {
@@ -70,7 +73,7 @@ struct BrainAtHomeSection: View {
             can reach the web when the web-search toggle allows. Off by \
             default; revoking a device cuts it off immediately.
             """)
-            .font(.callout).foregroundStyle(.secondary)
+            .font(.callout).foregroundStyle(.readableSecondary)
         }
         .sheet(isPresented: $showPairingSheet, onDismiss: { env.brainServe.cancelPairing() }) {
             BrainPairingSheet(showSheet: $showPairingSheet)
@@ -109,7 +112,7 @@ struct BrainPairingSheet: View {
                 Text("Scan this in M1K3 on the other device. The code lives for a "
                     + "minute and commits nothing until you approve.")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                     .multilineTextAlignment(.center)
                 // Camera-less clients (desktops, emulators, a paired agent on
                 // this Mac) paste the same payload the QR encodes. Same
@@ -131,7 +134,7 @@ struct BrainPairingSheet: View {
                     .font(.headline)
                 Text("Only approve a device you're holding right now.")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                 HStack {
                     Button("Decline", role: .cancel) {
                         env.brainServe.cancelPairing()
@@ -150,7 +153,7 @@ struct BrainPairingSheet: View {
                 showSheet = false
             }
             .buttonStyle(.borderless)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.readableSecondary)
         }
         .padding(28)
         .frame(minWidth: 320)

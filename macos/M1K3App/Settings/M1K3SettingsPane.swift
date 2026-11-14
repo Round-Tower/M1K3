@@ -29,6 +29,9 @@
 //  choice changed nothing. Kev's call. Confidence 0.9.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the "Free up space" rows (retired brain folders), their confirmation
 //  and the refresh moved to Settings > Brains & downloads; a "Manage downloads…" button hops there. Confidence 0.8.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 import M1K3Chat
 import M1K3Inference
 import M1K3MLX
@@ -48,7 +51,7 @@ struct M1K3SettingsPane: View {
         Form {
             Section {
                 LabeledContent {
-                    Text(env.selectedBrain.tagline).foregroundStyle(.secondary)
+                    Text(env.selectedBrain.tagline).foregroundStyle(.readableSecondary)
                 } label: {
                     Label(env.selectedBrain.displayName, systemImage: env.selectedBrain.glyph)
                         .symbolRenderingMode(.hierarchical)
@@ -82,7 +85,7 @@ struct M1K3SettingsPane: View {
                 """
                 Text(copy)
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
 
             // Hidden until Lil can honour it (ThinkingToggleSupport): on today's
@@ -101,7 +104,7 @@ struct M1K3SettingsPane: View {
                     Text("Reasoning models think before answering — sharper on hard "
                         + "questions, slower on small talk. Auto decides per turn; voice "
                         + "mode has its own toggle and ignores this setting.")
-                        .font(.callout).foregroundStyle(.secondary)
+                        .font(.callout).foregroundStyle(.readableSecondary)
                 }
             }
 
@@ -123,7 +126,7 @@ struct M1K3SettingsPane: View {
                         }
                     }
                     Text(env.voiceCharacter.summary)
-                        .font(.callout).foregroundStyle(.secondary)
+                        .font(.callout).foregroundStyle(.readableSecondary)
                 }
                 Button("Hear a sample") { Task { await env.speakSample() } }
                     .buttonStyle(.glass)
@@ -134,7 +137,7 @@ struct M1K3SettingsPane: View {
                     + "voice model and runs entirely offline. Character shapes the tone "
                     + "\u{2014} Clean is the full range, M1K3 is the signature sound, Radio "
                     + "leans lo-fi. Hit \u{201C}Hear a sample\u{201D} to compare.")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.readableSecondary)
             }
 
             voiceInputSection
@@ -156,13 +159,13 @@ struct M1K3SettingsPane: View {
                     .controlSize(.small)
                     .frame(maxWidth: 160)
                 Text(env.modelLoad.label(modelName: env.downloadingBrainName))
-                    .font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+                    .font(.callout.monospacedDigit()).foregroundStyle(.readableSecondary)
             }
         case .preparing:
             HStack(spacing: 8) {
                 ProgressView().controlSize(.small) // indeterminate
                 Text(env.modelLoad.label(modelName: env.downloadingBrainName))
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.readableSecondary)
             }
         case .failed:
             Label(env.modelLoad.label(modelName: env.downloadingBrainName), systemImage: "exclamationmark.triangle")
@@ -189,7 +192,7 @@ struct M1K3SettingsPane: View {
                     .controlSize(.small)
                     .frame(maxWidth: 160)
                 Text("Fetching \(upgradeTargetName) in the background… \(Int((fraction * 100).rounded()))%")
-                    .font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+                    .font(.callout.monospacedDigit()).foregroundStyle(.readableSecondary)
             }
         case let .failed(_, transient):
             Label(
@@ -215,7 +218,7 @@ struct M1K3SettingsPane: View {
                 ProgressView(value: fraction)
                 Text(env.voiceLoad.label(modelName: "M1K3 Voice"))
                     .font(.callout.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
         default:
             if env.selectedVoiceTier == .m1k3Voice {
@@ -257,7 +260,7 @@ struct M1K3SettingsPane: View {
                 + "a one-time download and applies on the next launch. Echo "
                 + "cancellation stops M1K3 hearing itself, at some cost to accuracy "
                 + "in a quiet room.")
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.readableSecondary)
         }
     }
 
@@ -280,13 +283,13 @@ struct M1K3SettingsPane: View {
                 ProgressView(value: fraction)
                 Text(env.whisperLoad.label(modelName: "WhisperKit"))
                     .font(.callout.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
         case .preparing:
             VStack(alignment: .leading, spacing: 4) {
                 ProgressView() // indeterminate — load has no honest fraction
                 Text(env.whisperLoad.label(modelName: "WhisperKit"))
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.readableSecondary)
             }
         case .ready:
             Label("WhisperKit ready", systemImage: "checkmark.circle.fill")

@@ -131,6 +131,7 @@ targetTemplates:
       - path: M1K3App/PixelFont.swift
       - path: M1K3App/ReadingMode.swift
       - path: M1K3App/ReadingText.swift
+      - path: M1K3App/ReadableSecondary.swift # the quiet-text colour ReadingText and RememberPhotoButton use
       # Voice mode's follow-the-spoken-word line (2026-09-03): the Mac's
       # observable highlight state + the paint layer, both package-only deps.
       - path: M1K3App/SpeechHighlight.swift

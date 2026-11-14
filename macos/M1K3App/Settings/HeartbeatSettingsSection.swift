@@ -17,6 +17,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — the Settings-screen pass: section headers are
 //  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
 //
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Heartbeat
 import SwiftUI
@@ -58,7 +61,7 @@ struct HeartbeatSettingsSection: View {
         } footer: {
             Text("Every couple of hours M1K3 takes stock and writes a short note. "
                 + "Kept on this machine, capped at a week, never remembered as facts.")
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.readableSecondary)
         }
         .onChange(of: heartbeatOn) { _, enabled in
             env.setHeartbeatEnabled(enabled)

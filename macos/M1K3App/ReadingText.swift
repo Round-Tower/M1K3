@@ -54,6 +54,9 @@
 //  looser lines and letters; touch keeps its values, so Dynamic Type still governs
 //  there. Kev, on a Mac screenshot in the serif face: "it needs to be bigger, with
 //  better kerning, and more padding on the border". Tried by launch on the Mac only.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3AnswerBlocks
 import M1K3Chat
@@ -132,7 +135,7 @@ struct ReadingText: View {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(ordinal.map { "\($0)." } ?? "•")
                     .font(baseFont.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                 proseText(content, font: baseFont)
             }
         case let .blockquote(content):
@@ -141,7 +144,7 @@ struct ReadingText: View {
                     .fill(.secondary.opacity(0.4))
                     .frame(width: 3)
                 proseText(content, font: baseFont)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
         case let .codeBlock(language, code):
             CodeBlockView(code: code, language: language)
