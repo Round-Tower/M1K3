@@ -26,6 +26,8 @@
 # Signed: Kev + claude-fable-5.2, 2026-11-13, Confidence 0.55 (the iOS suite ran on a Simulator
 # by a bare xcodebuild and the collector filed its reports; THIS script and the Mac lane are
 # unrun, and --largest-text is untried — verify-by-launch), Prior: Unknown
+# Review: Kev + claude-fable-5.2, 2026-11-14 — the Mac lane ends with a11y_contrast.py: each contrast
+# finding measured on the screen's picture (the first run's 31 were 18 false, 11 real, 2 off-picture).
 set -euo pipefail
 
 target=${1:?mac|ios}; shift
@@ -102,6 +104,11 @@ done
 if (( ! found )); then
   echo "no report was written — no screen was audited (xcodebuild exit=$rc)"
   (( rc )) || rc=3   # nothing audited is never a pass, whatever xcodebuild said
+fi
+if [[ $target == mac ]] && (( found )); then
+  # Xcode's audit gives no number: re-measure each contrast finding on the screen's own picture.
+  echo; echo "=== contrast, measured (4.5:1 is the bar) ==="
+  "$root/tools/dev/a11y_contrast.py" "$out" || true
 fi
 echo
 echo "xcodebuild test exit=$rc · reports in $out"

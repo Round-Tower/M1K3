@@ -3,6 +3,8 @@
 //  M1K3ScreengrabTests
 //
 //  Signed: Kev + claude-fable-5.2, 2026-11-13, Confidence 0.85 (pinned), Prior: Unknown
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — pins `elementName`: the first Mac run left 59 of 78
+//  findings as "(unnamed element)", which nobody could act on.
 //
 
 @testable import M1K3Screengrab
@@ -103,5 +105,45 @@ struct AccessibilityAuditReportTests {
     func detailFolded() {
         let report = AccessibilityAuditReport.render([finding("chat", "contrast", "Send", "Contrast failed\nRatio 2.1")])
         #expect(report.contains("- [contrast] Send: Contrast failed Ratio 2.1"))
+    }
+
+    @Test("an element with a label is named by it")
+    func elementNameUsesLabel() {
+        #expect(AccessibilityAuditReport.elementName(
+            label: "Send", identifier: "chat.send", title: "", value: "", type: "button", frame: "{{0, 0}, {44, 44}}"
+        ) == "Send")
+    }
+
+    @Test("an identifier is not a spoken name: it places the element, it does not stand in for a label")
+    func elementNameShowsIdentifierAsAPlace() {
+        #expect(AccessibilityAuditReport.elementName(
+            label: " ", identifier: "bolt.fill", title: "Lil M1K3", value: "", type: "menu button", frame: "{{0, 0}, {41, 36}}"
+        ) == "menu button #bolt.fill \"Lil M1K3\" at {{0, 0}, {41, 36}}")
+    }
+
+    @Test("an element with no name is told apart by what it is, what it shows and where it sits")
+    func elementNameFallsBackToTypeAndPlace() {
+        #expect(AccessibilityAuditReport.elementName(
+            label: "", identifier: "", title: "", value: "", type: "image", frame: "{{12, 40}, {16, 16}}"
+        ) == "image at {{12, 40}, {16, 16}}")
+        #expect(AccessibilityAuditReport.elementName(
+            label: "", identifier: "", title: "", value: "On this Mac\nonly", type: "static text", frame: "{{0, 0}, {90, 14}}"
+        ) == "static text \"On this Mac only\" at {{0, 0}, {90, 14}}")
+        #expect(AccessibilityAuditReport.elementName(
+            label: "", identifier: "", title: "Reset", value: "ignored", type: "button", frame: ""
+        ) == "button \"Reset\"")
+    }
+
+    @Test("a long value is cut so a finding stays one readable line")
+    func elementNameCutsLongText() {
+        let name = AccessibilityAuditReport.elementName(
+            label: "", identifier: "", title: "", value: String(repeating: "a", count: 200), type: "static text", frame: ""
+        )
+        #expect(name == "static text \"" + String(repeating: "a", count: 60) + "…\"")
+    }
+
+    @Test("nothing known at all still reads as unnamed")
+    func elementNameEmpty() {
+        #expect(AccessibilityAuditReport.elementName(label: "", identifier: "", title: "", value: "", type: "", frame: "") == "")
     }
 }

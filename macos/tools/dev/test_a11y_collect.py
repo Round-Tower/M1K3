@@ -1,6 +1,7 @@
 """Tests for a11y_collect: the audit's text attachments, filed by screen out of an xcresult export.
 
 Signed: Kev + claude-fable-5.2, 2026-11-13, Confidence 0.85, Prior: Unknown
+Review: Kev + claude-fable-5.2, 2026-11-14 — pins the screenshot filing.
 """
 
 from __future__ import annotations
@@ -106,3 +107,22 @@ def test_a_source_outside_the_export_is_never_read(tmp_path: Path) -> None:
     out = tmp_path / "out"
     assert m.collect(export, out) == []
     assert not (out / "chat.txt").exists()
+
+
+def test_a_screen_picture_is_filed_beside_its_report_and_is_not_a_report(tmp_path: Path) -> None:
+    export = _export(
+        tmp_path,
+        [
+            {
+                "attachments": [
+                    {"exportedFileName": "P.png", "suggestedHumanReadableName": "a11y-shot-brain-at-home_0_AA.png"},
+                    {"exportedFileName": "R.txt", "suggestedHumanReadableName": "a11y-brain-at-home_0_BB.txt"},
+                    {"exportedFileName": "X.png", "suggestedHumanReadableName": "a11y-shot-../evil_0_CC.png"},
+                ]
+            }
+        ],
+        {"P.png": "png", "R.txt": "0 issues\n", "X.png": "x"},
+    )
+    out = tmp_path / "out"
+    assert m.collect(export, out) == ["brain-at-home"]
+    assert sorted(p.name for p in out.iterdir()) == ["brain-at-home.png", "brain-at-home.txt"]
