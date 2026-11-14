@@ -36,6 +36,7 @@
 //  costume line under the wordmark; the first-session hero is untouched. Confidence 0.8 (verify-by-launch).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (CI fold) — the costume line renders inline from
 //  `SeasonalLook.greeting(for:)` (the shared SeasonalGreeting.swift is gone). Confidence 0.85.
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — the confirmation tick is hidden from accessibility (the sentence beside it carries it). Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
 
 import M1K3Avatar
 import M1K3Chat
@@ -176,6 +177,7 @@ struct GreetingCard: View {
                     .font(.callout.weight(.medium))
             } icon: {
                 Image(systemName: "checkmark.circle.fill")
+                    .accessibilityHidden(true)
                     .foregroundStyle(.green)
                     .transition(.symbolEffect)
             }

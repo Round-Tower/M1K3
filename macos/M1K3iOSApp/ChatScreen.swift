@@ -126,6 +126,9 @@
 //  heights. They read "Ask more" and "Search the web", one line each (VoiceOver keeps the long wording). Confidence 0.8.
 //  Review: Kev + claude-fable-5.2, 2026-11-10 — the wordmark gains the brain's tag ("LIL M1K3"), typed on in the pixel
 //  face when the brain changes (`BrainTagTypeOn`, still with Reduce Motion). Confidence 0.6 until Kev has seen it.
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — the status line over the composer is near-primary, not `.secondary`
+//  (it failed Xcode's contrast audit over the thin material), and its separator dot is hidden from accessibility.
+//  Measured by re-running the audit on a Simulator; the look is verify-on-device. Confidence 0.7.
 
 import M1K3Avatar
 import M1K3Chat
@@ -837,7 +840,7 @@ struct ChatScreen: View {
                     Image(systemName: symbol)
                 }
                 Text(line.brainText)
-                Text("·").foregroundStyle(.tertiary)
+                Text("·").foregroundStyle(.tertiary).accessibilityHidden(true)
                 Image(systemName: ChatStatusLine.webSymbol)
                     .opacity(line.webSearchOn ? 1 : 0.4)
                 Text(line.webText)
@@ -846,7 +849,9 @@ struct ChatScreen: View {
                     .foregroundStyle(.tertiary)
             }
             .font(.caption)
-            .foregroundStyle(.secondary)
+            // Not `.secondary`: over the thin material it measured under the contrast floor
+            // (Xcode's audit, 2026-11-13), and this line is the one that says where a message goes.
+            .foregroundStyle(.primary.opacity(0.85))
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(.ultraThinMaterial, in: Capsule())

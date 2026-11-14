@@ -15,6 +15,7 @@
 //  SettingsHeader (icon + readable title) and caption text is callout, for readability. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — 1.1: mounted by BrainAtHomeSettingsPane (its own pane), no longer
 //  inside Privacy; copy unchanged. Confidence 0.85.
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — the pairing glyph is hidden from accessibility. Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
 //
 
 import M1K3BrainServe
@@ -123,6 +124,7 @@ struct BrainPairingSheet: View {
                 .buttonStyle(.glass)
             case let .awaitingApproval(candidateName, _):
                 Image(systemName: "person.badge.shield.checkmark")
+                    .accessibilityHidden(true)
                     .font(.largeTitle)
                     .symbolRenderingMode(.hierarchical)
                 Text("“\(candidateName)” wants to pair")

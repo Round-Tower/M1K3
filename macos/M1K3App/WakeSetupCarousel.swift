@@ -50,6 +50,7 @@
 //  the face card the deck card fades back but keeps its place (nothing jumps) and `faceStrip`, a compact glass strip with the
 //  picker, Say hi, the shared `chevron(forward:)` and dots, takes the top, so the creature has the middle. Card-turn
 //  animation only: a fade and a render scale, never a tick. Confidence 0.6 (the look is verify-by-launch).
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — the kit row's status symbol is hidden from accessibility (the status line beside it says the same). Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
 
 import M1K3Avatar
 import M1K3Inference
@@ -354,6 +355,7 @@ struct WakeSetupCarousel: View {
             // Started, in flight elsewhere, or refused: read-only, static status.
             HStack(alignment: .top, spacing: 8) {
                 Image(systemName: symbol)
+                    .accessibilityHidden(true)
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(row.status == .ready ? AnyShapeStyle(.tint) : AnyShapeStyle(.secondary))
                     .frame(width: 18)

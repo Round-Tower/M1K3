@@ -29,6 +29,7 @@
 //  list: titles are text; the empty states keep theirs). Confidence unchanged.
 //  Review: Kev + claude-opus-5, 2026-09-15 — the day headers drop the calendar glyph too (the same pass:
 //  rows keep their kind icons, repeated decoration goes). Confidence unchanged.
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — the visit row's icon is hidden from accessibility. Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
 
 import M1K3Heartbeat
 import M1K3MCPLog
@@ -260,6 +261,7 @@ struct HeartbeatScreen: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Image(systemName: "bubble.left.and.bubble.right")
+                        .accessibilityHidden(true)
                         .symbolRenderingMode(.hierarchical)
                     Text(visit.clientName ?? "An agent")
                         .font(.callout.bold())

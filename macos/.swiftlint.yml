@@ -13,6 +13,13 @@ excluded:
   - .build
   - .spm-cache
 
+# Accessibility, at lint time (2026-11-13): an image is named or explicitly hidden, and anything
+# with a tap gesture says it is a button. Static, so it catches an omission, never a bad label —
+# `UITests/Screengrab*/AccessibilityAudit*` runs Xcode's audit on the live screens for the rest.
+opt_in_rules:
+  - accessibility_label_for_image
+  - accessibility_trait_for_button
+
 disabled_rules:
   # SwiftFormat (run in the same pre-commit hook) ADDS trailing commas to
   # multi-line collection literals, so this rule flags exactly what the formatter

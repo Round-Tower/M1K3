@@ -35,6 +35,7 @@
 //  selected (`destination(_:systemImage:_:)`). Direction C of the icon mock. Confidence 0.8 (look is
 //  verify-by-launch).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the sidebar column keeps the SYSTEM show/hide toggle (the custom one in ContentView is retired) so the sidebar toggle sits at the window's left edge. Verify by launch: it must survive collapse. Confidence 0.65.
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — the row icon is hidden from accessibility (its title names the row). Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
 
 import M1K3Chat
 import SwiftUI
@@ -122,6 +123,7 @@ struct SidebarView: View {
             Text(title)
         } icon: {
             Image(systemName: systemImage)
+                .accessibilityHidden(true)
                 .foregroundStyle(selection == tag ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(.secondary))
         }
         .tag(tag)

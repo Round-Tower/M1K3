@@ -45,6 +45,8 @@
 //  (compile-checked; the placement and the feel are verify-on-device).
 //  Review: Kev + claude-fable-5.2, 2026-11-09 (review fold) — a refused camera shows on the eye (a slashed eye and
 //  an accessibility value): the caption that says so is only on screen while voice mode is parked.
+//  Review: Kev + claude-fable-5.2, 2026-11-13 — the "end with please" hint is plain white at 0.82, not `.secondary`
+//  (it failed Xcode's contrast audit over the avatar). Measured on a Simulator; the look is verify-on-device. Confidence 0.7.
 //
 
 import M1K3Avatar
@@ -245,7 +247,8 @@ struct VoiceScreen: View {
             if case .listening = state {
                 Text(PoliteEndpoint.uiHint)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    // Not `.secondary`: over the avatar it failed Xcode's contrast audit (2026-11-13).
+                    .foregroundStyle(.white.opacity(0.82))
                     .padding(.horizontal, 14)
                     .padding(.vertical, 8)
                     .m1k3Glass(cornerRadius: 14)
