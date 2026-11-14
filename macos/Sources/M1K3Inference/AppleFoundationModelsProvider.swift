@@ -97,6 +97,9 @@
 //  8, 16 and 32 it read 9, 17 and 33, live). Before this a cut answer said `stop`. Confidence 0.8 (pure rule tested,
 //  the cut live, on English prose only); an answer that ends by itself within one token of the ceiling also reads
 //  `length` (review fold: a false `stop` is the worse error for a client).
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — conforms to `TextReading` (the read: the look's shape for text,
+//  instructions only, no persona, no tools, `readContextTokens` = `MiniContextWindow.current`); failures logged by
+//  class only. Confidence 0.75: compile- and seam-tested; the live answers are the blind set's job.
 import Foundation
 import M1K3LogCore
 import os
@@ -930,6 +933,54 @@ extension AppleFoundationModelsProvider: ImageLooking {
     /// saw: the class is enough to count failures, and nothing in view is kept.
     private func logLookFailure(_ failure: AFMFailure) {
         Self.log.error("afm look failed: \(failure.rawValue, privacy: .public)")
+    }
+}
+
+// MARK: - The read (text, instructions only)
+
+/// One text, one question, the caller's instructions: a fresh session with no persona, no
+/// tools and no prewarm slot, the look's shape without the image. Snapshots pass through.
+extension AppleFoundationModelsProvider: TextReading {
+    /// A read is a sentence or two, or a short list (`ReadBudget.answerTokens`).
+    static let readResponseTokens = ReadBudget.answerTokens
+
+    /// Mini reads in the fast window (`ReadBudget.fastMiniWindow`), never past the device's own.
+    public var readContextTokens: Int {
+        isAvailable ? min(MiniContextWindow.current, ReadBudget.fastMiniWindow) : 0
+    }
+
+    public func read(instructions: String, prompt: String) -> LookStream {
+        guard isAvailable else {
+            return AsyncThrowingStream { $0.finish(throwing: TextReadingError.cannotRead) }
+        }
+        return AsyncThrowingStream { continuation in
+            let task = Task { [self] in
+                do {
+                    let system = try TextReadingError.instructions(instructions)
+                    let session = LanguageModelSession(instructions: system)
+                    let options = GenerationOptions(maximumResponseTokens: Self.readResponseTokens)
+                    for try await snapshot in session.streamResponse(to: prompt, options: options) {
+                        let content = snapshot.content
+                        if !content.isEmpty { continuation.yield(content) }
+                    }
+                    continuation.finish()
+                } catch is CancellationError {
+                    continuation.finish(throwing: CancellationError())
+                } catch let error as InferenceError {
+                    continuation.finish(throwing: error)
+                } catch {
+                    guard !Task.isCancelled else {
+                        continuation.finish(throwing: CancellationError())
+                        return
+                    }
+                    let failure = AFMFailure.classify(error: error)
+                    // By class only: the error's own text can quote what was pasted.
+                    Self.log.error("afm read failed: \(failure.rawValue, privacy: .public)")
+                    continuation.finish(throwing: LookDeclined(reply: ReadFailureReply.reply(for: failure)))
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
     }
 }
 

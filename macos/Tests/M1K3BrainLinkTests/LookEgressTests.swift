@@ -9,6 +9,7 @@
 //
 //  Signed: Kev + claude-fable-5.2, 2026-11-09, Confidence 0.85, Prior: none (new file)
 //  Context: the twin, for Private Cloud Compute, is in M1K3AgentTests.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — the read's twin: a paste stays on the device too.
 //
 
 import Foundation
@@ -52,6 +53,36 @@ struct LookEgressTests {
             thrown = error
         }
         #expect(thrown as? InferenceError == ImageLookingError.cannotLook)
+        #expect(dials.withLock { $0 } == 0)
+    }
+
+    @Test("Brain at Home cannot read a paste either: a read through the façade dials nothing")
+    func readThroughTheFacadeSendsNothing() async {
+        #expect(!((HomeBrainProvider.self as Any.Type) is any TextReading.Type))
+        let dials = Mutex(0)
+        let home = HomeBrainProvider(
+            brain: PairedBrain(
+                identity: "ID-1", name: "Studio", hosts: ["192.168.1.24"], mainPort: 4243,
+                lastKnownHost: nil, addedAt: Date(timeIntervalSince1970: 0)
+            ),
+            key: Data((0 ..< 32).map { UInt8($0) }),
+            transport: { _, _, _, _ in
+                dials.withLock { $0 += 1 }
+                return AsyncThrowingStream { $0.finish() }
+            },
+            onBrainUpdate: { _ in }
+        )
+        let facade = SwappableInferenceProvider(home)
+        #expect(facade.readContextTokens == 0)
+        var thrown: (any Error)?
+        do {
+            for try await _ in facade.read(instructions: ReadPrompt.instructions, prompt: "a pasted text") {
+                Issue.record("a brain off the device must not read")
+            }
+        } catch {
+            thrown = error
+        }
+        #expect(thrown as? InferenceError == TextReadingError.cannotRead)
         #expect(dials.withLock { $0 } == 0)
     }
 }
