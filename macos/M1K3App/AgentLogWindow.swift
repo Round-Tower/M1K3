@@ -14,6 +14,9 @@
 //  empty/off-state copy are Kev's ⌘R — verify-by-launch, not proven here).
 //  Prior: none (new file).
 //
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3MCPLog
 import SwiftUI
@@ -49,7 +52,7 @@ struct AgentLogWindowContent: View {
                 .font(.pixelTitle)
             Text("\(calls.count)")
                 .font(.caption.monospacedDigit())
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
             Spacer()
             Button(role: .destructive) {
                 Task { await clear() }
@@ -99,17 +102,17 @@ struct AgentLogWindowContent: View {
                 if let client = call.clientName {
                     Text(client)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                 }
                 Spacer()
                 Text(call.timestamp, format: .relative(presentation: .named))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
             if let argumentsJSON = call.argumentsJSON {
                 Text(argumentsJSON)
                     .font(.caption.monospaced())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                     .lineLimit(3)
                     .textSelection(.enabled)
             }
@@ -119,7 +122,7 @@ struct AgentLogWindowContent: View {
                 .textSelection(.enabled)
             Text("\(call.durationMS) ms")
                 .font(.caption2)
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.readableSecondary)
         }
         .padding(.vertical, 4)
     }

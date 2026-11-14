@@ -11,6 +11,9 @@
 //  AvatarView's cross-platform accent-colour extraction.
 //
 //  Signed: Kev + claude-sonnet-5, 2026-07-22, Confidence 0.8, Prior: Unknown
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 #if canImport(AppKit)
     import AppKit
@@ -46,7 +49,7 @@ struct CodeBlockView: View {
             if let language, !language.isEmpty {
                 Text(language.uppercased())
                     .font(.caption2.weight(.semibold).monospaced())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
             Spacer()
             copyButton
@@ -61,7 +64,7 @@ struct CodeBlockView: View {
                 .font(.caption2)
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(.readableSecondary)
         .accessibilityLabel("Copy code")
         .help(didCopy ? "Copied" : "Copy code")
     }

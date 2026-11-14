@@ -16,6 +16,9 @@
 //  fetch starting or settling), never per progress tick; B6 Semantic memory confirms (it re-indexes your notes) and
 //  disables while an answer streams; new rows for partial, removing, checking and re-indexing states.
 //  Confidence 0.7 (verify-by-launch).
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Inference
 import M1K3MLX
@@ -45,7 +48,7 @@ struct DownloadsSettingsPane: View {
             } footer: {
                 Text("Downloads come from huggingface.co (and github.com for the voice pack), once, and "
                     + "then run on this Mac. Nothing is removed without asking.")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.readableSecondary)
             }
             retiredSection
         }
@@ -111,9 +114,9 @@ struct DownloadsSettingsPane: View {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 8) {
                     Text(item.name).font(.headline)
-                    Text(sizeLabel(item)).font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+                    Text(sizeLabel(item)).font(.callout.monospacedDigit()).foregroundStyle(.readableSecondary)
                 }
-                Text(item.purpose).font(.callout).foregroundStyle(.secondary)
+                Text(item.purpose).font(.callout).foregroundStyle(.readableSecondary)
                 status(of: item)
             }
             Spacer(minLength: 8)
@@ -141,14 +144,14 @@ struct DownloadsSettingsPane: View {
                         .accessibilityLabel("\(item.name) download")
                         .accessibilityValue("\(Int((fraction * 100).rounded())) percent")
                     Text("Downloading… \(Int((fraction * 100).rounded()))%")
-                        .font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+                        .font(.callout.monospacedDigit()).foregroundStyle(.readableSecondary)
                 } else {
                     ProgressView().controlSize(.small)
-                    Text("Downloading…").font(.callout).foregroundStyle(.secondary)
+                    Text("Downloading…").font(.callout).foregroundStyle(.readableSecondary)
                 }
                 if !item.actions.contains(.cancel) {
                     Text("This one can't be stopped once it starts.")
-                        .font(.callout).foregroundStyle(.secondary)
+                        .font(.callout).foregroundStyle(.readableSecondary)
                 }
             }
         case .preparing:
@@ -162,11 +165,11 @@ struct DownloadsSettingsPane: View {
         case .partial:
             Label("Partly downloaded", systemImage: "arrow.down.circle.dotted")
                 .symbolRenderingMode(.hierarchical)
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.readableSecondary)
         case .ready:
             Label("Downloaded", systemImage: "checkmark.circle")
                 .symbolRenderingMode(.hierarchical)
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.readableSecondary)
         case .inUse:
             Label("In use", systemImage: "checkmark.circle.fill")
                 .symbolRenderingMode(.hierarchical)
@@ -181,7 +184,7 @@ struct DownloadsSettingsPane: View {
     private func spinner(_ text: LocalizedStringKey) -> some View {
         HStack(spacing: 8) {
             ProgressView().controlSize(.small)
-            Text(text).font(.callout).foregroundStyle(.secondary)
+            Text(text).font(.callout).foregroundStyle(.readableSecondary)
         }
     }
 
@@ -234,7 +237,7 @@ struct DownloadsSettingsPane: View {
                             Text(weights.repoID.split(separator: "/").last.map(String.init) ?? weights.repoID)
                                 .font(.callout)
                             Text("No longer used · \(weights.bytes.formatted(.byteCount(style: .file)))")
-                                .font(.callout).foregroundStyle(.secondary)
+                                .font(.callout).foregroundStyle(.readableSecondary)
                         }
                         Spacer()
                         Button("Remove…") { pendingRetired = weights }
@@ -247,7 +250,7 @@ struct DownloadsSettingsPane: View {
                     SettingsHeader("Free up space", systemImage: "internaldrive")
                     Spacer()
                     Text(RetiredWeightsPolicy.totalBytes(env.retiredWeights).formatted(.byteCount(style: .file)))
-                        .font(.callout.monospacedDigit()).foregroundStyle(.secondary)
+                        .font(.callout.monospacedDigit()).foregroundStyle(.readableSecondary)
                 }
             }
         }

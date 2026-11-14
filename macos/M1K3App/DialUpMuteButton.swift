@@ -11,6 +11,9 @@
 //
 //  Signed: Kev + claude-opus-4-8, 2026-07-20, Confidence 0.82 (verify-owed =
 //  on-device: tap it mid-download and hear the loop stop/resume).
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Avatar
 import SwiftUI
@@ -37,7 +40,7 @@ struct DialUpMuteButton: View {
             }
             .buttonStyle(.glass)
             .controlSize(.small)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.readableSecondary)
             .help(dialUpSound ? "Mute the dial-up connecting sound" : "Unmute the dial-up connecting sound")
             .accessibilityLabel(dialUpSound ? "Mute dial-up sound" : "Unmute dial-up sound")
             .padding(.top, 6)

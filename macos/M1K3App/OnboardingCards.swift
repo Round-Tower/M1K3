@@ -14,6 +14,9 @@
 //  transition; card titles moved to the shared Font.pixelTitle.
 //  Review: Kev + claude-opus-4-6, 2026-10-12 — removed the "Recommended" badge: `isRecommended` property,
 //  `recommendedBadge` view, and the HStack wrapping the title. The tier's policy role stays. Confidence 0.9.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Inference
 import SwiftUI
@@ -67,11 +70,11 @@ struct BrainCard: View {
                         .foregroundStyle(.tint)
                     Text(tier.detail)
                         .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(sizeLabel)
                         .font(.caption.monospacedDigit())
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.readableSecondary)
                         .padding(.top, 2)
                 }
                 Spacer(minLength: 0)
@@ -136,7 +139,7 @@ struct AutoBrainCard: View {
                     Text("M1K3 picks the best brain for this Mac and keeps adapting to "
                         + "power, memory and heat. Change it any time.")
                         .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer(minLength: 0)

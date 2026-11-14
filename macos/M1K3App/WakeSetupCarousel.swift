@@ -51,6 +51,9 @@
 //  picker, Say hi, the shared `chevron(forward:)` and dots, takes the top, so the creature has the middle. Card-turn
 //  animation only: a fade and a render scale, never a tick. Confidence 0.6 (the look is verify-by-launch).
 //  Review: Kev + claude-fable-5.2, 2026-11-13 — the kit row's status symbol is hidden from accessibility (the status line beside it says the same). Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Avatar
 import M1K3Inference
@@ -112,7 +115,7 @@ struct WakeSetupCarousel: View {
 
                     Text("All of this lives in Settings too — skip anything.")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                 }
                 // Glass, except beside a live download bar (see OnboardingGlass).
                 .onboardingCard(nearLiveProgress: fraction != nil)
@@ -215,7 +218,7 @@ struct WakeSetupCarousel: View {
                         SelectionRadio(isSelected: readingMode == mode)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(mode.displayName).font(.headline)
-                            Text(mode.detail).font(.caption).foregroundStyle(.secondary)
+                            Text(mode.detail).font(.caption).foregroundStyle(.readableSecondary)
                         }
                         Spacer()
                     }
@@ -239,7 +242,7 @@ struct WakeSetupCarousel: View {
                         SelectionRadio(isSelected: env.selectedVoiceTier == tier)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(tier.displayName).font(.headline)
-                            Text(tier.tagline).font(.caption).foregroundStyle(.secondary)
+                            Text(tier.tagline).font(.caption).foregroundStyle(.readableSecondary)
                         }
                         Spacer()
                     }
@@ -251,7 +254,7 @@ struct WakeSetupCarousel: View {
             // The line is always laid out, so it never changes the card's height.
             Text(env.voiceLoad.isActive ? "Downloading M1K3 Voice…" : " ")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .frame(height: 16)
             Button("Hear a sample") {
                 flow.engage()
@@ -343,7 +346,7 @@ struct WakeSetupCarousel: View {
     private func kitNote(_ text: LocalizedStringKey) -> some View {
         Text(text)
             .font(.callout)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.readableSecondary)
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity, minHeight: 120)
     }
@@ -384,11 +387,11 @@ struct WakeSetupCarousel: View {
             HStack {
                 Text(name).font(.headline)
                 Spacer()
-                Text(size).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                Text(size).font(.caption.monospacedDigit()).foregroundStyle(.readableSecondary)
             }
             Text(detail)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -420,7 +423,7 @@ struct WakeSetupCarousel: View {
     private func kitAftermath(_ text: LocalizedStringKey) -> some View {
         Text(text)
             .font(.callout)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.readableSecondary)
             .multilineTextAlignment(.center)
             .lineLimit(2)
     }
@@ -524,7 +527,7 @@ struct WakeSetupCarousel: View {
                     ProgressView(value: fraction).frame(maxWidth: 320)
                     Text(WakeProgressCopy.line(fraction: fraction, name: displayName))
                         .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                         .lineLimit(2)
                         .multilineTextAlignment(.center)
                     DialUpMuteButton()
@@ -535,7 +538,7 @@ struct WakeSetupCarousel: View {
                     ProgressView().controlSize(.small)
                     Text(WakeProgressCopy.warmingLine(tick: warmingTick))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                         .lineLimit(2)
                         .multilineTextAlignment(.center)
                 }
@@ -640,7 +643,7 @@ struct WakeSetupCarousel: View {
     private func cardCaption(_ text: String) -> some View {
         Text(text)
             .font(.caption)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.readableSecondary)
             .multilineTextAlignment(.center)
     }
 }
@@ -668,7 +671,7 @@ private struct KitLoadSlot: View {
                     }
                     Text("Fetching your kit · \(progress.ready) of \(progress.total) ready")
                         .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                         .lineLimit(1)
                 }
                 .controlSize(.small)

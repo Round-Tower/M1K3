@@ -11,6 +11,9 @@
 //
 //  Signed: Kev + claude-fable-5, 2026-08-23, Confidence 0.8 (layout
 //  verify-at-⌘R; install path's ledger behaviour test-pinned). Prior: Unknown.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3AgentTools
 import SwiftUI
@@ -45,7 +48,7 @@ struct ScriptProposalSheet: View {
             if the file changes, M1K3 refuses until you re-approve.
             """)
             .font(.caption)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.readableSecondary)
             if replacesExisting {
                 Label(
                     "This replaces an existing script named \(proposal.name).",
@@ -91,7 +94,7 @@ struct ScriptProposalSheet: View {
             if busy {
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.small)
-                    Text("Running \(proposal.name)…").font(.caption).foregroundStyle(.secondary)
+                    Text("Running \(proposal.name)…").font(.caption).foregroundStyle(.readableSecondary)
                 }
             }
         }

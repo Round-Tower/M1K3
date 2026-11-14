@@ -25,6 +25,10 @@
 //  Signed: Kev + claude-fable-5.2, 2026-11-13, Confidence 0.6 (drives a live app
 //  through XCTest's snapshot of the whole tree, which the plate suite has seen
 //  time out on the main window; verify-by-launch per screen), Prior: Unknown
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — findings name their element through
+//  `AccessibilityAuditReport.elementName` and say its kind. It also attaches a picture of the window and heads
+//  the report with the window's frame, for a11y_contrast.py; the picture is now the answer to "which screen was
+//  this".
 //
 
 import AppKit

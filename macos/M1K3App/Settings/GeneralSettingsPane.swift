@@ -24,6 +24,9 @@
 //  ("it was slow", TestFlight). Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-29 — the Screen Saver row is gone: the screensaver is parked for 1.3.0
 //  (Kev: "a poor implementation as it stands"); ScreenSaverParkedScanTests keeps it out. Confidence 0.85.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import AppKit
 import M1K3Inference
@@ -55,7 +58,7 @@ struct GeneralSettingsPane: View {
             } footer: {
                 Text("Pings you when a long reply finishes or a brain loads — only "
                     + "while M1K3's in the background, never with the reply itself.")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.readableSecondary)
             }
 
             Section {
@@ -76,7 +79,7 @@ struct GeneralSettingsPane: View {
                 Text("Short earcons for errors, saved memories, and voice mode waking "
                     + "up — never over M1K3's voice. The dial-up sound plays while a "
                     + "brain loads and has its own switch since it loops.")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.readableSecondary)
             }
 
             Section {
@@ -86,7 +89,7 @@ struct GeneralSettingsPane: View {
             } footer: {
                 Text("A small pill under your menu bar shows your companion and what "
                     + "M1K3 is saying — even with the window closed. Off by default.")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.readableSecondary)
             }
 
             Section {
@@ -102,7 +105,7 @@ struct GeneralSettingsPane: View {
                 Text("Ratings are how other people find a small app. This opens the "
                     + "App Store's review sheet; M1K3 himself asks at most once per release, "
                     + "and only after a few days together.")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.readableSecondary)
             }
         }
         .formStyle(.grouped)
@@ -154,7 +157,7 @@ struct GeneralSettingsPane: View {
         } footer: {
             Text("\u{201C}Menu bar only\u{201D} hides the Dock icon and starts M1K3 quietly "
                 + "— open it anytime from the menu bar.")
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.readableSecondary)
         }
     }
 

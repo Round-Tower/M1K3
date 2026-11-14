@@ -96,6 +96,9 @@
 //  Confidence 0.65 (the heights are estimates; verify-by-launch).
 //  Review: Kev + claude-opus-5.5, 2026-10-21 — the backdrop passes `canSleep: false`: the chat backdrop now sleeps
 //  after 90 s idle, and here the face waking as the bar fills is the show, however long the download takes.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3AgentTools
 import M1K3Avatar
@@ -276,7 +279,7 @@ struct HelloView: View {
 
             Text(privacyLine)
                 .font(.title3)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 440)
 
@@ -309,13 +312,13 @@ struct HelloView: View {
             if let currentDoorLabel {
                 Text("Currently: \(currentDoorLabel)")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                     .accessibilityLabel("Currently set to \(currentDoorLabel)")
             }
 
             Text(disclosureCaption)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 420)
 
@@ -324,7 +327,7 @@ struct HelloView: View {
                     .disabled(settling)
                     .buttonStyle(.plain)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                     .padding(.top, 2)
             }
 
@@ -334,7 +337,7 @@ struct HelloView: View {
                 }
                 .buttonStyle(.plain)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
             }
         }
         // The words sit on a glass card, the face stays the room: the full-window fox
@@ -403,7 +406,7 @@ struct HelloView: View {
             }
             .buttonStyle(.plain)
             .font(.caption)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.readableSecondary)
         }
         .task {
             // Re-poll while visible; the moment AFM turns available the same
@@ -453,7 +456,7 @@ struct HelloView: View {
                         }
                         .buttonStyle(.plain)
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                     }
                 }
             }
@@ -480,7 +483,7 @@ struct HelloView: View {
                 .font(.headline)
             Text(caption)
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 6)

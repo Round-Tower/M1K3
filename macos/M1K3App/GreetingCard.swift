@@ -37,6 +37,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (CI fold) — the costume line renders inline from
 //  `SeasonalLook.greeting(for:)` (the shared SeasonalGreeting.swift is gone). Confidence 0.85.
 //  Review: Kev + claude-fable-5.2, 2026-11-13 — the confirmation tick is hidden from accessibility (the sentence beside it carries it). Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Avatar
 import M1K3Chat
@@ -73,14 +76,14 @@ struct GreetingCard: View {
             if isFirstSession {
                 Text(greetingLine)
                     .font(.title3)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             } else {
                 // Returning users have no line here; in season M1K3 greets in costume.
                 // The first-session hero keeps its own job.
                 if let line = SeasonalLook.greeting(for: season) {
                     Text(line)
                         .font(.title3)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                         .multilineTextAlignment(.center)
                 }
             }
@@ -136,7 +139,7 @@ struct GreetingCard: View {
                     .font(.title3.weight(.semibold))
                 Text("PDF or text — read here, never uploaded.")
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                     .multilineTextAlignment(.center)
             }
             .padding(.vertical, 28)
@@ -161,7 +164,7 @@ struct GreetingCard: View {
             ProgressView().controlSize(.regular)
             Text("Reading it now…")
                 .font(.callout)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
         }
         .padding(.vertical, 36)
         .frame(maxWidth: .infinity)
@@ -195,7 +198,7 @@ struct GreetingCard: View {
                 Button("Drop another", action: onImport)
                     .buttonStyle(.plain)
                     .font(.callout)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
         }
         .padding(.vertical, 24)

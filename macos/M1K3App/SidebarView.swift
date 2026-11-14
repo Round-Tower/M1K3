@@ -36,6 +36,9 @@
 //  verify-by-launch).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — the sidebar column keeps the SYSTEM show/hide toggle (the custom one in ContentView is retired) so the sidebar toggle sits at the window's left edge. Verify by launch: it must survive collapse. Confidence 0.65.
 //  Review: Kev + claude-fable-5.2, 2026-11-13 — the row icon is hidden from accessibility (its title names the row). Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Chat
 import SwiftUI
@@ -72,7 +75,7 @@ struct SidebarView: View {
                 if summaries.isEmpty {
                     Text("No conversations yet")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                 } else {
                     ForEach(summaries) { summary in
                         conversationRow(for: summary)
@@ -81,6 +84,7 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
+        .accessibilityLabel("Sidebar")
         // NOTE: deliberately NOT .ignoresSafeArea(.container, edges: .top)
         // here, unlike the trailing .inspector — tried it (2026-07-19), and
         // unlike the inspector's bespoke ReviewPanel, this List's own first
@@ -172,7 +176,7 @@ struct SidebarView: View {
                 Spacer()
             }
             .buttonStyle(.borderless)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.readableSecondary)
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
         }
@@ -187,7 +191,7 @@ struct SidebarView: View {
                     .lineLimit(1)
                 Text(summary.updatedAt, format: .relative(presentation: .named))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
             Spacer()
             if summary.id == env.chat.activeConversationID {

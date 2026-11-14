@@ -20,6 +20,9 @@
 //
 //  Signed: Kev + claude-fable-5.2, 2026-11-13, Confidence 0.6 (drives a live
 //  app; the anchors are the plate suite's; verify-by-launch per screen), Prior: Unknown
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — findings name their element through
+//  `AccessibilityAuditReport.elementName` and say its kind. Built for the Simulator after the change; not re-
+//  run there.
 //
 
 import M1K3Screengrab

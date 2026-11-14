@@ -46,6 +46,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — the "MCP Server" pane is titled "Server" (Kev, on first trying the
 //  Local API: "to account for everything"): it holds the MCP server and the Local API. The case stays `.mcp`.
 //
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Screengrab
 import SwiftUI
@@ -139,7 +142,7 @@ struct SettingsView: View {
                     .kerning(2)
                 Text("\(env.selectedBrain.displayName) is thinking · private by design")
                     .font(.body)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
 
             Spacer(minLength: 12)

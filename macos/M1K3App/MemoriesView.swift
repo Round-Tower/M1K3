@@ -34,6 +34,9 @@
 //  memory (launch snag list). Confidence now 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: the detail screen reloads this list after an edit or a
 //  forget (`onChange`), so a superseded or forgotten row never lingers when you come back. Confidence 0.8.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Memory
 import SwiftUI
@@ -108,11 +111,13 @@ struct MemoriesView: View {
             }
             .buttonStyle(.borderless)
             .help(showCorrected ? "Hide corrected facts" : "Show corrected facts (kept as history)")
+            // An icon, so `.secondary` (3:1 is its bar): the wide gap to primary is the on/off cue.
             .foregroundStyle(showCorrected ? Color.primary : Color.secondary)
+            .accessibilityAddTraits(showCorrected ? .isSelected : [])
             .accessibilityLabel(showCorrected ? "Hide corrected facts" : "Show corrected facts")
             Text("\(liveCount) memor\(liveCount == 1 ? "y" : "ies")")
                 .font(.caption.monospacedDigit())
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
         }
         .padding(16)
     }
@@ -127,9 +132,10 @@ struct MemoriesView: View {
     private var interrogateField: some View {
         HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .accessibilityHidden(true)
             TextField("Ask what I know…", text: $query)
+                .accessibilityLabel("Ask what I know")
                 .textFieldStyle(.plain)
                 .onSubmit(runInterrogation)
             if searching {
@@ -140,7 +146,7 @@ struct MemoriesView: View {
                     results = nil
                 } label: {
                     Image(systemName: "xmark.circle.fill")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                 }
                 .buttonStyle(.borderless)
                 .accessibilityLabel("Clear search")
@@ -170,6 +176,7 @@ struct MemoriesView: View {
                     NavigationLink(value: memory) {
                         MemoryRow(memory: memory)
                     }
+                    .accessibilityAddTraits(.isButton)
                     .swipeActions {
                         Button(role: .destructive) { forget(memory) } label: {
                             Label("Forget", systemImage: "trash")
@@ -185,15 +192,17 @@ struct MemoriesView: View {
                             NavigationLink(value: memory) {
                                 MemoryRow(memory: memory, corrected: true)
                             }
+                            .accessibilityAddTraits(.isButton)
                         }
                     } header: {
                         Label("Corrected — kept as history", systemImage: "clock.arrow.circlepath")
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.readableSecondary)
                     }
                 }
             }
             .listStyle(.inset)
             .scrollContentBackground(.hidden)
+            .accessibilityLabel("Memories")
         }
     }
 
@@ -270,15 +279,18 @@ private struct MemoryRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(displayText)
                     .lineLimit(2)
+                    .foregroundStyle(corrected ? Color.readableSecondary : Color.primary)
                 Text(caption)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
             Spacer()
         }
         .padding(.vertical, 4)
-        .opacity(corrected ? 0.55 : 1.0)
-        .accessibilityElement(children: .combine)
-        .accessibilityHint(corrected ? Text("Corrected fact, kept as history") : Text(""))
+        // No whole-row dimming: 0.55 over the quiet caption came to about 3:1. A corrected row is
+        // told apart by its history glyph, a quiet title and the caption's "corrected ·".
+        // Not combined: on the Mac a combined row is an element with no role (the audit read
+        // all seventeen as "Unknown role", and a button trait did not change it). The fact and
+        // its caption stay two texts, which have one; a corrected row's caption already says so.
     }
 }

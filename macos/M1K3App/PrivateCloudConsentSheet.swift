@@ -19,6 +19,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-01 — header only: the sheet now shows once (ADR 0010), so
 //  "nothing is remembered between sends" stopped being true; the view itself is unchanged. Confidence 0.85.
 //
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Chat
 import M1K3LanguageModel
@@ -66,7 +69,7 @@ struct PrivateCloudConsentSheet: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(PrivateCloudTurn.appleGuarantee)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Link("How Apple protects it", destination: PrivateCloudTurn.appleGuaranteeURL)
                     .font(.caption)
