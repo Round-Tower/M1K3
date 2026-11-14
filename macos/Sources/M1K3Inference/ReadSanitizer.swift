@@ -89,7 +89,7 @@ public enum ReadSanitizer {
     /// The special-token SHAPES: `<|…|>` with no space inside (Qwen's turns, Gemma 4's `<|"|>`),
     /// Gemma 4's one-sided `<|turn>` / `<turn|>`, Gemma's `<start_of_…>` / `<end_of_…>`, its
     /// `<unusedN>`, and the image placeholders. No space is allowed inside, so F#'s `a <| f >> g` stays.
-    nonisolated(unsafe) static let tokenShapes = /<\|[^\s<>|]{0,40}\|>|<\|[A-Za-z_]{1,24}>|<[A-Za-z_]{1,24}\|>|<(?:start|end)_[a-z_]{1,32}>|<unused\d{1,4}>|<image_soft_token>/
+    nonisolated(unsafe) static let tokenShapes = /<\|[^\s<>|]{0,40}\|>|<\|[A-Za-z_]{1,24}>|<[A-Za-z_]{1,24}\|>|<(?:start|end)_[a-z_]{1,32}>|<unused\d{1,4}>|<[a-z]{1,16}_soft_token>/
 
     static func neutralisingTemplateTokens(_ text: String) -> String {
         // Until nothing changes: removing an inner token must not leave an outer one assembled

@@ -29,12 +29,16 @@ public struct ReadSource: Codable, Sendable, Equatable {
         let bounded = raw.count > Self.characterCap * 2 ? String(raw.prefix(Self.characterCap * 2)) : raw
         let cleaned = String(ReadSanitizer.clean(bounded).prefix(Self.characterCap))
         guard !cleaned.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
-        let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        self.title = name.isEmpty ? Self.pastedTitle : name
+        // The title reaches grounding, Spotlight and the banner (the security pass): cleaned like
+        // the text, one line, capped.
+        let name = ReadSanitizer.clean(title)
+            .split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        self.title = name.isEmpty ? Self.pastedTitle : String(name.prefix(Self.titleCap))
         text = cleaned
     }
 
     public static let pastedTitle = String(localized: "Pasted text")
+    public static let titleCap = 120
 
     /// The composer's attached files as one source: one file keeps its name; several are each
     /// headed by their name, and the source is named for the first. nil when none has text.

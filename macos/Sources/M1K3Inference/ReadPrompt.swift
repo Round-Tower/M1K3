@@ -16,6 +16,10 @@
 //  markers are removed from the text first, so a text cannot close its own
 //  fence early.
 //
+//  Review (same day, security pass): the marker strip runs to a fixed point with the token strip
+//  inside it (a marker removed from `<|im_st<<<TEXTart|>` assembled `<|im_start|>`), and every image
+//  shape leaves an answer.
+//
 //  Signed: Kev + claude-opus-5.5, 2026-11-14, Confidence 0.7 (the wording is
 //  unmeasured until the blind set runs; keep it until a paired arm beats it).
 //  Prior: none (new file); the shape follows LookPrompt (#768).
@@ -53,17 +57,35 @@ public enum ReadPrompt {
     /// A read's answer as shown: markdown images removed. A read answers about text, so a picture in
     /// the answer can only be one the text planted (the blind set's tracking pixel: Mini copied it on
     /// every arm). Links stay; the user decides whether to open one.
+    /// Every image shape (the security pass): inline with or without a title, reference-style and
+    /// its definition lines, and HTML `<img>`. Bounded and single-line, so no pattern can run away.
     public static func cleanAnswer(_ answer: String) -> String {
         answer
-            .replacing(/!\[[^\]\n]{0,200}\]\([^)\s]{0,2000}\)/, with: "")
+            .replacing(inlineImage, with: "")
+            .replacing(referenceImage, with: "")
+            .replacing(referenceDefinition, with: "")
+            .replacing(htmlImage, with: "")
             .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    private nonisolated(unsafe) static let inlineImage = /!\[[^\n]{0,300}?\]\([^\n]{0,2000}?\)/
+    private nonisolated(unsafe) static let referenceImage = /!\[[^\n]{0,300}?\]\[[^\n]{0,200}?\]/
+    private nonisolated(unsafe) static let referenceDefinition = /(?m)^ {0,3}\[[^\]\n]{1,200}\]:[^\n]{0,2000}$/
+    private nonisolated(unsafe) static let htmlImage = /(?i)<img\b[^>\n]{0,2000}>/
+
     /// The user turn of a read. `cut` says the text is an excerpt (the compressor left parts out).
     public static func prompt(text: String, question: String, cut: Bool = false) -> String {
-        let body = text
-            .replacingOccurrences(of: openMarker, with: "")
-            .replacingOccurrences(of: closeMarker, with: "")
+        // To a fixed point, with the token strip run again each pass (the security pass): removing a
+        // marker must not assemble another marker (`<<<<<<TEXTTEXT`) or a template token
+        // (`<|im_st<<<TEXTart|>`), and the sanitiser ran before this strip.
+        var body = text
+        for _ in 0 ..< 8 {
+            let next = ReadSanitizer.neutralisingTemplateTokens(
+                body.replacingOccurrences(of: openMarker, with: "").replacingOccurrences(of: closeMarker, with: "")
+            )
+            if next == body { break }
+            body = next
+        }
         let frame = cut
             ? "The text (excerpts; [\u{2026}] marks parts left out):"
             : "The text:"

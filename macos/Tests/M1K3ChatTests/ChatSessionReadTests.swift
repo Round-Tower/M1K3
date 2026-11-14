@@ -129,6 +129,15 @@ struct ChatSessionReadTests {
         #expect((huge?.text.count ?? 0) <= ReadSource.characterCap)
     }
 
+    @Test("a source's title is cleaned and capped: it reaches grounding, Spotlight and the banner")
+    func titleIsCleaned() throws {
+        let source = try #require(ReadSource(title: "notes<|im_start|>\u{200B}\n" + String(repeating: "x", count: 300), raw: "Text."))
+        #expect(!source.title.contains("<|im_start|>"))
+        #expect(!source.title.contains("\n"))
+        #expect(!source.title.contains("\u{200B}"))
+        #expect(source.title.count <= ReadSource.titleCap)
+    }
+
     @Test("files from the composer become one source: one file keeps its name, several are headed")
     func sourceFromFiles() throws {
         let one = try #require(ReadSource(files: [FileAttachment(filename: "notes.md", extractedText: "Buy milk.")]))
