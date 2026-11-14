@@ -125,6 +125,8 @@
 //  chat screen to enable web search, just so it's clear, like the brain toggle"). Same key as Settings ▸ Privacy
 //  and the menu bar. Confidence 0.8 (verify-by-launch).
 //  Review: Kev + claude-fable-5.2, 2026-11-13 — banner and strip icons that sit beside their own text are hidden from accessibility. Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — a send with files and no pictures is a READ (`env.read`: instructions only,
+//  on this Mac, display-only) instead of FILE blocks prepended to a full chat turn; a read's answers offer "Keep this".
 
 import M1K3Avatar
 import M1K3Chat
@@ -186,6 +188,8 @@ struct ContentView: View {
     @State private var showAttachmentImporter = false
     @State private var pendingAttachments: [ImageAttachment] = []
     @State private var pendingFiles: [FileAttachment] = []
+    /// Sends are more questions about the last read's text ("Ask more" under it), until the pill's ✕.
+    @State private var aboutText: String?
     /// ADR 0006: the chat-egress consent (default OFF), held here so the input
     /// bar re-renders when Settings flips it.
     @AppStorage(ChatEgressConsent.defaultsKey) private var privateCloudConsent = false
@@ -782,6 +786,9 @@ struct ContentView: View {
                                 },
                                 onSendExchange: fieldReportAllowed && message.isExchangeAnswer
                                     ? sendExchange(for: message.id) : nil,
+                                onKeep: env.chat.readSource(answeredBy: message.id).map { source in
+                                    { await env.keep(source) }
+                                },
                                 onSpeak: { text in Task { await env.speak(text) } },
                                 onOpenLink: { url in env.review.open(url: url) },
                                 onSendFollowUp: { text in
@@ -794,6 +801,9 @@ struct ContentView: View {
                                 contextWindow: env.selectedBrain.approximateContextTokens
                             )
                             .id(message.id)
+                        }
+                        if env.chat.lastRead != nil, !env.chat.isResponding, aboutText == nil {
+                            readActions
                         }
                     }
                     // Horizontal > vertical on purpose — flat assistant turns (no
@@ -935,9 +945,15 @@ struct ContentView: View {
             if !pendingFiles.isEmpty {
                 pendingFilesStrip
             }
+            // The pill holds its own title: `lastRead` is nil while a follow-up streams, and the
+            // chain must survive that. It ends on its ✕, an ordinary send, or another conversation.
+            if let aboutText {
+                aboutTextPill(aboutText)
+            }
             inputRow
         }
         .animation(.easeOut(duration: 0.2), value: env.speechHighlight.isActive)
+        .onChange(of: env.chat.activeConversationID) { aboutText = nil }
     }
 
     /// Thumbnails of images staged for the next send, each removable. Only
@@ -981,6 +997,48 @@ struct ContentView: View {
                 pendingAttachments = []
             }
         }
+    }
+
+    /// Under the newest read: the next question goes to the same text.
+    private var readActions: some View {
+        HStack {
+            Button {
+                aboutText = env.chat.lastRead?.source.title
+            } label: {
+                Label("Ask more", systemImage: "doc.text.magnifyingglass")
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .buttonStyle(.glass)
+            .accessibilityLabel("Ask more about this text")
+            .help("Your next message is answered from this text again, on this Mac")
+            Spacer(minLength: 0)
+        }
+        .font(.callout)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// Over the composer while the next send is a question about the last read's text.
+    private func aboutTextPill(_ title: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "doc.text.magnifyingglass")
+                .accessibilityHidden(true)
+            Text("Asking about “\(title)”")
+                .lineLimit(1)
+            Button {
+                aboutText = nil
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Stop asking about this text")
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(.ultraThinMaterial, in: Capsule())
+        .padding(.bottom, 6)
     }
 
     private var pendingFilesStrip: some View {
@@ -1273,6 +1331,16 @@ struct ContentView: View {
 
     private func send() {
         guard canSend else { return }
+        // "Ask more" under a read: the question goes to the same text, on this Mac, before any
+        // Private Cloud arming (a read never leaves the device). STICKY (Kev, 2026-11-14): the pill
+        // stays for a chain of questions until its ✕, a new attachment, or the read is no longer last.
+        if aboutText != nil, env.chat.lastRead != nil, pendingAttachments.isEmpty, pendingFiles.isEmpty, env.reader != nil {
+            let question = draft
+            draft = ""
+            Task { await env.readAgain(question) }
+            return
+        }
+        aboutText = nil
         // ADR 0006 (amended by 0007 + 0010): the first PCC send ever goes through
         // the consent sheet, later ones reuse its answer — except where on-device
         // history would ride along unseen. Attachments never ride a PCC turn
@@ -1294,6 +1362,27 @@ struct ContentView: View {
             return
         case .local:
             break
+        }
+        // Prose files asked ABOUT are READ (instructions only, on this Mac, display-only) rather than
+        // prepended to a chat turn that carries the persona, the tools and the history. Code, a
+        // "write"/"draft"/"translate" ask, or a brain that can't read here keeps the chat turn.
+        if pendingAttachments.isEmpty, env.reader != nil, env.isReady,
+           ReadRoute.reads(files: pendingFiles, draft: draft)
+        {
+            let question = draft
+            let files = pendingFiles
+            draft = ""
+            pendingFiles = []
+            Task {
+                // Cleaning a long file is real work: off the main actor.
+                let source = await Task.detached(priority: .userInitiated) { ReadSource(files: files) }.value
+                if let source {
+                    await env.read(question, source: source)
+                } else {
+                    await env.send(question)
+                }
+            }
+            return
         }
         var text = draft
         if !pendingFiles.isEmpty {

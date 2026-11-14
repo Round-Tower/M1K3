@@ -48,6 +48,7 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-12 — the bubbles' inset grows with the larger Mac text
 //  (`ReadingTypography`: 18 by 14 behind an answer, 16 by 12 on the user's own bubble). Kev: "more
 //  padding on the border". Confidence 0.7 (judged on one screen by launch).
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — `onKeep`: a read's answer offers "Keep this" (files its text in Documents).
 
 import AppKit
 import M1K3AnswerBlocks
@@ -71,6 +72,9 @@ struct MessageView: View {
     /// The view never builds or sends anything — ContentView composes the draft and the sheet.
     /// nil hides the button: ContentView wires it only for an age band allowed the offer.
     var onSendExchange: ((String?) -> Void)?
+    /// "Keep this": file the text this read answered about in Documents. nil (the default, and
+    /// every answer that is not a read's) hides the button.
+    var onKeep: (() async -> Bool)?
     /// Called with the message text when the user taps speak.
     let onSpeak: (String) -> Void
     /// Called with a link found in the turn when the user taps its chip — opens it
@@ -107,6 +111,7 @@ struct MessageView: View {
     @State private var showSources = false
     @State private var showReasoning = false
     @State private var didCopy = false
+    @State private var didKeep = false
     @State private var showComment = false
     @State private var commentDraft = ""
     /// A "Send this exchange…" waiting for the popover to close before the sheet is raised (#708).
@@ -338,6 +343,22 @@ struct MessageView: View {
                     .buttonStyle(.glass)
                     .accessibilityLabel("Share this answer")
                     .help("Share this answer")
+
+                    if let onKeep {
+                        Button {
+                            // The check shows only once the text is in Documents.
+                            Task { didKeep = await onKeep() }
+                        } label: {
+                            Image(systemName: didKeep ? "checkmark" : "tray.and.arrow.down")
+                                .symbolRenderingMode(.hierarchical)
+                                .font(.caption)
+                                .contentTransition(.symbolEffect(.replace))
+                        }
+                        .buttonStyle(.glass)
+                        .disabled(didKeep)
+                        .accessibilityLabel(didKeep ? "Kept in Documents" : "Keep this text in Documents")
+                        .help(didKeep ? "Kept in Documents" : "Keep this text in Documents, where M1K3 can search it later")
+                    }
 
                     Divider().frame(height: 14).opacity(0.4)
 

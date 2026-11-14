@@ -159,6 +159,10 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-11 (#621, the voice half) — a voice turn counts from the first heard word
 //  (`VoiceLoopState.holdsTheBrain`), the case the issue was filed on. Confidence 0.7: the rule is pinned; a voice turn
 //  at launch is verify-by-ear.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — the read: `reader` (the façade's `TextReading`), `read(_:source:)`
+//  (a file sent from the composer is read on this Mac with instructions only, display-only) and `keep(_:)` ("Keep
+//  this" files the text in Documents, with the ingest banner). Confidence 0.75: the turn is pinned in
+//  ChatSessionReadTests; the buttons are verify-by-launch.
 
 import AppKit
 import Foundation
@@ -1441,6 +1445,54 @@ final class AppEnvironment {
     /// Send a user message: drives avatar thinking → generating → idle, then
     /// hands off to ChatSession. The speech delegate handles the speaking→idle
     /// transition if the user taps Speak on the response.
+    /// The façade's read seam (`TextReading`), when the ACTIVE brain can read on this Mac. The façade
+    /// always conforms, so the window says it: Brain at Home and Private Cloud read in 0 tokens.
+    var reader: (any TextReading)? {
+        guard let reader = provider as? TextReading, reader.readContextTokens > 0 else { return nil }
+        return reader
+    }
+
+    /// Read one text and answer one question about it, on this Mac (`ChatSession.read`):
+    /// instructions only, no persona, no tools, display-only.
+    func read(_ question: String, source: ReadSource) async {
+        guard isReady, let reader else { return }
+        brainServe?.preemptForLocalTurn()
+        localAPI?.preemptForLocalTurn()
+        await chat.read(question, source: source, reader: reader)
+    }
+
+    /// Another question about the last read's text (`ChatSession.readAgain`).
+    func readAgain(_ question: String) async {
+        guard isReady, let reader else { return }
+        brainServe?.preemptForLocalTurn()
+        localAPI?.preemptForLocalTurn()
+        await chat.readAgain(question, reader: reader)
+    }
+
+    /// "Keep this": file a read's text in Documents, where search and grounding can find it.
+    /// The user's choice is the consent; a read is never kept on its own.
+    /// True when the text is in Documents (newly, or already).
+    @discardableResult
+    func keep(_ source: ReadSource) async -> Bool {
+        isIngesting = true
+        defer { isIngesting = false }
+        do {
+            let result = try await ingester.ingest(title: source.title, text: source.text)
+            let dedup = result.wasDeduped ? " (already kept)" : ""
+            lastIngestStatus = "Kept “\(source.title)” in Documents — \(result.chunkCount) chunks\(dedup)."
+            lastIngestedTitle = source.title
+            lastIngestFailed = false
+            refreshCounts()
+            scheduleIngestStatusDismissal(of: lastIngestStatus)
+            if !result.wasDeduped { await spotlightDonate(itemID: result.itemID) }
+            return true
+        } catch {
+            lastIngestStatus = "Couldn’t keep “\(source.title)”: \(error.localizedDescription)"
+            lastIngestFailed = true
+            return false
+        }
+    }
+
     func send(_ text: String, images: [ImageAttachment] = []) async {
         // Backstop: never run a turn before the active brain is loaded into memory.
         // The chat surface already gates this (canSend + the readiness overlay), but

@@ -156,6 +156,8 @@
 //  background exit so the shed really frees the brain (BackgroundExitPolicy). Confidence 0.8.
 //  Review fold: the shed keeps a weak hold, and the return takes a still-loaded brain back instead of loading again,
 //  whoever kept it (a turn cut before its first token, a title, a distillation).
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — `keep(_:)`: "Keep this" files a read's text in Documents with the
+//  ingest banner (the read itself is AppCore+Read). Compile-checked; owes a try in the hand.
 
 import AVFoundation
 #if os(iOS)
@@ -286,6 +288,12 @@ final class AppCore {
     /// Who a look asks (#768): the on-device slot. Brain at Home answers through this slot too, but it does not
     /// conform to `ImageLooking`, so a frame handed here cannot leave the phone (LookEgressTests).
     var looker: any ImageLooking {
+        activeProvider
+    }
+
+    /// The read seam on the active brain (AppCore+Read). Only the on-device brains conform, so a text
+    /// handed here cannot leave the phone: Brain at Home and Private Cloud fail it on the device.
+    var reader: any TextReading {
         activeProvider
     }
 
@@ -1414,6 +1422,23 @@ final class AppCore {
         } catch {
             if ingestingToken == token { ingestingToken = nil }
             lastIngestStatus = "Couldn’t index “\(title)”: \(error.localizedDescription)"
+        }
+    }
+
+    /// "Keep this": file a read's text in Documents, where search and grounding can find it. The
+    /// user's tap is the consent; a read is never kept on its own.
+    @discardableResult
+    func keep(_ source: ReadSource) async -> Bool {
+        do {
+            let result = try await ingester.ingest(title: source.title, text: source.text)
+            let dedup = result.wasDeduped ? " (already kept)" : ""
+            lastIngestStatus = "Kept “\(source.title)” in Documents — \(result.chunkCount) chunks\(dedup)."
+            refreshCounts()
+            scheduleIngestStatusClear()
+            return true
+        } catch {
+            lastIngestStatus = "Couldn’t keep “\(source.title)”: \(error.localizedDescription)"
+            return false
         }
     }
 
