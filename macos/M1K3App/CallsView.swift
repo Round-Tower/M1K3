@@ -15,6 +15,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-07 — shows the load's note under the header, so a list
 //  with calls it couldn't open (or a locked log) says so instead of reading "No calls yet" under a
 //  non-zero count.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Calls
 import SwiftUI
@@ -86,7 +89,7 @@ struct CallsView: View {
             if let status = env.lastCallStatus {
                 HStack(spacing: 8) {
                     if env.isImportingCall { ProgressView().controlSize(.small) }
-                    Text(status).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                    Text(status).font(.caption).foregroundStyle(.readableSecondary).lineLimit(2)
                     Spacer()
                 }
                 .padding(12)
@@ -100,7 +103,7 @@ struct CallsView: View {
                 .symbolRenderingMode(.hierarchical)
                 .font(.pixelTitle)
             Text("\(env.callCount)") // observable — re-renders the list after import/delete
-                .font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                .font(.caption.monospacedDigit()).foregroundStyle(.readableSecondary)
             Spacer()
             recordButton
             Button {
@@ -147,7 +150,7 @@ struct CallsView: View {
     private func loadNoteBanner(_ note: String) -> some View {
         Label(note, systemImage: "lock.trianglebadge.exclamationmark")
             .font(.callout)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.readableSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 16)
             .padding(.bottom, 8)
@@ -163,7 +166,7 @@ struct CallsView: View {
                 if let started = env.recordingStartedAt {
                     TimelineView(.periodic(from: started, by: 1)) { context in
                         Text(RecordingClock.label(seconds: Int(context.date.timeIntervalSince(started))))
-                            .monospacedDigit().foregroundStyle(.secondary)
+                            .monospacedDigit().foregroundStyle(.readableSecondary)
                     }
                 }
             } else if env.isTranscribingCall {
@@ -225,12 +228,12 @@ private struct CallRow: View {
                 Text(call.title).font(.body.weight(.medium))
                 Spacer()
                 Text(call.startedAt, format: .dateTime.day().month().hour().minute())
-                    .font(.caption2.monospacedDigit()).foregroundStyle(.secondary)
+                    .font(.caption2.monospacedDigit()).foregroundStyle(.readableSecondary)
             }
             if let gist = call.fullSummary?.overview ?? call.quickSummary?.overview, !gist.isEmpty {
-                Text(gist).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                Text(gist).font(.caption).foregroundStyle(.readableSecondary).lineLimit(2)
             }
-            Text("\(call.segments.count) lines").font(.caption2.monospacedDigit()).foregroundStyle(.tertiary)
+            Text("\(call.segments.count) lines").font(.caption2.monospacedDigit()).foregroundStyle(.readableSecondary)
         }
         .padding(.vertical, 4)
         .contentShape(.rect)
@@ -271,7 +274,7 @@ struct CallDetailView: View {
 
     private var transcriptSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Transcript").font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+            Text("Transcript").font(.subheadline.weight(.semibold)).foregroundStyle(.readableSecondary)
             ForEach(call.segments) { segment in
                 VStack(alignment: .leading, spacing: 2) {
                     if let speaker = segment.speaker {
@@ -285,7 +288,7 @@ struct CallDetailView: View {
 
     private func bulletList(_ title: String, _ items: [String]) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+            Text(title).font(.caption.weight(.semibold)).foregroundStyle(.readableSecondary)
             ForEach(items, id: \.self) { item in
                 Label(item, systemImage: "circle.fill")
                     .labelStyle(BulletLabelStyle())
@@ -296,7 +299,7 @@ struct CallDetailView: View {
 
     private func sectionCard(_ title: String, @ViewBuilder _ content: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
+            Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(.readableSecondary)
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)

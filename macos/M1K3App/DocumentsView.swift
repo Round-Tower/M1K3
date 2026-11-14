@@ -23,6 +23,9 @@
 //  quarantine button (restore would make it Spotlight-donatable), privacy line in the empty state. TDD_SKIP: view
 //  body.
 //  Review: Kev + claude-fable-5.2, 2026-11-13 — the lock toggle is named for VoiceOver with the words its tooltip already used. Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Knowledge
 import SwiftUI
@@ -69,11 +72,12 @@ struct DocumentsView: View {
                         } header: {
                             Label("Internal — hidden from AI", systemImage: "lock.fill")
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.readableSecondary)
                         }
                     }
                 }
                 .listStyle(.inset)
+                .accessibilityLabel("Documents")
                 .scrollContentBackground(.hidden)
             }
         }
@@ -102,7 +106,7 @@ struct DocumentsView: View {
             Spacer()
             Text("\(docs.count) item\(docs.count == 1 ? "" : "s")")
                 .font(.caption.monospacedDigit())
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
             Button {
                 showInternal.toggle()
                 reload()
@@ -112,7 +116,9 @@ struct DocumentsView: View {
             }
             .buttonStyle(.borderless)
             .help(showInternal ? "Hide internal items" : "Show quarantined items")
+            // An icon, so `.secondary` (3:1 is its bar): the wide gap to primary is the on/off cue.
             .foregroundStyle(showInternal ? Color.primary : Color.secondary)
+            .accessibilityAddTraits(showInternal ? .isSelected : [])
             Button { showImporter = true } label: {
                 Label("Import", systemImage: "doc.badge.plus")
             }
@@ -159,10 +165,10 @@ private struct DocumentRow: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(doc.title)
                     .lineLimit(1)
-                    .foregroundStyle(doc.kind == .quarantined ? Color.secondary : Color.primary)
+                    .foregroundStyle(doc.kind == .quarantined ? Color.readableSecondary : Color.primary)
                 Text("\(kindLabel) · \(chunks) chunk\(chunks == 1 ? "" : "s")")
                     .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
             Spacer()
             // A Photo has no quarantine: restoring re-tags to .document, which is

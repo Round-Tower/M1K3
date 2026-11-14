@@ -25,8 +25,13 @@
 //  Signed: Kev + claude-fable-5.2, 2026-11-13, Confidence 0.6 (drives a live app
 //  through XCTest's snapshot of the whole tree, which the plate suite has seen
 //  time out on the main window; verify-by-launch per screen), Prior: Unknown
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — findings name their element through
+//  `AccessibilityAuditReport.elementName` and say its kind. It also attaches a picture of the window and heads
+//  the report with the window's frame, for a11y_contrast.py; the picture is now the answer to "which screen was
+//  this".
 //
 
+import AppKit
 import M1K3Screengrab
 import XCTest
 
@@ -78,13 +83,32 @@ final class AccessibilityAuditUITests: XCTestCase {
         if let run = ProcessInfo.processInfo.environment[ScreengrabHarness.runKey], !run.isEmpty {
             app.launchEnvironment[ScreengrabHarness.runKey] = run
         }
-        app.launchArguments = recipe.flatArguments
+        app.launchArguments = recipe.flatArguments + Self.appearanceArguments
         addTeardownBlock { app.terminate() }
         app.launch()
         app.activate()
         XCTAssert(app.windows.firstMatch.waitForExistence(timeout: 180), "\(plate.rawValue): no window after launch")
         RunLoop.current.run(until: Date().addingTimeInterval(settle))
         app.activate()
+
+        // What was on screen when the audit ran: the Mac suite names no anchor, so this picture
+        // is the proof of which screen the report is about, and what a contrast finding is measured on.
+        // The runner has no window-server connection until AppKit makes one; without it the
+        // screenshot aborts the whole run (`CGS_REQUIRE_INIT`, 2026-11-14).
+        _ = NSApplication.shared
+        let shot = app.windows.firstMatch.screenshot()
+        let picture = XCTAttachment(screenshot: shot)
+        picture.name = "a11y-shot-\(plate.rawValue)"
+        picture.lifetime = .keepAlways
+        add(picture)
+
+        // The element tree as XCTest saw it: what an unnamed "group" finding is can only be read here.
+        // The WINDOW's tree, never the application's: that one carries the system menu bar, whose
+        // Recent Items are the owner's apps and document names (caught on the first dump, 2026-11-14).
+        let tree = XCTAttachment(string: app.windows.firstMatch.debugDescription)
+        tree.name = "a11y-tree-\(plate.rawValue)"
+        tree.lifetime = .keepAlways
+        add(tree)
 
         let collected = Collected()
         var incomplete = ""
@@ -94,7 +118,7 @@ final class AccessibilityAuditUITests: XCTestCase {
                     screen: plate.rawValue,
                     kind: Self.name(of: issue.auditType),
                     element: Self.name(of: issue.element),
-                    detail: issue.compactDescription,
+                    detail: Self.detail(of: issue),
                     place: Self.place(of: issue.element)
                 ))
                 return true // handled: keep going, the report carries it
@@ -106,7 +130,9 @@ final class AccessibilityAuditUITests: XCTestCase {
             incomplete = "AUDIT DID NOT COMPLETE: \(error.localizedDescription) — the list below is partial, not a clean screen.\n"
         }
 
-        let report = incomplete + AccessibilityAuditReport.render(collected.findings)
+        // The window's frame, so `a11y_contrast.py` can place each finding on the screenshot.
+        let window = "WINDOW \(app.windows.firstMatch.frame)\n"
+        let report = window + incomplete + AccessibilityAuditReport.render(collected.findings)
         let attachment = XCTAttachment(string: report)
         attachment.name = "a11y-\(plate.rawValue)"
         attachment.lifetime = .keepAlways
@@ -121,15 +147,55 @@ final class AccessibilityAuditUITests: XCTestCase {
         app.terminate()
     }
 
+    /// Xcode's wording plus what kind of element it is: a named element ("bolt.fill") is
+    /// otherwise impossible to place.
+    private static func detail(of issue: XCUIAccessibilityAuditIssue) -> String {
+        guard let element = issue.element, element.exists else { return issue.compactDescription }
+        return "\(issue.compactDescription) (\(name(of: element.elementType)))"
+    }
+
     private static func name(of element: XCUIElement?) -> String {
         guard let element, element.exists else { return "" }
-        let label = element.label
-        return label.isEmpty ? element.identifier : label
+        return AccessibilityAuditReport.elementName(
+            label: element.label,
+            identifier: element.identifier,
+            title: element.title,
+            value: (element.value as? String) ?? "",
+            type: Self.name(of: element.elementType),
+            frame: "\(element.frame)"
+        )
+    }
+
+    private static func name(of type: XCUIElement.ElementType) -> String {
+        let known: [XCUIElement.ElementType: String] = [
+            .button: "button", .staticText: "static text", .image: "image", .group: "group",
+            .other: "element", .textField: "text field", .textView: "text view", .cell: "cell",
+            .scrollView: "scroll view", .table: "table", .outline: "outline", .outlineRow: "outline row",
+            .tableRow: "row", .toolbar: "toolbar", .toolbarButton: "toolbar button", .window: "window",
+            .splitGroup: "split group", .splitter: "splitter", .checkBox: "checkbox", .toggle: "toggle",
+            .switch: "switch", .popUpButton: "pop-up button", .menuButton: "menu button", .link: "link",
+            .disclosureTriangle: "disclosure triangle", .scrollBar: "scroll bar", .slider: "slider",
+            .progressIndicator: "progress indicator", .segmentedControl: "segmented control",
+            .radioButton: "radio button", .tabGroup: "tab group", .navigationBar: "navigation bar",
+            .collectionView: "collection view", .secureTextField: "secure text field",
+        ]
+        return known[type] ?? "element type \(type.rawValue)"
     }
 
     private static func place(of element: XCUIElement?) -> String {
         guard let element, element.exists else { return "" }
         return "\(element.frame)"
+    }
+
+    /// `M1K3_A11Y_APPEARANCE=light|dark` pins the app's appearance for the run, whatever the Mac
+    /// is set to, so both get measured (the Mac went dark between two runs on 2026-11-14 and the
+    /// light figures went stale). AppKit reads both keys from the argument domain.
+    private static var appearanceArguments: [String] {
+        switch ProcessInfo.processInfo.environment["M1K3_A11Y_APPEARANCE"] {
+        case "light": ["-NSRequiresAquaSystemAppearance", "YES"]
+        case "dark": ["-NSRequiresAquaSystemAppearance", "NO", "-AppleInterfaceStyle", "Dark"]
+        default: []
+        }
     }
 
     private static func name(of type: XCUIAccessibilityAuditType) -> String {

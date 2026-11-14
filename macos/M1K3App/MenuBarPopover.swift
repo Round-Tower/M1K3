@@ -18,6 +18,9 @@
 //  Review: Kev + claude-opus-5-5, 2026-09-23 — the footer's Settings opens the main window's
 //  Settings screen (the Settings scene retired). Confidence 0.85.
 //  Review: Kev + claude-fable-5.2, 2026-11-13 — decorative glyphs (the pixel mark, label icons, the tile icon above its title) are hidden from accessibility. Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import AppKit
 import M1K3Avatar
@@ -110,12 +113,12 @@ struct MenuBarPopover: View {
                         Label("Say hello in the main window first", systemImage: "hand.wave")
                     }
                     .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                     Divider()
                 }
             } else {
                 Label("Waking M1K3…", systemImage: "ellipsis.circle")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                     // Only exists while the env is nil, so it cycles exactly
                     // while waking — honest motion for a state with no spinner.
                     .symbolEffect(.variableColor.iterative)
@@ -137,7 +140,7 @@ struct MenuBarPopover: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(env.selectedBrain.displayName).font(.pixelTitle)
                 Text(Self.runtimeLabel(env.selectedRuntime))
-                    .font(.caption).foregroundStyle(.secondary)
+                    .font(.caption).foregroundStyle(.readableSecondary)
             }
             Spacer()
             activityBadge(env, treatment: treatment)
@@ -154,7 +157,7 @@ struct MenuBarPopover: View {
             // statusLabel carries the same recording-wins precedence as the
             // dot colour — the old displayName read "Idle" beside a red dot.
             Text(env.avatar.state.activity.statusLabel(isRecording: env.isRecording))
-                .font(.caption2).foregroundStyle(.secondary)
+                .font(.caption2).foregroundStyle(.readableSecondary)
         }
     }
 
@@ -185,7 +188,7 @@ struct MenuBarPopover: View {
         case .asking:
             HStack(spacing: 8) {
                 ProgressView().controlSize(.small)
-                Text("Thinking…").font(.caption).foregroundStyle(.secondary)
+                Text("Thinking…").font(.caption).foregroundStyle(.readableSecondary)
             }
         case let .answer(_, text):
             VStack(alignment: .leading, spacing: 8) {
@@ -216,7 +219,7 @@ struct MenuBarPopover: View {
                         .accessibilityHidden(true)
                 }
                 .font(.caption2)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 Text(pulse.displayText)
                     .font(.caption)
                     .lineLimit(3)
@@ -248,7 +251,7 @@ struct MenuBarPopover: View {
                             .accessibilityHidden(true)
                     }
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                 }
                 .buttonStyle(.plain)
                 Divider()
@@ -279,7 +282,7 @@ struct MenuBarPopover: View {
                             .layoutPriority(1)
                     }
                     .font(.caption2)
-                    .foregroundStyle(entry.outcome == .refused ? .orange : .secondary)
+                    .foregroundStyle(entry.outcome == .refused ? Color.orange : Color.readableSecondary)
                 }
             }
             // Seen only while the popover is actually on screen: its window outlives a
@@ -322,7 +325,7 @@ struct MenuBarPopover: View {
                 Image(systemName: "antenna.radiowaves.left.and.right")
             }
             .font(.caption2)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.readableSecondary)
             Divider()
         }
     }
@@ -382,7 +385,7 @@ struct MenuBarPopover: View {
                 Task { await env.affirmConsentAndRecord(scope: .remembered) }
             }
             Button("Cancel") { showRecordConsent = false }
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
         }
         .font(.caption)
         .buttonStyle(.glass)
@@ -417,7 +420,7 @@ struct MenuBarPopover: View {
         }
         .font(.caption)
         .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(.readableSecondary)
     }
 
     // MARK: Actions

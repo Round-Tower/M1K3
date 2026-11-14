@@ -27,6 +27,9 @@
 //  auditions left Settings (the 2026-07-21 import section and the 2026-09-29 audition section are gone), and the
 //  Agent conversation log moved to the MCP Server pane. Confidence 0.8 (verify-by-launch).
 //
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Inference
 import SwiftUI
@@ -48,7 +51,7 @@ struct AdvancedSettingsPane: View {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
                         Text(env.embeddingStatus ?? "Rebuilding index…")
-                            .font(.callout).foregroundStyle(.secondary)
+                            .font(.callout).foregroundStyle(.readableSecondary)
                     }
                 } else {
                     let embeddingToggleTitle = env.usingMLXEmbeddings
@@ -59,7 +62,7 @@ struct AdvancedSettingsPane: View {
                     }
                     .buttonStyle(.glass)
                     if let status = env.embeddingStatus {
-                        Text(status).font(.callout).foregroundStyle(.secondary)
+                        Text(status).font(.callout).foregroundStyle(.readableSecondary)
                     }
                 }
             } header: {
@@ -67,20 +70,20 @@ struct AdvancedSettingsPane: View {
             } footer: {
                 Text("Semantic MLX embeddings improve retrieval but download a model on "
                     + "first use and re-embed every stored chunk.")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.readableSecondary)
             }
 
             Section {
                 if env.isTranscribingCall {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
-                        Text("Transcribing call…").font(.callout).foregroundStyle(.secondary)
+                        Text("Transcribing call…").font(.callout).foregroundStyle(.readableSecondary)
                     }
                 } else if env.isPreparingBatchTranscription {
                     HStack(spacing: 8) {
                         ProgressView().controlSize(.small)
                         Text(env.lastCallStatus ?? "Preparing call transcription…")
-                            .font(.callout).foregroundStyle(.secondary)
+                            .font(.callout).foregroundStyle(.readableSecondary)
                     }
                 } else if env.batchTranscriptionReady {
                     LabeledContent("Transcription", value: "Ready")
@@ -91,7 +94,7 @@ struct AdvancedSettingsPane: View {
                     .buttonStyle(.glass)
                 }
                 if let status = env.lastCallStatus, !env.isPreparingBatchTranscription {
-                    Text(status).font(.callout).foregroundStyle(.secondary)
+                    Text(status).font(.callout).foregroundStyle(.readableSecondary)
                 }
             } header: {
                 SettingsHeader("Call recording", systemImage: "phone.bubble")
@@ -99,7 +102,7 @@ struct AdvancedSettingsPane: View {
                 Text("Record a call from the chat toolbar (consent-gated). With transcription "
                     + "enabled, a stopped recording is transcribed, summarised, encrypted, and "
                     + "indexed — on-device.")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.readableSecondary)
             }
 
             Section {
@@ -110,7 +113,7 @@ struct AdvancedSettingsPane: View {
                 Text("A testing aid: shows context tokens and tokens/sec under each answer "
                     + "from Lil or Big. Mini (Apple's on-device model) doesn't report "
                     + "generation metrics.")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.readableSecondary)
             }
 
             Section {
@@ -149,7 +152,7 @@ struct AdvancedSettingsPane: View {
                     : "Copies recent logs and this Mac's details, scrubbed of paths, "
                     + "emails and your name, into a prefilled GitHub issue — nothing "
                     + "sent until you submit. MetricKit summaries above are opt-in.")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.readableSecondary)
             }
 
             Section {
@@ -158,7 +161,7 @@ struct AdvancedSettingsPane: View {
             } footer: {
                 Text("M1K3 is built with open-source components. "
                     + "Everything runs on this Mac.")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.readableSecondary)
             }
         }
         .formStyle(.grouped)

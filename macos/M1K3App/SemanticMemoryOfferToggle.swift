@@ -12,6 +12,9 @@
 //  look in the picker and the glass upgrade card is verify-by-launch). Prior: none (new file).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — O2 the detail line says when it starts ("Starts after Lil
 //  is ready."); O4 a fixed-height slot, reserved (invisible, untappable) until the first disk scan lands. Confidence 0.75.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Inference
 import SwiftUI
@@ -36,7 +39,7 @@ struct SemanticMemoryOfferToggle: View {
                         .font(.callout)
                     Text(SemanticMemoryOffer.toggleDetail(brainName: brainName))
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                         .lineLimit(2)
                 }
             }

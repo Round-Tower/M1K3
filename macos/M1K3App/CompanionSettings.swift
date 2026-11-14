@@ -24,6 +24,9 @@
 //  Review: Kev + claude-sonnet-5.5, 2026-10-22 — the toggle's help names Flight Club (copy only; the string is
 //  English-only like the rest of this help). Confidence 0.85.
 //
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Avatar
 import SwiftUI
@@ -135,7 +138,7 @@ struct CompanionSettingsSection: View {
     }
 
     private func caption(_ text: String) -> some View {
-        Text(text).font(.callout).foregroundStyle(.secondary)
+        Text(text).font(.callout).foregroundStyle(.readableSecondary)
     }
 
     /// A quick greeting beat on the shared controller, then back to idle —

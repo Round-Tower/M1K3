@@ -21,6 +21,9 @@
 //  (one `canSave` for both); a save that fails says so on screen and to VoiceOver instead of leaving an enabled
 //  Save and silence; the style footer shows only on a LIVE style row and claims only what is true ("as many as
 //  fit", on this Mac). Confidence 0.75 (the same click-through owed).
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Memory
 import SwiftUI
@@ -109,7 +112,7 @@ struct MemoryDetailView: View {
                         .background(.tint.opacity(0.15), in: Capsule())
                     Text("\(provenance.label) · \(memory.createdAt.formatted(date: .abbreviated, time: .shortened))")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                 }
             }
             .padding(.vertical, 4)
@@ -118,7 +121,7 @@ struct MemoryDetailView: View {
             if memory.kind == .style, memory.supersededBy == nil {
                 Text("How you asked M1K3 to answer. The newest asks shape every answer on this Mac, as many as fit.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
         }
     }
@@ -203,7 +206,7 @@ struct MemoryDetailView: View {
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(step.text).lineLimit(3)
-                Text(when).font(.caption).foregroundStyle(.secondary)
+                Text(when).font(.caption).foregroundStyle(.readableSecondary)
             }
         }
         .accessibilityElement(children: .combine)
@@ -220,13 +223,13 @@ struct MemoryDetailView: View {
             if related.isEmpty {
                 Text("No connections yet — related facts will appear here as M1K3 links them.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             } else {
                 ForEach(related) { neighbour in
                     NavigationLink(value: neighbour) {
                         HStack(spacing: 10) {
                             Image(systemName: "point.3.connected.trianglepath.dotted")
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.readableSecondary)
                                 .accessibilityHidden(true)
                             Text(neighbour.title?.isEmpty == false ? neighbour.title! : neighbour.text)
                                 .lineLimit(2)

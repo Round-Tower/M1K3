@@ -14,6 +14,9 @@
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-09, Confidence 0.7 (pure SwiftUI over a
 //  tested model; TDD_SKIP). Prior: Unknown
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Chat
 import M1K3Inference
@@ -50,18 +53,18 @@ struct RememberPhotoButton: View {
                 ProgressView().controlSize(.small)
                 Text("Looking…")
             }
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.readableSecondary)
             .accessibilityElement(children: .combine)
             .accessibilityLabel(String(localized: "Looking at the photo"))
         case .remembered:
             Label("Remembered on this device", systemImage: "checkmark.circle")
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
                 .accessibilityLabel(String(localized: "Photo remembered. The caption stays on this device."))
         case let .failed(message):
             VStack(alignment: .trailing, spacing: 2) {
                 action(memory, title: String(localized: "Try again"))
                 Text(message)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                     .multilineTextAlignment(.trailing)
             }
         case nil:

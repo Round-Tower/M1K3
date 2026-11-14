@@ -17,6 +17,9 @@
 //  hover-only (+ a context menu with Done/Dismiss); the Add field parses a trailing due phrase via
 //  DueDateParser ("by Friday", "in 3 days", "3 oct") — package-pinned; the placeholder teaches it.
 //  Review: Kev + claude-fable-5.2, 2026-11-13 — the circle button reads "Mark done" and a resolved row's symbol reads Done / Dismissed (state was symbol-only). Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Todos
 import SwiftUI
@@ -52,7 +55,7 @@ struct TodosScreen: View {
                     .font(.pixelTitle)
                 Text("\(open.count)")
                     .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                 Spacer()
             }
             HStack {
@@ -91,7 +94,7 @@ struct TodosScreen: View {
                         ForEach(pending) { todo in pendingRow(todo) }
                     } header: {
                         Label("Suggested — yours to accept", systemImage: "tray")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.caption).foregroundStyle(.readableSecondary)
                     }
                 }
                 if !open.isEmpty {
@@ -99,7 +102,7 @@ struct TodosScreen: View {
                         ForEach(open) { todo in openRow(todo) }
                     } header: {
                         Label("Open", systemImage: "circle")
-                            .font(.caption).foregroundStyle(.secondary)
+                            .font(.caption).foregroundStyle(.readableSecondary)
                     }
                 }
                 if !resolved.isEmpty {
@@ -112,7 +115,7 @@ struct TodosScreen: View {
                             .font(.caption)
                         } label: {
                             Label("Resolved (\(resolved.count))", systemImage: "checkmark.circle")
-                                .font(.caption).foregroundStyle(.secondary)
+                                .font(.caption).foregroundStyle(.readableSecondary)
                         }
                     }
                 }
@@ -142,7 +145,7 @@ struct TodosScreen: View {
             } label: {
                 Image(systemName: "circle")
                     .accessibilityLabel("Mark done")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
             .buttonStyle(.plain)
             .help("Done")
@@ -152,7 +155,7 @@ struct TodosScreen: View {
                 Button("Dismiss", role: .destructive) { Task { await env?.dismissTodo(todo) } }
                     .buttonStyle(.plain)
                     .font(.caption)
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.readableSecondary)
             }
         }
         .padding(.vertical, 2)
@@ -168,10 +171,10 @@ struct TodosScreen: View {
         HStack(alignment: .firstTextBaseline) {
             Image(systemName: todo.state == .done ? "checkmark.circle.fill" : "xmark.circle")
                 .accessibilityLabel(todo.state == .done ? "Done" : "Dismissed")
-                .foregroundStyle(.tertiary)
+                .foregroundStyle(.readableSecondary)
             Text(todo.title)
                 .strikethrough(todo.state == .done)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
             Spacer()
             Button("Reopen") { Task { await env?.reopenTodo(todo) } }
                 .buttonStyle(.plain)
@@ -186,7 +189,7 @@ struct TodosScreen: View {
             if let detail = detailLine(todo) {
                 Text(detail)
                     .font(.caption)
-                    .foregroundStyle(todo.isOverdue(now: Date()) ? AnyShapeStyle(.orange) : AnyShapeStyle(.secondary))
+                    .foregroundStyle(todo.isOverdue(now: Date()) ? AnyShapeStyle(.orange) : AnyShapeStyle(Color.readableSecondary))
             }
         }
     }

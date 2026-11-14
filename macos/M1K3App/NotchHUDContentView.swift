@@ -87,6 +87,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-05 (later) — correction: the docked-tile `.dark` pin this Review's
 //  first draft claimed was a no-op. The HUD capture harness showed a light tile with a dark fox in Light
 //  mode either way. The pin is gone and the docked comment says what renders. Confidence 0.85 (captured).
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Avatar
 import M1K3Voice
@@ -251,7 +254,7 @@ struct NotchHUDContentView: View {
         Text(NarrationCaption.text(for: env.speechHighlight.narrator))
             .font(.system(size: 10, weight: .medium, design: .rounded))
             .tracking(0.5)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.readableSecondary)
     }
 
     /// Under a notch: smoked glass. A translucent dark fill with a glass

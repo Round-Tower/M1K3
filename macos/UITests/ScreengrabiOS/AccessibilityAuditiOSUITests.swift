@@ -20,6 +20,9 @@
 //
 //  Signed: Kev + claude-fable-5.2, 2026-11-13, Confidence 0.6 (drives a live
 //  app; the anchors are the plate suite's; verify-by-launch per screen), Prior: Unknown
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — findings name their element through
+//  `AccessibilityAuditReport.elementName` and say its kind. Built for the Simulator after the change; not re-
+//  run there.
 //
 
 import M1K3Screengrab
@@ -87,7 +90,7 @@ final class AccessibilityAuditiOSUITests: XCTestCase {
                     screen: plate.rawValue,
                     kind: Self.name(of: issue.auditType),
                     element: Self.name(of: issue.element),
-                    detail: issue.compactDescription,
+                    detail: Self.detail(of: issue),
                     place: Self.place(of: issue.element)
                 ))
                 return true // handled: keep going, the report carries it
@@ -108,10 +111,39 @@ final class AccessibilityAuditiOSUITests: XCTestCase {
         app.terminate()
     }
 
+    /// Xcode's wording plus what kind of element it is: a named element ("bolt.fill") is
+    /// otherwise impossible to place.
+    private static func detail(of issue: XCUIAccessibilityAuditIssue) -> String {
+        guard let element = issue.element, element.exists else { return issue.compactDescription }
+        return "\(issue.compactDescription) (\(name(of: element.elementType)))"
+    }
+
     private static func name(of element: XCUIElement?) -> String {
         guard let element, element.exists else { return "" }
-        let label = element.label
-        return label.isEmpty ? element.identifier : label
+        return AccessibilityAuditReport.elementName(
+            label: element.label,
+            identifier: element.identifier,
+            title: element.title,
+            value: (element.value as? String) ?? "",
+            type: Self.name(of: element.elementType),
+            frame: "\(element.frame)"
+        )
+    }
+
+    private static func name(of type: XCUIElement.ElementType) -> String {
+        let known: [XCUIElement.ElementType: String] = [
+            .button: "button", .staticText: "static text", .image: "image", .group: "group",
+            .other: "element", .textField: "text field", .textView: "text view", .cell: "cell",
+            .scrollView: "scroll view", .table: "table", .outline: "outline", .outlineRow: "outline row",
+            .tableRow: "row", .toolbar: "toolbar", .toolbarButton: "toolbar button", .window: "window",
+            .splitGroup: "split group", .splitter: "splitter", .checkBox: "checkbox", .toggle: "toggle",
+            .switch: "switch", .popUpButton: "pop-up button", .menuButton: "menu button", .link: "link",
+            .disclosureTriangle: "disclosure triangle", .scrollBar: "scroll bar", .slider: "slider",
+            .progressIndicator: "progress indicator", .segmentedControl: "segmented control",
+            .radioButton: "radio button", .tabGroup: "tab group", .navigationBar: "navigation bar",
+            .collectionView: "collection view", .secureTextField: "secure text field",
+        ]
+        return known[type] ?? "element type \(type.rawValue)"
     }
 
     private static func place(of element: XCUIElement?) -> String {

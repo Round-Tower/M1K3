@@ -30,6 +30,9 @@
 //  Review: Kev + claude-opus-5, 2026-09-15 — the day headers drop the calendar glyph too (the same pass:
 //  rows keep their kind icons, repeated decoration goes). Confidence unchanged.
 //  Review: Kev + claude-fable-5.2, 2026-11-13 — the visit row's icon is hidden from accessibility. Lint-driven (`accessibility_label_for_image` / `accessibility_trait_for_button`, on since this PR); not yet heard in VoiceOver.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import M1K3Heartbeat
 import M1K3MCPLog
@@ -71,7 +74,7 @@ struct HeartbeatScreen: View {
                     .font(.pixelTitle)
                 Text("\(pulseCount)")
                     .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
                 Spacer()
                 Button(role: .destructive) {
                     Task { await clearPulses() }
@@ -86,7 +89,7 @@ struct HeartbeatScreen: View {
             if let holdLine = currentHoldLine {
                 Text(holdLine)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
             if heartbeatOn, !availableTags.isEmpty {
                 tagChips
@@ -165,7 +168,7 @@ struct HeartbeatScreen: View {
                     } header: {
                         Text(dayTitle(day.day)) // no calendar glyph on every day: the date says it (Kev's icon pass, 2026-09-15)
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.readableSecondary)
                     }
                 }
             }
@@ -184,7 +187,7 @@ struct HeartbeatScreen: View {
                     + "fold into this timeline as visits — who called in, and what they "
                     + "used. Captured on this Mac only, newest 500 kept, off by default.")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
             .padding(.vertical, 2)
         }
@@ -227,7 +230,7 @@ struct HeartbeatScreen: View {
                 Spacer()
                 Text("told by \(pulse.renderedBy)")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
             Text(pulse.displayText)
                 .font(.callout)
@@ -245,11 +248,11 @@ struct HeartbeatScreen: View {
                 HStack {
                     Label(call.tool, systemImage: call.isError ? "exclamationmark.triangle.fill" : "wrench.and.screwdriver")
                         .font(.caption)
-                        .foregroundStyle(call.isError ? AnyShapeStyle(.red) : AnyShapeStyle(.secondary))
+                        .foregroundStyle(call.isError ? AnyShapeStyle(.red) : AnyShapeStyle(Color.readableSecondary))
                     Spacer()
                     Text(call.timestamp, format: .dateTime.hour().minute().second())
                         .font(.caption.monospacedDigit())
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.readableSecondary)
                 }
             }
             Button("Full transcript in the Agent Log") {
@@ -267,7 +270,7 @@ struct HeartbeatScreen: View {
                         .font(.callout.bold())
                     Text("· \(visit.callCount) call\(visit.callCount == 1 ? "" : "s")")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                     if visit.errorCount > 0 {
                         Text("· \(visit.errorCount) error\(visit.errorCount == 1 ? "" : "s")")
                             .font(.caption)
@@ -276,11 +279,11 @@ struct HeartbeatScreen: View {
                     Spacer()
                     Text(visitInterval(visit))
                         .font(.caption.monospacedDigit())
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                 }
                 Text(toolSummary(visit))
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
         }
         .padding(.vertical, 4)

@@ -51,6 +51,9 @@
 //  Settings pane. Confidence 0.8 (verify-by-launch).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (PR 2b) — the Tools footer comes from `NetworkCrossings`: web search is no
 //  longer "the one capability that sends anything off this Mac" (the model downloads cross too). Confidence 0.85.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
+//  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
+//  Not yet seen by Kev's eye.
 
 import AppKit // NSApp — the age-range sheet's window
 #if canImport(DeclaredAgeRange)
@@ -97,7 +100,7 @@ struct PrivacySettingsPane: View {
                 Text(NetworkCrossings.webSearchFootnote(for: NetworkCrossings.Lane(
                     privateCloudBackendPresent: privateCloudSetting != .hidden
                 )))
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.readableSecondary)
             }
 
             privateCloudSection
@@ -115,7 +118,7 @@ struct PrivacySettingsPane: View {
                 into Spotlight (⌘Space). Managed by macOS; turning off removes \
                 everything M1K3 donated.
                 """)
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.readableSecondary)
             }
 
             contextSection
@@ -142,7 +145,7 @@ struct PrivacySettingsPane: View {
         case .managedOff:
             Section {
                 Label("Turned off by your organisation", systemImage: "building.2")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             } header: {
                 SettingsHeader("Private Cloud Compute", systemImage: "lock.icloud")
             }
@@ -161,7 +164,7 @@ struct PrivacySettingsPane: View {
                     """)
                     Link("How Apple protects it", destination: PrivateCloudTurn.appleGuaranteeURL)
                 }
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.readableSecondary)
             }
         }
     }
@@ -201,7 +204,7 @@ struct PrivacySettingsPane: View {
                 Web search is disabled for users under 16; the assistant's tone adjusts \
                 for all minors. Declining gives full capability.
                 """)
-                .font(.callout).foregroundStyle(.secondary)
+                .font(.callout).foregroundStyle(.readableSecondary)
             }
         }
     #else
@@ -264,7 +267,7 @@ struct PrivacySettingsPane: View {
             }
             ForEach(unansweredSenses.sorted(), id: \.self) { sense in
                 Text("macOS didn't get an answer, so \(sense) stayed off. Switch it on again to be asked.")
-                    .font(.callout).foregroundStyle(.secondary)
+                    .font(.callout).foregroundStyle(.readableSecondary)
             }
             if locationDenied {
                 Text("macOS has location access off for M1K3 — grant it in System "
@@ -282,7 +285,7 @@ struct PrivacySettingsPane: View {
             tools in a turn. macOS asks its own permission when you switch \
             Calendar or Location on.
             """)
-            .font(.callout).foregroundStyle(.secondary)
+            .font(.callout).foregroundStyle(.readableSecondary)
         }
         .task { refreshContextAuth() }
         .onChange(of: contextCalendar) { _, on in
@@ -355,7 +358,7 @@ struct PrivacySettingsPane: View {
                 if scriptRows.isEmpty {
                     Text("No scripts installed yet — M1K3 can propose one in chat, or drop your own in the scripts folder and approve it here.")
                         .font(.callout)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                 }
                 ForEach(scriptRows) { row in
                     HStack {
@@ -363,7 +366,7 @@ struct PrivacySettingsPane: View {
                         Spacer()
                         switch row.state {
                         case .approved:
-                            Text("Approved").font(.callout).foregroundStyle(.secondary)
+                            Text("Approved").font(.callout).foregroundStyle(.readableSecondary)
                             Button("Revoke") {
                                 env.revokeScriptApproval(named: row.script.name)
                                 Task { await refreshScriptRows() }
@@ -398,7 +401,7 @@ struct PrivacySettingsPane: View {
             becomes a remembered fact. An approved script can be re-run later \
             with different input, so approve only scripts you trust with anything.
             """)
-            .font(.callout).foregroundStyle(.secondary)
+            .font(.callout).foregroundStyle(.readableSecondary)
         }
         .task(id: scriptToolsEnabled) { await refreshScriptRows() }
     }
