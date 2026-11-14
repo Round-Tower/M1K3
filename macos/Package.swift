@@ -361,7 +361,7 @@ let package = Package(
         ),
         .testTarget(
             name: "M1K3EvalTests",
-            dependencies: ["M1K3Eval"],
+            dependencies: ["M1K3Eval", "M1K3Inference"],
             path: "Tests/M1K3EvalTests"
         ),
         // Agent tools backed by the knowledge layer — the bridge that makes the
@@ -394,7 +394,7 @@ let package = Package(
         ),
         .testTarget(
             name: "M1K3AgentToolsTests",
-            dependencies: ["M1K3AgentTools", "M1K3Agent", "M1K3Preview"],
+            dependencies: ["M1K3AgentTools", "M1K3Agent", "M1K3Inference", "M1K3Preview"],
             path: "Tests/M1K3AgentToolsTests",
             resources: [.copy("Fixtures")]
         ),

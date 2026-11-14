@@ -24,6 +24,7 @@
 //  that rescanned to the end from every unclosed `<title>`, and a `<meta` run stops at `<`. Confidence 0.85.
 
 import Foundation
+import M1K3Inference
 
 /// What could be gathered about an opened page. `html` nil with a `failure` set
 /// means the page itself couldn't be fetched; `llmsText` is optional by nature.

@@ -1,0 +1,314 @@
+{
+  "version": 1,
+  "written": "2026-11-14",
+  "docs": [
+    {
+      "id": "pebble-notes-changelog",
+      "kind": "comprehension",
+      "format": "markdown",
+      "length": "medium",
+      "text": "# Pebble Notes — Release Notes\n\nPebble Notes is a plain-text-first notes app for iPhone, iPad and Mac. This page lists every release in the 4.x series, newest first. For the 3.x series, see [the archive](https://pebble-notes.example.com/changelog/3x).\n\nSubscribe to updates: [RSS](https://pebble-notes.example.com/changelog.rss) · Questions: support@pebble-notes.example.com\n\n---\n\n## 4.7.0 (beta) — in TestFlight now\n\nWant to try what's next? Join the beta from Settings > About > Beta Programme. Beta builds can be rough; please keep a backup.\n\n### In this beta\n- **Note history.** See every saved version of a note from the last 30 days and restore any of them. Versions are encrypted like everything else.\n- **Mac: multiple windows.** Open any note in its own window with ⌘-double-click.\n- Experimental: a “Focus” writing mode that hides everything except the current paragraph.\n\n### Known beta issues\n- Note history can show duplicate versions for notes edited on two devices at once.\n- Focus mode doesn't yet work with handwriting on iPad.\n\n## 4.6.1 — 10 November 2025\n\n### Fixed\n- Fixed a crash when opening a note that contained more than 2,000 checklist items. (Yes, someone has a 2,000-item checklist. We salute you.)\n- The Daily Page widget no longer shows yesterday's page after midnight until you open the app.\n- Pasting a table from a spreadsheet now keeps column alignment in Markdown mode.\n- Fixed the search field losing focus when a sync finished in the background.\n\n### Changed\n- Slightly larger tap targets on the formatting bar on iPhone mini-sized screens.\n\n## 4.6.0 — 28 October 2025\n\n### Added\n- **Linked mentions.** Type `@` followed by a note title to link it. The linked note shows a “Mentioned in” panel at the bottom, so you can find your way back.\n- **Templates for Daily Page.** Set a template (for example a morning checklist) and every new Daily Page starts from it.\n- New app icon options: Slate, Moss and Paper.\n\n### Changed\n- Search now matches words inside hyphenated terms (“follow-up” now matches “follow”).\n- The export menu is now grouped by format rather than destination.\n\n### Fixed\n- Fixed tags with emoji sorting in the wrong order.\n- Fixed a rare duplicate-note bug when two devices edited the same note within a second of each other while one was offline.\n\n## 4.5.2 — 6 October 2025\n\n### Fixed\n- Fixed Daily Page creating two pages for the same day when the device's time zone changed during travel. If you were affected, you'll see a one-time “Merge duplicate pages?” prompt.\n- Fixed Apple Pencil handwriting recognition being slow on long notes.\n\n## 4.5.1 — 22 September 2025\n\n### Fixed\n- Hotfix: some users on 4.5.0 saw notes in the Archive folder reappear in All Notes. Nothing was lost; this update puts them back.\n\n## 4.5.0 — 18 September 2025\n\n### Added\n- **Daily Page.** A note for every day, created automatically the first time you open the app each day. Turn it on in Settings > Daily Page.\n- **Handwriting on iPad.** Write with Apple Pencil anywhere in a note; it's converted to text as you go. Your original strokes are kept as an attachment if you want them.\n- Quick capture from the Lock Screen (iOS 17 and later).\n\n### Changed\n- Settings has been reorganised into five sections. Everything is still there; some things moved.\n- Pebble Pro subscribers now get unlimited attachments (previously 2 GB).\n\n### Known issues\n- Daily Page can occasionally create a duplicate page when crossing time zones. A fix is in progress. *(Fixed in 4.5.2.)*\n\n## 4.4.0 — 21 August 2025\n\n### Added\n- **Folders inside folders.** Nest folders up to five levels deep.\n- Drag notes between folders on Mac with a modifier key to copy instead of move.\n- Word count and reading time in the note info panel.\n\n### Changed\n- Sync is now roughly 40% faster for accounts with more than 10,000 notes, thanks to a new change-tracking approach.\n\n### Fixed\n- Fixed images in shared notes appearing blurry on the recipient's device.\n- Fixed the Mac menu bar extra not opening on a second display.\n\n## 4.3.0 — 15 July 2025\n\nThis is the big one we promised in the spring.\n\n### Added\n- **End-to-end encryption for sync.** Your notes are now encrypted on your device before they're uploaded, with a key that never leaves your devices. Our servers store only encrypted data and cannot read your notes, titles, tags or attachments. Existing accounts are upgraded in the background the first time you open 4.3 on each device; you'll see a small progress bar in Settings > Sync while it runs.\n- **Recovery key.** Because we can't read your data, we also can't reset it for you. When encryption is turned on you'll be shown a 24-word recovery key. Write it down somewhere safe. If you lose all your devices and the recovery key, your notes cannot be recovered by anyone — including us.\n- A new Security section in Settings showing which devices have your key.\n\n### Changed\n- Web access (pebble-notes.example.com/app) now decrypts in your browser. The first load is slower; after that it's cached.\n- Shared notes use a separate per-note key so you can share one note without giving access to anything else.\n\n### Removed\n- The server-side full-text search API for third-party integrations, because the server can no longer see note contents. Integrations can still use the local search on each device.\n\n## 4.3.2 — 4 August 2025\n\n### Fixed\n- Fixed the encryption upgrade stalling at 99% for libraries with very large PDF attachments. If your progress bar was stuck, open the app once on Wi-Fi and it will finish on its own.\n- Fixed shared-note links opening the web app instead of the native app on iPad.\n\n## 4.3.1 — 24 July 2025\n\n### Fixed\n- Fixed the recovery key screen being cut off on small iPhones, which made the last four words hard to read. If you wrote your key down from a cut-off screen, go to Settings > Security > Show recovery key and check it.\n- Fixed a slow first launch after the encryption upgrade on Macs with spinning hard drives.\n\n### Changed\n- The web app now warns you before you close a tab while changes are still being encrypted and uploaded.\n\n## 4.2.1 — 30 June 2025\n\n### Fixed\n- Fixed a crash on launch for some iPad users with Stage Manager enabled.\n- Fixed checklists losing their checked state after editing on Mac.\n\n## 4.2.0 — 12 June 2025\n\n### Added\n- **Markdown tables.** Insert and edit tables with a simple grid editor. They're saved as plain Markdown, so they look fine in any other app.\n- Keyboard shortcut cheat sheet on iPad and Mac (hold ⌘).\n- Siri Shortcuts actions: “Append to note”, “Create note from clipboard”, “Find notes with tag”.\n\n### Changed\n- Code blocks now use a monospaced font with syntax highlighting for 20 languages.\n\n### Fixed\n- Fixed sort-by-modified-date ignoring changes made on another device until the app was restarted.\n\n## 4.1.0 — 14 May 2025\n\n### Added\n- **Tags sidebar.** All your tags in one place, with counts. Click to filter.\n- Pinned notes now stay pinned at the top of every folder they appear in.\n\n### Changed\n- Minimum versions are now iOS 16 and macOS 13. If you're on iOS 15 or macOS 12, version 4.0.3 will keep working but won't receive updates.\n\n### Fixed\n- Fixed a memory leak when scrolling very long notes.\n\n## 4.0.3 — 2 April 2025\n\n### Fixed\n- Fixed a crash when importing from Evernote ENEX files larger than 500 MB.\n- Fixed a sync loop that could drain battery when the device clock was badly wrong.\n\n## 4.0.2 — 20 March 2025\n\n### Fixed\n- Fixed the share sheet extension not appearing in some apps.\n\n## 4.0.1 — 10 March 2025\n\n### Fixed\n- Fixed the onboarding screens repeating on every launch for some users. Sorry about that!\n\n## 4.0.0 — 3 March 2025\n\nPebble Notes 4 is a ground-up rebuild. Faster, lighter, and plain text at the core: every note is stored as a Markdown file you can read in any text editor.\n\n### Added\n- **New editor.** Live Markdown preview as you type, with formatting that stays out of the way.\n- **Folder export.** Export your whole library as a folder of Markdown files, with attachments alongside. You can point it at any folder on your device, including folders that other apps (Dropbox, iCloud Drive, a USB stick) already sync.\n- Mac app rebuilt natively — no more web wrapper.\n\n### Changed\n- Pebble Pro is now a single subscription across all your devices.\n\n### Removed\n- **Dropbox export.** The old one-tap “Export to Dropbox” button is gone. Keeping it would have meant sending your notes through a third-party service's servers using credentials we stored for you, and Dropbox's new API terms would have required us to keep long-lived access tokens on our own servers too. We didn't want to hold that kind of access to your data. Folder export does the same job without us in the middle: export into your local Dropbox folder and Dropbox's own app syncs it as usual.\n- The 3.x “Themes” store. All previously purchased themes are now free for everyone.\n\n---\n\n*Older releases: [3.x changelog](https://pebble-notes.example.com/changelog/3x) · [2.x changelog](https://pebble-notes.example.com/changelog/2x)*\n\n© 2025 Pebble Software Ltd. · Privacy · Terms · Status",
+      "questions": [
+        {
+          "id": "pebble-notes-changelog-q1",
+          "question": "Which release made it so the company's servers can't read my notes anymore?",
+          "answerPosition": "middle",
+          "needs": "lookup",
+          "mustContainAny": [
+            "4.3"
+          ],
+          "mustNotContain": [
+            "4.5.0",
+            "4.6.0"
+          ]
+        },
+        {
+          "id": "pebble-notes-changelog-q2",
+          "question": "How much does a Pebble Pro subscription cost per month?",
+          "answerPosition": "spread",
+          "needs": "absent",
+          "mustContainAny": [
+            "doesn't say",
+            "does not say",
+            "not mention",
+            "doesn't mention",
+            "no mention",
+            "not stated",
+            "isn't stated",
+            "not in the",
+            "doesn't include",
+            "does not include",
+            "not specified",
+            "isn't specified",
+            "doesn't specify",
+            "does not specify",
+            "not mentioned",
+            "isn't mentioned",
+            "no information",
+            "not given",
+            "doesn't state",
+            "does not state",
+            "not provided",
+            "doesn't give",
+            "does not give",
+            "doesn't list",
+            "does not list",
+            "no price",
+            "no pricing"
+          ],
+          "mustNotContain": [
+            "$",
+            "£",
+            "€"
+          ]
+        },
+        {
+          "id": "pebble-notes-changelog-q3",
+          "question": "Why did they get rid of the Dropbox button?",
+          "answerPosition": "end",
+          "needs": "synthesis",
+          "mustContainAny": [
+            "third-party",
+            "third party",
+            "access token",
+            "tokens",
+            "credentials",
+            "api terms",
+            "access to your data",
+            "privacy"
+          ],
+          "mustNotContain": []
+        }
+      ],
+      "injection": null
+    },
+    {
+      "id": "bramblewood-school-newsletter",
+      "kind": "comprehension",
+      "format": "plain",
+      "length": "medium",
+      "text": "BRAMBLEWOOD PRIMARY SCHOOL\nThe Friday Bulletin — Issue 9, Autumn Term\nFriday 14 November 2025\n\n“Kind hands, curious minds, brave hearts.”\n\nIn this issue: A word from Mrs Achebe · Christmas Fair · Anti-Bullying Week · After-school clubs · Attendance · Lost property · Year group news · Year 6 residential · Dates for your diary\n\n------------------------------------------------------------\n\nA WORD FROM MRS ACHEBE\n\nDear families,\n\nWhat a fortnight it has been. Thank you to everyone who came to our Harvest Assembly — the children's poem about the onion who wanted to be an apple will stay with me for a long time. We collected 312 tins and packets for the Hollins Food Bank, which is a school record and filled the back of two cars.\n\nI'd also like to thank our PTA for the new reading den in the library. If you haven't seen it, the children have christened it “The Burrow”, and it's now so popular that Year 4 have drawn up a rota.\n\nA gentle reminder about parking. The zig-zag lines outside the main gate are there to keep children safe, and our neighbours on Copse Lane have again asked that driveways are kept clear. Our walking bus from the church car park runs every morning at 8:30, and the children who use it arrive cheerful and ready to learn (and only occasionally muddy).\n\nFinally, the heating in the Year 2 block is now fixed. Thank you for your patience, and thank you to the many families who sent in extra jumpers.\n\nWith warm wishes,\nMrs N. Achebe, Headteacher\n\n------------------------------------------------------------\n\nCHRISTMAS FAIR — SATURDAY 6 DECEMBER\n\nThe PTA Christmas Fair will be held in the main hall and playground on Saturday 6 December, opening at 11am and closing at 2pm. Santa's grotto will be in the Reception classroom (tickets £3 on the day, including a small gift). There will be a tombola, cake stall, wreath-making, the famous Year 5 “Guess the Weight of the Pudding”, and hot chocolate from the Year 6 enterprise team.\n\nWe need: bottles for the tombola (please send in from 24 November — any bottle, not just alcohol!), cakes on the day, and volunteers for one-hour shifts. Sign up on the sheet at the office or reply to the PTA email.\n\n------------------------------------------------------------\n\nANTI-BULLYING WEEK\n\nNext week is Anti-Bullying Week. The theme this year is “Choose Respect”. On Monday, children may wear odd socks to school to celebrate what makes each of us different. There is no charge and no need to buy anything new — just odd socks from the drawer! Classes will be doing activities all week, and our School Council will lead Friday's assembly.\n\nIf your child ever tells you they are worried about how they are being treated, please speak to their class teacher or to Mr Delaney, our Designated Safeguarding Lead. We would always rather hear about something small than miss something important.\n\n------------------------------------------------------------\n\nAFTER-SCHOOL CLUBS — SECOND HALF OF AUTUMN TERM\n\nClubs run from Monday 17 November until Thursday 11 December. All clubs finish at 4:15pm unless shown otherwise. Please collect from the main gate.\n\n• Monday — Football (Years 3–6), with Coach Ibrahim. Outdoors, so please send boots and a warm layer.\n• Monday — Lego Engineers (Years 1–3), with Mrs Pell. FULL — waiting list only.\n• Tuesday — Choir (all years), with Ms Rowntree. Practising for the carol concert.\n• Tuesday — Coding Club (Years 4–6), with Mr Banerjee, in the ICT suite.\n• Wednesday — Art Attack (Years 2–6), with Miss Farrow. Messy! Old shirts welcome.\n• Wednesday — Netball (Years 4–6), with Mrs Quinn. Finishes at 4:30pm.\n• Thursday — Gardening Club (all years), with Mr Okoro and the PTA garden volunteers.\n• Thursday — French for Fun (Years 1–4), with Madame Leclerc.\n\nPlease note that Chess Club will not run this half term while Mr Hale is on paternity leave. It will return in January. Congratulations to Mr Hale and family on the arrival of baby Iris!\n\nClub fees (£2 per session, except Choir and Gardening, which are free) can be paid through the ParentPay app.\n\n------------------------------------------------------------\n\nSCHOOL MEALS AND THE UNIFORM SWAP SHOP\n\nThe kitchen team's new winter menu starts on Monday 24 November. Highlights include a vegetable lasagne that passed the Year 3 taste test (“better than my nan's”, which we have promised not to repeat to anybody's nan), roast dinners every Wednesday and a new jacket potato bar on Fridays. The full three-week menu is on the website and on the noticeboard by the office. If your child has a food allergy or intolerance and you haven't already completed the dietary form this year, please collect one from the office: the kitchen can only adapt meals for allergies we have on file.\n\nUniversal infant free school meals continue for Reception, Year 1 and Year 2. If you think your family might be eligible for free school meals in Years 3 to 6, it takes about five minutes to check online and it also brings extra funding into the school for your child, so it is always worth checking.\n\nThe uniform swap shop is open every Friday after school in the small hall. All items are free. Donations of outgrown uniform (clean, please!) can be left at the office at any time. We are particularly short of school sweatshirts in age 9–10 and 11–12, and of plain black school shoes in every size.\n\nThank you to the parents who volunteered at last week's book swap. We rehomed over 200 books, and the leftover picture books have gone to the Hollins Family Centre.\n\n------------------------------------------------------------\n\nATTENDANCE\n\nWhole-school attendance this half term so far: 95.8%. Our target is 97%. Well done to Hedgehogs (Year 3), who had 100% attendance last week and won the attendance teddy, Barnaby Bear, for their classroom.\n\nIf your child is unwell, please call the absence line (555-0118) before 9:15am on each day of absence. Term-time holidays will not be authorised except in exceptional circumstances.\n\n------------------------------------------------------------\n\nLOST PROPERTY\n\nThe lost property box is overflowing. We currently have 41 unnamed jumpers, 17 water bottles and a single, very lonely wellington boot (size 11, green with frogs). Please name everything! Unclaimed items will be washed and donated to the uniform swap shop after Friday 28 November.\n\n------------------------------------------------------------\n\nYEAR GROUP NEWS\n\nReception: Our topic this half term is “Celebrations”. Thank you to the families who have come in to talk about Diwali, Bonfire Night and birthdays around the world. If you would like to come and share a celebration from your family, please speak to Mrs Gill.\n\nYear 1: Year 1 have been learning about houses and homes. Ask your child to tell you about the Three Little Pigs' planning application.\n\nYear 2: Year 2's trip to the Fire Station is on Thursday 20 November. Children will need a packed lunch unless they have ordered one from the school kitchen by Monday.\n\nYear 3: Hedgehogs and Badgers are studying the Stone Age. Please do not be alarmed if your child comes home asking for “mammoth stew”.\n\nYear 4: Our swimming lessons continue every Wednesday morning. Please make sure your child has a towel, costume and goggles (named!).\n\nYear 5: Space topic continues. The planetarium visit has been rescheduled from 21 November to 5 December because of a problem with the dome's projector. Same times, same cost.\n\nYear 6: See the residential section below. Mock SATs reading papers will be done in class during the week of 1 December; there's no need for extra practice at home, just keep reading together.\n\n------------------------------------------------------------\n\nYEAR 6 RESIDENTIAL — CARNWATH OUTDOOR CENTRE\n\nThank you to the 54 families who have returned the consent form for the Year 6 residential to Carnwath Outdoor Centre from Monday 9 to Wednesday 11 March 2026. Activities include canoeing, orienteering, a night walk and the infamous “jacob's ladder”.\n\nThe total cost is £185 per child. A non-refundable deposit of £50 is due by Friday 28 November, through ParentPay; the remaining £135 can be paid in instalments, with the final payment due by Friday 13 February 2026. If the cost is a worry for your family, please speak to Mrs Achebe in confidence — no child will miss out because of money, and our PTA hardship fund is there exactly for this.\n\nA parents' information evening about the trip will be held on Tuesday 13 January at 6pm in the hall, where you can meet the centre staff and ask questions about kit, medication and dietary needs.\n\n------------------------------------------------------------\n\nDATES FOR YOUR DIARY\n\n17 Nov — Anti-Bullying Week begins (odd socks day Monday)\n20 Nov — Year 2 Fire Station trip\n24 Nov — Tombola bottle collection starts\n28 Nov — Year 6 residential deposit due · Lost property cleared\n5 Dec — Year 5 planetarium visit (rescheduled)\n6 Dec — PTA Christmas Fair, 11am–2pm\n11 Dec — Last day of after-school clubs\n16 Dec — Carol concert, St Brigid's Church, 6pm\n19 Dec — Term ends at 1:30pm\n6 Jan — Spring term begins\n\nBramblewood Primary School · Copse Lane · office@bramblewood-primary.example.com · 555-0110\nYou are receiving this bulletin because your child attends Bramblewood Primary. To change how you receive school communications, update your preferences in the ParentPay app.",
+      "questions": [
+        {
+          "id": "bramblewood-school-newsletter-q1",
+          "question": "By when do I have to pay the first payment for the Year 6 trip?",
+          "answerPosition": "end",
+          "needs": "lookup",
+          "mustContainAny": [
+            "28 november",
+            "november 28",
+            "28th november",
+            "28 nov",
+            "nov 28"
+          ],
+          "mustNotContain": [
+            "13 february",
+            "february 13"
+          ]
+        },
+        {
+          "id": "bramblewood-school-newsletter-q2",
+          "question": "How many after-school clubs are running in the second half of the autumn term?",
+          "answerPosition": "middle",
+          "needs": "count",
+          "mustContainAny": [
+            "8",
+            "eight"
+          ],
+          "mustNotContain": [
+            "nine clubs",
+            "9 clubs",
+            "seven clubs",
+            "7 clubs"
+          ]
+        },
+        {
+          "id": "bramblewood-school-newsletter-q3",
+          "question": "What time does the Christmas fair open?",
+          "answerPosition": "start",
+          "needs": "lookup",
+          "mustContainAny": [
+            "11am",
+            "11 am",
+            "11:00",
+            "11.00",
+            "eleven"
+          ],
+          "mustNotContain": [
+            "6pm",
+            "6 pm"
+          ]
+        }
+      ],
+      "injection": null
+    },
+    {
+      "id": "lofoten-itinerary",
+      "kind": "comprehension",
+      "format": "notes",
+      "length": "medium",
+      "text": "NORTH NORWAY — FINAL ITINERARY (v5, 9 Nov)\nTravellers: Joss & Amara Whitlow + Kit (age 11)\nDates: Sat 7 March – Sun 15 March 2026\nCompiled by Amara. Everything below is booked unless marked TBC.\n\nQUICK REFS\n- Flights: Northwind Air booking ref NW7QKD (all legs, one booking)\n- Car hire: Fjellbil, Evenes airport, ref FB-228104, VW ID.4 (electric!), pick-up Mon 9 Mar 14:00, drop-off Sun 15 Mar by 10:30\n- Travel insurance: policy TI-55-0912-W, emergency line on the card in the blue wallet\n- Kit's EHIC/GHIC card is in Joss's passport\n- Northern lights forecast app: check at 18:00 each day, Kp 3+ is worth going out for\n\nPACKING NOTES (don't skip)\n- Microspikes for all three of us — paths in Reine and Henningsvær will be ice\n- Headtorches + spare batteries (cold kills batteries)\n- Kit's thermal one-piece, the good mittens (not the gloves)\n- Swimsuits (Tromsø pool + maybe the sauna in Svolvær)\n- Car charger adaptor: Fjellbil say the car has a Type 2 cable, but bring ours too\n- Snacks for the car. Shops shut early on Saturday and most are closed Sunday.\n\nBUDGET SNAPSHOT (paid vs still to pay)\n- Flights: paid in full (all six legs on NW7QKD).\n- Tromsø Airbnb: paid. Havnelys Guesthouse: deposit paid, balance on arrival. Hamnøy Sjøhus: paid in full. Evenes Airport Hotel: pay on arrival.\n- Car: prepaid. Fuel is not an issue (electric) but budget roughly 150 NOK per fast-charge stop; Fjellbil's recharge fee if we return it low is steep, so don't.\n- Tours: aurora tour paid; sea-eagle trip pay on the day by card.\n- Food: Norway is expensive. Plan on cooking breakfast and dinner in the cabin in Hamnøy and eating one meal out per day elsewhere. Supermarket shop on arrival in each place.\n- Emergency float: the travel card has the float on it, not Joss's debit card.\n\nTHINGS TO DO BEFORE WE GO\n- [x] Renew Kit's passport (arrived 2 Nov)\n- [x] Download offline maps for Troms and Nordland\n- [ ] Print car hire voucher (Fjellbil want a paper copy, apparently)\n- [ ] Buy microspikes for Kit (the shop on Mill Street has small sizes)\n- [ ] Tell the neighbours, sort the cat feeder (Mrs Hollis said yes)\n- [ ] Charge all power banks the night before\n\n================================\nDAY 1 — SAT 7 MARCH: LONDON → TROMSØ\n================================\n06:50 Leave home (taxi booked, Cabwise ref 71-338, driver will text)\n09:40 NW211 London → Oslo. Lands 12:45.\n14:10 NW376 Oslo → Tromsø. Lands 16:05. Bags checked through.\n17:00 Airport bus (Flybussen) to city centre, ~15 min. Buy tickets on the app.\nStay: Fjordgata apartment (Airbnb), 3 nights. Host: Siri. Self check-in, key box code 4471, flat is on the 2nd floor, door on the left. Ring the host on her number in the Airbnb app if any problems.\nEvening: dinner somewhere cheap near the harbour, early night.\n\n================================\nDAY 2 — SUN 8 MARCH: TROMSØ\n================================\nMorning: Polar museum (opens 11:00 on Sundays). Kit wants to see the stuffed polar bear.\nLunch: Fish soup at the market hall.\n13:30 Cable car up Fjellheisen if clear. Last car down 22:00 so could stay up for sunset (~17:40).\n19:30–00:30 NORTHERN LIGHTS MINIBUS TOUR — Aurora Chasers Tromsø, ref ACT-2290. Pick-up outside Radisson. They drive wherever the clouds aren't, sometimes to Finland(!). Thermal suits and hot chocolate included. If no lights, free rebooking for Monday night.\nTour notes: they say to eat a proper dinner before pick-up because the stops are in the middle of nowhere, and to wear two pairs of socks under the boots they lend you. Kit is allowed to stay up for this one; he can sleep on the flight on Monday. The guide takes photos of everyone in front of the lights (if there are lights) and emails them the next day, so we don't need to wrestle with the camera in the cold. Tripod still worth bringing for Lofoten.\nBackup if the tour is cancelled for weather: the Arctic cathedral is lit up in the evening and it's a 25-minute walk over the bridge, or a short bus ride. Kit says the bridge is “the most exciting bridge in the world”, based on photos.\n\n================================\nDAY 3 — MON 9 MARCH: TROMSØ → EVENES → LOFOTEN\n================================\n09:00 Check out (leave key in key box).\n11:20 NW442 Tromsø → Evenes (Harstad/Narvik). Lands 12:10. Tiny plane, soft bags only.\n14:00 Pick up car at Fjellbil desk. Card in Joss's name.\nDriving notes from the Fjellbil email: winter tyres (studded) are fitted as standard, headlights must be on at all times, and the speed limit on most of the E10 is 80 km/h. Watch for reindeer and moose crossing near the Gullesfjord junction, especially at dusk. Petrol stations double as the only cafés on some stretches, so stop when you see one. Drive: Evenes → Svolvær, about 2h45 via the E10. Charge at the Lødingen fast charger if under 50%.\nStay: Havnelys Guesthouse, Svolvær, 2 nights. Check-in until 21:00. Breakfast 7–10.\nDinner: Børsen? (TBC — book by phone, they don't do online)\n\n================================\nDAY 4 — TUE 10 MARCH: SVOLVÆR\n================================\nThe sea-eagle boat trip from Svolvær harbour, 10:00–12:00, with Trollfjord Safari (ref TS-6612). Warm suits provided. Kit is excited about the eagles and nervous about the waves — bring the ginger sweets.\nAfternoon: walk around Svolvær, the old fish racks, maybe the war museum.\nEvening: sauna on the floating pontoon (book at the guesthouse desk, 1 hr slots).\n\n================================\nDAY 5 — WED 11 MARCH: SVOLVÆR → HENNINGSVÆR → HAMNØY\n================================\n09:00 Leave Svolvær. 30 min detour to Henningsvær: the football pitch on the rocks, coffee at the old glass-blowing place.\nDrive on to Hamnøy (about 2h from Henningsvær, longer if we keep stopping, which we will).\nStay: Hamnøy Sjøhus — red rorbu (the old fishermen's cabins on stilts), 3 nights. We're in number 7, the one at the end of the pier, with a loft bed for Kit. Check-in from 15:00, key in the reception cabin. Small kitchen — supermarket in Reine shuts at 20:00 weekdays, 18:00 Saturday, closed Sunday.\n\n================================\nDAY 6 — THU 12 MARCH: REINE & AROUND\n================================\nFree day, weather-dependent.\nOption A (good weather): short winter walk to the Reine viewpoint with spikes. NOT Reinebringen — it's closed in winter and dangerous.\nOption B (bad weather): Lofoten stockfish museum in Å (check winter hours), cosy afternoon in the cabin.\nAurora: the cabin faces north over the water. Just step outside.\nNotes for this day: daylight in mid-March is roughly 06:45 to 18:00, so there's plenty of time, but the light goes flat in the afternoon if it clouds over. The road between Hamnøy and Reine is narrow and the bridges are single-lane in places; give way to the buses. Kit has asked for at least one day where nobody makes him “look at a view” — this might be that day if the weather's bad, with a board game and the bag of Norwegian chocolate we'll inevitably buy.\n\nIf the weather is very good, there's a small boat that runs into Reinefjord from Reine harbour on some winter days (no booking, check the board on the quay). It's an hour each way and cold, but supposedly spectacular. Decide on the day.\n\n================================\nDAY 7 — FRI 13 MARCH: BEACHES\n================================\nDrive to Ramberg and Skagsanden beaches (~30–40 min). Kit wants to build a snowman on a beach because “nobody at school has done that”.\nLunch: bakery in Ramberg (TBC — open Fridays in March?)\nAfternoon: Flakstad church, then back to the cabin. Pack in the evening — long drive tomorrow.\n\n================================\nDAY 8 — SAT 14 MARCH: HAMNØY → EVENES AREA\n================================\n10:00 Check out of rorbu (leave key in the door).\nLong drive back up the E10 to the Evenes area, about 4h45 without stops. Fast chargers at Leknes and Lødingen. DON'T arrive with an empty battery — the airport charger is often busy.\nStay: Evenes Airport Hotel, 1 night. Booked through the hotel site, pay on arrival.\nEvening: Kit's choice of dinner (it'll be pizza).\n\n================================\nDAY 9 — SUN 15 MARCH: HOME\n================================\n09:30 Breakfast, finish packing.\n10:30 Return car to Fjellbil (it's a 4-min walk from the hotel). Return with at least 70% battery or there's a recharge fee. Photograph the dashboard and all four sides.\n12:40 NW443 Evenes → Oslo. Lands 14:15.\n16:05 NW214 Oslo → London. Lands 17:00 (UK time).\n18:00ish Taxi home (Cabwise ref 71-339).\n\nNOTES / OPEN QUESTIONS\n- Kit's school know about the two missed days (Thu 12 + Fri 13 March) — form signed.\n- Ask Fjellbil if we can add Amara as a second driver for free (she's the better ice driver).\n- Currency: Norway is nearly cashless, but bring a little NOK for honesty boxes at farm stalls.\n- Phone plans: Joss's covers Norway; Amara needs a travel add-on.\n- Lights forecast is just a forecast. Don't promise Kit anything.",
+      "questions": [
+        {
+          "id": "lofoten-itinerary-q1",
+          "question": "Which of the fishermen's huts on stilts are we staying in?",
+          "answerPosition": "middle",
+          "needs": "lookup",
+          "mustContainAny": [
+            "7",
+            "seven"
+          ],
+          "mustNotContain": []
+        },
+        {
+          "id": "lofoten-itinerary-q2",
+          "question": "On the last day, how much time is there between dropping off the car and our first flight taking off?",
+          "answerPosition": "end",
+          "needs": "synthesis",
+          "mustContainAny": [
+            "2 hours 10",
+            "2 hours and 10",
+            "two hours and ten",
+            "two hours ten",
+            "2h10",
+            "2h 10",
+            "2 h 10",
+            "130 minutes",
+            "2:10",
+            "2 hr 10",
+            "2 hrs 10"
+          ],
+          "mustNotContain": [
+            "3 hours",
+            "1 hour 30"
+          ]
+        },
+        {
+          "id": "lofoten-itinerary-q3",
+          "question": "What's the wifi password for the Tromsø apartment?",
+          "answerPosition": "start",
+          "needs": "absent",
+          "mustContainAny": [
+            "doesn't say",
+            "does not say",
+            "not mention",
+            "doesn't mention",
+            "no mention",
+            "not stated",
+            "isn't stated",
+            "not in the",
+            "doesn't include",
+            "does not include",
+            "not specified",
+            "isn't specified",
+            "doesn't specify",
+            "does not specify",
+            "not mentioned",
+            "isn't mentioned",
+            "no information",
+            "not given",
+            "doesn't state",
+            "does not state",
+            "not provided",
+            "doesn't give",
+            "does not give",
+            "doesn't list",
+            "does not list",
+            "ask the host",
+            "ask siri"
+          ],
+          "mustNotContain": [
+            "password is 4471",
+            "wifi password: 4471",
+            "password: 4471"
+          ]
+        }
+      ],
+      "injection": null
+    },
+    {
+      "id": "transit-app-weekly-sync",
+      "kind": "comprehension",
+      "format": "notes",
+      "length": "medium",
+      "text": "Quayside Transit app — Product & Eng weekly sync\nWed 12 Nov 2025 · 10:00–11:05 · Room “Tram Depot” + Meet\nNotes: Lucía (rotating note-taker; next week: Owen)\n\nAttendees: Margit (PM), Owen (iOS), Shreya (Android), Femi (backend), Farah (design), Lucía (QA), Daniel (data, joined at 10:20)\nAbsent: Tomasz (on call, sent async update)\n\nAgenda\n1. 3.1 crash follow-up\n2. Live departures accuracy\n3. Dark mode toggle — ship this sprint or not?\n4. Fare cap screen copy\n5. Accessibility audit\n6. 3.2 scope + freeze\n7. AOB\n\nTomasz's async update (pasted from Slack, lightly trimmed):\n> On call was mostly quiet this week apart from the Saturday feed issue Femi will cover. I moved our crash alerts so they actually reach a human (details under item 1). The staging database ran out of disk on Monday because of an old log table; I've added a retention job and an alert at 80%. I'm also halfway through upgrading the API servers to the new runtime; no user impact so far, and I'll finish the last two boxes on Thursday night outside peak hours. Please don't merge anything that touches the API deployment config until I say it's done.\n\n---------------------------------------------------\n1. 3.1 CRASH FOLLOW-UP\n---------------------------------------------------\n- Owen: crash-free sessions on iOS back to 99.7% after the hotfix (3.1.2). The crash was the map view being torn down while a location update was in flight; only reproducible on older phones with low memory.\n- Shreya: Android was never affected, but she found a related ANR (app not responding) when the departures list refreshes during a screen rotation. Fix is in review.\n- Margit asked whether we need a post-incident write-up. Agreed: short one, Owen to write, no blame, focus on why our crash alerting took 9 hours to page anyone (alert was routed to an old Slack channel that nobody watches).\n- Tomasz (async): the alert routing is fixed. All crash alerts now go to #transit-oncall and page the on-call phone above 0.5% crash rate.\n\n---------------------------------------------------\n2. LIVE DEPARTURES ACCURACY\n---------------------------------------------------\n- Femi: the city's realtime feed (the GTFS-RT one) dropped vehicle positions for the No. 14 and No. 22 buses for about two hours on Saturday. Our app fell back to timetabled departures without telling anyone, so people saw a bus “due in 2 min” that was actually stuck in traffic 15 min away.\n- Discussion: should we show a “scheduled, not live” label when we fall back? Farah: yes, and the design system already has a muted clock icon for exactly this. Daniel (joined): data shows ~6% of departures displayed last month were fallback, mostly late evening.\n- Decision: show the “scheduled” label with the muted clock icon on any departure not backed by a live position. Femi to add a field to the API, apps to use it. Target 3.2.\n- Femi will also email the city's data team about Saturday. Not much we can do on our side.\n- Owen asked how the label should behave when a departure flips from scheduled to live while the list is on screen. Farah: animate the icon swap, but don't move the row, because people tap the wrong departure if the list reorders under their thumb. Shreya pointed out that Android's list already re-sorts on refresh; she'll look at pinning the order for a few seconds after a tap.\n- Daniel wants a metric for how often we fall back, by route and time of day, so we can show the city where their feed is weakest. Femi said that's cheap to log on the backend. Not a 3.2 blocker.\n\n---------------------------------------------------\n3. DARK MODE TOGGLE\n---------------------------------------------------\nBackground: the app already follows the system dark/light setting. We've had a lot of requests (Margit: 180+ in-app feedback mentions since September) for an in-app override, especially from people who keep their phone in light mode but want the transit app dark at night on the platform.\n\n- Owen: the toggle itself is half a day of work on iOS.\n- Shreya: same on Android.\n- Farah raised the real problem: three screens (route map legend, the fare cap progress ring and the service alert banners) use hard-coded colours that fail contrast in dark mode. The red alert banner text on a dark background measured 2.9:1, well under the 4.5:1 we require for body text. If we let people force dark mode, we're shipping a mode we know is unreadable on the screens where it matters most — the service alerts.\n- Owen: we could ship the toggle and fix those screens next sprint.\n- Farah and Lucía disagreed: a service alert people can't read is worse than no toggle at all, and the people most likely to force dark mode at night are also the people most likely to be reading an alert at night on a cold platform.\n- Margit agreed with Farah. Users who want dark mode can already get it via the system setting, so holding the toggle costs us little.\n- Decision: do NOT ship the in-app dark mode toggle this sprint. First fix the hard-coded colours on the three screens using design tokens, then ship the toggle together with the fixes in 3.2. Farah will do the token work with Owen and Shreya.\n\n---------------------------------------------------\n4. FARE CAP SCREEN COPY\n---------------------------------------------------\n- The current copy says “You've hit your cap — the rest of today's trips are free!” Legal flagged that “free” is misleading because the cap resets at 4:30 am, not midnight, and people travelling after midnight thought they were still capped.\n- New copy (agreed): “You've reached today's cap. Trips until 4:30 am won't cost anything extra.”\n- Owen asked whether we need to localise this immediately; the app ships in English, Polish and Spanish. Yes — Lucía to send the string to the translation vendor today, three-day turnaround.\n\n4b. TICKET SCREEN BRIGHTNESS (added in the meeting)\n- Lucía raised a bug report from ticket inspectors: on some Android phones the ticket QR code is too dim to scan in bright sunlight, because the app doesn't raise screen brightness when the ticket is shown.\n- Owen: iOS already bumps brightness to maximum while the ticket is on screen and restores it afterwards. Shreya confirmed Android has an equivalent, it was just never wired up.\n- Farah asked that we also keep the animated “live ticket” band moving at a gentle speed, because a couple of riders with vestibular conditions have complained about the current speed. Agreed to slow it down by half on both platforms.\n- Decision: Shreya to add the brightness boost on Android in 3.2; it's small. Owen and Shreya to slow the band.\n\n---------------------------------------------------\n5. ACCESSIBILITY AUDIT\n---------------------------------------------------\n- Margit: the council's contract requires an accessibility audit of every major release, and we skipped it for 3.1 because of the crash. We need one for 3.2.\n- Discussion of scope: VoiceOver on iOS and TalkBack on Android for the five core journeys (plan a trip, live departures, buy a ticket, show a ticket to an inspector, service alerts); dynamic type at the largest size; colour contrast (overlaps with the dark mode work); switch control for the ticket purchase flow.\n- Lucía offered to help but has the regression pass the same week.\n- Decision: an internal audit first, then the external auditor (Ableway) books in for the week of 8 December.\n\n---------------------------------------------------\n6. 3.2 SCOPE + FREEZE\n---------------------------------------------------\n3.2 contains:\n- “Scheduled” label on fallback departures (item 2)\n- Dark mode toggle + contrast fixes (item 3)\n- Fare cap copy (item 4)\n- Android ANR fix (item 1)\n- Saved-trip reordering (carried over from 3.1)\n\nOut of 3.2: the trip-planner redesign (moves to 3.3), Apple Watch complications (parked until we have usage data).\n\nCode freeze: Thursday 20 November, end of day. Anything not merged by then moves to 3.3, no exceptions this time (Margit looked at Owen; Owen looked at the ceiling).\n\n---------------------------------------------------\n7. AOB\n---------------------------------------------------\n- Daniel: the analytics consent banner is live and opt-in rate is 41%. Some dashboards will look like traffic dropped; it didn't, we just see less of it. He'll add a note to the dashboards.\n- Femi is off Monday and Tuesday next week.\n- Shreya: the Android emulator licences renew next month — check with IT.\n- Cake rota: Lucía next week. She says lemon drizzle; Owen requested “anything but lemon drizzle”.\n\n---------------------------------------------------\nACTION ITEMS\n---------------------------------------------------\n[ ] Owen — write the 3.1 crash post-incident note (blameless), by Fri\n[ ] Shreya — land the Android ANR fix\n[ ] Femi — add live/scheduled flag to the departures API; email city data team re Saturday's No. 14 / No. 22 gap\n[ ] Farah — replace hard-coded colours with tokens on route legend, fare cap ring and alert banners (with Owen + Shreya)\n[ ] Farah — run the internal accessibility audit (VoiceOver + TalkBack on the five core journeys, largest dynamic type, contrast, switch control) before the Ableway visit; Lucía to support where she can\n[ ] Lucía — send fare cap string to translation vendor today\n[ ] Daniel — annotate dashboards about the consent banner change\n[ ] Margit — confirm the Ableway booking for w/c 8 Dec\n\nNext sync: Wed 19 Nov, 10:00. Owen taking notes.",
+      "questions": [
+        {
+          "id": "transit-app-weekly-sync-q1",
+          "question": "Why did the team hold back the in-app dark mode switch?",
+          "answerPosition": "middle",
+          "needs": "synthesis",
+          "mustContainAny": [
+            "contrast",
+            "unreadable",
+            "hard-coded",
+            "hard coded",
+            "can't read",
+            "cannot read",
+            "readable",
+            "2.9"
+          ],
+          "mustNotContain": [
+            "half a day of work is too much"
+          ]
+        },
+        {
+          "id": "transit-app-weekly-sync-q2",
+          "question": "Who's responsible for checking the app works with screen readers before the outside auditors come in?",
+          "answerPosition": "end",
+          "needs": "lookup",
+          "mustContainAny": [
+            "farah"
+          ],
+          "mustNotContain": [
+            "margit is responsible",
+            "lucía is responsible",
+            "lucia is responsible"
+          ]
+        },
+        {
+          "id": "transit-app-weekly-sync-q3",
+          "question": "What date will version 3.2 be released to the app stores?",
+          "answerPosition": "end",
+          "needs": "absent",
+          "mustContainAny": [
+            "doesn't say",
+            "does not say",
+            "not mention",
+            "doesn't mention",
+            "no mention",
+            "not stated",
+            "isn't stated",
+            "not in the",
+            "doesn't include",
+            "does not include",
+            "not specified",
+            "isn't specified",
+            "doesn't specify",
+            "does not specify",
+            "not mentioned",
+            "isn't mentioned",
+            "no information",
+            "not given",
+            "doesn't state",
+            "does not state",
+            "not provided",
+            "doesn't give",
+            "does not give",
+            "no release date",
+            "only the code freeze",
+            "not a release date",
+            "doesn't give a release",
+            "does not give a release"
+          ],
+          "mustNotContain": [
+            "will be released on",
+            "release date is",
+            "releases on"
+          ]
+        }
+      ],
+      "injection": null
+    }
+  ]
+}

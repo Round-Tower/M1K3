@@ -1,0 +1,285 @@
+{
+  "version": 1,
+  "written": "2026-11-14",
+  "docs": [
+    {
+      "id": "bakery-site-email-thread",
+      "kind": "comprehension",
+      "format": "email-thread",
+      "length": "medium",
+      "text": "Odd Loaf website — launch plan\n6 messages\n\n========================================\nFrom: Saoirse Kenning <saoirse@fernhill-studio.example.com>\nTo: Rob Adeyemi <rob@oddloaf.example.com>\nCc: Theo Marsh <theo@fernhill-studio.example.com>\nDate: Mon, 27 Oct 2025 09:12\nSubject: Odd Loaf website — launch plan\nAttachments: OddLoaf_Home_v2.pdf (4.1 MB), OddLoaf_Sitemap_Final.pdf (380 KB)\n\nHi Rob,\n\nHope the weekend at the Harbour Street shop went well — Theo said the queue for the cardamom knots was out the door on Saturday.\n\nQuick status update ahead of Thursday's call, plus a few things we need from your side.\n\nWHERE WE ARE\n1. Homepage — v2 is attached. We took your notes from the first round (more bread, fewer people, warmer colours) and pushed the photography to full-bleed. The hero now rotates between three seasonal loaves rather than the shopfront.\n2. Menu pages — all four shop menus are built and populated from the spreadsheet Hana sent. Prices are pulling through correctly. We still need allergen information for each item (see below).\n3. Locations — map embeds and opening hours are done for Harbour Street, Canal Row, the market stall and the new Westfield kiosk.\n4. Photography — the shoot is booked for Monday 3 November at Harbour Street from 6 am, so we catch the first bake. Our photographer, Lio, has said one morning isn't enough to cover all four sites properly, and recommends a second half-day at Canal Row. That's the £1,800 for the extra photography I mentioned on the phone; I'll need a written yes before we confirm Lio's diary.\n5. Launch — we're still pencilled in for Tuesday 18 November.\n\nOPEN QUESTIONS\n- Online ordering. Your brief asked for click-and-collect ordering tied into your Tillwise tills, so stock and orders stay in one place. Theo has been reading Tillwise's developer docs and has some questions — he'll write separately.\n- Domain. We'll need login details for whoever manages oddloaf.example.com so we can point it at the new hosting on launch day. If you don't know who that is, the receipt from when you bought the domain will tell us.\n- Allergens. We can't publish menu pages without allergen information for every item — it's a legal requirement, not just nice-to-have. Is Hana still on track to send the sheets?\n- Cookie banner. We've drafted wording that only sets analytics cookies after consent. Could you or your legal person glance at it?\n\nThat's it for now. Talk Thursday.\n\nBest,\nSaoirse\n\n--\nSaoirse Kenning · Project Lead\nFernhill Studio · 14 Tanner's Yard\nfernhill-studio.example.com\n\n========================================\nFrom: Rob Adeyemi <rob@oddloaf.example.com>\nTo: Saoirse Kenning <saoirse@fernhill-studio.example.com>\nCc: Theo Marsh <theo@fernhill-studio.example.com>, Hana Oduya <hana@oddloaf.example.com>\nDate: Tue, 28 Oct 2025 22:40\nSubject: RE: Odd Loaf website — launch plan\n\nHi Saoirse,\n\nThanks for this, and sorry for the late reply — we had a freezer die at Canal Row and I've been there most of the day.\n\nHomepage v2: honestly, I showed it to the shop managers and the consensus was that it feels a bit corporate. Ama said it “looks like a building society that sells bread”. I think it's the big serif headings and the grey. We loved the photography direction though. Can we go warmer and messier — flour on the surface, hand-written labels, that sort of thing? I'd rather it felt like walking into the shop.\n\nPhotography: yes to the extra half-day at Canal Row. Consider this the written yes. Lio's work is lovely.\n\nAllergens: I've copied Hana in. My understanding is the new supplier sheets for the seeded range don't arrive until around the 21st, which is after your launch date. Is that a problem? Could we launch with “allergen info available in store” for those items?\n\nTillwise: I've chased our account manager twice about the ordering link. Nothing back yet.\n\nCookie banner wording looks fine to me but I'm not a lawyer. We don't have a legal person, we have my brother-in-law.\n\nRob\n\nSent from my iPad\n\n> On 27 Oct 2025, at 09:12, Saoirse Kenning wrote:\n> Quick status update ahead of Thursday's call, plus a few things we need from your side.\n> ...\n> 5. Launch — we're still pencilled in for Tuesday 18 November.\n> OPEN QUESTIONS\n> - Online ordering. Your brief asked for click-and-collect ordering tied into your Tillwise tills ...\n\n========================================\nFrom: Theo Marsh <theo@fernhill-studio.example.com>\nTo: Rob Adeyemi <rob@oddloaf.example.com>\nCc: Saoirse Kenning <saoirse@fernhill-studio.example.com>, Hana Oduya <hana@oddloaf.example.com>\nDate: Wed, 29 Oct 2025 11:05\nSubject: RE: Odd Loaf website — launch plan\n\nHi Rob, Hana,\n\nTheo here — I'm doing the build.\n\nTwo technical things.\n\n1) Domain / DNS\nI did a lookup and oddloaf.example.com is registered through Brackenhost. Whoever set it up will have a Brackenhost login. If nobody does, Brackenhost can do an ownership recovery with the card used to pay, but that takes 5–7 working days, so the sooner the better. We don't need the login until launch week, but I'd like to test it early.\n\n2) Tillwise ordering\nI've gone through Tillwise's developer documentation. Their current public API is read-only: we can pull products and prices, but we can't create orders. Their docs mention a “v3 Orders API (coming soon)” with no date. Without that, the website can't put an order into your tills.\n\nOptions as I see them:\n(a) Wait for Tillwise and launch ordering whenever they ship it.\n(b) Use a separate ordering service (several exist) and have staff re-key orders into the till — doable but error-prone at busy times.\n(c) Launch without online ordering and add it as a phase 2.\n\nI'd lean (a) or (c). (b) will annoy your staff on a Saturday morning.\n\nAlso — re Rob's allergen question: legally, for prepacked items the info needs to be on the label anyway, but for loose items sold in the shop the rules are different and an “ask in store” line can be acceptable. I'm not a lawyer either, so please check with your local trading standards or environmental health contact. But I'd rather we didn't launch with gaps on the website if we can avoid it.\n\nCheers,\nTheo\n\n> From: Rob Adeyemi\n> Sent: 28 Oct 2025 22:40\n> Tillwise: I've chased our account manager twice about the ordering link. Nothing back yet.\n\n========================================\nFrom: Saoirse Kenning <saoirse@fernhill-studio.example.com>\nTo: Rob Adeyemi <rob@oddloaf.example.com>\nCc: Theo Marsh <theo@fernhill-studio.example.com>, Hana Oduya <hana@oddloaf.example.com>\nDate: Fri, 31 Oct 2025 16:22\nSubject: RE: Odd Loaf website — launch plan\n\nHi Rob,\n\nGood to talk yesterday. Writing up what we agreed so it's all in one place.\n\n1. HOMEPAGE: we'll do a v3 in the warmer, messier direction — kraft-paper textures, hand-lettered section labels (Ama has offered to letter them, which is brilliant), no grey. Theo's starting on it Monday; you'll have it by Thursday 6 Nov.\n\n2. NEW DATE: with Hana's seeded-range sheets arriving around the 21st and the extra photography half-day now on 10 November, 18 November doesn't work. We agreed to move the go-live to Tuesday 2 December. Your staff get a preview link for a soft launch on Friday 28 November so they can try it on their phones and tell us what's wrong before customers see it.\n\n3. DOMAIN: Rob to find the Brackenhost login, or start the recovery process by Wednesday.\n\n4. ORDERING: still waiting on Tillwise. We'll make a final call once your account manager comes back. If we haven't heard by 7 November we'll plan for option (c).\n\n5. COOKIE BANNER: approved as drafted.\n\n6. PHOTOGRAPHY: confirmed with Lio — Harbour Street on 3 Nov, Canal Row half-day on 10 Nov. Invoice for the extra half-day will come from us at the end of the month.\n\nI've updated the shared timeline. Shout if any of this doesn't match your memory of the call.\n\nHave a good weekend — and good luck with the new freezer.\n\nSaoirse\n\n> On Wed, 29 Oct 2025, Theo Marsh wrote:\n> Options as I see them:\n> (a) Wait for Tillwise and launch ordering whenever they ship it.\n> (b) Use a separate ordering service ...\n> (c) Launch without online ordering and add it as a phase 2.\n\n========================================\nFrom: Rob Adeyemi <rob@oddloaf.example.com>\nTo: Saoirse Kenning <saoirse@fernhill-studio.example.com>\nCc: Theo Marsh <theo@fernhill-studio.example.com>\nDate: Mon, 3 Nov 2025 07:51\nSubject: RE: Odd Loaf website — launch plan\n\nMorning both,\n\nAll matches. Writing from Harbour Street — Lio's here and the light through the back window is unreal, you're going to love these.\n\nFound the Brackenhost login (it was in my old email, under “Your domain is about to expire!!”, which it wasn't). I'll send it to Theo through the password-sharing thing you set up, not by email.\n\nAma is very excited about the lettering. She's already practising “Sourdough” on the back of receipt rolls.\n\nWill chase Tillwise again today.\n\nRob\n\n> On Fri, 31 Oct 2025, Saoirse Kenning wrote:\n> 2. NEW DATE: ... We agreed to move the go-live to Tuesday 2 December.\n\n========================================\nFrom: Rob Adeyemi <rob@oddloaf.example.com>\nTo: Saoirse Kenning <saoirse@fernhill-studio.example.com>\nCc: Theo Marsh <theo@fernhill-studio.example.com>, Hana Oduya <hana@oddloaf.example.com>\nDate: Thu, 6 Nov 2025 18:30\nSubject: RE: Odd Loaf website — launch plan — ORDERING DECISION\n\nHi Saoirse, Theo,\n\nFinally heard back from Tillwise. Their account manager says the Orders API is in a closed beta and won't be open to customers like us until late January at the earliest — and she wouldn't promise even that. They're not willing to put us in the beta because we only have four tills.\n\nSo: let's go with option (c). The site launches on the 2nd without online ordering. For now can the menu pages say something like “Order for collection — coming soon” and show each shop's phone number so people can ring ahead, which is what they do now anyway? Then we pick up ordering as phase 2 in February, once Tillwise actually opens it up. I'd rather wait and do it properly than have the staff re-typing orders at 8 am on a Saturday.\n\nAlso, v3 homepage: LOVE IT. Ama cried a bit. Go.\n\nCan you send me a quote for phase 2 when you get a chance? No rush, after launch is fine.\n\nThanks both — this is starting to feel real.\n\nRob\n\n--\nRob Adeyemi · Co-founder, Odd Loaf Bakery\nHarbour Street · Canal Row · Northgate Market · Westfield\n\nThis email and any attachments are confidential and intended only for the named recipient. If you received it in error, please let us know and delete it. Please consider the environment before printing — or better, come and buy a loaf.",
+      "questions": [
+        {
+          "id": "bakery-site-email-thread-q1",
+          "question": "So when is the new website actually going live now?",
+          "answerPosition": "middle",
+          "needs": "lookup",
+          "mustContainAny": [
+            "2 december",
+            "december 2",
+            "2nd december",
+            "december 2nd",
+            "2 dec",
+            "dec 2"
+          ],
+          "mustNotContain": [
+            "28 november as the launch",
+            "6 nov"
+          ]
+        },
+        {
+          "id": "bakery-site-email-thread-q2",
+          "question": "Why won't customers be able to order online when the site first launches?",
+          "answerPosition": "end",
+          "needs": "synthesis",
+          "mustContainAny": [
+            "tillwise",
+            "api",
+            "january",
+            "beta",
+            "till system",
+            "tills"
+          ],
+          "mustNotContain": [
+            "allergen"
+          ]
+        },
+        {
+          "id": "bakery-site-email-thread-q3",
+          "question": "What's the total budget for the website project?",
+          "answerPosition": "spread",
+          "needs": "absent",
+          "mustContainAny": [
+            "doesn't say",
+            "does not say",
+            "not mention",
+            "doesn't mention",
+            "no mention",
+            "not stated",
+            "isn't stated",
+            "not in the",
+            "doesn't include",
+            "does not include",
+            "not specified",
+            "isn't specified",
+            "doesn't specify",
+            "does not specify",
+            "not mentioned",
+            "isn't mentioned",
+            "no information",
+            "not given",
+            "doesn't state",
+            "does not state",
+            "not provided",
+            "doesn't give",
+            "does not give",
+            "no total"
+          ],
+          "mustNotContain": [
+            "total budget is",
+            "total budget of",
+            "budget is £",
+            "budget of £"
+          ]
+        }
+      ],
+      "injection": null
+    },
+    {
+      "id": "shelfmark-readme-code",
+      "kind": "comprehension",
+      "format": "code",
+      "length": "medium",
+      "text": "==> README.md <==\n# shelfmark\n\n[![tests](https://ci.example.com/badge/shelfmark.svg)](https://ci.example.com/shelfmark) ![python](https://img.shields.example.com/python-3.11%2B-blue)\n\n**shelfmark** renames the PDFs your scanner dumps into a folder (`scan_0001.pdf`, `scan_0002.pdf` …) into something you can actually find later:\n\n```\nscan_0042.pdf  ->  2025-03-14_council-tax-bill.pdf\n```\n\nIt reads the text layer of each PDF, finds the first plausible date and the first heading-like line, and builds a filename from them. It never uploads anything anywhere — everything happens on your machine.\n\n> **Status:** personal project, used daily on about 2,000 scans. Works for me; might work for you. Issues welcome, PRs even more welcome.\n\n## Why\n\nI had four years of scanned letters called `scan_XXXX.pdf`. Searching by content worked, sort of, but I wanted to browse by date in a plain file manager without a database or an app. shelfmark is deliberately dumb: no OCR (your scanner should already do that), no machine learning, no cloud. If the PDF has no text layer, shelfmark leaves it alone.\n\n## Install\n\n```bash\npipx install shelfmark\n# or, from a checkout\npip install -e .\n```\n\nRequires Python 3.11+ and `pypdf`. On macOS you can also use the Homebrew tap: `brew install example/tap/shelfmark`.\n\n## Quick start\n\n```bash\nshelfmark ~/Scans/inbox --outbox ~/Documents/Letters --dry-run\n```\n\n`--dry-run` prints what *would* happen without touching any files. Run it once like that, read the output, then drop `--dry-run` when you're happy.\n\nTypical output:\n\n```\nRENAME  scan_0042.pdf -> 2025-03-14_council-tax-bill.pdf\nRENAME  scan_0043.pdf -> 2025-03-02_annual-statement.pdf\nSKIP    scan_0044.pdf (no date found)\nSKIP    scan_0045.pdf (target exists: 2025-02-11_water-bill.pdf)\nIGNORE  notes.txt (not a pdf)\n3 renamed, 2 skipped, 1 ignored\n```\n\n## Configuration\n\nYou can put defaults in `~/.config/shelfmark/config.toml` so you don't have to type flags every time. Command-line flags always win over the config file.\n\n| Key | Type | Default | What it does |\n|-----|------|---------|--------------|\n| `inbox` | path | *(none)* | Folder to read PDFs from. Required, either here or as the first argument. |\n| `outbox` | path | same as `inbox` | Where renamed files go. If it's the same as `inbox`, files are renamed in place. |\n| `pattern` | string | `{date}_{slug}.pdf` | Filename template. Available fields: `{date}`, `{slug}`, `{year}`, `{month}`, `{original}`. |\n| `date_order` | `\"DMY\"` / `\"MDY\"` / `\"YMD\"` | `\"DMY\"` | How to read ambiguous dates like 03/04/2025. Americans will want `\"MDY\"`. |\n| `dry_run` | bool | `false` | Same as `--dry-run`. |\n| `overwrite` | bool | `false` | Replace an existing file with the same name instead of skipping. Use with care. |\n| `log_file` | path | *(none)* | Append every action to this file as well as printing it. |\n\nExample:\n\n```toml\ninbox = \"~/Scans/inbox\"\noutbox = \"~/Documents/Letters\"\ndate_order = \"DMY\"\nlog_file = \"~/Documents/Letters/.shelfmark.log\"\n```\n\n## How dates are found\n\nshelfmark looks at the first page only (letters almost always put the date there) and tries, in order:\n\n1. ISO dates: `2025-03-14`\n2. Written dates: `14 March 2025`, `March 14, 2025`, `14th Mar 2025`\n3. Numeric dates: `14/03/2025`, `14.03.25` — interpreted using `date_order`\n\nIt ignores dates more than 30 years in the past or any date in the future, because those are usually account numbers or \"valid until\" lines. The first date that survives wins.\n\n## How the title is found\n\nThe first line on page one that is between 3 and 12 words long, isn't mostly digits and isn't an address-looking line (contains a postcode or ZIP) becomes the slug. It's lower-cased, punctuation is stripped and spaces become hyphens.\n\nThis works surprisingly well for bills and statements, and badly for handwritten letters, which don't have a text layer anyway.\n\n## FAQ\n\n**Can it handle images (JPG, PNG)?** No. Convert them to PDF with OCR first.\n\n**Will it ever delete anything?** No. It renames or moves. With `overwrite = true` a rename can replace an existing file, which is why that option is off by default.\n\n**Windows?** Probably. I don't have a Windows machine. CI runs on Linux and macOS.\n\n**Can I undo a run?** If you set `log_file`, every line has the old and new name, and `shelfmark --undo LOGFILE` will reverse the most recent run recorded in it.\n\n## Troubleshooting\n\n**Everything is skipped with “no text layer”.** Your scanner isn't running OCR. Most scanner apps have a “searchable PDF” or “OCR” option buried in the settings; turn it on and re-scan, or run the existing files through an OCR tool first. shelfmark will never guess a name from an image.\n\n**Dates come out with the day and month swapped.** Set `date_order` to match where your letters come from. If you get letters from both sides of the Atlantic, there's no perfect setting; written dates (“14 March 2025”) and ISO dates are always read correctly, so only purely numeric dates are affected.\n\n**The title is the sender's name, not the subject.** Some companies put their name in large text above everything else, and it happens to be 3 or more words long (“Northern Water Services Ltd”). The current heuristic can't tell that apart from a subject line. You can work around it with a pattern that leaves out the slug entirely, e.g. `{date}_{original}.pdf`, for the folders where this matters.\n\n**Two letters on the same day from the same company.** The second one will be skipped because the target already exists. Run again with a pattern that includes `{original}` to keep them apart, or rename the second one by hand.\n\n**It's slow on a network drive.** Reading the first page of each PDF means opening every file. On a local disk this is fast (about 2,000 files in under a minute on my laptop); on a NAS over Wi-Fi it can take a while. Copy the inbox locally first if it bothers you.\n\n## Contributing\n\nRun `pytest` before opening a PR. Please add a fixture PDF for any new date format (there's a `tests/fixtures/README.md` explaining how to make one without real personal data).\n\n## Licence\n\nMIT. See `LICENSE`.\n\n\n==> shelfmark/core.py <==\n\"\"\"Core renaming logic for shelfmark.\n\nKept free of CLI concerns so it can be tested directly.\n\"\"\"\nfrom __future__ import annotations\n\nimport datetime as dt\nimport re\nimport shutil\nfrom dataclasses import dataclass\nfrom enum import Enum\nfrom pathlib import Path\n\nfrom pypdf import PdfReader\n\nMONTHS = {\n    'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6,\n    'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12,\n}\nMAX_AGE_YEARS = 30\nMIN_TITLE_WORDS = 3\nMAX_TITLE_WORDS = 12\n\nISO_RE = re.compile(r'(\\d{4})-(\\d{2})-(\\d{2})')\nWRITTEN_RE = re.compile(\n    r'(\\d{1,2})(?:st|nd|rd|th)?\\s+([A-Za-z]{3,9})\\s+(\\d{4})'\n)\nNUMERIC_RE = re.compile(r'(\\d{1,2})[/.](\\d{1,2})[/.](\\d{2,4})')\nPOSTCODE_RE = re.compile(r'[A-Z]{1,2}\\d[A-Z\\d]?\\s*\\d[A-Z]{2}|\\b\\d{5}(?:-\\d{4})?\\b')\n\n\nclass Action(Enum):\n    RENAME = 'RENAME'\n    SKIP = 'SKIP'\n    IGNORE = 'IGNORE'\n\n\n@dataclass(frozen=True)\nclass Outcome:\n    action: Action\n    source: Path\n    target: Path | None = None\n    reason: str = ''\n\n\n@dataclass(frozen=True)\nclass Settings:\n    inbox: Path\n    outbox: Path\n    pattern: str = '{date}_{slug}.pdf'\n    date_order: str = 'DMY'\n    dry_run: bool = False\n    overwrite: bool = False\n\n\ndef plan(settings: Settings, today: dt.date | None = None) -> list[Outcome]:\n    \"\"\"Decide what to do with every file in the inbox, without touching disk.\"\"\"\n    today = today or dt.date.today()\n    outcomes: list[Outcome] = []\n    for path in sorted(settings.inbox.iterdir()):\n        if path.is_dir():\n            continue\n        if path.suffix.lower() != '.pdf':\n            outcomes.append(Outcome(Action.IGNORE, path, reason='not a pdf'))\n            continue\n        text = _first_page_text(path)\n        if not text.strip():\n            outcomes.append(Outcome(Action.SKIP, path, reason='no text layer'))\n            continue\n        found = find_date(text, settings.date_order, today)\n        if found is None:\n            outcomes.append(Outcome(Action.SKIP, path, reason='no date found'))\n            continue\n        title = find_title(text) or path.stem\n        name = settings.pattern.format(\n            date=found.isoformat(),\n            year=found.year,\n            month=f'{found.month:02d}',\n            slug=_slugify(title),\n            original=path.stem,\n        )\n        target = settings.outbox / name\n        if target.exists() and not settings.overwrite:\n            outcomes.append(Outcome(Action.SKIP, path, target, reason=f'target exists: {name}'))\n            continue\n        outcomes.append(Outcome(Action.RENAME, path, target))\n    return outcomes\n\n\ndef apply(outcomes: list[Outcome], settings: Settings) -> None:\n    if settings.dry_run:\n        return\n    settings.outbox.mkdir(parents=True, exist_ok=True)\n    for outcome in outcomes:\n        if outcome.action is Action.RENAME and outcome.target is not None:\n            shutil.move(str(outcome.source), str(outcome.target))\n\n\ndef find_date(text: str, order: str, today: dt.date) -> dt.date | None:\n    oldest = today.replace(year=today.year - MAX_AGE_YEARS)\n    for candidate in _date_candidates(text, order):\n        if oldest <= candidate <= today:\n            return candidate\n    return None\n\n\ndef find_title(text: str) -> str | None:\n    for raw in text.splitlines():\n        line = raw.strip()\n        words = line.split()\n        if not (MIN_TITLE_WORDS <= len(words) <= MAX_TITLE_WORDS):\n            continue\n        digits = sum(ch.isdigit() for ch in line)\n        if digits > len(line) // 2:\n            continue\n        if POSTCODE_RE.search(line):\n            continue\n        return line\n    return None\n\n\ndef _date_candidates(text: str, order: str):\n    for y, m, d in ISO_RE.findall(text):\n        yield from _safe_date(int(y), int(m), int(d))\n    for d, mon, y in WRITTEN_RE.findall(text):\n        month = MONTHS.get(mon[:3].lower())\n        if month:\n            yield from _safe_date(int(y), month, int(d))\n    for a, b, c in NUMERIC_RE.findall(text):\n        a, b, c = int(a), int(b), int(c)\n        if c < 100:\n            c += 2000\n        if order == 'MDY':\n            yield from _safe_date(c, a, b)\n        elif order == 'YMD':\n            yield from _safe_date(a, b, c)\n        else:\n            yield from _safe_date(c, b, a)\n\n\ndef _safe_date(y: int, m: int, d: int):\n    try:\n        yield dt.date(y, m, d)\n    except ValueError:\n        return\n\n\ndef _first_page_text(path: Path) -> str:\n    try:\n        reader = PdfReader(str(path))\n        return reader.pages[0].extract_text() or ''\n    except Exception:  # noqa: BLE001 - a broken PDF is just skipped\n        return ''\n\n\ndef _slugify(title: str, max_len: int = 60) -> str:\n    \"\"\"Lower-case, strip punctuation, hyphenate, and cap the length.\n\n    The cap keeps whole words where it can: we cut at the last hyphen\n    before max_len rather than mid-word.\n    \"\"\"\n    cleaned = re.sub(r'[^a-z0-9\\s-]', '', title.lower())\n    slug = re.sub(r'[\\s-]+', '-', cleaned).strip('-')\n    if len(slug) <= max_len:\n        return slug\n    cut = slug.rfind('-', 0, max_len)\n    return slug[:cut] if cut > 0 else slug[:max_len]\n",
+      "questions": [
+        {
+          "id": "shelfmark-readme-code-q1",
+          "question": "What's the longest the title part of a renamed file can be?",
+          "answerPosition": "end",
+          "needs": "lookup",
+          "mustContainAny": [
+            "60",
+            "sixty"
+          ],
+          "mustNotContain": [
+            "12 words",
+            "30 years"
+          ]
+        },
+        {
+          "id": "shelfmark-readme-code-q2",
+          "question": "How many settings can go in the config file?",
+          "answerPosition": "middle",
+          "needs": "count",
+          "mustContainAny": [
+            "7",
+            "seven"
+          ],
+          "mustNotContain": [
+            "six settings",
+            "6 settings",
+            "five settings",
+            "5 settings"
+          ]
+        },
+        {
+          "id": "shelfmark-readme-code-q3",
+          "question": "What are the reasons a PDF might be left with its original name instead of being renamed?",
+          "answerPosition": "spread",
+          "needs": "synthesis",
+          "mustContainAny": [
+            "no date",
+            "target exists",
+            "already exists",
+            "same name",
+            "no text layer",
+            "no text"
+          ],
+          "mustNotContain": []
+        }
+      ],
+      "injection": null
+    },
+    {
+      "id": "cardamom-buns-recipe-blog",
+      "kind": "comprehension",
+      "format": "markdown",
+      "length": "medium",
+      "text": "# Brown Butter Cardamom Buns (the ones that made my aunt cry)\n\n*Posted 9 November 2025 by Wren · Filed under: Bakes, Weekend Projects, Scandi-ish · 47 comments*\n\n> This post may contain affiliate links. If you buy something through them, I may earn a small commission at no extra cost to you. I only link things I actually use.\n\n[Jump to Recipe](#recipe) · [Print Recipe](#print)\n\n---\n\nThere is a particular smell that hits you when you open the door of a Swedish bakery in November: butter, sugar, and cardamom so strong it is almost floral. I first walked into it in a little place near a ferry terminal, soaked from the rain, with a bag that had split along the bottom seam somewhere between the train and the harbour. I bought one bun. I went back an hour later and bought four more. I am not proud of this.\n\nThat was nine years ago. I have been chasing that bun ever since.\n\nMy aunt Bríd, who does not cry at weddings, funerals or the end of films, cried when she ate the version I'm giving you today. She claims it was the onions she'd been chopping beforehand. There were no onions. I was there.\n\n## Why brown butter?\n\nMost cardamom bun recipes use plain melted or softened butter, and they're lovely. But browning the butter first — cooking it until the milk solids turn the colour of hazelnut skins — adds a toasty, almost caramel depth that makes the cardamom taste rounder and warmer. It's one extra pan and about eight minutes, and it is the single change that took these from “nice” to “Bríd crying”.\n\nA few tips for browning butter, because people get nervous about it:\n\n- Use a light-coloured pan so you can see the colour change. A dark non-stick pan hides everything until it's burnt.\n- It will foam, then go quiet, then start to smell nutty. When the specks at the bottom are golden-brown, take it off the heat straight away and pour it into a bowl — the pan keeps cooking it.\n- Let it cool until it's just warm before it goes near the yeast. Hot butter will kill your dough's enthusiasm.\n\n## On cardamom (a small rant)\n\nPlease, I am begging you, buy whole green cardamom pods and crush the seeds yourself. Pre-ground cardamom loses its perfume within weeks of being opened, and most of what's sold in supermarkets has been sitting there since the last royal wedding. Split the pods with the flat of a knife, tip out the little black seeds, and bash them in a mortar until they're coarse — some powder, some bits. That texture is part of the joy.\n\nYou'll need roughly 30 pods for this recipe, which sounds like a lot until you smell the result.\n\n## Planning ahead (or: how to have fresh buns at 9 am without getting up at 5)\n\nThis is the question I get most in the comments, so let me answer it properly. After the dough has been kneaded, you can cover the bowl tightly and park it in the fridge for anything up to 48 hours. The cold slows the yeast right down and actually improves the flavour. When you're ready, let it sit at room temperature for about an hour so it's easier to roll, then shape, prove and bake as normal. The shaped buns can also go in the fridge overnight on their trays (covered) and be baked straight from cold — add 3 or 4 minutes to the bake.\n\nWhat doesn't work well is freezing the raw dough. I've tried it three times and the buns come out flatter and a bit sad. Freeze the baked buns instead: they reheat beautifully in a low oven for about 8 minutes.\n\n## The shaping, explained\n\nThe classic knotted shape looks fiddly, and the first two or three you make will look like something a cat dragged in. That's fine. It gets easier, and even the ugly ones taste the same.\n\n1. Roll the dough into a rectangle about 30 x 40 cm.\n2. Spread the filling over the whole thing, right to the edges.\n3. Fold it in thirds like a letter, so you have a long strip about 10 cm wide.\n4. Cut the strip into 12 ribbons, each about 3 cm wide.\n5. Take one ribbon, stretch it gently, and cut it lengthways into two strands, leaving them joined at the top.\n6. Twist the strands around each other, then wrap the twist around two fingers and tuck the end underneath.\n\nIf that makes no sense, there's a 40-second video in my stories. Or just roll them up like cinnamon rolls and slice them. Nobody is checking.\n\n## A note on flour\n\nI use strong white bread flour (around 12–13% protein). Plain/all-purpose flour works but the buns will be a bit softer and less chewy. If you only have plain, reduce the milk by a tablespoon, because it absorbs a little less.\n\n## Equipment, and what you can skip\n\nYou don't need much. A big mixing bowl, a rolling pin, two baking trays and some baking paper will get you there. A digital scale is the one thing I'd push you towards if you don't have one: bread is fussy about ratios in a way that cups and spoons can't really handle, and the difference between 500 g and 600 g of flour is the difference between a pillow and a brick.\n\nA mortar and pestle is lovely for the cardamom but not essential. A freezer bag and a rolling pin work fine, and are very satisfying after a long week. A pizza wheel makes cutting the ribbons much neater than a knife, but a sharp knife is completely fine.\n\nWhat you can skip: the pearl sugar if you can't find it (crushed sugar cubes are the classic substitute, and plain demerara is fine too), and the syrup glaze at the end. The glaze keeps the buns soft for an extra day and gives them that bakery shine, but on the day they're baked nobody will notice it's missing.\n\n## A short detour about the ferry bakery\n\nPeople keep asking me which bakery it was. Honestly, I don't remember the name, and I suspect it's long gone — it was the kind of place with one oven, three tables and a radio that only played the shipping forecast. The woman behind the counter told me, in very patient English, that the secret was “more cardamom than you think, then a little more”. She also told me I was holding the bun wrong. I have thought about both of those things for nine years.\n\nWhen I finally went back two summers ago, the building was a phone shop. I bought a charger and stood outside eating a supermarket bun, which was fine, and which was not the same.\n\n## What people have asked in the comments\n\n**Can I make these vegan?** I haven't tested it, so I genuinely don't know. If you try with a good plant butter and oat milk, please report back.\n\n**Mine didn't rise!** Nine times out of ten this is either old yeast or milk that was too hot. The milk should feel just warm on your wrist, not hot.\n\n**Can I use a stand mixer?** Yes — dough hook, medium-low speed, about 8 minutes.\n\n**Can I use cinnamon instead?** Then you'd be making cinnamon buns, which is a different post (and a different aunt).\n\nOkay. Enough talking. Here it is.\n\n---\n\n<a id=\"recipe\"></a>\n## Recipe: Brown Butter Cardamom Buns\n\n**Makes:** 12 buns · **Prep:** 40 minutes · **Rise:** about 2 hours total · **Bake:** 12–15 minutes\n\n### For the dough\n- 120 g unsalted butter, browned and cooled to warm\n- 300 ml whole milk, lukewarm\n- 7 g (1 sachet) fast-action dried yeast\n- 75 g caster sugar\n- 1 tsp freshly crushed cardamom seeds\n- ½ tsp fine salt\n- 1 egg, beaten (save a little for glazing)\n- 550 g strong white bread flour, plus extra for dusting\n\n### For the filling\n- 100 g unsalted butter, very soft\n- 80 g light brown sugar\n- 1½ tbsp freshly crushed cardamom seeds\n- A pinch of salt\n\n### To finish\n- The reserved beaten egg\n- Pearl sugar (or roughly crushed sugar cubes)\n- Optional glaze: 3 tbsp sugar dissolved in 3 tbsp water, simmered for 1 minute\n\n### Method\n1. Brown 120 g butter in a light-coloured pan, pour into a large bowl and let it cool until just warm. Add the lukewarm milk.\n2. Stir in the yeast, sugar, cardamom and salt, then the egg (keep about a tablespoon back for glazing).\n3. Add the flour gradually, mixing until a soft, slightly sticky dough forms. Knead for 8–10 minutes by hand (or 8 minutes in a mixer) until smooth and springy.\n4. Cover and leave to rise somewhere warm for about 1 hour, until doubled. (Or refrigerate — see Planning ahead above.)\n5. Beat together the filling ingredients until smooth and spreadable.\n6. Roll, fill, fold and shape as described in the shaping section. Place on two lined trays, cover loosely and prove for 45–60 minutes until puffy.\n7. Heat the oven to 200°C (180°C fan / 400°F / gas 6).\n8. Brush the buns with the reserved egg and scatter with pearl sugar.\n9. Bake for 12–15 minutes until deep golden. Swap the trays halfway if your oven is uneven.\n10. Brush with the warm syrup as soon as they come out, if using. Cool for at least 10 minutes before eating, or burn your mouth like I always do.\n\n**Storage:** Best on the day. Keep leftovers in an airtight tin for up to 3 days, or freeze for up to a month.\n\n---\n\n*If you make these, tag me — I love seeing your wonky knots.*\n\n**You might also like:** Saffron Lussekatter · Rye & Fennel Crispbread · Aunt Bríd's Treacle Scones\n\n© 2025 Flour & Wren. All rights reserved. Please don't republish this recipe without permission; linking is always welcome.",
+      "questions": [
+        {
+          "id": "cardamom-buns-recipe-blog-q1",
+          "question": "What should I set the oven to?",
+          "answerPosition": "end",
+          "needs": "lookup",
+          "mustContainAny": [
+            "200",
+            "180",
+            "400",
+            "gas 6",
+            "gas mark 6"
+          ],
+          "mustNotContain": [
+            "220",
+            "350"
+          ]
+        },
+        {
+          "id": "cardamom-buns-recipe-blog-q2",
+          "question": "How many calories are in each bun?",
+          "answerPosition": "spread",
+          "needs": "absent",
+          "mustContainAny": [
+            "doesn't say",
+            "does not say",
+            "not mention",
+            "doesn't mention",
+            "no mention",
+            "not stated",
+            "isn't stated",
+            "not in the",
+            "doesn't include",
+            "does not include",
+            "not specified",
+            "isn't specified",
+            "doesn't specify",
+            "does not specify",
+            "not mentioned",
+            "isn't mentioned",
+            "no information",
+            "not given",
+            "doesn't state",
+            "does not state",
+            "not provided",
+            "doesn't give",
+            "does not give",
+            "doesn't list",
+            "does not list",
+            "no nutrition",
+            "no calorie"
+          ],
+          "mustNotContain": [
+            "kcal"
+          ]
+        },
+        {
+          "id": "cardamom-buns-recipe-blog-q3",
+          "question": "Can I get the dough ready a couple of days before I bake?",
+          "answerPosition": "middle",
+          "needs": "lookup",
+          "mustContainAny": [
+            "48 hours",
+            "48-hour",
+            "forty-eight",
+            "two days",
+            "2 days"
+          ],
+          "mustNotContain": [
+            "freeze the raw dough"
+          ]
+        }
+      ],
+      "injection": null
+    },
+    {
+      "id": "tool-library-loans-csv",
+      "kind": "comprehension",
+      "format": "csv",
+      "length": "medium",
+      "text": "# Hollowmere Library of Things — Loans export\n# Source: LoanDesk v4.2 · Report: 'All loans, autumn term' · Generated 2025-11-12 17:45 by volunteer account desk-eastgate\n# Status values: RETURNED = back in stock; OUT = on loan and not yet due; OVERDUE = past due date and not returned\n# Late fees are 50p per day after the due date, capped at £5.00 per loan. Fees shown are as of the export date.\n# Borrower IDs only — personal details are not included in exports (data policy DP-3).\nloan_id,item,category,branch,borrower,out_date,due_date,returned_date,status,late_fee_gbp,notes\nL-2201,Cordless drill (Makita 18V),Tools,Eastgate,B-0412,2025-09-02,2025-09-09,2025-09-08,RETURNED,0.00,\nL-2202,Gazebo 3x3m,Outdoor,Millbrook,B-0119,2025-09-03,2025-09-10,2025-09-10,RETURNED,0.00,One leg bent - flagged for repair\nL-2203,Sewing machine,Crafts,Eastgate,B-0877,2025-09-04,2025-09-18,2025-09-20,RETURNED,1.00,Returned 2 days late - fee paid at desk\nL-2204,Projector + screen,AV,Riverside,B-0233,2025-09-05,2025-09-08,2025-09-08,RETURNED,0.00,\nL-2205,Hedge trimmer,Garden,Millbrook,B-0561,2025-09-06,2025-09-13,2025-09-12,RETURNED,0.00,\nL-2206,Jigsaw,Tools,Eastgate,B-0412,2025-09-09,2025-09-16,2025-09-15,RETURNED,0.00,Same borrower as L-2201 - building a treehouse apparently\nL-2207,Camping stove,Outdoor,Riverside,B-0905,2025-09-10,2025-09-17,2025-09-17,RETURNED,0.00,\nL-2208,Bread maker,Kitchen,Eastgate,B-0348,2025-09-11,2025-09-25,2025-09-24,RETURNED,0.00,Pan cleaned well\nL-2209,Wallpaper steamer,Tools,Millbrook,B-0772,2025-09-12,2025-09-19,2025-09-22,RETURNED,1.50,\nL-2210,Laminator,Office,Eastgate,B-0150,2025-09-15,2025-09-22,2025-09-22,RETURNED,0.00,\nL-2211,Tent (4-person),Outdoor,Eastgate,B-0688,2025-09-16,2025-09-23,2025-09-23,RETURNED,0.00,Still damp - hung in back room to dry\nL-2212,Lawn aerator,Garden,Riverside,B-0233,2025-09-17,2025-09-24,2025-09-23,RETURNED,0.00,\nL-2213,Karaoke machine,AV,Millbrook,B-0440,2025-09-18,2025-09-21,2025-09-21,RETURNED,0.00,Microphone 2 crackles\nL-2214,Stand mixer,Kitchen,Eastgate,B-0999,2025-09-19,2025-10-03,2025-10-02,RETURNED,0.00,\nL-2215,Tile cutter,Tools,Millbrook,B-0119,2025-09-22,2025-09-29,2025-09-29,RETURNED,0.00,\nL-2216,Pasta machine,Kitchen,Riverside,B-0310,2025-09-23,2025-10-07,2025-10-06,RETURNED,0.00,\nL-2217,Leaf blower,Garden,Eastgate,B-0561,2025-09-24,2025-10-01,2025-10-01,RETURNED,0.00,\nL-2218,Telescope,Hobby,Millbrook,B-0823,2025-09-25,2025-10-09,2025-10-14,RETURNED,2.50,Finder scope cap missing\nL-2219,Circular saw,Tools,Eastgate,B-0688,2025-09-26,2025-10-03,2025-10-03,RETURNED,0.00,Blade guard checked on return\nL-2220,Folding tables x4,Events,Riverside,B-0905,2025-09-29,2025-10-02,2025-10-02,RETURNED,0.00,\nL-2221,Dehumidifier,Home,Eastgate,B-0277,2025-09-30,2025-10-14,2025-10-14,RETURNED,0.00,\nL-2222,Pressure washer,Garden,Millbrook,B-0561,2025-10-01,2025-10-08,2025-10-08,RETURNED,0.00,\nL-2223,Ukulele,Music,Eastgate,B-0150,2025-10-02,2025-10-16,2025-10-16,RETURNED,0.00,\nL-2224,Sander (orbital),Tools,Riverside,B-0233,2025-10-03,2025-10-10,2025-10-09,RETURNED,0.00,\nL-2225,Slow cooker,Kitchen,Millbrook,B-0348,2025-10-06,2025-10-20,2025-10-20,RETURNED,0.00,\nL-2226,Sewing machine,Crafts,Eastgate,B-0614,2025-10-07,2025-10-21,2025-10-21,RETURNED,0.00,Bobbin case replaced before loan\nL-2227,Gazebo 3x3m,Outdoor,Eastgate,B-0720,2025-10-08,2025-10-15,2025-10-15,RETURNED,0.00,\nL-2228,Board games bundle,Games,Riverside,B-0310,2025-10-09,2025-10-23,2025-10-22,RETURNED,0.00,\nL-2229,Ladder (3-section),Tools,Millbrook,B-0772,2025-10-10,2025-10-17,2025-10-17,RETURNED,0.00,\nL-2230,Food dehydrator,Kitchen,Eastgate,B-0999,2025-10-13,2025-10-27,2025-10-27,RETURNED,0.00,\nL-2231,Projector + screen,AV,Eastgate,B-0440,2025-10-14,2025-10-17,2025-10-17,RETURNED,0.00,\nL-2232,Strimmer,Garden,Millbrook,B-0119,2025-10-15,2025-10-22,,OVERDUE,5.00,Two reminder emails sent; no reply; fee at cap\nL-2233,Wet vac,Home,Riverside,B-0277,2025-10-16,2025-10-23,2025-10-23,RETURNED,0.00,\nL-2234,Router (wood),Tools,Eastgate,B-0412,2025-10-17,2025-10-24,2025-10-24,RETURNED,0.00,Bits counted in and out - all 12 present\nL-2235,Tent (4-person),Outdoor,Millbrook,B-0688,2025-10-20,2025-10-27,2025-10-27,RETURNED,0.00,\nL-2236,Ice cream maker,Kitchen,Eastgate,B-0614,2025-10-21,2025-11-04,,OVERDUE,4.00,Borrower phoned - away until 14 Nov\nL-2237,Paint sprayer,Tools,Millbrook,B-0823,2025-10-22,2025-10-29,2025-10-31,RETURNED,1.00,\nL-2238,Kids' bike trailer,Outdoor,Riverside,B-0905,2025-10-23,2025-11-06,2025-11-05,RETURNED,0.00,\nL-2239,Telescope,Hobby,Eastgate,B-0150,2025-10-24,2025-11-07,,OVERDUE,2.50,\nL-2240,Hedge trimmer,Garden,Eastgate,B-0277,2025-10-27,2025-11-03,2025-11-03,RETURNED,0.00,\nL-2241,Sewing machine,Crafts,Millbrook,B-0348,2025-10-28,2025-11-11,2025-11-10,RETURNED,0.00,\nL-2242,Laminator,Office,Riverside,B-0310,2025-10-29,2025-11-05,,OVERDUE,3.50,Borrower says it jammed - bringing in for checking\nL-2243,Stand mixer,Kitchen,Eastgate,B-0720,2025-10-30,2025-11-13,,OUT,0.00,\nL-2244,Karaoke machine,AV,Millbrook,B-0440,2025-10-31,2025-11-03,2025-11-03,RETURNED,0.00,Halloween party - mic 2 still crackles; replace before December\nL-2245,Cordless drill (Makita 18V),Tools,Eastgate,B-0999,2025-11-01,2025-11-08,,OVERDUE,2.00,\nL-2246,Leaf blower,Garden,Millbrook,B-0561,2025-11-03,2025-11-10,2025-11-10,RETURNED,0.00,\nL-2247,Board games bundle,Games,Eastgate,B-0877,2025-11-03,2025-11-17,,OUT,0.00,\nL-2248,Dehumidifier,Home,Millbrook,B-0614,2025-11-04,2025-11-18,,OUT,0.00,\nL-2249,Pasta machine,Kitchen,Eastgate,B-0233,2025-11-04,2025-11-18,,OUT,0.00,\nL-2250,Gazebo 3x3m,Outdoor,Riverside,B-0720,2025-11-05,2025-11-08,,OVERDUE,2.00,Rain cancelled the event - borrower asked for an extension; not yet approved\nL-2251,Jigsaw,Tools,Millbrook,B-0412,2025-11-05,2025-11-12,,OUT,0.00,Due today\nL-2252,Ukulele,Music,Eastgate,B-0688,2025-11-06,2025-11-20,,OUT,0.00,\nL-2253,Bread maker,Kitchen,Millbrook,B-0277,2025-11-06,2025-11-20,,OUT,0.00,\nL-2254,Tile cutter,Tools,Eastgate,B-0823,2025-11-07,2025-11-14,,OUT,0.00,\nL-2255,Folding tables x4,Events,Millbrook,B-0905,2025-11-07,2025-11-10,2025-11-10,RETURNED,0.00,\nL-2256,Wallpaper steamer,Tools,Riverside,B-0772,2025-11-07,2025-11-14,,OUT,0.00,\nL-2257,Projector + screen,AV,Eastgate,B-0150,2025-11-08,2025-11-11,2025-11-11,RETURNED,0.00,\nL-2258,Carpet cleaner (Vax),Home,Riverside,B-0348,2025-11-08,2025-11-21,,OUT,0.00,Shampoo sachets x3 included\nL-2259,Sewing machine,Crafts,Millbrook,B-0119,2025-11-10,2025-11-24,,OUT,0.00,Borrower still has the strimmer from L-2232 - loan allowed by manager (Jen) as a one-off\nL-2260,Camping stove,Outdoor,Eastgate,B-0440,2025-11-11,2025-11-18,,OUT,0.00,Gas canister not included - borrower to buy own\n# 60 rows · filters: out_date between 2025-09-01 and 2025-11-12 · all branches\n# Totals by status are not shown in this export; use the dashboard for live counts.",
+      "questions": [
+        {
+          "id": "tool-library-loans-csv-q1",
+          "question": "How many loans are overdue right now?",
+          "answerPosition": "spread",
+          "needs": "count",
+          "mustContainAny": [
+            "6",
+            "six"
+          ],
+          "mustNotContain": [
+            "seven overdue",
+            "7 overdue",
+            "five overdue",
+            "5 overdue"
+          ]
+        },
+        {
+          "id": "tool-library-loans-csv-q2",
+          "question": "When does the carpet cleaner need to come back?",
+          "answerPosition": "end",
+          "needs": "lookup",
+          "mustContainAny": [
+            "2025-11-21",
+            "21 nov",
+            "nov 21",
+            "21st",
+            "november 21",
+            "21 november"
+          ],
+          "mustNotContain": [
+            "2025-11-08"
+          ]
+        },
+        {
+          "id": "tool-library-loans-csv-q3",
+          "question": "The strimmer is about three weeks late, so why is the borrower only being charged £5?",
+          "answerPosition": "middle",
+          "needs": "synthesis",
+          "mustContainAny": [
+            "cap",
+            "capped",
+            "maximum",
+            "max",
+            "limit"
+          ],
+          "mustNotContain": [
+            "waived",
+            "discount"
+          ]
+        }
+      ],
+      "injection": null
+    }
+  ]
+}

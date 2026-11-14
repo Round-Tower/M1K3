@@ -43,6 +43,8 @@
 //  MLXBrainProvider+VerifyCostProbe); no other change. Confidence 0.8.
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — emits `KokoroLaunchChecks.guardedRead()` (a forced MLX error must
 //  throw, not trap); no other change. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — dispatches the read eval (M1K3_SELFTEST_READEVAL=1, ReadEvalStage.swift):
+//  the blind read set on stdin through an MLX brain's TextReading seam.
 
 import Foundation
 import M1K3Chat
@@ -545,6 +547,12 @@ enum SelfTest {
         //     same tokens. See EnergyProbeStage.swift.
         if EnergyProbeStage.isRequested {
             await EnergyProbeStage.run(emit: emit)
+        }
+
+        // 8i. Optional read eval (M1K3_SELFTEST_READEVAL=1): the blind read set on STDIN through
+        //     an MLX brain's `TextReading` seam, rows on stdout. See ReadEvalStage.swift.
+        if ReadEvalStage.isRequested {
+            await ReadEvalStage.run(emit: emit)
         }
 
         emit("=== END SELF-TEST ===")

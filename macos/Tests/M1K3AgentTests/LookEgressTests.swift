@@ -9,6 +9,7 @@
 //
 //  Signed: Kev + claude-fable-5.2, 2026-11-09, Confidence 0.85, Prior: none (new file)
 //  Context: the twin, for Brain at Home, is in M1K3BrainLinkTests.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — the read's twin: a paste stays on the device too.
 //
 
 import Foundation
@@ -50,6 +51,24 @@ struct LookEgressTests {
             thrown = error
         }
         #expect(thrown as? InferenceError == ImageLookingError.cannotLook)
+        #expect(cloud.asked.count == 0)
+    }
+
+    @Test("Private Cloud cannot read a paste: a read through the façade fails on the device")
+    func readThroughTheFacadeNeverReachesTheCloud() async {
+        #expect(!((PrivateCloudInferenceAdapter.self as Any.Type) is any TextReading.Type))
+        let cloud = CountingCloud()
+        let facade = SwappableInferenceProvider(PrivateCloudInferenceAdapter(backend: cloud, instructions: { "persona" }))
+        #expect(facade.readContextTokens == 0)
+        var thrown: (any Error)?
+        do {
+            for try await _ in facade.read(instructions: ReadPrompt.instructions, prompt: "a pasted text") {
+                Issue.record("the cloud must not read")
+            }
+        } catch {
+            thrown = error
+        }
+        #expect(thrown as? InferenceError == TextReadingError.cannotRead)
         #expect(cloud.asked.count == 0)
     }
 }

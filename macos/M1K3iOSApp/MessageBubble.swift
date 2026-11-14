@@ -40,6 +40,7 @@
 //  (Kev's phone). Pinned by PhoneAnswerActionsTests. Confidence 0.75 (verify on the phone).
 //  Review: Kev + claude-fable-5.2, 2026-11-10 — the working line ("Thinking…") wears the pixel face at its 12 pt floor
 //  (Kev: "use the pixelated font a bit more in… the thinking and loading sort of stuff"). Confidence 0.6 until seen.
+//  Review: Kev + claude-opus-5.5, 2026-11-14 — `onKeep`: a read's answer offers "Keep this" (files its text in Documents).
 
 import M1K3AnswerBlocks
 import M1K3Chat
@@ -59,12 +60,15 @@ struct MessageBubble: View {
     /// transcript can't hold a sheet through the keyboard (Kev, 11-02).
     var onNeedsWork: () -> Void = {}
     var onSpeak: (String) -> Void = { _ in }
+    /// "Keep this": file the text this read answered about in Documents. nil hides the button.
+    var onKeep: (() async -> Bool)?
     var onSendFollowUp: (String) -> Void = { _ in }
     /// A typed `m1k3-choices` card in this answer may send (#717): ChatScreen
     /// passes true only for the newest message while no turn is responding.
     var acceptsChoices = false
 
     @State private var didCopy = false
+    @State private var didKeep = false
 
     var body: some View {
         switch message.role {
@@ -142,6 +146,14 @@ struct MessageBubble: View {
                 .accessibilityLabel(didCopy ? "Copied" : "Copy this answer")
             ShareLink(item: message.text + ShareSignature.answerSuffix) { actionIcon("square.and.arrow.up") }
                 .accessibilityLabel("Share this answer")
+            if let onKeep {
+                Button {
+                    // The check shows only once the text is in Documents.
+                    Task { didKeep = await onKeep() }
+                } label: { actionIcon(didKeep ? "checkmark" : "tray.and.arrow.down") }
+                    .disabled(didKeep)
+                    .accessibilityLabel(didKeep ? "Kept in Documents" : "Keep this text in Documents")
+            }
             Divider().frame(height: 16).opacity(0.4)
             Button { onFeedback(.good, nil) } label: {
                 actionIcon(verdict == .good ? "hand.thumbsup.fill" : "hand.thumbsup")
