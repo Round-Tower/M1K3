@@ -55,6 +55,8 @@
 //  `PrivateCloudTurn.appleGuarantee` instead of our own claim. Confidence 0.8 (verify-by-device).
 //  Review: Kev + claude-opus-5-5, 2026-10-13 — the "Answer ratings" section (AnswerRatingsSection.swift):
 //  the rated count and an Export ratings (JSONL) share, for evaluating chat off the phone. Confidence 0.8.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
+//  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
 
 #if canImport(DeclaredAgeRange)
     @preconcurrency import DeclaredAgeRange
@@ -136,7 +138,7 @@ struct SettingsScreen: View {
                                 Text(tier.displayName).foregroundStyle(.primary)
                                 Text(tier.tagline)
                                     .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(.readableSecondary)
                             }
                             Spacer()
                             if core.selectedBrain == tier, !core.homeBrainActive, !core.privateCloudArming.isOn {
@@ -156,13 +158,13 @@ struct SettingsScreen: View {
                     privateCloudBrainRow
                 }
                 if let note = menu.note {
-                    Text(note).font(.caption).foregroundStyle(.secondary)
+                    Text(note).font(.caption).foregroundStyle(.readableSecondary)
                 }
                 if let note = core.brainNote {
                     Text(note).font(.caption).foregroundStyle(.orange)
                 }
                 if let hint = miniHint {
-                    Text(hint).font(.caption).foregroundStyle(.secondary)
+                    Text(hint).font(.caption).foregroundStyle(.readableSecondary)
                 }
             }
 
@@ -316,7 +318,7 @@ struct SettingsScreen: View {
                     Text("Home").foregroundStyle(.primary)
                     Text("\(brain.name)’s brain, over your Wi-Fi")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                 }
                 Spacer()
                 if core.homeBrainActive, !core.privateCloudArming.isOn {
@@ -343,7 +345,7 @@ struct SettingsScreen: View {
                     Text("Home").foregroundStyle(.primary)
                     Text("Your Mac’s brain, over your Wi‑Fi — pair to use it")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                 }
             }
         }
@@ -387,7 +389,7 @@ struct SettingsScreen: View {
                     Text(PrivateCloudRung.menuTitle(privateCloudRow)).foregroundStyle(.primary)
                     Text("Answers on Apple's servers — asks before your first message goes")
                         .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.readableSecondary)
                 }
                 Spacer()
                 if core.privateCloudArming.isOn {

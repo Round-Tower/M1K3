@@ -23,6 +23,10 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — findings name their element through
 //  `AccessibilityAuditReport.elementName` and say its kind. Built for the Simulator after the change; not re-
 //  run there.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — first run on a real iPhone. Two anchors were wrong (Memories shows
+//  no memory text on the phone; the privacy footer's words had changed), so both read NOT REACHED on the right
+//  screen. The suite now attaches a screenshot and the window's tree and heads the report with the window frame,
+//  like the Mac's.
 //
 
 import M1K3Screengrab
@@ -44,7 +48,8 @@ final class AccessibilityAuditiOSUITests: XCTestCase {
     }
 
     func testMemories() throws {
-        try audit(.memories, anchor: "roofline", timeout: 180)
+        // The phone opens Memories on its count and search field, not a list: no memory text is on screen.
+        try audit(.memories, anchor: "Recall a memory", timeout: 180)
     }
 
     func testSettingsBrainAtHome() throws {
@@ -52,7 +57,7 @@ final class AccessibilityAuditiOSUITests: XCTestCase {
     }
 
     func testSettingsPrivacy() throws {
-        try audit(.privacyLabel, anchor: "sends your conversation", timeout: 180)
+        try audit(.privacyLabel, anchor: "sends your query", timeout: 180)
     }
 
     func testVoice() throws {
@@ -77,10 +82,19 @@ final class AccessibilityAuditiOSUITests: XCTestCase {
         app.launch()
         XCTAssert(app.wait(for: .runningForeground, timeout: 60), "\(plate.rawValue): app never came foreground")
         let reached = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "label CONTAINS[c] %@ OR value CONTAINS[c] %@", anchor, anchor)).firstMatch
+            .matching(NSPredicate(
+                format: "label CONTAINS[c] %@ OR value CONTAINS[c] %@ OR placeholderValue CONTAINS[c] %@",
+                anchor, anchor, anchor
+            )).firstMatch
             .waitForExistence(timeout: timeout)
         XCTAssert(reached, "\(plate.rawValue): '\(anchor)' never appeared — the audit below is of the wrong screen")
         RunLoop.current.run(until: Date().addingTimeInterval(3))
+
+        // The window's own element tree (never the application's: keep the dump to the app).
+        let tree = XCTAttachment(string: app.windows.firstMatch.debugDescription)
+        tree.name = "a11y-tree-\(plate.rawValue)"
+        tree.lifetime = .keepAlways
+        add(tree)
 
         let collected = Collected()
         var incomplete = ""
@@ -100,8 +114,19 @@ final class AccessibilityAuditiOSUITests: XCTestCase {
             incomplete = "AUDIT DID NOT COMPLETE: \(error.localizedDescription) — the list below is partial, not a clean screen.\n"
         }
 
+        // What is on screen, for `a11y_contrast.py` and for anyone reading the report. Taken AFTER
+        // the audit: a list can sit some points differently once the audit has walked it, and the
+        // findings' frames are read during the walk (the first phone run measured blank card).
+        // The window, not the screen: the WINDOW frame below is what the picture must match (an
+        // iPad window is not the screen), and it keeps other apps out of the frame.
+        let picture = XCTAttachment(screenshot: app.windows.firstMatch.screenshot())
+        picture.name = "a11y-shot-\(plate.rawValue)"
+        picture.lifetime = .keepAlways
+        add(picture)
+
         let heading = reached ? "" : "NOT REACHED: '\(anchor)' never appeared, so this is another screen's audit.\n"
-        let report = heading + incomplete + AccessibilityAuditReport.render(collected.findings)
+        let window = "WINDOW \(app.windows.firstMatch.frame)\n"
+        let report = window + heading + incomplete + AccessibilityAuditReport.render(collected.findings)
         let attachment = XCTAttachment(string: report)
         attachment.name = "a11y-\(plate.rawValue)"
         attachment.lifetime = .keepAlways
@@ -111,11 +136,11 @@ final class AccessibilityAuditiOSUITests: XCTestCase {
         app.terminate()
     }
 
-    /// Xcode's wording plus what kind of element it is: a named element ("bolt.fill") is
-    /// otherwise impossible to place.
+    /// Xcode's wording plus what kind of element it is and where: a labelled element is otherwise
+    /// impossible to place, and `a11y_contrast.py` measures a contrast finding on that frame.
     private static func detail(of issue: XCUIAccessibilityAuditIssue) -> String {
         guard let element = issue.element, element.exists else { return issue.compactDescription }
-        return "\(issue.compactDescription) (\(name(of: element.elementType)))"
+        return "\(issue.compactDescription) (\(name(of: element.elementType)) at \(element.frame))"
     }
 
     private static func name(of element: XCUIElement?) -> String {

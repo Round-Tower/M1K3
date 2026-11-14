@@ -36,6 +36,9 @@
 //  not scaling 5). The supporting copy is plain white at a fixed opacity instead of the vibrancy styles, the column
 //  scrolls when it outgrows the screen (it could only compress), and the wordmark scales with text size. Measured by
 //  re-running the audit on a Simulator; the look is verify-on-device. Confidence 0.65.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
+//  (ReadableSecondary.swift), as on the Mac in #831. The cards' footnote is `.caption` (the phone audit flagged
+//  `.caption2` as not scaling). Not yet measured on the phone at the time of writing.
 
 import M1K3Avatar
 import M1K3Inference
@@ -280,13 +283,13 @@ struct OnboardingScreen: View {
                     .multilineTextAlignment(.leading)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(footnote)
-                    .font(.caption2)
+                    .font(.caption)
                     .foregroundStyle(Self.quietCopy)
                     .fixedSize(horizontal: false, vertical: true)
             }
             if !stacked {
                 Spacer(minLength: 0)
-                Image(systemName: "chevron.right").foregroundStyle(.secondary).accessibilityHidden(true)
+                Image(systemName: "chevron.right").foregroundStyle(.readableSecondary).accessibilityHidden(true)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

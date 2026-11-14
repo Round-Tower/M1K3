@@ -19,6 +19,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-05 — the done copy follows what actually happened (auto-activated / pair
 //  again on a Home-only device / choose Home). Confidence now 0.85.
 //  Review: Kev + claude-fable-5.1, 2026-09-09 — no viewfinder (no camera prompt) under the screengrab harness. Confidence now 0.85.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
+//  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
 //
 
 #if os(iOS)
@@ -96,7 +98,7 @@ struct BrainPairingScreen: View {
                     + "Then scan the code it shows."
             )
             .font(.callout)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.readableSecondary)
         }
         #if os(iOS)
             // Never under the screengrab harness: the TCC alert landed in the plate.
@@ -117,7 +119,7 @@ struct BrainPairingScreen: View {
                         HStack(spacing: 12) {
                             ProgressView()
                             Text("Camera permission…")
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.readableSecondary)
                         }
                         .task {
                             _ = await AVCaptureDevice.requestAccess(for: .video)

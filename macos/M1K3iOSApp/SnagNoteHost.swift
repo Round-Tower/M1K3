@@ -17,6 +17,8 @@
 //  through GlassCompat's m1k3Glass and the prominent buttons through snagProminent (visionOS has no glass
 //  styles); the captions are localized; "Not now" gets a 44 pt target and the buttons stack at large text.
 //  Confidence 0.75.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
+//  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
 //
 
 import M1K3Chat
@@ -56,7 +58,7 @@ private struct SnagNoteCard: View {
         Button("See the report", action: onSee)
             .snagProminent()
         Button("Not now", action: onDismiss)
-            .foregroundStyle(.secondary)
+            .foregroundStyle(.readableSecondary)
             .frame(minHeight: 44) // a full touch target for the quiet button
             .contentShape(Rectangle())
     }
@@ -120,7 +122,7 @@ struct SnagReportSheet: View {
                     if let caption {
                         Text(caption)
                             .font(.footnote)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.readableSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
 

@@ -12,6 +12,8 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-03 — cognitive-load cut: both footers down to the fact + the guarantee.
 //  Review: Kev + claude-fable-5.1, 2026-09-05 — the section appears only once paired; pairing lives on the Brain
 //  section's Home row (one entry point). Confidence now 0.85.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
+//  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
 //
 
 import M1K3BrainLink
@@ -70,7 +72,7 @@ struct BrainAtHomeSection: View {
         } else if checkedHealth {
             Label("Unreachable", systemImage: "circle.fill")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(.readableSecondary)
         } else {
             ProgressView().controlSize(.small)
         }

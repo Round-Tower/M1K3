@@ -20,6 +20,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — a "Sound effects" toggle (the Mac's key) for the iPhone's new earcons;
 //  it reaches the live player at once. Verify-on-device.
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — "Speak answers" (chat auto-speak, the Mac's key): off stops the voice at once.
+//  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
+//  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
 //
 
 import M1K3Inference
@@ -52,7 +54,7 @@ struct VoiceOutputSection: View {
                             Text(tier.displayName).foregroundStyle(.primary)
                             Text(tier.tagline)
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(.readableSecondary)
                         }
                         Spacer()
                         if core.selectedVoiceTier == tier {
@@ -67,7 +69,7 @@ struct VoiceOutputSection: View {
             if let note = AppCore.mlxSupport.voiceNote {
                 Text(note)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
             Button("Hear a sample") {
                 Task { await core.speakSample() }
@@ -98,7 +100,7 @@ struct VoiceOutputSection: View {
                 ProgressView(value: fraction)
                 Text(core.voiceLoad.label(modelName: "M1K3 Voice"))
                     .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.readableSecondary)
             }
         case .preparing:
             ProgressView()
