@@ -18,7 +18,7 @@
     },
     "keys": {
         "numbers": {
-            "heard": 3,
+            "heard": 4,
             "total": 18
         }
     },
@@ -29,8 +29,8 @@
                 "errors": 2,
                 "failures": [],
                 "name": "contractions",
-                "processingSeconds": 2.428572833,
-                "realTimeFactor": 0.13857762242510702,
+                "processingSeconds": 2.444471459,
+                "realTimeFactor": 0.13948481934379459,
                 "wordErrorRate": 0.05128205128205128,
                 "words": 39
             },
@@ -39,29 +39,29 @@
                 "errors": 10,
                 "failures": [],
                 "name": "numbers",
-                "processingSeconds": 4.576510249,
-                "realTimeFactor": 0.09504694182762201,
-                "wordErrorRate": 0.11764705882352941,
-                "words": 85
+                "processingSeconds": 4.526740581,
+                "realTimeFactor": 0.09401330386292835,
+                "wordErrorRate": 0.1,
+                "words": 100
             },
             {
                 "audioSeconds": 24.45,
                 "errors": 9,
                 "failures": [],
                 "name": "proper-nouns",
-                "processingSeconds": 2.6849108329999996,
-                "realTimeFactor": 0.10981230400817994,
+                "processingSeconds": 2.6395355410000003,
+                "realTimeFactor": 0.1079564638445808,
                 "wordErrorRate": 0.18,
                 "words": 50
             },
             {
                 "audioSeconds": 29.9,
-                "errors": 13,
+                "errors": 14,
                 "failures": [],
                 "name": "hard-words",
-                "processingSeconds": 3.140652331,
-                "realTimeFactor": 0.10503853949832777,
-                "wordErrorRate": 0.22413793103448276,
+                "processingSeconds": 3.1337911249999997,
+                "realTimeFactor": 0.1048090677257525,
+                "wordErrorRate": 0.2413793103448276,
                 "words": 58
             },
             {
@@ -69,8 +69,8 @@
                 "errors": 2,
                 "failures": [],
                 "name": "passage",
-                "processingSeconds": 15.922334458,
-                "realTimeFactor": 0.09009667255906069,
+                "processingSeconds": 15.901458375,
+                "realTimeFactor": 0.08997854505587778,
                 "wordErrorRate": 0.0025477707006369425,
                 "words": 785
             }
