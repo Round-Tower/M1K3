@@ -11,8 +11,8 @@
 //
 //  Upstream credit (MIT): ported from ml-explore/mlx-swift-lm PR #684 ("Add EmbeddingGemma 2 full
 //  support", merged 2026-10-12, in no tagged release yet — our pin is the 3.32.x tag line on purpose,
-//  see Package.swift), files `Libraries/MLXLMCommon/Models/Gemma4Encoders.swift` (the vision part: no
-//  audio), `Libraries/MLXLMCommon/Models/EmbeddingGemma2.swift` and `Libraries/MLXVLM/EmbeddingGemma2.swift`.
+//  see Package.swift), files `Libraries/MLXLMCommon/Models/Gemma4Encoders.swift` (the vision part: no  claims: skip (upstream paths)
+//  audio), `Libraries/MLXLMCommon/Models/EmbeddingGemma2.swift` and `Libraries/MLXVLM/EmbeddingGemma2.swift`.  claims: skip
 //  Copyright © 2026 Apple Inc. Differences: prefixed names (MLXVLM's own Gemma4 types stay untouched),
 //  the unused paths dropped (clipped linears and standardisation — EmbeddingGemma 2 ships neither, and the
 //  configuration refuses a checkpoint that does), and the 2-D position branch of the RoPE. Checked against

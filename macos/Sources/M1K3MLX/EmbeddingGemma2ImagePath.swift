@@ -9,7 +9,7 @@
 //  version (`image-v2`, which also covers the preprocessing), kept in its own fingerprint beside the text path's `prompt-v1`.
 //
 //  Upstream credit (MIT): the size arithmetic and the antialiased-bicubic weights follow
-//  ml-explore/mlx-swift-lm PR #684 (`Libraries/MLXVLM/EmbeddingGemma2.swift`, `Gemma4ProcessorConfiguration`;
+//  ml-explore/mlx-swift-lm PR #684 (`Libraries/MLXVLM/EmbeddingGemma2.swift`, `Gemma4ProcessorConfiguration`;  claims: skip
 //  Copyright © 2026 Apple Inc.), which in turn reproduce the checkpoint's `Gemma4ImageProcessor`
 //  (Pillow / torchvision resampling, a = -0.5). Differences: ImageIO instead of Core Image for decoding
 //  (no `CIContext`; the orientation transform and the sRGB conversion come from ImageIO), and the resample
