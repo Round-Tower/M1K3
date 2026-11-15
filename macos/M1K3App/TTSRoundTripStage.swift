@@ -16,6 +16,9 @@
 //      M1K3_SELFTEST_TTSRT_KINDS=numbers,passage  (optional; every class by default) \
 //      M1K3.app/Contents/MacOS/M1K3 | grep '^TTSRT'
 //
+//  M1K3_SELFTEST_TTSRT_EMIT_AUDIO=1 also streams each clip as `TTSRTWAV <id> <base64 wav>`
+//  (the container is closed to the host), for listening by ear off the Mac.
+//
 //  Rows: `TTSRT <id> <errors>/<words> <heard>`; the last line is `TTSRTREPORT <json>`
 //  (numbers only, committable). The clips and report stay in the container's tmp under
 //  `tts-roundtrip/`. Quit the live app first: two MLX processes crawl.
@@ -45,6 +48,7 @@ enum TTSRoundTripStage {
             Set($0.split(separator: ",").compactMap { TTSRoundTrip.Kind(rawValue: String($0)) })
         } ?? Set(TTSRoundTrip.Kind.allCases)
         let items = TTSRoundTrip.corpus.filter { kinds.contains($0.kind) }
+        let emitAudio = SelfTestEnv.value("M1K3_SELFTEST_TTSRT_EMIT_AUDIO") == "1"
         let downloadBase: URL
         do {
             downloadBase = try await MainActor.run { try AppEnvironment.storeURL() }.deletingLastPathComponent()
@@ -92,6 +96,12 @@ enum TTSRoundTripStage {
                 try PCMWave.data(samples: samples, sampleRate: Int(KokoroSynthesizer.sampleRate)).write(to: audio)
                 try item.spoken.write(to: folder.appendingPathComponent("\(item.clipName).txt"),
                                       atomically: true, encoding: .utf8)
+                // The container is closed to the host on macOS 27: M1K3_SELFTEST_TTSRT_EMIT_AUDIO=1
+                // streams each clip on stdout (one base64 line) for listening off the Mac.
+                if emitAudio {
+                    let wav = try Data(contentsOf: audio)
+                    emit("TTSRTWAV\t\(item.id)\t\(wav.base64EncodedString())")
+                }
                 let start = clock.now
                 let heard = try await transcriber.transcribe(fileURL: audio).map(\.text).joined(separator: " ")
                 let elapsed = clock.now - start
