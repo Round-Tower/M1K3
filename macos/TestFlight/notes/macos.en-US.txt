@@ -2,7 +2,7 @@ Thanks for testing M1K3 1.5.0 on the Mac.
 
 New in this build, please try:
 • Read a text: drop a .txt, .md, .csv or .log file on the chat and ask a question about it ("when does the warranty end?"). The answer should start in a few seconds and stick to the file. Send the file with no words and you should get the gist of the whole text
-• Ask more: under a read's answer, click Ask more. Every message you send then asks about the same text, until you click the ✕ or switch to another chat
+• Ask more: under a read's answer, click Ask more. Every message you send then asks about the same text, until you close the Ask more pill or switch to another chat
 • Keep this: under a read's answer, click Keep this. A banner should say it was kept in Documents, and searching your documents should find it. A read is never kept unless you click it. A very long file (a big log) should say it kept the first 100,000 characters
 • A link in a read's answer should show as plain code and do nothing when clicked, with no link chip beside it
 • These should stay ordinary chat turns, not reads: a .swift or other code file, "translate this" or "write a reply to this" with a file, and any file while Brain at Home or Private Cloud Compute is answering
