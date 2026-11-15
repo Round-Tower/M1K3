@@ -1,5 +1,5 @@
 {
-  "_about": "The App Store accessibility labels M1K3 claims, per device family, read by accessibility.py (#834). declare = the 1.5 TestFlight walk confirmed it; pending = evidence but no walk yet; no = not claimed. accessibility.py set --confirm refuses while anything chosen is pending. Flip a line only with the walk's result in its evidence.",
+  "_about": "The App Store accessibility labels M1K3 claims, per device family, read by accessibility.py (#834). declare = the 1.5 TestFlight walk confirmed it; pending = evidence but no walk yet; no = not claimed; n/a = App Store Connect refuses the label for that device family, so it is left out of the write. accessibility.py set --confirm refuses while anything chosen is pending. Flip a line only with the walk's result in its evidence.",
   "MAC": {
     "voiceover": {
       "status": "declare",
@@ -18,8 +18,8 @@
       "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: #831 measured light and dark: lowest 4.8:1 dark, 5.6:1 light. Owed: the walk's eye check."
     },
     "largerText": {
-      "status": "declare",
-      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: #820 added the reading size setting. Owed: the largest size on the chat, Memories and Settings."
+      "status": "n/a",
+      "evidence": "App Store Connect refuses it for the Mac (409, 2026-11-15: \"The 'supportsLargerText' attribute cannot be set for an 'accessibilityDeclarations' with the 'MAC' device family.\"). Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"); #820's reading size setting still ships, the label just doesn't exist on the Mac."
     },
     "reducedMotion": {
       "status": "declare",

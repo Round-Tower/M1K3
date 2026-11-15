@@ -6,7 +6,8 @@
 """App Store accessibility labels (Accessibility Nutrition Labels), per device family.
 
 The claims live in `accessibility_labels.json`, reviewed in git, each with its evidence.
-Only `declare` is sent as supported; `pending` and `no` go as not supported. `set` is a
+Only `declare` is sent as supported; `pending` and `no` go as not supported, and `n/a`
+(a feature ASC refuses for that device family, e.g. Larger Text on MAC) is left out. `set` is a
 dry run until `--confirm`, and `--confirm` refuses while a chosen family still has a
 `pending` claim (#834: declare only what the 1.5 TestFlight walk confirms) unless
 `--allow-pending "<why>"`. A write leaves a DRAFT; `--publish` publishes it.
@@ -22,6 +23,11 @@ true` publishes it (the previous PUBLISHED one becomes REPLACED). The read path 
 
 Signed: Kev + claude-opus-5.5, 2026-11-15, Confidence 0.75 (payloads pinned against the
 OpenAPI schema; no write has run yet). Prior: none (new file).
+Review: Kev + claude-opus-5.5, 2026-11-15 — the first --confirm (Kev: "Please run it pal")
+published IPHONE and IPAD and read them back; MAC drew a 409 (supportsLargerText cannot be
+set for MAC), so a fourth status, n/a, leaves an attribute out of the body. Confidence 0.85:
+the write path is proven on two families; MAC's other eight attributes are unproven until
+its write.
 Format: MurphySig v0.4 (https://murphysig.dev/spec)
 Context: Kev, 2026-11-15: "We'll also need to update the ASC to reflect the accessibility changes."
 """
@@ -40,7 +46,7 @@ from asc import APP_ID, bail, call, paginate
 SPEC = Path(__file__).resolve().parent / "accessibility_labels.json"
 TYPE = "accessibilityDeclarations"
 DEVICE_FAMILIES = ("IPHONE", "IPAD", "APPLE_TV", "APPLE_WATCH", "MAC", "VISION")
-STATUSES = ("declare", "pending", "no")
+STATUSES = ("declare", "pending", "no", "n/a")
 # spec key → API attribute, in App Store Connect's order.
 ATTRIBUTE = {
     "voiceover": "supportsVoiceover",
@@ -75,7 +81,9 @@ def load_spec(path: Path | None = None) -> dict[str, dict[str, dict[str, str]]]:
 
 
 def attributes(claims: dict[str, dict[str, str]]) -> dict[str, bool]:
-    return {ATTRIBUTE[f]: claims[f]["status"] == "declare" for f in FEATURES}
+    """Every applicable feature as supported or not. `n/a` is absent: ASC refuses the
+    attribute for that family even as false (409, supportsLargerText on MAC, 2026-11-15)."""
+    return {ATTRIBUTE[f]: claims[f]["status"] == "declare" for f in FEATURES if claims[f]["status"] != "n/a"}
 
 
 def create_body(family: str, attrs: dict[str, bool]) -> dict[str, Any]:
@@ -99,9 +107,10 @@ class Step:
     pending: list[str] = field(default_factory=list)
 
 
-def _live_attrs(item: dict[str, Any]) -> dict[str, bool]:
+def _live_attrs(item: dict[str, Any], keys: dict[str, bool]) -> dict[str, bool]:
+    """The live declaration over the same attributes the spec sends (n/a ones dropped)."""
     a = item["attributes"]
-    return {ATTRIBUTE[f]: bool(a.get(ATTRIBUTE[f])) for f in FEATURES}
+    return {k: bool(a.get(k)) for k in keys}
 
 
 def plan(spec: dict[str, dict[str, dict[str, str]]], live: list[dict[str, Any]], families: list[str]) -> list[Step]:
@@ -117,7 +126,7 @@ def plan(spec: dict[str, dict[str, dict[str, str]]], live: list[dict[str, Any]],
         published = next((d for d in mine if d["attributes"].get("state") == "PUBLISHED"), None)
         if draft is not None:
             steps.append(Step(family, "update", attrs, draft["id"], pending))
-        elif published is not None and _live_attrs(published) == attrs:
+        elif published is not None and _live_attrs(published, attrs) == attrs:
             steps.append(Step(family, "same", attrs, None, pending))
         else:
             steps.append(Step(family, "create", attrs, None, pending))
@@ -171,7 +180,7 @@ def show() -> int:
 
 
 def describe(step: Step) -> str:
-    yes = [f for f in FEATURES if step.attrs[ATTRIBUTE[f]]]
+    yes = [f for f in FEATURES if step.attrs.get(ATTRIBUTE[f])]
     what = {"create": "create a draft", "update": f"edit draft {step.draft_id}",
             "same": "already published as the spec says; nothing to send"}[step.action]
     return f"{step.family}: {what}  declare: {', '.join(yes) or '(none)'}  pending: {', '.join(step.pending) or '(none)'}"
