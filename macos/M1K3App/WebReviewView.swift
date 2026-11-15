@@ -25,6 +25,9 @@
 //  Tailscale name worked before and must still); its start is judged once. A refusal superseded
 //  by a newer decision stays silent, and WebKit's policy-cancel failure (102) is ignored, so no
 //  note lands on the wrong page. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-15 — #839: the profile comes from `PrivateWebConfiguration.make()` (the
+//  one non-persistent configuration the iOS host shares; same store as before), and an optional `control` handle
+//  lets voice mode scroll / go back. Nothing else moved. Confidence 0.8 (verify-by-run).
 
 import M1K3Chat
 import M1K3Preview
@@ -38,6 +41,8 @@ struct WebReviewView: View {
     /// and text — what the model gets to know about "this page" (BrowserContext).
     /// Read from the live DOM, so JavaScript-rendered sites count too.
     var onPageLoaded: @MainActor (BrowserContext) -> Void = { _ in }
+    /// Voice mode's handle for spoken scroll / back (#839); nil for the review panel.
+    var control: WebReviewControl?
 
     @State private var webView = WebReviewView.makeWebView()
     @State private var isLoading = false
@@ -46,7 +51,7 @@ struct WebReviewView: View {
     var body: some View {
         WebViewContainer(
             webView: webView, url: url, isLoading: $isLoading, loadError: $loadError,
-            onPageLoaded: onPageLoaded
+            onPageLoaded: onPageLoaded, control: control
         )
         // A thin indeterminate hairline while loading — slicker than a spinner
         // button, and it takes no chrome height of its own.
@@ -65,9 +70,7 @@ struct WebReviewView: View {
 
     /// A private, non-persistent WebKit profile: no cookies/cache/history survive.
     private static func makeWebView() -> WKWebView {
-        let config = WKWebViewConfiguration()
-        config.websiteDataStore = .nonPersistent()
-        return WKWebView(frame: .zero, configuration: config)
+        WKWebView(frame: .zero, configuration: PrivateWebConfiguration.make())
     }
 
     private func errorOverlay(_ message: String) -> some View {
@@ -96,6 +99,7 @@ private struct WebViewContainer: NSViewRepresentable {
     @Binding var isLoading: Bool
     @Binding var loadError: String?
     let onPageLoaded: @MainActor (BrowserContext) -> Void
+    let control: WebReviewControl?
 
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
@@ -104,6 +108,7 @@ private struct WebViewContainer: NSViewRepresentable {
     func makeNSView(context: Context) -> WKWebView {
         webView.navigationDelegate = context.coordinator
         webView.uiDelegate = context.coordinator
+        control?.attach(webView)
         webView.load(URLRequest(url: url))
         return webView
     }

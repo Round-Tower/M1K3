@@ -54,8 +54,14 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: Kev + claude-opus-5.5, 2026-11-15 — #839: a page can slide in beside the avatar (wide window) or pop up
+//  over it (narrow), only after a tap on the source chip or a spoken "show me that". The avatar keeps the rest of
+//  the window and stays the tap / Space barge-in target; the chrome is inset with it. ESC closes the page first, then
+//  leaves voice mode. The slide sits out under Reduce Motion (a fade instead). Confidence 0.6 (verify-by-launch).
 
 import M1K3Avatar
+import M1K3Chat
+import M1K3Preview
 import M1K3Voice
 import SwiftUI
 
@@ -66,6 +72,27 @@ struct VoiceModeView: View {
     /// it's mounted as a full-window overlay over the chat, so `.focusable()`
     /// alone doesn't route key presses here until something grants focus.
     @FocusState private var focused: Bool
+    /// The window's width, for beside-or-pop-up (#839).
+    @State private var viewWidth: CGFloat = 0
+
+    private static let sideBySideMinWidth: CGFloat = 900
+
+    private var pageOpen: Bool {
+        env.voicePage.isOpen
+    }
+
+    private var sideBySide: Bool {
+        viewWidth >= Self.sideBySideMinWidth
+    }
+
+    private var panelWidth: CGFloat {
+        min(560, viewWidth * 0.45)
+    }
+
+    /// The width the page takes from the avatar's side when it sits beside it.
+    private var reservedTrailing: CGFloat {
+        pageOpen && sideBySide ? panelWidth + 32 : 0
+    }
 
     var body: some View {
         ZStack {
@@ -87,6 +114,7 @@ struct VoiceModeView: View {
             // `.fit` is diagnosed for wide views (issue filed with this PR).
             AvatarSurface(env: env)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.trailing, reservedTrailing)
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
                 .onTapGesture(perform: primaryAction)
@@ -105,6 +133,7 @@ struct VoiceModeView: View {
                 VStack(spacing: 12) {
                     stateContent
                         .frame(maxWidth: .infinity)
+                    sourceChip
                     controlBar
                         .padding(.horizontal, 18)
                         .padding(.vertical, 10)
@@ -115,7 +144,15 @@ struct VoiceModeView: View {
                 .padding(.bottom, 24)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.trailing, reservedTrailing)
+
+            // The quoted page (#839): beside the avatar on a wide window, a pop-up on a narrow one.
+            if let pageURL = env.voicePage.url {
+                pagePanel(pageURL)
+            }
         }
+        .animation(reduceMotion ? nil : .spring(response: 0.38, dampingFraction: 0.86), value: pageOpen)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { viewWidth = $0 }
         .focusable()
         .focused($focused)
         .onAppear { focused = true } // grab first-responder so Space/Esc fire
@@ -123,7 +160,12 @@ struct VoiceModeView: View {
             primaryAction()
             return .handled
         }
-        .onExitCommand { env.exitVoiceMode() }
+        // ESC closes the page first, then voice mode (#839).
+        .onExitCommand {
+            if pageOpen { env.closeVoicePage() } else { env.exitVoiceMode() }
+        }
+        // The page took a click or a spoken open; keep Space / Esc on the hero.
+        .onChange(of: pageOpen) { focused = true }
         .onChange(of: env.voiceLoop?.state) { _, newState in
             syncAvatar(with: newState)
         }
@@ -137,6 +179,63 @@ struct VoiceModeView: View {
                 retireSpokenBubble(oldText)
             }
             if newText == nil { spokenBubbles.removeAll() }
+        }
+    }
+
+    // MARK: - The quoted page (#839)
+
+    @ViewBuilder
+    private func pagePanel(_ url: URL) -> some View {
+        let panel = VoicePagePanel(url: url)
+        if sideBySide {
+            panel
+                .frame(width: panelWidth)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                .padding(16)
+                .transition(reduceMotion ? .opacity : .move(edge: .trailing).combined(with: .opacity))
+        } else {
+            panel
+                .frame(maxWidth: 640, maxHeight: .infinity)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, 20)
+                .padding(.vertical, 48)
+                .shadow(radius: 18)
+                .transition(reduceMotion ? .opacity : .scale(scale: 0.96).combined(with: .opacity))
+        }
+    }
+
+    /// A chip for the page the last answer cited, only while M1K3 is talking or waiting, and not
+    /// while that page is already up. A tap is the person's request; nothing opens by itself.
+    @ViewBuilder
+    private var sourceChip: some View {
+        if !pageOpen, showsSourceChip, let source = env.lastCitedSource, let host = source.url.host {
+            VoiceSourceChip(source: CitedSourceLabel(host: host)) {
+                Task { await env.openVoicePage(source, origin: .linkChipTap) }
+            }
+            .transition(.opacity)
+        } else if let refusal = env.voicePage.refusal {
+            Text(refusalNote(refusal))
+                .font(.caption)
+                .foregroundStyle(.primary)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .glassEffect(.regular, in: .capsule)
+        }
+    }
+
+    private var showsSourceChip: Bool {
+        switch env.voiceLoop?.state {
+        case .speaking, .idle: true
+        default: false
+        }
+    }
+
+    private func refusalNote(_ refusal: VoicePageRefusal) -> String {
+        switch refusal {
+        case .privateAddress:
+            String(localized: "M1K3 won't open a page on this Mac or a private network.")
+        case .notWebPage, .notAskedFor:
+            String(localized: "That isn't a web page M1K3 can open.")
         }
     }
 
