@@ -55,6 +55,9 @@
 # Review: Kev + claude-fable-5.2, 2026-11-11 — MARKETING_VERSION 1.3.0 → 1.4.0 (chore(release): v1.4.0), Kev's call ("cut
 # the next release to TestFlight"): 1.3.0 is live on both stores (train closed); new surfaces since (the camera look on
 # iPhone #793/#794, the Local API on the Mac #801), so MINOR (VERSIONING.md). Confidence 0.85.
+# Review: Kev + claude-opus-5.5, 2026-11-15 — MARKETING_VERSION 1.4.0 → 1.5.0 (chore(release): v1.5.0), Kev's call ("Let's
+# get everything to TestFlight under build 1.5"): 1.4.0 is live on both stores since 11-13 (train closed); new surfaces since
+# (the read, Mac + iOS #833; the accessibility audit and fixes #829/#831/#832), so MINOR (VERSIONING.md). Confidence 0.85.
 
 name: M1K3
 
@@ -70,7 +73,7 @@ settings:
     # Versioning scheme: see /VERSIONING.md. This is the single source of truth
     # for the user-facing version on every Apple surface (TestFlight, MAS, the
     # nightly DMG's name). Build numbers are Xcode Cloud's (auto-managed).
-    MARKETING_VERSION: "1.4.0"
+    MARKETING_VERSION: "1.5.0"
     CURRENT_PROJECT_VERSION: "1"
     # Apple Silicon only (2026-09-15). Every brain needs it — MLX (Lil, Big, pocket)
     # and Apple Intelligence (Mini) are both arm64-only — yet the Mac archive was

@@ -1,22 +1,22 @@
-Thanks for testing M1K3 1.4.0 on iPhone and iPad.
+Thanks for testing M1K3 1.5.0 on iPhone and iPad.
 
 New in this build, please try:
-• The eye at the top of a chat opens the camera. Point it at a label, a sign or a screen, type a question and send. The answer should be about what you see, and come from your device: try it in Airplane Mode
-• Ask again: after a look, tap "Ask about this photo" to ask a second question about the same picture
-• Search: after a look, tap "Search the web". A search should appear in the message field and go nowhere until you send it
-• Voice mode with the eye open: every question should be about what is in front of you. Ask something that has nothing to do with the view ("what's seven times eight?") and I should just answer it
-• Voice mode with the eye closed: ask "what am I looking at?" and I should take one look and close the camera. Settings has a switch, "Open the camera when I ask aloud": turn it off and the same question should open nothing
-• The green camera dot should go out when you leave the Look screen, leave voice mode or put the app in the background. Tell us about any time it stays on
-• A long look: keep the eye open in voice mode for about ten minutes. Tell us if the phone gets hot, and how much battery it took
-• Delete a chat that has a look in it: the picture should go with it
-• The title on the chat screen names who is answering, like "LIL M1K3"
-• Ask Mini an ordinary coding question ("write a function that reverses a string"): the answer should be code, with no line about not sharing its wiring
-• While M1K3 is speaking a long answer, lock the phone or switch to another app, then come back. Do it a few times. It should never crash, and it should speak again when you return. An earlier build could crash here
-• With Lil answering a long question, switch to another app for a few seconds and come back. The app should still be there, the answer should read Stopped where you left it, and the next message should answer. An earlier build closed itself here
+• Read a text: attach a .txt, .md, .csv or .log file from Files and ask a question about it ("when does the warranty end?"). The answer should stick to the file and come from your device: try it in Airplane Mode. Send the file with no words and you should get the gist of the whole text
+• How long a long file takes before the first words appear, with Lil and with Mini. Tell us the seconds; we have not timed it on a phone yet
+• Ask more: under a read's answer, tap Ask more. Every message then asks about the same text, until you tap the ✕ or switch to another chat
+• Keep this: under a read's answer, tap Keep this. A banner should say it was kept in Documents. A read is never kept unless you tap it
+• A link in a read's answer should show as plain code and do nothing when tapped
+• These should stay ordinary chat turns, not reads: a code file, "translate this" with a file, and any file while Brain at Home is answering
+• Stop a read while it is answering: it should say "Stopped before an answer.", and Keep this should still work
+• Listen for "I'm", "I'll", "I've" and "I'd" in spoken answers. They should sound right now. So should names such as Abuja, Alzheimer's and iOS
+• Accessibility: with VoiceOver on, ask a question, read the answer, and open Memories, Documents and Settings. In Documents, each row should read its title then its date, and swipe to delete should still work
+• With Voice Control on, say "Show names": the names should match what you see
+• Try the largest text sizes (Settings > Accessibility > Display & Text Size > Larger Text): tell us about anything cut off or overlapping. Dates and small print are a size larger than before; on a small phone, tell us if anything no longer fits
+• Try light and dark appearance and Reduce Motion (the avatar and voice mode). Tell us about anything hard to read or that moves when it shouldn't
 
 And the basics:
 • Voice mode, a few turns in a row
 • Airplane mode: chat should keep working on the device
 • Brain at Home with M1K3 on your Mac
 
-The camera picture is read on your device and sent nowhere. The network is used for brain downloads and web search, which is on by default. Send feedback straight from TestFlight; a screenshot of anything odd helps most.
+A read happens on your device: the file goes nowhere else, and it is stored with that chat, so deleting the chat deletes it. The network is used for brain downloads and web search, which is on by default. Send feedback straight from TestFlight; a screenshot of anything odd helps most.
