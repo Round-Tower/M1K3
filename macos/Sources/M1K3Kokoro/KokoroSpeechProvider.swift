@@ -76,6 +76,8 @@
 //  how a paced line sounds is verify-by-launch).
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — a cancelled utterance that spoke nothing no longer falls back to the
 //  system voice (speech stopped for the background must stay stopped). Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-11-15 (#838) — `defaultModelDirectory()` is public so the round-trip
+//  self-test (TTSRoundTripStage) synthesises from the folder the app stages; no behaviour change. Confidence 0.9.
 
 import Foundation
 import M1K3Inference
@@ -442,7 +444,7 @@ public final class KokoroSpeechProvider: SpeechProviderWithWordTiming, SpeechPro
         return KokoroPinnedWeights.matches(size: size, sha256: digest, file: name)
     }
 
-    private static func defaultModelDirectory() -> URL {
+    public static func defaultModelDirectory() -> URL {
         let base = (try? FileManager.default.url(
             for: .applicationSupportDirectory,
             in: .userDomainMask,

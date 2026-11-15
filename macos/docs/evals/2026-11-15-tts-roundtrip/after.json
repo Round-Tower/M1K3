@@ -1,0 +1,97 @@
+{
+    "fallbacks": {
+        "contractions": {
+            "cased": 4,
+            "dictionary": 35
+        },
+        "hard-words": {
+            "dictionary": 51,
+            "letterToSound": 8
+        },
+        "numbers": {
+            "dictionary": 58,
+            "inflection": 2,
+            "number": 23,
+            "roman": 3
+        },
+        "passage": {
+            "dictionary": 775,
+            "inflection": 9,
+            "letterToSound": 1
+        },
+        "proper-nouns": {
+            "cased": 3,
+            "compound": 1,
+            "dictionary": 33,
+            "house": 5,
+            "inflection": 1,
+            "letterToSound": 6,
+            "silent": 1
+        }
+    },
+    "keys": {
+        "numbers": {
+            "heard": 18,
+            "total": 18
+        }
+    },
+    "speech": {
+        "arms": [
+            {
+                "audioSeconds": 17.525,
+                "errors": 2,
+                "failures": [],
+                "name": "contractions",
+                "processingSeconds": 2.438413916,
+                "realTimeFactor": 0.1391391678174037,
+                "wordErrorRate": 0.05128205128205128,
+                "words": 39
+            },
+            {
+                "audioSeconds": 50.574999999999996,
+                "errors": 3,
+                "failures": [],
+                "name": "numbers",
+                "processingSeconds": 4.6375589999999995,
+                "realTimeFactor": 0.09169666831438458,
+                "wordErrorRate": 0.03,
+                "words": 100
+            },
+            {
+                "audioSeconds": 24.45,
+                "errors": 9,
+                "failures": [],
+                "name": "proper-nouns",
+                "processingSeconds": 2.628371585,
+                "realTimeFactor": 0.10749986032719837,
+                "wordErrorRate": 0.18,
+                "words": 50
+            },
+            {
+                "audioSeconds": 29.9,
+                "errors": 15,
+                "failures": [],
+                "name": "hard-words",
+                "processingSeconds": 3.1351683749999997,
+                "realTimeFactor": 0.1048551295986622,
+                "wordErrorRate": 0.25862068965517243,
+                "words": 58
+            },
+            {
+                "audioSeconds": 176.725,
+                "errors": 2,
+                "failures": [],
+                "name": "passage",
+                "processingSeconds": 15.720825,
+                "realTimeFactor": 0.0889564294808318,
+                "wordErrorRate": 0.0025477707006369425,
+                "words": 785
+            }
+        ],
+        "clips": 39,
+        "date": "2026-11-15",
+        "locale": "en_GB"
+    },
+    "transcriber": "WhisperKit small.en",
+    "voice": "bm_daniel"
+}

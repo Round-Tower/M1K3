@@ -37,10 +37,11 @@ struct NumberSpellerTests {
         #expect(NumberSpeller.integerWords("1000001") == ["one", "million", "and", "one"])
     }
 
-    @Test("more than nine digits falls back to digit-by-digit")
+    @Test("more than twelve digits read digit by digit, grouped in threes with a pause (#838)")
     func hugeNumbersDigitByDigit() {
         #expect(NumberSpeller.integerWords("1234567890123") == [
-            "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "zero", "one", "two", "three",
+            "one", "two", "three", ",", "four", "five", "six", ",", "seven", "eight", "nine", ",",
+            "zero", "one", "two", ",", "three",
         ])
     }
 
@@ -107,6 +108,7 @@ struct NumberSpellerTests {
             "seventeen", "eighteen", "nineteen",
             "twenty", "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety",
             "hundred", "thousand", "million", "billion", "point", "and", "oh",
+            ",", // the pause between digit groups (#838), a punctuation token, not a word
         ]
         let samples = ["0", "7", "15", "42", "99", "100", "123", "205", "999", "1000",
                        "1984", "2007", "2026", "4500", "12000", "999999", "3000000",
