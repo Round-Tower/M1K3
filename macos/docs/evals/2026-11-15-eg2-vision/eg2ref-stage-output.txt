@@ -1,0 +1,104 @@
+=== M1K3 SELF-TEST (inside .app bundle) ===
+✓ store+ingest: 1 chunk, 1 embedding(s)
+• AFM available: true
+✓ AFM RAG answer: **The hydraulic seal on the conveyor failed under load** [Plant Notes §3.2 Seals].
+  grounded in 1 source(s)
+• loading the MLX embedder (EmbeddingGemma 2; downloads on first use)…
+✓ MLX embed (mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v1): dim=512 ‖v‖=1.000
+embedwarm: cold=4015ms warm=20ms delta=3994ms (delta = first-turn TTFT tax without the launch warm)
+• loading MLX generation model mlx-community/Llama-3.2-1B-Instruct-4bit…
+✓ MLX generate: A hydraulic seal (or gasket) is a device that seals two connected parts using high pressure fluids like oil or gas.
+✓ kokoro guarded read: an MLX error on a dispatch queue throws instead of trapping
+• eg2ref: mlx-community/embeddinggemma-2-8bit — reading the reference fixture from stdin…
+• eg2ref: 38 cases from mlx-community/embeddinggemma-2-8bit@7505ef2f
+eg2ref load: 3.9 s
+eg2ref q-pricing tokens ok (18) cos768 0.99993 cos512 0.99993 pipeline 0.99993
+eg2ref d-pricing tokens ok (34) cos768 0.99990 cos512 0.99990 pipeline 0.99990
+eg2ref q-retention tokens ok (17) cos768 0.99986 cos512 0.99986 pipeline 0.99986
+eg2ref d-retention tokens ok (25) cos768 0.99992 cos512 0.99992 pipeline 0.99992
+eg2ref q-seal tokens ok (15) cos768 0.99994 cos512 0.99994 pipeline 0.99994
+eg2ref d-seal tokens ok (23) cos768 0.99992 cos512 0.99992 pipeline 0.99992
+eg2ref d-offtopic tokens ok (25) cos768 0.99986 cos512 0.99987 pipeline 0.99987
+eg2ref q-code tokens ok (17) cos768 0.99994 cos512 0.99994 pipeline 0.99994
+eg2ref d-code tokens ok (46) cos768 0.99985 cos512 0.99985 pipeline 0.99985
+eg2ref q-ga tokens ok (27) cos768 0.99990 cos512 0.99990 pipeline 0.99990
+eg2ref d-de tokens ok (28) cos768 0.99990 cos512 0.99990 pipeline 0.99990
+eg2ref d-empty-ish tokens ok (9) cos768 0.99998 cos512 0.99998 pipeline 0.99998
+eg2ref d-long tokens ok (1396) cos768 0.99996 cos512 0.99996 pipeline 0.99996
+eg2ref q-long tokens ok (21) cos768 0.99995 cos512 0.99995 pipeline 0.99995
+eg2ref q-img-whiteboard tokens ok (14) cos768 0.99994 cos512 0.99994 pipeline 0.99994
+eg2ref d-img-whiteboard tokens ok (38) cos768 0.99993 cos512 0.99993 pipeline 0.99993
+eg2ref q-img-barchart tokens ok (16) cos768 0.99994 cos512 0.99994 pipeline 0.99994
+eg2ref d-img-barchart tokens ok (24) cos768 0.99993 cos512 0.99994 pipeline 0.99994
+eg2ref q-img-sunset tokens ok (13) cos768 0.99996 cos512 0.99997 pipeline 0.99997
+eg2ref d-img-sunset tokens ok (28) cos768 0.99993 cos512 0.99993 pipeline 0.99993
+eg2ref q-img-tree tokens ok (14) cos768 0.99995 cos512 0.99996 pipeline 0.99996
+eg2ref d-img-tree tokens ok (23) cos768 0.99995 cos512 0.99996 pipeline 0.99996
+eg2ref q-img-house tokens ok (17) cos768 0.99996 cos512 0.99996 pipeline 0.99996
+eg2ref d-img-house tokens ok (26) cos768 0.99995 cos512 0.99995 pipeline 0.99995
+eg2ref q-img-night tokens ok (15) cos768 0.99994 cos512 0.99995 pipeline 0.99995
+eg2ref d-img-night tokens ok (22) cos768 0.99993 cos512 0.99994 pipeline 0.99994
+eg2ref q-img-apple tokens ok (12) cos768 0.99997 cos512 0.99998 pipeline 0.99998
+eg2ref d-img-apple tokens ok (25) cos768 0.99995 cos512 0.99996 pipeline 0.99996
+eg2ref q-img-stopsign tokens ok (15) cos768 0.99995 cos512 0.99995 pipeline 0.99995
+eg2ref d-img-stopsign tokens ok (22) cos768 0.99992 cos512 0.99992 pipeline 0.99992
+eg2ref q-img-clock tokens ok (16) cos768 0.99992 cos512 0.99993 pipeline 0.99993
+eg2ref d-img-clock tokens ok (21) cos768 0.99991 cos512 0.99991 pipeline 0.99991
+eg2ref q-img-piechart tokens ok (13) cos768 0.99996 cos512 0.99996 pipeline 0.99996
+eg2ref d-img-piechart tokens ok (22) cos768 0.99993 cos512 0.99993 pipeline 0.99993
+eg2ref q-img-mountain tokens ok (11) cos768 0.99997 cos512 0.99997 pipeline 0.99997
+eg2ref d-img-mountain tokens ok (22) cos768 0.99992 cos512 0.99992 pipeline 0.99992
+eg2ref q-img-cat tokens ok (14) cos768 0.99996 cos512 0.99996 pipeline 0.99996
+eg2ref d-img-cat tokens ok (25) cos768 0.99994 cos512 0.99994 pipeline 0.99994
+eg2ref rank q-long→d-long 0.771 vs d-offtopic 0.611 ok
+eg2ref rank q-pricing→d-pricing 0.796 vs d-offtopic 0.574 ok
+eg2ref rank q-retention→d-retention 0.891 vs d-offtopic 0.575 ok
+eg2ref rank q-seal→d-seal 0.770 vs d-offtopic 0.603 ok
+eg2ref rank q-code→d-code 0.831 vs d-offtopic 0.521 ok
+eg2ref summary: tokens 14/14 · min cos768 0.99985 · min cos512 0.99985 · min pipeline 0.99985 · ranking ok · embed median 25 ms · process peak RSS 1749 MB (earlier stages included) · PASS
+eg2ref text digest: 15bfaaad809770ea
+• eg2ref images: 12 generated drawings; the vision tower loads on the first
+eg2ref image fingerprint: mlx/mlx-community/embeddinggemma-2-8bit/d768/mlx-swift-0.32/image-prompt-v1 (text: mlx/mlx-community/embeddinggemma-2-8bit/d768/mlx-swift-0.32/prompt-v1)
+eg2ref memory before any image: mlx MB: active=274 cache=0 peak=0 footprint=462 · footprint 462 MB
+eg2ref image whiteboard cos768 0.99996 cos512 0.99996 362 ms (cold: includes loading the vision tower)
+eg2ref memory after the first image: mlx MB: active=594 cache=0 peak=832 footprint=905 · footprint 905 MB
+eg2ref image barchart cos768 0.99997 cos512 0.99997 267 ms
+eg2ref image sunset cos768 0.99998 cos512 0.99998 275 ms
+eg2ref image tree cos768 0.99996 cos512 0.99996 268 ms
+eg2ref image house cos768 0.99998 cos512 0.99998 267 ms
+eg2ref image night cos768 0.99998 cos512 0.99998 268 ms
+eg2ref image apple cos768 0.99998 cos512 0.99998 257 ms
+eg2ref image stopsign cos768 0.99999 cos512 0.99999 267 ms
+eg2ref image clock cos768 0.99998 cos512 0.99998 254 ms
+eg2ref image piechart cos768 0.99996 cos512 0.99996 266 ms
+eg2ref image mountain cos768 0.99993 cos512 0.99993 269 ms
+eg2ref image cat cos768 0.99998 cos512 0.99998 269 ms
+eg2ref memory after all images: mlx MB: active=594 cache=0 peak=837 footprint=913 · footprint 913 MB
+eg2ref rank q-img-whiteboard→whiteboard 0.717 vs barchart 0.610 ok
+eg2ref rank q-img-barchart→barchart 0.770 vs piechart 0.607 ok
+eg2ref rank q-img-sunset→sunset 0.739 vs clock 0.574 ok
+eg2ref rank q-img-tree→tree 0.752 vs mountain 0.615 ok
+eg2ref rank q-img-house→house 0.768 vs apple 0.634 ok
+eg2ref rank q-img-night→night 0.750 vs sunset 0.596 ok
+eg2ref rank q-img-apple→apple 0.772 vs stopsign 0.647 ok
+eg2ref rank q-img-stopsign→stopsign 0.784 vs tree 0.616 ok
+eg2ref rank q-img-clock→clock 0.751 vs stopsign 0.574 ok
+eg2ref rank q-img-piechart→piechart 0.752 vs barchart 0.681 ok
+eg2ref rank q-img-mountain→mountain 0.709 vs night 0.573 ok
+eg2ref rank q-img-cat→cat 0.707 vs apple 0.611 ok
+eg2ref images top-1: 12/12 queries find their own picture among all 12 (reference: all)
+eg2ref floors [text query → its picture]    n=12 min 0.707 p10 0.709 median 0.752 mean 0.747 p90 0.772 max 0.784
+eg2ref floors [text query → other pictures]  n=132 min 0.514 p10 0.540 median 0.570 mean 0.574 p90 0.613 max 0.681
+eg2ref floors [caption doc → its picture]    n=12 min 0.752 p10 0.788 median 0.817 mean 0.810 p90 0.829 max 0.844
+eg2ref floors [caption doc → other pictures] n=132 min 0.551 p10 0.587 median 0.633 mean 0.634 p90 0.678 max 0.729
+eg2ref floors [text query → its caption]     n=12 min 0.794 p10 0.811 median 0.835 mean 0.831 p90 0.856 max 0.861  (text↔text, for scale)
+eg2ref floors [text query → other captions]  n=132 min 0.515 p10 0.573 median 0.616 mean 0.618 p90 0.671 max 0.730
+eg2ref floors [picture ↔ other picture]     n=66 min 0.663 p10 0.684 median 0.766 mean 0.764 p90 0.830 max 0.872
+eg2ref floors text→image: weakest match 0.707, strongest non-match 0.681, gap 0.027
+eg2ref crowding: 17 text queries with a relevant text doc, searched over 20 text docs + 12 image vectors: relevant doc pushed out of rank 1 by an image 0×, out of the top 3 0×, images above the relevant doc 0 total
+eg2ref crowding: tightest margin (relevant text doc − best image) 0.027
+eg2ref crowding: image vectors clearing the TEXT floors across 17 queries: memory 0.67 → 14, chunk 0.70 → 13 (each query has at most one picture that belongs)
+eg2ref unload: footprint 784 MB → 741 MB after dropping the vision tower; mlx MB: active=274 cache=0 peak=837 footprint=741 · footprint 741 MB
+eg2ref reload: one image after the drop took 351 ms; mlx MB: active=594 cache=0 peak=837 footprint=932 · footprint 932 MB
+eg2ref images summary: 12/12 · min cos768 0.99993 · min cos512 0.99993 · ranking ok · top-1 12/12 · cold 362 ms · warm median 268 ms · process peak RSS 1749 MB · PASS
+=== END SELF-TEST ===
