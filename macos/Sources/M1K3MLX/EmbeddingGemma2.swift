@@ -225,7 +225,7 @@ public actor EmbeddingGemma2Embedder {
         do {
             vision = try EmbeddingGemma2VisionConfiguration.decode(from: configData)
         } catch {
-            Logger(subsystem: "app.m1k3", category: "embedder")
+            Logger(subsystem: "app.m1k3", category: "mlx-load")
                 .notice("vision tower refused, images unsupported: \(String(describing: error), privacy: .public)")
         }
         return try await EmbeddingGemma2Embedder(
