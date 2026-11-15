@@ -1,20 +1,20 @@
-Thanks for testing M1K3 1.4.0 on the Mac.
+Thanks for testing M1K3 1.5.0 on the Mac.
 
 New in this build, please try:
-• Settings has a pane called Server (it was MCP Server). It holds the MCP server for coding agents and the new Local API, each with its own switch and key
-• Local API: switch it on, copy the API key, and point any tool that speaks the OpenAI API at http://127.0.0.1:4141/v1 with that key. The model is named after the brain you have loaded: mini-m1k3, lil-m1k3 or big-m1k3. From Terminal: curl -H "Authorization: Bearer KEY" http://127.0.0.1:4141/v1/models
-• You go first: start a long answer through the Local API, then send a chat message in M1K3. Your message should be answered and the API call should end. Tell us if either one hangs
-• Switch the Local API off: the same call should be refused. Press New Key: the old key should stop working
-• Tell us which tools you tried it with (an editor, a script, a chat app) and anything that did not connect. A long conversation is slow to start on every turn for now, because each call re-reads all of it
-• Private Cloud Compute for other apps (off by default, App Store and TestFlight builds, needs Private Cloud Compute on in Settings > Privacy). Settings > Server > Local API > "Also offer Private Cloud Compute": the model list gains cloud-m1k3, always last, and a call that names it is answered by Apple's Private Cloud Compute. Only that call's messages are sent. The pane counts the calls that have left. Switch it off, or switch Privacy's Private Cloud Compute off: the same call should be refused
-• Agents: Settings > Server > "Let agents ask Private Cloud Compute" adds the ask_private_cloud tool for a connected agent. Each call should show in the menu bar's agent activity. With the switch off the tool should say it is not allowed
-• Ask Mini an ordinary coding question ("write a function that reverses a string"): the answer should be code, with no line about not sharing its wiring
-• Your MCP setup should work as before. The hints now say Settings > Server
-• Quit M1K3, open it again with Lil or Big, and send a chat message the moment it is ready. The answer should start promptly and run at its usual speed. Before this build a first message sent that early crawled. Try the same with voice mode
+• Read a text: drop a .txt, .md, .csv or .log file on the chat and ask a question about it ("when does the warranty end?"). The answer should start in a few seconds and stick to the file. Send the file with no words and you should get the gist of the whole text
+• Ask more: under a read's answer, tap Ask more. Every message you send then asks about the same text, until you tap the ✕ or switch to another chat
+• Keep this: under a read's answer, tap Keep this. A banner should say it was kept in Documents, and searching your documents should find it. A read is never kept unless you tap it. A very long file (a big log) should say it kept the first 100,000 characters
+• A link in a read's answer should show as plain code and do nothing when clicked, with no link chip beside it
+• These should stay ordinary chat turns, not reads: a .swift or other code file, "translate this" or "write a reply to this" with a file, and any file while Brain at Home or Private Cloud Compute is answering
+• Stop a read while it is answering: it should say "Stopped before an answer.", and Keep this should still work
+• Listen for "I'm", "I'll", "I've" and "I'd" in spoken answers (voice mode, or Speak on an answer). They should sound right now. So should names such as Abuja, Alzheimer's and iOS
+• Accessibility: with VoiceOver on, ask a question, read the answer, and open Memories, Documents and Settings. Every button should say what it does. Tell us about anything VoiceOver reads as just "button"
+• With Voice Control on, say "Show names": the names should match what you see on the message field, the memory search, the sidebar and the toolbar
+• Try light and dark appearance, Reduce Motion (the avatar and voice mode) and the largest reading size. Tell us about anything hard to read or that moves when it shouldn't
 
 And the basics:
 • Chat, then voice mode, a few turns in a row
-• Drop a note or PDF onto the chat and ask about it
+• Drop a PDF onto the chat and ask about it
 • Brain at Home from your iPhone or iPad
 
-The Local API listens on this Mac only and is off until you switch it on. Nothing sent to it is kept in chat history or memory. A call to a brain on this Mac goes nowhere else; only the cloud-m1k3 model, which you switch on yourself, sends a call to Apple. The network is used for brain downloads and web search, which is on by default; the switch beside the brain switcher turns it off. Flag anything that looks like it left your Mac when it shouldn't have: Settings → "Report an issue…" attaches a privacy-scrubbed diagnostic.
+A read happens on this Mac: the file goes nowhere else, and it is stored with that chat, so deleting the chat deletes it. The network is used for brain downloads and web search, which is on by default; the switch beside the brain switcher turns it off. Flag anything that looks like it left your Mac when it shouldn't have: Settings → "Report an issue…" attaches a privacy-scrubbed diagnostic.
