@@ -90,12 +90,16 @@ def test_pending_claims_are_listed_and_gate_confirm() -> None:
     assert a11y.refusal(clean, allow_pending=None) is None
 
 
-def test_the_shipped_spec_cannot_be_confirmed_before_the_walk() -> None:
-    # #834: declare only what the 1.5 TestFlight walk confirms. Until someone flips the
-    # lines with the walk's evidence, --confirm refuses.
+def test_the_shipped_spec_declares_only_what_the_walk_confirmed() -> None:
+    # #834: declare only what the 1.5 TestFlight walk confirms. Kev walked build 553 on
+    # 2026-11-15; every declared claim names that walk, and nothing is left pending.
     spec = a11y.load_spec(HERE / "accessibility_labels.json")
     steps = a11y.plan(spec, [], list(spec))
-    assert a11y.refusal(steps, allow_pending=None) is not None
+    assert a11y.refusal(steps, allow_pending=None) is None
+    for family in spec.values():
+        for claim in family.values():
+            if claim["status"] == "declare":
+                assert "walked TestFlight build 553" in claim["evidence"]
 
 
 class FakeASC:
