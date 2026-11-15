@@ -62,18 +62,42 @@ public enum TTSRoundTrip {
         }
     }
 
-    /// The lower-error reading of the two: Whisper may write "£5" or "five pounds".
+    /// The fewer errors of the two readings (Whisper may write "£5" or "five pounds"),
+    /// over the SPOKEN reading's word count either way: a longer reference can't dilute.
     public static func score(_ item: Item, heard: String) -> WordErrorRate.Score {
-        let scores = item.references.map { WordErrorRate.score(reference: $0, hypothesis: heard) }
-        return scores.min { lhs, rhs in
-            Double(lhs.errors) / Double(max(lhs.words, 1)) < Double(rhs.errors) / Double(max(rhs.words, 1))
-        } ?? WordErrorRate.score(reference: item.spoken, hypothesis: heard)
+        let spoken = WordErrorRate.score(reference: item.spoken, hypothesis: heard)
+        let errors = item.references.map { WordErrorRate.score(reference: $0, hypothesis: heard).errors }.min()
+            ?? spoken.errors
+        return WordErrorRate.Score(errors: min(errors, spoken.words), words: spoken.words)
+    }
+
+    /// A clip that failed to synthesise or transcribe: every word wrong, so a failure
+    /// can never lower the rate.
+    public static func failedScore(_ item: Item) -> WordErrorRate.Score {
+        let words = WordErrorRate.score(reference: item.spoken, hypothesis: item.spoken).words
+        return WordErrorRate.Score(errors: words, words: words)
+    }
+
+    /// A Kokoro voice id ("bm_daniel"): what the report may carry from the environment.
+    public static func isVoiceID(_ text: String) -> Bool {
+        text.range(of: #"^[a-z]{2}_[a-z]+$"#, options: .regularExpression) != nil
     }
 
     /// How many of an item's keys Whisper heard in some acceptable form.
+    /// Each form matches as a whole word, a plural "s" allowed: "pound" is in "pounds",
+    /// never in "compound"; "euro" never in "Europe"; "23" never in "2023".
     public static func keysHeard(_ item: Item, heard: String) -> Int {
-        let lowered = heard.lowercased()
-        return item.keys.filter { forms in forms.contains { lowered.contains($0.lowercased()) } }.count
+        item.keys.filter { forms in forms.contains { containsWord($0, in: heard) } }.count
+    }
+
+    private static func containsWord(_ form: String, in text: String) -> Bool {
+        // A boundary only where the form itself starts or ends with a letter or digit:
+        // "£" is followed by its amount.
+        let wordy: (Character?) -> Bool = { $0?.isLetter == true || $0?.isNumber == true }
+        let before = wordy(form.first) ? #"(?<![\p{L}\p{N}])"# : ""
+        let after = wordy(form.last) ? #"s?(?![\p{L}\p{N}])"# : ""
+        let pattern = before + NSRegularExpression.escapedPattern(for: form) + after
+        return text.range(of: pattern, options: [.regularExpression, .caseInsensitive]) != nil
     }
 
     private static func items(_ kind: Kind, _ pairs: [(String, String?)]) -> [Item] {

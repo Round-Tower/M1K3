@@ -83,12 +83,18 @@ public enum SpokenNumbers {
 
     /// "£5" → five pounds; "€3.50" → three euros fifty; "$0.99" → ninety-nine cents.
     /// Exactly two decimals are a minor unit; any other decimal reads as a number.
-    public static func currency(symbol: Character, literal: String) -> Money? {
+    /// `scaled`: a scale word follows ("£1 million", "$2.50 billion"), so the amount reads
+    /// as a plain number and the unit is always plural: "one million pounds".
+    public static func currency(symbol: Character, literal: String, scaled: Bool = false) -> Money? {
         guard let unit = units[symbol] else { return nil }
         let cleaned = literal.replacingOccurrences(of: ",", with: "")
         let parts = cleaned.split(separator: ".", omittingEmptySubsequences: false)
         guard (1 ... 2).contains(parts.count),
               parts.allSatisfy({ !$0.isEmpty && $0.allSatisfy(\.isASCIIDigit) }) else { return nil }
+        if scaled {
+            guard let words = NumberSpeller.numberWords(cleaned, yearReading: false) else { return nil }
+            return Money(amount: words, unit: [unit.many], tail: [])
+        }
         if parts.count == 2, parts[1].count == 2, let major = UInt64(parts[0]), let minor = UInt64(parts[1]) {
             let minorWords = NumberSpeller.integerWords(Substring(String(minor)), yearReading: false)
             if major == 0 {
@@ -115,6 +121,21 @@ public enum SpokenNumbers {
     /// "10:30" → ten thirty; "10:05" → ten oh five; "10:00" → ten o'clock (a clock-sized
     /// hour only); "3:16" → three sixteen. One colon, digits both sides.
     public static func colon(_ text: String) -> [String]? {
+        var body = Substring(text)
+        var meridiem: [String] = []
+        switch body.suffix(2).lowercased() {
+        case "am": meridiem = ["aye", "em"]
+        case "pm": meridiem = ["pee", "em"]
+        default: break
+        }
+        if !meridiem.isEmpty { body = body.dropLast(2) }
+        guard let words = clock(body) else { return nil }
+        if meridiem.isEmpty { return words }
+        // "10:00am" is "ten a m", not "ten o'clock a m".
+        return (words.last == "o'clock" ? Array(words.dropLast()) : words) + meridiem
+    }
+
+    private static func clock(_ text: Substring) -> [String]? {
         let parts = text.split(separator: ":", omittingEmptySubsequences: false)
         guard parts.count == 2, parts.allSatisfy({ !$0.isEmpty && $0.allSatisfy(\.isASCIIDigit) }),
               let left = UInt64(parts[0]), let right = UInt64(parts[1]) else { return nil }
@@ -133,19 +154,25 @@ public enum SpokenNumbers {
         8: ("eighth", "eighths"), 9: ("ninth", "ninths"), 10: ("tenth", "tenths"),
     ]
 
-    /// "1/2" → a half; "3/4" → three quarters; "5/16" → five over sixteen; "24/7" →
-    /// twenty-four seven. One slash, digits both sides.
+    /// "1/2" → a half; "1/8" → an eighth; "3/4" → three quarters; "5/16" → five over
+    /// sixteen; "24/7" → twenty-four seven. A score or rating reads "out of": the top is at
+    /// least the bottom ("10/10"), the bottom is 5, 10 or 100 ("7/10", "4/5"), or the top
+    /// is a decimal ("4.5/5"). One slash, digits on the right.
     public static func fraction(_ text: String) -> [String]? {
         let parts = text.split(separator: "/", omittingEmptySubsequences: false)
-        guard parts.count == 2, parts.allSatisfy({ !$0.isEmpty && $0.allSatisfy(\.isASCIIDigit) }),
-              let top = UInt64(parts[0]), let bottom = UInt64(parts[1]) else { return nil }
-        let topWords = NumberSpeller.integerWords(parts[0], yearReading: false)
+        guard parts.count == 2, !parts[1].isEmpty, parts[1].allSatisfy(\.isASCIIDigit),
+              let bottom = UInt64(parts[1]),
+              let topWords = NumberSpeller.numberWords(String(parts[0]), yearReading: false) else { return nil }
         let bottomWords = NumberSpeller.integerWords(parts[1], yearReading: false)
+        guard let top = UInt64(parts[0]) else { return topWords + ["out", "of"] + bottomWords } // "4.5/5"
         if top == 24, bottom == 7 { return topWords + bottomWords }
-        if let name = denominators[bottom], top >= 1, top < 100 {
-            if top == 1 { return ["a", name.one] }
-            if let many = name.many { return topWords + [many] }
+        if top == 1, let name = denominators[bottom] {
+            return [name.one.first.map { "aeiou".contains($0) } == true ? "an" : "a", name.one]
         }
+        if bottom > 0, top >= bottom || [5, 10, 100].contains(bottom) {
+            return topWords + ["out", "of"] + bottomWords
+        }
+        if let name = denominators[bottom], top < 100, let many = name.many { return topWords + [many] }
         return topWords + ["over"] + bottomWords
     }
 
@@ -165,7 +192,8 @@ public enum SpokenNumbers {
         }
         let parts = body.split(separator: ".", omittingEmptySubsequences: false)
         guard !parts.isEmpty, parts.allSatisfy({ !$0.isEmpty && $0.allSatisfy(\.isASCIIDigit) }) else { return nil }
-        guard !prefix.isEmpty || parts.count >= 3 else { return nil }
+        // A bare triple needs short parts: "15.11.2026" is a date, "192.168.1.1" an address.
+        guard !prefix.isEmpty || (parts.count >= 3 && parts.allSatisfy { $0.count <= 2 }) else { return nil }
         var words = prefix
         for (index, part) in parts.enumerated() {
             if index > 0 { words.append("point") }
@@ -177,8 +205,10 @@ public enum SpokenNumbers {
     // MARK: - Roman numerals
 
     /// The value of a canonical uppercase Roman numeral (1…3999), else nil.
+    private static let romanDigits: [Character: Int] = ["I": 1, "V": 5, "X": 10, "L": 50, "C": 100, "D": 500, "M": 1000]
+
     public static func romanValue(_ text: String) -> Int? {
-        let values: [Character: Int] = ["I": 1, "V": 5, "X": 10, "L": 50, "C": 100, "D": 500, "M": 1000]
+        let values = romanDigits
         guard !text.isEmpty, text.allSatisfy({ values[$0] != nil }) else { return nil }
         let digits = text.map { values[$0]! }
         var total = 0
@@ -218,28 +248,36 @@ public enum SpokenNumbers {
         "urban", "boniface", "ramesses", "ramses", "napoleon", "constantine", "ivan", "gustav",
         "gustavus", "christian", "olaf", "harald", "haakon", "carl", "ludwig", "wilhelm", "otto",
         "francis", "ferdinand", "isabella", "juan", "alfonso", "pedro", "joseph", "leopold",
-        "rudolf", "malcolm", "david", "robert", "kenneth", "duncan", "harold", "stephen", "matilda",
+        "rudolf", "david", "robert", "kenneth", "duncan", "harold", "stephen", "matilda",
     ]
 
     /// A Roman numeral read only after a cue: a regnal name → "the eighth", a cardinal
     /// cue → "twenty-three", "Elements" → "book one". No cue, no reading: the pronoun
     /// "I", "CD", "Vitamin D" stay as written. A lone C, D, L or M is a label ("Appendix C").
     /// A lone "I" is the pronoun far more often ("the book I read", "Thanks John I will"),
-    /// so it needs a capitalised cue AND no lowercase word after it ("Henry I.").
-    public static func roman(_ text: String, previous: String?, next: String? = nil) -> [String]? {
-        guard let previous, let value = romanValue(text) else { return nil }
+    /// so it needs a capitalised cue AND no lowercase word after it but "of" ("Henry I.",
+    /// "Part I of"). A lone X after a cardinal cue is a placeholder ("Section X"); a lone V
+    /// or X before "." and a capitalised word is a middle initial ("Charles V. Smith"); a
+    /// regnal number stays under 40 ("Robert MD" is not Robert the fifteen-hundredth).
+    public static func roman(_ text: String, previous: String?, next: String? = nil,
+                             followedByInitialStop: Bool = false) -> [String]?
+    {
+        guard let previous, let first = text.first, "IVXLCDM".contains(first),
+              let value = romanValue(text) else { return nil }
         if text.count == 1, !"IVX".contains(text) { return nil }
+        if text.count == 1, followedByInitialStop { return nil }
         if text == "I" {
             guard previous.first?.isUppercase == true else { return nil }
-            if let next, next.first?.isLowercase == true { return nil }
+            if let next, next.first?.isLowercase == true, next.lowercased() != "of" { return nil }
         }
         let cue = previous.lowercased()
         let cardinal = NumberSpeller.integerWords(Substring(String(value)), yearReading: false)
         if cue == "elements" { return ["book"] + cardinal }
         if regnalNames.contains(cue) {
+            guard value < 40 else { return nil }
             return ["the"] + (ordinalized(cardinal) ?? cardinal)
         }
-        if cardinalCues.contains(cue) { return cardinal }
+        if cardinalCues.contains(cue), text != "X" { return cardinal }
         return nil
     }
 
@@ -270,16 +308,28 @@ public enum SpokenNumbers {
         "would", "could", "this", "these", "those", "his", "her", "its", "their", "our", "my",
     ]
 
-    /// Whether a year-shaped number (1100–2099) reads as a year. A count when a lowercase
-    /// content word follows ("1500 people", "2048 tokens"); a year when an era follows,
-    /// a month or year cue leads, or what follows is a function word, a name or nothing.
-    public static func readsAsYear(previous: String?, next: String?) -> Bool {
+    /// Words before a number that make it a year ("in 1984", "since 2019").
+    private static let yearPrepositions: Set = [
+        "in", "since", "by", "until", "till", "from", "during", "before", "after", "around", "circa",
+    ]
+
+    /// Whether a year-shaped number (1100–2099) reads as a year. A year when an era follows
+    /// or a month, year cue or year preposition leads. Otherwise only a plausible year (up
+    /// to 2030) standing alone, before a function word or before a capitalised name reads
+    /// as one ("It was 1984.", "1066 William"); "2048." and "1500 people" are counts, and so
+    /// is a number before an all-caps unit ("1500 MB", "1600 MHz").
+    public static func readsAsYear(_ value: UInt64, previous: String?, next: String?) -> Bool {
         if let next, eras.contains(next.lowercased()) { return true }
-        if let previous, months.contains(previous.lowercased()) || yearCues.contains(previous.lowercased()) {
-            return true
+        if let previous {
+            let cue = previous.lowercased()
+            if months.contains(cue) || yearCues.contains(cue) || yearPrepositions.contains(cue) { return true }
         }
+        guard value <= 2030 else { return false }
         guard let next, let first = next.first else { return true }
-        if first.isUppercase { return true }
+        if first.isUppercase {
+            // A title-case name follows a year; an all-caps or mixed unit follows a count.
+            return next.dropFirst().allSatisfy(\.isLowercase)
+        }
         return functionWords.contains(next.lowercased())
     }
 }

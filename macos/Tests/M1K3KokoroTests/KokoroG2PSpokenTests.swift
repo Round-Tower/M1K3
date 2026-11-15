@@ -79,7 +79,8 @@ struct KokoroG2PSpokenTests {
         speaks("1990 – 2000", as: "nineteen ninety to two thousand")
         speaks("pages 4-7", as: "pages four to seven")
         #expect(captionWords("pages 4-7") == ["pages", "4", "-", "7"])
-        // An ISO date is a dash chain, not a range: no "to" anywhere.
+        // An ISO date is a dash chain, not a range: it reads as it did before #838.
+        speaks("2026-11-15", as: "twenty twenty six eleven fifteen")
         let date = Self.g2p.phonemeTokens("2026-11-15")
         let to = Self.g2p.phonemeTokens("to")
         #expect(!date.isEmpty)
@@ -106,10 +107,10 @@ struct KokoroG2PSpokenTests {
         speaks("Book IV", as: "Book four")
         speaks("Elements I.47", as: "Elements book one, proposition forty seven")
         #expect(captionWords("Elements I.47") == ["Elements", "I.47"])
-        // The pronoun is untouched, even after a cue word.
-        speaks("Then I went", as: "Then I went")
-        speaks("the book I read", as: "the book I read")
-        speaks("Thanks John I will", as: "Thanks John I will")
+        // The pronoun is untouched, even after a cue word: no Roman reading anywhere.
+        for text in ["Then I went", "the book I read", "Thanks John I will", "Chapter I begins"] {
+            #expect(!Self.g2p.annotatedTokens(text).sources.contains(.roman), "\(text) read a numeral")
+        }
         speaks("Henry I.", as: "Henry the first.")
     }
 
@@ -120,6 +121,31 @@ struct KokoroG2PSpokenTests {
         #expect(captionWords("v1.2.3") == ["v1.2.3"])
         // A decimal stays a decimal.
         speaks("2.5", as: "two point five")
+    }
+
+    @Test("review fold: money, times, ratings, dates, names and counts in ordinary speech")
+    func reviewFold() {
+        speaks("a $1 billion deal", as: "a one billion dollars deal")
+        speaks("£1 million", as: "one million pounds")
+        speaks("£2.50 million", as: "two point five zero million pounds")
+        speaks("at 10:30am", as: "at ten thirty aye em")
+        speaks("rated 4.5/5", as: "rated four point five out of five")
+        speaks("a perfect 10/10", as: "a perfect ten out of ten")
+        speaks("The context is 2048.", as: "The context is two thousand and forty eight.")
+        speaks("1500 MB", as: "one thousand five hundred MB")
+        speaks("It was 1984.", as: "It was nineteen eighty four.")
+        for text in ["Malcolm X", "Charles V. Smith", "Section X"] {
+            #expect(!Self.g2p.annotatedTokens(text).sources.contains(.roman), "\(text) read a numeral")
+        }
+        // A dotted date is not a version: no "point" spoken.
+        let point = Self.g2p.phonemeTokens("point")
+        #expect(!Self.contains(Self.g2p.phonemeTokens("15.11.2026"), point))
+        // Phone numbers, product names and hyphenated words never say "to".
+        let to = Self.g2p.phonemeTokens("to")
+        for text in ["(555) 123-4567", "1-800-FLOWERS", "x86-64", "COVID-19", "well-known"] {
+            #expect(!Self.contains(Self.g2p.phonemeTokens(text), to), "\(text) said 'to'")
+        }
+        speaks("COVID-19", as: "COVID nineteen")
     }
 
     @Test("every rule keeps the karaoke contract: word ranges tile the written words")

@@ -73,7 +73,7 @@ struct SpokenNumbersTests {
     @Test("fractions: 1/2, 3/4, 2/3, 1/7, 3/7, 5/16, 24/7")
     func fractions() {
         #expect(SpokenNumbers.fraction("1/2") == ["a", "half"])
-        #expect(SpokenNumbers.fraction("3/2") == ["three", "halves"])
+        #expect(SpokenNumbers.fraction("3/2") == ["three", "out", "of", "two"])
         #expect(SpokenNumbers.fraction("1/4") == ["a", "quarter"])
         #expect(SpokenNumbers.fraction("3/4") == ["three", "quarters"])
         #expect(SpokenNumbers.fraction("2/3") == ["two", "thirds"])
@@ -81,7 +81,7 @@ struct SpokenNumbersTests {
         #expect(SpokenNumbers.fraction("1/7") == ["a", "seventh"])
         // "sevenths" is not in the dictionary, so a plural seventh says "over".
         #expect(SpokenNumbers.fraction("3/7") == ["three", "over", "seven"])
-        #expect(SpokenNumbers.fraction("9/10") == ["nine", "tenths"])
+        #expect(SpokenNumbers.fraction("9/10") == ["nine", "out", "of", "ten"])
         #expect(SpokenNumbers.fraction("5/16") == ["five", "over", "sixteen"])
         #expect(SpokenNumbers.fraction("24/7") == ["twenty", "four", "seven"])
         #expect(SpokenNumbers.fraction("1/0") == ["one", "over", "zero"])
@@ -163,18 +163,74 @@ struct SpokenNumbersTests {
         #expect(SpokenNumbers.euclid(book: "IIII", proposition: "47") == nil)
     }
 
-    @Test("a year reading needs a year's context; a count before a noun is a count")
+    @Test("a year reading needs a year's context; without one, only a plausible year reads as one")
     func yearOrCount() {
-        // Counts: a lowercase content word follows.
-        #expect(SpokenNumbers.readsAsYear(previous: nil, next: "people") == false)
-        #expect(SpokenNumbers.readsAsYear(previous: "about", next: "tokens") == false)
-        // Years: nothing follows, a function word follows, an era follows, or a year cue leads.
-        #expect(SpokenNumbers.readsAsYear(previous: "in", next: nil))
-        #expect(SpokenNumbers.readsAsYear(previous: nil, next: "the"))
-        #expect(SpokenNumbers.readsAsYear(previous: nil, next: "BC"))
-        #expect(SpokenNumbers.readsAsYear(previous: "March", next: "saw"))
-        #expect(SpokenNumbers.readsAsYear(previous: "since", next: "was"))
-        #expect(SpokenNumbers.readsAsYear(previous: nil, next: "William"))
+        // Counts: a lowercase content word or an all-caps unit follows, or it is past any near year.
+        #expect(SpokenNumbers.readsAsYear(1500, previous: nil, next: "people") == false)
+        #expect(SpokenNumbers.readsAsYear(2048, previous: "about", next: "tokens") == false)
+        #expect(SpokenNumbers.readsAsYear(1500, previous: nil, next: "MB") == false)
+        #expect(SpokenNumbers.readsAsYear(1600, previous: nil, next: "MHz") == false)
+        #expect(SpokenNumbers.readsAsYear(2048, previous: "is", next: nil) == false)
+        #expect(SpokenNumbers.readsAsYear(2048, previous: nil, next: "is") == false)
+        // Years: an era follows, a year cue or preposition leads, or a plausible year stands alone.
+        #expect(SpokenNumbers.readsAsYear(1984, previous: "in", next: nil))
+        #expect(SpokenNumbers.readsAsYear(1984, previous: nil, next: "the"))
+        #expect(SpokenNumbers.readsAsYear(1984, previous: "was", next: nil))
+        #expect(SpokenNumbers.readsAsYear(2099, previous: nil, next: "BC"))
+        #expect(SpokenNumbers.readsAsYear(2048, previous: "in", next: nil))
+        #expect(SpokenNumbers.readsAsYear(1990, previous: "March", next: "saw"))
+        #expect(SpokenNumbers.readsAsYear(1066, previous: nil, next: "William"))
+    }
+
+    @Test("review fold: money before a scale word is plural and keeps its decimals")
+    func scaledMoney() {
+        #expect(SpokenNumbers.currency(symbol: "£", literal: "1", scaled: true)?.all == ["one", "pounds"])
+        #expect(SpokenNumbers.currency(symbol: "$", literal: "2.50", scaled: true)?.all
+            == ["two", "point", "five", "zero", "dollars"])
+        #expect(SpokenNumbers.currency(symbol: "$", literal: "2.50", scaled: true)?.tail == [])
+    }
+
+    @Test("review fold: scores and ratings read 'out of'; a fraction of one reads 'a' or 'an'")
+    func ratings() {
+        #expect(SpokenNumbers.fraction("10/10") == ["ten", "out", "of", "ten"])
+        #expect(SpokenNumbers.fraction("5/5") == ["five", "out", "of", "five"])
+        #expect(SpokenNumbers.fraction("2/2") == ["two", "out", "of", "two"])
+        #expect(SpokenNumbers.fraction("7/10") == ["seven", "out", "of", "ten"])
+        #expect(SpokenNumbers.fraction("4/5") == ["four", "out", "of", "five"])
+        #expect(SpokenNumbers.fraction("4.5/5") == ["four", "point", "five", "out", "of", "five"])
+        #expect(SpokenNumbers.fraction("1/8") == ["an", "eighth"])
+        #expect(SpokenNumbers.fraction("1/10") == ["a", "tenth"])
+        #expect(SpokenNumbers.fraction("3/8") == ["three", "eighths"])
+        #expect(SpokenNumbers.fraction("2/3") == ["two", "thirds"])
+    }
+
+    @Test("review fold: a clock time takes am and pm")
+    func meridiem() {
+        #expect(SpokenNumbers.colon("10:30am") == ["ten", "thirty", "aye", "em"])
+        #expect(SpokenNumbers.colon("9:15PM") == ["nine", "fifteen", "pee", "em"])
+        #expect(SpokenNumbers.colon("10:00am") == ["ten", "aye", "em"])
+        #expect(SpokenNumbers.colon("10:30xy") == nil)
+    }
+
+    @Test("review fold: a bare dotted triple is a version only when every part is short")
+    func notEveryTripleIsAVersion() {
+        #expect(SpokenNumbers.version("15.11.2026") == nil)
+        #expect(SpokenNumbers.version("192.168.1.1") == nil)
+        #expect(SpokenNumbers.version("1.2.10") != nil)
+        #expect(SpokenNumbers.version("v15.11.2026") != nil)
+    }
+
+    @Test("review fold: Malcolm X, placeholders and initials are not numerals")
+    func romanMisreadings() {
+        #expect(SpokenNumbers.roman("X", previous: "Malcolm") == nil)
+        #expect(SpokenNumbers.roman("X", previous: "Section") == nil)
+        #expect(SpokenNumbers.roman("X", previous: "Level") == nil)
+        #expect(SpokenNumbers.roman("MD", previous: "Robert") == nil)
+        #expect(SpokenNumbers.roman("V", previous: "Charles", followedByInitialStop: true) == nil)
+        #expect(SpokenNumbers.roman("V", previous: "Charles") == ["the", "fifth"])
+        #expect(SpokenNumbers.roman("XIV", previous: "Louis") == ["the", "fourteenth"])
+        #expect(SpokenNumbers.roman("I", previous: "Part", next: "of") == ["one"])
+        #expect(SpokenNumbers.roman("I", previous: "Chapter", next: "begins") == nil)
     }
 
     @Test("integerWords can skip the year reading")
@@ -187,6 +243,19 @@ struct SpokenNumbersTests {
     @Test("every word the rules emit is in the shipped dictionary")
     func vocabularyResolves() throws {
         let dictionary = try KokoroG2P.bundledDictionary()
+        // Every ordinal 0…120, every tens ordinal, and the scales.
+        for value in Array(0 ... 120) + [200, 1000, 1_000_000, 1_000_000_000] {
+            for word in try #require(SpokenNumbers.ordinal("\(value)th")) {
+                #expect(dictionary[word] != nil, "\(word) (from \(value)th) is not in the dictionary")
+            }
+        }
+        for bottom in 2 ... 10 {
+            for top in 1 ... 12 {
+                for word in try #require(SpokenNumbers.fraction("\(top)/\(bottom)")) {
+                    #expect(dictionary[word] != nil, "\(word) (from \(top)/\(bottom)) is not in the dictionary")
+                }
+            }
+        }
         let samples: [[String]?] = [
             SpokenNumbers.ordinal("1st"), SpokenNumbers.ordinal("2nd"), SpokenNumbers.ordinal("3rd"),
             SpokenNumbers.ordinal("5th"), SpokenNumbers.ordinal("8th"), SpokenNumbers.ordinal("9th"),
@@ -202,7 +271,7 @@ struct SpokenNumbersTests {
             SpokenNumbers.fraction("3/4"), SpokenNumbers.fraction("2/5"), SpokenNumbers.fraction("5/6"),
             SpokenNumbers.fraction("1/7"), SpokenNumbers.fraction("3/7"), SpokenNumbers.fraction("3/8"),
             SpokenNumbers.fraction("4/9"), SpokenNumbers.fraction("7/10"), SpokenNumbers.fraction("1/16"),
-            SpokenNumbers.version("v1.2.3"), [SpokenNumbers.rangeWord, "minus"],
+            SpokenNumbers.version("v1.2.3"), [SpokenNumbers.rangeWord, "minus", "out", "of", "an", "aye", "pee", "em"],
             SpokenNumbers.roman("VIII", previous: "Henry"), SpokenNumbers.euclid(book: "I", proposition: "47"),
         ]
         for words in samples {

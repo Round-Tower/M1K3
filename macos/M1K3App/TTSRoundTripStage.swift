@@ -37,6 +37,10 @@ enum TTSRoundTripStage {
 
     static func run(emit: @escaping (String) -> Void) async {
         let voice = SelfTestEnv.value("M1K3_SELFTEST_TTSRT_VOICE") ?? "bm_daniel"
+        guard TTSRoundTrip.isVoiceID(voice) else {
+            emit("✗ ttsrt: not a Kokoro voice id")
+            return
+        }
         let kinds = SelfTestEnv.value("M1K3_SELFTEST_TTSRT_KINDS").map {
             Set($0.split(separator: ",").compactMap { TTSRoundTrip.Kind(rawValue: String($0)) })
         } ?? Set(TTSRoundTrip.Kind.allCases)
@@ -53,6 +57,10 @@ enum TTSRoundTripStage {
                 WhisperKitProvider.isModelDownloaded(model: $0.modelID, downloadBase: downloadBase)
             }?.modelID
             ?? WhisperModelVariant.small.modelID
+        guard WhisperModelVariant.allCases.contains(where: { $0.modelID == whisper }) else {
+            emit("✗ ttsrt: not a WhisperKit variant (\(WhisperModelVariant.allCases.map(\.modelID)))")
+            return
+        }
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("tts-roundtrip", isDirectory: true)
         emit("• ttsrt: \(items.count) items, voice \(voice), whisper \(whisper), clips in \(folder.lastPathComponent)/")
 
@@ -71,6 +79,7 @@ enum TTSRoundTripStage {
 
         var arms: [TTSRoundTrip.Kind: SpeechToTextArm] = [:]
         var fallbacks: [String: [String: Int]] = [:]
+        var keys: [String: TTSRoundTripReport.KeyTally] = [:]
         let clock = ContinuousClock()
         for item in items {
             for (source, count) in g2p.annotatedTokens(item.text).sourceCounts {
@@ -90,10 +99,17 @@ enum TTSRoundTripStage {
                 arm.add(score, audioSeconds: Double(samples.count) / KokoroSynthesizer.sampleRate,
                         processingSeconds: Double(elapsed.components.seconds)
                             + Double(elapsed.components.attoseconds) / 1e18)
-                emit("TTSRT\t\(item.id)\t\(score.errors)/\(score.words)\t\(heard)")
+                let heardKeys = TTSRoundTrip.keysHeard(item, heard: heard)
+                if !item.keys.isEmpty {
+                    keys[item.kind.rawValue, default: .init()].heard += heardKeys
+                    keys[item.kind.rawValue, default: .init()].total += item.keys.count
+                }
+                emit("TTSRT\t\(item.id)\t\(score.errors)/\(score.words)\tkeys \(heardKeys)/\(item.keys.count)\t\(heard)")
             } catch {
                 // The report is committed: a reason is the error's type, never a path.
                 arm.fail(clip: item.id, reason: String(describing: type(of: error)))
+                arm.add(TTSRoundTrip.failedScore(item), audioSeconds: 0, processingSeconds: 0)
+                if !item.keys.isEmpty { keys[item.kind.rawValue, default: .init()].total += item.keys.count }
                 emit("TTSRT\t\(item.id)\tfailed\t\(type(of: error))")
             }
             arms[item.kind] = arm
@@ -102,11 +118,12 @@ enum TTSRoundTripStage {
         let ordered = TTSRoundTrip.Kind.allCases.compactMap { arms[$0] }
         let report = TTSRoundTripReport(
             speech: SpeechToTextReport(date: Self.today(), clips: items.count, locale: "en_GB", arms: ordered),
-            voice: voice, transcriber: "WhisperKit \(whisper)", fallbacks: fallbacks
+            voice: voice, transcriber: "WhisperKit \(whisper)", fallbacks: fallbacks, keys: keys
         )
         for arm in ordered {
-            emit(String(format: "• ttsrt %@: %d/%d words wrong (%.1f%%)",
-                        arm.name, arm.errors, arm.words, arm.wordErrorRate * 100))
+            let tally = keys[arm.name].map { String(format: ", keys heard %d/%d", $0.heard, $0.total) } ?? ""
+            emit(String(format: "• ttsrt %@: %d/%d words wrong (%.1f%%)%@",
+                        arm.name, arm.errors, arm.words, arm.wordErrorRate * 100, tally))
         }
         do {
             let data = try report.encoded()

@@ -179,8 +179,11 @@ public struct KokoroG2P: Sendable {
                 let waiting = pendingUnit // set by the previous run only when THIS run is its scale word
                 pendingUnit = []
                 var source = G2PSource.silent
+                // "Charles V. Smith": a letter, a stop, a space and a capital is an initial.
+                let initialStop = run.end + 2 < chars.count && chars[run.end] == "." && chars[run.end + 1] == " "
+                    && chars[run.end + 2].isUppercase
                 var toks = resolveTokens(for: run, prefix: prefix, previous: previousWord, next: next,
-                                         pendingUnit: &pendingUnit, source: &source)
+                                         initialStop: initialStop, pendingUnit: &pendingUnit, source: &source)
                 if !waiting.isEmpty, let unit = joinedTokens(for: waiting), let base = toks {
                     toks = base + [Self.space] + unit
                 }
@@ -237,13 +240,32 @@ public struct KokoroG2P: Sendable {
         guard char == "-" || char == "–" || char == "\u{2212}" else { return nil }
         if index > 0, index + 1 < chars.count, chars[index - 1].isASCIIDigit, chars[index + 1].isASCIIDigit {
             guard separatorCount(chars, around: index) == 1 else { return nil }
-            return char == "\u{2212}" ? "minus" : SpokenNumbers.rangeWord
+            if char == "\u{2212}" { return "minus" }
+            return isPlainRange(chars, dash: index) ? SpokenNumbers.rangeWord : nil
         }
         // A spaced en dash between two numbers: "1990 – 2000".
         guard char == "–",
               index >= 2, chars[index - 1] == " ", chars[index - 2].isASCIIDigit,
               index + 2 < chars.count, chars[index + 1] == " ", chars[index + 2].isASCIIDigit else { return nil }
         return SpokenNumbers.rangeWord
+    }
+
+    /// "4-7" and "1990–2000" are ranges; "x86-64", "COVID-19", "1-800-FLOWERS" and a
+    /// phone's "123-4567" are not: both sides are bare digit runs (no letter or dash
+    /// touching them), and a hyphen never joins three digits to four.
+    private func isPlainRange(_ chars: [Character], dash: Int) -> Bool {
+        var lower = dash
+        while lower > 0, chars[lower - 1].isASCIIDigit {
+            lower -= 1
+        }
+        var upper = dash + 1
+        while upper < chars.count, chars[upper].isASCIIDigit {
+            upper += 1
+        }
+        if lower > 0, chars[lower - 1].isLetter || chars[lower - 1] == "-" { return false }
+        if upper < chars.count, chars[upper].isLetter || chars[upper] == "-" { return false }
+        if chars[dash] == "-", dash - lower == 3, upper - dash - 1 == 4 { return false }
+        return true
     }
 
     private static let separators: Set<Character> = [":", "/", "-", "–", "\u{2212}"]
@@ -271,6 +293,22 @@ public struct KokoroG2P: Sendable {
             }
         }
         return count
+    }
+
+    /// Whether a ':' or '/' at `separator` may join its run: the left side is digits (a
+    /// '/' also takes one decimal point: "4.5/5"), and the right side's digits end the run
+    /// or run into letters (am/pm), never into another '.' or ',' and digit ("3:16,17",
+    /// "1.5:1" and "4.5/5.5" stop at the separator, as before #838).
+    private func joinsCleanly(_ chars: [Character], runStart: Int, separator: Int) -> Bool {
+        let left = chars[runStart ..< separator]
+        let dots = left.filter { $0 == "." }.count
+        guard !left.contains(","), dots == 0 || (chars[separator] == "/" && dots == 1) else { return false }
+        var end = separator + 1
+        while end < chars.count, chars[end].isASCIIDigit {
+            end += 1
+        }
+        if end + 1 < chars.count, chars[end] == "." || chars[end] == ",", chars[end + 1].isASCIIDigit { return false }
+        return true
     }
 
     /// The next word after `end`, past spaces only (any punctuation in between → nil).
@@ -321,7 +359,8 @@ public struct KokoroG2P: Sendable {
                 guard (digitBefore && digitAfter) || euclid else { break }
             } else if runChar == ":" || runChar == "/" {
                 guard digitBefore, digitAfter, !containsLetter,
-                      separatorCount(chars, around: end) == 1 else { break }
+                      separatorCount(chars, around: end) == 1,
+                      joinsCleanly(chars, runStart: start, separator: end) else { break }
             } else {
                 break
             }
@@ -361,7 +400,8 @@ public struct KokoroG2P: Sendable {
     /// ever replace what used to be silence — the fate of every pronounceable
     /// OOV word before it, including "Kev" and "Kokoro" itself.
     private func resolveTokens(for run: WordRun, prefix: NumericPrefix?, previous: String?, next: String?,
-                               pendingUnit: inout [String], source: inout G2PSource) -> [Int]?
+                               initialStop: Bool = false, pendingUnit: inout [String],
+                               source: inout G2PSource) -> [Int]?
     {
         if run.containsDigit {
             source = .number
@@ -372,14 +412,15 @@ public struct KokoroG2P: Sendable {
                 source = .house
                 return house
             }
-            if case let .currency(symbol) = prefix, run.unitWords.isEmpty,
-               let money = SpokenNumbers.currency(symbol: symbol, literal: run.text)
-            {
-                if let next, SpokenNumbers.isScaleWord(next), money.tail.isEmpty {
-                    pendingUnit = money.unit
-                    return joinedTokens(for: money.amount)
+            if case let .currency(symbol) = prefix, run.unitWords.isEmpty {
+                let scaled = next.map(SpokenNumbers.isScaleWord) ?? false
+                if let money = SpokenNumbers.currency(symbol: symbol, literal: run.text, scaled: scaled) {
+                    if scaled {
+                        pendingUnit = money.unit
+                        return joinedTokens(for: money.amount)
+                    }
+                    return joinedTokens(for: money.all)
                 }
-                return joinedTokens(for: money.all)
             }
             let sign = prefix == .minus ? ["minus"] : []
             if let words = numericWords(run, signed: !sign.isEmpty, previous: previous, next: next) {
@@ -389,7 +430,9 @@ public struct KokoroG2P: Sendable {
             source = .spellOut
             return spellOutTokens(run.text, extraWords: run.unitWords, signWords: sign)
         }
-        if let roman = SpokenNumbers.roman(run.text, previous: previous, next: next) {
+        if let roman = SpokenNumbers.roman(run.text, previous: previous, next: next,
+                                           followedByInitialStop: initialStop)
+        {
             source = .roman
             return joinedTokens(for: roman)
         }
@@ -429,7 +472,8 @@ public struct KokoroG2P: Sendable {
         }
         // A year needs a year's context: "1500 people" is a count; an amount with a
         // sign or a unit ("-1500", "2000%") is never a year.
-        let year = !signed && run.unitWords.isEmpty && SpokenNumbers.readsAsYear(previous: previous, next: next)
+        let year = !signed && run.unitWords.isEmpty
+            && SpokenNumbers.readsAsYear(UInt64(text) ?? 0, previous: previous, next: next)
         return NumberSpeller.numberWords(text, yearReading: year)
     }
 

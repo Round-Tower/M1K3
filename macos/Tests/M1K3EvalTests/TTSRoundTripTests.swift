@@ -68,6 +68,38 @@ struct TTSRoundTripTests {
         #expect(keyed.count >= 11)
     }
 
+    @Test("review fold: keys match whole words, a plural s allowed")
+    func keysAreWords() throws {
+        let money = try #require(TTSRoundTrip.corpus.first { $0.text.contains("£5,") })
+        #expect(TTSRoundTrip.keysHeard(money, heard: "a compound in Europe for 5") == 0)
+        #expect(TTSRoundTrip.keysHeard(money, heard: "five pounds, twenty dollars, three euros") == 3)
+        let half = try #require(TTSRoundTrip.corpus.first { $0.text.contains("1/2") })
+        #expect(TTSRoundTrip.keysHeard(half, heard: "halfway through, three quarters") == 1)
+    }
+
+    @Test("review fold: the denominator is the spoken reading's words, whichever reading scores")
+    func fixedDenominator() throws {
+        let item = try #require(TTSRoundTrip.corpus.first { $0.text.contains("Henry VIII") })
+        let spokenWords = WordErrorRate.score(reference: item.spoken, hypothesis: item.spoken).words
+        #expect(TTSRoundTrip.score(item, heard: item.text).words == spokenWords)
+        #expect(TTSRoundTrip.score(item, heard: "nothing like it").words == spokenWords)
+    }
+
+    @Test("review fold: a failed clip counts every word wrong")
+    func failedClip() throws {
+        let item = try #require(TTSRoundTrip.corpus.first)
+        let failed = TTSRoundTrip.failedScore(item)
+        #expect(failed.errors == failed.words)
+        #expect(failed.words > 0)
+    }
+
+    @Test("review fold: only known voices and Whisper variants reach the report")
+    func knownIds() {
+        #expect(TTSRoundTrip.isVoiceID("bm_daniel"))
+        #expect(TTSRoundTrip.isVoiceID("../etc") == false)
+        #expect(TTSRoundTrip.isVoiceID("bm_daniel; rm") == false)
+    }
+
     @Test("clip file names pair audio with text and sort by class then index")
     func clipNames() {
         let item = TTSRoundTrip.Item(id: "numbers-03", kind: .numbers, text: "x", spoken: "x")
@@ -88,7 +120,8 @@ struct TTSRoundTripTests {
         #expect(json.contains("\"voice\" : \"bm_daniel\""))
         #expect(json.contains("\"number\" : 2"))
         #expect(json.contains("\"heard\" : 9"))
-        #expect(!json.contains("too"))
+        let object = try #require(JSONSerialization.jsonObject(with: report.encoded()) as? [String: Any])
+        #expect(Set(object.keys) == ["speech", "voice", "transcriber", "fallbacks", "keys"])
     }
 }
 
