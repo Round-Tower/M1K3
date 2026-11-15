@@ -306,6 +306,9 @@ final class EmbeddingGemma2VisionEncoder: Module {
         var hidden = x
         for layer in layers {
             hidden = layer(hidden, positions: positions)
+            // One layer at a time: left lazy, the 16-layer graph over ~2,400 patches holds ~700 MB of intermediates
+            // at once (measured: MLX peak 1.31 GB against 0.59 GB of weights); this keeps the peak near one layer's.
+            eval(hidden)
         }
         return hidden
     }

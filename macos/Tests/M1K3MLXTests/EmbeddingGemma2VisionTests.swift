@@ -80,6 +80,19 @@ struct EmbeddingGemma2VisionTests {
         #expect(folded == fixturePatterns)
     }
 
+    @Test("the text filter and the vision filter never claim the same checkpoint key: the text path stays text-only")
+    func filtersAreDisjoint() throws {
+        let text = try JSONDecoder().decode(EmbeddingGemma2Configuration.self, from: fixture("embeddinggemma2-config"))
+        let textKeys = EmbeddingGemma2TextModel.weightKeys(for: text)
+        let visionKeys = try EmbeddingGemma2VisionStack.weightKeys(for: vision())
+        for key in visionKeys {
+            #expect(EmbeddingGemma2TextModel.textCoreKey(key) == nil, "\(key) must not load into the text core")
+        }
+        for key in textKeys {
+            #expect(EmbeddingGemma2VisionStack.visionKey(key) == nil, "\(key) must not load into the vision tower")
+        }
+    }
+
     @Test("the vision filter keeps vision_tower.* and embed_vision.* and nothing of the text or audio side")
     func visionKeyFilter() {
         #expect(EmbeddingGemma2VisionStack.visionKey("vision_tower.patch_embedder.input_proj.weight")
@@ -97,20 +110,26 @@ struct EmbeddingGemma2ImageProcessorTests {
     private let processor = EmbeddingGemma2ImageProcessor(patchSize: 16, poolingKernelSize: 3, maxSoftTokens: 280)
 
     /// (width, height) → the target the reference processor (and so mlx-vlm's fixture) used.
-    private static let sizes: [(width: Int, height: Int, targetWidth: Int, targetHeight: Int, tokens: Int)] = [
-        (640, 480, 912, 672, 266),
-        (640, 400, 1008, 624, 273),
-        (480, 640, 672, 912, 266),
-        (400, 400, 768, 768, 256),
-        (320, 240, 912, 672, 266),
-        (4032, 3024, 912, 672, 266),
+    struct Sample {
+        let width: Int
+        let height: Int
+        let targetWidth: Int
+        let targetHeight: Int
+        let tokens: Int
+    }
+
+    private static let sizes: [Sample] = [
+        Sample(width: 640, height: 480, targetWidth: 912, targetHeight: 672, tokens: 266),
+        Sample(width: 640, height: 400, targetWidth: 1008, targetHeight: 624, tokens: 273),
+        Sample(width: 480, height: 640, targetWidth: 672, targetHeight: 912, tokens: 266),
+        Sample(width: 400, height: 400, targetWidth: 768, targetHeight: 768, tokens: 256),
+        Sample(width: 320, height: 240, targetWidth: 912, targetHeight: 672, tokens: 266),
+        Sample(width: 4032, height: 3024, targetWidth: 912, targetHeight: 672, tokens: 266),
     ]
 
     @Test("the target size keeps the aspect, fits the 280-token budget, and is a multiple of 48 per side",
           arguments: sizes)
-    func targetSize(
-        _ row: (width: Int, height: Int, targetWidth: Int, targetHeight: Int, tokens: Int)
-    ) {
+    func targetSize(_ row: Sample) {
         let (height, width) = processor.targetSize(height: row.height, width: row.width)
         #expect(width == row.targetWidth)
         #expect(height == row.targetHeight)
