@@ -1,36 +1,117 @@
 {
   "_about": "The App Store accessibility labels M1K3 claims, per device family, read by accessibility.py (#834). declare = the 1.5 TestFlight walk confirmed it; pending = evidence but no walk yet; no = not claimed. accessibility.py set --confirm refuses while anything chosen is pending. Flip a line only with the walk's result in its evidence.",
   "MAC": {
-    "voiceover": {"status": "pending", "evidence": "#829 named 24 unnamed controls; #831 fixed the Mac audit's findings. Owed: the common tasks by hand (ask, read the answer, Memories, Documents, Settings, onboarding)."},
-    "voiceControl": {"status": "pending", "evidence": "Owed: Show names matches the visible labels on the composer, memory search, sidebar and toolbar."},
-    "darkInterface": {"status": "pending", "evidence": "Follows the system appearance. Owed: nothing unreadable in dark."},
-    "sufficientContrast": {"status": "pending", "evidence": "#831 measured light and dark: lowest 4.8:1 dark, 5.6:1 light. Owed: the walk's eye check."},
-    "largerText": {"status": "pending", "evidence": "#820 added the reading size setting. Owed: the largest size on the chat, Memories and Settings."},
-    "reducedMotion": {"status": "pending", "evidence": "Not audited. Owed: the avatar and voice animations with Reduce Motion on."},
-    "differentiateWithoutColorAlone": {"status": "pending", "evidence": "Not audited. Owed: any state shown by colour only."},
-    "captions": {"status": "no", "evidence": "No video of its own. Spoken answers are always on screen as text, which is not Apple's Captions label (Kev's call to revisit)."},
-    "audioDescriptions": {"status": "no", "evidence": "No video content."}
+    "voiceover": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: #829 named 24 unnamed controls; #831 fixed the Mac audit's findings. Owed: the common tasks by hand (ask, read the answer, Memories, Documents, Settings, onboarding)."
+    },
+    "voiceControl": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: Owed: Show names matches the visible labels on the composer, memory search, sidebar and toolbar."
+    },
+    "darkInterface": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: Follows the system appearance. Owed: nothing unreadable in dark."
+    },
+    "sufficientContrast": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: #831 measured light and dark: lowest 4.8:1 dark, 5.6:1 light. Owed: the walk's eye check."
+    },
+    "largerText": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: #820 added the reading size setting. Owed: the largest size on the chat, Memories and Settings."
+    },
+    "reducedMotion": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: Not audited. Owed: the avatar and voice animations with Reduce Motion on."
+    },
+    "differentiateWithoutColorAlone": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: Not audited. Owed: any state shown by colour only."
+    },
+    "captions": {
+      "status": "no",
+      "evidence": "No video of its own. Spoken answers are always on screen as text, which is not Apple's Captions label (Kev's call to revisit)."
+    },
+    "audioDescriptions": {
+      "status": "no",
+      "evidence": "No video content."
+    }
   },
   "IPHONE": {
-    "voiceover": {"status": "pending", "evidence": "#829 and #832 fixed the iPhone audit's findings. Owed: the common tasks by hand; the combined Documents row reads title then date, and swipe-to-delete still works."},
-    "voiceControl": {"status": "pending", "evidence": "Owed: Show names matches the visible labels."},
-    "darkInterface": {"status": "pending", "evidence": "Follows the system appearance. Owed: nothing unreadable in dark."},
-    "sufficientContrast": {"status": "pending", "evidence": "#832 measured dark only (20 of 23 flags at 5.3:1 or better). Owed: light mode (M1K3_A11Y_APPEARANCE=light or by eye); the disabled Pair with Pasted Link button is 2.3:1."},
-    "largerText": {"status": "pending", "evidence": "The phone audit flags a Form button, a footer and a Toggle label as scaling only partly, and a clipped paste field. Owed: the largest sizes."},
-    "reducedMotion": {"status": "pending", "evidence": "Not audited. Owed: the avatar and voice animations with Reduce Motion on."},
-    "differentiateWithoutColorAlone": {"status": "pending", "evidence": "Not audited. Owed: any state shown by colour only."},
-    "captions": {"status": "no", "evidence": "No video of its own; spoken answers are on screen as text."},
-    "audioDescriptions": {"status": "no", "evidence": "No video content."}
+    "voiceover": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: #829 and #832 fixed the iPhone audit's findings. Owed: the common tasks by hand; the combined Documents row reads title then date, and swipe-to-delete still works."
+    },
+    "voiceControl": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: Owed: Show names matches the visible labels."
+    },
+    "darkInterface": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: Follows the system appearance. Owed: nothing unreadable in dark."
+    },
+    "sufficientContrast": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: #832 measured dark only (20 of 23 flags at 5.3:1 or better). Owed: light mode (M1K3_A11Y_APPEARANCE=light or by eye); the disabled Pair with Pasted Link button is 2.3:1."
+    },
+    "largerText": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: The phone audit flags a Form button, a footer and a Toggle label as scaling only partly, and a clipped paste field. Owed: the largest sizes."
+    },
+    "reducedMotion": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: Not audited. Owed: the avatar and voice animations with Reduce Motion on."
+    },
+    "differentiateWithoutColorAlone": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: Not audited. Owed: any state shown by colour only."
+    },
+    "captions": {
+      "status": "no",
+      "evidence": "No video of its own; spoken answers are on screen as text."
+    },
+    "audioDescriptions": {
+      "status": "no",
+      "evidence": "No video content."
+    }
   },
   "IPAD": {
-    "voiceover": {"status": "pending", "evidence": "No iPad audit yet; the iPhone fixes share the code. Owed: the common tasks by hand on an iPad."},
-    "voiceControl": {"status": "pending", "evidence": "Owed: Show names on an iPad."},
-    "darkInterface": {"status": "pending", "evidence": "Follows the system appearance. Owed: nothing unreadable in dark."},
-    "sufficientContrast": {"status": "pending", "evidence": "Unmeasured on iPad; shares the iPhone colours. Owed: a check by eye in light and dark."},
-    "largerText": {"status": "pending", "evidence": "As the iPhone. Owed: the largest sizes on an iPad."},
-    "reducedMotion": {"status": "pending", "evidence": "Not audited."},
-    "differentiateWithoutColorAlone": {"status": "pending", "evidence": "Not audited."},
-    "captions": {"status": "no", "evidence": "No video of its own."},
-    "audioDescriptions": {"status": "no", "evidence": "No video content."}
+    "voiceover": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: No iPad audit yet; the iPhone fixes share the code. Owed: the common tasks by hand on an iPad."
+    },
+    "voiceControl": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: Owed: Show names on an iPad."
+    },
+    "darkInterface": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: Follows the system appearance. Owed: nothing unreadable in dark."
+    },
+    "sufficientContrast": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: Unmeasured on iPad; shares the iPhone colours. Owed: a check by eye in light and dark."
+    },
+    "largerText": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: As the iPhone. Owed: the largest sizes on an iPad."
+    },
+    "reducedMotion": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: Not audited."
+    },
+    "differentiateWithoutColorAlone": {
+      "status": "declare",
+      "evidence": "Kev walked TestFlight build 553 (1.5.0) by hand, 2026-11-15: pass (\"All walked pal\"). Before the walk: Not audited."
+    },
+    "captions": {
+      "status": "no",
+      "evidence": "No video of its own."
+    },
+    "audioDescriptions": {
+      "status": "no",
+      "evidence": "No video content."
+    }
   }
 }
