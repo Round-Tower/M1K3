@@ -60,14 +60,35 @@ public struct G2PWord: Sendable, Equatable {
     }
 }
 
+/// Which link of the fallback chain spoke a word (#838 slice 1): the share that reaches
+/// `.letterToSound` on a corpus is the hard-word rate, measured instead of guessed.
+public enum G2PSource: String, Sendable, Equatable, Hashable, CaseIterable, Codable {
+    case dictionary, house, cased, inflection, compound, spellOut, letterToSound
+    /// A digit run read by NumberSpeller / SpokenNumbers (ordinals, money, ranges…).
+    case number
+    /// A Roman numeral read after a cue ("Henry VIII").
+    case roman
+    /// Nothing resolved: the word is silent.
+    case silent
+}
+
 /// Token assembly plus the word boundaries that produced it.
 public struct G2PResult: Sendable, Equatable {
     public let tokens: [Int]
     public let words: [G2PWord]
+    /// Parallel to `words`: the fallback that resolved each one (empty when the
+    /// result was built by hand).
+    public let sources: [G2PSource]
 
-    public init(tokens: [Int], words: [G2PWord]) {
+    public init(tokens: [Int], words: [G2PWord], sources: [G2PSource] = []) {
         self.tokens = tokens
         self.words = words
+        self.sources = sources
+    }
+
+    /// How many words each fallback spoke.
+    public var sourceCounts: [G2PSource: Int] {
+        sources.reduce(into: [:]) { $0[$1, default: 0] += 1 }
     }
 }
 
@@ -115,6 +136,7 @@ public struct KokoroG2P: Sendable {
     private func assemble(_ text: String, cap: Int?) -> G2PResult {
         var tokens: [Int] = []
         var words: [G2PWord] = []
+        var sources: [G2PSource] = []
         var prevWasToken = false
         var offset = 0 // running UTF-16 offset into the original text
         let chars = Array(text)
@@ -124,11 +146,12 @@ public struct KokoroG2P: Sendable {
         var pendingUnit: [String] = [] // "£5 million": "pounds" waits for "million"
 
         /// Appends one caption word; false when the cap stops the walk.
-        func emit(_ toks: [Int]?, _ textRange: Range<Int>) -> Bool {
+        func emit(_ toks: [Int]?, _ textRange: Range<Int>, _ source: G2PSource) -> Bool {
             guard let toks, !toks.isEmpty else {
                 // OOV: no phonemes, no space — an empty token range at the
                 // current position keeps the word addressable for timing.
                 words.append(G2PWord(textRange: textRange, tokenRange: tokens.count ..< tokens.count))
+                sources.append(.silent)
                 return true
             }
             let needed = (prevWasToken ? 1 : 0) + toks.count
@@ -137,6 +160,7 @@ public struct KokoroG2P: Sendable {
             let tokenStart = tokens.count
             tokens.append(contentsOf: toks)
             words.append(G2PWord(textRange: textRange, tokenRange: tokenStart ..< tokens.count))
+            sources.append(source)
             prevWasToken = true
             return true
         }
@@ -154,16 +178,17 @@ public struct KokoroG2P: Sendable {
                 let next = peekWord(chars, from: run.end)
                 let waiting = pendingUnit // set by the previous run only when THIS run is its scale word
                 pendingUnit = []
+                var source = G2PSource.silent
                 var toks = resolveTokens(for: run, prefix: prefix, previous: previousWord, next: next,
-                                         pendingUnit: &pendingUnit)
+                                         pendingUnit: &pendingUnit, source: &source)
                 if !waiting.isEmpty, let unit = joinedTokens(for: waiting), let base = toks {
                     toks = base + [Self.space] + unit
                 }
-                guard emit(toks, textRange) else { break }
+                guard emit(toks, textRange, source) else { break }
                 previousWord = run.text
             } else if let dashWord = dashWord(chars, at: index) {
                 let width = char.utf16.count
-                guard emit(joinedTokens(for: [dashWord]), offset ..< offset + width) else { break }
+                guard emit(joinedTokens(for: [dashWord]), offset ..< offset + width, .number) else { break }
                 offset += width
                 index += 1
                 previousWord = dashWord
@@ -183,7 +208,7 @@ public struct KokoroG2P: Sendable {
                 index += 1
             }
         }
-        return G2PResult(tokens: tokens, words: words)
+        return G2PResult(tokens: tokens, words: words, sources: sources)
     }
 
     /// A sign or currency symbol that belongs to the number after it.
@@ -336,13 +361,15 @@ public struct KokoroG2P: Sendable {
     /// ever replace what used to be silence — the fate of every pronounceable
     /// OOV word before it, including "Kev" and "Kokoro" itself.
     private func resolveTokens(for run: WordRun, prefix: NumericPrefix?, previous: String?, next: String?,
-                               pendingUnit: inout [String]) -> [Int]?
+                               pendingUnit: inout [String], source: inout G2PSource) -> [Int]?
     {
         if run.containsDigit {
+            source = .number
             // House names first: "M1K3" is pronounced "Mike" (the
             // kill-or-commit ruling, 2026-08-16) — not spelled out. Only when
             // no unit or sign rode the run; "15°C" never reaches the lexicon.
             if run.unitWords.isEmpty, prefix == nil, let house = houseTokens(run.text.lowercased()) {
+                source = .house
                 return house
             }
             if case let .currency(symbol) = prefix, run.unitWords.isEmpty,
@@ -359,19 +386,31 @@ public struct KokoroG2P: Sendable {
                 return joinedTokens(for: sign + words + run.unitWords)
             }
             // Mixed alphanumeric ("V2X7") → spell out per character.
+            source = .spellOut
             return spellOutTokens(run.text, extraWords: run.unitWords, signWords: sign)
         }
         if let roman = SpokenNumbers.roman(run.text, previous: previous, next: next) {
+            source = .roman
             return joinedTokens(for: roman)
         }
         let raw = run.text.lowercased()
-        if let hit = lookup(raw) { return hit }
-        if let house = houseTokens(raw) { return house }
-        if let cased = casedLookup(run.text, lowered: raw) { return cased }
-        if let inflected = inflectedTokens(raw) { return inflected }
-        if let compound = compoundTokens(raw) { return compound }
-        if shouldSpellOut(run.text) { return spellOutTokens(run.text, extraWords: []) }
-        if let guessed = LetterToSound.tokens(for: raw) { return guessed }
+        let chain: [(G2PSource, () -> [Int]?)] = [
+            (.dictionary, { lookup(raw) }),
+            (.house, { houseTokens(raw) }),
+            (.cased, { casedLookup(run.text, lowered: raw) }),
+            (.inflection, { inflectedTokens(raw) }),
+            (.compound, { compoundTokens(raw) }),
+            // A run that should be spelled out STOPS here, spoken or not: letter-to-sound
+            // never guesses at "zzzqx" (an empty hit is a silent word).
+            (.spellOut, { shouldSpellOut(run.text) ? spellOutTokens(run.text, extraWords: []) ?? [] : nil }),
+            (.letterToSound, { LetterToSound.tokens(for: raw) }),
+        ]
+        for (link, resolve) in chain {
+            if let hit = resolve() {
+                source = link
+                return hit
+            }
+        }
         return nil
     }
 

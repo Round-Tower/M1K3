@@ -45,6 +45,8 @@
 //  throw, not trap); no other change. Confidence 0.8.
 //  Review: Kev + claude-opus-5.5, 2026-11-14 — dispatches the read eval (M1K3_SELFTEST_READEVAL=1, ReadEvalStage.swift):
 //  the blind read set on stdin through an MLX brain's TextReading seam.
+//  Review: Kev + claude-opus-5.5, 2026-11-15 (#838) — dispatches the Kokoro → Whisper round trip
+//  (M1K3_SELFTEST_TTSRT=1, TTSRoundTripStage.swift); no other change. Confidence 0.8.
 
 import Foundation
 import M1K3Chat
@@ -553,6 +555,12 @@ enum SelfTest {
         //     an MLX brain's `TextReading` seam, rows on stdout. See ReadEvalStage.swift.
         if ReadEvalStage.isRequested {
             await ReadEvalStage.run(emit: emit)
+        }
+
+        // 8j. Optional Kokoro → Whisper round trip (M1K3_SELFTEST_TTSRT=1, #838): the TTS
+        //     corpus spoken, transcribed and scored per class. See TTSRoundTripStage.swift.
+        if TTSRoundTripStage.isRequested {
+            await TTSRoundTripStage.run(emit: emit)
         }
 
         emit("=== END SELF-TEST ===")
