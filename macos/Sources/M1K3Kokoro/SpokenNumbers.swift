@@ -67,10 +67,14 @@ public enum SpokenNumbers {
         }
     }
 
-    private static let units: [Character: (one: String, many: String, minorOne: String, minorMany: String)] = [
-        "£": ("pound", "pounds", "penny", "pence"),
-        "$": ("dollar", "dollars", "cent", "cents"),
-        "€": ("euro", "euros", "cent", "cents"),
+    private struct CurrencyNames {
+        let one: String, many: String, minorOne: String, minorMany: String
+    }
+
+    private static let units: [Character: CurrencyNames] = [
+        "£": CurrencyNames(one: "pound", many: "pounds", minorOne: "penny", minorMany: "pence"),
+        "$": CurrencyNames(one: "dollar", many: "dollars", minorOne: "cent", minorMany: "cents"),
+        "€": CurrencyNames(one: "euro", many: "euros", minorOne: "cent", minorMany: "cents"),
     ]
 
     public static func isCurrencySymbol(_ char: Character) -> Bool {

@@ -15,7 +15,7 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-15, Confidence 0.75 (the corpus is a first
 //  cut: #838's table, common contractions, names and hard words Kev's users meet, and
-//  an original five-minute passage; Kev's heard examples belong here first). Prior:
+//  an original 785-word passage; Kev's heard examples belong here first). Prior:
 //  none (new file).
 //  Format: MurphySig v0.4 (https://murphysig.dev/spec)
 //
@@ -38,12 +38,17 @@ public enum TTSRoundTrip {
         public let text: String
         /// How it should sound, as words (the clip's .txt reference).
         public let spoken: String
+        /// What the word scorer can't see: its normaliser strips "-", "£", "/", so "five"
+        /// scores 0 errors against "-5". Each key is a set of acceptable forms (any one,
+        /// case-insensitive, anywhere in what was heard): ["minus", "-5"].
+        public let keys: [[String]]
 
-        public init(id: String, kind: Kind, text: String, spoken: String) {
+        public init(id: String, kind: Kind, text: String, spoken: String, keys: [[String]] = []) {
             self.id = id
             self.kind = kind
             self.text = text
             self.spoken = spoken
+            self.keys = keys
         }
 
         /// The spoken reading first, then the written one.
@@ -65,12 +70,36 @@ public enum TTSRoundTrip {
         } ?? WordErrorRate.score(reference: item.spoken, hypothesis: heard)
     }
 
+    /// How many of an item's keys Whisper heard in some acceptable form.
+    public static func keysHeard(_ item: Item, heard: String) -> Int {
+        let lowered = heard.lowercased()
+        return item.keys.filter { forms in forms.contains { lowered.contains($0.lowercased()) } }.count
+    }
+
     private static func items(_ kind: Kind, _ pairs: [(String, String?)]) -> [Item] {
         pairs.enumerated().map { index, pair in
             Item(id: String(format: "%@-%02d", kind.rawValue, index + 1), kind: kind,
-                 text: pair.0, spoken: pair.1 ?? pair.0)
+                 text: pair.0, spoken: pair.1 ?? pair.0, keys: numberKeys[pair.0] ?? [])
         }
     }
+
+    /// The numbers rows' keys, by written text. 1500/2048 have none: Whisper writes the
+    /// digits whichever reading it heard, so the year-or-count call is the ear's.
+    private static let numberKeys: [String: [[String]]] = [
+        "She came 3rd in her 21st race.": [["third", "3rd"], ["twenty first", "twenty-first", "21st"]],
+        "It was -5 overnight.": [["minus", "-5", "−5"]],
+        "It costs £5, or $20, or €3.50.": [["pound", "£"], ["dollar", "$"], ["euro", "€"]],
+        "The train leaves at 10:30.": [["10:30", "10.30", "ten thirty"]],
+        "From 1990–2000, see pages 4-7.": [["1990 to 2000", "nineteen ninety to two thousand"],
+                                           ["4 to 7", "four to seven"]],
+        "Add 1/2 a cup, then 3/4 of the rest.": [["half", "1/2", "½"], ["three quarters", "3/4", "¾"]],
+        "Henry VIII had six wives.": [["eighth", "viii", "8th"]],
+        "Read Psalm XXIII and Book IV.": [["twenty three", "twenty-three", "xxiii", "23"], ["book four", "book iv", "book 4"]],
+        "Look up John 3:16 tonight.": [["3:16", "3 16", "three sixteen"]],
+        "Euclid proves it in Elements I.47.": [["proposition"]],
+        "Update to v1.2.3 today.": [["version", "v1.2.3"]],
+        "In 1984 the house sold for £5 million.": [["million pounds", "£5 million", "£5m", "5 million pounds"]],
+    ]
 
     public static let corpus: [Item] = items(.contractions, [
         ("I'm sure it's fine.", nil),
@@ -117,7 +146,7 @@ public enum TTSRoundTrip {
         ("A rhombicosidodecahedron has sixty two faces.", nil),
     ]) + items(.passage, [(passage, nil)])
 
-    /// Original prose, about five minutes aloud: the audiobook question on #752.
+    /// Original prose, 785 words (about three minutes at Kokoro's pace): the audiobook question on #752.
     static let passage = """
     The lighthouse at the end of the headland had not been lit for years, but people still walked out to it \
     in the evenings, as if it might remember what it was for. The path ran along the top of the cliff, \
@@ -168,12 +197,27 @@ public struct TTSRoundTripReport: Sendable, Encodable, Equatable {
     public let transcriber: String
     /// class → fallback → words.
     public let fallbacks: [String: [String: Int]]
+    /// class → keys heard of keys asked (the symbols the word scorer forgives).
+    public let keys: [String: KeyTally]
 
-    public init(speech: SpeechToTextReport, voice: String, transcriber: String, fallbacks: [String: [String: Int]]) {
+    public struct KeyTally: Sendable, Encodable, Equatable {
+        public var heard: Int
+        public var total: Int
+
+        public init(heard: Int = 0, total: Int = 0) {
+            self.heard = heard
+            self.total = total
+        }
+    }
+
+    public init(speech: SpeechToTextReport, voice: String, transcriber: String,
+                fallbacks: [String: [String: Int]], keys: [String: KeyTally] = [:])
+    {
         self.speech = speech
         self.voice = voice
         self.transcriber = transcriber
         self.fallbacks = fallbacks
+        self.keys = keys
     }
 
     public func encoded() throws -> Data {

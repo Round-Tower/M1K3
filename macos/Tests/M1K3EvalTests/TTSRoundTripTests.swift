@@ -14,7 +14,7 @@ struct TTSRoundTripTests {
         }
         let passageWords = corpus.filter { $0.kind == .passage }
             .map { $0.text.split(whereSeparator: \.isWhitespace).count }.reduce(0, +)
-        // About five minutes of prose at ~150 words a minute.
+        // Several minutes of continuous prose (785 words, 177 s at Kokoro's pace on 2026-11-15).
         #expect(passageWords >= 650)
     }
 
@@ -49,6 +49,25 @@ struct TTSRoundTripTests {
         #expect(wrong.errors > 0)
     }
 
+    @Test("keys catch what the word scorer forgives: a dropped sign, symbol or ordinal")
+    func keys() throws {
+        let minus = try #require(TTSRoundTrip.corpus.first { $0.text.contains("-5") })
+        // The normaliser strips "-", so "five" scores 0 errors against "-5"; the key does not.
+        #expect(TTSRoundTrip.score(minus, heard: "It was five overnight.").errors == 0)
+        #expect(TTSRoundTrip.keysHeard(minus, heard: "It was five overnight.") == 0)
+        #expect(TTSRoundTrip.keysHeard(minus, heard: "It was minus five overnight.") == 1)
+        #expect(TTSRoundTrip.keysHeard(minus, heard: "It was -5 overnight.") == 1)
+        let money = try #require(TTSRoundTrip.corpus.first { $0.text.contains("£5,") })
+        #expect(money.keys.count == 3)
+        #expect(TTSRoundTrip.keysHeard(money, heard: "It costs 5 or 20 or 3.50.") == 0)
+        #expect(TTSRoundTrip.keysHeard(money, heard: "It costs £5 or $20 or €3.50.") == 3)
+        #expect(TTSRoundTrip.keysHeard(money, heard: "five Pounds, twenty dollars, three euros fifty") == 3)
+        // Every numbers item but the plain-digit ones carries keys; no other class needs them.
+        let keyed = TTSRoundTrip.corpus.filter { !$0.keys.isEmpty }
+        #expect(keyed.allSatisfy { $0.kind == .numbers })
+        #expect(keyed.count >= 11)
+    }
+
     @Test("clip file names pair audio with text and sort by class then index")
     func clipNames() {
         let item = TTSRoundTrip.Item(id: "numbers-03", kind: .numbers, text: "x", spoken: "x")
@@ -62,11 +81,13 @@ struct TTSRoundTripTests {
         let report = TTSRoundTripReport(
             speech: SpeechToTextReport(date: "2026-11-15", clips: 1, locale: "en_GB", arms: [arm]),
             voice: "bm_daniel", transcriber: "small.en",
-            fallbacks: ["numbers": ["number": 2]]
+            fallbacks: ["numbers": ["number": 2]],
+            keys: ["numbers": TTSRoundTripReport.KeyTally(heard: 9, total: 12)]
         )
         let json = try #require(String(data: report.encoded(), encoding: .utf8))
         #expect(json.contains("\"voice\" : \"bm_daniel\""))
         #expect(json.contains("\"number\" : 2"))
+        #expect(json.contains("\"heard\" : 9"))
         #expect(!json.contains("too"))
     }
 }
