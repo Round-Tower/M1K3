@@ -7,6 +7,7 @@
 //
 //  Signed: Kev + claude-fable-5.1, 2026-10-10, Confidence 0.85, Prior: none (new file).
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#545 pass 2) — `if let` reword of the model_type check.
+//  Review: Kev + claude-opus-5.5, 2026-11-15 (#836) — four error cases for the vision path; the text-core fields are untouched.
 
 import Foundation
 
@@ -155,4 +156,12 @@ public struct EmbeddingGemma2Configuration: Decodable, Sendable {
 
 public enum EmbeddingGemma2Error: Error, Equatable {
     case notEmbeddingGemma2(String)
+    /// A vision tower this port does not cover (see `EmbeddingGemma2VisionConfiguration.decode`).
+    case unsupportedVision(String)
+    /// The checkpoint declares no vision tower, or its weights are not on disk.
+    case visionUnavailable
+    /// The bytes are not an image the system can decode, or its size is unusable.
+    case invalidImage
+    /// The model returned a non-finite or all-zero vector.
+    case invalidEmbedding
 }

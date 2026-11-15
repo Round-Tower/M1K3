@@ -51,6 +51,24 @@ struct MLXEmbeddingServiceTests {
         #expect(fp != "mlx/mlx-community/Qwen3-Embedding-0.6B-4bit-DWQ/d512/\(MLXEmbeddingService.kernelTag)")
     }
 
+    @Test("the text fingerprint is the literal 1.4 string: the image path adds nothing to it, so no store re-indexes (#836)")
+    func textFingerprintIsPinnedLiterally() {
+        // Stored text vectors carry this string. Any edit here re-indexes every store, so it is spelled out,
+        // not composed from the constants it is built from.
+        #expect(MLXEmbeddingService().fingerprint == "mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v1")
+    }
+
+    @Test("the image path has its own fingerprint: same model, width and kernel, its own prompt version")
+    func imageFingerprintIsItsOwn() throws {
+        let service = MLXEmbeddingService()
+        let image = try #require(service.imageFingerprint)
+        #expect(image == "mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/image-prompt-v1")
+        #expect(image != service.fingerprint)
+        #expect(image.hasPrefix(EmbedderFloors.embeddingGemma2IdentityPrefix))
+        // Qwen has no vision tower: no image identity to invent.
+        #expect(MLXEmbeddingService(configuration: EmbedderRegistry.qwen3_embedding).imageFingerprint == nil)
+    }
+
     @Test("Qwen3-Embedding stays constructible for the A/B harness, with its old fingerprint")
     func qwenRemainsConstructible() {
         let qwen = MLXEmbeddingService(configuration: EmbedderRegistry.qwen3_embedding)

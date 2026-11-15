@@ -53,6 +53,9 @@
 //  narrower (but clean) dead zones get their own floors (EmbedderFloors.embeddingGemma2, challenged); the
 //  fingerprint change re-indexes every store once on next launch. Qwen stays constructible for the A/B.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 — header comment only: "Default = Qwen3-Embedding" now names EmbeddingGemma 2 (#547). Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-11-15 (#836) — `embedImage` + `imageFingerprint` (the vision tower, loaded on first
+//  image and dropped under memory pressure). The text arm is untouched: same `fingerprint` string, same prompts, same
+//  load; EmbeddingGemma2Tests pins the literal fingerprint. Confidence 0.75.
 
 import Foundation
 import M1K3Inference
@@ -135,6 +138,15 @@ public final class MLXEmbeddingService: EmbeddingService, @unchecked Sendable {
         case .qwen3Instruct: "mlx/\(configuration.name)/d\(dimension)/\(Self.kernelTag)"
         case .embeddingGemma2: "mlx/\(configuration.name)/d\(dimension)/\(Self.kernelTag)/\(Self.gemmaPromptVersion)"
         }
+    }
+
+    /// Identity of the IMAGE vector space (#836): the same model, width and kernel generation as `fingerprint`,
+    /// but its own prompt version (`EmbeddingGemma2ImagePath.promptVersion`, the image sequence layout) instead of
+    /// the text path's `prompt-v1`. Kept apart so editing one prompt never re-embeds the other modality, and the
+    /// text `fingerprint` (every stored text vector) is untouched. Nil where images cannot embed (Qwen).
+    public var imageFingerprint: String? {
+        guard prompting == .embeddingGemma2 else { return nil }
+        return "mlx/\(configuration.name)/d\(dimension)/\(Self.kernelTag)/\(EmbeddingGemma2ImagePath.promptVersion)"
     }
 
     /// - Parameters:
@@ -260,6 +272,60 @@ public final class MLXEmbeddingService: EmbeddingService, @unchecked Sendable {
         // dimension=384) this is a no-op pass-through.
         return try MatryoshkaTruncation.truncateValidated(raw, to: dimension)
     }
+
+    // MARK: Images (#836)
+
+    /// Embeds an encoded image (PNG, JPEG, HEIC…) into the same space as text, MRL-truncated to `dimension`.
+    /// EmbeddingGemma 2 only: the vision tower loads on the first call (not at launch, not for text) and is
+    /// dropped on a system memory warning or `unloadVision()`. Throws `EmbeddingGemma2Error.visionUnavailable`
+    /// for any other model, or a checkpoint without a vision tower.
+    ///
+    /// The iOS / visionOS shell never constructs this service (it embeds with hashing until Stream D lands);
+    /// the first caller there must sit behind `AppCore.mlxAvailable`, like every MLX path — the Simulator and
+    /// Apple GPU family 5 trap in mlx-swift rather than throw.
+    public func embedImage(_ data: Data) async throws -> [Float] {
+        guard prompting == .embeddingGemma2 else { throw EmbeddingGemma2Error.visionUnavailable }
+        guard case let .gemma(embedder) = try await ensureLoaded() else { throw EmbeddingGemma2Error.visionUnavailable }
+        defer { MLXMemoryBudget.reclaim(label: "embed-image") }
+        let raw = try await embedder.embedImage(data)
+        watchMemoryPressure(for: embedder)
+        return try MatryoshkaTruncation.truncateValidated(raw, to: dimension)
+    }
+
+    /// Drops the vision tower's weights now (a no-op for text-only use or before the first image).
+    public func unloadVision() async {
+        guard let embedder = visionEmbedder() else { return }
+        await embedder.unloadVision()
+        MLXMemoryBudget.reclaim(label: "vision-unload")
+    }
+
+    private func visionEmbedder() -> EmbeddingGemma2Embedder? {
+        visionLock.lock()
+        defer { visionLock.unlock() }
+        return imageEmbedder
+    }
+
+    /// One memory-pressure source per service, installed when the tower first loads: a warning or critical event
+    /// frees the ~340 MB of vision weights (the next image reloads them in a moment); the text core stays.
+    private func watchMemoryPressure(for embedder: EmbeddingGemma2Embedder) {
+        visionLock.lock()
+        defer { visionLock.unlock() }
+        imageEmbedder = embedder
+        guard pressureSource == nil else { return }
+        let source = DispatchSource.makeMemoryPressureSource(eventMask: [.warning, .critical], queue: .global(qos: .utility))
+        source.setEventHandler {
+            Task {
+                await embedder.unloadVision()
+                MLXMemoryBudget.reclaim(label: "vision-pressure")
+            }
+        }
+        source.resume()
+        pressureSource = source
+    }
+
+    private let visionLock = NSLock()
+    private var imageEmbedder: EmbeddingGemma2Embedder?
+    private var pressureSource: DispatchSourceMemoryPressure?
 
     private static func embedUpstream(_ text: String, in container: EmbedderModelContainer) async -> [Float] {
         await container.perform { context in
