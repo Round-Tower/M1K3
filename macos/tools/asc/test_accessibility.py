@@ -163,3 +163,33 @@ def test_a_draft_beside_a_published_one_is_the_one_edited() -> None:
     spec = spec_of(MAC={"voiceover": "declare"})
     steps = a11y.plan(spec, [live("P1", "MAC", "PUBLISHED"), live("D1", "MAC", "DRAFT")], ["MAC"])
     assert (steps[0].action, steps[0].draft_id) == ("update", "D1")
+
+
+def test_n_a_leaves_the_attribute_out_of_every_payload() -> None:
+    # ASC 409, 2026-11-15: "The 'supportsLargerText' attribute cannot be set for an
+    # 'accessibilityDeclarations' with the 'MAC' device family." Even false is refused,
+    # so an n/a feature is absent from the body, not sent as not supported.
+    claims = spec_of(MAC={"voiceover": "declare", "largerText": "n/a"})["MAC"]
+    attrs = a11y.attributes(claims)
+    assert "supportsLargerText" not in attrs
+    assert attrs["supportsVoiceover"] is True
+    assert len(attrs) == len(a11y.FEATURES) - 1
+    step = a11y.plan(spec_of(MAC={"voiceover": "declare", "largerText": "n/a"}), [], ["MAC"])[0]
+    for _method, _path, body in a11y.requests_for(step, publish=True):
+        assert "supportsLargerText" not in body["data"]["attributes"]
+    assert "largerText" not in a11y.describe(step)
+
+
+def test_a_published_mac_declaration_matches_without_the_n_a_attribute() -> None:
+    spec = spec_of(MAC={"voiceover": "declare", "largerText": "n/a"})
+    published = live("P1", "MAC", "PUBLISHED", voiceover=True)
+    del published["attributes"]["supportsLargerText"]
+    assert a11y.plan(spec, [published], ["MAC"])[0].action == "same"
+
+
+def test_the_shipped_spec_marks_larger_text_n_a_on_the_mac_only() -> None:
+    spec = a11y.load_spec(HERE / "accessibility_labels.json")
+    assert spec["MAC"]["largerText"]["status"] == "n/a"
+    assert "cannot be set" in spec["MAC"]["largerText"]["evidence"]
+    assert spec["IPHONE"]["largerText"]["status"] == "declare"
+    assert spec["IPAD"]["largerText"]["status"] == "declare"
