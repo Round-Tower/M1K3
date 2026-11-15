@@ -166,6 +166,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-14 (the summoned pass on #833) — `read`/`readAgain` return whether they
 //  started (a brain swap between the route and the call no longer drops the question); Keep's banner comes from
 //  `ReadSource.keptStatus`, which names the part kept when the cap cut the text. Confidence 0.75 (compile-checked).
+//  Review: Kev + claude-opus-5.5, 2026-11-15 — `read`/`readAgain` refuse a turn in flight (and `readAgain` a missing
+//  read) BEFORE pausing Brain at Home and the Local API, as the phone's wrapper already did: a refused read no longer
+//  stalls serving for nothing (the #833 review nit). Confidence 0.85 (compile-checked).
 
 import AppKit
 import Foundation
@@ -1459,7 +1462,9 @@ final class AppEnvironment {
     /// instructions only, no persona, no tools, display-only. False when it could not start (the
     /// brain changed, or a turn is in flight): the caller hands the words and the file back.
     func read(_ question: String, source: ReadSource) async -> Bool {
-        guard isReady, let reader else { return false }
+        // A turn in flight refuses before the pause, so a refused read never stalls Brain at Home
+        // or the Local API for nothing (the #833 review nit).
+        guard isReady, !chat.isResponding, let reader else { return false }
         brainServe?.preemptForLocalTurn()
         localAPI?.preemptForLocalTurn()
         return await chat.read(question, source: source, reader: reader)
@@ -1467,7 +1472,7 @@ final class AppEnvironment {
 
     /// Another question about the last read's text (`ChatSession.readAgain`). False as for `read`.
     func readAgain(_ question: String) async -> Bool {
-        guard isReady, let reader else { return false }
+        guard isReady, !chat.isResponding, chat.lastRead != nil, let reader else { return false }
         brainServe?.preemptForLocalTurn()
         localAPI?.preemptForLocalTurn()
         return await chat.readAgain(question, reader: reader)
