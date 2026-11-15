@@ -47,7 +47,7 @@ struct PrivateWebHostTests {
         #expect(await guardian.allows(url("https://example.com"), isMainFrame: true, userInitiated: false))
     }
 
-    @Test("a page's own redirect into private space is refused, a person's click is not")
+    @Test("a page's own redirect into private space is refused, and so is a click the page may have faked")
     @MainActor
     func redirectIntoPrivateRefused() async {
         let guardian = WebNavigationGuard(initialURL: url("https://example.com"), resolver: Table(answers: [:]))
@@ -55,7 +55,57 @@ struct PrivateWebHostTests {
         #expect(await !guardian.allows(url("http://192.168.1.1/admin"), isMainFrame: true, userInitiated: false))
         #expect(await !guardian.allows(url("http://localhost:8080"), isMainFrame: true, userInitiated: false))
         #expect(await guardian.allows(url("https://example.org/next"), isMainFrame: true, userInitiated: false))
+        // WebKit gives no user-gesture bit, so a hostile page's scripted click reads as a click. The strict
+        // (voice page) guard judges it like any other move, toward private and loopback targets alike.
+        #expect(await !guardian.allows(url("http://192.168.1.1/mine"), isMainFrame: true, userInitiated: true))
+        #expect(await !guardian.allows(url("http://localhost:4242/mcp"), isMainFrame: true, userInitiated: true))
+        #expect(await !guardian.allows(url("http://[::1]:4242/"), isMainFrame: true, userInitiated: true))
+        #expect(await guardian.allows(url("https://example.org/clicked"), isMainFrame: true, userInitiated: true))
+    }
+
+    @Test("the lenient guard (a person's own panel) still lets a real click go anywhere")
+    @MainActor
+    func lenientTrustsClicks() async {
+        let guardian = WebNavigationGuard(
+            initialURL: url("https://example.com"), resolver: Table(answers: [:]), isStrict: false
+        )
+        _ = await guardian.allows(url("https://example.com"), isMainFrame: true, userInitiated: false)
         #expect(await guardian.allows(url("http://192.168.1.1/mine"), isMainFrame: true, userInitiated: true))
+        #expect(await !guardian.allows(url("http://192.168.1.1/admin"), isMainFrame: true, userInitiated: false))
+    }
+
+    @Test("strict: only http, https and about pass on the main frame; everything else is cancelled", arguments: [
+        "tel:+15551234567", "zoommtg://zoom.us/join?confno=1", "itms-apps://apps.apple.com/app/id1",
+        "mailto:a@b.c", "facetime://x", "sms:555", "m1k3://event/x", "data:text/html,hi", "blob:https://example.com/abc",
+        "javascript:alert(1)", "ftp://example.com/x", "x-apple.systempreferences:", "file:///etc/hosts",
+    ])
+    @MainActor
+    func strictSchemes(raw: String) async {
+        let guardian = WebNavigationGuard(initialURL: url("https://example.com"), resolver: Table(answers: [:]))
+        _ = await guardian.allows(url("https://example.com"), isMainFrame: true, userInitiated: false)
+        #expect(await !guardian.allows(url(raw), isMainFrame: true, userInitiated: true))
+        #expect(await !guardian.allows(url(raw), isMainFrame: true, userInitiated: false))
+    }
+
+    @Test("strict: http, https and about main-frame moves pass the scheme check", arguments: [
+        "https://example.org/", "http://example.org/", "about:blank", "HTTPS://example.org/",
+    ])
+    @MainActor
+    func strictAllowedSchemes(raw: String) async {
+        let guardian = WebNavigationGuard(initialURL: url("https://example.com"), resolver: Table(answers: [:]))
+        _ = await guardian.allows(url("https://example.com"), isMainFrame: true, userInitiated: false)
+        #expect(await guardian.allows(url(raw), isMainFrame: true, userInitiated: false))
+    }
+
+    @Test("strict: a subframe may load blob and data subresources, but still not tel or zoom")
+    @MainActor
+    func strictSubframes() async {
+        let guardian = WebNavigationGuard(initialURL: url("https://example.com"), resolver: Table(answers: [:]))
+        _ = await guardian.allows(url("https://example.com"), isMainFrame: true, userInitiated: false)
+        #expect(await guardian.allows(url("blob:https://example.com/abc"), isMainFrame: false, userInitiated: false))
+        #expect(await guardian.allows(url("data:image/png;base64,AAAA"), isMainFrame: false, userInitiated: false))
+        #expect(await !guardian.allows(url("tel:555"), isMainFrame: false, userInitiated: false))
+        #expect(await !guardian.allows(url("zoommtg://x"), isMainFrame: false, userInitiated: false))
     }
 
     @Test("a public name that rebinds into private space is refused on a later move")
@@ -93,7 +143,7 @@ struct PrivateWebHostTests {
         #expect(await !guardian.allows(url("file:///etc/hosts"), isMainFrame: true, userInitiated: false))
     }
 
-    @Test("non-web schemes are not the guard's to judge")
+    @Test("about:blank passes")
     @MainActor
     func otherSchemesPass() async {
         let guardian = WebNavigationGuard(initialURL: url("https://example.com"), resolver: Table(answers: [:]))

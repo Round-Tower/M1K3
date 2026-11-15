@@ -11,6 +11,8 @@
 //  Signed: Kev + claude-opus-5.5, 2026-11-15, Confidence 0.6 (verify-by-launch: placement over each
 //  avatar skin, VoiceOver order, whether WebKit highlights the text fragment on this load).
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-11-15 — #839 review: the page feeds its own context slot, judged on the requested
+//  URL (no ReviewModel); Close takes `.cancelAction` so Esc works after a click into the page. Confidence 0.6.
 
 import AppKit
 import M1K3Preview
@@ -26,8 +28,10 @@ struct VoicePagePanel: View {
             Divider().opacity(0.4)
             DeferredPanelMount {
                 WebReviewView(url: url, onPageLoaded: { context in
-                    // The model reads the page through BrowserContext (ReviewModel.liveContext).
-                    env.review.setPageContext(context, for: env.review.currentWebURL ?? url)
+                    // The model reads the page through BrowserContext, from the voice page's own slot. A capture
+                    // that lands after the page moved on (or closed) is dropped, judged on the REQUESTED url.
+                    guard env.voicePage.url == url else { return }
+                    VoicePageContext.set(context)
                 }, control: env.pageControl)
             }
             .id(url)
@@ -57,6 +61,8 @@ struct VoicePagePanel: View {
             Button { env.closeVoicePage() } label: {
                 Image(systemName: "xmark")
             }
+            // Esc closes the page even when a click inside the web view took focus from the hero.
+            .keyboardShortcut(.cancelAction)
             .help("Close page (Esc)")
             .accessibilityLabel("Close page")
         }

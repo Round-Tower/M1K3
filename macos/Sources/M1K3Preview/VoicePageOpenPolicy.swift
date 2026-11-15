@@ -14,6 +14,7 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-15, Confidence 0.85 (pure; the pin is the
 //  model-output test). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-11-15 — #839 review: `deferOpen` (one pending open, cancelled by `close()`).
 
 import Foundation
 import Observation
@@ -86,6 +87,7 @@ public final class VoicePageSession {
     /// Bumped per request and per close: an open that finishes its lookup after a newer
     /// request (or a close) is dropped, so a slow lookup cannot reopen a closed page.
     @ObservationIgnored private var generation = 0
+    @ObservationIgnored private var pending: Task<Void, Never>?
 
     public init(resolver: any HostResolving = SystemHostResolver()) {
         self.resolver = resolver
@@ -110,8 +112,21 @@ public final class VoicePageSession {
         }
     }
 
+    /// Run `work` (an open that waits for something, like an answer's sources) as the session's one
+    /// pending open. A newer one replaces it, and `close()` cancels it, so a page the person closed
+    /// cannot reopen itself later.
+    @discardableResult
+    public func deferOpen(_ work: @escaping @MainActor () async -> Void) -> Task<Void, Never> {
+        pending?.cancel()
+        let task = Task { @MainActor in await work() }
+        pending = task
+        return task
+    }
+
     public func close() {
         generation += 1
+        pending?.cancel()
+        pending = nil
         url = nil
         refusal = nil
     }

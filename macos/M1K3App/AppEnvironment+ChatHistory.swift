@@ -55,6 +55,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — Kev flipped the search head on (`whenUnset: true`; `-toolSearchHead NO`
 //  turns it off). It ships as its untrained stub, which never vetoes, so no turn changes until trained weights pass
 //  the gate; then they are live with no flag move. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-15 — #839: `browserContextProvider` also reads the voice page's own slot
+//  (`VoicePageContext`) when the review panel shows nothing. Confidence 0.8.
 
 import Foundation
 import M1K3Agent
@@ -566,7 +568,8 @@ extension AppEnvironment {
             voiceClauseProvider: { Self.voiceTurnClause.clause },
             // What's open beside the chat (the review panel's rendered page) — a
             // snapshot the web view updates on load; nil when no page is showing.
-            browserContextProvider: { ReviewModel.liveContext.withLock { $0 } },
+            // The review panel's page, else the one voice mode has open (#839): never both at once.
+            browserContextProvider: { ReviewModel.liveContext.withLock { $0 } ?? VoicePageContext.live.withLock { $0 } },
             // The user's open todos, rendered once per write (todosRevision)
             // and read here as a snapshot — per-turn content, never the
             // cached persona prefix.

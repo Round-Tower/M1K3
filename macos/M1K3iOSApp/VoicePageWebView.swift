@@ -12,6 +12,9 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-15, Confidence 0.6 (compile-checked; the policy and store
 //  are pinned in M1K3PreviewTests; the look and the touch behaviour are verify-on-device). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-11-15 — #839 review: a refused or failed page shows a short note instead of a
+//  blank card (policy cancels stay quiet); `canGoBack`; the guard is the strict one (no trusted clicks, http /
+//  https / about only). Confidence 0.6.
 
 import M1K3Preview
 import SwiftUI
@@ -38,6 +41,10 @@ final class VoicePageControl {
         webView?.evaluateJavaScript(script, completionHandler: nil)
     }
 
+    var canGoBack: Bool {
+        webView?.canGoBack ?? false
+    }
+
     @discardableResult
     func goBack() -> Bool {
         guard let webView, webView.canGoBack else { return false }
@@ -49,9 +56,11 @@ final class VoicePageControl {
 struct VoicePageWebView: UIViewRepresentable {
     let url: URL
     let control: VoicePageControl
+    /// A short line when the page is refused or fails to load; nil when a load starts fine.
+    let onFailure: (String?) -> Void
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(url: url)
+        Coordinator(url: url, onFailure: onFailure)
     }
 
     func makeUIView(context: Context) -> WKWebView {
@@ -70,9 +79,11 @@ struct VoicePageWebView: UIViewRepresentable {
     @MainActor
     final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
         private let navigationGuard: WebNavigationGuard
+        private let onFailure: (String?) -> Void
 
-        init(url: URL) {
+        init(url: URL, onFailure: @escaping (String?) -> Void) {
             navigationGuard = WebNavigationGuard(initialURL: url)
+            self.onFailure = onFailure
         }
 
         func webView(
@@ -84,7 +95,30 @@ struct VoicePageWebView: UIViewRepresentable {
                 isMainFrame: navigationAction.targetFrame?.isMainFrame ?? true,
                 userInitiated: navigationAction.navigationType == .linkActivated
             )
+            if !allowed {
+                onFailure(String(localized: "M1K3 won't open that link from a page."))
+            }
             return allowed ? .allow : .cancel
+        }
+
+        func webView(_: WKWebView, didStartProvisionalNavigation _: WKNavigation!) {
+            onFailure(nil)
+        }
+
+        func webView(_: WKWebView, didFail _: WKNavigation!, withError error: Error) {
+            fail(error)
+        }
+
+        func webView(_: WKWebView, didFailProvisionalNavigation _: WKNavigation!, withError error: Error) {
+            fail(error)
+        }
+
+        private func fail(_ error: Error) {
+            let nsError = error as NSError
+            // WebKit's "Frame load interrupted" (102) is a policy cancel: ours, whose note is already up.
+            if nsError.domain == "WebKitErrorDomain", nsError.code == 102 { return }
+            if nsError.domain == NSURLErrorDomain, nsError.code == NSURLErrorCancelled { return }
+            onFailure(String(localized: "Couldn't load the page."))
         }
 
         /// target="_blank" / window.open(): load in place (it goes back through the guard).
@@ -108,6 +142,8 @@ struct VoicePageCard: View {
     let control: VoicePageControl
     let onClose: () -> Void
 
+    @State private var failure: String?
+
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
@@ -128,8 +164,24 @@ struct VoicePageCard: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
             Divider().opacity(0.4)
-            VoicePageWebView(url: url, control: control)
+            VoicePageWebView(url: url, control: control) { failure = $0 }
                 .id(url)
+                .overlay {
+                    if let failure {
+                        VStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle")
+                                .imageScale(.large)
+                                .accessibilityHidden(true)
+                            Text(failure)
+                                .font(.callout)
+                                .multilineTextAlignment(.center)
+                        }
+                        .padding(20)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(.regularMaterial)
+                        .accessibilityElement(children: .combine)
+                    }
+                }
         }
         .m1k3Glass(cornerRadius: 22)
         .clipShape(RoundedRectangle(cornerRadius: 22))

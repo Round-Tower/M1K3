@@ -11,6 +11,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-15, Confidence 0.8 (the phrase list is a first cut;
 //  recogniser variants will earn additions, each with a near-miss test). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-11-15 — #839 review: `VoicePageRouting` (the grammar must not swallow an
+//  ordinary turn: nothing cited falls through, "go back" at the first page closes). Confidence 0.8.
 
 import Foundation
 
@@ -74,5 +76,50 @@ public enum VoicePageGrammar {
             }
         }
         return phrase
+    }
+}
+
+/// Whether the last answer has a source to put up: the shells map `CitedSource.Availability` onto it.
+public enum VoicePageCitedState: Sendable, Equatable {
+    case ready
+    /// The answer is still being written; its sources land when it finishes.
+    case pending
+    case none
+}
+
+/// What to do with a spoken turn (#839): a page command, or an ordinary turn for the model.
+public enum VoicePageAction: Sendable, Equatable {
+    case scroll(VoicePageCommand)
+    case goBack
+    case close
+    case openCited
+    /// Say a short "one moment" now and open the page once the sources land.
+    case waitThenOpenCited
+    /// Not ours: the words go to the model like any turn.
+    case passToModel
+}
+
+public enum VoicePageRouting {
+    /// The grammar plus what it needs to know. The grammar never swallows an ordinary turn:
+    /// "show me that" with nothing cited is a question for the model; "go back" at the first page
+    /// closes the page (there is no earlier page to go to).
+    public static func route(
+        _ transcript: String, pageIsOpen: Bool, cited: VoicePageCitedState, canGoBack: Bool
+    ) -> VoicePageAction {
+        guard let command = VoicePageGrammar.match(transcript, pageIsOpen: pageIsOpen) else { return .passToModel }
+        switch command {
+        case .scrollDown, .scrollUp:
+            return .scroll(command)
+        case .goBack:
+            return canGoBack ? .goBack : .close
+        case .close:
+            return .close
+        case .showCited:
+            switch cited {
+            case .ready: return .openCited
+            case .pending: return .waitThenOpenCited
+            case .none: return .passToModel
+            }
+        }
     }
 }

@@ -37,6 +37,10 @@ final class WebReviewControl {
         webView?.evaluateJavaScript(script, completionHandler: nil)
     }
 
+    var canGoBack: Bool {
+        webView?.canGoBack ?? false
+    }
+
     /// Back one page in the web view's own history; false when there is none.
     @discardableResult
     func goBack() -> Bool {

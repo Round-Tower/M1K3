@@ -123,6 +123,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-14 — the read (a text, instructions only): `read`, `readAgain`, `lastRead`,
 //  `readSource(answeredBy:)`, display-only like the look (contextExcluded, tag `read`, no title, a rating keeps no
 //  words); `ChatMessage.readSource` (Optional, strip-key decode pinned). Confidence 0.8: ChatSessionReadTests.
+//  Review: Kev + claude-opus-5.5, 2026-11-15 — #839 review: `ChatMessage.citedURLs` (Optional, persisted) and the
+//  `collectedCitedURLs()` seam record the URLs the app itself cited, so a model-typed "Web sources:" block cannot
+//  be put up by voice. Confidence 0.8 (pinned in CitedSourceTests).
 //  Review: Kev + claude-opus-5.5, 2026-11-14 (follow-ups) — `ChatMessage.isRead`, so the shells keep a read's links
 //  untappable. Confidence 0.85.
 
@@ -184,6 +187,12 @@ public protocol RAGResponding: Sendable {
     /// merge into the message's sources and the citation validator's allow-list.
     /// Defaults to empty for responders without tools.
     func collectedSources() -> [ChunkHit]
+
+    /// The web / Wikipedia URLs the app's own "Web sources:" / "Wikipedia sources:" block cited this
+    /// turn (#839), lifted from tool observations. DESTRUCTIVE like `collectedSources`: call once,
+    /// after the stream completes. These, not any block text, are what "show me that" may open.
+    /// Defaults to none for responders without web tools.
+    func collectedCitedURLs() -> [String]
 }
 
 public extension RAGResponding {
@@ -212,6 +221,10 @@ public extension RAGResponding {
     }
 
     func collectedSources() -> [ChunkHit] {
+        []
+    }
+
+    func collectedCitedURLs() -> [String] {
         []
     }
 }
@@ -252,6 +265,10 @@ public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
     /// Optional so pre-trace transcripts decode to nil (the `attachments`
     /// precedent); nil and empty mean the same.
     public var toolsUsed: [String]?
+    /// The URLs the app itself cited for this answer (the lifted web / Wikipedia sources, never text
+    /// the model typed), so voice mode's "show me that" opens only what a tool really returned (#839).
+    /// PERSISTED so a reloaded answer can still be put up; OPTIONAL so every earlier transcript decodes nil.
+    public var citedURLs: [String]?
     /// A reasoning model's `<think>…</think>` chain-of-thought, separated from
     /// the answer and surfaced (collapsibly) for transparency. Persisted as an
     /// optional key, so old transcripts (without it) still decode to nil.
@@ -331,6 +348,7 @@ public struct ChatMessage: Identifiable, Sendable, Equatable, Codable {
 
     enum CodingKeys: String, CodingKey {
         case id, role, text, sources, status, reasoning, attachments, toolsUsed, brain, contextExcluded, interrupted
+        case citedURLs
         case answerOrigin, turnNote, readSource
     }
 
@@ -577,6 +595,7 @@ public final class ChatSession {
             let (reasoning, answerWithFollowUps) = ReasoningSplit.split(raw)
             let (answer, followUps) = FollowUpSplit.split(answerWithFollowUps)
             let mergedSources = Self.mergeSources(sources, responder.collectedSources())
+            let citedURLs = responder.collectedCitedURLs()
             let validation = await CitationValidator.validate(responseText: answer, against: mergedSources)
             // Prompt-leak guard (#111): the model reproduced its own wiring.
             // The persona's WIRING rule forbids it, but a prompt cannot enforce itself and
@@ -609,6 +628,7 @@ public final class ChatSession {
                 // under a refusal would dress the leak up as a served answer
                 // (the "Sources footer on a leak" rule, #111).
                 if leaked { $0.toolsUsed = nil }
+                $0.citedURLs = leaked || citedURLs.isEmpty ? nil : citedURLs
                 $0.activityLabel = nil
                 $0.interrupted = stopped ? true : nil
                 $0.status = .complete

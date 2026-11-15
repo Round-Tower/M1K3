@@ -89,6 +89,36 @@ struct PageHostScanTests {
         #expect(iosSpoken.contains("origin: .spokenRequest"))
     }
 
+    @Test("the Mac voice page never touches the chat inspector's ReviewModel")
+    func macVoicePageLeavesReviewModelAlone() throws {
+        for file in ["M1K3App/VoicePagePanel.swift", "M1K3App/AppEnvironment+VoicePage.swift"] {
+            let source = try Self.code(file)
+            #expect(!source.contains("env.review"), "\(file) reaches the inspector's model")
+            #expect(!source.contains("review.open"), "\(file) opens the inspector's target")
+            #expect(!source.contains("review.clear"), "\(file) wipes the inspector's target")
+        }
+        let panel = try Self.code("M1K3App/VoicePagePanel.swift")
+        #expect(panel.contains("guard env.voicePage.url == url"), "a stale capture must be judged on the requested url")
+        #expect(panel.contains(".keyboardShortcut(.cancelAction)"), "Esc must reach Close after a click into the page")
+    }
+
+    @Test("the responder reads the voice page's context slot beside the review panel's")
+    func providerReadsVoiceSlot() throws {
+        let source = try Self.code("M1K3App/AppEnvironment+ChatHistory.swift")
+        #expect(source.contains("ReviewModel.liveContext.withLock { $0 } ?? VoicePageContext.live.withLock { $0 }"))
+    }
+
+    @Test("closing the voice page always cancels a pending open, before any early return")
+    func closeAlwaysCancels() throws {
+        for file in ["M1K3App/AppEnvironment+VoicePage.swift", "M1K3iOSApp/AppCore+VoicePage.swift"] {
+            let source = try Self.code(file)
+            let range = try #require(source.range(of: "func closeVoicePage() {"), "\(file)")
+            let body = source[range.upperBound...].prefix(160)
+            #expect(!body.contains("guard"), "\(file): closeVoicePage must not return early")
+            #expect(body.contains("voicePage.close()"))
+        }
+    }
+
     @Test("the Mac panel keeps the review view's navigation policy and store")
     func macHostIsTheReviewView() throws {
         let panel = try Self.code("M1K3App/VoicePagePanel.swift")

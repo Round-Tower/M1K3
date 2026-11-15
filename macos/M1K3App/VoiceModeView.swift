@@ -58,6 +58,8 @@
 //  over it (narrow), only after a tap on the source chip or a spoken "show me that". The avatar keeps the rest of
 //  the window and stays the tap / Space barge-in target; the chrome is inset with it. ESC closes the page first, then
 //  leaves voice mode. The slide sits out under Reduce Motion (a fade instead). Confidence 0.6 (verify-by-launch).
+//  Review: same day (review fold) — the hero re-grabs focus one yield after the page's deferred mount; the chip reads
+//  the cached cited source. Confidence 0.6.
 
 import M1K3Avatar
 import M1K3Chat
@@ -165,7 +167,12 @@ struct VoiceModeView: View {
             if pageOpen { env.closeVoicePage() } else { env.exitVoiceMode() }
         }
         // The page took a click or a spoken open; keep Space / Esc on the hero.
-        .onChange(of: pageOpen) { focused = true }
+        .onChange(of: pageOpen) {
+            Task {
+                await Task.yield() // after the deferred mount of the page's web view
+                focused = true
+            }
+        }
         .onChange(of: env.voiceLoop?.state) { _, newState in
             syncAvatar(with: newState)
         }
