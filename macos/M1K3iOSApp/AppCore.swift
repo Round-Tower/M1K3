@@ -160,6 +160,8 @@
 //  ingest banner (the read itself is AppCore+Read). Compile-checked; owes a try in the hand.
 //  Review: Kev + claude-opus-5.5, 2026-11-14 (the summoned pass on #833) — Keep's banner comes from
 //  `ReadSource.keptStatus`, which names the part kept when the cap cut the text. Compile-checked.
+//  Review: Kev + claude-opus-5.5, 2026-11-15 — `voicePage` + `pageControl` (#839): the page voice mode can open
+//  beside the face, and the handle its spoken scroll / back commands drive (AppCore+VoicePage). Compile-checked.
 
 import AVFoundation
 #if os(iOS)
@@ -181,6 +183,7 @@ import M1K3LogCore
 import M1K3Memory
 import M1K3MemoryChatBridge
 import M1K3MLX
+import M1K3Preview
 import M1K3Screengrab
 import M1K3Voice
 import Metal
@@ -258,6 +261,10 @@ final class AppCore {
     /// SpeechHighlight, cherry-picked verbatim; fed by AVSpeechProvider's live
     /// word ranges (AppCore+Voice.wireSpeechCallbacks).
     let speechHighlight = SpeechHighlight()
+    /// The page voice mode shows beside the face (#839): opened only by a tap or a spoken request.
+    let voicePage = VoicePageSession()
+    /// The handle the spoken "scroll down" / "go back" commands drive on that page's web view.
+    let pageControl = VoicePageControl()
     /// Why the loop is parked after an audio interruption (a call, headphones
     /// pulled) — shown in place of the idle caption; cleared on tap-to-talk.
     var voicePauseNote: String?
