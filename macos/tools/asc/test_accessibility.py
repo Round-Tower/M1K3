@@ -96,3 +96,66 @@ def test_the_shipped_spec_cannot_be_confirmed_before_the_walk() -> None:
     spec = a11y.load_spec(HERE / "accessibility_labels.json")
     steps = a11y.plan(spec, [], list(spec))
     assert a11y.refusal(steps, allow_pending=None) is not None
+
+
+class FakeASC:
+    """Stands in for asc.call / paginate: records every request, answers a POST with an id."""
+
+    def __init__(self, live: list[dict] | None = None) -> None:
+        self.live = live or []
+        self.calls: list[tuple[str, str, dict]] = []
+
+    def call(self, method: str, path: str, **kw: object) -> dict:
+        self.calls.append((method, path, kw.get("json")))  # type: ignore[arg-type]
+        return {"data": {"id": "NEW1"}} if method == "POST" else {"data": {}}
+
+    def paginate(self, path: str):  # noqa: ANN201
+        yield from self.live
+
+
+@pytest.fixture
+def fake(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> FakeASC:
+    asc_fake = FakeASC()
+    monkeypatch.setattr(a11y, "call", asc_fake.call)
+    monkeypatch.setattr(a11y, "paginate", asc_fake.paginate)
+    spec = tmp_path / "spec.json"
+    spec.write_text(json.dumps(spec_of(MAC={"voiceover": "declare"}, IPHONE={"voiceover": "pending"})))
+    monkeypatch.setattr(a11y, "SPEC", spec)
+    return asc_fake
+
+
+
+def test_a_dry_run_writes_nothing(fake: FakeASC) -> None:
+    assert a11y.set_labels(["MAC", "IPHONE"], publish=True, confirm=False, allow_pending=None) == 0
+    assert fake.calls == []
+
+
+def test_a_pending_claim_refuses_confirm_before_any_write(fake: FakeASC) -> None:
+    assert a11y.set_labels(["MAC", "IPHONE"], publish=True, confirm=True, allow_pending=None) == 3
+    assert fake.calls == []
+
+
+def test_create_then_publish_sends_the_full_attributes_to_the_new_draft(fake: FakeASC) -> None:
+    assert a11y.set_labels(["MAC"], publish=True, confirm=True, allow_pending=None) == 0
+    methods = [(m, p) for m, p, _ in fake.calls]
+    assert methods == [("POST", "/v1/accessibilityDeclarations"), ("PATCH", "/v1/accessibilityDeclarations/NEW1")]
+    patch = fake.calls[1][2]["data"]
+    assert patch["id"] == "NEW1"
+    assert patch["attributes"]["publish"] is True
+    assert patch["attributes"]["supportsVoiceover"] is True
+
+
+def test_allow_pending_writes_with_a_reason(fake: FakeASC) -> None:
+    assert a11y.set_labels(["IPHONE"], publish=False, confirm=True, allow_pending="walked; motion left out") == 0
+    assert [m for m, _, _ in fake.calls] == ["POST"]
+
+
+def test_an_empty_family_list_is_refused(fake: FakeASC) -> None:
+    with pytest.raises(SystemExit, match="no device family"):
+        a11y.set_labels([], publish=False, confirm=True, allow_pending=None)
+
+
+def test_a_draft_beside_a_published_one_is_the_one_edited() -> None:
+    spec = spec_of(MAC={"voiceover": "declare"})
+    steps = a11y.plan(spec, [live("P1", "MAC", "PUBLISHED"), live("D1", "MAC", "DRAFT")], ["MAC"])
+    assert (steps[0].action, steps[0].draft_id) == ("update", "D1")

@@ -35,7 +35,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from asc import APP_ID, bail, call
+from asc import APP_ID, bail, call, paginate
 
 SPEC = Path(__file__).resolve().parent / "accessibility_labels.json"
 TYPE = "accessibilityDeclarations"
@@ -56,8 +56,9 @@ ATTRIBUTE = {
 FEATURES = tuple(ATTRIBUTE)
 
 
-def load_spec(path: Path = SPEC) -> dict[str, dict[str, dict[str, str]]]:
+def load_spec(path: Path | None = None) -> dict[str, dict[str, dict[str, str]]]:
     """The spec without its `_about`, refused whole if a family, feature or status is off."""
+    path = path or SPEC
     raw = json.loads(path.read_text(encoding="utf-8"))
     spec = {k: v for k, v in raw.items() if not k.startswith("_")}
     for family, claims in spec.items():
@@ -132,11 +133,30 @@ def refusal(steps: list[Step], allow_pending: str | None) -> str | None:
     return None
 
 
+NEW_ID = "<new draft id>"
+
+
+def requests_for(step: Step, publish: bool) -> list[tuple[str, str, dict[str, Any]]]:
+    """The writes one step makes, in order: what the dry run prints and --confirm sends.
+    A create that publishes PATCHes the new draft with the full attributes plus publish,
+    so the second request never relies on a partial body."""
+    if step.action == "same":
+        return []
+    if step.action == "create":
+        reqs = [("POST", f"/v1/{TYPE}", create_body(step.family, step.attrs))]
+        if publish:
+            reqs.append(("PATCH", f"/v1/{TYPE}/{NEW_ID}", update_body(NEW_ID, step.attrs, publish=True)))
+        return reqs
+    draft = step.draft_id or ""
+    return [("PATCH", f"/v1/{TYPE}/{draft}", update_body(draft, step.attrs, publish))]
+
+
 def fetch_live() -> list[dict[str, Any]]:
-    resp = call("GET", f"/v1/apps/{APP_ID}/{TYPE}?limit=50")
-    if "_error" in resp:
-        bail("read declarations", resp)
-    return resp.get("data", [])
+    try:
+        items = list(paginate(f"/v1/apps/{APP_ID}/{TYPE}?limit=50"))
+    except RuntimeError as exc:
+        raise SystemExit(f"FAILED at read declarations: {exc}") from exc
+    return [d for d in items if d.get("attributes", {}).get("deviceFamily") and d["attributes"].get("state")]
 
 
 def show() -> int:
@@ -150,40 +170,41 @@ def show() -> int:
     return 0
 
 
+def describe(step: Step) -> str:
+    yes = [f for f in FEATURES if step.attrs[ATTRIBUTE[f]]]
+    what = {"create": "create a draft", "update": f"edit draft {step.draft_id}",
+            "same": "already published as the spec says; nothing to send"}[step.action]
+    return f"{step.family}: {what}  declare: {', '.join(yes) or '(none)'}  pending: {', '.join(step.pending) or '(none)'}"
+
+
 def set_labels(families: list[str], publish: bool, confirm: bool, allow_pending: str | None) -> int:
-    spec = load_spec()
-    steps = plan(spec, fetch_live(), families)
+    if not families:
+        raise SystemExit("--family names no device family")
+    steps = plan(load_spec(), fetch_live(), families)
     for s in steps:
-        yes = [f for f in FEATURES if s.attrs[ATTRIBUTE[f]]]
-        print(f"{s.family}: {s.action}{' ' + s.draft_id if s.draft_id else ''}"
-              f"  declare: {', '.join(yes) or '(none)'}  pending: {', '.join(s.pending) or '(none)'}")
+        print(describe(s))
     why = refusal(steps, allow_pending)
     if not confirm:
         for s in steps:
-            if s.action == "create":
-                print(json.dumps(create_body(s.family, s.attrs)))
-            elif s.action == "update":
-                print(json.dumps(update_body(s.draft_id or "", s.attrs, publish)))
+            for method, path, body in requests_for(s, publish):
+                print(f"{method} {path} {json.dumps(body)}")
         print(f"(dry run{'; --confirm would refuse: ' + why if why else ''})")
         return 0
     if why:
         print(f"REFUSED: {why}", file=sys.stderr)
         return 3
     for s in steps:
-        if s.action == "same":
-            continue
-        draft_id = s.draft_id
-        if s.action == "create":
-            resp = call("POST", f"/v1/{TYPE}", json=create_body(s.family, s.attrs))
+        new_id: str | None = None
+        for method, path, body in requests_for(s, publish):
+            if new_id is not None:
+                path = path.replace(NEW_ID, new_id)
+                body = json.loads(json.dumps(body).replace(NEW_ID, new_id))
+            resp = call(method, path, json=body)
             if "_error" in resp:
-                bail(f"create {s.family}", resp)
-            draft_id = resp["data"]["id"]
-            if publish:
-                resp = call("PATCH", f"/v1/{TYPE}/{draft_id}", json=update_body(draft_id, {}, publish=True))
-        else:
-            resp = call("PATCH", f"/v1/{TYPE}/{draft_id}", json=update_body(draft_id or "", s.attrs, publish))
-        if "_error" in resp:
-            bail(f"{'publish' if publish else 'update'} {s.family}", resp)
+                left = f" (draft {new_id} was created and is left as DRAFT; a rerun edits it)" if new_id else ""
+                bail(f"{method} {s.family}{left}", resp)
+            if method == "POST":
+                new_id = resp["data"]["id"]
     print("read back:")
     return show()
 
