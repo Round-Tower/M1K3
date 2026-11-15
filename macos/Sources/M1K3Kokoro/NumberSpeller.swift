@@ -15,35 +15,52 @@
 //  Signed: Kev + claude-fable-5, 2026-06-11, Confidence 0.9 (pure, every rule
 //  test-pinned; the year heuristic is a taste call). Prior: Unknown.
 //
+//  Review: Kev + claude-opus-5.5, 2026-11-15 (#838) — the year reading is now a choice
+//  (`yearReading:`), so the walker can read "1500 people" as a count from the next word
+//  (`SpokenNumbers.readsAsYear`); amounts, ordinals and versions never take it. More than
+//  twelve digits read in groups of three with a "," pause between them, not as one long
+//  string. Confidence 0.85.
+//
 
 import Foundation
 
 public enum NumberSpeller {
     /// English (en-GB, with "and") words for an unsigned digit-string integer.
-    /// Years 1100–2099 read as pairs; > 13 digits falls back to digit-by-digit.
-    public static func integerWords(_ digits: Substring) -> [String] {
+    /// Years 1100–2099 read as pairs unless `yearReading` is off; more than 12 digits
+    /// read digit by digit in groups of three, a "," (a pause token) between groups.
+    public static func integerWords(_ digits: Substring, yearReading: Bool = true) -> [String] {
         guard !digits.isEmpty, digits.allSatisfy(\.isASCIIDigit) else { return [] }
         guard let value = UInt64(digits), digits.count <= 12 else {
-            return digits.compactMap { digitWord($0) }
+            return groupedDigitWords(digits)
         }
-        if let year = yearWords(value) { return year }
+        if yearReading, let year = yearWords(value) { return year }
         return spell(value)
+    }
+
+    /// "1234567" → one two three , four five six , seven.
+    private static func groupedDigitWords(_ digits: Substring) -> [String] {
+        var words: [String] = []
+        for (index, char) in digits.enumerated() {
+            if index > 0, index % 3 == 0 { words.append(",") }
+            if let word = digitWord(char) { words.append(word) }
+        }
+        return words
     }
 
     /// "12.5" → ["twelve","point","five"]; "1,000" → ["one","thousand"];
     /// nil if the literal is not a plain number.
-    public static func numberWords(_ literal: String) -> [String]? {
+    public static func numberWords(_ literal: String, yearReading: Bool = true) -> [String]? {
         let cleaned = literal.replacingOccurrences(of: ",", with: "")
         guard !cleaned.isEmpty else { return nil }
         let parts = cleaned.split(separator: ".", omittingEmptySubsequences: false)
         guard parts.allSatisfy({ !$0.isEmpty && $0.allSatisfy(\.isASCIIDigit) }) else { return nil }
         switch parts.count {
         case 1:
-            return integerWords(parts[0])
+            return integerWords(parts[0], yearReading: yearReading)
         case 2:
             // Fraction digits are spoken individually: 0.25 → point two five.
             let fraction = parts[1].compactMap { digitWord($0) }
-            return integerWords(parts[0]) + ["point"] + fraction
+            return integerWords(parts[0], yearReading: false) + ["point"] + fraction
         default:
             return nil // 1.2.3 is a version string, not a number
         }

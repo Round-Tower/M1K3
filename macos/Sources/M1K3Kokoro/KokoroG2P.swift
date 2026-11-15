@@ -31,6 +31,14 @@
 //  capitals), and inflection bases try title case too ("Abujas"). Every word that hits
 //  today keeps its tokens (KokoroG2PCaseTests pins "Polish", "AI", house words). Confidence
 //  0.85 (tests through the bundled pipeline; how the rescued words sound is verify-by-ear).
+//  Review: Kev + claude-opus-5.5, 2026-11-15 (#838 slice 2) — numbers and symbols the way
+//  people say them: the walker carries one word of context each way, reads a sign or
+//  currency symbol into its number, takes one ':' or '/' between digits into the run,
+//  says "to" for a dash between two numbers (its own caption word) and leaves dash
+//  chains (dates) alone; `SpokenNumbers` decides the words. A lone "I" stays the pronoun
+//  unless a capitalised cue leads. Every rule is pinned against the bundled dictionary
+//  (KokoroG2PSpokenTests, SpokenNumbersTests). Confidence 0.8: tests prove the tokens;
+//  the round trip (slice 1) and Kev's ear prove the sound.
 //
 
 import Foundation
@@ -98,6 +106,12 @@ public struct KokoroG2P: Sendable {
     /// The one walker behind both APIs. Walks the ORIGINAL string (case preserved,
     /// lowercasing only each extracted word for dictionary lookup) so word text
     /// ranges are exact by construction, tracking a running UTF-16 offset.
+    ///
+    /// #838: the walker also carries one word of context each way (the previous word
+    /// run, reset by punctuation, and a peek at the next) for the rules that need it
+    /// ("1500 people" is a count, "Henry VIII" a king), reads a leading sign or
+    /// currency symbol into the number it qualifies ("-5", "£5"), and speaks a dash
+    /// between two numbers as "to" (its own caption word over the dash).
     private func assemble(_ text: String, cap: Int?) -> G2PResult {
         var tokens: [Int] = []
         var words: [G2PWord] = []
@@ -106,27 +120,53 @@ public struct KokoroG2P: Sendable {
         let chars = Array(text)
         let charCount = chars.count
         var index = 0
+        var previousWord: String?
+        var pendingUnit: [String] = [] // "£5 million": "pounds" waits for "million"
+
+        /// Appends one caption word; false when the cap stops the walk.
+        func emit(_ toks: [Int]?, _ textRange: Range<Int>) -> Bool {
+            guard let toks, !toks.isEmpty else {
+                // OOV: no phonemes, no space — an empty token range at the
+                // current position keeps the word addressable for timing.
+                words.append(G2PWord(textRange: textRange, tokenRange: tokens.count ..< tokens.count))
+                return true
+            }
+            let needed = (prevWasToken ? 1 : 0) + toks.count
+            if let cap, tokens.count + needed > cap { return false }
+            if prevWasToken { tokens.append(Self.space) }
+            let tokenStart = tokens.count
+            tokens.append(contentsOf: toks)
+            words.append(G2PWord(textRange: textRange, tokenRange: tokenStart ..< tokens.count))
+            prevWasToken = true
+            return true
+        }
 
         while index < charCount {
             let char = chars[index]
-            if char.isLetter || char.isASCIIDigit {
-                let run = scanRun(chars, from: index)
-                let textRange = offset ..< offset + run.utf16Count
+            let prefix = numericPrefix(chars, at: index)
+            if prefix != nil || char.isLetter || char.isASCIIDigit {
+                let runStart = prefix == nil ? index : index + 1
+                let run = scanRun(chars, from: runStart, previous: previousWord)
+                let width = (prefix == nil ? 0 : char.utf16.count) + run.utf16Count
+                let textRange = offset ..< offset + width
                 index = run.end
-                offset += run.utf16Count
-                guard let toks = resolveTokens(for: run), !toks.isEmpty else {
-                    // OOV: no phonemes, no space — an empty token range at the
-                    // current position keeps the word addressable for timing.
-                    words.append(G2PWord(textRange: textRange, tokenRange: tokens.count ..< tokens.count))
-                    continue
+                offset += width
+                let next = peekWord(chars, from: run.end)
+                let waiting = pendingUnit // set by the previous run only when THIS run is its scale word
+                pendingUnit = []
+                var toks = resolveTokens(for: run, prefix: prefix, previous: previousWord, next: next,
+                                         pendingUnit: &pendingUnit)
+                if !waiting.isEmpty, let unit = joinedTokens(for: waiting), let base = toks {
+                    toks = base + [Self.space] + unit
                 }
-                let needed = (prevWasToken ? 1 : 0) + toks.count
-                if let cap, tokens.count + needed > cap { break }
-                if prevWasToken { tokens.append(Self.space) }
-                let tokenStart = tokens.count
-                tokens.append(contentsOf: toks)
-                words.append(G2PWord(textRange: textRange, tokenRange: tokenStart ..< tokens.count))
-                prevWasToken = true
+                guard emit(toks, textRange) else { break }
+                previousWord = run.text
+            } else if let dashWord = dashWord(chars, at: index) {
+                let width = char.utf16.count
+                guard emit(joinedTokens(for: [dashWord]), offset ..< offset + width) else { break }
+                offset += width
+                index += 1
+                previousWord = dashWord
             } else if char == " " || char == "\n" || char == "\t" || char == "\r" {
                 offset += 1 // whitespace → implicit space, emitted only before the next word
                 index += 1
@@ -136,12 +176,90 @@ public struct KokoroG2P: Sendable {
                 prevWasToken = true
                 offset += char.utf16.count
                 index += 1
+                previousWord = nil
+                pendingUnit = []
             } else {
                 offset += char.utf16.count // unknown character → skip
                 index += 1
             }
         }
         return G2PResult(tokens: tokens, words: words)
+    }
+
+    /// A sign or currency symbol that belongs to the number after it.
+    private enum NumericPrefix: Equatable {
+        case minus
+        case currency(Character)
+    }
+
+    /// "-5" / "−5" at the start of a number (not between two: that's a range or a
+    /// subtraction), and "£5" / "$20" / "€3.50".
+    private func numericPrefix(_ chars: [Character], at index: Int) -> NumericPrefix? {
+        let char = chars[index]
+        guard index + 1 < chars.count, chars[index + 1].isASCIIDigit else { return nil }
+        if SpokenNumbers.isCurrencySymbol(char) { return .currency(char) }
+        guard char == "-" || char == "\u{2212}" else { return nil }
+        if index == 0 { return .minus }
+        let before = chars[index - 1]
+        return before.isWhitespace || "([{\"“'/".contains(before) ? .minus : nil
+    }
+
+    /// The word a dash speaks between two numbers: "to" for a range ("4-7",
+    /// "1990–2000", "1990 – 2000"), "minus" for U+2212 ("10−3"). A chain of
+    /// separators (an ISO date, "10:30-11:00") is left as it was.
+    private func dashWord(_ chars: [Character], at index: Int) -> String? {
+        let char = chars[index]
+        guard char == "-" || char == "–" || char == "\u{2212}" else { return nil }
+        if index > 0, index + 1 < chars.count, chars[index - 1].isASCIIDigit, chars[index + 1].isASCIIDigit {
+            guard separatorCount(chars, around: index) == 1 else { return nil }
+            return char == "\u{2212}" ? "minus" : SpokenNumbers.rangeWord
+        }
+        // A spaced en dash between two numbers: "1990 – 2000".
+        guard char == "–",
+              index >= 2, chars[index - 1] == " ", chars[index - 2].isASCIIDigit,
+              index + 2 < chars.count, chars[index + 1] == " ", chars[index + 2].isASCIIDigit else { return nil }
+        return SpokenNumbers.rangeWord
+    }
+
+    private static let separators: Set<Character> = [":", "/", "-", "–", "\u{2212}"]
+
+    /// How many separators sit between digits in the numeric chain around `index`
+    /// (digits, '.', ',' and separators): 1 for "4-7" or "10:30", 2 for "2026-11-15".
+    private func separatorCount(_ chars: [Character], around index: Int) -> Int {
+        func inChain(_ char: Character) -> Bool {
+            char.isASCIIDigit || char == "." || char == "," || Self.separators.contains(char)
+        }
+        var lower = index
+        while lower > 0, inChain(chars[lower - 1]) {
+            lower -= 1
+        }
+        var upper = index
+        while upper + 1 < chars.count, inChain(chars[upper + 1]) {
+            upper += 1
+        }
+        var count = 0
+        for position in lower ... upper where Self.separators.contains(chars[position]) {
+            if position > lower, position < upper,
+               chars[position - 1].isASCIIDigit, chars[position + 1].isASCIIDigit
+            {
+                count += 1
+            }
+        }
+        return count
+    }
+
+    /// The next word after `end`, past spaces only (any punctuation in between → nil).
+    private func peekWord(_ chars: [Character], from end: Int) -> String? {
+        var index = end
+        while index < chars.count, chars[index] == " " || chars[index] == "\t" {
+            index += 1
+        }
+        var word = ""
+        while index < chars.count, chars[index].isLetter || chars[index] == "'" {
+            word.append(chars[index])
+            index += 1
+        }
+        return word.isEmpty ? nil : word
     }
 
     /// One maximal word run plus any unit suffix it absorbed.
@@ -156,20 +274,29 @@ public struct KokoroG2P: Sendable {
     /// Maximal run: letters, ASCII digits, internal apostrophes, and '.'/','
     /// flanked by digits (decimals, grouping commas). A digit-containing run
     /// absorbs a trailing %, °C, °F, or ° into the SAME run so "15°C" is one
-    /// word for timing.
-    private func scanRun(_ chars: [Character], from start: Int) -> WordRun {
+    /// word for timing. #838: one ':' or '/' between digits joins the run ("10:30",
+    /// "3/4") when it is the chain's only separator, and after "Elements" a Roman
+    /// numeral takes its proposition ("I.47").
+    private func scanRun(_ chars: [Character], from start: Int, previous: String?) -> WordRun {
         var end = start
         var utf16Count = 0
         var containsDigit = false
+        var containsLetter = false
         while end < chars.count {
             let runChar = chars[end]
+            let digitBefore = end > start && chars[end - 1].isASCIIDigit
+            let digitAfter = end + 1 < chars.count && chars[end + 1].isASCIIDigit
             if runChar.isLetter || runChar == "'" {
-                // word characters
+                containsLetter = true
             } else if runChar.isASCIIDigit {
                 containsDigit = true
             } else if runChar == "." || runChar == "," {
-                guard end > start, chars[end - 1].isASCIIDigit,
-                      end + 1 < chars.count, chars[end + 1].isASCIIDigit else { break }
+                let euclid = runChar == "." && digitAfter && previous?.lowercased() == "elements"
+                    && SpokenNumbers.romanValue(String(chars[start ..< end])) != nil
+                guard (digitBefore && digitAfter) || euclid else { break }
+            } else if runChar == ":" || runChar == "/" {
+                guard digitBefore, digitAfter, !containsLetter,
+                      separatorCount(chars, around: end) == 1 else { break }
             } else {
                 break
             }
@@ -208,19 +335,34 @@ public struct KokoroG2P: Sendable {
     /// span. Letter-to-sound is deliberately LAST (2026-08-16): it can only
     /// ever replace what used to be silence — the fate of every pronounceable
     /// OOV word before it, including "Kev" and "Kokoro" itself.
-    private func resolveTokens(for run: WordRun) -> [Int]? {
+    private func resolveTokens(for run: WordRun, prefix: NumericPrefix?, previous: String?, next: String?,
+                               pendingUnit: inout [String]) -> [Int]?
+    {
         if run.containsDigit {
             // House names first: "M1K3" is pronounced "Mike" (the
             // kill-or-commit ruling, 2026-08-16) — not spelled out. Only when
-            // no unit rode the run; "15°C" never reaches the lexicon.
-            if run.unitWords.isEmpty, let house = houseTokens(run.text.lowercased()) {
+            // no unit or sign rode the run; "15°C" never reaches the lexicon.
+            if run.unitWords.isEmpty, prefix == nil, let house = houseTokens(run.text.lowercased()) {
                 return house
             }
-            if let numberWords = NumberSpeller.numberWords(run.text) {
-                return joinedTokens(for: numberWords + run.unitWords)
+            if case let .currency(symbol) = prefix, run.unitWords.isEmpty,
+               let money = SpokenNumbers.currency(symbol: symbol, literal: run.text)
+            {
+                if let next, SpokenNumbers.isScaleWord(next), money.tail.isEmpty {
+                    pendingUnit = money.unit
+                    return joinedTokens(for: money.amount)
+                }
+                return joinedTokens(for: money.all)
+            }
+            let sign = prefix == .minus ? ["minus"] : []
+            if let words = numericWords(run, signed: !sign.isEmpty, previous: previous, next: next) {
+                return joinedTokens(for: sign + words + run.unitWords)
             }
             // Mixed alphanumeric ("V2X7") → spell out per character.
-            return spellOutTokens(run.text, extraWords: run.unitWords)
+            return spellOutTokens(run.text, extraWords: run.unitWords, signWords: sign)
+        }
+        if let roman = SpokenNumbers.roman(run.text, previous: previous, next: next) {
+            return joinedTokens(for: roman)
         }
         let raw = run.text.lowercased()
         if let hit = lookup(raw) { return hit }
@@ -231,6 +373,25 @@ public struct KokoroG2P: Sendable {
         if shouldSpellOut(run.text) { return spellOutTokens(run.text, extraWords: []) }
         if let guessed = LetterToSound.tokens(for: raw) { return guessed }
         return nil
+    }
+
+    /// The #838 readings of a digit run, most specific first; nil → spell it out.
+    private func numericWords(_ run: WordRun, signed: Bool, previous: String?, next: String?) -> [String]? {
+        let text = run.text
+        if let ordinal = SpokenNumbers.ordinal(text) { return ordinal }
+        if text.contains(":") { return SpokenNumbers.colon(text) }
+        if text.contains("/") { return SpokenNumbers.fraction(text) }
+        if let version = SpokenNumbers.version(text) { return version }
+        if previous?.lowercased() == "elements", let dot = text.firstIndex(of: ".") {
+            let book = String(text[..<dot])
+            if let euclid = SpokenNumbers.euclid(book: book, proposition: String(text[text.index(after: dot)...])) {
+                return euclid
+            }
+        }
+        // A year needs a year's context: "1500 people" is a count; an amount with a
+        // sign or a unit ("-1500", "2000%") is never a year.
+        let year = !signed && run.unitWords.isEmpty && SpokenNumbers.readsAsYear(previous: previous, next: next)
+        return NumberSpeller.numberWords(text, yearReading: year)
     }
 
     /// House-lexicon lookup with the same apostrophe trim as `lookup` — so
@@ -432,8 +593,8 @@ public struct KokoroG2P: Sendable {
 
     /// Per-character expansion: letters via their spoken names, digits via
     /// NumberSpeller.
-    private func spellOutTokens(_ text: String, extraWords: [String]) -> [Int]? {
-        var words: [String] = []
+    private func spellOutTokens(_ text: String, extraWords: [String], signWords: [String] = []) -> [Int]? {
+        var words: [String] = signWords
         for char in text {
             if char.isLetter {
                 words.append(contentsOf: spelledWords(for: char))
@@ -445,11 +606,23 @@ public struct KokoroG2P: Sendable {
     }
 
     /// Dictionary tokens for each word, joined by the space token. Words the
-    /// dictionary lacks are dropped; nil when nothing resolved.
+    /// dictionary lacks are dropped; nil when nothing resolved. A "," word is the
+    /// comma's pause token, attached like written punctuation (no space before it):
+    /// the digit groups and the Euclid reference (#838).
     private func joinedTokens(for expansionWords: [String]) -> [Int]? {
-        let groups = expansionWords.compactMap { dictionary[$0] }.filter { !$0.isEmpty }
-        guard !groups.isEmpty else { return nil }
-        return Array(groups.joined(separator: [Self.space]))
+        var out: [Int] = []
+        var spoke = false
+        for word in expansionWords {
+            if word == ",", let comma = punctuation[","] {
+                if spoke { out.append(comma) }
+                continue
+            }
+            guard let toks = dictionary[word], !toks.isEmpty else { continue }
+            if !out.isEmpty { out.append(Self.space) }
+            out.append(contentsOf: toks)
+            spoke = true
+        }
+        return spoke ? out : nil
     }
 
     /// Model input tokens = [pad] + phonemes + [pad].
