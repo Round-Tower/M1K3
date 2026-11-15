@@ -25,6 +25,12 @@
 //  no-vowel/short-caps OOV spells out via single-letter dict keys; one G2PWord
 //  per expansion keeps karaoke ranges exact. Pronounceable OOV still skips —
 //  conservative by design. Confidence 0.85 (audio quality verify-at-⌘R).
+//  Review: Kev + claude-opus-5.5, 2026-11-15 (#837) — the case rescue: after the lowercase
+//  dictionary hit and the house lexicon miss, the word as written and then its title case
+//  are tried ("I'm", "Abuja", "Alzheimer's", "iOS": 4,306 misaki-gb keys exist only with
+//  capitals), and inflection bases try title case too ("Abujas"). Every word that hits
+//  today keeps its tokens (KokoroG2PCaseTests pins "Polish", "AI", house words). Confidence
+//  0.85 (tests through the bundled pipeline; how the rescued words sound is verify-by-ear).
 //
 
 import Foundation
@@ -219,6 +225,7 @@ public struct KokoroG2P: Sendable {
         let raw = run.text.lowercased()
         if let hit = lookup(raw) { return hit }
         if let house = houseTokens(raw) { return house }
+        if let cased = casedLookup(run.text, lowered: raw) { return cased }
         if let inflected = inflectedTokens(raw) { return inflected }
         if let compound = compoundTokens(raw) { return compound }
         if shouldSpellOut(run.text) { return spellOutTokens(run.text, extraWords: []) }
@@ -300,7 +307,27 @@ public struct KokoroG2P: Sendable {
     /// base plus a plural it may not have. nil for stems too short to be real.
     private func resolveBase(_ stem: String) -> [Int]? {
         guard stem.count >= 2 else { return nil }
-        return lookup(stem) ?? houseTokens(stem) ?? compoundTokens(stem)
+        return lookup(stem) ?? houseTokens(stem) ?? lookup(Self.titleCased(stem)) ?? compoundTokens(stem)
+    }
+
+    /// The case rescue (#837): misaki-gb keys 4,306 words only with capitals ("I'm",
+    /// "Abuja", "Alzheimer's", "iOS"), which the lowercased lookup can never reach. Tried
+    /// AFTER the lowercase hit and the house lexicon, so every dictionary or house hit keeps
+    /// today's tokens ("Polish" at a sentence start stays "polish"). Only dictionary misses
+    /// change: their own capitalised entry now beats the guess they got (inflection for 18
+    /// keys such as "Phillips", else compound, spell-out, letter-to-sound or silence). The
+    /// word as written first ("iOS", "ASEAN"), then title case ("i'm" → "I'm").
+    private func casedLookup(_ original: String, lowered: String) -> [Int]? {
+        if original != lowered, let hit = lookup(original) { return hit }
+        let title = Self.titleCased(lowered)
+        if title != original, title != lowered, let hit = lookup(title) { return hit }
+        return nil
+    }
+
+    /// First character upper, the rest as given (lowercase in every caller).
+    private static func titleCased(_ word: String) -> String {
+        guard let first = word.first else { return word }
+        return first.uppercased() + word.dropFirst()
     }
 
     private func pluralSuffix(after last: Int?) -> [Int] {

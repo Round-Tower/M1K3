@@ -16,6 +16,8 @@
 //  misaki (Apache 2.0) for commercial shipping. Canonical Kokoro vocab: single-token
 //  affricates (ʧ=133, ʤ=82) and diphthongs (A=24, I=25, Q=33, W=39, Y=41).
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-15 (#837) — `bundledDictionary()` split out of
+//  `bundled()` so tests read the real keys; loading is unchanged. Confidence 0.95.
 //
 
 import Compression
@@ -32,14 +34,19 @@ public extension KokoroG2P {
 
     /// Build a KokoroG2P from the bundled, compressed dictionary resource.
     static func bundled() throws -> KokoroG2P {
+        try KokoroG2P(dictionary: bundledDictionary())
+    }
+
+    /// The bundled dictionary itself, keyed as misaki-gb writes it (case kept: "I'm",
+    /// "Abuja"). Tests read entries from it to pin what the walker should find (#837).
+    internal static func bundledDictionary() throws -> [String: [Int]] {
         guard let url = Bundle.module.url(forResource: bundledResource, withExtension: "deflate") else {
             throw LoadError.resourceMissing("\(bundledResource).deflate")
         }
         // Parse the inflated BYTES directly — materializing a 7.7 MB String and
         // Substring-splitting 197k lines measured 1.33 s of the voice tier's
         // load (2026-08-16), serial with the weights inside Loaded.init.
-        let bytes = try inflateData(Data(contentsOf: url))
-        return KokoroG2P(dictionary: parse(bytes))
+        return try parse(inflateData(Data(contentsOf: url)))
     }
 
     /// Inflate `[UInt32 LE uncompressedSize][raw DEFLATE]` to its UTF-8 text.
