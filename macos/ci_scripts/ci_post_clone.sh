@@ -7,11 +7,16 @@
 # has nothing to compile. (the prior knowledge-server app commits its pbxproj and skips this; M1K3 can't.)
 #
 # Xcode Cloud finds ci_scripts/ because it sits next to macos/M1K3.xcodeproj.
+#
+# Signed (this change only): Kev + claude-opus-5.5, 2026-11-15, Confidence 0.9. Prior: Unknown.
+# The version lines read with `sed -n 1p`, never `| head`: under pipefail a reader that quits
+# early can SIGPIPE the writer, and run 552 (release-1.5.0) died here with exit 141 after
+# "Xcode 27.2" on the iOS archive. tools/ci/test_ci_scripts_pipes.py keeps it out.
 set -euo pipefail
 
 echo "=== M1K3 CI: Post-Clone ==="
-xcodebuild -version | head -1
-swift --version | head -1
+xcodebuild -version | sed -n 1p
+swift --version 2>&1 | sed -n 1p
 
 MACOS_DIR="$CI_PRIMARY_REPOSITORY_PATH/macos"
 
