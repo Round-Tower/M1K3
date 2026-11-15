@@ -64,7 +64,10 @@ into macos/M1K3App/ThirdPartyLicenses.plist; notable components include:
 
   - llama.cpp — MIT License (included as a git submodule under
     app/composeApp/src/androidMain/cpp/llama.cpp)
-  - MLX / mlx-swift / mlx-swift-lm — MIT License
+  - MLX / mlx-swift / mlx-swift-lm — MIT License (Copyright (c) 2024 ml-explore). Portions of
+    macos/Sources/M1K3MLX/EmbeddingGemma2Vision.swift and EmbeddingGemma2ImagePath.swift are ported from
+    mlx-swift-lm PR #684 ("Add EmbeddingGemma 2 full support"; the Gemma 4 vision encoder and the image
+    processor's size and resampling arithmetic, files copyright 2026 Apple Inc.), under the same MIT License.
   - WhisperKit — MIT License
   - Model weights (Qwen3, Gemma 4) — Apache License 2.0, retrieved at runtime
   - Model weights (LFM2.5-1.2B, the Mini where Apple Intelligence is blocked)

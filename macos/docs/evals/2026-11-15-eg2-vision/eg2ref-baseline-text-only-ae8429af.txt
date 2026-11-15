@@ -1,0 +1,61 @@
+=== M1K3 SELF-TEST (inside .app bundle) ===
+✓ store+ingest: 1 chunk, 1 embedding(s)
+• AFM available: true
+✓ AFM RAG answer: **The hydraulic seal on the conveyor failed under load** [Plant Notes §3.2 Seals].
+  grounded in 1 source(s)
+• loading the MLX embedder (EmbeddingGemma 2; downloads on first use)…
+✓ MLX embed (mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v1): dim=512 ‖v‖=1.000
+embedwarm: cold=6509ms warm=21ms delta=6487ms (delta = first-turn TTFT tax without the launch warm)
+• loading MLX generation model mlx-community/Llama-3.2-1B-Instruct-4bit…
+✓ MLX generate: A hydraulic seal is a device used in hydraulic systems to prevent the leakage of fluids into or out of cylinders or pumps.
+✓ kokoro guarded read: an MLX error on a dispatch queue throws instead of trapping
+• eg2ref: mlx-community/embeddinggemma-2-8bit — reading the reference fixture from stdin…
+• eg2ref: 38 cases from mlx-community/embeddinggemma-2-8bit@7505ef2f
+eg2ref load: 4.0 s
+eg2ref q-pricing tokens ok (18) cos768 0.99993 cos512 0.99993 pipeline 0.99993
+eg2ref d-pricing tokens ok (34) cos768 0.99990 cos512 0.99990 pipeline 0.99990
+eg2ref q-retention tokens ok (17) cos768 0.99986 cos512 0.99986 pipeline 0.99986
+eg2ref d-retention tokens ok (25) cos768 0.99992 cos512 0.99992 pipeline 0.99992
+eg2ref q-seal tokens ok (15) cos768 0.99994 cos512 0.99994 pipeline 0.99994
+eg2ref d-seal tokens ok (23) cos768 0.99992 cos512 0.99992 pipeline 0.99992
+eg2ref d-offtopic tokens ok (25) cos768 0.99986 cos512 0.99987 pipeline 0.99987
+eg2ref q-code tokens ok (17) cos768 0.99994 cos512 0.99994 pipeline 0.99994
+eg2ref d-code tokens ok (46) cos768 0.99985 cos512 0.99985 pipeline 0.99985
+eg2ref q-ga tokens ok (27) cos768 0.99990 cos512 0.99990 pipeline 0.99990
+eg2ref d-de tokens ok (28) cos768 0.99990 cos512 0.99990 pipeline 0.99990
+eg2ref d-empty-ish tokens ok (9) cos768 0.99998 cos512 0.99998 pipeline 0.99998
+eg2ref d-long tokens ok (1396) cos768 0.99996 cos512 0.99996 pipeline 0.99996
+eg2ref q-long tokens ok (21) cos768 0.99995 cos512 0.99995 pipeline 0.99995
+eg2ref q-img-whiteboard tokens ok (14) cos768 0.99994 cos512 0.99994 pipeline 0.99994
+eg2ref d-img-whiteboard tokens ok (38) cos768 0.99993 cos512 0.99993 pipeline 0.99993
+eg2ref q-img-barchart tokens ok (16) cos768 0.99994 cos512 0.99994 pipeline 0.99994
+eg2ref d-img-barchart tokens ok (24) cos768 0.99993 cos512 0.99994 pipeline 0.99994
+eg2ref q-img-sunset tokens ok (13) cos768 0.99996 cos512 0.99997 pipeline 0.99997
+eg2ref d-img-sunset tokens ok (28) cos768 0.99993 cos512 0.99993 pipeline 0.99993
+eg2ref q-img-tree tokens ok (14) cos768 0.99995 cos512 0.99996 pipeline 0.99996
+eg2ref d-img-tree tokens ok (23) cos768 0.99995 cos512 0.99996 pipeline 0.99996
+eg2ref q-img-house tokens ok (17) cos768 0.99996 cos512 0.99996 pipeline 0.99996
+eg2ref d-img-house tokens ok (26) cos768 0.99995 cos512 0.99995 pipeline 0.99995
+eg2ref q-img-night tokens ok (15) cos768 0.99994 cos512 0.99995 pipeline 0.99995
+eg2ref d-img-night tokens ok (22) cos768 0.99993 cos512 0.99994 pipeline 0.99994
+eg2ref q-img-apple tokens ok (12) cos768 0.99997 cos512 0.99998 pipeline 0.99998
+eg2ref d-img-apple tokens ok (25) cos768 0.99995 cos512 0.99996 pipeline 0.99996
+eg2ref q-img-stopsign tokens ok (15) cos768 0.99995 cos512 0.99995 pipeline 0.99995
+eg2ref d-img-stopsign tokens ok (22) cos768 0.99992 cos512 0.99992 pipeline 0.99992
+eg2ref q-img-clock tokens ok (16) cos768 0.99992 cos512 0.99993 pipeline 0.99993
+eg2ref d-img-clock tokens ok (21) cos768 0.99991 cos512 0.99991 pipeline 0.99991
+eg2ref q-img-piechart tokens ok (13) cos768 0.99996 cos512 0.99996 pipeline 0.99996
+eg2ref d-img-piechart tokens ok (22) cos768 0.99993 cos512 0.99993 pipeline 0.99993
+eg2ref q-img-mountain tokens ok (11) cos768 0.99997 cos512 0.99997 pipeline 0.99997
+eg2ref d-img-mountain tokens ok (22) cos768 0.99992 cos512 0.99992 pipeline 0.99992
+eg2ref q-img-cat tokens ok (14) cos768 0.99996 cos512 0.99996 pipeline 0.99996
+eg2ref d-img-cat tokens ok (25) cos768 0.99994 cos512 0.99994 pipeline 0.99994
+eg2ref rank q-long→d-long 0.771 vs d-offtopic 0.611 ok
+eg2ref rank q-pricing→d-pricing 0.796 vs d-offtopic 0.574 ok
+eg2ref rank q-retention→d-retention 0.891 vs d-offtopic 0.575 ok
+eg2ref rank q-seal→d-seal 0.770 vs d-offtopic 0.603 ok
+eg2ref rank q-code→d-code 0.831 vs d-offtopic 0.521 ok
+eg2ref summary: tokens 14/14 · min cos768 0.99985 · min cos512 0.99985 · min pipeline 0.99985 · ranking ok · embed median 27 ms · process peak RSS 1754 MB (earlier stages included) · PASS
+eg2ref text digest: 15bfaaad809770ea
+=== END SELF-TEST ===
+exit 0

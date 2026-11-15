@@ -28,7 +28,12 @@
 //  fixture; the RSS figure is labelled as the whole process's.
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#545 bot pass) — true/yes count as the preset.
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#545 pass 2) — a NaN cosine can no longer read as PASS.
+//  Review: Kev + claude-opus-5.5, 2026-11-15 (#836) — the fixture's image cases run after the text ones
+//  (EmbeddingGemma2RefStage+Images.swift: vectors ≥ 0.999 at both widths, relevance order, the floor and RAM
+//  measurements); the text summary counts only the text cases and a SHA-256 of their vectors
+//  (`eg2ref text digest`) proves two builds embedded them to the same bits.
 
+import CryptoKit
 import Foundation
 import M1K3Knowledge
 import M1K3MLX
@@ -53,6 +58,26 @@ enum EmbeddingGemma2RefStage {
             let embedding512: [Float]
         }
 
+        /// One generated image: its PNG bytes, the query and caption text cases that describe it, and
+        /// mlx-vlm's vectors for it.
+        struct ImageCase: Decodable {
+            let id: String
+            let pngBase64: String
+            let queryCase: String
+            let captionCase: String
+            let embedding768: [Float]
+            let embedding512: [Float]
+        }
+
+        struct ProceduralImage: Decodable {
+            let id: String
+            let formula: String
+            let width: Int
+            let height: Int
+            let embedding768: [Float]
+            let embedding512: [Float]
+        }
+
         struct Ranking: Decodable {
             let query: String
             let relevant: String
@@ -63,6 +88,11 @@ enum EmbeddingGemma2RefStage {
         let modelRevision: String
         let cases: [Case]
         let rankingChecks: [Ranking]
+        /// The image cases (#836); absent in a text-only fixture.
+        let images: [ImageCase]?
+        let imageRankingChecks: [Ranking]?
+        /// Images the stage builds itself from a formula (a photo-sized noisy frame), with mlx-vlm's vectors.
+        let proceduralImages: [ProceduralImage]?
     }
 
     /// One case's three comparisons against the reference.
@@ -71,6 +101,7 @@ enum EmbeddingGemma2RefStage {
         let cos768: Float
         let cos512: Float
         let pipeline: Float
+        let vector768: [Float]
         let vector512: [Float]
         let embedMillis: Double
     }
@@ -112,8 +143,13 @@ enum EmbeddingGemma2RefStage {
                     item.id, tokenNote, item.inputIDs.count, result.cos768, result.cos512, result.pipeline
                 ))
             }
+            // The text cases only: every vector the text path produced, hashed (a text-unchanged proof across builds).
+            let textCases = reference.cases.filter { !$0.id.hasPrefix("q-img-") && !$0.id.hasPrefix("d-img-") }
+            let textResults = results.filter { entry in textCases.contains { $0.id == entry.key } }
             let rankingOK = rank(reference.rankingChecks, results: results, emit: emit)
-            emit(summary(results: results, rankingOK: rankingOK, total: reference.cases.count))
+            emit(summary(results: textResults, rankingOK: rankingOK, total: textCases.count))
+            emit("eg2ref text digest: \(digest(textCases.compactMap { results[$0.id]?.vector768 }))")
+            await runImages(reference: reference, service: service, results: results, emit: emit) // IMAGES-CALL
         } catch {
             emit("✗ eg2ref: \(error)")
         }
@@ -137,13 +173,14 @@ enum EmbeddingGemma2RefStage {
             cos768: VectorMath.cosineSimilarity(v768, item.embedding768),
             cos512: VectorMath.cosineSimilarity(v512, item.embedding512),
             pipeline: VectorMath.cosineSimilarity(pipeline, item.embedding512),
+            vector768: v768,
             vector512: v512,
             embedMillis: millis
         )
     }
 
     /// The fixture's relevance pairs, scored with OUR vectors; a missing id fails.
-    private static func rank(
+    static func rank(
         _ checks: [Reference.Ranking], results: [String: CaseResult], emit: (String) -> Void
     ) -> Bool {
         var allOK = !checks.isEmpty
@@ -167,7 +204,7 @@ enum EmbeddingGemma2RefStage {
         return allOK
     }
 
-    private static func summary(results: [String: CaseResult], rankingOK: Bool, total: Int) -> String {
+    static func summary(results: [String: CaseResult], rankingOK: Bool, total: Int) -> String {
         let values = Array(results.values)
         let tokenMatches = values.filter(\.tokensOK).count
         let minCos768 = values.map(\.cos768).min() ?? 0
@@ -187,13 +224,23 @@ enum EmbeddingGemma2RefStage {
         )
     }
 
-    private static func seconds(_ duration: Duration) -> Double {
+    /// SHA-256 of every text vector's float32 bytes, first 16 hex digits: two builds with the same digest embedded
+    /// every text case to the same bits.
+    static func digest(_ vectors: [[Float]]) -> String {
+        var hasher = SHA256()
+        for vector in vectors {
+            vector.withUnsafeBytes { hasher.update(bufferPointer: $0) }
+        }
+        return hasher.finalize().prefix(8).map { String(format: "%02x", $0) }.joined()
+    }
+
+    static func seconds(_ duration: Duration) -> Double {
         let parts = duration.components
         return Double(parts.seconds) + Double(parts.attoseconds) / 1e18
     }
 
     /// Peak resident set of this process in whole MB (`ru_maxrss` is BYTES on macOS).
-    private static func peakRSSMB() -> Int {
+    static func peakRSSMB() -> Int {
         var usage = rusage()
         getrusage(RUSAGE_SELF, &usage)
         return Int(usage.ru_maxrss) / 1_048_576

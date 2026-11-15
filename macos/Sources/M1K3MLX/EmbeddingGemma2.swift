@@ -6,8 +6,8 @@
 //  embedding_gemma2`) as an MLXEmbedders model: 24 bidirectional Gemma-4-style
 //  layers with projection-only per-layer embeddings, mean pooling, a 512 → 768
 //  projection, then L2 normalisation. The vision and audio encoders in the same
-//  checkpoint are dropped at load — this is the retrieval embedder for text and
-//  code; multimodal memory (Stream D) adds the encoders later.
+//  checkpoint are dropped at load by the text path — the vision encoder loads lazily
+//  for images (#836, EmbeddingGemma2Vision.swift); the audio encoder is still unused.
 //
 //  Why our own file: mlx-swift-lm at our pin (3.32.3) has no Gemma-4-based
 //  embedder (MLXEmbedders: Bert / Gemma3 / LFM2 / NomicBert / Qwen3), and the
@@ -37,6 +37,12 @@
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#545 bot pass) — the sliding mask is now covered by a
 //  1,396-token fixture case (cosine 0.99996); `loadWeights` takes the per-layer quantization only.
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#545 pass 2) — an empty id sequence yields no vector.
+//  Review: Kev + claude-opus-5.5, 2026-11-15 (#836 review fold) — the image path runs in `EmbeddingGemma2Guard` (an MLX
+//  error throws `visionFailed`), `<bos>`/`<eos>` are read once, a refused tower is logged, distinct vision errors.
+//  Review: Kev + claude-opus-5.5, 2026-11-15 (#836) — the image path: `embedImage` and a lazily loaded vision tower
+//  (EmbeddingGemma2Vision.swift, EmbeddingGemma2ImagePath.swift). The text path's arithmetic is unchanged: the core's
+//  embedding step and its layers are two methods (`scaledEmbeddings`, `forward`) so an image can substitute soft tokens
+//  between them; the text `embed` still runs tokenize, model(tokens), mean, L2, and the stage's text part is the proof.
 
 import Foundation
 import MLX
@@ -44,6 +50,7 @@ import MLXEmbedders
 import MLXFast
 import MLXLMCommon
 import MLXNN
+import os
 
 // MARK: - Model
 
@@ -75,6 +82,15 @@ public final class EmbeddingGemma2TextModel: Module, BaseLanguageModel {
     /// `[B, L]` tokens (+ optional `[B, L]` 1/0 mask) → `[B, L, embeddingDim]`.
     public func callAsFunction(_ tokens: MLXArray, attentionMask: MLXArray? = nil) -> MLXArray {
         languageModel(tokens, attentionMask: attentionMask)
+    }
+
+    /// Scaled token embeddings and the layers over embeddings — the image path substitutes soft tokens between them.
+    func scaledEmbeddings(_ tokens: MLXArray) -> MLXArray {
+        languageModel.scaledEmbeddings(tokens)
+    }
+
+    func forward(_ hidden: MLXArray, attentionMask: MLXArray? = nil) -> MLXArray {
+        languageModel.forward(hidden, attentionMask: attentionMask)
     }
 
     /// Keeps the text core and drops the vision/audio encoders. A text-only
@@ -147,10 +163,37 @@ public actor EmbeddingGemma2Embedder {
 
     public nonisolated let embeddingDim: Int
 
-    init(model: EmbeddingGemma2TextModel, tokenizer: any MLXLMCommon.Tokenizer) {
+    /// The image path (#836). `visionConfiguration` is nil for a checkpoint with no vision tower; the tower's
+    /// weights load on the first image and `unloadVision()` drops them again. Nothing here touches the text path.
+    private let modelDirectory: URL?
+    private let visionConfiguration: EmbeddingGemma2VisionConfiguration?
+    private var vision: EmbeddingGemma2VisionStack?
+    private var imageProcessor: EmbeddingGemma2ImageProcessor?
+    /// `<bos>` and `<eos>`, read once (the tokenizer's post-processor adds both around any text).
+    private let beginID: Int?
+    private let endID: Int?
+
+    init(
+        model: EmbeddingGemma2TextModel, tokenizer: any MLXLMCommon.Tokenizer,
+        modelDirectory: URL? = nil, visionConfiguration: EmbeddingGemma2VisionConfiguration? = nil
+    ) {
         self.model = model
         self.tokenizer = tokenizer
+        self.modelDirectory = modelDirectory
+        self.visionConfiguration = visionConfiguration
+        beginID = visionConfiguration == nil ? nil : tokenizer.encode(text: "", addSpecialTokens: true).first
+        endID = visionConfiguration == nil ? nil : tokenizer.eosTokenId
         embeddingDim = model.config.embeddingDim
+    }
+
+    /// Whether this checkpoint can embed images (it declares a vision tower and its directory is known).
+    public nonisolated var supportsImages: Bool {
+        visionConfiguration != nil && modelDirectory != nil
+    }
+
+    /// Whether the vision tower's weights are resident.
+    public var isVisionLoaded: Bool {
+        vision != nil
     }
 
     /// Resolves `configuration` (a Hub id downloads through `downloader`; a
@@ -177,7 +220,17 @@ public actor EmbeddingGemma2Embedder {
         try await loadWeights(
             modelDirectory: resolved.modelDirectory, model: model, perLayerQuantization: base.perLayerQuantization
         )
-        return try await EmbeddingGemma2Embedder(model: model, tokenizer: tokenizer)
+        // A tower this port cannot read leaves the text path whole: images are unsupported, text is not.
+        var vision: EmbeddingGemma2VisionConfiguration?
+        do {
+            vision = try EmbeddingGemma2VisionConfiguration.decode(from: configData)
+        } catch {
+            Logger(subsystem: "app.m1k3", category: "mlx-load")
+                .notice("vision tower refused, images unsupported: \(String(describing: error), privacy: .public)")
+        }
+        return try await EmbeddingGemma2Embedder(
+            model: model, tokenizer: tokenizer, modelDirectory: resolved.modelDirectory, visionConfiguration: vision
+        )
     }
 
     /// The token ids `text` embeds as (the tokenizer's post-processor adds
@@ -201,6 +254,90 @@ public actor EmbeddingGemma2Embedder {
         let vector = pooled / norm
         eval(vector)
         return vector.asArray(Float.self)
+    }
+}
+
+// MARK: - Images
+
+public extension EmbeddingGemma2Embedder {
+    /// The unit-length `embeddingDim` vector for an encoded image (PNG, JPEG, HEIC...): the sequence is
+    /// `<bos> <boi> <image>xn <eoi> <eos>` with the vision tower's soft tokens in place of the placeholders,
+    /// then the same layers, mean pooling and L2 norm as text — one space. The tower loads on first use.
+    func embedImage(_ data: Data) throws -> [Float] {
+        guard let config = visionConfiguration, let directory = modelDirectory else {
+            throw EmbeddingGemma2Error.noVisionTower
+        }
+        let processor = try loadedProcessor(directory: directory)
+        guard let begin = beginID, let end = endID else { throw EmbeddingGemma2Error.invalidImage }
+        // Every MLX step below runs inside an error scope: a truncated, deleted or mismatched checkpoint, or a
+        // GPU failure, throws `visionFailed` instead of reaching MLX's fatalError.
+        return try EmbeddingGemma2Guard.run {
+            let (pixels, softTokens) = try processor.pixels(from: data)
+            guard softTokens > 0 else { throw EmbeddingGemma2Error.invalidImage }
+            let stack = try loadedVision(config, directory: directory)
+            let features = stack(pixels.asType(.bfloat16))
+            let ids = EmbeddingGemma2ImagePath.tokens(
+                softTokens: softTokens, vision: config, beginOfSequence: begin, endOfSequence: end
+            )
+            guard ids.count <= EmbeddingGemma2TextModel.contextLength, features.dim(1) == softTokens else {
+                throw EmbeddingGemma2Error.invalidImage
+            }
+            let tokens = MLXArray(ids.map { Int32($0) }).expandedDimensions(axis: 0)
+            var hidden = model.scaledEmbeddings(tokens)
+            // The soft tokens replace the placeholders AFTER the text scaling, as the reference does: positions
+            // 2 ..< 2 + n sit between <bos> <boi> and <eoi> <eos>.
+            let start = 2
+            hidden = concatenated(
+                [
+                    hidden[0..., ..<start, 0...], features.asType(hidden.dtype),
+                    hidden[0..., (start + softTokens)..., 0...],
+                ],
+                axis: 1
+            )
+            let states = model.forward(hidden).asType(.float32)
+            let pooled = states.mean(axis: 1).squeezed(axis: 0)
+            let norm = maximum(sqrt((pooled * pooled).sum()), MLXArray(Float(1e-9)))
+            let vector = pooled / norm
+            eval(vector)
+            let values = vector.asArray(Float.self)
+            guard values.allSatisfy({ $0.isFinite }), values.contains(where: { $0 != 0 }) else {
+                throw EmbeddingGemma2Error.invalidEmbedding
+            }
+            return values
+        }
+    }
+
+    private func loadedProcessor(directory: URL) throws -> EmbeddingGemma2ImageProcessor {
+        if let imageProcessor { return imageProcessor }
+        let processor = try EmbeddingGemma2ImageProcessor.load(directory: directory)
+        imageProcessor = processor
+        return processor
+    }
+
+    /// Frees the vision tower (~340 MB of bf16 weights). The next image reloads it; the text core is untouched.
+    func unloadVision() {
+        vision = nil
+    }
+
+    private func loadedVision(
+        _ config: EmbeddingGemma2VisionConfiguration, directory: URL
+    ) throws -> EmbeddingGemma2VisionStack {
+        if let vision { return vision }
+        let stack = EmbeddingGemma2VisionStack(config, textHiddenSize: model.config.hiddenSize)
+        var weights: [String: MLXArray] = [:]
+        let files = ((try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? [])
+            .filter { $0.pathExtension == "safetensors" }
+        // The file is opened lazily: only the vision tensors are read when they are evaluated below.
+        for file in files {
+            for (key, value) in try loadArrays(url: file) {
+                if let name = EmbeddingGemma2VisionStack.visionKey(key) { weights[name] = value }
+            }
+        }
+        guard !weights.isEmpty else { throw EmbeddingGemma2Error.visionWeightsMissing }
+        try stack.update(parameters: ModuleParameters.unflattened(weights), verify: [.all])
+        eval(stack)
+        vision = stack
+        return stack
     }
 }
 
@@ -238,15 +375,27 @@ final class EmbeddingGemma2TextCore: Module {
 
     /// `[B, L]` tokens (+ optional `[B, L]` 1/0 mask) → `[B, L, embeddingDim]`.
     func callAsFunction(_ tokens: MLXArray, attentionMask: MLXArray?) -> MLXArray {
+        forward(scaledEmbeddings(tokens), attentionMask: attentionMask)
+    }
+
+    /// `[B, L]` tokens → the scaled token embeddings `[B, L, hidden]` the layers start from.
+    func scaledEmbeddings(_ tokens: MLXArray) -> MLXArray {
         var hidden = embedTokens(tokens)
         // The model card forbids float16 (activations exceed its range); a
         // float16 conversion would overflow silently into degenerate vectors.
         if hidden.dtype == .float16 { hidden = hidden.asType(.float32) }
         // The reference rounds sqrt(hidden) to the activation dtype (22.625 in bf16).
         hidden *= MLXArray(Float(hiddenSize).squareRoot()).asType(hidden.dtype)
+        return hidden
+    }
+
+    /// The layers over `[B, L, hidden]` embeddings — the text path's, or text with an image's soft tokens
+    /// already in place of their placeholders — to `[B, L, embeddingDim]`.
+    func forward(_ hidden: MLXArray, attentionMask: MLXArray?) -> MLXArray {
+        var hidden = hidden
         let perLayerInputs = ple(hidden)
 
-        let length = tokens.dim(1)
+        let length = hidden.dim(1)
         let (globalMask, localMask) = Self.masks(length: length, window: slidingWindow, attentionMask: attentionMask)
         for (index, layer) in layers.enumerated() {
             hidden = layer(

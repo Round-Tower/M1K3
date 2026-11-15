@@ -10,6 +10,8 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.85, Prior: none (new
 //  file; GEMMA_1_1_PLAN Stream C, slice 1).
+//  Review: Kev + claude-opus-5.5, 2026-11-15 (#836) — the fixture gained twelve images (`images`, `imageRankingChecks`,
+//  `imagePrompt`) and a query + caption text case per image; the image tests pin them.
 //  Review: Kev + claude-fable-5.1, 2026-10-10 (#545) — the fixture gained `d-long` (1,396 tokens,
 //  past the 512 sliding window) and `q-long`; `longCasePresent` pins it so the port's local mask stays covered.
 
@@ -95,6 +97,116 @@ struct EmbeddingGemma2ReferenceTests {
     func ranking() throws {
         let checks = try load().rankingChecks
         #expect(checks.count >= 4)
+        let allRanked = checks.allSatisfy { $0.ok }
+        #expect(allRanked)
+    }
+
+    // MARK: Images (#836)
+
+    struct ImageReference: Decodable {
+        struct Prompt: Decodable {
+            let version: String
+            let prefix: String
+            let ids: [String: Int]
+        }
+
+        struct Image: Decodable {
+            let id: String
+            let pngBase64: String
+            let width: Int
+            let height: Int
+            let targetWidth: Int
+            let targetHeight: Int
+            let softTokens: Int
+            let queryCase: String
+            let captionCase: String
+            let embedding768: [Double]
+            let embedding512: [Double]
+        }
+
+        struct Ranking: Decodable {
+            let query: String
+            let relevant: String
+            let irrelevant: String
+            let ok: Bool
+        }
+
+        let cases: [Case]
+        let imagePrompt: Prompt
+        let images: [Image]
+        let imageRankingChecks: [Ranking]
+
+        struct Case: Decodable {
+            let id: String
+        }
+    }
+
+    private func loadImages() throws -> ImageReference {
+        let url = try #require(Bundle.module.url(
+            forResource: "embeddinggemma2-reference", withExtension: "json", subdirectory: "Fixtures"
+        ))
+        return try JSONDecoder().decode(ImageReference.self, from: Data(contentsOf: url))
+    }
+
+    @Test("the image path has no prompt prefix (the model card: prefixes are for text only) and its own version")
+    func imagePrompt() throws {
+        let prompt = try loadImages().imagePrompt
+        #expect(prompt.version == "image-v2")
+        #expect(prompt.prefix.isEmpty)
+        #expect(prompt.ids == ["bos": 2, "boi": 255_999, "image": 258_880, "eoi": 258_882, "eos": 1])
+    }
+
+    @Test("every image vector is unit length at 768 and its MRL-512 head; the PNG is a PNG; the size is a 48 multiple")
+    func imageVectors() throws {
+        let reference = try loadImages()
+        #expect(reference.images.count >= 12)
+        let textIDs = Set(reference.cases.map(\.id))
+        for image in reference.images {
+            #expect(image.embedding768.count == 768)
+            #expect(image.embedding512.count == 512)
+            #expect(abs(norm(image.embedding768) - 1) < 1e-3, "\(image.id)")
+            #expect(abs(norm(image.embedding512) - 1) < 1e-3, "\(image.id)")
+            let head = Array(image.embedding768.prefix(512))
+            let headNorm = norm(head)
+            let drift = zip(head, image.embedding512).map { abs($0 / headNorm - $1) }.max() ?? 1
+            #expect(drift < 1e-4, "\(image.id) MRL truncation drift \(drift)")
+            let png = try #require(Data(base64Encoded: image.pngBase64), "\(image.id)")
+            #expect(png.prefix(4) == Data([0x89, 0x50, 0x4E, 0x47]), "\(image.id) is a PNG")
+            #expect(image.targetWidth % 48 == 0 && image.targetHeight % 48 == 0, "\(image.id)")
+            #expect(image.softTokens == image.targetWidth / 16 * (image.targetHeight / 16) / 9, "\(image.id)")
+            #expect(image.softTokens <= 280, "\(image.id)")
+            #expect(textIDs.contains(image.queryCase) && textIDs.contains(image.captionCase), "\(image.id)")
+        }
+    }
+
+    @Test("a photo-sized noisy frame is in the fixture, built by formula, with unit-length reference vectors")
+    func proceduralImage() throws {
+        struct Procedural: Decodable {
+            let id: String
+            let formula: String
+            let width: Int
+            let height: Int
+            let softTokens: Int
+            let embedding768: [Double]
+            let embedding512: [Double]
+        }
+        struct File: Decodable {
+            let proceduralImages: [Procedural]
+        }
+        let url = try #require(Bundle.module.url(
+            forResource: "embeddinggemma2-reference", withExtension: "json", subdirectory: "Fixtures"
+        ))
+        let noise = try #require(JSONDecoder().decode(File.self, from: Data(contentsOf: url)).proceduralImages.first)
+        #expect(noise.formula == "noise-chirp-v1")
+        #expect(noise.width == 4032 && noise.height == 3024)
+        #expect(noise.softTokens == 266)
+        #expect(abs(norm(noise.embedding768) - 1) < 1e-3 && abs(norm(noise.embedding512) - 1) < 1e-3)
+    }
+
+    @Test("text finds the picture: each query ranks its image above the hardest other one")
+    func imageRanking() throws {
+        let checks = try loadImages().imageRankingChecks
+        #expect(checks.count >= 12)
         let allRanked = checks.allSatisfy { $0.ok }
         #expect(allRanked)
     }

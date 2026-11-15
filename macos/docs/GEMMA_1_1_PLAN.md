@@ -141,7 +141,7 @@ Gate: retrieval ≥ Qwen3-Embedding on every fixture family, re-index verified o
 
 Goal: images, screenshots and audio live in the knowledge graph beside text.
 
-- [ ] Lazy-load the vision encoder (+170M) only when an image is ingested or queried; drop it under memory pressure.
+- [x] Lazy-load the vision encoder (+170M) only when an image is ingested or queried; drop it under memory pressure. **2026-11-15 (#836):** `MLXEmbeddingService.embedImage` loads the tower (bf16, +320 MB) on the first image and drops it on a memory warning or `unloadVision()`; the image path is `<bos><boi><image>×n<eoi><eos>` with no prefix and its own `image-v2` fingerprint (layout + preprocessing) (`imageFingerprint`); the text fingerprint and vectors are bit-identical (digest `15bfaaad809770ea` on master and the branch). In-app parity against mlx-vlm: 12 generated images, min cosine 0.99993 at 768 and 512, top-1 12/12. Numbers, the floor inputs and a PROPOSED (unsigned) text→image floor: `docs/evals/2026-11-15-eg2-vision/README.md`. Still owed: a phone run, real photos for the floor, the `modality` column.
 - [ ] GRDB migration in `KnowledgeStore.swift`: `modality` column + thumbnail/blob reference (migrations live inside `*Store.swift` → land.sh reads them; plan two passes).
 - [ ] Ingest: attachments already in chat (`AttachmentStore`) → embedded on add. Query: text → finds images ("the whiteboard photo about pricing").
 - [ ] Retrieval fixtures with images; floors per modality pair (text↔image will sit lower than text↔text — measure, don't guess).
@@ -879,3 +879,4 @@ Review: Kev + claude-fable-5.1, 2026-10-09 — Stream D's 1.1 slice (caption mem
 Review: Kev + claude-fable-5.1, 2026-10-11 05:10 — Lil's think phase measured overnight (five arms, #553): auto barely thinks; forced thinking is bimodal with 6 cap-hit empties; every prompt steer loses. Decoder-side think budget proposed, challenger pending. Confidence 0.8 on the read (×1, Debug build; the ms column is only trusted on the chat path).
 Review: Kev + claude-opus-5.5, 2026-10-11 11:55 — #555 measured with the app's router on: 20/44 → 37/44, 11 empty answers → 0, median turn 133 s → 16 s. The overnight runaway was the plain route ignoring Auto, not Qwen3.5. Confidence 0.9 on the cause (paired arms, same machine state; ×1, Debug).
 Review: Kev + claude-opus-5.5, 2026-10-28 — the Gemma-ladder line records that gemma-4-26B-A4B lost to gemma-4-12B in-app and MoE Big is closed on M1 (2026-10-25). Confidence 0.9.
+Review: Kev + claude-opus-5.5, 2026-11-15 (#836) — Stream D's lazy-vision box checked: the vision encoder is ported (mlx-swift-lm#684, credited) and verified in-app; the floor is measured and proposed, not signed. Confidence 0.75.
