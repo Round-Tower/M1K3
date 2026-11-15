@@ -195,5 +195,73 @@
   "embed_audio",
   "embed_vision",
   "vision_tower"
- ]
+ ],
+ "visionKeys": 211,
+ "visionPatterns": [
+  {
+   "key": "embed_vision.embedding_projection.weight",
+   "count": 1
+  },
+  {
+   "key": "vision_tower.encoder.layers.N.input_layernorm.weight",
+   "count": 16
+  },
+  {
+   "key": "vision_tower.encoder.layers.N.mlp.down_proj.linear.weight",
+   "count": 16
+  },
+  {
+   "key": "vision_tower.encoder.layers.N.mlp.gate_proj.linear.weight",
+   "count": 16
+  },
+  {
+   "key": "vision_tower.encoder.layers.N.mlp.up_proj.linear.weight",
+   "count": 16
+  },
+  {
+   "key": "vision_tower.encoder.layers.N.post_attention_layernorm.weight",
+   "count": 16
+  },
+  {
+   "key": "vision_tower.encoder.layers.N.post_feedforward_layernorm.weight",
+   "count": 16
+  },
+  {
+   "key": "vision_tower.encoder.layers.N.pre_feedforward_layernorm.weight",
+   "count": 16
+  },
+  {
+   "key": "vision_tower.encoder.layers.N.self_attn.k_norm.weight",
+   "count": 16
+  },
+  {
+   "key": "vision_tower.encoder.layers.N.self_attn.k_proj.linear.weight",
+   "count": 16
+  },
+  {
+   "key": "vision_tower.encoder.layers.N.self_attn.o_proj.linear.weight",
+   "count": 16
+  },
+  {
+   "key": "vision_tower.encoder.layers.N.self_attn.q_norm.weight",
+   "count": 16
+  },
+  {
+   "key": "vision_tower.encoder.layers.N.self_attn.q_proj.linear.weight",
+   "count": 16
+  },
+  {
+   "key": "vision_tower.encoder.layers.N.self_attn.v_proj.linear.weight",
+   "count": 16
+  },
+  {
+   "key": "vision_tower.patch_embedder.input_proj.weight",
+   "count": 1
+  },
+  {
+   "key": "vision_tower.patch_embedder.position_embedding_table",
+   "count": 1
+  }
+ ],
+ "visionNote": "vision_tower.* + embed_vision.*: all bf16 (the 8-bit policy quantises the text encoder and audio projection only), so there are no scales or biases."
 }

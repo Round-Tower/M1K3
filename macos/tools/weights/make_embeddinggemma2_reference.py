@@ -11,20 +11,41 @@ in a venv with mlx-vlm @ 3d87e88402f307efbf68e568971aa887ee7d9ed0 (the revision
 mlx-community validated with) + transformers. HF_HOME points at a scratch dir on
 purpose: never the app's model cache (the 2026-07-16 pre-seed incident).
 
+One command that builds that venv (the 1.2 GB checkpoint lands in $HF_HOME, default
+~/.cache/huggingface, which is not the app's cache):
+
+    uv run --with "mlx-vlm @ git+https://github.com/Blaizzy/mlx-vlm@3d87e88402f307efbf68e568971aa887ee7d9ed0" \\
+        --with "mlx==0.32.3" --with "transformers>=5.18" --with pillow --with numpy \\
+        python -I make_embeddinggemma2_reference.py <out.json>
+
+Images (#836): the twelve drawings of make_embeddinggemma2_images.py (rendered into a temp folder
+on each run), preprocessed the way the checkpoint's Gemma4ImageProcessor does
+(aspect-preserving size, antialiased bicubic, 0...1 pixels), then run through mlx-vlm's vision
+tower. The image prompt is NONE: the model card says prefixes apply to text only, so an image is
+`<bos><boi><image>*n<eoi><eos>`. The EAP Transformers wheel that ships `EmbeddingGemma2Processor`
+is not needed: the processor's arithmetic is reproduced here and pinned by the Swift test.
+
 Signed: Kev + claude-opus-5-5, 2026-10-06, Confidence 0.8, Prior: none (new file;
 GEMMA_1_1_PLAN Stream C, slice 1). Pinned by EmbeddingGemma2ReferenceTests.
 Review: Kev + claude-fable-5.1, 2026-10-10 (#545 review) — `d-long` / `q-long`: a ~900-token
 document so the Swift port's sliding-window mask (the one path the short cases never reach)
 is checked against the reference too. Regenerated with the same pinned venv.
+Review: Kev + claude-opus-5.5, 2026-11-15 (#836) — image cases (`images`, `imageRankingChecks`) and a
+caption/query text case per image, appended after the existing text cases (the text rows are untouched).
 """
 
+import base64
+import importlib.util
 import json
 import sys
+import tempfile
 from pathlib import Path
 
 import mlx.core as mx
+import numpy as np
 from huggingface_hub import snapshot_download
 from mlx_vlm.embedding_loader import load_embedding_model
+from PIL import Image
 from transformers import AutoTokenizer
 
 REPO = "mlx-community/embeddinggemma-2-8bit"
@@ -85,15 +106,65 @@ MUST_RANK = [
 ]
 
 
+# Image path constants: config.json / processor_config.json of the pinned revision.
+PATCH, POOL, MAX_SOFT = 16, 3, 280
+BOS, EOS, BOI, EOI, IMAGE_TOKEN = 2, 1, 255999, 258882, 258880
+
+
+def target_size(height: int, width: int) -> tuple[int, int]:
+    """Gemma4ImageProcessor's aspect-preserving size (same arithmetic as the Swift port)."""
+    side = POOL * PATCH
+    factor = (MAX_SOFT * POOL * POOL * PATCH * PATCH / max(height * width, 1)) ** 0.5
+    th, tw = int(factor * height / side), int(factor * width / side)
+    if th == 0:
+        th, tw = 1, max(min(int(width / max(height, 1)), MAX_SOFT), 1)
+    elif tw == 0:
+        tw, th = 1, max(min(int(height / max(width, 1)), MAX_SOFT), 1)
+    return th * side, tw * side
+
+
+def load_images() -> tuple[Path, list]:
+    here = Path(__file__).resolve().parent
+    spec = importlib.util.spec_from_file_location("eg2_images", here / "make_embeddinggemma2_images.py")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    # *.png is gitignored: the drawings are rendered fresh (deterministic) and travel in the
+    # fixture as base64, so nothing but the script has to be committed.
+    folder = Path(tempfile.mkdtemp(prefix="eg2-images-"))
+    module.main(folder)
+    return folder, module.IMAGES
+
+
+def embed_image(model, path: Path):
+    """(768 vector, th, tw, soft tokens) for one image, as the model's processor + mlx-vlm do it."""
+    image = Image.open(path).convert("RGB")
+    th, tw = target_size(image.height, image.width)
+    resized = image.resize((tw, th), Image.BICUBIC)  # Pillow's antialiased bicubic (a = -0.5)
+    pixels = np.asarray(resized, dtype=np.float32).transpose(2, 0, 1)[None] / 255.0
+    soft = (th // PATCH) * (tw // PATCH) // (POOL * POOL)
+    ids = [BOS, BOI] + [IMAGE_TOKEN] * soft + [EOI, EOS]
+    arr = mx.array([ids])
+    result = model(arr, attention_mask=mx.ones_like(arr), pixel_values=mx.array(pixels))
+    v = result.text_embeds[0].astype(mx.float32)
+    mx.eval(v)
+    return v, th, tw, soft
+
+
 def main(out: Path) -> None:
+    image_dir, image_specs = load_images()
     info_path = snapshot_download(REPO, revision=REVISION)
     path = Path(info_path)
     sha = path.name  # snapshots/<sha>
     model = load_embedding_model(path)
     tok = AutoTokenizer.from_pretrained(path)
 
+    # One query and one caption per image, appended so the earlier text rows are untouched.
+    image_cases = []
+    for image_id, _file, _size, caption, query in image_specs:
+        image_cases += [(f"q-img-{image_id}", "query", query), (f"d-img-{image_id}", "document", caption)]
+
     rows, vecs = [], {}
-    for case_id, role, text in CASES:
+    for case_id, role, text in CASES + image_cases:
         prompted = (QUERY if role == "query" else DOCUMENT) + text
         ids = tok(prompted, add_special_tokens=True)["input_ids"]
         arr = mx.array([ids])
@@ -117,6 +188,32 @@ def main(out: Path) -> None:
         g, b = cos(q, good), cos(q, bad)
         checks.append({"query": q, "relevant": good, "irrelevant": bad, "cosRelevant": round(g, 4),
                        "cosIrrelevant": round(b, 4), "ok": g > b})
+    images, image_vecs = [], {}
+    for image_id, file, _size, _caption, _query in image_specs:
+        path = image_dir / file
+        v, th, tw, soft = embed_image(model, path)
+        image_vecs[image_id] = v
+        t512 = v[:512] / mx.linalg.norm(v[:512])
+        images.append({
+            "id": image_id, "file": file, "width": Image.open(path).width, "height": Image.open(path).height,
+            "targetHeight": th, "targetWidth": tw, "softTokens": soft,
+            "queryCase": f"q-img-{image_id}", "captionCase": f"d-img-{image_id}",
+            "pngBase64": base64.b64encode(path.read_bytes()).decode(),
+            "embedding768": [round(float(x), 6) for x in v.tolist()],
+            "embedding512": [round(float(x), 6) for x in t512.tolist()],
+        })
+
+    # Text->image: each query against its own picture and against the hardest other picture.
+    image_checks, matrix = [], {}
+    for image_id, *_ in image_specs:
+        q = vecs[f"q-img-{image_id}"]
+        scores = {other: float((q * image_vecs[other]).sum()) for other, *_ in image_specs}
+        matrix[image_id] = scores
+        hardest = max((o for o in scores if o != image_id), key=scores.get)
+        image_checks.append({"query": f"q-img-{image_id}", "relevant": image_id, "irrelevant": hardest,
+                             "cosRelevant": round(scores[image_id], 4), "cosIrrelevant": round(scores[hardest], 4),
+                             "ok": scores[image_id] > scores[hardest]})
+
     doc = {
         "model": REPO, "modelRevision": sha,
         "generator": "mlx-vlm 3d87e88402f307efbf68e568971aa887ee7d9ed0, mlx " + mx.__version__,
@@ -124,9 +221,23 @@ def main(out: Path) -> None:
         "prompts": {"query": QUERY, "document": DOCUMENT},
         "mrl512": "first 512 dims of the 768 vector, re-normalised",
         "cases": rows, "rankingChecks": checks,
+        "imagePrompt": {
+            "version": "image-prompt-v1",
+            "template": "<bos><start_of_image><image_soft_token>*n<end_of_image><eos>",
+            "prefix": "",
+            "note": "the model card: task prefixes apply to text only; pass images without any prefix",
+            "ids": {"bos": BOS, "boi": BOI, "image": IMAGE_TOKEN, "eoi": EOI, "eos": EOS},
+            "preprocessing": "aspect-preserving size (max 280 soft tokens, patch 16, pool 3), antialiased bicubic, 0...1",
+        },
+        "images": images, "imageRankingChecks": image_checks,
     }
     out.write_text(json.dumps(doc, ensure_ascii=False, indent=1))
     print("revision", sha)
+    top1 = sum(1 for c in image_checks if c["ok"])
+    print(f"image checks: {top1}/{len(image_checks)} queries rank their picture above the hardest other")
+    for c in image_checks:
+        print(("OK  " if c["ok"] else "BAD ") + f'{c["query"]}: {c["cosRelevant"]} vs {c["irrelevant"]} {c["cosIrrelevant"]}')
+    print("image tokens:", {i["id"]: (i["targetWidth"], i["targetHeight"], i["softTokens"]) for i in images})
     for c in checks:
         print(("OK  " if c["ok"] else "BAD ") + f'{c["query"]}: relevant {c["cosRelevant"]} vs off-topic {c["cosIrrelevant"]}')
     print("tokens:", {r["id"]: len(r["inputIDs"]) for r in rows})
