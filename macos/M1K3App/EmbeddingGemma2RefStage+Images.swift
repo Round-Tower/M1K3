@@ -13,9 +13,12 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-15, Confidence 0.75. Prior: none (new file; #836).
 
+import CoreGraphics
 import Foundation
+import ImageIO
 import M1K3Knowledge
 import M1K3MLX
+import UniformTypeIdentifiers
 
 extension EmbeddingGemma2RefStage {
     struct ImageResult {
@@ -81,11 +84,13 @@ extension EmbeddingGemma2RefStage {
             measureFloors(reference: reference, images: images, results: results, outcomes: outcomes, emit: emit)
             await measureUnload(service: service, images: images, emit: emit, clock: clock)
 
+            let noise = try await checkProcedural(reference: reference, service: service, emit: emit)
+
             let minCos768 = outcomes.values.map(\.cos768).min() ?? 0
             let minCos512 = outcomes.values.map(\.cos512).min() ?? 0
             let finite = outcomes.values.allSatisfy { $0.cos768.isFinite && $0.cos512.isFinite }
             let pass = outcomes.count == images.count && finite && minCos768 >= threshold
-                && minCos512 >= threshold && rankingOK && top1.hits == images.count
+                && minCos512 >= threshold && rankingOK && top1.hits == images.count && noise
             emit(String(
                 format: "eg2ref images summary: %d/%d · min cos768 %.5f · min cos512 %.5f · ranking %@ · top-1 %d/%d · "
                     + "cold %.0f ms · warm median %.0f ms · process peak RSS %d MB · %@",
@@ -95,6 +100,75 @@ extension EmbeddingGemma2RefStage {
         } catch {
             emit("✗ eg2ref images: \(error)")
         }
+    }
+
+    // MARK: Procedural (noisy, high-frequency, photo-sized)
+
+    /// The generator's `noise_pixels` (integer arithmetic, uint32 wraparound on both sides), as 8-bit RGB.
+    static func noisePixels(width: Int, height: Int) -> [UInt8] {
+        var rgb = [UInt8](repeating: 0, count: width * height * 4)
+        rgb.withUnsafeMutableBufferPointer { out in
+            for y in 0 ..< height {
+                let yy = UInt32(y)
+                for x in 0 ..< width {
+                    let xx = UInt32(x)
+                    for channel in 0 ..< 3 {
+                        let mixed = (xx &* 73_856_093) ^ (yy &* 19_349_663) ^ UInt32(truncatingIfNeeded: channel &* 83_492_791)
+                        let noise = (mixed &* 2_654_435_761) >> 24
+                        let chirp = ((xx &* xx &* UInt32(channel + 1) &+ yy &* yy &* 3) >> 9) & 255
+                        out[(y * width + x) * 4 + channel] = UInt8((noise >> 2) + ((chirp &* 3) >> 2))
+                    }
+                    out[(y * width + x) * 4 + 3] = 255
+                }
+            }
+        }
+        return rgb
+    }
+
+    static func pngData(rgbx: [UInt8], width: Int, height: Int) -> Data? {
+        var bytes = rgbx
+        let image: CGImage? = bytes.withUnsafeMutableBytes { buffer in
+            CGContext(
+                data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                space: CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB(),
+                bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue
+            )?.makeImage()
+        }
+        let output = NSMutableData()
+        guard let image, let destination = CGImageDestinationCreateWithData(output, UTType.png.identifier as CFString, 1, nil)
+        else { return nil }
+        CGImageDestinationAddImage(destination, image, nil)
+        return CGImageDestinationFinalize(destination) ? output as Data : nil
+    }
+
+    /// The photo-sized noisy frame against mlx-vlm's vector for the same bytes: the resample-order and the
+    /// single-resample divergences show up on high-frequency content, not on flat drawings.
+    private static func checkProcedural(
+        reference: Reference, service: MLXEmbeddingService, emit: (String) -> Void
+    ) async throws -> Bool {
+        var allOK = true
+        for item in reference.proceduralImages ?? [] {
+            let pixels = noisePixels(width: item.width, height: item.height)
+            guard let png = pngData(rgbx: pixels, width: item.width, height: item.height) else {
+                emit("✗ eg2ref procedural \(item.id): could not encode the PNG")
+                return false
+            }
+            let clock = ContinuousClock()
+            let start = clock.now
+            let v768 = try await service.embedImage(png)
+            let millis = seconds(clock.now - start) * 1000
+            let v512 = try MatryoshkaTruncation.truncateValidated(v768, to: storeWidth)
+            let cos768 = VectorMath.cosineSimilarity(v768, item.embedding768)
+            let cos512 = VectorMath.cosineSimilarity(v512, item.embedding512)
+            let ok = cos768 >= threshold && cos512 >= threshold
+            allOK = allOK && ok
+            emit(String(
+                format: "eg2ref procedural %@ %dx%d (%d KB PNG) cos768 %.5f cos512 %.5f %.0f ms peak MLX %d MB %@", item.id,
+                item.width, item.height, png.count / 1024, cos768, cos512, millis, MLXMemoryBudget.peakMB(),
+                ok ? "ok" : "BELOW 0.999"
+            ))
+        }
+        return allOK
     }
 
     // MARK: Retrieval

@@ -134,6 +134,27 @@ public struct EmbeddingGemma2VisionConfiguration: Sendable, Equatable {
     }
 }
 
+// MARK: - Guard
+
+/// Runs MLX work inside an error scope so a failure (a truncated or mismatched checkpoint, a GPU error) throws
+/// instead of reaching MLX's no-handler fatalError. The same pattern as `KokoroGuardedRead` (M1K3Kokoro, which this
+/// target cannot import). Errors that are already `EmbeddingGemma2Error` pass through; anything else is wrapped.
+enum EmbeddingGemma2Guard {
+    static func run<R>(_ body: () throws -> R) throws -> R {
+        do {
+            return try withError { failure in
+                let result = try body()
+                try failure.check()
+                return result
+            }
+        } catch let error as EmbeddingGemma2Error {
+            throw error
+        } catch {
+            throw EmbeddingGemma2Error.visionFailed(String(describing: error))
+        }
+    }
+}
+
 // MARK: - Stack
 
 /// `vision_tower` + `embed_vision`: pixels `[B, 3, H, W]` → `[B, soft tokens, textHidden]`.

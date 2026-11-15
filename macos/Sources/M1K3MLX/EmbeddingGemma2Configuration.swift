@@ -158,10 +158,19 @@ public enum EmbeddingGemma2Error: Error, Equatable {
     case notEmbeddingGemma2(String)
     /// A vision tower this port does not cover (see `EmbeddingGemma2VisionConfiguration.decode`).
     case unsupportedVision(String)
-    /// The checkpoint declares no vision tower, or its weights are not on disk.
-    case visionUnavailable
+    /// The checkpoint declares no vision tower (a text-only conversion, or one `decode` refused).
+    case noVisionTower
+    /// The checkpoint declares a tower but no `vision_tower.*` / `embed_vision.*` weights are on disk.
+    case visionWeightsMissing
+    /// `processor_config.json` is missing or unreadable.
+    case visionProcessorMissing
+    /// An MLX failure while loading the tower or embedding an image (a truncated, deleted or mismatched
+    /// checkpoint): thrown, never a trap.
+    case visionFailed(String)
     /// The bytes are not an image the system can decode, or its size is unusable.
     case invalidImage
+    /// An aspect ratio so extreme its resampling matrix would be hundreds of MB.
+    case unsupportedImageShape
     /// The model returned a non-finite or all-zero vector.
     case invalidEmbedding
 }

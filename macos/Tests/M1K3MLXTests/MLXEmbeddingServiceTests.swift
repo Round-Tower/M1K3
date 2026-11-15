@@ -62,9 +62,16 @@ struct MLXEmbeddingServiceTests {
     func imageFingerprintIsItsOwn() throws {
         let service = MLXEmbeddingService()
         let image = try #require(service.imageFingerprint)
-        #expect(image == "mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/image-prompt-v1")
+        #expect(image == "mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/image-v2")
         #expect(image != service.fingerprint)
         #expect(image.hasPrefix(EmbedderFloors.embeddingGemma2IdentityPrefix))
+        // The image fingerprint is NOT the measured text identity, so `forFingerprint` takes the unmeasured-family
+        // branch (strictest of the known sets), never the measured-text branch. NOTE: numerically that branch
+        // equals the text floors today (Gemma's bars are all at or above Qwen's), so "unmeasured" is a label and
+        // a place to hook a per-modality field, not a stricter number: see docs/evals/2026-11-15-eg2-vision.
+        #expect(!image.hasSuffix(EmbedderFloors.embeddingGemma2IdentitySuffix))
+        #expect(EmbedderFloors.forFingerprint(image) == .strictest(of: [.qwen3Instructed, .embeddingGemma2]))
+        #expect(EmbedderFloors.forFingerprint(service.fingerprint) == .embeddingGemma2)
         // Qwen has no vision tower: no image identity to invent.
         #expect(MLXEmbeddingService(configuration: EmbedderRegistry.qwen3_embedding).imageFingerprint == nil)
     }

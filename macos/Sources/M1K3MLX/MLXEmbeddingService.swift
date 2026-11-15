@@ -277,55 +277,32 @@ public final class MLXEmbeddingService: EmbeddingService, @unchecked Sendable {
 
     /// Embeds an encoded image (PNG, JPEG, HEIC…) into the same space as text, MRL-truncated to `dimension`.
     /// EmbeddingGemma 2 only: the vision tower loads on the first call (not at launch, not for text) and is
-    /// dropped on a system memory warning or `unloadVision()`. Throws `EmbeddingGemma2Error.visionUnavailable`
-    /// for any other model, or a checkpoint without a vision tower.
+    /// dropped on a system memory warning or `unloadVision()`. Throws `EmbeddingGemma2Error.notEmbeddingGemma2`
+    /// for any other model, `noVisionTower` for a checkpoint without one, and `visionFailed` for an MLX error.
     ///
     /// The iOS / visionOS shell never constructs this service (it embeds with hashing until Stream D lands);
     /// the first caller there must sit behind `AppCore.mlxAvailable`, like every MLX path — the Simulator and
     /// Apple GPU family 5 trap in mlx-swift rather than throw.
     public func embedImage(_ data: Data) async throws -> [Float] {
-        guard prompting == .embeddingGemma2 else { throw EmbeddingGemma2Error.visionUnavailable }
-        guard case let .gemma(embedder) = try await ensureLoaded() else { throw EmbeddingGemma2Error.visionUnavailable }
+        guard prompting == .embeddingGemma2 else { throw EmbeddingGemma2Error.notEmbeddingGemma2("image embedding") }
+        guard case let .gemma(embedder) = try await ensureLoaded() else {
+            throw EmbeddingGemma2Error.notEmbeddingGemma2("image embedding")
+        }
+        // Registered BEFORE the work that can load the tower: a throw after the load still leaves a watcher
+        // and a reference `unloadVision()` can reach.
+        pressure.watch(embedder)
         defer { MLXMemoryBudget.reclaim(label: "embed-image") }
         let raw = try await embedder.embedImage(data)
-        watchMemoryPressure(for: embedder)
         return try MatryoshkaTruncation.truncateValidated(raw, to: dimension)
     }
 
     /// Drops the vision tower's weights now (a no-op for text-only use or before the first image).
     public func unloadVision() async {
-        guard let embedder = visionEmbedder() else { return }
-        await embedder.unloadVision()
-        MLXMemoryBudget.reclaim(label: "vision-unload")
+        await pressure.fire()
     }
 
-    private func visionEmbedder() -> EmbeddingGemma2Embedder? {
-        visionLock.lock()
-        defer { visionLock.unlock() }
-        return imageEmbedder
-    }
-
-    /// One memory-pressure source per service, installed when the tower first loads: a warning or critical event
-    /// frees the ~340 MB of vision weights (the next image reloads them in a moment); the text core stays.
-    private func watchMemoryPressure(for embedder: EmbeddingGemma2Embedder) {
-        visionLock.lock()
-        defer { visionLock.unlock() }
-        imageEmbedder = embedder
-        guard pressureSource == nil else { return }
-        let source = DispatchSource.makeMemoryPressureSource(eventMask: [.warning, .critical], queue: .global(qos: .utility))
-        source.setEventHandler {
-            Task {
-                await embedder.unloadVision()
-                MLXMemoryBudget.reclaim(label: "vision-pressure")
-            }
-        }
-        source.resume()
-        pressureSource = source
-    }
-
-    private let visionLock = NSLock()
-    private var imageEmbedder: EmbeddingGemma2Embedder?
-    private var pressureSource: DispatchSourceMemoryPressure?
+    /// One watcher per service: it holds the latest embedder weakly and cancels its source when the service goes.
+    private let pressure = VisionPressureRelease { MLXMemoryBudget.reclaim(label: "vision-unload") }
 
     private static func embedUpstream(_ text: String, in container: EmbedderModelContainer) async -> [Float] {
         await container.perform { context in

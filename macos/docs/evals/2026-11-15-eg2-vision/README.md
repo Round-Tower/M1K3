@@ -16,15 +16,20 @@ at the end is an input to that, not a decision.
   likeness), each with a query ("the whiteboard photo about pricing") and a caption the way a Photo memory would hold
   it. **They are not photographs.** Everything below about score distributions is a statement about drawings.
 - The vision path: `<bos> <boi> <image>×n <eoi> <eos>`, no prompt text (the model card: "Prefixes apply to text only.
-  Pass images, video, and audio without any prefix"), under its own `image-prompt-v1` in
-  `MLXEmbeddingService.imageFingerprint`.
+  Pass images, video, and audio without any prefix"), under its own `image-v2` in
+  `MLXEmbeddingService.imageFingerprint`. The version covers the preprocessing as well as the token layout: ANY
+  change to either must bump it (a comment on `EmbeddingGemma2ImagePath.promptVersion` says so), because every stored
+  image vector depends on both. (The stage prints `…/d768/…` fingerprints and the unit tests pin `…/d512/…`: the stage
+  builds its service at the native 768 width to compare against the 768 fixture, the app and the tests use the stored
+  512. The width is the only difference.)
 
 ## Parity (the gate: ≥ 0.999 cosine at both widths, relevance order holds)
 
 | | result |
 |---|---|
-| Image vectors vs mlx-vlm, 768 | min **0.99993** over 12 images (all 0.99993 to 0.99999) |
-| Image vectors vs mlx-vlm, MRL 512 (the stored width) | min **0.99993** |
+| Image vectors vs mlx-vlm, 768 | min **0.99995** over 12 images (all 0.99995 to 0.99999) |
+| Image vectors vs mlx-vlm, MRL 512 (the stored width) | min **0.99995** |
+| A noisy, high-frequency 4032×3024 frame (built by integer formula, 31 MB PNG through ImageIO; not a photograph) | cos768 **0.99995**, cos512 **0.99995**, 626 ms, MLX peak 837 MB |
 | Text → image order, our vectors, each query vs the hardest other picture | **12/12** ok (e.g. whiteboard 0.717 vs barchart 0.610) |
 | Top-1: each query finds its own picture among all 12 | **12/12** (the reference does too) |
 | The 14 original text cases vs mlx-vlm | tokens 14/14, min cos 0.99985 at 768 and 512, PASS (the stage's `eg2ref summary`) |
@@ -35,12 +40,16 @@ at the end is an input to that, not a decision.
 - Per-case lines for all 38 text cases (tokens, cos768, cos512, pipeline) are **identical** between master (ae8429af,
   built separately) and this branch: `diff` of the `eg2ref q-*/d-*` lines is empty.
 - A SHA-256 over every text vector's float32 bytes (the 14 original cases) is `15bfaaad809770ea` on both builds:
-  **bit-identical vectors**. The stage prints it (`eg2ref text digest`).
+  **bit-identical vectors**. The stage prints it (`eg2ref text digest`). The claim covers those 14 reference cases (the
+  24 added caption/query cases match line for line, but they are not in the digest).
 - The text fingerprint is the literal `mlx/mlx-community/embeddinggemma-2-8bit/d512/mlx-swift-0.32/prompt-v1`,
   pinned by `MLXEmbeddingServiceTests.textFingerprintIsPinnedLiterally`; the app's own self-test line shows it live.
-  So no store re-indexes. The image fingerprint (`…/image-prompt-v1`) is a different string, so editing one prompt never
-  re-embeds the other modality, and `EmbedderFloors.forFingerprint` does not mistake it for the measured text identity
-  (it fails closed to the strictest bars).
+  So no store re-indexes. The image fingerprint (`…/image-v2`) is a different string, so editing one prompt never
+  re-embeds the other modality, and `EmbedderFloors.forFingerprint` does not mistake it for the measured text identity:
+  it takes the unmeasured-family branch. **Caveat:** that branch returns the strictest of the known sets, and Gemma's
+  bars are at or above Qwen's on every field, so numerically it is the text floors again. A test pins which branch it
+  takes; getting a different number for images needs a per-modality field in `EmbedderFloors`, which is the floor decision
+  and is not made here.
 - Not run here: MEMEVAL / ABSEP / KEYEVAL. They embed through `embed` / `embedQuery`, which the digest above shows are
   untouched, but "byte for byte" on those fixtures is owed as its own run if the gate wants it by name.
 
@@ -115,8 +124,9 @@ Why 0.69 and why only low confidence:
   not.
 - The lever that is likely to matter more than the absolute floor is the same one named for the text keyword probes:
   per-query normalisation (a margin over the query's own median score) rather than one bar for every query.
-- The fingerprint already keeps this honest: `forFingerprint` returns the strictest text bars for an unmeasured image
-  fingerprint, so an image index cannot silently run on the text floors.
+- The fingerprint does NOT by itself keep image search off the text numbers: `forFingerprint` resolves an image
+  fingerprint to the unmeasured-family branch, which equals the text floors numerically today (see above). A separate
+  image floor has to be a new field; until then image vectors would be gated by the text bars.
 
 ## What is left (not done in this slice)
 
@@ -124,9 +134,22 @@ Why 0.69 and why only low confidence:
   the 594 MB resident tower), and the iOS wiring. `embedImage` lives on `MLXEmbeddingService`, which the iOS shell does
   not construct yet (it embeds with hashing); the first caller there must sit behind `AppCore.mlxAvailable`.
 - A real-photo fixture and the floor measurement on it; `challenger` on the floor; the `modality` column migration.
-- A 12 MP photo through the processor: the resample is two matrix products per channel (flat, but slower than
-  upstream's Metal kernel), and the decode caps the long side at 3,072 px. Unmeasured on the phone.
-- A wide-gamut photo: ImageIO converts to sRGB while Pillow reads raw bytes, so an AdobeRGB or P3 file differs from
-  the Python reference by its profile. sRGB files do not.
+- A 12 MP photo on the phone: the resample is two matrix products per channel (flat, but slower than upstream's
+  Metal kernel); on the Mac the 4032×3024 frame took 626 ms end to end. The decode reads up to 8,192 px on the long
+  side (a 200 MB RGBA bitmap, the safety cap); a larger frame is scaled down by ImageIO, a divergence only above
+  ~50 MP. Unmeasured on the phone.
+- The pressure watcher has no cooldown: a machine that stays under pressure drops and reloads the tower per image
+  (~0.3 s each). Follow-up.
+- Intentional divergences from the reference, each a choice and not an accident (a change to any bumps `image-v2`):
+  1. **Colour profile.** ImageIO converts to sRGB, Pillow reads raw bytes, so an AdobeRGB or P3 file differs from the
+     Python reference by its profile. sRGB files do not.
+  2. **Alpha.** A transparent pixel lands on white (the context is filled white first); Pillow's `convert("RGB")` drops
+     alpha and shows whatever colour was under it (usually black).
+  3. **EXIF orientation** is applied (ImageIO's transform), as the processor's `prepared` does upstream. Pillow's
+     `Image.open` does not, so a rotated JPEG differs from a naive Python reference.
+  Resample order matches Pillow now (horizontal pass, round to 8 bits, vertical pass, round) and there is ONE resample:
+  ImageIO decodes at full size (below the 8,192 px cap it never scales, and never upscales; both are unit-tested), so
+  its thumbnail filter does not stack with ours. Before the change the order was vertical-first; I did not measure that
+  gap on a noisy frame, the swap is the default.
 - MEMEVAL / ABSEP / KEYEVAL byte-for-byte, as noted above.
 - The audio encoder (out of scope).

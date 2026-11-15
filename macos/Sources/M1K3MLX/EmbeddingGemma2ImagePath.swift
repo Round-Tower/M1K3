@@ -6,7 +6,7 @@
 //  layout around the soft tokens. The model card is explicit that task prefixes apply to text only
 //  ("pass images, video and audio without any prefix"), so an image's sequence is
 //  `<bos> <boi> <image>×n <eoi> <eos>` — no prompt text. That layout is the image path's own prompt
-//  version (`image-prompt-v1`), kept in its own fingerprint beside the text path's `prompt-v1`.
+//  version (`image-v2`, which also covers the preprocessing), kept in its own fingerprint beside the text path's `prompt-v1`.
 //
 //  Upstream credit (MIT): the size arithmetic and the antialiased-bicubic weights follow
 //  ml-explore/mlx-swift-lm PR #684 (`Libraries/MLXVLM/EmbeddingGemma2.swift`, `Gemma4ProcessorConfiguration`;
@@ -19,6 +19,9 @@
 //  image by nothing.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-15, Confidence 0.75. Prior: none (new file; #836).
+//  Review: Kev + claude-opus-5.5, 2026-11-15 (#836 review fold) — Pillow's resample order (horizontal, round, vertical,
+//  round), one resample only (full-size decode to an 8,192 px safety cap), a cap on the weight allocation, the version
+//  string covers preprocessing (image-v2).
 //  Open: the numeric proof is EmbeddingGemma2RefStage's (12 drawings against mlx-vlm); no photo has been
 //  through it, and the resample speed on a 12 MP photo is unmeasured on the phone.
 
@@ -36,9 +39,11 @@ public struct EmbeddingGemma2ImageProcessor: Sendable, Equatable {
     /// Soft tokens per image at most (the model card's default is 280; 70 to 1120 are supported).
     public let maxSoftTokens: Int
 
-    /// The longest side decoded before resampling. A 48 MP photo would otherwise be a 190 MB bitmap, then a
-    /// float copy of it; 3,072 px is three times the ~1,000 px the target ends at.
-    static let decodeLongSide = 3072
+    /// The longest side ImageIO will decode: a safety cap, not a resample. A photo within it is decoded at its
+    /// full size, so the only resample is ours (a thumbnail filter followed by our bicubic would filter twice
+    /// and move the vector off the reference). 8,192 px is a 200 MB RGBA bitmap; larger images are scaled DOWN
+    /// to it by ImageIO, which is a divergence from the reference only for a frame over ~50 MP.
+    static let decodeLongSide = 8192
 
     public init(patchSize: Int = 16, poolingKernelSize: Int = 3, maxSoftTokens: Int = 280) {
         self.patchSize = patchSize
@@ -79,6 +84,18 @@ public struct EmbeddingGemma2ImageProcessor: Sendable, Equatable {
         self.init(patchSize: patch, poolingKernelSize: pool, maxSoftTokens: budget)
     }
 
+    /// Reads `processor_config.json` from a checkpoint directory; a missing or unreadable file is
+    /// `visionProcessorMissing`, not a raw Foundation error.
+    static func load(directory: URL) throws -> EmbeddingGemma2ImageProcessor {
+        let data: Data
+        do {
+            data = try Data(contentsOf: directory.appending(component: "processor_config.json"))
+        } catch {
+            throw EmbeddingGemma2Error.visionProcessorMissing
+        }
+        return try EmbeddingGemma2ImageProcessor(processorConfiguration: data)
+    }
+
     /// The largest size that keeps the aspect, stays within `maxSoftTokens × pool²` patches, and has both
     /// sides a multiple of `pool × patch` (so the pooling cells cover the image exactly). One side flooring
     /// to zero (an extreme aspect) clamps to one cell and caps the long side at the token budget.
@@ -101,7 +118,9 @@ public struct EmbeddingGemma2ImageProcessor: Sendable, Equatable {
 
     /// The soft tokens the tower produces for an image of exactly `height × width` pixels.
     public func softTokenCount(height: Int, width: Int) -> Int {
-        (height / patchSize) * (width / patchSize) / (poolingKernelSize * poolingKernelSize)
+        let cell = poolingKernelSize * patchSize
+        precondition(height % cell == 0 && width % cell == 0, "a target size is a multiple of pool × patch")
+        return (height / patchSize) * (width / patchSize) / (poolingKernelSize * poolingKernelSize)
     }
 
     /// `[output × input]` row-major weights of the antialiased bicubic filter (a = -0.5) that Pillow and
@@ -142,13 +161,43 @@ extension EmbeddingGemma2ImageProcessor {
     /// Throws `invalidImage` for bytes ImageIO cannot decode or an empty frame.
     func pixels(from data: Data) throws -> (pixels: MLXArray, softTokens: Int) {
         let decoded = try Self.decode(data, longSide: Self.decodeLongSide)
-        let (height, width) = targetSize(height: decoded.height, width: decoded.width)
-        var channels = MLXArray(decoded.rgba, [decoded.height, decoded.width, 4])[0..., 0..., ..<3]
-            .transposed(2, 0, 1).asType(.float32) / 255
-        if decoded.height != height || decoded.width != width {
-            channels = resized(channels, height: height, width: width)
+        let plan = try resamplePlan(sourceHeight: decoded.height, sourceWidth: decoded.width)
+        let bytes = MLXArray(decoded.rgba, [decoded.height, decoded.width, 4])
+        var planes: [MLXArray] = []
+        for channel in 0 ..< 3 {
+            // 0...255 float, one channel at a time: Pillow's order (horizontal, round to 8 bits, vertical, round).
+            var plane = bytes[0..., 0..., channel].asType(.float32)
+            if plan.width != decoded.width {
+                let columns = MLXArray(
+                    Self.bicubicWeights(input: decoded.width, output: plan.width), [plan.width, decoded.width]
+                )
+                plane = round(clip(matmul(plane, columns.transposed()), min: 0, max: 255))
+            }
+            if plan.height != decoded.height {
+                let rows = MLXArray(
+                    Self.bicubicWeights(input: decoded.height, output: plan.height), [plan.height, decoded.height]
+                )
+                plane = round(clip(matmul(rows, plane), min: 0, max: 255))
+            }
+            plane = plane / 255
+            eval(plane)
+            planes.append(plane)
         }
-        return (channels.expandedDimensions(axis: 0), softTokenCount(height: height, width: width))
+        return (stacked(planes, axis: 0).expandedDimensions(axis: 0), plan.softTokens)
+    }
+
+    /// The most `bicubicWeights` floats one resampling pass may allocate (64 MB). A 10000×1 panorama would
+    /// otherwise ask for a 13,440 × 10,000 matrix (537 MB); a 4032 → 912 pass is 3.7 M floats.
+    static let maxWeightFloats = 16_000_000
+
+    /// The target size and soft-token count for a decoded frame, or `unsupportedImageShape` when a resampling
+    /// pass would exceed `maxWeightFloats` (an extreme aspect ratio): refused with a clear error, not allocated.
+    func resamplePlan(sourceHeight: Int, sourceWidth: Int) throws -> (height: Int, width: Int, softTokens: Int) {
+        let (height, width) = targetSize(height: sourceHeight, width: sourceWidth)
+        guard width * sourceWidth <= Self.maxWeightFloats, height * sourceHeight <= Self.maxWeightFloats else {
+            throw EmbeddingGemma2Error.unsupportedImageShape
+        }
+        return (height, width, softTokenCount(height: height, width: width))
     }
 
     /// The frame upright (EXIF orientation applied), in sRGB, as 8-bit RGBA over white, longest side capped.
@@ -179,29 +228,17 @@ extension EmbeddingGemma2ImageProcessor {
         guard drawn else { throw EmbeddingGemma2Error.invalidImage }
         return (rgba, height, width)
     }
-
-    /// Separable bicubic resample as two matrix products per channel (flat memory: one channel's float copy
-    /// is alive at a time), rounded to 8 bits like the reference's `uint8` output.
-    func resized(_ pixels: MLXArray, height: Int, width: Int) -> MLXArray {
-        let rows = MLXArray(Self.bicubicWeights(input: pixels.dim(1), output: height), [height, pixels.dim(1)])
-        let columns = MLXArray(Self.bicubicWeights(input: pixels.dim(2), output: width), [width, pixels.dim(2)])
-        var planes: [MLXArray] = []
-        for channel in 0 ..< pixels.dim(0) {
-            let plane = matmul(matmul(rows, pixels[channel]), columns.transposed())
-            let rounded = round(clip(plane * 255, min: 0, max: 255)) / 255
-            eval(rounded)
-            planes.append(rounded)
-        }
-        return stacked(planes, axis: 0)
-    }
 }
 
 // MARK: - Token layout
 
 public enum EmbeddingGemma2ImagePath {
-    /// The image path's prompt version, kept in `MLXEmbeddingService.imageFingerprint`. Editing the layout
-    /// below (a prompt prefix, a title, a different marker) bumps this and re-embeds every image vector.
-    public static let promptVersion = "image-prompt-v1"
+    /// The image path's version, kept in `MLXEmbeddingService.imageFingerprint`. It covers the token layout below
+    /// (a prompt prefix, a title, a different marker) AND the preprocessing in `EmbeddingGemma2ImageProcessor`
+    /// (decode, orientation, alpha matte, resample order, size arithmetic, rounding). ANY change to either
+    /// bumps this string, which re-embeds every stored image vector. v1 was the layout alone (never shipped);
+    /// v2 adds the Pillow-order resample and the single-resample decode.
+    public static let promptVersion = "image-v2"
 
     /// `<bos> <boi> <image>×n <eoi> <eos>`: no text, no prefix (the model card: prefixes are for text only).
     static func tokens(

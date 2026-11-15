@@ -151,7 +151,7 @@ struct EmbeddingGemma2ReferenceTests {
     @Test("the image path has no prompt prefix (the model card: prefixes are for text only) and its own version")
     func imagePrompt() throws {
         let prompt = try loadImages().imagePrompt
-        #expect(prompt.version == "image-prompt-v1")
+        #expect(prompt.version == "image-v2")
         #expect(prompt.prefix.isEmpty)
         #expect(prompt.ids == ["bos": 2, "boi": 255_999, "image": 258_880, "eoi": 258_882, "eos": 1])
     }
@@ -177,6 +177,30 @@ struct EmbeddingGemma2ReferenceTests {
             #expect(image.softTokens <= 280, "\(image.id)")
             #expect(textIDs.contains(image.queryCase) && textIDs.contains(image.captionCase), "\(image.id)")
         }
+    }
+
+    @Test("a photo-sized noisy frame is in the fixture, built by formula, with unit-length reference vectors")
+    func proceduralImage() throws {
+        struct Procedural: Decodable {
+            let id: String
+            let formula: String
+            let width: Int
+            let height: Int
+            let softTokens: Int
+            let embedding768: [Double]
+            let embedding512: [Double]
+        }
+        struct File: Decodable {
+            let proceduralImages: [Procedural]
+        }
+        let url = try #require(Bundle.module.url(
+            forResource: "embeddinggemma2-reference", withExtension: "json", subdirectory: "Fixtures"
+        ))
+        let noise = try #require(JSONDecoder().decode(File.self, from: Data(contentsOf: url)).proceduralImages.first)
+        #expect(noise.formula == "noise-chirp-v1")
+        #expect(noise.width == 4032 && noise.height == 3024)
+        #expect(noise.softTokens == 266)
+        #expect(abs(norm(noise.embedding768) - 1) < 1e-3 && abs(norm(noise.embedding512) - 1) < 1e-3)
     }
 
     @Test("text finds the picture: each query ranks its image above the hardest other one")

@@ -137,7 +137,25 @@ def load_images() -> tuple[Path, list]:
 
 def embed_image(model, path: Path):
     """(768 vector, th, tw, soft tokens) for one image, as the model's processor + mlx-vlm do it."""
-    image = Image.open(path).convert("RGB")
+    return embed_pil(model, Image.open(path).convert("RGB"))
+
+
+def noise_pixels(width: int, height: int) -> np.ndarray:
+    """A high-frequency, 4032x3024-class stress image from integer arithmetic only, so the Swift stage builds the
+    SAME bytes without shipping a 30 MB PNG: per-pixel hash noise (full entropy, aliasing-hostile) under a zone-plate
+    chirp. uint32 wraparound is the contract on both sides (Swift: `&*`)."""
+    x = np.arange(width, dtype=np.uint32)[None, :]
+    y = np.arange(height, dtype=np.uint32)[:, None]
+    out = np.empty((height, width, 3), np.uint8)
+    for c in range(3):
+        mixed = (x * np.uint32(73856093)) ^ (y * np.uint32(19349663)) ^ np.uint32((c * 83492791) & 0xFFFFFFFF)
+        noise = (mixed * np.uint32(2654435761)) >> np.uint32(24)
+        chirp = ((x * x * np.uint32(c + 1) + y * y * np.uint32(3)) >> np.uint32(9)) & np.uint32(255)
+        out[:, :, c] = ((noise >> np.uint32(2)) + ((chirp * np.uint32(3)) >> np.uint32(2))).astype(np.uint8)
+    return out
+
+
+def embed_pil(model, image):
     th, tw = target_size(image.height, image.width)
     resized = image.resize((tw, th), Image.BICUBIC)  # Pillow's antialiased bicubic (a = -0.5)
     pixels = np.asarray(resized, dtype=np.float32).transpose(2, 0, 1)[None] / 255.0
@@ -203,6 +221,18 @@ def main(out: Path) -> None:
             "embedding512": [round(float(x), 6) for x in t512.tolist()],
         })
 
+    # A noisy, high-frequency 4032x3024 frame (what a real photo stresses that flat drawings do not).
+    procedural = []
+    for image_id, w, h in [("noise4032", 4032, 3024)]:
+        v, th, tw, soft = embed_pil(model, Image.fromarray(noise_pixels(w, h)))
+        t512 = v[:512] / mx.linalg.norm(v[:512])
+        procedural.append({
+            "id": image_id, "formula": "noise-chirp-v1", "width": w, "height": h,
+            "targetHeight": th, "targetWidth": tw, "softTokens": soft,
+            "embedding768": [round(float(x), 6) for x in v.tolist()],
+            "embedding512": [round(float(x), 6) for x in t512.tolist()],
+        })
+
     # Text->image: each query against its own picture and against the hardest other picture.
     image_checks, matrix = [], {}
     for image_id, *_ in image_specs:
@@ -222,14 +252,16 @@ def main(out: Path) -> None:
         "mrl512": "first 512 dims of the 768 vector, re-normalised",
         "cases": rows, "rankingChecks": checks,
         "imagePrompt": {
-            "version": "image-prompt-v1",
+            "version": "image-v2",
             "template": "<bos><start_of_image><image_soft_token>*n<end_of_image><eos>",
             "prefix": "",
             "note": "the model card: task prefixes apply to text only; pass images without any prefix",
             "ids": {"bos": BOS, "boi": BOI, "image": IMAGE_TOKEN, "eoi": EOI, "eos": EOS},
-            "preprocessing": "aspect-preserving size (max 280 soft tokens, patch 16, pool 3), antialiased bicubic, 0...1",
+            "preprocessing": "aspect-preserving size (max 280 soft tokens, patch 16, pool 3); Pillow BICUBIC resize "
+                             "(horizontal pass, round to uint8, vertical pass); 0...1. Any change bumps image-v2.",
         },
         "images": images, "imageRankingChecks": image_checks,
+        "proceduralImages": procedural,
     }
     out.write_text(json.dumps(doc, ensure_ascii=False, indent=1))
     print("revision", sha)

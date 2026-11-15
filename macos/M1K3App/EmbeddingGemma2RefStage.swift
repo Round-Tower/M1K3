@@ -69,6 +69,15 @@ enum EmbeddingGemma2RefStage {
             let embedding512: [Float]
         }
 
+        struct ProceduralImage: Decodable {
+            let id: String
+            let formula: String
+            let width: Int
+            let height: Int
+            let embedding768: [Float]
+            let embedding512: [Float]
+        }
+
         struct Ranking: Decodable {
             let query: String
             let relevant: String
@@ -82,6 +91,8 @@ enum EmbeddingGemma2RefStage {
         /// The image cases (#836); absent in a text-only fixture.
         let images: [ImageCase]?
         let imageRankingChecks: [Ranking]?
+        /// Images the stage builds itself from a formula (a photo-sized noisy frame), with mlx-vlm's vectors.
+        let proceduralImages: [ProceduralImage]?
     }
 
     /// One case's three comparisons against the reference.

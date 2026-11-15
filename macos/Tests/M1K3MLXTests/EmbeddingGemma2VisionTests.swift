@@ -190,6 +190,6 @@ struct EmbeddingGemma2ImageProcessorTests {
         let config = try #require(try EmbeddingGemma2VisionConfiguration.decode(from: data))
         let ids = EmbeddingGemma2ImagePath.tokens(softTokens: 4, vision: config, beginOfSequence: 2, endOfSequence: 1)
         #expect(ids == [2, 255_999, 258_880, 258_880, 258_880, 258_880, 258_882, 1])
-        #expect(EmbeddingGemma2ImagePath.promptVersion == "image-prompt-v1")
+        #expect(EmbeddingGemma2ImagePath.promptVersion == "image-v2")
     }
 }
