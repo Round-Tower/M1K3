@@ -168,6 +168,7 @@
 //  the answer. Harvested from the MoE Big audition (spike 34f4dae7; Qwen3.6-35B-A3B ran in-app 2026-10-25,
 //  docs/evals/2026-10-24-moe-big/). Confidence 0.85.
 
+//  Review: Kev + claude-opus-5.5, 2026-11-16 (#858) — every generation entry, the persona prefill and the weights load now runs inside MLXGuardedEvaluation, so a GPU submit refused in the background throws instead of trapping. Confidence 0.7; verify-by-launch on a phone.
 import Foundation
 import Hub
 import M1K3Inference

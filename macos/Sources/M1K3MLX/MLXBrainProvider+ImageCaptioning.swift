@@ -18,6 +18,7 @@
 //  thinking-off are pinned; the vision round-trip itself is verify-by-launch).
 //  Prior: Unknown
 
+//  Review: Kev + claude-opus-5.5, 2026-11-16 (#858) — caption now runs inside MLXGuardedEvaluation, so a GPU submit refused in the background throws instead of trapping. Confidence 0.7; verify-by-launch on a phone.
 import Foundation
 import M1K3Inference
 import MLXLMCommon

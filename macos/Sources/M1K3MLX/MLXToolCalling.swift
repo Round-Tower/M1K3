@@ -104,6 +104,7 @@
 //  config.json is on disk (it fell to the generic `.json` arm); harvested from the MoE Big audition (spike
 //  34f4dae7). Confidence 0.85.
 
+//  Review: Kev + claude-opus-5.5, 2026-11-16 (#858) — the tool turn and the agent step now runs inside MLXGuardedEvaluation, so a GPU submit refused in the background throws instead of trapping. Confidence 0.7; verify-by-launch on a phone.
 import Foundation
 import M1K3Inference
 import MLX

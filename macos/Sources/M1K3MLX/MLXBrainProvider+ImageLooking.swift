@@ -16,6 +16,7 @@
 //  pinned; the vision round-trip is verify-by-launch, timed on the phone).
 //  Prior: none (new file); the session shape is MLXBrainProvider+ImageCaptioning's.
 
+//  Review: Kev + claude-opus-5.5, 2026-11-16 (#858) — look now runs inside MLXGuardedEvaluation, so a GPU submit refused in the background throws instead of trapping. Confidence 0.7; verify-by-launch on a phone.
 import Foundation
 import M1K3Inference
 import MLXLMCommon
