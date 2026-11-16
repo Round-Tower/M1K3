@@ -9,6 +9,8 @@ New in this build, please try:
 • Stop a read while it is answering: it should say "Stopped before an answer.", and Keep this should still work
 • Listen for "I'm", "I'll", "I've" and "I'd" in spoken answers (voice mode, or Speak on an answer). They should sound right now. So should names such as Abuja, Alzheimer's and iOS
 • Listen to numbers in spoken answers: "3rd", "-5", "£5", "10:30", "pages 4-7", "3/4", "Henry VIII", "v1.2.3", and "1500 people" against "in 1984". Each should sound the way you would say it
+• Voice mode, ask something that needs the web ("what's in the news in Cork?"). When Mike quotes a source, a small chip shows under his line: click it, or say "show me that", and the page opens beside the avatar with the quote lit up. Then try saying "scroll down", "go back" and "close it", and press Esc after clicking inside the page (the page should close first, then voice mode). A page should never open by itself
+• In voice mode, the line Mike says while he uses a tool ("Let me check the web") should stay centred as it fades up, not jump to the left
 • Accessibility: with VoiceOver on, ask a question, read the answer, and open Memories, Documents and Settings. Every button should say what it does. Tell us about anything VoiceOver reads as just "button"
 • With Voice Control on, say "Show names": the names should match what you see on the message field, the memory search, the sidebar and the toolbar
 • Try light and dark appearance, Reduce Motion (the avatar and voice mode) and the largest reading size. Tell us about anything hard to read or that moves when it shouldn't
