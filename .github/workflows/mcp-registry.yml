@@ -43,8 +43,13 @@
 # Review: Kev + claude-fable-5.2, 2026-11-16. Run 43870575453 (Kev's) logged "Updating
 # io.github.Round-Tower/m1k3 version 0.1.0: active → deprecated", and the registry read
 # back deprecated with the "Moved" message. The one-off job and its input are deleted,
-# as its own comment asked; git keeps them (6f207f4b). Still open: the `mcp-registry`
-# environment is unrestricted.
+# as its own comment asked; git keeps them (6f207f4b). Open (closed below): the
+# `mcp-registry` environment is unrestricted.
+# Review: Kev + claude-fable-5.2, 2026-11-16. Kev restricted the `mcp-registry`
+# environment, read back over the API: protected branches only (master is the one),
+# and a required reviewer (Kev). The publish job now waits for his approval, so the
+# master check is no longer the only boundary. A second protected branch would also
+# be allowed to deploy: pin a `master` rule then.
 name: MCP Registry
 
 on:
