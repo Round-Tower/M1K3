@@ -60,6 +60,8 @@
 //  leaves voice mode. The slide sits out under Reduce Motion (a fade instead). Confidence 0.6 (verify-by-launch).
 //  Review: same day (review fold) — the hero re-grabs focus one yield after the page's deferred mount; the chip reads
 //  the cached cited source. Confidence 0.6.
+//  Review: Kev + claude-opus-5.5, 2026-11-16 — the spoken timeline is one centred column (Kev: the tool-call bubble
+//  sat left and "looks kinda funny"); text inside a bubble stays leading. Confidence 0.8 (verify-by-launch).
 
 import M1K3Avatar
 import M1K3Chat
@@ -335,10 +337,12 @@ struct VoiceModeView: View {
             // The timeline: already-spoken lines dim and fade above the live
             // one; the live bubble keeps the dyslexia Focus-reader following
             // word-by-word.
-            VStack(alignment: .leading, spacing: 8) {
+            // One centred column (Kev, 2026-11-16): a retired bubble — the spoken tool line first of
+            // all — sat flush left and dragged the live line left with it. Text stays leading inside.
+            VStack(alignment: .center, spacing: 8) {
                 ForEach(spokenBubbles) { bubble in
                     glassBubble(bubble.text, dimmed: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(maxWidth: .infinity, alignment: .center)
                 }
                 if let text = env.speechHighlight.utteranceText {
                     // Compact: the bubble hugs the sentence — no claimed

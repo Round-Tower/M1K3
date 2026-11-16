@@ -52,6 +52,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-15 — #839: a source chip on a spoken answer that cited a page, and the
 //  page itself (VoicePageCard): a pop-up over the top of the face on a phone, beside it on a wide screen. Opened
 //  only by the chip or a spoken "show me that". Compile-checked; the layout and Reduce Motion are verify-on-device.
+//  Review: Kev + claude-opus-5.5, 2026-11-16 — the spoken timeline is one centred column, like the Mac's (Kev: the
+//  tool-call bubble sat left). Text inside a bubble stays leading. Confidence 0.8 (verify-on-device).
 //
 
 import M1K3Avatar
@@ -390,7 +392,8 @@ struct VoiceScreen: View {
     /// Already-spoken sentences dim and fade above the live one; the live
     /// bubble keeps the dyslexia Focus-reader following word-by-word.
     private var spokenTimeline: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        // One centred column, like the Mac's (Kev, 2026-11-16): the spoken tool line sat flush left.
+        VStack(alignment: .center, spacing: 8) {
             ForEach(spokenBubbles) { bubble in
                 Text(bubble.text)
                     .font(.callout)
@@ -399,7 +402,7 @@ struct VoiceScreen: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .m1k3Glass(cornerRadius: 16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .center)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
             if let text = core.speechHighlight.utteranceText {
