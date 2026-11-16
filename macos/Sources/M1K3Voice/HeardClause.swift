@@ -15,6 +15,10 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-16, Confidence 0.6 (wording unmeasured until the heard arm
 //  runs on Lil / Big / Mini). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-11-16 — the first arm measured no help (Lil 26 vs 27 of 40 without it, Big 32
+//  vs 31, Mini 20 vs 20; same routes either way), and on Kev's curry turn Big named the "glitch" despite "don't remark".
+//  Kev: try a second wording. `secondWording` is shorter and says only what happened and what to answer, nothing about
+//  mix-ups; `forArm` lets the eval run either. Written before the rerun, which adds six held-out garbles. Confidence 0.5.
 //
 
 public enum HeardClause {
@@ -24,4 +28,20 @@ public enum HeardClause {
     doesn't fit, read past it to the phrase they probably said rather than building on it, and don't \
     remark on the mix-up. If you genuinely can't tell what they meant, ask in a few words.
     """
+
+    /// The second wording under test (#852): what happened and what to answer, nothing about the mix-up itself.
+    public static let secondWording = """
+    The user said this aloud; speech recognition wrote it down, so a word may be a sound-alike of what they \
+    said. Reply to what they most likely meant.
+    """
+
+    /// The eval's arm (`M1K3_SELFTEST_CHATEVAL_HEARD`, `M1K3_AFM_EVAL_HEARD`): `off` is no line, `v2` the second
+    /// wording, anything else the shipped one.
+    public static func forArm(_ arm: String?) -> String? {
+        switch arm {
+        case "off": nil
+        case "v2": secondWording
+        default: text
+        }
+    }
 }

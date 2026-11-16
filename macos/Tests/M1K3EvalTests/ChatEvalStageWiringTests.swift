@@ -147,7 +147,7 @@ struct ChatEvalStageWiringTests {
         // The same text the voice shells hand the responder, gated on the fixture and the arm.
         #expect(live.contains("voiceClauseProvider:"), "the responder never gets the heard line")
         #expect(live.contains("fixture.spoken"))
-        #expect(live.contains("HeardClause.text"))
+        #expect(live.contains("HeardClause.forArm("))
         #expect(text.contains("\"M1K3_SELFTEST_CHATEVAL_HEARD\""))
         let embeds = try Self.body(of: "private static func runEmbeds(", in: text)
         #expect(embeds.contains("kinds.contains(.heard)"), "a heard-only run must still warm the embedder")

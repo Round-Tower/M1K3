@@ -521,9 +521,12 @@ def test_heard_off_rides_the_trigger_only_when_asked():
     # #852: the heard line is on by default (the app ships it); only the arm without it sets the key.
     assert "M1K3_SELFTEST_CHATEVAL_HEARD" not in rc.build_trigger(
         base_opts(), container=CONTAINER, power_source="ac", powermode=None, commit=None, mlx_rev=None)
-    trig = rc.build_trigger(base_opts(heard_off=True), container=CONTAINER, power_source="ac",
+    trig = rc.build_trigger(base_opts(heard="off"), container=CONTAINER, power_source="ac",
                             powermode=None, commit=None, mlx_rev=None)
     assert trig["M1K3_SELFTEST_CHATEVAL_HEARD"] == "off"
+    trig = rc.build_trigger(base_opts(heard="v2"), container=CONTAINER, power_source="ac",
+                            powermode=None, commit=None, mlx_rev=None)
+    assert trig["M1K3_SELFTEST_CHATEVAL_HEARD"] == "v2"
 
 
 def test_main_threads_heard_off_to_the_trigger(tmp_path, monkeypatch, capsys):

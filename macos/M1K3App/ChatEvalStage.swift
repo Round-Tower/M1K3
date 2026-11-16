@@ -393,10 +393,10 @@ enum ChatEvalStage {
         SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_LIVE_PATH") == "1"
     }
 
-    /// The heard arm (#852): a `spoken` fixture gets the voice shells' heard line unless
-    /// `M1K3_SELFTEST_CHATEVAL_HEARD=off`. On by default, because the app ships it on.
-    private static var heardArmOn: Bool {
-        SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_HEARD") != "off"
+    /// The heard arm (#852): a `spoken` fixture gets the voice shells' heard line, `off` none, `v2` the
+    /// second wording (`HeardClause.forArm`). The shipped line by default, because the app ships it.
+    private static var heardArm: String? {
+        SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_HEARD")
     }
 
     private static func livePathObservation(
@@ -487,7 +487,7 @@ enum ChatEvalStage {
             styleClauseProvider: { steer.clause },
             // A voice turn's line, as the shells set it through `VoiceTurnPreparer.turnClause` (no room line:
             // the eval has no microphone). Typed fixtures never carry it, as typed chat never does.
-            voiceClauseProvider: { fixture.spoken && Self.heardArmOn ? HeardClause.text : nil },
+            voiceClauseProvider: { fixture.spoken ? HeardClause.forArm(Self.heardArm) : nil },
             plainRouteProvider: plainRoute
         )
         // The tools the turn ran and the stage that picked them (2026-10-10): the 10-09 arm could

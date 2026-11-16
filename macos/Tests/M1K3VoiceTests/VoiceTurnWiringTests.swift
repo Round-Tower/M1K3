@@ -210,12 +210,22 @@ struct HeardClauseTests {
         #expect(text.contains("ask"))
     }
 
-    @Test("the line carries no example from the heard eval: it can't be tuned to its own test")
+    @Test("no wording carries an example from the heard eval: it can't be tuned to its own test")
     func noFixtureWords() {
-        let text = HeardClause.text.lowercased()
-        for word in ["curry", "keeping", "craic", "galway", "giving out"] {
-            #expect(!text.contains(word), "\(word)")
+        for text in [HeardClause.text, HeardClause.secondWording].map({ $0.lowercased() }) {
+            for word in ["curry", "keeping", "craic", "galway", "giving out", "penny", "jupiter"] {
+                #expect(!text.contains(word), "\(word)")
+            }
         }
+    }
+
+    @Test("the eval arm picks a wording: off is none, v2 the second, anything else the shipped one")
+    func armPicksWording() {
+        #expect(HeardClause.forArm("off") == nil)
+        #expect(HeardClause.forArm("v2") == HeardClause.secondWording)
+        #expect(HeardClause.forArm(nil) == HeardClause.text)
+        #expect(HeardClause.forArm("on") == HeardClause.text)
+        #expect(HeardClause.secondWording != HeardClause.text)
     }
 }
 

@@ -8,11 +8,12 @@
 //  heard line exactly as the shells do (`HeardClause`), and `M1K3_SELFTEST_CHATEVAL_HEARD=off` runs the
 //  same turns without it: the arm is the line, nothing else.
 //
-//  Three groups:
+//  Four groups:
 //  - **Garbles** (12): a sound-alike swap of the kind Apple's fast recogniser makes. Each has a fact
 //    that only appears if the brain read past the swap (Canberra for "oz trail ya"), and the swap
 //    itself as a `mustNotContain` (parroting "moaner Lisa" back is building on it). Kev's real one
 //    has no fact to check, so it scores on not building on the curry.
+//  - **Held out** (6, added with the second wording before its run): garbles neither wording was written against.
 //  - **Idioms** (2): Hiberno-English read literally ("giving out" is scolding, not handing out).
 //  - **Guards** (6): what the line must not break. A real odd word stays ("a crack in my screen" is
 //    not the craic; a chicken curry is a curry), a clean turn doesn't talk about speech recognition,
@@ -24,8 +25,10 @@
 //
 //  Run: `--kinds heard --router dispatch` on lil,big, the arm on and off; Mini via MiniLiveEvalTests.
 //
-//  Signed: Kev + claude-opus-5-5, 2026-11-16, Confidence 0.6 (by-ear garbles, n = 20; the arm's
+//  Signed: Kev + claude-opus-5-5, 2026-11-16, Confidence 0.6 (by-ear garbles, n = 26 with the held-out six; the arm's
 //  verdict needs paired per-fixture results, not the aggregate). Prior: Unknown.
+//  Review: Kev + claude-opus-5-5, 2026-11-16 — six held-out garbles, written with the second wording and before
+//  its run, so the rerun has turns neither wording was written against. Confidence 0.6.
 //
 
 import Foundation
@@ -103,6 +106,42 @@ public extension ChatEvalFixtures {
                 mustContainAny: ["8,84", "8848", "8849", "8 84", "29,0", "29 0"], mustNotContain: ["ever rest"] + leakMarkers,
                 minChars: 1
             )
+        ),
+
+        // Held out (added 2026-11-16 with the second wording, before its run; neither wording saw them).
+        .init(
+            id: "heard-holdout-penicillin", kind: .heard, spoken: true,
+            prompt: "Who discovered penny sill in?",
+            expectation: .init(mustContainAny: ["Fleming"], mustNotContain: ["penny sill in"] + leakMarkers, minChars: 1)
+        ),
+        .init(
+            id: "heard-holdout-solar-system", kind: .heard, spoken: true,
+            prompt: "What's the biggest planet in the solar sis stem?",
+            expectation: .init(mustContainAny: ["Jupiter"], mustNotContain: ["sis stem"] + leakMarkers, minChars: 1)
+        ),
+        .init(
+            id: "heard-holdout-hexagon", kind: .heard, spoken: true,
+            prompt: "How many sides does a hex a gone have?",
+            expectation: .init(
+                mustContainAny: ["six", "6"], mustNotContain: ["hex a gone"] + leakMarkers, minChars: 1, wholeWordFacts: true
+            )
+        ),
+        .init(
+            id: "heard-holdout-austen", kind: .heard, spoken: true,
+            prompt: "Who wrote pride and prejudice, was it jane oh stin?",
+            expectation: .init(mustContainAny: ["Austen"], mustNotContain: ["oh stin"] + leakMarkers, minChars: 1)
+        ),
+        .init(
+            id: "heard-holdout-eiffel", kind: .heard, spoken: true,
+            prompt: "How tall is the eye full tower in Paris?",
+            expectation: .init(
+                mustContainAny: ["330", "324", "300", "1,083", "1083"], mustNotContain: ["eye full"] + leakMarkers, minChars: 1
+            )
+        ),
+        .init(
+            id: "heard-holdout-baikal", kind: .heard, spoken: true,
+            prompt: "What's the deepest lake in the world, lake by call?",
+            expectation: .init(mustContainAny: ["Baikal"], mustNotContain: ["by call"] + leakMarkers, minChars: 1)
         ),
 
         // Idioms read literally.

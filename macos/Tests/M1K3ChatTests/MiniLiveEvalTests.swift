@@ -283,9 +283,9 @@ struct MiniLiveEvalTests {
                             EgressFacts(webSearch: true, privateCloudOffered: true), device: HostPlatform.thisDevice
                         )
                     },
-                    // #852: a spoken fixture gets the voice shells' heard line unless M1K3_AFM_EVAL_HEARD=off.
+                    // #852: a spoken fixture gets the voice shells' heard line; M1K3_AFM_EVAL_HEARD=off|v2 (HeardClause.forArm).
                     voiceClauseProvider: {
-                        fixture.spoken && evalEnvironment["M1K3_AFM_EVAL_HEARD"] != "off" ? HeardClause.text : nil
+                        fixture.spoken ? HeardClause.forArm(evalEnvironment["M1K3_AFM_EVAL_HEARD"]) : nil
                     },
                     plainRouteProvider: routeInstructions.map { instructions in
                         { @Sendable in
