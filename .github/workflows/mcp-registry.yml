@@ -7,10 +7,10 @@
 # afterwards from Kev's Mac with integrations/mcpb/publish-listing.sh: that
 # namespace is proven by a DNS record on m1k3.app, and its signing key stays off CI.
 #
-# No secret is used. `retire_github_listing` is a one-off: it marks the duplicate
-# io.github.Round-Tower/m1k3 entry (published from here on 2026-11-15) deprecated.
-# Only this repository's GitHub OIDC token can speak for that namespace;
-# mcp-publisher is pinned and Sigstore-verified, as the registry's own guide does it.
+# No secret is used and no job holds a registry identity (no id-token). The duplicate
+# io.github.Round-Tower/m1k3 entry this workflow published on 2026-11-15 is deprecated
+# (see the last Review). Only this repository's GitHub OIDC token can speak for that
+# namespace, so changing that entry again means a job with `id-token: write` here.
 #
 # Signed: Kev + claude-fable-5.2, 2026-11-12, Confidence 0.6. Prior: none (new file).
 # Context: Kev, 2026-11-12, on listing M1K3 for Claude users: "Let's go it pal".
@@ -39,7 +39,12 @@
 # status` under OIDC is untried).
 # Review: Kev + claude-fable-5.2, 2026-11-16. Run 43858169720: the OIDC login held and
 # `status` accepted the namespace, then stopped at a y/N prompt that --all-versions
-# raises. The job now names version 0.1.0. Open: that form has not run yet.
+# raises. The job now names version 0.1.0. Open (closed below): that form has not run yet.
+# Review: Kev + claude-fable-5.2, 2026-11-16. Run 43870575453 (Kev's) logged "Updating
+# io.github.Round-Tower/m1k3 version 0.1.0: active → deprecated", and the registry read
+# back deprecated with the "Moved" message. The one-off job and its input are deleted,
+# as its own comment asked; git keeps them (6f207f4b). Still open: the `mcp-registry`
+# environment is unrestricted.
 name: MCP Registry
 
 on:
@@ -47,10 +52,6 @@ on:
     inputs:
       publish:
         description: "Create the public release that carries the bundle (off = dry run)"
-        type: boolean
-        default: false
-      retire_github_listing:
-        description: "One-off: mark io.github.Round-Tower/m1k3 deprecated on the registry"
         type: boolean
         default: false
 
@@ -63,8 +64,6 @@ concurrency:
 
 jobs:
   build:
-    # A retire-only run has nothing to build.
-    if: ${{ inputs.publish || !inputs.retire_github_listing }}
     runs-on: ubuntu-24.04 # not -latest: move deliberately (#582)
     timeout-minutes: 10
     outputs:
@@ -167,50 +166,3 @@ jobs:
           gh release download "$TAG" --pattern m1k3.mcpb --dir released
           echo "Released $TAG, sha256 $(sha256sum released/m1k3.mcpb | cut -d' ' -f1)"
           echo "::notice::The registry listing is not published from CI. On Kev's Mac: integrations/mcpb/publish-listing.sh, then --confirm."
-
-  # One-off (2026-11-16). The first real run published io.github.Round-Tower/m1k3
-  # beside app.m1k3/m1k3, which had been live since 2026-10-03 and was not checked
-  # for. A registry entry cannot be removed, so this marks it deprecated and names
-  # the real one. Delete this job and its input once it has run.
-  retire-github-listing:
-    if: ${{ inputs.retire_github_listing && github.ref == 'refs/heads/master' }}
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    environment: mcp-registry
-    permissions:
-      id-token: write # the registry's GitHub OIDC login
-    env:
-      MCP_PUBLISHER_VERSION: v1.8.1
-    steps:
-      - name: Install cosign
-        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
-
-      - name: Download and verify mcp-publisher
-        run: |
-          set -euo pipefail
-          os="$(uname -s | tr '[:upper:]' '[:lower:]')"
-          arch="$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/')"
-          archive="mcp-publisher_${os}_${arch}.tar.gz"
-          base_url="https://github.com/modelcontextprotocol/registry/releases/download/${MCP_PUBLISHER_VERSION}"
-          curl --fail --location --silent --show-error --output "$archive" "$base_url/$archive"
-          curl --fail --location --silent --show-error --output "$archive.sigstore.json" "$base_url/$archive.sigstore.json"
-          cosign verify-blob \
-            --bundle "$archive.sigstore.json" \
-            --certificate-identity "https://github.com/modelcontextprotocol/registry/.github/workflows/release.yml@refs/tags/${MCP_PUBLISHER_VERSION}" \
-            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-            "$archive"
-          tar xzf "$archive" mcp-publisher
-          rm -f "$archive" "$archive.sigstore.json"
-
-      - name: Log in to the MCP Registry
-        run: ./mcp-publisher login github-oidc
-
-      # The one version is named: --all-versions asks "Continue? [y/N]" and dies on a
-      # runner's empty stdin (run 43858169720). The `y` is there in case a named
-      # version ever asks too.
-      - name: Mark the duplicate listing deprecated
-        run: |
-          set -euo pipefail
-          printf 'y\n' | ./mcp-publisher status --status deprecated \
-            --message "Moved: M1K3 is listed as app.m1k3/m1k3." \
-            io.github.Round-Tower/m1k3 0.1.0

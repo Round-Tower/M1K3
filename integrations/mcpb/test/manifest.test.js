@@ -2,6 +2,8 @@
 // Signed: Kev + claude-fable-5.2, 2026-11-12, Confidence 0.85. Prior: Unknown.
 // Review: Kev + claude-fable-5.2, 2026-11-16. The listing is app.m1k3/m1k3 with its own
 // version; a new test holds the split (CI releases, only Kev's Mac publishes).
+// Review: Kev + claude-fable-5.2, 2026-11-16. The retire job ran and is deleted, so the
+// split test now covers the whole workflow.
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -85,18 +87,14 @@ test('the registry listing matches the bundle and keeps the registry\'s rules', 
   assert.equal(pkg.fileSha256, undefined, 'the hash is set by publish-listing.sh from the released bundle, never by hand');
 });
 
-// The split this listing rests on: CI releases the bundle and may deprecate the old
-// GitHub-namespace entry, but only Kev's Mac can publish app.m1k3/m1k3.
+// The split this listing rests on: CI releases the bundle and holds no registry
+// identity at all; only Kev's Mac can publish app.m1k3/m1k3.
 test('the workflow cannot publish the listing, and the script is what hashes it', () => {
   const repo = path.join(root, '..', '..');
   const workflow = fs.readFileSync(path.join(repo, '.github', 'workflows', 'mcp-registry.yml'), 'utf8');
-  const jobs = workflow.slice(workflow.indexOf('\njobs:'));
-  const retire = jobs.indexOf('\n  retire-github-listing:');
-  assert.ok(retire > 0, 'the retire job is the last job');
-  const beforeRetire = jobs.slice(0, retire).replace(/^\s*#.*$/gm, '');
-  assert.ok(!beforeRetire.includes('id-token'), 'build and publish hold no registry identity');
-  assert.ok(!beforeRetire.includes('./mcp-publisher'), 'build and publish never run the publisher');
   const code = workflow.replace(/^\s*#.*$/gm, '');
+  assert.ok(!code.includes('id-token'), 'no job holds a registry identity');
+  assert.ok(!code.includes('mcp-publisher'), 'no job runs the publisher');
   assert.ok(!code.includes('login dns') && !code.includes('secrets.'), 'the DNS key never goes to CI');
   const script = fs.readFileSync(path.join(root, 'publish-listing.sh'), 'utf8');
   assert.ok(script.includes(".packages[0].fileSha256 = $sha"));
