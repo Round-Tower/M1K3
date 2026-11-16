@@ -96,7 +96,8 @@ test('the workflow cannot publish the listing, and the script is what hashes it'
   const beforeRetire = jobs.slice(0, retire).replace(/^\s*#.*$/gm, '');
   assert.ok(!beforeRetire.includes('id-token'), 'build and publish hold no registry identity');
   assert.ok(!beforeRetire.includes('./mcp-publisher'), 'build and publish never run the publisher');
-  assert.ok(!workflow.includes('login dns') && !workflow.includes('secrets.'), 'the DNS key never goes to CI');
+  const code = workflow.replace(/^\s*#.*$/gm, '');
+  assert.ok(!code.includes('login dns') && !code.includes('secrets.'), 'the DNS key never goes to CI');
   const script = fs.readFileSync(path.join(root, 'publish-listing.sh'), 'utf8');
   assert.ok(script.includes(".packages[0].fileSha256 = $sha"));
   assert.ok(script.includes('login dns --domain m1k3.app'));

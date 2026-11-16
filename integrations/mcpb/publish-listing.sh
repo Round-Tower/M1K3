@@ -10,7 +10,10 @@
 # Signed: Kev + claude-fable-5.2, 2026-11-16, Confidence 0.7. Prior: Unknown (new file).
 # Context: Kev, 2026-11-15, on finding two registry entries: "Domain please pal".
 # 1.1.0 was published by hand with these same steps on 2026-11-16; the script's
-# --confirm path itself has not run.
+# --confirm path itself has not run against the registry.
+# Review: Kev + claude-fable-5.2, 2026-11-16 (#849, both passes): the seed check used
+# (#c64), which needs EXTENDED_GLOB and so refused every key. Now a length and
+# charset test, tried on a throwaway key.
 set -eu
 setopt pipefail
 case ${1:-} in ''|--confirm) ;; *) print -u2 "unknown argument: $1 (only --confirm)"; exit 2 ;; esac
@@ -37,7 +40,7 @@ fi
 # It is in mcp-publisher's argument list for the length of the login (the tool takes
 # it no other way), and nowhere else.
 seed=$(openssl pkey -in $key -outform DER | tail -c 32 | xxd -p -c 64)
-[[ $seed == [0-9a-f](#c64) ]] || { print -u2 "$key is not a plain Ed25519 private key"; exit 1 }
+[[ ${#seed} -eq 64 && $seed != *[^0-9a-f]* ]] || { print -u2 "$key is not a plain Ed25519 private key"; exit 1 }
 mcp-publisher login dns --domain m1k3.app --private-key $seed > /dev/null
 unset seed
 mcp-publisher publish
