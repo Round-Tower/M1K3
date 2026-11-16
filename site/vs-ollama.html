@@ -119,7 +119,7 @@
   <ul>
     <li><strong>Live voice</strong> — streaming on-device speech recognition and natural speech out.</li>
     <li><strong>Knowledge graph + RAG</strong> — import documents; ask questions grounded in your own files, with semantic search.</li>
-    <li><strong>Call memory</strong> — consent-gated call recording with on-device transcription and encrypted persistence.</li>
+    <li><strong>Call memory</strong> — consent-gated call recording with on-device transcription; the saved call record is encrypted.</li>
     <li><strong>A local agent</strong> — tool use (your knowledge base; web search, on by default, behind one toggle that turns it off).</li>
     <li><strong>An MCP server</strong> — Claude and other agents can query your local knowledge. See <a href="/mcp-knowledge-server">giving Claude a local memory</a>.</li>
   </ul>
@@ -140,7 +140,7 @@
         <tr><td>Voice</td><td class="yes">Built in — streaming STT + TTS, on-device</td><td class="no">Not built in</td></tr>
         <tr><td>Knowledge / RAG</td><td class="yes">Built in — knowledge graph, semantic search, grounded answers</td><td class="no">Not built in at the server level; add via third-party tools</td></tr>
         <tr><td>MCP server</td><td class="yes">Built in — your knowledge, exposed to Claude and other agents</td><td class="no">No first-party MCP knowledge server</td></tr>
-        <tr><td>Call transcription</td><td class="yes">Built in — consent-gated, encrypted, on-device</td><td class="no">Not built in</td></tr>
+        <tr><td>Call transcription</td><td class="yes">Built in — consent-gated, on-device, the saved record encrypted</td><td class="no">Not built in</td></tr>
         <tr><td>Developer API</td><td>MCP (loopback HTTP + stdio), and an <a href="/local-api">OpenAI-compatible local API</a> on 127.0.0.1:4141, off by default</td><td class="yes">Local REST API — the ecosystem standard for local LLM apps</td></tr>
         <tr><td>License</td><td>FSL-1.1-ALv2 (source-available; free for humans, no account or telemetry)</td><td>MIT (open source), free</td></tr>
         <tr><td>Best for</td><td>A private, working assistant on a modern Mac</td><td>Developers, scripting, building local-AI apps, non-Apple hardware</td></tr>

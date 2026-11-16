@@ -343,7 +343,7 @@ Four lines an agent will actually obey beat a paragraph it skims. Run m1k3 agent
 
 ### What your agent gets
 
-Nineteen tools on the App Store build (eighteen on the DMG, which has no Private Cloud Compute). The short version: it can ask a local brain, search your own documents, keep and recall facts across sessions, speak and listen, and put something on your todo list without ever taking it off.
+Nineteen tools are listed on the App Store build (eighteen on the DMG, which has no Private Cloud Compute); a few, such as listen, forget_memory, open_link and ask_private_cloud, answer with a refusal until you grant them in Settings. The short version: it can ask a local brain, search your own documents, keep and recall facts across sessions, speak and listen, and put something on your todo list without ever taking it off.
 
 | Tool | What it does |
 
@@ -508,7 +508,7 @@ print(reply.choices[0].message.content)
 
 | Honoured | messages (system, developer, user, assistant), max_tokens, temperature, stop (up to four), stream_options.include_usage |
 
-| Refused with a 400 | tools and functions, n above 1, image or audio content, JSON-schema response formats |
+| Refused with a 400 | tools and functions, n above 1, image or audio content, tool messages, JSON-schema response formats |
 
 | Not offered (404) | /v1/completions, /v1/embeddings, /v1/responses, audio and image endpoints |
 
@@ -522,9 +522,11 @@ For a job bigger than your Mac, there is one optional model that leaves it. Swit
 
 - You can see it: the Settings pane counts the calls that have left since M1K3 opened.
 
-- It spends your daily limit. Apple limits Private Cloud Compute per day, and these calls count against the limit M1K3's own chat uses.
+- It spends your daily limit. Apple limits Private Cloud Compute per day, and these calls count against the limit M1K3's own chat uses. A spent limit answers 429 insufficient_quota; retrying will not help until it resets.
 
-- M1K3 caps it too: 30 lent calls an hour, so a tool in a loop cannot spend your day.
+- M1K3 caps it too: 30 lent calls an hour, so a tool in a loop cannot spend your day. Over that is 429 rate_limit_exceeded with a Retry-After.
+
+- Unreachable for the moment is 503 service_unavailable, which OpenAI client libraries retry by themselves.
 
 What Apple promises about Private Cloud Compute is on Apple's own page (https://security.apple.com/blog/private-cloud-compute/). M1K3 makes no claim beyond it. The privacy page has the same account in the policy's words.
 
@@ -898,7 +900,7 @@ Use the plugin or m1k3 connect claude, not both: with both, every tool is listed
 
 ### How do I connect Claude Desktop or other clients?
 
-For Claude Desktop there is the M1K3 MCP Bundle: download m1k3.mcpb (https://github.com/Round-Tower/M1K3/releases/download/mcpb-v0.1.0/m1k3.mcpb), open it with Claude Desktop, and paste the access token when asked. The bundle is a small bridge to the same in-app server on 127.0.0.1, so the app still has to be running. M1K3 is on the MCP Registry (https://registry.modelcontextprotocol.io) as app.m1k3/m1k3. There is also a M1K3MCP stdio binary you can build from source for knowledge-only access. Client-by-client setup lives in macos/docs/MCP_SETUP.md (https://github.com/Round-Tower/M1K3/blob/master/macos/docs/MCP_SETUP.md). MCP is an open protocol, so any MCP-capable client — not just Claude — can connect to the same endpoint.
+For Claude Desktop there is the M1K3 MCP Bundle: download m1k3.mcpb (https://github.com/Round-Tower/M1K3/releases/download/mcpb-v0.1.0/m1k3.mcpb), open it with Claude Desktop, and paste the access token when asked. The bundle is a small bridge to the same in-app server on 127.0.0.1, so the app still has to be running. The bundle is new and we have not yet tested it in Claude Desktop ourselves; if it misbehaves, m1k3 connect is the supported path, and an issue on GitHub is welcome. M1K3 is on the MCP Registry (https://registry.modelcontextprotocol.io) as app.m1k3/m1k3. There is also a M1K3MCP stdio binary you can build from source for knowledge-only access. Client-by-client setup lives in macos/docs/MCP_SETUP.md (https://github.com/Round-Tower/M1K3/blob/master/macos/docs/MCP_SETUP.md). MCP is an open protocol, so any MCP-capable client — not just Claude — can connect to the same endpoint.
 
 ### Does this stay private?
 
@@ -950,7 +952,7 @@ M1K3 is a free, source-available (FSL-1.1-ALv2, public repository) AI app for ma
 
 - Knowledge graph + RAG — import documents; ask questions grounded in your own files, with semantic search.
 
-- Call memory — consent-gated call recording with on-device transcription and encrypted persistence.
+- Call memory — consent-gated call recording with on-device transcription; the saved call record is encrypted.
 
 - A local agent — tool use (your knowledge base; web search, on by default, behind one toggle that turns it off).
 
@@ -978,7 +980,7 @@ Storage is app-sandboxed on your device, and saved call records are encrypted wi
 
 | MCP server | Built in — your knowledge, exposed to Claude and other agents | No first-party MCP knowledge server |
 
-| Call transcription | Built in — consent-gated, encrypted, on-device | Not built in |
+| Call transcription | Built in — consent-gated, on-device, the saved record encrypted | Not built in |
 
 | Developer API | MCP (loopback HTTP + stdio), and an OpenAI-compatible local API on 127.0.0.1:4141, off by default | Local REST API — the ecosystem standard for local LLM apps |
 
@@ -1046,7 +1048,7 @@ M1K3 is a free, source-available (FSL-1.1-ALv2, public repository) AI app for ma
 
 - Live voice — streaming speech in and natural speech out, fully on-device.
 
-- Call memory — consent-gated call transcription, encrypted at rest with a Keychain-held key.
+- Call memory — consent-gated call transcription; the saved call record is encrypted with a Keychain-held key.
 
 - An agent + MCP server — local tools, and your knowledge exposed to Claude and other agents over MCP.
 
@@ -1174,7 +1176,7 @@ The three options above give you a model. M1K3 (free for humans, source-availabl
 
 - A knowledge graph with RAG — drop in documents; get answers grounded in your own files.
 
-- Consent-gated call memory — encrypted, on-device transcription.
+- Consent-gated call memory — on-device transcription; the saved call record is encrypted.
 
 - A local agent and an MCP server — so Claude and other agents can query your local knowledge.
 

@@ -223,7 +223,7 @@ print(reply.choices[0].message.content)</pre></div>
         <tr><td>GET /v1/models</td><td>The ready brain, then <code>cloud-m1k3</code> if you offer it</td></tr>
         <tr><td>POST /v1/chat/completions</td><td>Text chat, streamed or whole</td></tr>
         <tr><td>Honoured</td><td><code>messages</code> (system, developer, user, assistant), <code>max_tokens</code>, <code>temperature</code>, <code>stop</code> (up to four), <code>stream_options.include_usage</code></td></tr>
-        <tr><td>Refused with a 400</td><td><code>tools</code> and <code>functions</code>, <code>n</code> above 1, image or audio content, JSON-schema response formats</td></tr>
+        <tr><td>Refused with a 400</td><td><code>tools</code> and <code>functions</code>, <code>n</code> above 1, image or audio content, tool messages, JSON-schema response formats</td></tr>
         <tr><td>Not offered (404)</td><td><code>/v1/completions</code>, <code>/v1/embeddings</code>, <code>/v1/responses</code>, audio and image endpoints</td></tr>
       </tbody>
     </table>
@@ -235,8 +235,9 @@ print(reply.choices[0].message.content)</pre></div>
   <ul>
     <li><strong>What leaves:</strong> the messages in that call, behind the one fixed acceptable-use line, and nothing else. M1K3 adds no memory, knowledge or history, and keeps nothing.</li>
     <li><strong>You can see it:</strong> the Settings pane counts the calls that have left since M1K3 opened.</li>
-    <li><strong>It spends your daily limit.</strong> Apple limits Private Cloud Compute per day, and these calls count against the limit M1K3's own chat uses.</li>
-    <li><strong>M1K3 caps it too:</strong> 30 lent calls an hour, so a tool in a loop cannot spend your day.</li>
+    <li><strong>It spends your daily limit.</strong> Apple limits Private Cloud Compute per day, and these calls count against the limit M1K3's own chat uses. A spent limit answers <code>429 insufficient_quota</code>; retrying will not help until it resets.</li>
+    <li><strong>M1K3 caps it too:</strong> 30 lent calls an hour, so a tool in a loop cannot spend your day. Over that is <code>429 rate_limit_exceeded</code> with a <code>Retry-After</code>.</li>
+    <li><strong>Unreachable for the moment</strong> is <code>503 service_unavailable</code>, which OpenAI client libraries retry by themselves.</li>
   </ul>
   <p>What Apple promises about Private Cloud Compute is on <a href="https://security.apple.com/blog/private-cloud-compute/">Apple's own page</a>. M1K3 makes no claim beyond it. The <a href="/privacy#local-api">privacy page</a> has the same account in the policy's words.</p>
 

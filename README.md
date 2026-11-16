@@ -7,7 +7,7 @@
 <p align="center">
 Local AI that runs <strong>entirely on your Apple-Silicon Mac</strong> —
 on-device LLM inference, live voice, a personal knowledge graph with RAG,
-encrypted call transcription, a local agent, and an MCP server.<br>
+consent-gated call transcription, a local agent, and an MCP server.<br>
 No telemetry. Every network call shows itself and can be switched off.
 </p>
 
@@ -51,7 +51,7 @@ No telemetry. Every network call shows itself and can be switched off.
 - **A face, and creatures** — the Phosphor Fox by default (a white wireframe
   lattice), with the pixel face and a cast of low-poly 3D companions to
   choose from, all rendered on-device with RealityKit.
-- **Call memory** — encrypted, on-device call transcription.
+- **Call memory** — on-device call transcription; the saved call record is encrypted.
 - **A local agent** — tools that *do* things, grounded in your own data, with
   markdown + syntax-highlighted code in chat.
 - **MCP server** — 19 tools over local HTTP (18 on the DMG build, which has no Private Cloud Compute); give Claude and other agents a

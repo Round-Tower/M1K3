@@ -88,9 +88,11 @@ from pathlib import Path
 
 
 def _site_footer() -> str:
-    # The one footer every page carries (tools/site/footer.py). Braces are doubled
-    # by nothing here: the footer has none, and this lands in an f-string as a value.
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "site"))
+    # The one footer every page carries (tools/site/footer.py). It is inserted
+    # into the page's f-string as a value, so its text needs no brace escaping.
+    site_tools = str(Path(__file__).resolve().parents[1] / "site")
+    if site_tools not in sys.path:
+        sys.path.insert(0, site_tools)
     import footer  # noqa: PLC0415
 
     return footer.render("brains")

@@ -47,3 +47,15 @@ def test_creature_credits_ride_only_the_pages_that_draw_them():
     assert "Quaternius" not in footer.render("index") and "PixelMannen" in footer.render("index")
     assert "PixelMannen" not in footer.render("privacy")
     assert "service marks of Apple Inc." in footer.render("privacy")
+
+
+def test_stamping_a_page_twice_changes_nothing():
+    page = SITE / "agents.html"
+    once = footer.stamped(page)
+    assert footer.FOOTER.sub(lambda _: footer.render("agents"), once, count=1) == once
+
+
+def test_no_page_has_two_footers():
+    # stamped() replaces the first only; a second would be left stale without a word.
+    for page in footer.pages():
+        assert page.read_text(encoding="utf-8").count("<footer>") == 1, page.name

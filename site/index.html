@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>M1K3 — Your AI. Your devices. Private by design.</title>
-<meta name="description" content="M1K3 is on-device AI for Mac, iPhone and iPad. Local inference, live voice, a knowledge graph, encrypted call memory, and an MCP server — on your devices by default, private by design." />
+<meta name="description" content="M1K3 is on-device AI for Mac, iPhone and iPad. Local inference, live voice, a knowledge graph, consent-gated call memory, and an MCP server — on your devices by default, private by design." />
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
 <!-- NOTE: canonical domain: m1k3.app (m1k3.ai + m1k3.bot 301-redirect here) (also in sitemap.xml, robots.txt, llms.txt) -->
 <link rel="canonical" href="https://m1k3.app/" />
@@ -53,7 +53,7 @@
   "applicationCategory": "ProductivityApplication",
   "applicationSubCategory": "Local AI assistant",
   "isAccessibleForFree": true,
-  "description": "Privacy-first AI that runs on-device by default on Apple Silicon Macs, iPhone and iPad: local LLM inference (MLX, Gemma 4, Qwen3.5, Apple Foundation Models), live voice with on-device neural TTS, a personal knowledge graph with RAG, a self-repairing temporal memory graph, encrypted call transcription, a local agent, an ambient Heartbeat (off by default), a LAN Brain-at-Home service (off by default), an MCP server with 19 tools, and an OpenAI-compatible Local API on the Mac (off by default).",
+  "description": "Privacy-first AI that runs on-device by default on Apple Silicon Macs, iPhone and iPad: local LLM inference (MLX, Gemma 4, Qwen3.5, Apple Foundation Models), live voice with on-device neural TTS, a personal knowledge graph with RAG, a self-repairing temporal memory graph, consent-gated call transcription, a local agent, an ambient Heartbeat (off by default), a LAN Brain-at-Home service (off by default), an MCP server with 19 tools, and an OpenAI-compatible Local API on the Mac (off by default).",
   "featureList": [
     "Three on-device brains: Mini (Apple Foundation Models, instant), Lil (Qwen3.5 4B, fronts the conversation and reads images), Big (Gemma 4 12B, delegated deep work)",
     "Live voice: on-device speech recognition in, Kokoro neural TTS out, sentence-streamed",
@@ -94,7 +94,7 @@
     { "@type": "Question", "name": "Which Macs does M1K3 support?",
       "acceptedAnswer": { "@type": "Answer", "text": "M1K3 requires an Apple Silicon Mac running macOS 26 Tahoe. It is a native SwiftUI app with Metal-accelerated inference, not an Electron wrapper." } },
     { "@type": "Question", "name": "How is M1K3 different from Ollama or ChatGPT?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Ollama is a local model server; ChatGPT is a cloud service. M1K3 is a complete on-device AI app: local models plus live voice, a personal knowledge graph over your documents, encrypted call memory, an agent with tools, and an MCP server, in one sandboxed native Mac app." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Ollama is a local model server; ChatGPT is a cloud service. M1K3 is a complete on-device AI app: local models plus live voice, a personal knowledge graph over your documents, consent-gated call memory, an agent with tools, and an MCP server, in one sandboxed native Mac app." } },
     { "@type": "Question", "name": "Can Claude or other AI agents use my M1K3 knowledge?",
       "acceptedAnswer": { "@type": "Answer", "text": "Yes. M1K3 ships an in-app MCP (Model Context Protocol) server with 19 tools — knowledge search, documents, voice, memory, and ask-M1K3 with an async job API for long asks — over local HTTP at 127.0.0.1:4242, so Claude and other MCP clients can query your local knowledge base on the Mac itself. What a tool returns becomes part of your conversation with that client." } },
     { "@type": "Question", "name": "Does M1K3 do anything when I'm not talking to it?",
@@ -536,8 +536,8 @@
     <div class="cell reveal">
       <div class="cell-icon">▶▮▮</div>
       <h3>Call memory</h3>
-      <p>Consent-gated call recording with on-device transcription, speaker-grouped summaries, and encrypted persistence. Your calls become searchable knowledge.</p>
-      <span class="tag">encrypted · keychain · consent-first</span>
+      <p>Consent-gated call recording with on-device transcription, and speaker-grouped summaries. The saved call record is encrypted, and its text is also indexed into your knowledge so you can search it.</p>
+      <span class="tag">consent-first · encrypted record · searchable</span>
     </div>
     <div class="cell reveal">
       <div class="cell-icon">⌁⌁⌁</div>
@@ -566,8 +566,8 @@
     <div class="cell reveal">
       <div class="cell-icon">☁︎?</div>
       <h3>Private Cloud Compute, when you ask</h3>
-      <p>For a question too big for the device, you can send that one turn to Apple's Private Cloud Compute. It is off until you switch it on, it asks your consent the first time, and the answer is labelled.</p>
-      <span class="tag">opt-in · consent first · labelled</span>
+      <p>For questions too big for the device, pick Apple's Private Cloud Compute as your brain and your typed messages go there until you pick a brain on your device again. It is off until you switch it on, it asks your consent the first time, and the brain picker names who is answering.</p>
+      <span class="tag">opt-in · consent first · named in the picker</span>
     </div>
     <div class="cell reveal">
       <div class="cell-icon">◇◆◇</div>
@@ -656,7 +656,7 @@ the action list?<br />
     </details>
     <details class="reveal">
       <summary>How is it different from Ollama or ChatGPT?</summary>
-      <p>Ollama is a local model server; ChatGPT is a cloud service. M1K3 is a complete on-device AI app: local models <em>plus</em> live voice, a knowledge graph over your documents, encrypted call memory, an agent with tools, and an MCP server — one sandboxed native app.</p>
+      <p>Ollama is a local model server; ChatGPT is a cloud service. M1K3 is a complete on-device AI app: local models <em>plus</em> live voice, a knowledge graph over your documents, consent-gated call memory, an agent with tools, and an MCP server — one sandboxed native app.</p>
     </details>
     <details class="reveal">
       <summary>Can Claude use my M1K3 knowledge?</summary>
