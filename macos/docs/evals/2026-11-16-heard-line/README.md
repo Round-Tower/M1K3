@@ -8,6 +8,9 @@ speech recognition help a brain read past a mishearing?
 wording 2 on every brain, and Kev's curry turn wasn't fixed by either. The fix has to be in what
 the recogniser hears (the polish pass, `../2026-11-16-polish-pass/`), not in what the brain is told.
 
+**Kev's call (same day): drop the line.** `HeardClause` and its arms are gone from the code; the 26 heard turns
+stay as a bench (`--kinds heard`), measuring how each brain copes with a garble as the app ships.
+
 ## Arms
 
 - **off**: no line (the app today).

@@ -21,9 +21,6 @@
 //  brain, and `learnNames` the names' shape and a private sample (300 names hit the cap from 450 memories).
 //  Review: Kev + claude-opus-5-5, 2026-10-17 — `learnNames` logs how many ordinary words NameRepair kept as locks
 //  (#627), so a device without the word embedding shows up as 0. Confidence 0.8.
-//  Review: Kev + claude-opus-5-5, 2026-11-16 (#852) — every voice turn now tells the brain it was heard
-//  (`HeardClause`), ahead of the room line, in one `turnClause`. Unlike the room line it is said every turn:
-//  every voice turn was heard. `-voiceHeardClause NO` at launch drops it (the A/B arm). Confidence 0.7.
 
 import Foundation
 import os
@@ -35,37 +32,16 @@ public final class VoiceTurnPreparer {
         /// For the brain's per-turn clauses only: never part of the question, so never in
         /// the chat history or memory distillation.
         public let soundClause: String?
-        /// `HeardClause.text`, unless `-voiceHeardClause NO`.
-        public let heardClause: String?
         let heard: SoundContext?
-
-        /// What the shells put in the turn's clause slot: the heard line, then the room line.
-        public var turnClause: String? {
-            let parts = [heardClause, soundClause].compactMap(\.self)
-            return parts.isEmpty ? nil : parts.joined(separator: "\n")
-        }
     }
 
     /// The kill switch's argv key: `M1K3 -voiceNameRepair NO`.
     public static let nameRepairKey = "voiceNameRepair"
-    /// The heard line's kill switch (#852): `M1K3 -voiceHeardClause NO`.
-    public static let heardClauseKey = "voiceHeardClause"
 
     public static func nameRepairEnabled(
         arguments: [String: Any] = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
     ) -> Bool {
-        switchOn(nameRepairKey, in: arguments)
-    }
-
-    public static func heardClauseEnabled(
-        arguments: [String: Any] = UserDefaults.standard.volatileDomain(forName: UserDefaults.argumentDomain)
-    ) -> Bool {
-        switchOn(heardClauseKey, in: arguments)
-    }
-
-    /// On unless the launch argument says no.
-    private static func switchOn(_ key: String, in arguments: [String: Any]) -> Bool {
-        guard let raw = arguments[key] as? String else { return true }
+        guard let raw = arguments[nameRepairKey] as? String else { return true }
         return !["no", "0", "false", "off"].contains(raw.lowercased())
     }
 
@@ -74,14 +50,8 @@ public final class VoiceTurnPreparer {
 
     private var repair = NameRepair(names: [])
     private var gate = SoundContextGate()
-    private let heardClause: Bool
 
-    public init(heardClause: Bool = VoiceTurnPreparer.heardClauseEnabled()) {
-        self.heardClause = heardClause
-        if !heardClause {
-            Self.sttLog.notice("heard line: off (-\(Self.heardClauseKey, privacy: .public) NO)")
-        }
-    }
+    public init() {}
 
     public func learnNames(_ names: [String]) {
         guard Self.nameRepairEnabled() else {
@@ -112,10 +82,7 @@ public final class VoiceTurnPreparer {
                 "sound context (shadow): would not take this \(words, privacy: .public)-word turn — music without a speaker (\(heard?.contextLine ?? "no line", privacy: .private)); taken anyway"
             )
         }
-        return Prepared(
-            question: repaired.text, soundClause: gate.clause(for: heard),
-            heardClause: heardClause ? HeardClause.text : nil, heard: heard
-        )
+        return Prepared(question: repaired.text, soundClause: gate.clause(for: heard), heard: heard)
     }
 
     /// The prepared turn really went to the brain: its room line counts as said.

@@ -55,9 +55,8 @@
 //  shipped until today) and `M1K3_AFM_EVAL_GUARD=1` (the app's leak guard applied before scoring), for the
 //  system-prompt cost pairing (Kev: "I wonder how much our system prompt is killing perf across models? And maybe
 //  intelligence too?"). Confidence 0.85.
-//  Review: Kev + claude-opus-5-5, 2026-11-16 (#852) — the heard kind runs on the live arm: a spoken fixture gets
-//  `HeardClause.text` in `voiceClauseProvider`, as the voice shells hand it; `M1K3_AFM_EVAL_HEARD=off` is the arm
-//  without it. Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-11-16 (#852) — the heard kind runs on the live arm (garbled voice turns).
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -66,7 +65,6 @@ import M1K3Agent
 @testable import M1K3Eval
 import M1K3Inference
 import M1K3Knowledge
-import M1K3Voice
 import Synchronization
 import Testing
 
@@ -282,10 +280,6 @@ struct MiniLiveEvalTests {
                         EgressDisclosure.clause(
                             EgressFacts(webSearch: true, privateCloudOffered: true), device: HostPlatform.thisDevice
                         )
-                    },
-                    // #852: a spoken fixture gets the voice shells' heard line; M1K3_AFM_EVAL_HEARD=off|v2 (HeardClause.forArm).
-                    voiceClauseProvider: {
-                        fixture.spoken ? HeardClause.forArm(evalEnvironment["M1K3_AFM_EVAL_HEARD"]) : nil
                     },
                     plainRouteProvider: routeInstructions.map { instructions in
                         { @Sendable in

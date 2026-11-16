@@ -2,8 +2,8 @@
 //  ChatEvalFixtures+HeardTests.swift
 //  M1K3EvalTests
 //
-//  Pins the heard kind's shape (#852): every fixture is a voice turn and nothing else is, a garble's
-//  fact is never in its own prompt (it has to be recovered, not read), and the guards are there.
+//  Pins the heard kind's shape (#852): a garble's fact is never in its own prompt (it has to be
+//  recovered, not read), each garble names its swap, the guards are there, and the kind sits last.
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-16, Confidence 0.85. Prior: Unknown.
 //
@@ -12,12 +12,8 @@
 import Testing
 
 struct ChatEvalFixturesHeardTests {
-    @Test("every heard fixture is spoken, and no other fixture is")
-    func spokenOnlyHere() {
-        let heardAllSpoken = ChatEvalFixtures.heard.allSatisfy { $0.spoken }
-        let othersTyped = ChatEvalFixtures.all.filter { $0.kind != .heard }.allSatisfy { !$0.spoken }
-        #expect(heardAllSpoken)
-        #expect(othersTyped)
+    @Test("the registry hands the heard kind exactly its own fixtures")
+    func registered() {
         #expect(ChatEvalFixtures.fixtures(for: .heard).count == ChatEvalFixtures.heard.count)
     }
 

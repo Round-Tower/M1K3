@@ -517,33 +517,6 @@ def test_calculator_rides_the_trigger_only_when_asked():
     assert trig["M1K3_SELFTEST_CHATEVAL_CALCULATOR"] == "1"
 
 
-def test_heard_off_rides_the_trigger_only_when_asked():
-    # #852: the heard line is on by default (the app ships it); only the arm without it sets the key.
-    assert "M1K3_SELFTEST_CHATEVAL_HEARD" not in rc.build_trigger(
-        base_opts(), container=CONTAINER, power_source="ac", powermode=None, commit=None, mlx_rev=None)
-    trig = rc.build_trigger(base_opts(heard="off"), container=CONTAINER, power_source="ac",
-                            powermode=None, commit=None, mlx_rev=None)
-    assert trig["M1K3_SELFTEST_CHATEVAL_HEARD"] == "off"
-    trig = rc.build_trigger(base_opts(heard="v2"), container=CONTAINER, power_source="ac",
-                            powermode=None, commit=None, mlx_rev=None)
-    assert trig["M1K3_SELFTEST_CHATEVAL_HEARD"] == "v2"
-
-
-def test_main_threads_heard_off_to_the_trigger(tmp_path, monkeypatch, capsys):
-    app = tmp_path / "M1K3.app"
-    (app / "Contents").mkdir(parents=True)
-    with open(app / "Contents/Info.plist", "wb") as handle:
-        plistlib.dump({"CFBundleIdentifier": rc.BUNDLE_ID}, handle)
-    monkeypatch.setattr(rc, "sh", lambda *cmd: BATT_AC if cmd[-1] == "batt" else PMSET_G)
-    monkeypatch.setattr(rc, "running_instances", list)
-    base = ["--name", "x", "--brains", "lil", "--app", str(app), "--dry-run", "--kinds", "heard"]
-    key = '"M1K3_SELFTEST_CHATEVAL_HEARD"'
-    assert rc.main([*base, "--heard", "off"]) == 0
-    assert f'{key}: "off"' in capsys.readouterr().out
-    assert rc.main(base) == 0
-    assert key not in capsys.readouterr().out
-
-
 def test_summary_shows_peak_memory_when_recorded(tmp_path):
     ok = {"fixtureID": "chat-x", "kind": "open-chat", "latencyMS": 9, "checks": [{"name": "non-empty", "outcome": "pass"}]}
     doc = tmp_path / "run.json"

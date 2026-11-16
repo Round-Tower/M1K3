@@ -140,8 +140,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-10 — `M1K3_SELFTEST_CHATEVAL_LEAN`: the bare arm on a one-line system
 //  prompt, for the system-prompt cost pairing (Kev: "I wonder how much our system prompt is killing perf across
 //  models? And maybe intelligence too?"). Confidence 0.8 (one line through `InferenceIntent.withInstructions`).
-//  Review: Kev + claude-opus-5-5, 2026-11-16 (#852) — the heard kind: a `spoken` fixture runs the live path with the
-//  voice shells' heard line in `voiceClauseProvider`; `M1K3_SELFTEST_CHATEVAL_HEARD=off` is the arm without it.
+//  Review: Kev + claude-opus-5-5, 2026-11-16 (#852) — the heard kind runs the live path (garbled voice turns, the
+//  bench for recogniser changes). A heard-line arm was measured and dropped (docs/evals/2026-11-16-heard-line).
 //  Confidence 0.8.
 
 import Foundation
@@ -393,12 +393,6 @@ enum ChatEvalStage {
         SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_LIVE_PATH") == "1"
     }
 
-    /// The heard arm (#852): a `spoken` fixture gets the voice shells' heard line, `off` none, `v2` the
-    /// second wording (`HeardClause.forArm`). The shipped line by default, because the app ships it.
-    private static var heardArm: String? {
-        SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_HEARD")
-    }
-
     private static func livePathObservation(
         _ fixture: ChatEvalFixture, images: [ImageAttachment] = [], seeded: KnowledgeStore? = nil,
         provider: any InferenceProvider, thinking: EvalThinkingPlan, start: ContinuousClock.Instant,
@@ -485,9 +479,6 @@ enum ChatEvalStage {
                 )
             },
             styleClauseProvider: { steer.clause },
-            // A voice turn's line, as the shells set it through `VoiceTurnPreparer.turnClause` (no room line:
-            // the eval has no microphone). Typed fixtures never carry it, as typed chat never does.
-            voiceClauseProvider: { fixture.spoken ? HeardClause.forArm(Self.heardArm) : nil },
             plainRouteProvider: plainRoute
         )
         // The tools the turn ran and the stage that picked them (2026-10-10): the 10-09 arm could
@@ -983,7 +974,7 @@ enum ChatEvalStage {
                     latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
             case .heard:
-                // Always the live path: the heard line rides the responder's per-turn clauses (#852).
+                // Always the live path, routed as the app routes a voice turn (#852).
                 let observation = try await livePathObservation(
                     fixture, provider: provider, thinking: thinking, start: start, clock: clock
                 )

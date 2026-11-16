@@ -235,9 +235,9 @@ public enum TaskKind: String, Sendable, CaseIterable, Equatable, Codable {
     /// a spoken "how's the machine?" answer (Phase 2's tool).
     case mechanic
     /// Voice turns as the recogniser hands them over (#852, `ChatEvalFixtures+Heard.swift`): sound-alike
-    /// swaps a brain must read past, Hiberno-English idioms, and guards a real odd word must survive. Every
-    /// fixture is `spoken`, so the in-app stage gives it the voice turn's heard line. Last, so older
-    /// reports' row order holds.
+    /// swaps a brain must read past, Hiberno-English idioms, and guards a real odd word must survive. A bench
+    /// for recogniser changes: how each brain copes with a garble as the app ships. Last, so older reports'
+    /// row order holds.
     case heard
 
     public var label: String {
@@ -358,15 +358,11 @@ public struct ChatEvalFixture: Sendable, Equatable, Identifiable {
     /// every other turn runs exactly as before): the readings Cool Head takes per send, set by
     /// the fixture instead of read off the eval Mac.
     public let machine: MachineScenario?
-    /// A voice turn (#852): the in-app stage gives it the heard line the voice shells add
-    /// (`HeardClause`), unless the arm is off. False everywhere but the `heard` kind.
-    public let spoken: Bool
     public let expectation: EvalExpectation
 
     public init(
         id: String,
         kind: TaskKind,
-        spoken: Bool = false,
         prompt: String,
         seedDoc: String? = nil,
         images: [String] = [],
@@ -375,7 +371,6 @@ public struct ChatEvalFixture: Sendable, Equatable, Identifiable {
     ) {
         self.id = id
         self.kind = kind
-        self.spoken = spoken
         self.prompt = prompt
         self.seedDoc = seedDoc
         self.images = images

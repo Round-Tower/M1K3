@@ -109,9 +109,6 @@ Review: Kev + claude-fable-5.1, 2026-11-06 — `_shipped` / the shipped column: 
 Review: Kev + claude-opus-5.5, 2026-10-27 — Kev flipped the search head on for the Mac (`whenUnset: true`), so
 `--router-search` now defaults on under dispatch like head and chain; `--no-router-search` is the off arm. The
 shipped head is still the untrained stub, which never vetoes. Confidence 0.85.
-Review: Kev + claude-opus-5-5, 2026-11-16 — `--heard off|v2` (#852): the heard kind's arm without the voice turn's
-heard line, or with the second wording (M1K3_SELFTEST_CHATEVAL_HEARD). On is the default because the app ships it.
-Confidence 0.85.
 """
 
 from __future__ import annotations
@@ -270,7 +267,6 @@ class RunOptions:
     think_steer: str | None = None  # none | terse | emoji | softcap | reread | trap | working | budget
     full_answers: bool = False  # whole answers in the document (bake-offs), not the 240-char excerpt
     calculator: bool = False  # offer the computing `calculate` stub (the calculator probe)
-    heard: str = "on"  # the heard kind's line (#852): on (what ships), off, or v2 (the second wording)
     router: str | None = None  # "dispatch": the app's own tool route, every tier on (the router arm)
     router_head: bool | None = None  # the group head (toolGroupRouter); None → on under dispatch, like the Mac app
     router_chain: bool | None = None  # two-tool chains (toolChain); None → on under dispatch, like the Mac app
@@ -410,8 +406,6 @@ def build_trigger(opts: RunOptions, *, container: Path, power_source: str, power
         trig["M1K3_SELFTEST_CHATEVAL_THINK_STEER"] = opts.think_steer
     if opts.calculator:
         trig["M1K3_SELFTEST_CHATEVAL_CALCULATOR"] = "1"
-    if opts.heard != "on":
-        trig["M1K3_SELFTEST_CHATEVAL_HEARD"] = opts.heard
     if opts.full_answers:
         trig["M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS"] = "1"
     if opts.router:
@@ -867,8 +861,6 @@ def main(argv: list[str] | None = None) -> int:
                     help="the think-steer A/B clause appended to the turn's rules (M1K3_SELFTEST_CHATEVAL_THINK_STEER)")
     ap.add_argument("--thinking", choices=THINKING_MODES,
                     help="how every arm thinks: tier (production's shape, the app default), always, fast")
-    ap.add_argument("--heard", choices=["on", "off", "v2"], default="on",
-                    help="spoken fixtures carry the voice turn's heard line: on (as the app ships), off, or v2 (#852)")
     ap.add_argument("--calculator", action="store_true",
                     help="offer the computing `calculate` stub beside the palette (the calculator probe)")
     ap.add_argument("--full-answers", action="store_true",
@@ -915,7 +907,7 @@ def main(argv: list[str] | None = None) -> int:
         kinds=[k for k in args.kinds.split(",") if k], repeats=args.repeats,
         live_path=not args.bare, notes=args.notes, dump_prompt=args.dump_prompt, pcc=args.pcc,
         thinking=args.thinking, think_steer=args.think_steer, full_answers=args.full_answers,
-        calculator=args.calculator, heard=args.heard,
+        calculator=args.calculator,
         router=args.router, router_head=args.router_head, router_chain=args.router_chain,
         router_search=args.router_search,
     )

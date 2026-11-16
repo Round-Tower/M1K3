@@ -427,8 +427,7 @@ let package = Package(
             // not depend on M1K3Chat. A pin test here renders the REAL prompt
             // and asserts every marker still matches, so a wording pass fails
             // loudly instead of silently zeroing a section in the report.
-            // M1K3Voice (#852): MiniLiveEvalTests' heard arm hands Mini the voice shells' own `HeardClause`.
-            dependencies: ["M1K3Chat", "M1K3KnowledgeTools", "M1K3AgentTools", "M1K3Eval", "M1K3LanguageModel", "M1K3Voice"],
+            dependencies: ["M1K3Chat", "M1K3KnowledgeTools", "M1K3AgentTools", "M1K3Eval", "M1K3LanguageModel"],
             path: "Tests/M1K3ChatTests"
         ),
         // Leaf bridge (Chat + Memory only): DistilledFactGraphAdapter, the
