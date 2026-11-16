@@ -169,6 +169,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-15 — `read`/`readAgain` refuse a turn in flight (and `readAgain` a missing
 //  read) BEFORE pausing Brain at Home and the Local API, as the phone's wrapper already did: a refused read no longer
 //  stalls serving for nothing (the #833 review nit). Confidence 0.85 (compile-checked).
+//  Review: Kev + claude-opus-5.5, 2026-11-15 — `voicePage` + `pageControl` (#839): the page voice mode can open
+//  beside the avatar, the handle its spoken scroll / back commands drive, and the cited-source cache. Confidence 0.7 (verify-by-launch).
 
 import AppKit
 import Foundation
@@ -539,6 +541,12 @@ final class AppEnvironment {
 
     /// Word-highlight state for speech playback (the karaoke reading view).
     let speechHighlight = SpeechHighlight()
+    /// The page voice mode shows beside the avatar (#839): opened only by a tap or a spoken request.
+    let voicePage = VoicePageSession()
+    /// The handle the spoken "scroll down" / "go back" commands drive on that page's web view.
+    let pageControl = WebReviewControl()
+    /// Memoises the last answer's cited source per finished message, so the chip's body pass is cheap.
+    let citedCache = CitedSourceCache()
     /// Whether the main window is at least partly on screen (its occlusion
     /// probe, reported from the window root). The notch HUD reads it so only
     /// one avatar renders at a time (`NotchHUDDemand`, 2026-10-01).

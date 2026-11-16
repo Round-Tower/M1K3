@@ -49,10 +49,16 @@
 //  (it failed Xcode's contrast audit over the avatar). Measured on a Simulator; the look is verify-on-device. Confidence 0.7.
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
 //  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
+//  Review: Kev + claude-opus-5.5, 2026-11-15 — #839: a source chip on a spoken answer that cited a page, and the
+//  page itself (VoicePageCard): a pop-up over the top of the face on a phone, beside it on a wide screen. Opened
+//  only by the chip or a spoken "show me that". Compile-checked; the layout and Reduce Motion are verify-on-device.
+//  Review: Kev + claude-opus-5.5, 2026-11-16 — the spoken timeline is one centred column, like the Mac's (Kev: the
+//  tool-call bubble sat left). Text inside a bubble stays leading. Confidence 0.8 (verify-on-device).
 //
 
 import M1K3Avatar
 import M1K3Chat
+import M1K3Preview
 import M1K3Voice
 import SwiftUI
 
@@ -63,6 +69,26 @@ struct VoiceScreen: View {
     /// Low Power Mode, observed: a toggle mid-session triggers no render on its
     /// own, so a render-time read would miss it until something else moved.
     @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
+    /// The screen's width, for beside-or-pop-up (#839).
+    @State private var viewWidth: CGFloat = 0
+
+    private static let sideBySideMinWidth: CGFloat = 700
+
+    private var pageOpen: Bool {
+        core.voicePage.isOpen
+    }
+
+    private var sideBySide: Bool {
+        viewWidth >= Self.sideBySideMinWidth
+    }
+
+    private var panelWidth: CGFloat {
+        min(520, viewWidth * 0.45)
+    }
+
+    private var reservedTrailing: CGFloat {
+        pageOpen && sideBySide ? panelWidth + 32 : 0
+    }
 
     private var state: VoiceLoopState {
         core.voiceLoop?.state ?? .ended
@@ -78,15 +104,25 @@ struct VoiceScreen: View {
 
             // The hero fills the screen like the Mac's; caption and controls float over it.
             face
+                .padding(.trailing, reservedTrailing)
                 .ignoresSafeArea()
 
             VStack(spacing: 28) {
                 Spacer()
                 caption
+                sourceChip
                 controls
             }
             .padding(.bottom, 36)
+            .padding(.trailing, reservedTrailing)
+
+            // The quoted page (#839): beside the face on a wide screen, a pop-up over its top on a phone.
+            if let pageURL = core.voicePage.url {
+                pageCard(pageURL)
+            }
         }
+        .animation(reduceMotion ? nil : .spring(response: 0.38, dampingFraction: 0.86), value: pageOpen)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { viewWidth = $0 }
         .overlay(alignment: .topTrailing) {
             Button {
                 core.exitVoiceMode()
@@ -131,6 +167,71 @@ struct VoiceScreen: View {
                 .receive(on: RunLoop.main)
         ) { _ in
             lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
+        }
+    }
+
+    // MARK: - The quoted page (#839)
+
+    @ViewBuilder
+    private func pageCard(_ url: URL) -> some View {
+        let card = VoicePageCard(url: url, control: core.pageControl) { core.closeVoicePage() }
+        if sideBySide {
+            card
+                .frame(width: panelWidth)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+                .padding(16)
+                .transition(reduceMotion ? .opacity : .move(edge: .trailing).combined(with: .opacity))
+        } else {
+            card
+                .containerRelativeFrame(.vertical) { height, _ in height * 0.55 }
+                .frame(maxHeight: .infinity, alignment: .top)
+                .padding(.horizontal, 12)
+                .padding(.top, 72)
+                .transition(reduceMotion ? .opacity : .scale(scale: 0.96, anchor: .top).combined(with: .opacity))
+        }
+    }
+
+    /// A chip for the page the last answer cited, only while M1K3 is talking or parked, and not while
+    /// that page is up. A tap is the person's request; nothing opens by itself.
+    @ViewBuilder
+    private var sourceChip: some View {
+        if !pageOpen, showsSourceChip, let source = core.lastCitedSource, let host = source.url.host {
+            Button {
+                Task { await core.openVoicePage(source, origin: .linkChipTap) }
+            } label: {
+                Label(host, systemImage: "safari")
+                    .font(.callout)
+                    .lineLimit(1)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .m1k3Glass(cornerRadius: 18)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Open source: \(host)")
+            .accessibilityHint("Shows the page beside M1K3")
+        } else if let refusal = core.voicePage.refusal {
+            Text(refusalNote(refusal))
+                .font(.caption)
+                .foregroundStyle(.white.opacity(0.82))
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .m1k3Glass(cornerRadius: 14)
+        }
+    }
+
+    private var showsSourceChip: Bool {
+        switch state {
+        case .speaking, .idle: true
+        default: false
+        }
+    }
+
+    private func refusalNote(_ refusal: VoicePageRefusal) -> String {
+        switch refusal {
+        case .privateAddress:
+            String(localized: "M1K3 won't open a page on a private network.")
+        case .notWebPage, .notAskedFor:
+            String(localized: "That isn't a web page M1K3 can open.")
         }
     }
 
@@ -291,7 +392,8 @@ struct VoiceScreen: View {
     /// Already-spoken sentences dim and fade above the live one; the live
     /// bubble keeps the dyslexia Focus-reader following word-by-word.
     private var spokenTimeline: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        // One centred column, like the Mac's (Kev, 2026-11-16): the spoken tool line sat flush left.
+        VStack(alignment: .center, spacing: 8) {
             ForEach(spokenBubbles) { bubble in
                 Text(bubble.text)
                     .font(.callout)
@@ -300,7 +402,7 @@ struct VoiceScreen: View {
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
                     .m1k3Glass(cornerRadius: 16)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(maxWidth: .infinity, alignment: .center)
                     .transition(.opacity.combined(with: .move(edge: .bottom)))
             }
             if let text = core.speechHighlight.utteranceText {

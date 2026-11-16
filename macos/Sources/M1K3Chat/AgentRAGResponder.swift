@@ -251,6 +251,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-10 — #768: `turnClauses` adds `LookAftermath.clause` on the one turn
 //  straight after a look (the turn cannot see the picture, and Lil described one anyway). Confidence 0.7: pinned in
 //  the prompt; the wording was tried on the phone on both brains, on one photo.
+//  Review: Kev + claude-opus-5.5, 2026-11-15 — #839 review: `provenanceBlocks` notes the URLs of the app-built sources
+//  blocks in a ledger drained by `collectedCitedURLs()`; the text of the blocks is unchanged. Confidence 0.8.
 //  Review: Kev + claude-fable-5.1, 2026-11-05 — `turnClauses(for:)`: every route carries the egress clause only
 //  when `EgressDisclosure.applies(to:)` reads the question as a privacy ask. Read off Kev's iPhone's chat store
 //  (build 544, 1.3.0 in review): "Me a recipe for banana bread, please." dispatched to web_search, and Mini's
@@ -287,6 +289,8 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// Hits the model retrieved itself via search_knowledge — drained after
     /// the stream and merged into the turn's sources (see `collectedSources`).
     private let sourceCollector: ToolSourceCollector?
+    /// The URLs this turn's app-built provenance block cited (#839); drained by `collectedCitedURLs()`.
+    private let citedLedger = CitedURLLedger()
     /// The user's reasoning preference, read fresh each turn (Settings picker:
     /// Auto / Always think / Fast answers) — same per-turn pattern as tools.
     private let thinkingModeProvider: @Sendable () -> ThinkingMode
@@ -540,6 +544,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         phases.started(at: phaseClock.now)
         // Stale tool hits from an aborted prior turn must not leak in.
         _ = sourceCollector?.drain()
+        _ = citedLedger.drain()
         // Self-query router (prompt-hardening v2): a question about M1K3
         // itself never touches retrieval — nothing embedded, nothing injected
         // — and the corpus-reaching tools are withheld from the turn below.
@@ -1221,7 +1226,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
         let trace = AgentResult(
             conclusion: "", toolsUsed: ran.map { $0.plan.tool.name }, iterations: steps.count, reasoningTrace: steps
         )
-        let tail = Self.webSourcesBlock(for: trace) + Self.factSourcesBlock(for: trace)
+        let tail = provenanceBlocks(for: trace)
         if !tail.isEmpty { continuation.yield(tail) }
         return .answered
     }
@@ -1416,8 +1421,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 )
             } else {
                 var tail = streamed ? "" : conclusion
-                tail += Self.webSourcesBlock(for: result)
-                tail += Self.factSourcesBlock(for: result)
+                tail += provenanceBlocks(for: result)
                 if !tail.isEmpty {
                     continuation.yield(tail)
                 }
@@ -1442,6 +1446,20 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
     /// Sources the model gathered itself via search_knowledge this turn —
     /// merged into the message's sources (and the citation allow-list) by
     /// ChatSession once the stream completes.
+    public func collectedCitedURLs() -> [String] {
+        citedLedger.drain()
+    }
+
+    /// The app's deterministic provenance blocks for a turn, and the URLs they cite, noted for
+    /// `collectedCitedURLs()` so voice mode opens only what a tool really returned (#839).
+    private func provenanceBlocks(for result: AgentResult) -> String {
+        let blocks = Self.webSourcesBlock(for: result) + Self.factSourcesBlock(for: result)
+        citedLedger.note(blocks.split(separator: "\n").compactMap { line in
+            line.hasPrefix("• ") ? String(line.dropFirst(2)) : nil
+        })
+        return blocks
+    }
+
     public func collectedSources() -> [ChunkHit] {
         // The citation gate re-applies the withhold: a tool that slipped an
         // excluded kind into the collector never becomes a source.
@@ -1543,7 +1561,7 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
             question: question, chunks: chunks, contextLine: contextLine,
             gathered: result.reasoningTrace, afterPreamble: afterPreamble, into: continuation
         )
-        let provenance = Self.webSourcesBlock(for: result) + Self.factSourcesBlock(for: result)
+        let provenance = provenanceBlocks(for: result)
         if !provenance.isEmpty {
             continuation.yield(provenance)
         }
@@ -2081,5 +2099,25 @@ public struct AgentRAGResponder: RAGResponding, Sendable {
                 + "rest rather than working it into the answer):\n\(knowledge)"
         }
         return [head, memoryBlock(memories, now: now), todos, ambient].compactMap { $0 }
+    }
+}
+
+/// Holds the URLs a turn's provenance blocks cited until ChatSession drains them (#839).
+final class CitedURLLedger: Sendable {
+    private let urls = Mutex<[String]>([])
+
+    func note(_ more: [String]) {
+        urls.withLock { held in
+            for url in more where !held.contains(url) {
+                held.append(url)
+            }
+        }
+    }
+
+    func drain() -> [String] {
+        urls.withLock { held in
+            defer { held = [] }
+            return held
+        }
     }
 }

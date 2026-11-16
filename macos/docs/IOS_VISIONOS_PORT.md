@@ -797,3 +797,14 @@ _Review: Kev + claude-fable-5.2, 2026-11-12: the #768 soak's heat half is record
 above with its limits (on the cable, a quiet dark room); the battery half stays
 owed. The same night's drills found and fixed three ways the phone app died at
 the background exit (#809, #812, #813). Confidence 0.8._
+
+## Addendum — 2026-11-15: the page beside the face (#839)
+
+The phone gets its first web view, only inside voice mode: `VoicePageWebView` (`M1K3iOSApp/`), a `WKWebView` on
+`PrivateWebConfiguration.make()` (a non-persistent store) whose every main-frame move goes through
+`WebNavigationGuard`, i.e. `WebURLPolicy.refusesNavigation` (#269). Never `SFSafariViewController`: it shares
+Safari's cookies. A page opens only from a tap on the source chip or a spoken "show me that"
+(`VoicePageOpenPolicy`; model output alone never does). A phone shows it as a pop-up over the top of the face; a
+wide screen beside it. Pinned in `PrivateWebHostTests` (store + guard) and `PageHostScanTests` (the shell's wiring).
+Not done: handing the page to the model through `BrowserContext` on the phone (no review model there), and a
+visionOS window beside the companion (the card compiles for visionOS but is an in-window overlay there).

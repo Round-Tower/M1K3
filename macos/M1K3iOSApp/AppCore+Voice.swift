@@ -87,6 +87,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-09 — #768: a voice turn tries the look first (`voiceLook`, AppCore+Look),
 //  and leaving the mode closes the eye. Confidence 0.65 (voice + camera together is unverified until it is on the
 //  phone).
+//  Review: Kev + claude-opus-5.5, 2026-11-15 — #839: a turn that is a spoken page command is answered by
+//  `handleVoicePageCommand` before the chat sees it (both lanes), and leaving the mode closes the page.
+//  Compile-checked; the spoken commands are verify-on-device.
 
 import AVFoundation
 import Foundation
@@ -194,6 +197,7 @@ extension AppCore {
         soundEffects.play(.voiceExit) // dematerialising: the enter sweep, mirrored
         controller.exit()
         voiceLoop = nil
+        closeVoicePage()
         lookCamera.close() // the eye never outlives the mode (#768)
         (transcriber as? AppleSpeechTranscriber)?.hearsRoom = false
         voicePauseNote = nil
@@ -332,6 +336,7 @@ extension AppCore {
                 }
                 avatar.setActivity(.thinking)
                 soundEffects.play(.endpointHeard) // got it: one soft tick down
+                if let reply = await handleVoicePageCommand(question) { return .success(reply) }
                 await sendVoiceTurn(question)
                 guard let last = chat.messages.last, last.role == .assistant else {
                     return .failure(VoiceTurnFailure(message: "No answer arrived."))
@@ -382,6 +387,11 @@ extension AppCore {
                 }
                 avatar.setActivity(.thinking)
                 soundEffects.play(.endpointHeard) // got it: one soft tick down
+                // A spoken page command is the person's, never the model's: answer it here (#839).
+                if let reply = await handleVoicePageCommand(question) {
+                    onChunk(reply)
+                    return .success(())
+                }
                 // The fold-forward guard (only prefix-extending updates — a
                 // FOLLOWUPS/polish shrink must never re-speak the answer), and
                 // the persona leak guard on the stream as it is spoken, as on the

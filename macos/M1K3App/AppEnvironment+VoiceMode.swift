@@ -65,6 +65,9 @@
 //  Review: same day (2), Kev's first live run — the watch now listens with `.watches` (as `.keepsListening` the
 //  8 s silent-listen limit closed it every 8.2 s, three closes and it gave up, so "hang on" fell on a closed mic),
 //  and speech stops at SpokenAnswerEnd (the "Web sources:" block was read aloud line by line). Confidence 0.65.
+//  Review: Kev + claude-opus-5.5, 2026-11-15 — #839: a turn that is a spoken page command ("show me that", "scroll
+//  down", "close it") is answered by `handleVoicePageCommand` before the chat sees it, and leaving voice mode closes
+//  the page. Both turn lanes (whole-answer and streaming) check first. Confidence 0.7 (verify-by-launch).
 
 import AppKit
 import AVFoundation
@@ -345,6 +348,7 @@ extension AppEnvironment {
         guard let controller = voiceLoop else { return }
         controller.exit()
         voiceLoop = nil
+        closeVoicePage()
         setHearsRoom(false)
         // Close the input device: the exit above stops the LISTEN, but the
         // engine stayed prepared with voice processing on, which held a
@@ -555,6 +559,7 @@ extension AppEnvironment {
                     return .failure(VoiceTurnFailure(message: "M1K3 is shutting down."))
                 }
                 soundEffects.play(.endpointHeard) // got it — one soft tick down
+                if let reply = await handleVoicePageCommand(question) { return .success(reply) }
                 await sendVoiceTurn(question)
                 guard let last = chat.messages.last, last.role == .assistant else {
                     return .failure(VoiceTurnFailure(message: "No answer arrived."))
@@ -593,6 +598,11 @@ extension AppEnvironment {
                     return .failure(VoiceTurnFailure(message: "M1K3 is shutting down."))
                 }
                 soundEffects.play(.endpointHeard) // got it — one soft tick down
+                // A spoken page command is the person's, never the model's: answer it here (#839).
+                if let reply = await handleVoicePageCommand(question) {
+                    onChunk(reply)
+                    return .success(())
+                }
                 // StreamedAnswerFolder carries the fold-forward guard (only
                 // prefix-extending updates — a FOLLOWUPS/polish shrink must
                 // never re-speak the answer, the 2026-07-25 finding) as a
