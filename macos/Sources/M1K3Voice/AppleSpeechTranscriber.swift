@@ -137,6 +137,10 @@
 //  fresh run of looks unless one is pending (`watchdogLookPendingFor`, under `engineLock`; scheduling
 //  moved inside the lock). Confidence 0.75: the rule is pinned, the route change is verify-by-launch.
 //  Review: same day (2) — Mac voice processing is on by default (`macEnabled`, VoiceProcessingPolicy). Confidence 0.75.
+//  Review: claude-opus-5-5, 2026-11-16 (#852) — the tap also feeds an `UtteranceRecorder` when the shell opts in
+//  (`capturesUtteranceAudio`, off by default): the listen's mono audio, bounded at 60 s, reset per listen, never
+//  on disk, for the polish pass at the endpoint. Same tap buffer the recogniser hears; no engine or lock change
+//  (the recorder has its own lock, taken outside `lock`). Verify-by-launch owed. Confidence 0.7.
 
 import AVFoundation
 import Foundation
@@ -201,6 +205,9 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
     private var hearsRoomStored = false
     private var soundListener: SoundContextListener?
     private var soundListenerBuilding = false
+    /// The listen's audio for the polish pass (#852). Its own lock; the tap feeds it outside `lock`.
+    /// Off until the shell opts in (`capturesUtteranceAudio`), reset per listen, memory-only.
+    private let utteranceRecorder = UtteranceRecorder()
     /// Observes `.AVAudioEngineConfigurationChange` so a route flip (a Bluetooth
     /// mic connecting, or capture forcing the A2DP→HFP profile switch) reinstalls
     /// the tap on the NEW input format instead of leaving it deaf on the old one.
@@ -334,6 +341,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         stopListening()
         // A new listen hears its own room: the last listen's sounds are forgotten.
         soundLock.withLock { soundListener }?.reset()
+        utteranceRecorder.reset()
         return AsyncStream { continuation in
             let generation = lock.withLock {
                 self.generation &+= 1
@@ -1012,6 +1020,7 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
             guard legacyLive || analyzer != nil else { return }
             let audible = MonoMixdown.mixIfNeeded(buffer, voiceProcessed: firstChannel)
             self.feedSoundContext(audible)
+            self.captureUtterance(audible)
             if let analyzer {
                 // SpeechAnalyzer path: meter the level for AnalyzerEndpoint, feed
                 // the analyzer outside `lock` (it converts), end if it's time.
@@ -1370,6 +1379,30 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         let segments = transcription.segments
         guard !segments.isEmpty else { return nil }
         return segments.reduce(0) { $0 + $1.confidence } / Float(segments.count)
+    }
+}
+
+// MARK: - Utterance audio (the polish pass, #852)
+
+extension AppleSpeechTranscriber: UtteranceAudioProviding {
+    public var capturesUtteranceAudio: Bool {
+        get { utteranceRecorder.isEnabled }
+        set { utteranceRecorder.isEnabled = newValue }
+    }
+
+    public func takeUtteranceAudio() -> UtteranceAudio? {
+        utteranceRecorder.take()
+    }
+
+    /// From the tap: the mono buffer the recogniser hears, kept for the accurate pass at the
+    /// endpoint. A buffer that isn't float32 (never seen from the tap) is skipped, not converted.
+    fileprivate func captureUtterance(_ buffer: AVAudioPCMBuffer) {
+        guard utteranceRecorder.isEnabled, let channel = buffer.floatChannelData?[0], buffer.frameLength > 0 else {
+            return
+        }
+        utteranceRecorder.append(
+            UnsafeBufferPointer(start: channel, count: Int(buffer.frameLength)), sampleRate: buffer.format.sampleRate
+        )
     }
 }
 
