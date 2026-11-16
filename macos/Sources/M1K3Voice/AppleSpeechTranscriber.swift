@@ -141,6 +141,9 @@
 //  (`capturesUtteranceAudio`, off by default): the listen's mono audio, bounded at 60 s, reset per listen, never
 //  on disk, for the polish pass at the endpoint. Same tap buffer the recogniser hears; no engine or lock change
 //  (the recorder has its own lock, taken outside `lock`). Verify-by-launch owed. Confidence 0.7.
+//  Review: claude-opus-5-5, 2026-11-16 (review fold, #852) — the capture reads through `UtteranceRecorder.append(_:)`
+//  (channels averaged, an unreadable buffer marks the audio truncated), starts per listen via `beginListen` (a
+//  `.watches` listen records nothing; the switch applies at a listen's start, never mid-listen). Confidence 0.7.
 
 import AVFoundation
 import Foundation
@@ -341,7 +344,8 @@ public final class AppleSpeechTranscriber: TranscriptionProvider, @unchecked Sen
         stopListening()
         // A new listen hears its own room: the last listen's sounds are forgotten.
         soundLock.withLock { soundListener }?.reset()
-        utteranceRecorder.reset()
+        // A barge-in watch hears M1K3's own answer: its audio is never a turn's, so it isn't kept.
+        utteranceRecorder.beginListen(recording: finality != .watches)
         return AsyncStream { continuation in
             let generation = lock.withLock {
                 self.generation &+= 1
@@ -1394,15 +1398,10 @@ extension AppleSpeechTranscriber: UtteranceAudioProviding {
         utteranceRecorder.take()
     }
 
-    /// From the tap: the mono buffer the recogniser hears, kept for the accurate pass at the
-    /// endpoint. A buffer that isn't float32 (never seen from the tap) is skipped, not converted.
+    /// From the tap: the buffer the recogniser hears, kept for the accurate pass at the endpoint.
+    /// The recorder averages channels and marks a buffer it can't read as a hole in the audio.
     fileprivate func captureUtterance(_ buffer: AVAudioPCMBuffer) {
-        guard utteranceRecorder.isEnabled, let channel = buffer.floatChannelData?[0], buffer.frameLength > 0 else {
-            return
-        }
-        utteranceRecorder.append(
-            UnsafeBufferPointer(start: channel, count: Int(buffer.frameLength)), sampleRate: buffer.format.sampleRate
-        )
+        utteranceRecorder.append(buffer)
     }
 }
 

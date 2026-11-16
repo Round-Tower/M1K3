@@ -974,7 +974,7 @@ enum ChatEvalStage {
                     latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
             case .heard:
-                // Always the live path, routed as the app routes a voice turn (#852).
+                // Always the live path, with the app's router (no room line in the eval) (#852).
                 let observation = try await livePathObservation(
                     fixture, provider: provider, thinking: thinking, start: start, clock: clock
                 )

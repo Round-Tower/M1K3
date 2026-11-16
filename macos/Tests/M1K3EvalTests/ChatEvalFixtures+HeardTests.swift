@@ -45,7 +45,7 @@ struct ChatEvalFixturesHeardTests {
         #expect(TaskKind.allCases.last == .heard)
     }
 
-    @Test("at least five guards: a real odd word, a clean turn and a tool turn must survive the line")
+    @Test("at least five guards: a real odd word, a clean turn and a tool turn stay as they are")
     func guards() {
         let guards = ChatEvalFixtures.heard.filter { $0.id.hasPrefix("heard-guard") }
         #expect(guards.count >= 5)

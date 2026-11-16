@@ -15,6 +15,9 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-16, Confidence 0.7 (the calls match the SDK and the
 //  file-fed pass; run by the eval, not yet on a live turn). Prior: Unknown.
+//  Review: claude-opus-5-5, 2026-11-16 (code-quality review fold, #852) — the analyzer is finished
+//  (`cancelAndFinishNow`) on every exit, cancelled or thrown; `analyzerBuffer` refuses a conversion
+//  that returns under 90% of the expected frames, and is pinned by tests (rates, empty, sine).
 
 import AVFoundation
 import Foundation
@@ -54,12 +57,18 @@ public enum AppleBufferTranscriber {
         }
         defer { collected.cancel() } // a throwing analyze, or a cancelled pass, must not leave the reader running
         let analyzer = SpeechAnalyzer(modules: [transcriber])
-        if let last = try await analyzer.analyzeSequence(stream) {
-            try await analyzer.finalizeAndFinish(through: last)
-        } else {
+        do {
+            if let last = try await analyzer.analyzeSequence(stream) {
+                try await analyzer.finalizeAndFinish(through: last)
+            } else {
+                await analyzer.cancelAndFinishNow()
+            }
+            return try AppleFileTranscriber.join(await collected.value)
+        } catch {
+            // Cancelled by the time budget, or thrown: the analyzer must not outlive the pass.
             await analyzer.cancelAndFinishNow()
+            throw error
         }
-        return try AppleFileTranscriber.join(await collected.value)
     }
 
     /// The samples as one buffer in the analyzer's own format (the live path converts per tap
@@ -92,7 +101,12 @@ public enum AppleBufferTranscriber {
             inputStatus.pointee = .haveData
             return input
         }
-        guard status != .error, output.frameLength > 0 else { throw error ?? Failure.unusableAudio }
+        // A converter that quietly returns a fraction of the audio would hand the analyzer a clipped
+        // utterance and a plausible-looking transcript of its start: refuse it.
+        let expected = Double(samples.count) * format.sampleRate / sampleRate
+        guard status != .error, Double(output.frameLength) >= expected * 0.9 else {
+            throw error ?? Failure.unusableAudio
+        }
         return output
     }
 }

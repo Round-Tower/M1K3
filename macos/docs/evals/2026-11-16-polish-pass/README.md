@@ -23,9 +23,15 @@ That is 1.8 points, and the same 8.9% the file-mode accurate arm measured on 202
 buffer-fed pass reproduces it. The policy kept the live text on none of the 30 clips (no empty,
 failed, timed-out or implausible result); the pass changed the text on 11 of 30.
 
+Re-run after the code-quality review's lexical floor (at least 40% of the live words must survive
+in the polished text, at every length; a live text under 4 words takes one word up to three more):
+the floor kept live **0 of the 11** changed clips, and WER is the same 8.9%. So on corpus 1 it
+costs nothing; it is there for the turns the corpus doesn't have (noise, TV, a second voice).
+
 Pass latency (the accurate pass alone, including analyzer setup and format conversion, a fresh
-analyzer per clip, on a Mac, inside the `swift test` debug bundle): median 0.227 s, p90 0.326 s,
-max 0.582 s, n = 30. The budget is 1.0 s, after which the live text stands. The 0.18 s quoted in
+analyzer per clip, on a Mac, inside the `swift test` debug bundle): first run median 0.227 s,
+p90 0.326 s, max 0.582 s; re-run after the review fold (quieter machine) median 0.176 s, p90 0.219 s,
+max 0.326 s; n = 30 each. The budget is 1.0 s, after which the live text stands. The 0.18 s quoted in
 the 2026-10-15 eval came from a separate probe; this is the shipped code's own timing.
 
 ## Caveats
@@ -33,6 +39,8 @@ the 2026-10-15 eval came from a separate probe; this is the shipped code's own t
 - One speaker, one session, one mic: 1.8 points on ~350 words is about six words. This does NOT
   clear the bar the polish pass was parked behind (accurate beats fast by at least 2 points on a
   SECOND real recording session), so the switch stays off. That call is Kev's.
+- Utterances over 15 s skip the pass (the budget is fixed, the pass grows with the audio) and the
+  capture stops at 20 s, so a long listen reads truncated and keeps its live text.
 - The eval feeds clean 16 kHz clips. The live path captures the tap's own buffer (VPIO on the
   Mac, the phone's mic on iOS) at the hardware rate; the pass converts it. Not measured on a device.
 - The pass latency on an iPhone is unmeasured. The `.notice` breadcrumb (category `stt`, "polish

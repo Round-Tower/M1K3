@@ -13,6 +13,9 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-11-16, Confidence 0.75 (budget race and fallbacks are
 //  pinned by tests with fake passes; the real pass is AppleBufferTranscriber). Prior: Unknown.
+//  Review: claude-opus-5-5, 2026-11-16 (code-quality review fold, #852) — `race` is cancellation-aware (a cancelled
+//  turn returns `.failed` at once and cancels the pass), the timer and the pass are both cancelled by whichever
+//  result lands first (`FirstResult`, tested). Confidence 0.75.
 
 import Foundation
 import os
@@ -96,59 +99,77 @@ public struct VoicePolisher: Sendable {
     }
 
     /// `operation`, abandoned after `seconds`. A timeout cancels the operation but does not wait for
-    /// it: a pass that ignores cancellation must still never hold the turn.
+    /// it: a pass that ignores cancellation must still never hold the turn. Cancelling the caller
+    /// (the turn was superseded) ends the race at once as a failure and cancels the operation too.
     static func race(
         seconds: Double, _ operation: @escaping @Sendable () async throws -> String
     ) async -> VoicePolishPolicy.PassResult {
-        await withCheckedContinuation { continuation in
-            let first = FirstResult(continuation)
-            let work = Task {
-                do {
-                    try first.deliver(.text(await operation()))
-                } catch {
-                    first.deliver(.failed)
+        let first = FirstResult()
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in
+                first.install(continuation)
+                let work = Task {
+                    do {
+                        try first.deliver(.text(await operation()))
+                    } catch {
+                        first.deliver(.failed)
+                    }
+                }
+                let timer = Task {
+                    try? await Task.sleep(for: .seconds(seconds))
+                    first.deliver(.timedOut)
+                }
+                // Whichever result lands first, the timer and the pass both stop.
+                first.onDelivered {
+                    timer.cancel()
+                    work.cancel()
                 }
             }
-            let timer = Task {
-                try? await Task.sleep(for: .seconds(seconds))
-                if first.deliver(.timedOut) { work.cancel() }
-            }
-            first.onDelivered { timer.cancel() }
+        } onCancel: {
+            first.deliver(.failed)
         }
     }
 }
 
-/// Resumes its continuation once, with whichever result arrives first.
-private final class FirstResult: @unchecked Sendable {
+/// Resumes its continuation once, with whichever result arrives first; a result that lands before
+/// the continuation is installed (a cancel at the very start) is held for it.
+final class FirstResult: @unchecked Sendable {
     private let lock = NSLock()
     private var continuation: CheckedContinuation<VoicePolishPolicy.PassResult, Never>?
-    private var done = false
+    private var result: VoicePolishPolicy.PassResult?
     private var cleanup: (@Sendable () -> Void)?
 
-    init(_ continuation: CheckedContinuation<VoicePolishPolicy.PassResult, Never>) {
-        self.continuation = continuation
+    init() {}
+
+    func install(_ continuation: CheckedContinuation<VoicePolishPolicy.PassResult, Never>) {
+        let ready = lock.withLock { () -> VoicePolishPolicy.PassResult? in
+            if result == nil { self.continuation = continuation }
+            return result
+        }
+        if let ready { continuation.resume(returning: ready) }
     }
 
     /// Runs `cleanup` when a result lands (immediately if one already has).
     func onDelivered(_ cleanup: @escaping @Sendable () -> Void) {
         let alreadyDone = lock.withLock {
-            if !done { self.cleanup = cleanup }
-            return done
+            if result == nil { self.cleanup = cleanup }
+            return result != nil
         }
         if alreadyDone { cleanup() }
     }
 
-    /// True when this result was the first and resumed the continuation.
+    /// True when this result was the first.
     @discardableResult
-    func deliver(_ result: VoicePolishPolicy.PassResult) -> Bool {
-        let (continuation, cleanup) = lock.withLock { () -> (CheckedContinuation<VoicePolishPolicy.PassResult, Never>?, (@Sendable () -> Void)?) in
-            guard !done else { return (nil, nil) }
-            done = true
+    func deliver(_ new: VoicePolishPolicy.PassResult) -> Bool {
+        let (won, continuation, cleanup) = lock.withLock {
+            () -> (Bool, CheckedContinuation<VoicePolishPolicy.PassResult, Never>?, (@Sendable () -> Void)?) in
+            guard result == nil else { return (false, nil, nil) }
+            result = new
             defer { self.continuation = nil; self.cleanup = nil }
-            return (self.continuation, self.cleanup)
+            return (true, self.continuation, self.cleanup)
         }
-        guard let continuation else { return false }
-        continuation.resume(returning: result)
+        guard won else { return false }
+        continuation?.resume(returning: new)
         cleanup?()
         return true
     }

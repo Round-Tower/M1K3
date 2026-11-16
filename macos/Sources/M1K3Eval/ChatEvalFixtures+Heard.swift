@@ -4,10 +4,9 @@
 //
 //  heard (#852): voice turns as the recogniser hands them over. Kev said "How're you keeping, are you
 //  well?" on his iPhone (2026-11-16) and the brain got "You're my curry keeping, are you well?", then
-//  riffed on the curry. These turns measure how a brain copes with a garble as the app ships: the bench for
-//  any recogniser change (the polish pass) or prompt change that claims to help. A per-turn "this was heard"
-//  line was measured on them and dropped: neither of two wordings helped any brain
-//  (`docs/evals/2026-11-16-heard-line/`).
+//  riffed on the curry. These turns are a standalone bench: how a brain copes with a garble as the app ships,
+//  for any recogniser change (the polish pass) or prompt change that claims to help. (A per-turn "this was
+//  heard" line was once measured on them and dropped; `docs/evals/2026-11-16-heard-line/` has the history.)
 //
 //  Four groups:
 //  - **Garbles** (12): a sound-alike swap of the kind Apple's fast recogniser makes. Each has a fact
@@ -16,13 +15,12 @@
 //    has no fact to check, so it scores on not building on the curry.
 //  - **Held out** (6, added before the second wording's run): garbles neither wording was written against.
 //  - **Idioms** (2): Hiberno-English read literally ("giving out" is scolding, not handing out).
-//  - **Guards** (6): what the line must not break. A real odd word stays ("a crack in my screen" is
+//  - **Guards** (6): what a garble-aware change must not break. A real odd word stays ("a crack in my screen" is
 //    not the craic; a chicken curry is a curry), a clean turn doesn't talk about speech recognition,
 //    and a tool turn still calls its tool.
 //
 //  The swaps are written by ear, not taken from a recogniser log (only Kev's is real), so the
-//  fixture set measures whether the line helps a brain recover, not how often the recogniser
-//  makes these mistakes.
+//  fixture set measures whether a brain recovers, not how often the recogniser makes these mistakes.
 //
 //  Run: `--kinds heard --router dispatch` on lil,big; Mini via MiniLiveEvalTests (`M1K3_AFM_EVAL_LIVE=1`).
 //
@@ -32,11 +30,14 @@
 //  its run, so the rerun has turns neither wording was written against. Confidence 0.6.
 //  Review: Kev + claude-opus-5-5, 2026-11-16 — Kev: drop the line. The `spoken` flag and the line's arms are gone;
 //  the 26 turns stay as the bench. Confidence 0.7.
+//  Review: claude-opus-5-5, 2026-11-16 (review fold, #852) — comments reworded as a standalone bench (they still
+//  talked about "the line"); no behaviour change.
 //
 
 import Foundation
 
-/// What a clean voice turn must never say about itself: the line is for the brain, not the answer.
+/// What a clean voice turn must never say about itself: it is a plain question, so the answer has no
+/// business talking about speech recognition.
 private let heardLeak = ["speech recognition", "speech-recognition", "transcri", "misheard", "mishear"]
 
 public extension ChatEvalFixtures {
@@ -161,7 +162,7 @@ public extension ChatEvalFixtures {
             expectation: .init(mustNotContain: ["cocaine", "drug"] + leakMarkers, mustComply: true, minChars: 1)
         ),
 
-        // Guards: the line must not break these.
+        // Guards: a real odd word survives and a clean voice turn stays clean.
         .init(
             id: "heard-guard-real-curry", kind: .heard,
             prompt: "Give me a quick recipe for a chicken curry.",

@@ -437,13 +437,16 @@ extension AppEnvironment {
         var lastHeard: SoundContext?
         // The polish pass (#852): the accurate re-run of the listen's audio at the endpoint, Apple's
         // analyzer only and OFF unless `-voicePolishPass YES`. The audio is read when the listen
-        // stops, like the room; a barge-in listen's audio holds M1K3's own echo, so it never polishes.
+        // stops, like the room. A barge-in watch records nothing (its audio holds M1K3's own echo), so a
+        // barge-in turn finds no audio and keeps its live text.
         let polisher = VoicePolisher.apple()
         var lastAudio: UtteranceAudio?
-        var listenIsBargeIn = false
         // One voice turn into the chat. The room line only counts as said once a turn really
         // carried it (a send that still finds the chat answering returns at once).
         let sendVoiceTurn: @MainActor (String) async -> Void = { [weak self] question in
+            // This turn's audio, taken first so no early return can leave it for the next turn.
+            let audio = lastAudio
+            lastAudio = nil
             guard let self else { return }
             // A question asked over the answer (barge-in, spoken or clicked) replaces it: stop
             // the generation still running, or `send` would return at once and the question be
@@ -454,8 +457,6 @@ extension AppEnvironment {
                     try? await Task.sleep(for: .milliseconds(50))
                 }
             }
-            let audio = lastAudio
-            lastAudio = nil
             let heardQuestion = await polisher.polished(live: question, audio: audio)
             let prepared = turns.prepare(heardQuestion, heard: lastHeard)
             let token = chat.isResponding ? nil : Self.voiceTurnClause.set(prepared.soundClause)
@@ -480,7 +481,6 @@ extension AppEnvironment {
             // `.watches`: silence never ends it (as `.keepsListening` it closed every 8.2 s).
             let stream = try provider.startListening(finality: .watches)
             activeProvider = provider
-            listenIsBargeIn = true
             Self.voiceLog.notice("voice barge-in watch on \(provider.name, privacy: .public)")
             return stream
         }
@@ -507,7 +507,6 @@ extension AppEnvironment {
                 activeProvider = provider
                 lastHeard = nil // this listen's room, not the last one's
                 lastAudio = nil
-                listenIsBargeIn = false
                 // Which engine served, and whether it can keep the room out of the
                 // mic, is the first question when someone reports M1K3 talking over
                 // the music or answering something they didn't say.
@@ -568,7 +567,7 @@ extension AppEnvironment {
                 activeProvider?.stopListening()
                 // After the stop, so the tap's last buffers are in. Taking clears the capture, so a
                 // second stop finds nothing and keeps what the first read.
-                if let audio = (activeProvider as? UtteranceAudioProviding)?.takeUtteranceAudio(), !listenIsBargeIn {
+                if let audio = (activeProvider as? UtteranceAudioProviding)?.takeUtteranceAudio() {
                     lastAudio = audio
                 }
                 activeProvider = nil

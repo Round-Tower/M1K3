@@ -285,12 +285,13 @@ extension AppCore {
         // answering and its send returns at once: it must not touch the room line, and the
         // line only counts as said once a turn really carried it.
         let sendVoiceTurn: @MainActor (String) async -> Void = { [weak self] question in
+            // This turn's audio, taken first so the look path's early return can't leave it for the next turn.
+            let audio = lastAudio
+            lastAudio = nil
             guard let self else { return }
             // #768: with the eye open (or on a spoken ask to look) the turn is a look. It carries the frame to
             // the on-device brain and nothing else, so it takes no room line and no name repair.
             if await voiceLook(question) { return }
-            let audio = lastAudio
-            lastAudio = nil
             let heardQuestion = await polisher.polished(live: question, audio: audio)
             let prepared = turns.prepare(heardQuestion, heard: lastHeard)
             let token = chat.isResponding ? nil : Self.voiceTurnClause.set(prepared.soundClause)

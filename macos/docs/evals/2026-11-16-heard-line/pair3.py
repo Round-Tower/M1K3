@@ -1,3 +1,10 @@
+# pair3.py: paired per-fixture comparison of the three heard-line arms (off, v1 "on", v2).
+# Usage: python3 pair3.py <prefix>. Reads <prefix>-off.json, <prefix>-on.json and <prefix>-v2.json
+# (chateval reports: "mlx" for the Lil/Big runs, "mini" for Mini), and prints, per brain and per
+# fixture, how many of 2 passes each arm got, flagging fixtures where the arms differ, then group totals.
+# The line itself was removed (see README.md); this stays for the record of how the verdict was read.
+#
+# Signed: Kev + claude-opus-5-5, 2026-11-16, Prior: Unknown (new header on a script that had none).
 import json, sys, collections
 def load(path):
     d = json.load(open(path)); out = collections.defaultdict(dict)

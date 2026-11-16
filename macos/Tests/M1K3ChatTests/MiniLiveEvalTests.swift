@@ -184,7 +184,7 @@ struct MiniLiveEvalTests {
             .openChat, .security, .refusal, .reasoning, .codeGen, .worldKnowledge,
             .humour, .interview, .instructionFollowing, .document, .sycophancy, .format,
         ]
-        // heard (#852) needs the live responder: the line rides its per-turn clauses.
+        // heard (#852) needs the live arm: the router has to route it as the app does.
         return liveAll ? bare.union([.toolUse, .heard]) : bare
     }
 
