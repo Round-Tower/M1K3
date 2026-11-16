@@ -345,3 +345,73 @@ def test_every_event_deep_link_opens_the_shipping_ios_target():
     for name, link in linked.items():
         assert link, f"{name}: no deepLink"
         assert link.split("://", 1)[0] in schemes, f"{name}: {link}"
+
+
+# --- app extensions (the iPhone Live Activity's WidgetKit extension) ---------------------------------
+
+
+def _ext(bundle_id="app.m1k3.liveactivity", sources=None, products=("M1K3LiveActivity",), platform="iOS"):
+    return {
+        "type": "app-extension",
+        "platform": platform,
+        "settings": {"base": {"PRODUCT_BUNDLE_IDENTIFIER": bundle_id}},
+        "sources": sources if sources is not None else [
+            {"path": "M1K3LiveActivityExtension"},
+            {"path": "M1K3LiveActivityExtension/PrivacyInfo.xcprivacy", "buildPhase": "resources"},
+        ],
+        "dependencies": [{"package": "M1K3", "product": p} for p in products],
+    }
+
+
+def _project_with_extension(ext=None, live_activities=True, embeds=True):
+    ios = _app("iOS", "app.m1k3", "a.plist", templates=["MobileShell"])
+    if live_activities:
+        ios["info"].setdefault("properties", {})["NSSupportsLiveActivities"] = True
+    if embeds:
+        ios["dependencies"] = [{"target": "M1K3LiveActivityExtension", "embed": True}]
+    return _project(
+        {"M1K3iOS": ios, "M1K3LiveActivityExtension": ext or _ext()},
+        templates={"MobileShell": TEMPLATE_WITH_MANIFEST},
+    )
+
+
+def test_extension_targets_keeps_only_store_platform_extensions():
+    project = _project({"A": _ext(), "B": _ext(platform="watchOS"), "C": _app("iOS", "app.m1k3", "c.plist")})
+    assert set(m.extension_targets(project)) == {"A"}
+
+
+def test_a_well_formed_extension_passes():
+    assert m.audit(_project_with_extension()) == []
+
+
+def test_extension_must_have_a_child_bundle_id_not_the_record_itself():
+    for bad in ("app.m1k3", "app.other.liveactivity", None):
+        problems = m.audit(_project_with_extension(_ext(bundle_id=bad)))
+        assert any("must start with 'app.m1k3.'" in p for p in problems), bad
+
+
+def test_extension_without_a_privacy_manifest_is_flagged():
+    ext = _ext(sources=[{"path": "M1K3LiveActivityExtension"}])
+    problems = m.audit(_project_with_extension(ext))
+    assert len(problems) == 1 and "PrivacyInfo.xcprivacy" in problems[0]
+
+
+def test_extension_linking_a_heavy_product_is_flagged():
+    problems = m.audit(_project_with_extension(_ext(products=("M1K3LiveActivity", "M1K3MLX"))))
+    assert len(problems) == 1 and "M1K3MLX" in problems[0] and "30 MB" in problems[0]
+
+
+def test_an_extension_no_app_embeds_never_ships():
+    problems = m.audit(_project_with_extension(embeds=False))
+    assert len(problems) == 1 and "never embedded" in problems[0]
+
+
+def test_the_embedding_app_must_declare_live_activities():
+    problems = m.audit(_project_with_extension(live_activities=False))
+    assert len(problems) == 1 and "NSSupportsLiveActivities" in problems[0]
+
+
+def test_extension_sharing_an_info_plist_with_an_app_is_flagged():
+    project = _project_with_extension()
+    project["targets"]["M1K3LiveActivityExtension"]["info"] = {"path": "a.plist"}
+    assert any("share one generated Info.plist" in p for p in m.audit(project))

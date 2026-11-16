@@ -25,6 +25,9 @@
 //  Open: a Private Cloud turn is stopped too when a brain is loaded on the device (the rule reads the loaded
 //  brain, not the turn's route). Stopping is the floor, not the ceiling. Picking the turn up again on the
 //  return, or a Live Activity that says it is paused, is a design call (Kev).
+//  Review: Kev + claude-opus-5.5, 2026-11-16 — `wantsBackgroundGrace` (the complement of `stopsTurn`) so an off-GPU
+//  turn finishes on a background task, and the Live Activity says "Paused" for the stopped ones (TurnActivityPolicy).
+//  The Open's Live Activity half is built; the Private Cloud-with-a-loaded-brain stop is unchanged. Confidence 0.8.
 //
 
 import Foundation
@@ -33,6 +36,13 @@ public enum BackgroundExitPolicy {
     /// Whether the turn in flight is stopped when the app leaves for the background.
     public static func stopsTurn(turnInFlight: Bool, brainRunsOnThisDevicesGPU: Bool) -> Bool {
         turnInFlight && brainRunsOnThisDevicesGPU
+    }
+
+    /// Whether the turn in flight is worth a background-task grace so it can finish while the person is away:
+    /// the exact complement of `stopsTurn` (a turn that runs elsewhere holds no weights here, and iOS would
+    /// otherwise suspend the app within seconds and freeze it mid-answer). Never for an on-device brain.
+    public static func wantsBackgroundGrace(turnInFlight: Bool, brainRunsOnThisDevicesGPU: Bool) -> Bool {
+        turnInFlight && !brainRunsOnThisDevicesGPU
     }
 
     /// Whether the turn is stopped when the scene goes `.inactive`. `.inactive` precedes `.background` by a

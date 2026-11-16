@@ -41,6 +41,8 @@
 //  scanner in M1K3Voice with a cross-module equality pin. Retire this line when he rules.
 //  Review: Kev + claude-opus-5.5, 2026-10-28 — the Open above is retired: Kev ruled on 10-27 for the Voice → leaf
 //  edge (and one M1K3AnswerBlocks target, not a split UI target). No manifest change.
+//  Review: Kev + claude-opus-5.5, 2026-11-16 — M1K3LiveActivity leaf (+ tests): the iPhone Live Activity's phase-only
+//  state, dependency-free; M1K3Chat depends on it for TurnActivityPolicy. No package dependency moves. Confidence 0.8.
 
 import Foundation
 import PackageDescription
@@ -54,6 +56,9 @@ let package = Package(
     platforms: [.macOS(.v26), .iOS(.v26), .visionOS(.v26)],
     products: [
         .library(name: "M1K3LogCore", targets: ["M1K3LogCore"]),
+        // The Live Activity's phase-only state + attributes. Foundation (and ActivityKit on iOS) only: the widget
+        // extension links it under a ~30 MB ceiling and the Mac's Live Activities will reuse it.
+        .library(name: "M1K3LiveActivity", targets: ["M1K3LiveActivity"]),
         .library(name: "M1K3Knowledge", targets: ["M1K3Knowledge"]),
         .library(name: "M1K3Memory", targets: ["M1K3Memory"]),
         .library(name: "M1K3MemoryViz", targets: ["M1K3MemoryViz"]),
@@ -217,6 +222,16 @@ let package = Package(
         .target(
             name: "M1K3LogCore",
             path: "Sources/M1K3LogCore"
+        ),
+        .target(
+            name: "M1K3LiveActivity",
+            path: "Sources/M1K3LiveActivity"
+        ),
+        .testTarget(
+            name: "M1K3LiveActivityTests",
+            // M1K3ScreensaverCore is TEST-ONLY: the Live Activity's face is a copy of its PixelFace grid, pinned here.
+            dependencies: ["M1K3LiveActivity", "M1K3ScreensaverCore"],
+            path: "Tests/M1K3LiveActivityTests"
         ),
         .testTarget(
             name: "M1K3LogCoreTests",
@@ -408,6 +423,8 @@ let package = Package(
                 // The PCC rung's pure policy + backend seam (ADR 0006): the
                 // PCC send path lives in ChatSession. Dependency-free module.
                 "M1K3LanguageModel",
+                // The Live Activity's phase vocabulary (TurnActivityPolicy decides when each shows).
+                "M1K3LiveActivity",
                 // Multi-conversation chat history (GRDBChatHistoryStore) —
                 // M1K3Knowledge already links GRDB, so zero new build weight.
                 .product(name: "GRDB", package: "GRDB.swift"),

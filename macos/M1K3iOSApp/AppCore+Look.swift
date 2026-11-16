@@ -42,6 +42,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — the `look` plate (Kev: "we might need to add a screenshot of the
 //  vision too"): a real look at a still the capture run names, in chat. Run by hand on an iPhone 17 Pro Max
 //  simulator through tools/screengrab/capture-look.sh. Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-11-16 — `look` and `lookAgain` are followed by the Live Activity (begin/end
+//  around the brain). Compile-checked; owes a try on a phone.
 
 import Foundation
 import M1K3Chat
@@ -77,13 +79,16 @@ extension AppCore {
         }
         avatar.setActivity(.thinking)
         beginAutoSpeakSession() // before the turn: it pins this turn's answer
+        let activity = beginTurnActivity(.answer)
         guard await chat.look(question, frame: frame, looker: looker, knowing: LookGrounding.now()) else {
+            endTurnActivity(activity, outcome: .stopped)
             AttachmentStore.discard([frame])
             cancelAutoSpeak()
             avatar.resetToIdle()
             return false
         }
         settleTypedTurn()
+        endTurnActivity(activity)
         return true
     }
 
@@ -104,12 +109,15 @@ extension AppCore {
         defer { isLooking = false }
         avatar.setActivity(.thinking)
         beginAutoSpeakSession()
+        let activity = beginTurnActivity(.answer)
         guard await chat.lookAgain(question, looker: looker, knowing: LookGrounding.now()) else {
+            endTurnActivity(activity, outcome: .stopped)
             cancelAutoSpeak()
             avatar.resetToIdle()
             return false
         }
         settleTypedTurn()
+        endTurnActivity(activity)
         return true
     }
 

@@ -28,6 +28,12 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — a true background also stops an on-device answer in flight and the
 //  speech properly (`stopForBackground`), before the shed. Drilled on the iPhone 17 Pro: without it, returning mid-answer
 //  on Lil got the app killed for memory. Confidence 0.8 (see BackgroundExitPolicy; the drill is in the PR).
+//  Review: Kev + claude-opus-5.5, 2026-11-16 — coming to the front ends a lingering Live Activity card
+//  (`turnActivity.appBecameActive`). Compile-checked; owes a try on a phone.
+//  Review: Kev + claude-opus-5.5, 2026-11-16 — `.inactive` starts the Live Activity card for a turn in flight
+//  (Kev's phone: a 6 s Mini turn never got one, and a card cannot start from the background).
+//  Review: Kev + claude-opus-5.5, 2026-11-16 (review fold) — the notification delegate installs in `init`, and the
+//  leaving-card starts only when the previous phase was .active (not on the return path).
 //  Review: Kev + claude-opus-5.5, 2026-11-16 (#858) — `.inactive` stops an on-device answer before the background lands, while the GPU is still allowed. Confidence 0.7; owes a phone check (see BackgroundExitPolicy).
 
 import M1K3Avatar
@@ -50,6 +56,8 @@ struct M1K3iOSApp: App {
 
     init() {
         BundledFonts.register() // Silkscreen — the pixel wordmark face.
+        // Before the core exists (it is built asynchronously): a cold-launch tap on a turn notice must reach it.
+        TurnNoticeDelegate.install()
         // The Phosphor Fox (white baked lattice, no shader) is the house default on
         // every surface, Mac and phone alike. Registered, not written: an explicit
         // persisted choice (any face, including the pixel face's "") always wins, and
@@ -72,14 +80,20 @@ struct M1K3iOSApp: App {
                 }
             }
             .preferredColorScheme(.dark)
-            .onChange(of: scenePhase) { _, phase in
+            .onChange(of: scenePhase) { previous, phase in
                 // Shed MLX weights on a true background (jetsam hygiene), re-warm on
                 // return. `.inactive` (Control Center, an alert) never sheds the model, so a transient
-                // interruption doesn't churn it; it only stops an on-device answer (below).
+                // interruption doesn't churn it; it starts the Live Activity card and stops an on-device answer (below).
                 switch phase {
                 case .inactive:
-                    // Before the background, so a generation step drains while the GPU is still allowed
-                    // (#858). Only an on-device turn; a Control Center pull stops it too (BackgroundExitPolicy).
+                    // ONE case, in this order. (1) The Live Activity card starts while we are still foreground (an
+                    // answer asked and then left is mostly under 8 s, and no card can start once we are gone). Only
+                    // from .active: the way BACK (.background → .inactive → .active) must not start a card. A system
+                    // sheet mid-turn can still start one that the next .active takes down: accepted.
+                    if previous == .active { core?.turnActivityGoingInactive() }
+                    // (2) Then the on-device stop, before the background so a generation step drains while the GPU
+                    // is still allowed (#858). It tells the card "Paused" first, then stops (AppCore). Unconditional
+                    // on `previous`: on the way back nothing is running (it was stopped), so it is a no-op.
                     core?.stopTurnForInactive()
                 case .background:
                     // What iOS does to a backgrounded app is no snag (#750). First, so a
@@ -96,6 +110,7 @@ struct M1K3iOSApp: App {
                     core?.releaseForBackground()
                 case .active:
                     markSessionActive()
+                    core?.turnActivity.appBecameActive()
                     core?.warmForForeground()
                 @unknown default: break
                 }

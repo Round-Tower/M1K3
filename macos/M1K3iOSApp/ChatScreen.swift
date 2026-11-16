@@ -135,6 +135,7 @@
 //  answers offer "Keep this". Compile-checked; owes a try in the hand.
 //  Review: Kev + claude-opus-5.5, 2026-11-14 (the summoned pass on #833) — a read that cannot start hands the question
 //  and the files back to the composer instead of dropping them. Compile-checked.
+//  Review: Kev + claude-opus-5.5, 2026-11-16 — New chat tells the Live Activity (`turnActivity.turnFinished(.newChat)`).
 
 import M1K3Avatar
 import M1K3Chat
@@ -254,6 +255,7 @@ struct ChatScreen: View {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
                         core.chat.startNewConversation()
+                        core.turnActivity.turnFinished(.newChat)
                     } label: {
                         Label("New chat", systemImage: "square.and.pencil")
                     }

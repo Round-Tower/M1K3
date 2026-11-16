@@ -32,6 +32,10 @@ Review: Kev + claude-opus-5-5, 2026-10-14 — the iOS target must register the `
 App Store Connect won't add an in-app event for review without a deep link, and Halloween's
 (m1k3://event/halloween) opens the app only through it. Confidence 0.85 (Apple's help page takes
 a custom URL; the open itself is verify-by-launch on a device).
+Review: Kev + claude-opus-5.5, 2026-11-16 — app EXTENSIONS are audited too (the iPhone Live Activity's WidgetKit
+extension). They have their own bundle id, so the "must be app.m1k3" rule is not theirs; theirs are a privacy
+manifest, a child id of the one record, an embedding app, a package allow-list (the ~30 MB ceiling), and the
+parent's NSSupportsLiveActivities. Confidence 0.8 (the rules are Apple's and the ceiling's; verify on an archive).
 """
 from __future__ import annotations
 
@@ -51,6 +55,12 @@ ALL_ORIENTATIONS = {
     "UIInterfaceOrientationLandscapeLeft",
     "UIInterfaceOrientationLandscapeRight",
 }
+# An extension is a child of the one store record: its id is `app.m1k3.<something>`, never `app.m1k3` itself.
+EXTENSION_ID_PREFIX = EXPECTED_BUNDLE_ID + "."
+# Package products an extension may link. A WidgetKit extension has a ~30 MB memory ceiling: MLX, the chat
+# stack or the knowledge graph would not fit, and a stray product in its list is how that creeps in.
+EXTENSION_ALLOWED_PRODUCTS = {"M1K3LiveActivity"}
+LIVE_ACTIVITY_PRODUCT = "M1K3LiveActivity"
 # In-app events (iPhone and iPad only) deep-link into the app through this scheme. App Store
 # Connect won't add an event for review without a deep link (2026-10-14), and a custom-scheme
 # link opens nothing unless the iOS target registers the scheme. fastlane/events/*/event.json.
@@ -67,6 +77,15 @@ def store_targets(project: dict) -> dict[str, dict]:
         name: t
         for name, t in (project.get("targets") or {}).items()
         if t.get("type") == "application" and t.get("platform") in STORE_PLATFORMS
+    }
+
+
+def extension_targets(project: dict) -> dict[str, dict]:
+    """The `app-extension` targets on a store platform: they ship inside a store app, so they are audited too."""
+    return {
+        name: t
+        for name, t in (project.get("targets") or {}).items()
+        if t.get("type") == "app-extension" and t.get("platform") in STORE_PLATFORMS
     }
 
 
@@ -164,6 +183,48 @@ def project_archs(project: dict) -> str | None:
     return ((project.get("settings") or {}).get("base") or {}).get("ARCHS")
 
 
+def _dependency_targets(target: dict) -> set[str]:
+    return {str(d["target"]) for d in target.get("dependencies") or [] if isinstance(d, dict) and d.get("target")}
+
+
+def _dependency_products(target: dict) -> set[str]:
+    return {str(d["product"]) for d in target.get("dependencies") or [] if isinstance(d, dict) and d.get("product")}
+
+
+def audit_extensions(project: dict) -> list[str]:
+    """Every way an app extension diverges from what the store (and its memory ceiling) require."""
+    problems: list[str] = []
+    apps = store_targets(project)
+    for name, t in extension_targets(project).items():
+        bid = bundle_id(t)
+        if not bid or not bid.startswith(EXTENSION_ID_PREFIX):
+            problems.append(
+                f"{name}: PRODUCT_BUNDLE_IDENTIFIER is {bid!r}, must start with {EXTENSION_ID_PREFIX!r} "
+                f"(an extension's id is prefixed by its parent's, the one store record)"
+            )
+        if not _carries_manifest(effective_sources(project, t)):
+            problems.append(
+                f"{name}: no {MANIFEST} in its sources — Apple requires a privacy manifest in every extension that ships"
+            )
+        extra = _dependency_products(t) - EXTENSION_ALLOWED_PRODUCTS
+        if extra:
+            problems.append(
+                f"{name}: links {sorted(extra)} — a widget extension has a ~30 MB memory ceiling; "
+                f"only {sorted(EXTENSION_ALLOWED_PRODUCTS)} may be linked (extend EXTENSION_ALLOWED_PRODUCTS on purpose)"
+            )
+        parents = {a: apps[a] for a in apps if name in _dependency_targets(apps[a])}
+        if not parents:
+            problems.append(f"{name}: no store app target depends on it, so it is never embedded and never ships")
+        if LIVE_ACTIVITY_PRODUCT in _dependency_products(t):
+            for parent, pt in parents.items():
+                if _info_prop(pt, "NSSupportsLiveActivities") is not True:
+                    problems.append(
+                        f"{parent}: embeds {name} but its Info.plist lacks NSSupportsLiveActivities = YES — "
+                        f"ActivityKit refuses every request without it"
+                    )
+    return problems
+
+
 def audit(project: dict) -> list[str]:
     """Every way the store targets diverge from the one shared record. Empty = aligned."""
     problems: list[str] = []
@@ -199,8 +260,9 @@ def audit(project: dict) -> list[str]:
                     f"unless all four are declared (INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad) "
                     f"or the target sets UIRequiresFullScreen"
                 )
+    problems += audit_extensions(project)
     by_plist: dict[str, list[str]] = {}
-    for name, t in targets.items():
+    for name, t in {**targets, **extension_targets(project)}.items():
         p = info_path(t)
         if p:
             by_plist.setdefault(p, []).append(name)
@@ -312,6 +374,8 @@ def main(argv: list[str]) -> int:
             problems += store_lane_gaps(os.path.basename(lane), ents)
     names = sorted(store_targets(project))
     if not problems:
+        exts = sorted(extension_targets(project))
+        print(f"✓ {len(exts)} app extension(s) ({', '.join(exts) or 'none'}) carry a privacy manifest and a child bundle id.")
         print(f"✓ {len(names)} store targets ({', '.join(names)}) all upload into {EXPECTED_BUNDLE_ID!r} "
               f"with a privacy manifest and their own Info.plist; the iOS target declares its iPad orientations "
               f"and registers the {EVENT_DEEP_LINK_SCHEME!r} event deep-link scheme.")

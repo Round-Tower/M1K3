@@ -808,3 +808,27 @@ Safari's cookies. A page opens only from a tap on the source chip or a spoken "s
 wide screen beside it. Pinned in `PrivateWebHostTests` (store + guard) and `PageHostScanTests` (the shell's wiring).
 Not done: handing the page to the model through `BrowserContext` on the phone (no review model there), and a
 visionOS window beside the companion (the card compiles for visionOS but is an in-window overlay there).
+
+## Addendum — 2026-11-16: the Live Activity for a long answer or read
+
+An iPhone Live Activity (Lock Screen + Dynamic Island): "M1K3 is thinking… / reading… / answering…", then
+"Answer ready"; a tap opens the chat (`m1k3://chat`). iOS only (`#if os(iOS)`; ActivityKit is not on visionOS).
+Pieces: `M1K3LiveActivity` (package leaf: `TurnActivityState`, a phase and no free text, test-pinned; the
+`ActivityAttributes`; the link), `TurnActivityPolicy` in `M1K3Chat` (the lifecycle as a pure value: starts at
+`TurnNotificationPolicy.longTurnThreshold` in the foreground, throttled phase updates, "Answer ready" only when
+the app is away, "Paused" when `BackgroundExitPolicy` stops a Lil/Big turn, one card at a time),
+`TurnActivityController` + `AppCore+TurnActivity` (the ActivityKit effects and the hooks), and the
+`M1K3LiveActivityExtension` target (`app.m1k3.liveactivity`, links only `M1K3LiveActivity`: a ~30 MB ceiling).
+A turn that runs off this phone's GPU (Mini, Brain at Home, Private Cloud: `BackgroundExitPolicy.wantsBackgroundGrace`,
+the complement of `stopsTurn`) holds a `beginBackgroundTask` so it can finish and flip the card; Lil/Big never do.
+Local updates only, no push token. The Mac waits for macOS 27.3 (the same ActivityKit code; the 27.2 SDK marks
+`Activity.request` unavailable). `check_store_targets.py` audits app extensions. The look and the grace window on a
+real phone are verify-on-device.
+
+_Review: Kev + claude-opus-5.5, 2026-11-16 (Kev tried the card on his iPhone): it is on brand now (the pixel face as the
+mark, `TurnFace`, a copy of the screensaver's grid pinned against `PixelFace`; Silkscreen for the title and the compact
+word; the screensaver's phosphor on ink). And the phone gets the Mac's long-turn ping: `TurnNoticePolicy` (pure) +
+`UserNoticeNotifier` post one generic "Your answer's ready" / "Finished reading" / "Your answer paused" when a followed
+turn lands, is stopped or loses its grace while the app is away; a tap opens the chat (`m1k3://chat`). The permission is
+asked once, right after a long answer finishes in the foreground (the phone has no notification setting). Confidence 0.7
+(the look, the font load and the banner are verify-on-device)._
