@@ -36,6 +36,7 @@ SITE_ROOT = "https://m1k3.app"
 PAGES: list[tuple[str, str]] = [
     ("install.html", "install"),
     ("agents.html", "agents"),
+    ("local-api.html", "local-api"),
     ("privacy.html", "privacy"),
     ("terms.html", "terms"),
     ("mcp-knowledge-server.html", "mcp-knowledge-server"),

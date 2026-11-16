@@ -37,7 +37,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-07-10",
-  "dateModified": "2026-10-11"
+  "dateModified": "2026-11-16"
 }
 </script>
 <script type="application/ld+json">
@@ -164,7 +164,7 @@
         <tr><th scope="col">You want…</th><th scope="col">Pick</th><th scope="col">Why</th></tr>
       </thead>
       <tbody>
-        <tr><td>A local API to build against</td><td>Ollama</td><td>The ecosystem standard; huge model library; cross-platform</td></tr>
+        <tr><td>A local API to build against</td><td>Ollama</td><td>The ecosystem standard; huge model library; cross-platform. (M1K3 has an <a href="/local-api">OpenAI-compatible local API</a> too, off by default, for the brain it already has loaded.)</td></tr>
         <tr><td>A GUI to explore models</td><td>LM Studio</td><td>Model browser + chat + OpenAI-compatible server, no terminal</td></tr>
         <tr><td>The framework itself</td><td>MLX / mlx-lm</td><td>Apple's own stack; Python; fine-tuning and research</td></tr>
         <tr><td>A finished private assistant</td><td>M1K3</td><td>Voice + document memory + agent + MCP, on-device, in one app</td></tr>
@@ -199,7 +199,7 @@
   <section class="page-cta">
     <span class="label">// skip the assembly</span>
     <h2>Want the finished thing?</h2>
-    <p>M1K3 is the assistant these building blocks add up to — free for humans, source-available, and entirely on your Mac.</p>
+    <p>M1K3 is the assistant these building blocks add up to — free for humans, source-available, and on your Mac by default.</p>
     <div class="cta-row">
       <a class="store-badge" href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=site-llm-guide&amp;mt=12"><img src="/badges/mac-app-store.svg" alt="Download on the Mac App Store" width="215" height="55" /></a>
       <a class="btn btn-ghost" aria-label="Source on GitHub" href="https://github.com/Round-Tower/M1K3"><svg class="mark" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.766 11.328c-2.063-.25-3.516-1.734-3.516-3.656 0-.781.281-1.625.75-2.188-.203-.515-.172-1.609.063-2.062.625-.078 1.468.25 1.968.703.594-.187 1.219-.281 1.985-.281.765 0 1.39.094 1.953.265.484-.437 1.344-.765 1.969-.687.218.422.25 1.515.046 2.047.5.593.766 1.39.766 2.203 0 1.922-1.453 3.375-3.547 3.64.531.344.89 1.094.89 1.954v1.625c0 .468.391.734.86.547C13.781 14.359 16 11.53 16 8.03 16 3.61 12.406 0 7.984 0 3.563 0 0 3.61 0 8.031a7.88 7.88 0 0 0 5.172 7.422c.422.156.828-.125.828-.547v-1.25c-.219.094-.5.156-.75.156-1.031 0-1.64-.562-2.078-1.609-.172-.422-.36-.672-.719-.719-.187-.015-.25-.093-.25-.187 0-.188.313-.328.625-.328.453 0 .844.281 1.25.86.313.452.64.655 1.031.655s.641-.14 1-.5c.266-.265.47-.5.657-.656"/></svg>Source</a>
@@ -219,9 +219,48 @@
 </main>
 
 <footer>
-  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE LTD</a> · MADE IN IRELAND · MAC APP STORE AND APP STORE ARE SERVICE MARKS OF APPLE INC.</span>
-  <span><a href="/teams">FOR TEAMS</a> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · <a href="/privacy">PRIVACY POLICY</a> · <a href="/terms">TERMS</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
-  <span class="guides">GUIDES: <a href="/local-llm-mac-guide" aria-current="page">LOCAL LLMS ON A MAC</a> · <a href="/vs-ollama">M1K3 VS OLLAMA</a> · <a href="/private-chatgpt-alternative-mac">PRIVATE CHATGPT ALTERNATIVE</a> · <a href="/mcp-knowledge-server">A LOCAL MEMORY FOR CLAUDE</a> · <a href="/golden-gate-on-device-ai">ON-DEVICE AI IN MACOS 27</a></span>
+  <div class="foot-cols">
+    <div>
+      <p class="foot-h">M1K3</p>
+      <ul>
+        <li><a href="/install">Install</a></li>
+        <li><a href="/brains">The brains</a></li>
+        <li><a href="/companions">Companions</a></li>
+        <li><a href="/vr">Memory Sky for Vision Pro</a></li>
+        <li><a href="/teams">For teams</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Build with it</p>
+      <ul>
+        <li><a href="/agents">For coding agents</a></li>
+        <li><a href="/local-api">Local API</a></li>
+        <li><a href="/weights">Model weights</a></li>
+        <li><a href="https://github.com/Round-Tower/M1K3">GitHub</a></li>
+        <li><a href="https://github.com/sponsors/Round-Tower">Sponsor</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Guides</p>
+      <ul>
+        <li><a href="/local-llm-mac-guide" aria-current="page">Local LLMs on a Mac</a></li>
+        <li><a href="/vs-ollama">M1K3 vs Ollama</a></li>
+        <li><a href="/private-chatgpt-alternative-mac">Private ChatGPT alternative</a></li>
+        <li><a href="/mcp-knowledge-server">A local memory for Claude</a></li>
+        <li><a href="/golden-gate-on-device-ai">On-device AI in macOS 27</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Small print</p>
+      <ul>
+        <li><a href="/privacy">Privacy policy</a></li>
+        <li><a href="/terms">Terms</a></li>
+        <li><a href="https://round-tower.ie">Round Tower Software</a></li>
+      </ul>
+    </div>
+  </div>
+  <p class="foot-line">© 2026 Round Tower Software Ltd. Made in Ireland. No tracking on this page, obviously.</p>
+  <p class="foot-line foot-faint">Mac App Store and App Store are service marks of Apple Inc.</p>
 </footer>
 
 <!-- Signed: Kev + claude-fable-5, 2026-07-10, Confidence 0.8.

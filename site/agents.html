@@ -37,7 +37,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-09-11",
-  "dateModified": "2026-10-02"
+  "dateModified": "2026-11-16"
 }
 </script>
 <script type="application/ld+json">
@@ -46,13 +46,13 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "Does the M1K3 app need to be running?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes, and the server has to be switched on. The MCP server lives inside the app, serves at http://127.0.0.1:4242/mcp only while M1K3 is open, and is off by default — turn it on once in Settings, MCP Server. A server your agent reports as disconnected almost always means the app is closed. The m1k3 command opens the app for you and waits up to twenty seconds for the port to answer." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes, and the server has to be switched on. The MCP server lives inside the app, serves at http://127.0.0.1:4242/mcp only while M1K3 is open, and is off by default — turn it on once in Settings ▸ Server. A server your agent reports as disconnected almost always means the app is closed. The m1k3 command opens the app for you and waits up to twenty seconds for the port to answer." } },
     { "@type": "Question", "name": "Which agents can m1k3 connect for me?",
       "acceptedAnswer": { "@type": "Answer", "text": "Five, in two ways. For Claude Code it runs that client’s own registration command; for Cursor and VS Code it edits the one JSON file, keeping every other server in it and leaving a .bak copy beside it the first time. For Codex and Zed it prints the snippet for you to paste, because rewriting an editor’s whole settings file on a hunch is the wrong thing for a tool to do." } },
     { "@type": "Question", "name": "Is it safe to leave the MCP server on?",
       "acceptedAnswer": { "@type": "Answer", "text": "It binds to 127.0.0.1 and nothing else, so no other machine can reach it, and it refuses any request whose Host header is not a loopback address or whose Origin is anything but a loopback page — the defence against a web page being tricked into calling it. It also wants its access token on every request, so a stray script that finds the port open gets a 401. The token is not a defence against malware running as you, which can read any client’s config file; the per-tool switches for listening, deleting memories and opening links cover that. Leave it on while you are working, and treat it the way you treat a shell." } },
     { "@type": "Question", "name": "What reaches the cloud when my agent uses M1K3?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Not your documents or memories: retrieval, embeddings, inference and voice all run on your Mac. The honest caveats: whatever your agent reads through M1K3 becomes part of that agent’s own context, and a cloud-hosted agent sends its context wherever its conversations go. Local server, client’s rules. And M1K3’s own network crossings are unchanged — a one-time model download you opt into, web search (on by default, so a question M1K3 looks up sends that search to the web; one switch in Settings turns it off), and updates." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Not your documents or memories: retrieval, embeddings, inference and voice all run on your Mac. The honest caveats: whatever your agent reads through M1K3 becomes part of that agent’s own context, and a cloud-hosted agent sends its context wherever its conversations go. Local server, client’s rules. And M1K3’s own network crossings are unchanged — a one-time model download you opt into, web search (on by default, so a question M1K3 looks up sends that search to the web; one switch in Settings turns it off), updates, and Apple's Private Cloud Compute only if you switch it on." } },
     { "@type": "Question", "name": "What does it cost?",
       "acceptedAnswer": { "@type": "Answer", "text": "Nothing. M1K3 is free for humans — no account, no subscription, no telemetry. The source is public under the Functional Source License (FSL-1.1-ALv2). Organisations that want one shared brain served to many people on their own hardware have a separate licence, M1K3 for Teams." } }
   ]
@@ -213,7 +213,7 @@ Never block on it; carry on without it.
   <p>Four lines an agent will actually obey beat a paragraph it skims. Run <code>m1k3 agent-notes</code> with no arguments to print it instead.</p>
 
   <h2>What your agent gets</h2>
-  <p>Eighteen tools. The short version: it can ask a local brain, search your own documents, keep and recall facts across sessions, speak and listen, and put something on your todo list without ever taking it off.</p>
+  <p>Nineteen tools on the App Store build (eighteen on the DMG, which has no Private Cloud Compute). The short version: it can ask a local brain, search your own documents, keep and recall facts across sessions, speak and listen, and put something on your todo list without ever taking it off.</p>
   <div class="table-scroll">
     <table class="cmp">
       <thead>
@@ -249,19 +249,19 @@ Never block on it; carry on without it.
     <li><strong>It will not answer without its token.</strong> Every request has to carry the access token as an <code>Authorization: Bearer</code> header; one without it gets a 401 before it reaches a session. The token keeps out stray scripts that find the port open, and stops a caller without it from knocking your agent off. It is not a defence against malware running as you, which can read any client's config file. The per-tool switches in Settings (listening, deleting memories, opening links) cover that for every caller.</li>
     <li><strong>It will not write your config from the App Store build.</strong> That copy of <code>m1k3</code> is sandboxed, so it can neither read <code>~/.cursor/mcp.json</code> nor run <code>claude</code> for you. There, <code>connect</code> prints the config and says so. The Developer ID build — the DMG and the Homebrew cask — does the write.</li>
     <li><strong>It will not serve two agents at once.</strong> One MCP client at a time, in this version: a second client connecting ends the first one's session.</li>
-    <li><strong>It will not send your documents or memories anywhere.</strong> Retrieval, embeddings, inference and voice run on the Mac. M1K3's <a href="/privacy">documented network crossings</a> are unchanged by connecting an agent: a one-time model download you opt into, web search (on by default, one switch in Settings to turn it off), and updates.</li>
+    <li><strong>It will not send your documents or memories anywhere.</strong> Retrieval, embeddings, inference and voice run on the Mac. M1K3's <a href="/privacy">documented network crossings</a> are unchanged by connecting an agent: a one-time model download you opt into, web search (on by default, one switch in Settings to turn it off), updates, and Apple's Private Cloud Compute only if you switch it on.</li>
   </ul>
 
   <h2>Not an agent? The Local API</h2>
   <p>From version 1.4, M1K3 on the Mac can also lend the brain you have loaded to any tool that speaks the OpenAI API: an editor, a script, a chat app. Switch on <strong>Settings ▸ Server ▸ Local API</strong>, copy its key, and point the tool at <code>http://127.0.0.1:4141/v1</code>. It listens on your Mac only, is off by default, and has a key of its own, separate from the MCP token. The caller gets the raw brain under its own instructions, with none of M1K3's memory, knowledge or tools: those stay behind the MCP server. You go first: a call waits while you are chatting.</p>
   <p><strong>And when the job is bigger than your Mac:</strong> switch on <strong>Also offer Private Cloud Compute</strong> and the same endpoint gains a second model, <code>cloud-m1k3</code>, answered by Apple's Private Cloud Compute. Same base URL, same key, one model name changed. Agents get it too, as the <code>ask_private_cloud</code> tool, behind a switch of its own. Both switches are off by default and both need Private Cloud Compute on in Privacy. Only what the caller sends goes out, behind one fixed line asking the model to keep to Apple's acceptable use requirements: nothing from your memory or knowledge is added by M1K3, though an agent can include what it has read. The Settings pane counts every call that leaves, and M1K3 caps them at 30 an hour so a script in a loop cannot spend your day's allowance. What Apple says about Private Cloud Compute is <a href="https://security.apple.com/blog/private-cloud-compute/">on Apple's own page</a>; M1K3 claims nothing beyond it.</p>
-  <p>The details are in <a href="https://github.com/Round-Tower/M1K3/blob/master/macos/docs/LOCAL_API.md">LOCAL_API.md</a>.</p>
+  <p>The setup, the model names and a first call are on <a href="/local-api">the Local API page</a>; the full reference is <a href="https://github.com/Round-Tower/M1K3/blob/master/macos/docs/LOCAL_API.md">LOCAL_API.md</a>.</p>
 
   <h2>Frequently asked questions</h2>
   <div class="faq-list">
     <details>
       <summary>Does the M1K3 app need to be running?</summary>
-      <p>Yes, and the server has to be switched on. The MCP server lives inside the app, serves at http://127.0.0.1:4242/mcp only while M1K3 is open, and is off by default — turn it on once in Settings, MCP Server. A server your agent reports as disconnected almost always means the app is closed. The m1k3 command opens the app for you and waits up to twenty seconds for the port to answer.</p>
+      <p>Yes, and the server has to be switched on. The MCP server lives inside the app, serves at http://127.0.0.1:4242/mcp only while M1K3 is open, and is off by default — turn it on once in Settings ▸ Server. A server your agent reports as disconnected almost always means the app is closed. The m1k3 command opens the app for you and waits up to twenty seconds for the port to answer.</p>
     </details>
     <details>
       <summary>Which agents can m1k3 connect for me?</summary>
@@ -273,7 +273,7 @@ Never block on it; carry on without it.
     </details>
     <details>
       <summary>What reaches the cloud when my agent uses M1K3?</summary>
-      <p>Not your documents or memories: retrieval, embeddings, inference and voice all run on your Mac. The honest caveats: whatever your agent reads through M1K3 becomes part of that agent’s own context, and a cloud-hosted agent sends its context wherever its conversations go. Local server, client’s rules. And M1K3’s own network crossings are unchanged — a one-time model download you opt into, web search (on by default, so a question M1K3 looks up sends that search to the web; one switch in Settings turns it off), and updates.</p>
+      <p>Not your documents or memories: retrieval, embeddings, inference and voice all run on your Mac. The honest caveats: whatever your agent reads through M1K3 becomes part of that agent’s own context, and a cloud-hosted agent sends its context wherever its conversations go. Local server, client’s rules. And M1K3’s own network crossings are unchanged — a one-time model download you opt into, web search (on by default, so a question M1K3 looks up sends that search to the web; one switch in Settings turns it off), updates, and Apple's Private Cloud Compute only if you switch it on.</p>
     </details>
     <details>
       <summary>What does it cost?</summary>
@@ -304,9 +304,48 @@ Never block on it; carry on without it.
 </main>
 
 <footer>
-  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE LTD</a> · MADE IN IRELAND</span>
-  <span><a href="/teams">FOR TEAMS</a> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · <a href="/privacy">PRIVACY POLICY</a> · <a href="/terms">TERMS</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
-  <span class="guides">GUIDES: <a href="/local-llm-mac-guide">LOCAL LLMS ON A MAC</a> · <a href="/vs-ollama">M1K3 VS OLLAMA</a> · <a href="/private-chatgpt-alternative-mac">PRIVATE CHATGPT ALTERNATIVE</a> · <a href="/mcp-knowledge-server">A LOCAL MEMORY FOR CLAUDE</a> · <a href="/golden-gate-on-device-ai">ON-DEVICE AI IN MACOS 27</a></span>
+  <div class="foot-cols">
+    <div>
+      <p class="foot-h">M1K3</p>
+      <ul>
+        <li><a href="/install">Install</a></li>
+        <li><a href="/brains">The brains</a></li>
+        <li><a href="/companions">Companions</a></li>
+        <li><a href="/vr">Memory Sky for Vision Pro</a></li>
+        <li><a href="/teams">For teams</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Build with it</p>
+      <ul>
+        <li><a href="/agents" aria-current="page">For coding agents</a></li>
+        <li><a href="/local-api">Local API</a></li>
+        <li><a href="/weights">Model weights</a></li>
+        <li><a href="https://github.com/Round-Tower/M1K3">GitHub</a></li>
+        <li><a href="https://github.com/sponsors/Round-Tower">Sponsor</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Guides</p>
+      <ul>
+        <li><a href="/local-llm-mac-guide">Local LLMs on a Mac</a></li>
+        <li><a href="/vs-ollama">M1K3 vs Ollama</a></li>
+        <li><a href="/private-chatgpt-alternative-mac">Private ChatGPT alternative</a></li>
+        <li><a href="/mcp-knowledge-server">A local memory for Claude</a></li>
+        <li><a href="/golden-gate-on-device-ai">On-device AI in macOS 27</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Small print</p>
+      <ul>
+        <li><a href="/privacy">Privacy policy</a></li>
+        <li><a href="/terms">Terms</a></li>
+        <li><a href="https://round-tower.ie">Round Tower Software</a></li>
+      </ul>
+    </div>
+  </div>
+  <p class="foot-line">© 2026 Round Tower Software Ltd. Made in Ireland. No tracking on this page, obviously.</p>
+  <p class="foot-line foot-faint">Mac App Store and App Store are service marks of Apple Inc.</p>
 </footer>
 
 <!-- Signed: Kev + claude-opus-5, 2026-09-11, Confidence 0.85.

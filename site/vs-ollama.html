@@ -37,7 +37,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-07-10",
-  "dateModified": "2026-10-02"
+  "dateModified": "2026-11-16"
 }
 </script>
 <script type="application/ld+json">
@@ -50,7 +50,7 @@
     { "@type": "Question", "name": "Does M1K3 use Ollama under the hood?",
       "acceptedAnswer": { "@type": "Answer", "text": "No. M1K3 runs models directly with MLX-Swift on Apple Silicon's Metal GPU, alongside Apple Foundation Models for fast turns. It does not depend on Ollama, and the two can run on the same Mac without conflict." } },
     { "@type": "Question", "name": "Can I run M1K3 and Ollama on the same Mac?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes. They are independent programs with separate model stores and no shared ports. Many developers will want both: Ollama for building and scripting against a local API, M1K3 as the private day-to-day assistant." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. They are independent programs with separate model stores and no shared ports. Many developers will want both: Ollama for its model library and its API on every platform, M1K3 as the private day-to-day assistant (it has an OpenAI-compatible local API too, since version 1.4, off by default)." } },
     { "@type": "Question", "name": "Which supports more models, M1K3 or Ollama?",
       "acceptedAnswer": { "@type": "Answer", "text": "Ollama, clearly. Ollama's library spans many model families and sizes, and that breadth is one of its main strengths. M1K3 deliberately ships a small curated set of brains — Gemma and Qwen via MLX plus Apple Foundation Models — tuned for its assistant, voice, and tool-calling features." } },
     { "@type": "Question", "name": "Are M1K3 and Ollama both free and open source?",
@@ -115,7 +115,7 @@
   <p>What Ollama is <em>not</em> trying to be is a finished assistant. Voice, document memory, retrieval over your own files, and agent tools aren't the model server's job — you assemble those yourself from the ecosystem around it.</p>
 
   <h2>What is M1K3?</h2>
-  <p>M1K3 is a free, source-available (FSL-1.1-ALv2, public repository) AI app for macOS that runs entirely on-device, made by Round Tower in Ireland. It runs Gemma and Qwen models via MLX-Swift on the Metal GPU, with Apple Foundation Models handling fast turns — hot-swappable in Settings. Around the models it ships the assistant layer as one native app:</p>
+  <p>M1K3 is a free, source-available (FSL-1.1-ALv2, public repository) AI app for macOS (and iPhone and iPad) that runs on-device by default, made by Round Tower in Ireland. It runs Gemma and Qwen models via MLX-Swift on the Metal GPU, with Apple Foundation Models handling fast turns — hot-swappable in Settings. Around the models it ships the assistant layer as one native app:</p>
   <ul>
     <li><strong>Live voice</strong> — streaming on-device speech recognition and natural speech out.</li>
     <li><strong>Knowledge graph + RAG</strong> — import documents; ask questions grounded in your own files, with semantic search.</li>
@@ -123,7 +123,7 @@
     <li><strong>A local agent</strong> — tool use (your knowledge base; web search, on by default, behind one toggle that turns it off).</li>
     <li><strong>An MCP server</strong> — Claude and other agents can query your local knowledge. See <a href="/mcp-knowledge-server">giving Claude a local memory</a>.</li>
   </ul>
-  <p>Storage is app-sandboxed and encrypted with a key held in your Keychain. There's no account, no subscription, and no telemetry. The trade-off is a narrow platform: M1K3 requires an <strong>Apple Silicon Mac on macOS 26 Tahoe</strong>, and its model lineup is a small curated set rather than a library.</p>
+  <p>Storage is app-sandboxed on your device, and saved call records are encrypted with a key held in your Keychain. There's no account, no subscription, and no telemetry. The trade-off is a narrow platform: M1K3 requires an <strong>Apple Silicon Mac on macOS 26 or later</strong> (or an iPhone or iPad on iOS 26 or later), and its model lineup is a small curated set rather than a library.</p>
 
   <h2>M1K3 vs Ollama: feature comparison</h2>
   <div class="table-scroll">
@@ -134,14 +134,14 @@
       <tbody>
         <tr><td>What it is</td><td>A finished on-device AI app</td><td>A local LLM runtime + model server</td></tr>
         <tr><td>Install</td><td>Mac App Store, Homebrew, signed DMG, or build from source</td><td>Installer or Homebrew; then <code>ollama run &lt;model&gt;</code></td></tr>
-        <tr><td>Platforms</td><td>macOS 26 (Tahoe), Apple Silicon only</td><td>macOS (incl. Intel), Windows, Linux</td></tr>
+        <tr><td>Platforms</td><td>macOS 26+ on Apple Silicon; iOS and iPadOS 26+</td><td>macOS (incl. Intel), Windows, Linux</td></tr>
         <tr><td>Interface</td><td>Native SwiftUI app (chat, voice, 3D companion)</td><td>CLI + local API; a desktop chat app; a large third-party UI ecosystem</td></tr>
         <tr><td>Models</td><td>Curated: Gemma + Qwen via MLX-Swift, plus Apple Foundation Models, hot-swappable</td><td>Broad library: many families and sizes, your pick</td></tr>
         <tr><td>Voice</td><td class="yes">Built in — streaming STT + TTS, on-device</td><td class="no">Not built in</td></tr>
         <tr><td>Knowledge / RAG</td><td class="yes">Built in — knowledge graph, semantic search, grounded answers</td><td class="no">Not built in at the server level; add via third-party tools</td></tr>
         <tr><td>MCP server</td><td class="yes">Built in — your knowledge, exposed to Claude and other agents</td><td class="no">No first-party MCP knowledge server</td></tr>
         <tr><td>Call transcription</td><td class="yes">Built in — consent-gated, encrypted, on-device</td><td class="no">Not built in</td></tr>
-        <tr><td>Developer API</td><td>MCP (loopback HTTP + stdio)</td><td class="yes">Local REST API — the ecosystem standard for local LLM apps</td></tr>
+        <tr><td>Developer API</td><td>MCP (loopback HTTP + stdio), and an <a href="/local-api">OpenAI-compatible local API</a> on 127.0.0.1:4141, off by default</td><td class="yes">Local REST API — the ecosystem standard for local LLM apps</td></tr>
         <tr><td>License</td><td>FSL-1.1-ALv2 (source-available; free for humans, no account or telemetry)</td><td>MIT (open source), free</td></tr>
         <tr><td>Best for</td><td>A private, working assistant on a modern Mac</td><td>Developers, scripting, building local-AI apps, non-Apple hardware</td></tr>
       </tbody>
@@ -180,7 +180,7 @@
   <section class="page-cta">
     <span class="label">// try it</span>
     <h2>See M1K3 for yourself.</h2>
-    <p>Free for humans, source-available. Runs entirely on your Mac — pull the ethernet cable, and only the web tools notice.</p>
+    <p>Free for humans, source-available. Runs on your Mac by default — pull the ethernet cable, and only the web tools notice.</p>
     <div class="cta-row">
       <a class="store-badge" href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=site-vs-ollama&amp;mt=12"><img src="/badges/mac-app-store.svg" alt="Download on the Mac App Store" width="215" height="55" /></a>
       <a class="btn btn-ghost" aria-label="Source on GitHub" href="https://github.com/Round-Tower/M1K3"><svg class="mark" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.766 11.328c-2.063-.25-3.516-1.734-3.516-3.656 0-.781.281-1.625.75-2.188-.203-.515-.172-1.609.063-2.062.625-.078 1.468.25 1.968.703.594-.187 1.219-.281 1.985-.281.765 0 1.39.094 1.953.265.484-.437 1.344-.765 1.969-.687.218.422.25 1.515.046 2.047.5.593.766 1.39.766 2.203 0 1.922-1.453 3.375-3.547 3.64.531.344.89 1.094.89 1.954v1.625c0 .468.391.734.86.547C13.781 14.359 16 11.53 16 8.03 16 3.61 12.406 0 7.984 0 3.563 0 0 3.61 0 8.031a7.88 7.88 0 0 0 5.172 7.422c.422.156.828-.125.828-.547v-1.25c-.219.094-.5.156-.75.156-1.031 0-1.64-.562-2.078-1.609-.172-.422-.36-.672-.719-.719-.187-.015-.25-.093-.25-.187 0-.188.313-.328.625-.328.453 0 .844.281 1.25.86.313.452.64.655 1.031.655s.641-.14 1-.5c.266-.265.47-.5.657-.656"/></svg>Source</a>
@@ -200,9 +200,48 @@
 </main>
 
 <footer>
-  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE LTD</a> · MADE IN IRELAND · MAC APP STORE AND APP STORE ARE SERVICE MARKS OF APPLE INC.</span>
-  <span><a href="/teams">FOR TEAMS</a> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · <a href="/privacy">PRIVACY POLICY</a> · <a href="/terms">TERMS</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
-  <span class="guides">GUIDES: <a href="/local-llm-mac-guide">LOCAL LLMS ON A MAC</a> · <a href="/vs-ollama" aria-current="page">M1K3 VS OLLAMA</a> · <a href="/private-chatgpt-alternative-mac">PRIVATE CHATGPT ALTERNATIVE</a> · <a href="/mcp-knowledge-server">A LOCAL MEMORY FOR CLAUDE</a> · <a href="/golden-gate-on-device-ai">ON-DEVICE AI IN MACOS 27</a></span>
+  <div class="foot-cols">
+    <div>
+      <p class="foot-h">M1K3</p>
+      <ul>
+        <li><a href="/install">Install</a></li>
+        <li><a href="/brains">The brains</a></li>
+        <li><a href="/companions">Companions</a></li>
+        <li><a href="/vr">Memory Sky for Vision Pro</a></li>
+        <li><a href="/teams">For teams</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Build with it</p>
+      <ul>
+        <li><a href="/agents">For coding agents</a></li>
+        <li><a href="/local-api">Local API</a></li>
+        <li><a href="/weights">Model weights</a></li>
+        <li><a href="https://github.com/Round-Tower/M1K3">GitHub</a></li>
+        <li><a href="https://github.com/sponsors/Round-Tower">Sponsor</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Guides</p>
+      <ul>
+        <li><a href="/local-llm-mac-guide">Local LLMs on a Mac</a></li>
+        <li><a href="/vs-ollama" aria-current="page">M1K3 vs Ollama</a></li>
+        <li><a href="/private-chatgpt-alternative-mac">Private ChatGPT alternative</a></li>
+        <li><a href="/mcp-knowledge-server">A local memory for Claude</a></li>
+        <li><a href="/golden-gate-on-device-ai">On-device AI in macOS 27</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Small print</p>
+      <ul>
+        <li><a href="/privacy">Privacy policy</a></li>
+        <li><a href="/terms">Terms</a></li>
+        <li><a href="https://round-tower.ie">Round Tower Software</a></li>
+      </ul>
+    </div>
+  </div>
+  <p class="foot-line">© 2026 Round Tower Software Ltd. Made in Ireland. No tracking on this page, obviously.</p>
+  <p class="foot-line foot-faint">Mac App Store and App Store are service marks of Apple Inc.</p>
 </footer>
 
 <!-- Signed: Kev + claude-fable-5, 2026-07-10, Confidence 0.85.
