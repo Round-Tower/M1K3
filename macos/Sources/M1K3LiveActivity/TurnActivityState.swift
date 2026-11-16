@@ -27,8 +27,8 @@ public enum TurnActivityPhase: String, Codable, Sendable, CaseIterable {
     case answering
     /// The answer finished while the person was elsewhere.
     case ready
-    /// An answer made on this phone's GPU was stopped when the app left (iOS refuses background
-    /// GPU work); opening M1K3 is the way back.
+    /// The answer was stopped when the app left (iOS refuses background GPU work, and the stop reads the
+    /// loaded brain, not the turn's route, so the words stay route-neutral); opening M1K3 is the way back.
     case paused
 }
 

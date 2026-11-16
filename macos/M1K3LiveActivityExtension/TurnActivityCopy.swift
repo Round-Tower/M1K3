@@ -21,7 +21,7 @@ struct TurnActivityCopy {
         case .reading: String(localized: "M1K3 is reading…")
         case .answering: String(localized: "M1K3 is answering…")
         case .ready: String(localized: "Answer ready")
-        case .paused: String(localized: "Paused — open M1K3")
+        case .paused: String(localized: "Paused — open M1K3 to finish")
         }
     }
 
@@ -30,7 +30,7 @@ struct TurnActivityCopy {
         switch phase {
         case .thinking, .reading, .answering: String(localized: "Tap to open the chat.")
         case .ready: String(localized: "Tap to read it.")
-        case .paused: String(localized: "Answers made on this phone pause when you leave M1K3.")
+        case .paused: String(localized: "Leaving M1K3 stopped this answer.")
         }
     }
 

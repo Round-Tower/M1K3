@@ -49,6 +49,7 @@ struct TurnActivityStateTests {
         #expect(!files.isEmpty)
         for file in files {
             let imports = try String(contentsOf: file, encoding: .utf8).split(separator: "\n")
+                .map { $0.trimmingCharacters(in: .whitespaces) } // an import inside #if is indented
                 .filter { $0.hasPrefix("import ") }.map { $0.dropFirst(7).trimmingCharacters(in: .whitespaces) }
             #expect(Set(imports).isSubset(of: ["Foundation", "ActivityKit"]), "\(file.lastPathComponent): \(imports)")
         }

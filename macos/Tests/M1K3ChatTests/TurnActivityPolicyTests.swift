@@ -176,6 +176,30 @@ struct TurnActivityPolicyTests {
         #expect(action == .start(state(.thinking)))
     }
 
+    @Test("Paused, then the turn finishes ANSWERED anyway (the stop lost the race): the answer is real")
+    func pausedThenAnsweredIsReadyOrGone() {
+        // Away: the answer is ready, so the card says so rather than leaving a stale "Paused".
+        var away = running(.answering)
+        _ = away.stoppedByBackground()
+        #expect(away.turnFinished(.answered, appActive: false)
+            == .end(final: state(.ready), dismissal: .after(TurnActivityPolicy.readyLingers)))
+        // In front: the answer is on screen, the card just goes.
+        var front = running(.answering)
+        _ = front.stoppedByBackground()
+        #expect(front.turnFinished(.answered, appActive: true) == .end(final: nil, dismissal: .immediate))
+    }
+
+    @Test("a new chat while a turn is still running ends its card and the turn's later finish is quiet")
+    func newChatDuringARunningTurn() {
+        var policy = running(.answering)
+        #expect(policy.turnFinished(.newChat, appActive: true) == .end(final: nil, dismissal: .immediate))
+        #expect(policy.turnFinished(.stopped, appActive: true) == .none)
+        // A paused card goes too.
+        var paused = running(.answering)
+        _ = paused.stoppedByBackground()
+        #expect(paused.turnFinished(.newChat, appActive: false) == .end(final: nil, dismissal: .immediate))
+    }
+
     @Test("a card the return to the app ended does not start again inside the same turn")
     func noRestartAfterReturn() {
         var policy = running(.answering)

@@ -214,7 +214,7 @@ final class AppCore {
     let ingester: DocumentIngester
     let chat: ChatSession
     /// The Live Activity for a long answer or read (iOS; an inert shell elsewhere). TurnActivityPolicy decides.
-    let turnActivity = TurnActivityController()
+    let turnActivity = TurnActivityDriver.live()
     /// "Remember this photo" (caption memory): the same shared model as the Mac. Lazy because its
     /// closures read `self`; the provider is the swappable slot (it forwards ImageCaptioning).
     @ObservationIgnored lazy var photoMemory = PhotoMemory(

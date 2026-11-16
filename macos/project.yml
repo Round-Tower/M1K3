@@ -581,6 +581,9 @@ targets:
     deploymentTarget: "26.0"
     sources:
       - path: M1K3LiveActivityExtension
+        # Named below (check_store_targets.py reads the explicit entry): excluded here so it is not swept twice.
+        excludes:
+          - PrivacyInfo.xcprivacy
       # Apple REQUIRES a manifest in every extension that ships (the same rule as the app's).
       - path: M1K3LiveActivityExtension/PrivacyInfo.xcprivacy
         buildPhase: resources
