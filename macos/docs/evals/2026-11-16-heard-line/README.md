@@ -65,6 +65,11 @@ vs 20 of 40, so v1's small gain on Lil and Big here is inside the run-to-run swi
 
 ## Caveats
 
+After this run, six prompts were reworded (same intent, same checks) because they were near copies of the search
+head's training prompts (`tools/router/test_train_search_head.py`): oz-capital, tie-tannic, you-list-ease and the
+curry, plain-fact and greeting guards. The JSON here records the wording that ran.
+
+
 n = 2 repeats per turn, by-ear garbles, and stub tools (a real web search often corrects "moaner Lisa" itself, so
 the dispatched garbles are harder here than live). None of that changes the direction: on the held-out turns, the
 line never helped.

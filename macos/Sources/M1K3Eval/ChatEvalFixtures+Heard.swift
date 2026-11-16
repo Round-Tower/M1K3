@@ -30,6 +30,9 @@
 //  its run, so the rerun has turns neither wording was written against. Confidence 0.6.
 //  Review: Kev + claude-opus-5-5, 2026-11-16 — Kev: drop the line. The `spoken` flag and the line's arms are gone;
 //  the 26 turns stay as the bench. Confidence 0.7.
+//  Review: Kev + claude-opus-5-5, 2026-11-16 (#854 CI) — six prompts reworded (same intent and checks): they were near
+//  copies of the search head's training prompts, which held_out_violations refuses ("What's the capital of Botswana?").
+//  The recorded run in docs/evals/2026-11-16-heard-line used the earlier wording.
 //  Review: claude-opus-5-5, 2026-11-16 (review fold, #852) — comments reworded as a standalone bench (they still
 //  talked about "the line"); no behaviour change.
 //
@@ -50,7 +53,7 @@ public extension ChatEvalFixtures {
         ),
         .init(
             id: "heard-oz-capital", kind: .heard,
-            prompt: "What's the capital of oz trail ya?",
+            prompt: "Which city is the capital of oz trail ya?",
             expectation: .init(mustContainAny: ["Canberra"], mustNotContain: ["oz trail"] + leakMarkers, minChars: 1)
         ),
         .init(
@@ -60,7 +63,7 @@ public extension ChatEvalFixtures {
         ),
         .init(
             id: "heard-tie-tannic", kind: .heard,
-            prompt: "What year did the tie tannic sink?",
+            prompt: "When did the tie tannic go down?",
             expectation: .init(mustContainAny: ["1912"], mustNotContain: ["tie tannic"] + leakMarkers, minChars: 1)
         ),
         .init(
@@ -85,7 +88,7 @@ public extension ChatEvalFixtures {
         ),
         .init(
             id: "heard-you-list-ease", kind: .heard,
-            prompt: "Who wrote the novel you list ease?",
+            prompt: "Who is the author of you list ease?",
             expectation: .init(mustContainAny: ["Joyce"], mustNotContain: ["you list ease"] + leakMarkers, minChars: 1)
         ),
         .init(
@@ -165,7 +168,7 @@ public extension ChatEvalFixtures {
         // Guards: a real odd word survives and a clean voice turn stays clean.
         .init(
             id: "heard-guard-real-curry", kind: .heard,
-            prompt: "Give me a quick recipe for a chicken curry.",
+            prompt: "How do I make a chicken curry from scratch?",
             expectation: .init(mustContainAll: ["curry"], mustNotContain: heardLeak + leakMarkers, mustComply: true, minChars: 80)
         ),
         .init(
@@ -178,12 +181,12 @@ public extension ChatEvalFixtures {
         ),
         .init(
             id: "heard-guard-plain-fact", kind: .heard,
-            prompt: "What's the capital of France?",
+            prompt: "Name the capital city of France.",
             expectation: .init(mustContainAny: ["Paris"], mustNotContain: heardLeak + leakMarkers, minChars: 1)
         ),
         .init(
             id: "heard-guard-greeting", kind: .heard,
-            prompt: "Hey, how are you doing today?",
+            prompt: "Hey there, how's your day going?",
             expectation: .init(mustNotContain: heardLeak + leakMarkers, mustComply: true, minChars: 1)
         ),
         .init(
