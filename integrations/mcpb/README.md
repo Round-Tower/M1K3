@@ -79,8 +79,9 @@ runs ahead of the bundle's because the listing began as a pointer at 1.0.0.
 
 The first real run (2026-11-15) also published `io.github.Round-Tower/m1k3`, a
 duplicate. It is marked deprecated with a pointer to `app.m1k3/m1k3` (2026-11-16);
-an entry cannot be removed. The repository's `mcp-registry` environment should be
-restricted to `master` with a required reviewer.
+an entry cannot be removed. The repository's `mcp-registry` environment allows only
+protected branches (`master`) and needs Kev's approval, so a real run waits at
+"Review deployments".
 
 ## Privacy Policy
 
@@ -102,3 +103,5 @@ by hand on 2026-11-16 with the steps publish-listing.sh now holds. The script's
 _Review: Kev + claude-fable-5.2, 2026-11-16. The retire job ran (run 43870575453) and
 the registry reads the duplicate as deprecated; the job is deleted. The script's
 `--confirm` path has still not run._
+_Review: Kev + claude-fable-5.2, 2026-11-16. Kev restricted the `mcp-registry`
+environment (read back over the API); Publishing says so._
