@@ -42,7 +42,7 @@ extension MLXBrainProvider: TextReading {
             let task = Task { [self] in
                 do {
                     let system = try TextReadingError.instructions(instructions)
-                    try await GenerationActivity.shared.during("M1K3 read") {
+                    try await MLXGuardedEvaluation.during("M1K3 read") {
                         let container = try await ensureLoaded()
                         defer { MLXMemoryBudget.reclaim(label: "read") }
                         var parameters = generateParameters

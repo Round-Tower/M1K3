@@ -17,6 +17,52 @@ struct BackgroundExitPolicyTests {
         #expect(!BackgroundExitPolicy.stopsTurn(turnInFlight: false, brainRunsOnThisDevicesGPU: false))
     }
 
+    @Test("the inactive stop follows the background rule exactly, so nothing off-GPU is stopped early")
+    func inactiveStopMatchesTheExitRule() {
+        for turn in [true, false] {
+            for gpu in [true, false] {
+                #expect(
+                    BackgroundExitPolicy.stopsTurnAtInactive(turnInFlight: turn, brainRunsOnThisDevicesGPU: gpu)
+                        == BackgroundExitPolicy.stopsTurn(turnInFlight: turn, brainRunsOnThisDevicesGPU: gpu)
+                )
+            }
+        }
+    }
+
+    @Test("the shed waits for a running turn, and only for the bound")
+    func shedWaitsBounded() {
+        #expect(BackgroundExitPolicy.shedPlan(turnStillRunning: true, waited: .zero) == .waitForTurn)
+        #expect(BackgroundExitPolicy.shedPlan(turnStillRunning: true, waited: .milliseconds(900)) == .waitForTurn)
+        #expect(BackgroundExitPolicy.shedPlan(turnStillRunning: true, waited: .seconds(1)) == .shedNow)
+        #expect(BackgroundExitPolicy.shedPlan(turnStillRunning: false, waited: .zero) == .shedNow)
+        #expect(BackgroundExitPolicy.shedWaitLimit <= .seconds(1))
+    }
+
+    @Test("the phone stops an on-device turn at .inactive, without touching speech or voice")
+    func theShellStopsAtInactive() throws {
+        let app = try String(contentsOf: Self.shell.appendingPathComponent("M1K3iOSHarnessApp.swift"), encoding: .utf8)
+        #expect(app.components(separatedBy: "case .inactive:").count == 2)
+        let inactive = try #require(app.range(of: "case .inactive:"))
+        let background = try #require(app.range(of: "case .background:"))
+        let arm = app[inactive.upperBound ..< background.lowerBound]
+        #expect(arm.contains("core?.stopTurnForInactive()"))
+        #expect(!arm.contains("exitVoiceMode") && !arm.contains("releaseForBackground"))
+        let body = try body(of: "func stopTurnForInactive()", in: "AppCore.swift")
+        #expect(body.contains("BackgroundExitPolicy.stopsTurnAtInactive("))
+        #expect(body.contains("chat.stopResponding()"))
+        #expect(!body.contains("stopSpeakingAnswer"))
+    }
+
+    @Test("the shed asks the policy and waits for the turn before it lets go of anything")
+    func theShedWaitsForTheTurn() throws {
+        let shed = try body(of: "func releaseForBackground()", in: "AppCore.swift")
+        #expect(shed.contains("BackgroundExitPolicy.shedPlan("))
+        #expect(shed.contains("chat.isResponding"))
+        #expect(!shed.contains("releaseMemory()"), "the release itself lives in shedBrain, behind the wait")
+        let release = try body(of: "func shedBrain()", in: "AppCore.swift")
+        #expect(release.contains("releaseMemory()"))
+    }
+
     /// The shell is not built by `swift test`, so the wiring is pinned on its source.
     private static let shell = URL(fileURLWithPath: #filePath)
         .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
@@ -54,7 +100,7 @@ struct BackgroundExitPolicyTests {
     func theReturnNeverLoadsBesideALiveBrain() throws {
         #expect(BackgroundExitPolicy.onReturn(shedBrainStillLoaded: true) == .takeItBack)
         #expect(BackgroundExitPolicy.onReturn(shedBrainStillLoaded: false) == .loadAgain)
-        let shed = try body(of: "func releaseForBackground()", in: "AppCore.swift")
+        let shed = try body(of: "func shedBrain()", in: "AppCore.swift")
         let held = try #require(shed.range(of: "shedMLX = currentMLX"))
         let dropped = try #require(shed.range(of: "currentMLX = nil"))
         #expect(held.lowerBound < dropped.lowerBound, "the weak hold is taken before the app lets go")

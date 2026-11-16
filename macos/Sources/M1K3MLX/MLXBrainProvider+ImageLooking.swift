@@ -43,7 +43,7 @@ extension MLXBrainProvider: ImageLooking {
             let task = Task { [self] in
                 do {
                     let system = try Self.lookInstructions(instructions)
-                    try await GenerationActivity.shared.during("M1K3 look") {
+                    try await MLXGuardedEvaluation.during("M1K3 look") {
                         let container = try await ensureLoaded()
                         defer { MLXMemoryBudget.reclaim(label: "look") }
                         var parameters = generateParameters

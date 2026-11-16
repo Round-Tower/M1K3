@@ -538,21 +538,27 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
                     // downstream (persona prefix, tool sessions, generate) is
                     // factory-agnostic; the VLM path additionally keeps the
                     // vision tower resident (image input + future MTP drafter).
+                    // The weights' first evaluation can land after a background exit (the load itself
+                    // is never cancelled): a refused GPU submit throws here, it does not trap (#858).
                     if Self.usesVLMLoadPath(for: loadConfiguration) {
-                        return try await VLMModelFactory.shared.loadContainer(
+                        return try await MLXGuardedEvaluation.run {
+                            try await VLMModelFactory.shared.loadContainer(
+                                from: HubApiDownloader.llmDefault,
+                                using: TransformersTokenizerLoader(),
+                                configuration: loadConfiguration
+                            ) { prog in
+                                progress(prog.fractionCompleted)
+                            }
+                        }
+                    }
+                    return try await MLXGuardedEvaluation.run {
+                        try await LLMModelFactory.shared.loadContainer(
                             from: HubApiDownloader.llmDefault,
                             using: TransformersTokenizerLoader(),
                             configuration: loadConfiguration
                         ) { prog in
                             progress(prog.fractionCompleted)
                         }
-                    }
-                    return try await LLMModelFactory.shared.loadContainer(
-                        from: HubApiDownloader.llmDefault,
-                        using: TransformersTokenizerLoader(),
-                        configuration: loadConfiguration
-                    ) { prog in
-                        progress(prog.fractionCompleted)
                     }
                 }
             )
@@ -668,7 +674,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
 
     public func generate(prompt: String) async throws -> String {
         // Held so macOS doesn't throttle the turn when the display sleeps (GenerationActivity).
-        try await GenerationActivity.shared.during("M1K3 generate") {
+        try await MLXGuardedEvaluation.during("M1K3 generate") {
             try await generateHeld(prompt: prompt)
         }
     }
@@ -711,7 +717,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
                     // Runs on every exit — completion, error, and cancellation via
                     // onTermination (cancel makes the stream loop throw into catch).
                     defer { MLXMemoryBudget.reclaim(label: "generateStreaming") }
-                    do {
+                    do { try await MLXGuardedEvaluation.run {
                         let container = try await ensureLoaded()
                         // Qwen3.5's template pre-opens <think>, so the stream's
                         // first real token is already chain-of-thought — surface
@@ -739,7 +745,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
                             }
                         }
                         continuation.finish()
-                    } catch {
+                    } } catch {
                         // Per the InferenceProvider contract, errors terminate the
                         // stream rather than throwing. A user "stop" cancels the task
                         // (see onTermination) and lands here as CancellationError —
@@ -957,7 +963,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
         // makes the closure async and `perform`'s overload no longer matches.
         let reusableWindow = Self.slidingWindow(forModelID: modelIdentifier, configDirectory: configDirectory)
         let wrappedSeeds = Self.wrappedPersonaSeedsEnabled()
-        let built: PrefixBox = try await container.perform { context in
+        let built: PrefixBox = try await MLXGuardedEvaluation.run { try await container.perform { context in
             // System-block token ids, no assistant opener. Lenient templates
             // render a system-only array; strict ones (Qwen3.5) reject it and
             // need the two-probe boundary slice — see systemBlockIDs.
@@ -1018,7 +1024,7 @@ public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchec
                 }
             }
             return PrefixBox(cache: cache, tokenIDs: ids, exact: trimmed)
-        }
+        } }
         guard !built.tokenIDs.isEmpty else {
             mlxTTFTLog.notice(
                 "persona prefix SKIPPED — longer than the sliding window, so no turn could reuse it"
@@ -1515,7 +1521,7 @@ extension MLXBrainProvider: RawCompletionProviding {
             let task = Task {
                 await GenerationActivity.shared.during("M1K3 raw stream") {
                     defer { MLXMemoryBudget.reclaim(label: "generateRawStreaming") }
-                    do {
+                    do { try await MLXGuardedEvaluation.run {
                         let container = try await ensureLoaded()
                         let plan = rawSessionPlan(maxTokens: maxTokens)
                         let components = plan.thinkBudget == nil && plan.waitPenalty == nil
@@ -1541,7 +1547,7 @@ extension MLXBrainProvider: RawCompletionProviding {
                             }
                         }
                         continuation.finish()
-                    } catch {
+                    } } catch {
                         if !(error is CancellationError) {
                             mlxTTFTLog.error("""
                             generateRawStreaming failed [\(self.modelIdentifier, privacy: .public)]: \

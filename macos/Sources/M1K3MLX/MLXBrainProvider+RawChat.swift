@@ -48,7 +48,7 @@ extension MLXBrainProvider: RawChatCompleting {
             let task = Task {
                 await GenerationActivity.shared.during("M1K3 Local API") {
                     defer { MLXMemoryBudget.reclaim(label: "completeRawChat") }
-                    do {
+                    do { try await MLXGuardedEvaluation.run {
                         let container = try await ensureLoaded()
                         let parameters = Self.rawChatParameters(
                             base: generateParameters, defaultCap: Self.defaultMaxTokens, request: request
@@ -76,7 +76,7 @@ extension MLXBrainProvider: RawChatCompleting {
                             finish ?? RawChatFinish(reason: .stop, promptTokens: nil, completionTokens: nil)
                         ))
                         continuation.finish()
-                    } catch {
+                    } } catch {
                         continuation.finish(throwing: error)
                     }
                 }

@@ -28,6 +28,7 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — a true background also stops an on-device answer in flight and the
 //  speech properly (`stopForBackground`), before the shed. Drilled on the iPhone 17 Pro: without it, returning mid-answer
 //  on Lil got the app killed for memory. Confidence 0.8 (see BackgroundExitPolicy; the drill is in the PR).
+//  Review: Kev + claude-opus-5.5, 2026-11-16 (#858) — `.inactive` stops an on-device answer before the background lands, while the GPU is still allowed. Confidence 0.7; owes a phone check (see BackgroundExitPolicy).
 
 import M1K3Avatar
 import M1K3Diagnostics
@@ -73,9 +74,13 @@ struct M1K3iOSApp: App {
             .preferredColorScheme(.dark)
             .onChange(of: scenePhase) { _, phase in
                 // Shed MLX weights on a true background (jetsam hygiene), re-warm on
-                // return. `.inactive` (notification banner / Control Center) is
-                // deliberately ignored so transient interruptions don't churn the model.
+                // return. `.inactive` (Control Center, an alert) never sheds the model, so a transient
+                // interruption doesn't churn it; it only stops an on-device answer (below).
                 switch phase {
+                case .inactive:
+                    // Before the background, so a generation step drains while the GPU is still allowed
+                    // (#858). Only an on-device turn; a Control Center pull stops it too (BackgroundExitPolicy).
+                    core?.stopTurnForInactive()
                 case .background:
                     // What iOS does to a backgrounded app is no snag (#750). First, so a
                     // memory kill while the brain is shed below is not one either.
@@ -92,7 +97,7 @@ struct M1K3iOSApp: App {
                 case .active:
                     markSessionActive()
                     core?.warmForForeground()
-                default: break
+                @unknown default: break
                 }
             }
         }

@@ -47,7 +47,7 @@ extension MLXBrainProvider: ImageCaptioning {
             throw InferenceError.generationFailed("this model cannot read images")
         }
         let instructions = try Self.captionInstructions(override: InferenceIntent.instructions)
-        return try await GenerationActivity.shared.during("M1K3 caption") {
+        return try await MLXGuardedEvaluation.during("M1K3 caption") {
             let container = try await ensureLoaded()
             defer { MLXMemoryBudget.reclaim(label: "caption") }
             var parameters = generateParameters
