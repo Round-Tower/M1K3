@@ -35,7 +35,11 @@
 # So the publish job now stops at the release and holds no id-token; the listing
 # goes out from Kev's Mac; a one-off job deprecates the duplicate. The
 # `mcp-registry` environment is still unrestricted (read 2026-11-15).
-# Open: the retire job has never run (`mcp-publisher status` under OIDC is untried).
+# Open (closed in part, see below): the retire job has never run (`mcp-publisher
+# status` under OIDC is untried).
+# Review: Kev + claude-fable-5.2, 2026-11-16. Run 43858169720: the OIDC login held and
+# `status` accepted the namespace, then stopped at a y/N prompt that --all-versions
+# raises. The job now names version 0.1.0. Open: that form has not run yet.
 name: MCP Registry
 
 on:
@@ -201,8 +205,12 @@ jobs:
       - name: Log in to the MCP Registry
         run: ./mcp-publisher login github-oidc
 
+      # The one version is named: --all-versions asks "Continue? [y/N]" and dies on a
+      # runner's empty stdin (run 43858169720). The `y` is there in case a named
+      # version ever asks too.
       - name: Mark the duplicate listing deprecated
         run: |
-          ./mcp-publisher status --status deprecated --all-versions \
+          set -euo pipefail
+          printf 'y\n' | ./mcp-publisher status --status deprecated \
             --message "Moved: M1K3 is listed as app.m1k3/m1k3." \
-            io.github.Round-Tower/m1k3
+            io.github.Round-Tower/m1k3 0.1.0
