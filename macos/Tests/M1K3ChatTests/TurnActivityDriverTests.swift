@@ -376,6 +376,59 @@ struct TurnActivityDriverTests {
         #expect(rig.log.events.contains("notice.clear"))
     }
 
+    // MARK: Leaving mid-turn
+
+    @Test("going inactive at 2 s starts the card now, with the phase the turn is in")
+    func inactiveStartsTheCard() async {
+        let rig = Rig()
+        rig.driver.turnBegan(kind: .answer) { .thinking }
+        rig.clock.advance(.seconds(2))
+        #expect(rig.driver.leavingForeground() == .started)
+        await rig.driver.settled()
+        #expect(rig.log.events.contains("card.start.thinking"))
+    }
+
+    @Test("going inactive with nothing running, or with Live Activities off, starts nothing and says why")
+    func inactiveWithoutAReason() async {
+        let idle = Rig()
+        #expect(idle.driver.leavingForeground() == .noTurn)
+        let off = Rig()
+        off.effects.activitiesEnabled = false
+        off.driver.turnBegan(kind: .answer) { .thinking }
+        #expect(off.driver.leavingForeground() == .disabled)
+        await off.driver.settled()
+        #expect(!off.log.events.contains { $0.hasPrefix("card.start") })
+    }
+
+    @Test("a pulled Control Center: inactive then active again takes the card back down")
+    func transientInactive() async {
+        let rig = Rig()
+        rig.driver.turnBegan(kind: .answer) { .thinking }
+        rig.driver.leavingForeground()
+        rig.driver.appBecameActive()
+        await rig.driver.settled()
+        let events = rig.log.events
+        let start = events.firstIndex(of: "card.start.thinking")
+        let end = events.firstIndex(of: "card.end.none")
+        #expect(start != nil && end != nil && start! < end!)
+    }
+
+    @Test("inactive then background for a Mini turn: the card exists, the grace holds, Ready and the notice follow")
+    func inactiveThenBackgroundThenReady() async {
+        let rig = Rig()
+        rig.driver.turnBegan(kind: .answer) { .answering }
+        rig.driver.leavingForeground()
+        rig.effects.appIsActive = false
+        rig.driver.leavingForBackground(turnInFlight: true, brainRunsOnThisDevicesGPU: false)
+        rig.driver.turnFinished(.answered)
+        await rig.driver.settled()
+        let events = rig.log.events
+        #expect(events.contains("card.start.answering"))
+        #expect(events.contains("card.end.ready"))
+        #expect(events.contains("notice.answerReady"))
+        #expect(rig.tasks.ended.count == 1)
+    }
+
     // MARK: Effects in order
 
     @Test("a stale card from a killed process is cleared before anything starts")

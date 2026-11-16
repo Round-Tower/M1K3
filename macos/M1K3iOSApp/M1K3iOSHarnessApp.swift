@@ -30,6 +30,8 @@
 //  on Lil got the app killed for memory. Confidence 0.8 (see BackgroundExitPolicy; the drill is in the PR).
 //  Review: Kev + claude-opus-5.5, 2026-11-16 — coming to the front ends a lingering Live Activity card
 //  (`turnActivity.appBecameActive`). Compile-checked; owes a try on a phone.
+//  Review: Kev + claude-opus-5.5, 2026-11-16 — `.inactive` starts the Live Activity card for a turn in flight
+//  (Kev's phone: a 6 s Mini turn never got one, and a card cannot start from the background).
 
 import M1K3Avatar
 import M1K3Diagnostics
@@ -75,8 +77,8 @@ struct M1K3iOSApp: App {
             .preferredColorScheme(.dark)
             .onChange(of: scenePhase) { _, phase in
                 // Shed MLX weights on a true background (jetsam hygiene), re-warm on
-                // return. `.inactive` (notification banner / Control Center) is
-                // deliberately ignored so transient interruptions don't churn the model.
+                // return. `.inactive` (notification banner / Control Center) never touches the model, so
+                // transient interruptions don't churn it; it only starts the Live Activity card (below).
                 switch phase {
                 case .background:
                     // What iOS does to a backgrounded app is no snag (#750). First, so a
@@ -91,6 +93,10 @@ struct M1K3iOSApp: App {
                     // alive and the return loads a second copy (BackgroundExitPolicy).
                     core?.stopForBackground()
                     core?.releaseForBackground()
+                case .inactive:
+                    // Still foreground, so ActivityKit may start the card: an answer asked and then left is mostly
+                    // under 8 s, and no card can start once we are gone. A transient pull ends it on .active.
+                    core?.turnActivityGoingInactive()
                 case .active:
                     markSessionActive()
                     core?.turnActivity.appBecameActive()

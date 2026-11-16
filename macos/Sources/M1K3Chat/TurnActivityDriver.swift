@@ -127,6 +127,16 @@ public final class TurnActivityDriver {
         enqueue { [weak self] in self?.endGrace() }
     }
 
+    /// The app is going inactive with a turn possibly in flight (`scenePhase` .inactive, still foreground, so
+    /// `Activity.request` is allowed): start the card now, whatever the elapsed time. Returns why, for the log.
+    @discardableResult
+    public func leavingForeground() -> TurnActivityPolicy.LeaveReason {
+        guard following, let phase else { return .noTurn }
+        let left = policy.leavingForeground(phase: phase(), activitiesEnabled: effects.activitiesEnabled)
+        perform(left.action)
+        return left.reason
+    }
+
     /// The app is leaving. Same inputs as `BackgroundExitPolicy.stopsTurn`, so the driver and the stop
     /// can never disagree: an on-device turn gets its Paused card (on its own short task), one that runs
     /// elsewhere gets the grace, and Lil/Big never get one.

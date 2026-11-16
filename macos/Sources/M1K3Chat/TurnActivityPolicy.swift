@@ -22,6 +22,10 @@
 //  Signed: Kev + claude-opus-5.5, 2026-11-16, Confidence 0.8 (the rules are pinned in
 //  TurnActivityPolicyTests; the intervals are by-feel defaults, tune on a real phone),
 //  Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-11-16 — `leavingForeground`: the card also starts when the app goes
+//  inactive mid-turn, at any elapsed time (Kev's phone: a 6 s Mini turn got no card, and none can start from the
+//  background). A card started that way is taken down again when the app is active (a Control Center pull
+//  leaves nothing behind); the 8 s start stays as the backstop. Confidence 0.75 (pinned; the device is the test).
 
 import Foundation
 import M1K3LiveActivity
@@ -50,6 +54,14 @@ public struct TurnActivityPolicy: Sendable {
         case newChat
     }
 
+    /// Why `leavingForeground` did or did not start a card (the app logs it).
+    public enum LeaveReason: Sendable, Equatable {
+        case started
+        case alreadyShown
+        case noTurn
+        case disabled
+    }
+
     /// Phase changes reach the Lock Screen at most this often (ActivityKit budgets updates).
     public static let minimumUpdateInterval: Duration = .seconds(2)
     /// How long "Answer ready" stays on the Lock Screen when nobody opens the app.
@@ -64,6 +76,8 @@ public struct TurnActivityPolicy: Sendable {
     /// One card per turn: once it has been shown (and ended by a return to the app), the same turn never
     /// starts another in front of the answer it is already streaming into.
     private var cardShownThisTurn = false
+    /// The card on screen was started by `leavingForeground`, a hedge that a return to the app undoes.
+    private var startedWhileLeaving = false
 
     public init() {}
 
@@ -71,6 +85,7 @@ public struct TurnActivityPolicy: Sendable {
     public mutating func turnBegan() -> Action {
         turnRunning = true
         cardShownThisTurn = false
+        startedWhileLeaving = false
         guard let shown, shown.phase == .ready || shown.phase == .paused else { return .none }
         self.shown = nil
         return .end(final: nil, dismissal: .immediate)
@@ -97,9 +112,28 @@ public struct TurnActivityPolicy: Sendable {
         return .update(next)
     }
 
+    /// The app is leaving the foreground (`scenePhase` .inactive) with a turn possibly in flight. An app's own
+    /// card is only seen once you have left, and `Activity.request` is refused from the background, so the
+    /// card starts NOW, whatever the elapsed time ("ask, then lock the phone" is mostly under 8 s). The 8 s
+    /// start in `progress` stays as the backstop for a long turn left in front.
+    public mutating func leavingForeground(
+        phase: TurnActivityPhase, activitiesEnabled: Bool
+    ) -> (action: Action, reason: LeaveReason) {
+        guard turnRunning else { return (.none, .noTurn) }
+        guard shown == nil else { return (.none, .alreadyShown) }
+        guard activitiesEnabled else { return (.none, .disabled) }
+        let next = TurnActivityState(phase: phase)
+        shown = next
+        cardShownThisTurn = true
+        startedWhileLeaving = true
+        lastSentAt = .zero
+        return (.start(next), .started)
+    }
+
     /// The turn left the stage.
     public mutating func turnFinished(_ outcome: Outcome, appActive: Bool) -> Action {
         turnRunning = false
+        startedWhileLeaving = false
         guard let current = shown else { return .none }
         // The stop that follows `stoppedByBackground` is the same turn ending: the Paused card stays.
         if current.phase == .paused, outcome == .stopped || outcome == .failed { return .none }
@@ -123,7 +157,11 @@ public struct TurnActivityPolicy: Sendable {
 
     /// The app came to the front: a lingering Ready/Paused card has done its job.
     public mutating func appBecameActive() -> Action {
-        guard let current = shown, current.phase == .ready || current.phase == .paused else { return .none }
+        guard let current = shown else { return .none }
+        // A card started on the way out is undone by the way back (a Control Center pull leaves nothing behind).
+        let lingering = current.phase == .ready || current.phase == .paused
+        guard lingering || startedWhileLeaving else { return .none }
+        startedWhileLeaving = false
         shown = nil
         return .end(final: nil, dismissal: .immediate)
     }

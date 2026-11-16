@@ -44,8 +44,16 @@ extension TurnActivityDriver {
             UIApplication.shared.applicationState == .active
         }
 
+        private var saidDisabled = false
+
         var activitiesEnabled: Bool {
-            ActivityAuthorizationInfo().areActivitiesEnabled
+            let enabled = ActivityAuthorizationInfo().areActivitiesEnabled
+            // Said once per launch: with Live Activities off a long turn shows no card, and the log says why.
+            if !enabled, !saidDisabled {
+                saidDisabled = true
+                Self.log.notice("live activity: switched off for M1K3 (Settings), no card")
+            }
+            return enabled
         }
 
         func endStaleCards() async {
@@ -54,22 +62,30 @@ extension TurnActivityDriver {
 
         func start(_ state: TurnActivityState) {
             do {
-                _ = try Activity.request(
+                let card = try Activity.request(
                     attributes: TurnActivityAttributes(),
                     content: ActivityContent(state: state, staleDate: nil),
                     pushType: nil
                 )
+                // A breadcrumb per card: the phone's first try showed nothing and the log could not say why.
+                Self.log.notice(
+                    "live activity started: \(String(describing: state.phase), privacy: .public) · \(card.activityState == .active ? "active" : "not active", privacy: .public) · cards=\(Activity<TurnActivityAttributes>.activities.count, privacy: .public)"
+                )
             } catch {
                 // Refused (the person switched it off, too many cards): the turn goes on without one.
-                Self.log.notice("live activity not started: \(String(describing: error), privacy: .public)")
+                Self.log.notice("live activity: refused: \(String(describing: error), privacy: .public)")
             }
         }
 
         func update(_ state: TurnActivityState) async {
+            Self.log.notice("live activity update: \(String(describing: state.phase), privacy: .public)")
             await Self.updateAll(ActivityContent(state: state, staleDate: nil))
         }
 
         func end(final: TurnActivityState?, dismissal: TurnActivityPolicy.Dismissal) async {
+            Self.log.notice(
+                "live activity end: \(final.map { String(describing: $0.phase) } ?? "none", privacy: .public) · \(String(describing: dismissal), privacy: .public)"
+            )
             await Self.endAll(final.map { ActivityContent(state: $0, staleDate: nil) }, Self.policy(for: dismissal))
         }
 

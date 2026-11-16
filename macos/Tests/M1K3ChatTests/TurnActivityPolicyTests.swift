@@ -189,6 +189,77 @@ struct TurnActivityPolicyTests {
         #expect(front.turnFinished(.answered, appActive: true) == .end(final: nil, dismissal: .immediate))
     }
 
+    // MARK: leaving the foreground mid-turn (scenePhase .inactive)
+
+    @Test("leaving at 2 s, well under the 8 s rule, starts the card: nothing can start it once we are gone")
+    func leavingEarlyStartsTheCard() {
+        var policy = TurnActivityPolicy()
+        _ = policy.turnBegan()
+        let left = policy.leavingForeground(phase: .thinking, activitiesEnabled: true)
+        #expect(left.action == .start(state(.thinking)))
+        #expect(left.reason == .started)
+    }
+
+    @Test("leaving at 10 s with the card already shown does not start a second")
+    func leavingWithACardIsQuiet() {
+        var policy = running(.answering)
+        let left = policy.leavingForeground(phase: .answering, activitiesEnabled: true)
+        #expect(left.action == .none)
+        #expect(left.reason == .alreadyShown)
+    }
+
+    @Test("leaving with no turn running does nothing")
+    func leavingIdleIsQuiet() {
+        var policy = TurnActivityPolicy()
+        let left = policy.leavingForeground(phase: .thinking, activitiesEnabled: true)
+        #expect(left.action == .none)
+        #expect(left.reason == .noTurn)
+    }
+
+    @Test("Live Activities switched off: leaving starts nothing, and says why")
+    func leavingWhenDisabled() {
+        var policy = TurnActivityPolicy()
+        _ = policy.turnBegan()
+        let left = policy.leavingForeground(phase: .thinking, activitiesEnabled: false)
+        #expect(left.action == .none)
+        #expect(left.reason == .disabled)
+    }
+
+    @Test("a transient inactive (Control Center, a system alert) ends its card the moment the app is active again")
+    func transientInactiveEndsTheCard() {
+        var policy = TurnActivityPolicy()
+        _ = policy.turnBegan()
+        _ = policy.leavingForeground(phase: .thinking, activitiesEnabled: true)
+        #expect(policy.appBecameActive() == .end(final: nil, dismissal: .immediate))
+        // The turn then finishes in front: nothing left to end.
+        #expect(policy.turnFinished(.answered, appActive: true) == .none)
+    }
+
+    @Test("pulling Control Center twice, then leaving for real, still gets a card")
+    func leavingAgainAfterATransient() {
+        var policy = TurnActivityPolicy()
+        _ = policy.turnBegan()
+        _ = policy.leavingForeground(phase: .thinking, activitiesEnabled: true)
+        _ = policy.appBecameActive()
+        let left = policy.leavingForeground(phase: .answering, activitiesEnabled: true)
+        #expect(left.action == .start(state(.answering)))
+    }
+
+    @Test("a card started on the way out carries the turn through the background to Ready")
+    func leavingCardReachesReady() {
+        var policy = TurnActivityPolicy()
+        _ = policy.turnBegan()
+        _ = policy.leavingForeground(phase: .thinking, activitiesEnabled: true)
+        #expect(policy.turnFinished(.answered, appActive: false)
+            == .end(final: state(.ready), dismissal: .after(TurnActivityPolicy.readyLingers)))
+    }
+
+    @Test("a card the user's 8 s rule started is NOT ended by a return to the app (the old behaviour stands)")
+    func eightSecondCardSurvivesReturn() {
+        var policy = running(.thinking)
+        #expect(policy.appBecameActive() == .none)
+    }
+
     @Test("a new chat while a turn is still running ends its card and the turn's later finish is quiet")
     func newChatDuringARunningTurn() {
         var policy = running(.answering)

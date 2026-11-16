@@ -13,6 +13,7 @@ import Foundation
 import M1K3Chat
 import M1K3Inference
 import M1K3LiveActivity
+import M1K3LogCore
 
 extension AppCore {
     /// Start following the turn about to run. False when another turn already holds the stage (a second
@@ -41,6 +42,18 @@ extension AppCore {
         turnActivity.leavingForBackground(
             turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: brainRunsOnThisDevicesGPU
         )
+    }
+
+    /// The scene went inactive (still foreground). Starts the card for a turn in flight and logs the decision, so
+    /// the phone's console says why a card did or did not appear (the effect logs the phase, or the refusal).
+    func turnActivityGoingInactive() {
+        let log = M1K3Log.logger(.iosCore)
+        switch turnActivity.leavingForeground() {
+        case .started: log.notice("live activity: leaving mid-turn → start")
+        case .alreadyShown: log.notice("live activity: leaving mid-turn → already shown")
+        case .disabled: log.notice("live activity: leaving mid-turn → switched off, no card")
+        case .noTurn: break // an idle pull-down is not worth a line
+        }
     }
 
     private func transcriptOutcome() -> TurnActivityPolicy.Outcome {
