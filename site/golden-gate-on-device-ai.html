@@ -37,7 +37,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-09-12",
-  "dateModified": "2026-09-12"
+  "dateModified": "2026-11-16"
 }
 </script>
 <script type="application/ld+json">
@@ -46,13 +46,13 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "Does Golden Gate bring a bigger on-device model?",
-      "acceptedAnswer": { "@type": "Answer", "text": "No. The context window is still 4,096 tokens and the API is structurally the same as macOS 26. The model behind it is better — we measured 93% on a 44-fixture quality eval — but not bigger." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "No. As measured on 2026-09-12 the context window was still 4,096 tokens on the Mac we tested (it is set per device) and the API is structurally the same as macOS 26. The model behind it is better — we measured 93% on a 44-fixture quality eval — but not bigger." } },
     { "@type": "Question", "name": "Can I use my own models with Apple's Foundation Models framework now?",
       "acceptedAnswer": { "@type": "Answer", "text": "No. The Adapter API (LoRA fine-tuning on the system model) was removed entirely on macOS 27 — 'Custom adapters are no longer supported since iOS 27, macOS 27, and visionOS 27.' No custom executor protocol shipped. The framework is still Apple-model-only." } },
     { "@type": "Question", "name": "What is the real win for on-device AI apps on macOS 27?",
       "acceptedAnswer": { "@type": "Answer", "text": "Two things. First, the token counting API (macOS 26.4+): exact token measurement for prompts, instructions, tools, and transcripts, replacing character-based heuristics. Second, a genuinely improved system model — better persona adherence, more concise answers, and improved reasoning." } },
     { "@type": "Question", "name": "Does M1K3 need changes for macOS 27?",
-      "acceptedAnswer": { "@type": "Answer", "text": "No. All 3,700 tests pass with zero code changes on macOS 27.0. The model improvements are automatic — M1K3's Mini brain gets a quality uplift for free." } }
+      "acceptedAnswer": { "@type": "Answer", "text": "No. All 3,700 tests the suite had on 2026-09-12 passed with zero code changes on macOS 27.0. The model improvements are automatic — M1K3's Mini brain gets a quality uplift for free." } }
   ]
 }
 </script>
@@ -148,24 +148,24 @@
     <li><strong>No <code>LanguageModelExecutor</code> protocol.</strong> There is no way to register a custom model executor — MLX, llama.cpp, or otherwise — with the Foundation Models framework. The system model is still the only model the framework runs.</li>
     <li><strong>No custom executor registration.</strong> Reports of a "one-line swap" between Apple's model and your own weights were premature. The framework's session and transcript plumbing remain Apple-model-only.</li>
     <li><strong>The Adapter API was removed.</strong> <code>SystemLanguageModel.Adapter</code> — introduced in macOS 26 for LoRA fine-tuning on top of the system model — throws on macOS 27: <em>"Custom adapters are no longer supported since iOS 27, macOS 27, and visionOS 27."</em></li>
-    <li><strong>Context window unchanged.</strong> <code>contextSize</code> returns 4,096 on the Golden Gate runtime, same as macOS 26.</li>
+    <li><strong>Context window unchanged.</strong> <code>contextSize</code> returned 4,096 on the Golden Gate runtime on the Mac we tested (2026-09-12), same as macOS 26. The size is the device's, so yours may differ.</li>
   </ul>
   <p>None of this is a criticism — shipping a better model and exact token counting is genuinely useful. But the gap between what was rumoured and what landed is worth stating plainly.</p>
 
   <h2>Metal: native 4-bit tensor types</h2>
-  <p>macOS 26.4 added <code>MTLTensorDataTypeInt4</code> and <code>MTLTensorDataTypeUInt4</code> — Metal's first native 4-bit integer tensor types. Every M1K3 brain runs as a 4-bit quantized model on Metal via MLX-Swift. Today, MLX handles dequantization in its own compute kernels. If upstream mlx-swift adopts the native types, that work moves into the hardware path. Worth watching, not actionable yet.</p>
+  <p>macOS 26.4 added <code>MTLTensorDataTypeInt4</code> and <code>MTLTensorDataTypeUInt4</code> — Metal's first native 4-bit integer tensor types. M1K3's downloadable brains (Lil and Big) run as 4-bit quantized models on Metal via MLX-Swift. Today, MLX handles dequantization in its own compute kernels. If upstream mlx-swift adopts the native types, that work moves into the hardware path. Worth watching, not actionable yet.</p>
 
   <h2>What this means for M1K3</h2>
-  <p><strong>Zero changes needed.</strong> All 3,700 tests pass on macOS 27.0 with no code modifications. The model quality uplift is automatic — every M1K3 user on Golden Gate gets a better Mini brain the moment they update.</p>
+  <p><strong>Zero changes needed.</strong> All 3,700 tests the suite had on 2026-09-12 passed on macOS 27.0 with no code modifications. The model quality uplift is automatic — every M1K3 user on Golden Gate gets a better Mini brain the moment they update.</p>
   <p>What we're building on top of it:</p>
   <ul>
     <li><strong>Exact token budgeting</strong> — wiring <code>tokenCount</code> into M1K3's budget policy so Mini uses its full 4,096-token window precisely instead of conservatively. The 3× replay uplift means Mini can hold a meaningfully longer conversation without losing context.</li>
-    <li><strong>The tier story holds.</strong> Mini (Apple's model) is the instant, no-download front brain. Lil (Qwen 3 4B, MLX) keeps its 32K context, native tool calling, and reasoning depth. Big (Gemma 4 12B, MLX) stays the delegation brain for deep work. Golden Gate makes Mini better; it doesn't replace the need for the depth tiers.</li>
+    <li><strong>The tier story holds.</strong> Mini (Apple's model) is the instant, no-download front brain. Lil (Qwen3.5 4B, MLX) keeps its 32K context, native tool calling, and reasoning depth. Big (Gemma 4 12B, MLX) stays the delegation brain for deep work. Golden Gate makes Mini better; it doesn't replace the need for the depth tiers.</li>
   </ul>
 
   <h2 id="faq">FAQ</h2>
   <h3>Does Golden Gate bring a bigger on-device model?</h3>
-  <p>No. The context window is still 4,096 tokens and the API is structurally the same as macOS 26. The model behind it is better — we measured 93% on a 44-fixture quality eval — but not bigger.</p>
+  <p>No. As measured on 2026-09-12 the context window was still 4,096 tokens on the Mac we tested (it is set per device) and the API is structurally the same as macOS 26. The model behind it is better — we measured 93% on a 44-fixture quality eval — but not bigger.</p>
 
   <h3>Can I use my own models with Apple's Foundation Models framework now?</h3>
   <p>No. The Adapter API (LoRA fine-tuning on the system model) was removed entirely on macOS 27 — "Custom adapters are no longer supported since iOS 27, macOS 27, and visionOS 27." No custom executor protocol shipped. The framework is still Apple-model-only.</p>
@@ -174,12 +174,12 @@
   <p>Two things. First, the token counting API (macOS 26.4+): exact token measurement for prompts, instructions, tools, and transcripts, replacing character-based heuristics. Second, a genuinely improved system model — better persona adherence, more concise answers, and improved reasoning.</p>
 
   <h3>Does M1K3 need changes for macOS 27?</h3>
-  <p>No. All 3,700 tests pass with zero code changes on macOS 27.0. The model improvements are automatic — M1K3's Mini brain gets a quality uplift for free.</p>
+  <p>No. All 3,700 tests the suite had on 2026-09-12 passed with zero code changes on macOS 27.0. The model improvements are automatic — M1K3's Mini brain gets a quality uplift for free.</p>
 
   <section class="page-cta">
     <span class="label">// try it</span>
     <h2>M1K3 is ready for Golden Gate</h2>
-    <p>Free for humans, source-available, and entirely on your Mac. The quality uplift lands the moment you update macOS.</p>
+    <p>Free for humans, source-available, and on your Mac by default. The quality uplift lands the moment you update macOS.</p>
     <div class="cta-row">
       <a class="store-badge" href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=site-golden-gate&amp;mt=12"><img src="/badges/mac-app-store.svg" alt="Download on the Mac App Store" width="215" height="55" /></a>
       <a class="btn btn-ghost" aria-label="Source on GitHub" href="https://github.com/Round-Tower/M1K3"><svg class="mark" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.766 11.328c-2.063-.25-3.516-1.734-3.516-3.656 0-.781.281-1.625.75-2.188-.203-.515-.172-1.609.063-2.062.625-.078 1.468.25 1.968.703.594-.187 1.219-.281 1.985-.281.765 0 1.39.094 1.953.265.484-.437 1.344-.765 1.969-.687.218.422.25 1.515.046 2.047.5.593.766 1.39.766 2.203 0 1.922-1.453 3.375-3.547 3.64.531.344.89 1.094.89 1.954v1.625c0 .468.391.734.86.547C13.781 14.359 16 11.53 16 8.03 16 3.61 12.406 0 7.984 0 3.563 0 0 3.61 0 8.031a7.88 7.88 0 0 0 5.172 7.422c.422.156.828-.125.828-.547v-1.25c-.219.094-.5.156-.75.156-1.031 0-1.64-.562-2.078-1.609-.172-.422-.36-.672-.719-.719-.187-.015-.25-.093-.25-.187 0-.188.313-.328.625-.328.453 0 .844.281 1.25.86.313.452.64.655 1.031.655s.641-.14 1-.5c.266-.265.47-.5.657-.656"/></svg>Source</a>
@@ -199,9 +199,48 @@
 </main>
 
 <footer>
-  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE LTD</a> · MADE IN IRELAND · MAC APP STORE AND APP STORE ARE SERVICE MARKS OF APPLE INC.</span>
-  <span><a href="/teams">FOR TEAMS</a> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · <a href="/privacy">PRIVACY POLICY</a> · <a href="/terms">TERMS</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
-  <span class="guides">GUIDES: <a href="/local-llm-mac-guide">LOCAL LLMS ON A MAC</a> · <a href="/vs-ollama">M1K3 VS OLLAMA</a> · <a href="/private-chatgpt-alternative-mac">PRIVATE CHATGPT ALTERNATIVE</a> · <a href="/mcp-knowledge-server">A LOCAL MEMORY FOR CLAUDE</a> · <a href="/golden-gate-on-device-ai" aria-current="page">ON-DEVICE AI IN MACOS 27</a></span>
+  <div class="foot-cols">
+    <div>
+      <p class="foot-h">M1K3</p>
+      <ul>
+        <li><a href="/install">Install</a></li>
+        <li><a href="/brains">The brains</a></li>
+        <li><a href="/companions">Companions</a></li>
+        <li><a href="/vr">Memory Sky for Vision Pro</a></li>
+        <li><a href="/teams">For teams</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Build with it</p>
+      <ul>
+        <li><a href="/agents">For coding agents</a></li>
+        <li><a href="/local-api">Local API</a></li>
+        <li><a href="/weights">Model weights</a></li>
+        <li><a href="https://github.com/Round-Tower/M1K3">GitHub</a></li>
+        <li><a href="https://github.com/sponsors/Round-Tower">Sponsor</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Guides</p>
+      <ul>
+        <li><a href="/local-llm-mac-guide">Local LLMs on a Mac</a></li>
+        <li><a href="/vs-ollama">M1K3 vs Ollama</a></li>
+        <li><a href="/private-chatgpt-alternative-mac">Private ChatGPT alternative</a></li>
+        <li><a href="/mcp-knowledge-server">A local memory for Claude</a></li>
+        <li><a href="/golden-gate-on-device-ai" aria-current="page">On-device AI in macOS 27</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Small print</p>
+      <ul>
+        <li><a href="/privacy">Privacy policy</a></li>
+        <li><a href="/terms">Terms</a></li>
+        <li><a href="https://round-tower.ie">Round Tower Software</a></li>
+      </ul>
+    </div>
+  </div>
+  <p class="foot-line">© 2026 Round Tower Software Ltd. Made in Ireland. No tracking on this page, obviously.</p>
+  <p class="foot-line foot-faint">Mac App Store and App Store are service marks of Apple Inc.</p>
 </footer>
 
 <!-- Signed: Kev + claude-opus-4-6, 2026-09-12, Confidence 0.9.
@@ -225,6 +264,7 @@
      devices. Private by design.", Kev's 2026-10-20 ruling, live with iOS 1.2.0). Confidence 0.9.
      Review: Kev + claude-fable-5.1, 2026-11-06 — the CTA band: Apple's own badge (site/badges, as supplied) replaces the
      text button; the source button carries GitHub's mark and reads "Source"; the footer credits the service marks.
-     Confidence 0.85. -->
+     Confidence 0.85. 
+     Review: Kev + claude-fable-5.2, 2026-11-16 — launch pass: the 4,096 window and the 3,700 tests are dated as 2026-09-12 measurements; Lil is Qwen3.5; the MLX line excludes Mini. Confidence 0.85. -->
 </body>
 </html>

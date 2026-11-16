@@ -6,7 +6,7 @@
 > on-device — local brains, live voice, a knowledge graph, a memory graph, and an
 > MCP server on loopback. Made by Round Tower, Ireland.
 
-Sources, in order: https://m1k3.app/install, https://m1k3.app/agents, https://m1k3.app/privacy, https://m1k3.app/terms, https://m1k3.app/mcp-knowledge-server, https://m1k3.app/vs-ollama, https://m1k3.app/private-chatgpt-alternative-mac, https://m1k3.app/local-llm-mac-guide, https://m1k3.app/brains, https://m1k3.app/weights, https://m1k3.app/golden-gate-on-device-ai, https://m1k3.app/teams, https://m1k3.app/companions, https://m1k3.app/install.txt.
+Sources, in order: https://m1k3.app/install, https://m1k3.app/agents, https://m1k3.app/local-api, https://m1k3.app/privacy, https://m1k3.app/terms, https://m1k3.app/mcp-knowledge-server, https://m1k3.app/vs-ollama, https://m1k3.app/private-chatgpt-alternative-mac, https://m1k3.app/local-llm-mac-guide, https://m1k3.app/brains, https://m1k3.app/weights, https://m1k3.app/golden-gate-on-device-ai, https://m1k3.app/teams, https://m1k3.app/companions, https://m1k3.app/install.txt.
 
 ---
 
@@ -165,11 +165,11 @@ $ m1k3 ask "what can you do?"
 ```
 A "disconnected" server almost always means the app is closed — m1k3 opens it for you and waits up to twenty seconds for the port. If status still fails, either the switch in Settings ▸ Server is off, or the token is missing or stale: m1k3 says which, and m1k3 login fixes the second.
 
-Done. Two minutes, no account, and the thing that knows your machine is answering on loopback. From here: what your agent gets (18 tools, and the seven things the server will not do), the brains and how they score, how to verify the privacy claims yourself.
+Done. Two minutes, no account, and the thing that knows your machine is answering on loopback. From here: what your agent gets (19 tools, and the seven things the server will not do), the brains and how they score, how to verify the privacy claims yourself.
 
 ### The whole thing as text, for agents
 
-The same four steps as a file your agent can fetch and follow — m1k3.app/install.txt. Three of the steps are the user's, on purpose: turning the server on, pasting its token, and starting a 2 GB download.
+The same four steps as a file your agent can fetch and follow — m1k3.app/install.txt. Three of the steps are the user's, on purpose: turning the server on, pasting its token, and starting a 3 GB download.
 
 ```
 # 1 · get the app (puts `m1k3` on PATH)
@@ -190,7 +190,7 @@ m1k3 ask "what can you do?"
 
 **Q: Will it run on an Intel Mac?**
 
-No. M1K3 needs Apple Silicon: every brain runs on Metal through MLX, and the 1.0 build ships arm64 only, so an Intel Mac has nothing that thinks. It needs macOS 26 (Tahoe) or later.
+No. M1K3 needs Apple Silicon: the downloadable brains run on Metal through MLX, and the app ships arm64 only, so an Intel Mac has nothing that thinks. It needs macOS 26 or later.
 
 **Q: Do I need an account, a key, or a subscription?**
 
@@ -198,11 +198,11 @@ None of the three. M1K3 is free for humans — no account, no API key, no subscr
 
 **Q: What touches the network during install and use?**
 
-Three documented things: the download of the app itself (the Mac App Store, Homebrew or GitHub Releases); a one-time model download from Hugging Face if you opt into the Lil or Big brain — Mini needs nothing; and web search, which is on by default so answers can be current, with one switch in Settings ▸ Privacy to turn it off. Documents, voice and memories never leave the Mac; with web search on, a question M1K3 looks up goes out as a search. The MCP server binds to 127.0.0.1 and nothing else.
+Four documented things: the download of the app itself and its updates (the Mac App Store, Homebrew or GitHub Releases); one-time model downloads from Hugging Face when you ask for them (the Lil or Big brain; on a Mac without Apple Intelligence a small Mini brain, about 630 MB, on first run); web search, which is on by default so answers can be current, with one switch in Settings ▸ Privacy to turn it off; and Apple's Private Cloud Compute, only if you switch it on. Documents, voice and memories never leave the Mac; with web search on, a question M1K3 looks up goes out as a search. The MCP server binds to 127.0.0.1 and nothing else.
 
 **Q: How do I uninstall it cleanly?**
 
-Homebrew: brew uninstall --cask m1k3, and add --zap to remove its data too. DMG: drag M1K3 from Applications to the Trash. Everything M1K3 stores lives in one sandbox container, ~/Library/Containers/app.m1k3, and the Lil and Big weights are inside it — delete that folder and nothing of M1K3 remains. If you connected an agent, run m1k3 connect <client> --print to see the one entry to remove from that client's config.
+Homebrew: brew uninstall --cask m1k3, and add --zap to remove its data too. DMG: drag M1K3 from Applications to the Trash. Everything M1K3 stores lives in one sandbox container, ~/Library/Containers/app.m1k3, and the Lil and Big weights are inside it — delete that folder and only M1K3's Keychain items remain (its access tokens and the call-record key; remove them in Keychain Access if you want every trace gone). If you connected an agent, run m1k3 connect <client> --print to see the one entry to remove from that client's config.
 
 **Q: Why does connect only print on the App Store build?**
 
@@ -343,7 +343,7 @@ Four lines an agent will actually obey beat a paragraph it skims. Run m1k3 agent
 
 ### What your agent gets
 
-Eighteen tools. The short version: it can ask a local brain, search your own documents, keep and recall facts across sessions, speak and listen, and put something on your todo list without ever taking it off.
+Nineteen tools are listed on the App Store build (eighteen on the DMG, which has no Private Cloud Compute); a few, such as listen, forget_memory, open_link and ask_private_cloud, answer with a refusal until you grant them in Settings. The short version: it can ask a local brain, search your own documents, keep and recall facts across sessions, speak and listen, and put something on your todo list without ever taking it off.
 
 | Tool | What it does |
 
@@ -395,7 +395,7 @@ The consent gates are deliberate and asymmetric: an agent can remember and it ca
 
 - It will not serve two agents at once. One MCP client at a time, in this version: a second client connecting ends the first one's session.
 
-- It will not send your documents or memories anywhere. Retrieval, embeddings, inference and voice run on the Mac. M1K3's documented network crossings are unchanged by connecting an agent: a one-time model download you opt into, web search (on by default, one switch in Settings to turn it off), and updates.
+- It will not send your documents or memories anywhere. Retrieval, embeddings, inference and voice run on the Mac. M1K3's documented network crossings are unchanged by connecting an agent: a one-time model download you opt into, web search (on by default, one switch in Settings to turn it off), updates, and Apple's Private Cloud Compute only if you switch it on.
 
 ### Not an agent? The Local API
 
@@ -403,13 +403,13 @@ From version 1.4, M1K3 on the Mac can also lend the brain you have loaded to any
 
 And when the job is bigger than your Mac: switch on Also offer Private Cloud Compute and the same endpoint gains a second model, cloud-m1k3, answered by Apple's Private Cloud Compute. Same base URL, same key, one model name changed. Agents get it too, as the ask_private_cloud tool, behind a switch of its own. Both switches are off by default and both need Private Cloud Compute on in Privacy. Only what the caller sends goes out, behind one fixed line asking the model to keep to Apple's acceptable use requirements: nothing from your memory or knowledge is added by M1K3, though an agent can include what it has read. The Settings pane counts every call that leaves, and M1K3 caps them at 30 an hour so a script in a loop cannot spend your day's allowance. What Apple says about Private Cloud Compute is on Apple's own page (https://security.apple.com/blog/private-cloud-compute/); M1K3 claims nothing beyond it.
 
-The details are in LOCAL_API.md (https://github.com/Round-Tower/M1K3/blob/master/macos/docs/LOCAL_API.md).
+The setup, the model names and a first call are on the Local API page; the full reference is LOCAL_API.md (https://github.com/Round-Tower/M1K3/blob/master/macos/docs/LOCAL_API.md).
 
 ### Frequently asked questions
 
 **Q: Does the M1K3 app need to be running?**
 
-Yes, and the server has to be switched on. The MCP server lives inside the app, serves at http://127.0.0.1:4242/mcp only while M1K3 is open, and is off by default — turn it on once in Settings, MCP Server. A server your agent reports as disconnected almost always means the app is closed. The m1k3 command opens the app for you and waits up to twenty seconds for the port to answer.
+Yes, and the server has to be switched on. The MCP server lives inside the app, serves at http://127.0.0.1:4242/mcp only while M1K3 is open, and is off by default — turn it on once in Settings ▸ Server. A server your agent reports as disconnected almost always means the app is closed. The m1k3 command opens the app for you and waits up to twenty seconds for the port to answer.
 
 **Q: Which agents can m1k3 connect for me?**
 
@@ -421,11 +421,144 @@ It binds to 127.0.0.1 and nothing else, so no other machine can reach it, and it
 
 **Q: What reaches the cloud when my agent uses M1K3?**
 
-Not your documents or memories: retrieval, embeddings, inference and voice all run on your Mac. The honest caveats: whatever your agent reads through M1K3 becomes part of that agent’s own context, and a cloud-hosted agent sends its context wherever its conversations go. Local server, client’s rules. And M1K3’s own network crossings are unchanged — a one-time model download you opt into, web search (on by default, so a question M1K3 looks up sends that search to the web; one switch in Settings turns it off), and updates.
+Not your documents or memories: retrieval, embeddings, inference and voice all run on your Mac. The honest caveats: whatever your agent reads through M1K3 becomes part of that agent’s own context, and a cloud-hosted agent sends its context wherever its conversations go. Local server, client’s rules. And M1K3’s own network crossings are unchanged — a one-time model download you opt into, web search (on by default, so a question M1K3 looks up sends that search to the web; one switch in Settings turns it off), updates, and Apple's Private Cloud Compute only if you switch it on.
 
 **Q: What does it cost?**
 
 Nothing. M1K3 is free for humans — no account, no subscription, no telemetry. The source is public under the Functional Source License (FSL-1.1-ALv2). Organisations that want one shared brain served to many people on their own hardware have a separate licence, M1K3 for Teams.
+
+---
+
+## Source: https://m1k3.app/local-api
+
+## The Local API
+
+Updated 2026-11-16 · M1K3 for Mac, version 1.4 and later
+
+Short answer: M1K3 on the Mac can lend the brain it already has loaded to any tool that speaks the OpenAI API. Switch on Settings ▸ Server ▸ Local API, copy the key, and point your editor, script or client library at http://127.0.0.1:4141/v1. It is off by default, it listens on your Mac only, and it has a key of its own. A caller gets the raw brain under its own instructions: none of M1K3's memory, knowledge, personality or tools.
+
+### Set it up
+
+- Open M1K3 on your Mac and go to Settings ▸ Server ▸ Local API. Switch it on.
+
+- Copy the API key from the same pane. You can make a new key there at any time; the old one stops working.
+
+- Point your tool at the base URL below and give it the key.
+
+```
+Base URL   http://127.0.0.1:4141/v1
+API key    Settings ▸ Server ▸ Local API ▸ API key ▸ Copy
+Model      mini-m1k3, lil-m1k3 or big-m1k3: whichever brain M1K3 has ready
+```
+### A first call
+
+With curl, streaming:
+
+```
+$ curl http://127.0.0.1:4141/v1/chat/completions \
+    -H "Authorization: Bearer $M1K3_API_KEY" -H "Content-Type: application/json" \
+    -d '{"model":"lil-m1k3","stream":true,"messages":[{"role":"user","content":"Hello"}]}'
+```
+With the OpenAI Python client. The brain on this Mac is always the first model listed, so you do not have to know which one is loaded:
+
+```
+from openai import OpenAI
+
+client = OpenAI(base_url="http://127.0.0.1:4141/v1", api_key="<the key from Settings>")
+models = [m.id for m in client.models.list()]
+reply = client.chat.completions.create(
+    model=models[0],
+    messages=[{"role": "user", "content": "Say hello in five words."}],
+)
+print(reply.choices[0].message.content)
+```
+### The model names
+
+| Model id | What answers | Where |
+
+| mini-m1k3 | Mini: Apple's on-device model | On this Mac |
+
+| lil-m1k3 | Lil: Qwen3.5 4B on MLX | On this Mac |
+
+| big-m1k3 | Big: Gemma 4 12B on MLX | On this Mac |
+
+| cloud-m1k3 | Apple's Private Cloud Compute | Leaves the Mac. Off until you switch it on. |
+
+/v1/models lists the brain that is ready. Asking for another one returns 404 model_not_found; switch brain in M1K3 itself. Which models these are, and how they score.
+
+### The rules
+
+- Loopback only. The listener binds 127.0.0.1. Nothing on your network can reach it, and web pages are refused: any request with an Origin header gets a 403.
+
+- Its own key. Not the MCP server's token, which also unlocks memory and speech.
+
+- You go first. One call at a time. A call that arrives while you are chatting or in voice mode gets a 429 with Retry-After, which OpenAI client libraries retry by themselves.
+
+- The raw brain. Your system message is the system prompt. Nothing you send is written to M1K3's chat history or turned into a memory. On the two Apple models one fixed line comes first, asking the model to keep to Apple's acceptable use requirements.
+
+- Nothing is kept between calls. Each call re-reads the whole conversation, so a long history costs the same wait every turn. Measured on 2026-11-11 on an M1 Max: a short prompt starts in about 0.15 s on Lil and about 0.3 s on Big, and a 2,000-token history takes about 4 s on Lil and about 8.6 s on Big before the first word.
+
+- Untested under your instructions. M1K3 chooses and tests its brains inside M1K3. How one behaves under another app's system prompt is yours to judge.
+
+### What it serves, and what it refuses
+
+| GET /v1/models | The ready brain, then cloud-m1k3 if you offer it |
+
+| POST /v1/chat/completions | Text chat, streamed or whole |
+
+| Honoured | messages (system, developer, user, assistant), max_tokens, temperature, stop (up to four), stream_options.include_usage |
+
+| Refused with a 400 | tools and functions, n above 1, image or audio content, tool messages, JSON-schema response formats |
+
+| Not offered (404) | /v1/completions, /v1/embeddings, /v1/responses, audio and image endpoints |
+
+Errors use OpenAI's shape. The full reference, with usage counts and finish reasons, is LOCAL_API.md (https://github.com/Round-Tower/M1K3/blob/master/macos/docs/LOCAL_API.md) in the repository.
+
+### The cloud model: Private Cloud Compute
+
+For a job bigger than your Mac, there is one optional model that leaves it. Switch on Also offer Private Cloud Compute in the same pane (it also needs Settings ▸ Privacy ▸ Private Cloud Compute on, and the App Store build with Apple Intelligence), and /v1/models gains cloud-m1k3. A call that names it is answered by Apple's Private Cloud Compute.
+
+- What leaves: the messages in that call, behind the one fixed acceptable-use line, and nothing else. M1K3 adds no memory, knowledge or history, and keeps nothing.
+
+- You can see it: the Settings pane counts the calls that have left since M1K3 opened.
+
+- It spends your daily limit. Apple limits Private Cloud Compute per day, and these calls count against the limit M1K3's own chat uses. A spent limit answers 429 insufficient_quota; retrying will not help until it resets.
+
+- M1K3 caps it too: 30 lent calls an hour, so a tool in a loop cannot spend your day. Over that is 429 rate_limit_exceeded with a Retry-After.
+
+- Unreachable for the moment is 503 service_unavailable, which OpenAI client libraries retry by themselves.
+
+What Apple promises about Private Cloud Compute is on Apple's own page (https://security.apple.com/blog/private-cloud-compute/). M1K3 makes no claim beyond it. The privacy page has the same account in the policy's words.
+
+### Want the assistant, not the raw brain?
+
+Memory, document search and voice live behind M1K3's MCP server, which has its own switch and its own token. Connect a coding agent, or read how Claude gets a local memory.
+
+### Questions
+
+**Q: Does M1K3 have an OpenAI-compatible API?**
+
+Yes, on the Mac, from version 1.4. Switch on Settings ▸ Server ▸ Local API and M1K3 serves /v1/models and /v1/chat/completions at http://127.0.0.1:4141/v1, in the shape OpenAI clients already speak. It is off by default and has its own key.
+
+**Q: Does anything I send leave my Mac?**
+
+Not with the on-device brains: the listener binds 127.0.0.1 only, refuses web pages, and a call to mini-m1k3, lil-m1k3 or big-m1k3 is answered on the Mac. The one exception is cloud-m1k3, which you have to switch on yourself: a call that names it sends that call's messages to Apple's Private Cloud Compute.
+
+**Q: Which model names does it serve?**
+
+Whichever brain M1K3 has ready: mini-m1k3 (Apple's on-device model), lil-m1k3 (Qwen3.5 4B) or big-m1k3 (Gemma 4 12B). Ask /v1/models and use the first id. Asking for a brain that is not loaded returns 404 model_not_found; switch brain in M1K3 itself.
+
+**Q: Does it support tool calls, embeddings or images?**
+
+Not in this version. It serves text chat, streamed or whole. Tools, functions, image and audio content and JSON-schema response formats are refused with a 400, and /v1/embeddings, /v1/completions and /v1/responses are not offered.
+
+**Q: How is this different from M1K3's MCP server?**
+
+The Local API lends the raw brain: your system message, your messages, and none of M1K3's memory, knowledge, personality or tools. The MCP server is the assistant itself for agents: memory, document search and voice. They have separate switches and separate keys.
+
+**Q: Does it work on iPhone or iPad?**
+
+No. The Local API is part of M1K3 on the Mac.
 
 ---
 
@@ -435,7 +568,7 @@ Nothing. M1K3 is free for humans — no account, no subscription, no telemetry. 
 
 Updated 2026-11-06 · By Round Tower, the makers of M1K3 — this page exists so the answer is checkable, not just claimable
 
-Short answer: yes — by architecture, not by promise. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the knowledge store encrypted under a key held in your Keychain. The MCP server binds to 127.0.0.1 and is off by default. The network is used in exactly four documented cases: one-time model downloads when you ask for them (brains, semantic memory, sharper speech recognition and the M1K3 Voice, from Hugging Face, plus one voice-styles file from GitHub), web search, which is on by default so answers can be current, with one switch in Settings to turn it off, updates via the channel you installed from, and — only if you turn it on in Settings and pick it as your brain — sending your typed messages to Apple's Private Cloud Compute. No telemetry, no account, no analytics. With Private Cloud Compute off, the default, pull the ethernet cable mid-conversation and only the web tools notice.
+Short answer: yes — by architecture, not by promise. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (Apple's on-device speech recognition, or WhisperKit if you download it), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, and saved call records are encrypted under a key held in your Keychain. The MCP server binds to 127.0.0.1 and is off by default. The network is used in exactly four documented cases: one-time model downloads when you ask for them (brains, semantic memory, sharper speech recognition and the M1K3 Voice, from Hugging Face, plus one voice-styles file from GitHub), web search, which is on by default so answers can be current, with one switch in Settings to turn it off, updates via the channel you installed from, and — only if you turn it on in Settings — Apple's Private Cloud Compute, which receives your typed messages while you've picked it as your brain, or another app's own prompt if you separately switch on lending it. No telemetry, no account, no analytics. With Private Cloud Compute off, the default, pull the ethernet cable mid-conversation and only the web tools notice.
 
 ### What runs where?
 
@@ -453,9 +586,9 @@ one sandboxed app · apple silicon · works offline
 
 - Knowledge & memory Embeddings, the personal knowledge graph, and hybrid RAG over your documents — indexed and searched locally.
 
-- Call memory Consent-gated transcription and summaries, encrypted at rest.
+- Call memory Consent-gated transcription and summaries; the saved record is encrypted.
 
-- Storage App-sandboxed GRDB store, encrypted with a Keychain-held key.
+- Storage App-sandboxed SQLite (GRDB) stores on your device.
 
 - MCP server Loopback only — 127.0.0.1:4242, unreachable from the network, off by default in Settings.
 
@@ -499,7 +632,7 @@ M1K3 itself has no servers and never sees or stores your conversations, whether 
 
 ### How is data stored on the Mac?
 
-Everything lives inside the app's macOS sandbox container. The knowledge and memory stores are GRDB databases encrypted with a key held in your Keychain — one place your knowledge lives, on hardware you own. Documents enter only when you explicitly open or drop them (the sandbox grants read access to user-selected files, nothing broader). Call transcription is consent-gated and encrypted at rest. Memory has a consent primitive going the other way too: forget_memory permanently deletes a fact, so what M1K3 knows stays revocable.
+Everything lives inside the app's sandbox container — one place your knowledge lives, on hardware you own. The knowledge and memory stores are SQLite (GRDB) databases. They are not separately encrypted: the sandbox keeps other apps out, and your device's own disk encryption protects the files at rest (FileVault on a Mac if you have it on, Data Protection on iPhone and iPad). Documents enter only when you explicitly open or drop them (the sandbox grants read access to user-selected files, nothing broader). Call recording is consent-gated, and the saved call record (transcript and summary) is encrypted with AES-256-GCM under a key held in your Keychain. So that you can search a call, its text is also indexed into the knowledge store, which is not separately encrypted. Memory has a consent primitive going the other way too: forget_memory permanently deletes a fact, so what M1K3 knows stays revocable.
 
 There's no telemetry to store elsewhere. Bug reports are user-initiated: Settings → Report an issue… generates a redacted diagnostic that you read and attach to a GitHub issue by hand — nothing is transmitted automatically. Likewise, a thumbs-down on an answer can offer Send this exchange to Round Tower…: a sheet shows that one exchange — your message (an attached file's text is left out), M1K3's answer, the brain and the app version, nothing else — which you can edit, and your own mail app sends it to hello@round-tower.ie. Nothing goes without you pressing Send, and M1K3 itself makes no connection. We read it to fix what went wrong, may rewrite it as a made-up test case, and delete it if you ask. And if M1K3 didn't close cleanly last time (a crash, a force-quit, or the Mac or phone ending it), it offers once to send a short report the same way: when that session began, the brain, the app and system versions, any crash summaries your device kept, and anything you add. If a brain won't get ready on your phone, it offers the same kind of report: what M1K3 showed you, the versions, its download log from that session, and anything you add. Nothing you typed or said goes with it. Neither is offered where the declared age is under 16.
 
@@ -515,7 +648,7 @@ Each one is off until you use the feature that needs it, and each one serves onl
 
 - Local API (off by default). Lets other apps on your Mac use the brain M1K3 has loaded. It listens on your Mac only (127.0.0.1), behind its own key, and refuses web pages. A caller gets the raw brain with its own instructions (on the two Apple models, behind one fixed line asking the model to keep to Apple's acceptable use requirements): no M1K3 memory, knowledge or personality is in reach, and nothing a caller sends is written to your chat history or memory. What an app sends a brain on your Mac this way stays on your Mac; what that app does with the answer is up to that app. One exception, which you switch on yourself in versions that offer it: with Also offer Private Cloud Compute on (and Private Cloud Compute on in Privacy), an app that asks for the cloud-m1k3 model by name has that call's messages sent to Apple's Private Cloud Compute. M1K3 adds nothing of yours to it, and the Settings pane counts the calls that have left. The MCP server has the same kind of switch for agents (Let agents ask Private Cloud Compute, off by default): M1K3 adds nothing to an agent's prompt, but an agent can include what it has read from your knowledge or memory.
 
-- Camera (iPhone and iPad). Used to scan the pairing code your Mac shows for Brain at Home. From the next iPhone version it is also how M1K3 looks at what you point it at when you ask. The camera is on only while the Look screen or voice mode's eye is open, or for the one picture a spoken ask takes. The frame is read by a brain on the device and sent nowhere: Brain at Home and Private Cloud Compute never receive it. A frame you ask about is saved with that chat on the device, is deleted with the chat, and is kept out of your device backup. A look runs no tools and is never turned into a memory, and its words are not passed to later messages unless you ask about the same photo again, which is answered on the device too. If you choose Search the web for this, M1K3 drafts the search words on the device and puts them in the message box. They leave only when you send them, and once sent they are an ordinary message of yours.
+- Camera (iPhone and iPad). Used to scan the pairing code your Mac shows for Brain at Home. From version 1.4 it is also how M1K3 looks at what you point it at when you ask. The camera is on only while the Look screen or voice mode's eye is open, or for the one picture a spoken ask takes. The frame is read by a brain on the device and sent nowhere: Brain at Home and Private Cloud Compute never receive it. A frame you ask about is saved with that chat on the device, is deleted with the chat, and is kept out of your device backup. A look runs no tools and is never turned into a memory, and its words are not passed to later messages unless you ask about the same photo again, which is answered on the device too. If you choose Search the web for this, M1K3 drafts the search words on the device and puts them in the message box. They leave only when you send them, and once sent they are an ordinary message of yours.
 
 - Local Network. Used only by Brain at Home (off by default) to serve M1K3's brain to devices you pair on your own network, encrypted.
 
@@ -527,6 +660,7 @@ M1K3's source is public — source-available under the Functional Source License
 
 ```
 $ codesign -d --entitlements - /Applications/M1K3.app
+# an excerpt from the Mac App Store build; the full list is in the repo
 com.apple.security.app-sandbox            → true
 com.apple.security.network.client         → true  # model downloads + the web tools (on by default)
 com.apple.security.network.server         → true  # the 127.0.0.1 MCP server, off by default
@@ -567,7 +701,7 @@ Everything above is the architecture. This section is the policy, in the form a 
 
 - Who is responsible. Round Tower Software Ltd, a company registered in Ireland (“Round Tower”), makes M1K3 and runs this website. Contact: hello@round-tower.ie.
 
-- What the app collects about you: nothing. M1K3 has no account, no sign-in, no telemetry, no analytics, no automatic crash reporting and no advertising. Round Tower receives nothing from the app itself and keeps no record of who uses it; the only things we can ever receive are an exchange you choose to email us from a thumbs-down, or a short report you choose to send after M1K3 didn't close cleanly or a brain wouldn't get ready, each through your own mail app after seeing the exact text. Your conversations, documents, memories, call transcripts and settings are stored only on your device, inside the app's sandbox container; the knowledge and memory stores and call transcripts are encrypted with a key held in your Keychain. The four network crossings listed above go to those third parties under their own privacy policies, and none of them goes through Round Tower: model downloads (the ones you ask for, and the Mini fallback on first run on a Mac without Apple Intelligence) from Hugging Face and GitHub; web tools, on by default with one switch to turn them off, which send the query M1K3 writes to DuckDuckGo and fetch Wikipedia summaries and the pages you ask it to read directly from those sites; updates through the channel you installed from; and, only if you turn it on and pick it as your brain, what you send to Apple's Private Cloud Compute.
+- What the app collects about you: nothing. M1K3 has no account, no sign-in, no telemetry, no analytics, no automatic crash reporting and no advertising. Round Tower receives nothing from the app itself and keeps no record of who uses it; the only things we can ever receive are an exchange you choose to email us from a thumbs-down, or a short report you choose to send after M1K3 didn't close cleanly or a brain wouldn't get ready, each through your own mail app after seeing the exact text. Your conversations, documents, memories, call transcripts and settings are stored only on your device, inside the app's sandbox container; saved call records are encrypted with a key held in your Keychain, and the knowledge and memory stores rely on the sandbox and your device's disk encryption. The four network crossings listed above go to those third parties under their own privacy policies, and none of them goes through Round Tower: model downloads (the ones you ask for, and the Mini fallback on first run on a Mac without Apple Intelligence) from Hugging Face and GitHub; web tools, on by default with one switch to turn them off, which send the query M1K3 writes to DuckDuckGo and fetch Wikipedia summaries and the pages you ask it to read directly from those sites; updates through the channel you installed from; and, only if you turn it on, Apple's Private Cloud Compute: what you send while it is your brain, or what another app sends if you separately lend it.
 
 - Apple. If you installed M1K3 from the App Store, Apple handles the download, any update and any opt-in crash and usage sharing you have enabled in your Apple account, under Apple's privacy policy (https://www.apple.com/legal/privacy/).
 
@@ -671,17 +805,17 @@ Questions, complaints or a request to use the marks: hello@round-tower.ie. Round
 
 Updated 2026-10-02 · A tutorial from Round Tower, the makers of M1K3
 
-Short answer: run an MCP knowledge server on your Mac and point Claude at it. M1K3 — a free, source-available AI app for Apple Silicon Macs — serves the Model Context Protocol over loopback HTTP at http://127.0.0.1:4242/mcp while the app runs. Import your documents and notes into M1K3, register the server with Claude Code, and Claude gains tools like search_knowledge, recall_memory, and remember over your knowledge — with retrieval, embeddings, and storage all happening on your machine. Claude Desktop connects too, via a knowledge-only stdio binary. Setup is switching the server on, pasting its access token into m1k3 login, and one connect; the walkthrough is below.
+Short answer: run an MCP knowledge server on your Mac and point Claude at it. M1K3 — a free, source-available AI app for Apple Silicon Macs — serves the Model Context Protocol over loopback HTTP at http://127.0.0.1:4242/mcp while the app runs. Import your documents and notes into M1K3, register the server with Claude Code, and Claude gains tools like search_knowledge, recall_memory, and remember over your knowledge — with retrieval, embeddings, and storage all happening on your machine. Claude Desktop connects too, through the M1K3 MCP Bundle. Setup is switching the server on, pasting its access token into m1k3 login, and one connect; the walkthrough is below.
 
 ### What is an MCP knowledge server?
 
 MCP (the Model Context Protocol (https://modelcontextprotocol.io)) is an open standard that lets AI assistants call external tools. A knowledge server is the pattern where those tools front a document store: the assistant can search, list, and read what you've put there, instead of relying on what its model happened to memorise in training.
 
-Cloud assistants usually solve "memory" with cloud storage. The local variant flips that: M1K3 keeps the knowledge base on your Mac — app-sandboxed, encrypted with a Keychain-held key — and exposes it only on 127.0.0.1, the loopback interface no other machine can reach. Claude gets a second brain; the second brain stays home.
+Cloud assistants usually solve "memory" with cloud storage. The local variant flips that: M1K3 keeps the knowledge base on your Mac, inside the app's sandbox, and exposes it only on 127.0.0.1, the loopback interface no other machine can reach. Claude gets a second brain; the second brain stays home.
 
 ### What tools does M1K3 expose over MCP?
 
-Eighteen, spanning knowledge, memory, intelligence, voice, and todos (the README's table (https://github.com/Round-Tower/M1K3#tools) is generated live from the running server):
+Nineteen on the App Store build: eighteen spanning knowledge, memory, intelligence, voice, and todos, plus ask_private_cloud, which stays off until you switch it on (the DMG build has no Private Cloud Compute, so it serves eighteen) (the README's table (https://github.com/Round-Tower/M1K3#tools) is generated live from the running server):
 
 | Tool | What it does |
 
@@ -766,11 +900,11 @@ Use the plugin or m1k3 connect claude, not both: with both, every tool is listed
 
 ### How do I connect Claude Desktop or other clients?
 
-The repo documents two surfaces: the in-app HTTP server above (the live way agents reach M1K3's voice, RAG, and memory), and a M1K3MCP stdio binary you can build from source and register in claude_desktop_config.json for knowledge-only access. Client-by-client setup lives in macos/docs/MCP_SETUP.md (https://github.com/Round-Tower/M1K3/blob/master/macos/docs/MCP_SETUP.md). MCP is an open protocol, so any MCP-capable client — not just Claude — can connect to the same endpoint.
+For Claude Desktop there is the M1K3 MCP Bundle: download m1k3.mcpb (https://github.com/Round-Tower/M1K3/releases/download/mcpb-v0.1.0/m1k3.mcpb), open it with Claude Desktop, and paste the access token when asked. The bundle is a small bridge to the same in-app server on 127.0.0.1, so the app still has to be running. The bundle is new and we have not yet tested it in Claude Desktop ourselves; if it misbehaves, m1k3 connect is the supported path, and an issue on GitHub is welcome. M1K3 is on the MCP Registry (https://registry.modelcontextprotocol.io) as app.m1k3/m1k3. There is also a M1K3MCP stdio binary you can build from source for knowledge-only access. Client-by-client setup lives in macos/docs/MCP_SETUP.md (https://github.com/Round-Tower/M1K3/blob/master/macos/docs/MCP_SETUP.md). MCP is an open protocol, so any MCP-capable client — not just Claude — can connect to the same endpoint.
 
 ### Does this stay private?
 
-The server side, yes, structurally: it binds to 127.0.0.1 (unreachable from the network), and search, embeddings, and storage all run on-device in a sandboxed app with an encrypted store.
+The server side, yes, structurally: it binds to 127.0.0.1 (unreachable from the network), and search, embeddings, and storage all run on-device in a sandboxed app.
 
 One caveat we'd rather state than have you discover: whatever an MCP client retrieves becomes part of that client's context. If the client is a cloud-hosted assistant, retrieved text travels wherever that assistant's conversations go. Local server, client's rules — so connect the clients you trust, and note that M1K3's forget_memory tool exists precisely so consent stays revocable on the store itself.
 
@@ -812,19 +946,19 @@ What Ollama is not trying to be is a finished assistant. Voice, document memory,
 
 ### What is M1K3?
 
-M1K3 is a free, source-available (FSL-1.1-ALv2, public repository) AI app for macOS that runs entirely on-device, made by Round Tower in Ireland. It runs Gemma and Qwen models via MLX-Swift on the Metal GPU, with Apple Foundation Models handling fast turns — hot-swappable in Settings. Around the models it ships the assistant layer as one native app:
+M1K3 is a free, source-available (FSL-1.1-ALv2, public repository) AI app for macOS (and iPhone and iPad) that runs on-device by default, made by Round Tower in Ireland. It runs Gemma and Qwen models via MLX-Swift on the Metal GPU, with Apple Foundation Models handling fast turns — hot-swappable in Settings. Around the models it ships the assistant layer as one native app:
 
 - Live voice — streaming on-device speech recognition and natural speech out.
 
 - Knowledge graph + RAG — import documents; ask questions grounded in your own files, with semantic search.
 
-- Call memory — consent-gated call recording with on-device transcription and encrypted persistence.
+- Call memory — consent-gated call recording with on-device transcription; the saved call record is encrypted.
 
 - A local agent — tool use (your knowledge base; web search, on by default, behind one toggle that turns it off).
 
 - An MCP server — Claude and other agents can query your local knowledge. See giving Claude a local memory.
 
-Storage is app-sandboxed and encrypted with a key held in your Keychain. There's no account, no subscription, and no telemetry. The trade-off is a narrow platform: M1K3 requires an Apple Silicon Mac on macOS 26 Tahoe, and its model lineup is a small curated set rather than a library.
+Storage is app-sandboxed on your device, and saved call records are encrypted with a key held in your Keychain. There's no account, no subscription, and no telemetry. The trade-off is a narrow platform: M1K3 requires an Apple Silicon Mac on macOS 26 or later (or an iPhone or iPad on iOS 26 or later), and its model lineup is a small curated set rather than a library.
 
 ### M1K3 vs Ollama: feature comparison
 
@@ -834,7 +968,7 @@ Storage is app-sandboxed and encrypted with a key held in your Keychain. There's
 
 | Install | Mac App Store, Homebrew, signed DMG, or build from source | Installer or Homebrew; then ollama run <model> |
 
-| Platforms | macOS 26 (Tahoe), Apple Silicon only | macOS (incl. Intel), Windows, Linux |
+| Platforms | macOS 26+ on Apple Silicon; iOS and iPadOS 26+ | macOS (incl. Intel), Windows, Linux |
 
 | Interface | Native SwiftUI app (chat, voice, 3D companion) | CLI + local API; a desktop chat app; a large third-party UI ecosystem |
 
@@ -846,9 +980,9 @@ Storage is app-sandboxed and encrypted with a key held in your Keychain. There's
 
 | MCP server | Built in — your knowledge, exposed to Claude and other agents | No first-party MCP knowledge server |
 
-| Call transcription | Built in — consent-gated, encrypted, on-device | Not built in |
+| Call transcription | Built in — consent-gated, on-device, the saved record encrypted | Not built in |
 
-| Developer API | MCP (loopback HTTP + stdio) | Local REST API — the ecosystem standard for local LLM apps |
+| Developer API | MCP (loopback HTTP + stdio), and an OpenAI-compatible local API on 127.0.0.1:4141, off by default | Local REST API — the ecosystem standard for local LLM apps |
 
 | License | FSL-1.1-ALv2 (source-available; free for humans, no account or telemetry) | MIT (open source), free |
 
@@ -894,7 +1028,7 @@ Both are free. Ollama is MIT-licensed open source. M1K3 is free for humans forev
 
 Updated 2026-10-02 · By Round Tower, the makers of M1K3 — we have a horse in this race, so we've kept the comparison factual.
 
-Short answer: the most private ChatGPT alternative for a Mac is one where the AI runs on the Mac itself, so your conversations physically cannot reach a server. M1K3 is built exactly for this: a free, source-available AI app for Apple Silicon Macs where inference, voice, embeddings, and storage are all on-device — zero bytes of your conversations, documents, or calls are sent anywhere. It gives you the assistant experience (chat, live voice, memory over your documents) rather than just a model runner. If you'd rather assemble your own stack, Ollama and LM Studio also run models locally and are good tools. The ChatGPT desktop app, by contrast, is a client for a cloud service — capable, but architecturally not private in the same sense.
+Short answer: the most private ChatGPT alternative for a Mac is one where the AI runs on the Mac itself, so a conversation has no server to be sent to. M1K3 is built for this: a free, source-available AI app for Apple Silicon Macs (and iPhone and iPad) where inference, voice, embeddings, and storage are all on-device by default. Your documents and calls are never sent anywhere; a conversation reaches the web only as the searches M1K3 runs for it, and one switch turns those off. It gives you the assistant experience (chat, live voice, memory over your documents) rather than just a model runner. If you'd rather assemble your own stack, Ollama and LM Studio also run models locally and are good tools. The ChatGPT desktop app, by contrast, is a client for a cloud service — capable, but architecturally not private in the same sense.
 
 ### What makes an AI app actually private?
 
@@ -902,7 +1036,7 @@ There are two different things people mean by "private AI", and the difference i
 
 - Privacy by policy — your data goes to a company's servers, and the company promises (via settings, contracts, and law) to handle it well. This is how every cloud AI works, ChatGPT included. The promise may be kept; the point is that keeping it is a decision someone else makes, continuously.
 
-- Privacy by architecture — the model runs on your own hardware, and the data never leaves. There is no server to breach, no policy to change, no retention window to argue about. Off-device disclosure isn't forbidden; it's impossible.
+- Privacy by architecture — the model runs on your own hardware, so there is no server of ours to breach, no policy to change, no retention window to argue about. What can leave is named, short, and behind switches: web search (on by default) and Apple's Private Cloud Compute (off by default).
 
 Everything local on this page — M1K3, Ollama, LM Studio — is in the second category for inference. The differences between them are about what you get around the model.
 
@@ -914,11 +1048,11 @@ M1K3 is a free, source-available (FSL-1.1-ALv2, public repository) AI app for ma
 
 - Live voice — streaming speech in and natural speech out, fully on-device.
 
-- Call memory — consent-gated call transcription, encrypted at rest with a Keychain-held key.
+- Call memory — consent-gated call transcription; the saved call record is encrypted with a Keychain-held key.
 
 - An agent + MCP server — local tools, and your knowledge exposed to Claude and other agents over MCP.
 
-No account, no subscription, no telemetry. The only network use is the one-time model download, plus web search, which is on by default so answers can be current and clearly toggled — one switch in Settings, and web off means web off. Requirements are the honest catch: an Apple Silicon Mac on macOS 26 Tahoe.
+No account, no subscription, no telemetry. The network is used for the model downloads you ask for, updates, and web search, which is on by default so answers can be current and clearly toggled — one switch in Settings, and web off means web off. Apple's Private Cloud Compute is there for the biggest questions, and stays off until you switch it on. Requirements are the honest catch: an Apple Silicon Mac on macOS 26 or later (or an iPhone or iPad on iOS 26 or later).
 
 ### How the alternatives compare on a Mac
 
@@ -930,7 +1064,7 @@ No account, no subscription, no telemetry. The only network use is the one-time 
 
 | Account required | No | No | No | Yes |
 
-| Assistant features included | Voice, document RAG, call memory, agent, MCP — built in | Chat via the app or third-party UIs; the rest is DIY | Polished chat GUI + local API; document chat | Full assistant, frontier features |
+| Assistant features included | Voice, document RAG, call memory, agent, MCP and an OpenAI-compatible local API — built in | Chat via the app or third-party UIs; the rest is DIY | Polished chat GUI + local API; document chat | Full assistant, frontier features |
 
 | Model quality ceiling | Local models (Gemma, Qwen) | Local models, wide choice | Local models, wide choice | Frontier models — the capability winner |
 
@@ -940,7 +1074,7 @@ No account, no subscription, no telemetry. The only network use is the one-time 
 
 | Source | Public — source-available (FSL-1.1-ALv2) | Open source — MIT | Partially (app is proprietary; CLI/SDK open) | Closed |
 
-| Platforms | macOS 26, Apple Silicon | macOS, Windows, Linux | macOS, Windows, Linux | macOS, Windows, web, mobile |
+| Platforms | macOS 26+ on Apple Silicon; iOS and iPadOS 26+ | macOS, Windows, Linux | macOS, Windows, Linux | macOS, Windows, web, mobile |
 
 Third-party details reflect publicly documented behaviour as of mid-2026 — verify current specifics with each vendor.
 
@@ -976,7 +1110,7 @@ Not on raw capability — and an honest local-AI vendor should say so. For every
 
 **Q: Does M1K3 require an account or subscription?**
 
-No. Free for humans, source-available (FSL-1.1-ALv2), no account, no subscription, no telemetry. Network is used only for the one-time model download and web search, which is on by default with one switch in Settings to turn it off.
+No. Free for humans, source-available (FSL-1.1-ALv2), no account, no subscription, no telemetry. The network is used for model downloads you ask for, web search (on by default, one switch in Settings turns it off), updates, and Apple's Private Cloud Compute only if you switch it on.
 
 **Q: What about Ollama or LM Studio instead?**
 
@@ -1042,7 +1176,7 @@ The three options above give you a model. M1K3 (free for humans, source-availabl
 
 - A knowledge graph with RAG — drop in documents; get answers grounded in your own files.
 
-- Consent-gated call memory — encrypted, on-device transcription.
+- Consent-gated call memory — on-device transcription; the saved call record is encrypted.
 
 - A local agent and an MCP server — so Claude and other agents can query your local knowledge.
 
@@ -1052,7 +1186,7 @@ First run starts on an instant brain with nothing to download on a Mac with Appl
 
 | You want… | Pick | Why |
 
-| A local API to build against | Ollama | The ecosystem standard; huge model library; cross-platform |
+| A local API to build against | Ollama | The ecosystem standard; huge model library; cross-platform. (M1K3 has an OpenAI-compatible local API too, off by default, for the brain it already has loaded.) |
 
 | A GUI to explore models | LM Studio | Model browser + chat + OpenAI-compatible server, no terminal |
 
@@ -5909,29 +6043,29 @@ Some things were widely anticipated that we could not find in the SDK:
 
 - The Adapter API was removed. SystemLanguageModel.Adapter — introduced in macOS 26 for LoRA fine-tuning on top of the system model — throws on macOS 27: "Custom adapters are no longer supported since iOS 27, macOS 27, and visionOS 27."
 
-- Context window unchanged. contextSize returns 4,096 on the Golden Gate runtime, same as macOS 26.
+- Context window unchanged. contextSize returned 4,096 on the Golden Gate runtime on the Mac we tested (2026-09-12), same as macOS 26. The size is the device's, so yours may differ.
 
 None of this is a criticism — shipping a better model and exact token counting is genuinely useful. But the gap between what was rumoured and what landed is worth stating plainly.
 
 ### Metal: native 4-bit tensor types
 
-macOS 26.4 added MTLTensorDataTypeInt4 and MTLTensorDataTypeUInt4 — Metal's first native 4-bit integer tensor types. Every M1K3 brain runs as a 4-bit quantized model on Metal via MLX-Swift. Today, MLX handles dequantization in its own compute kernels. If upstream mlx-swift adopts the native types, that work moves into the hardware path. Worth watching, not actionable yet.
+macOS 26.4 added MTLTensorDataTypeInt4 and MTLTensorDataTypeUInt4 — Metal's first native 4-bit integer tensor types. M1K3's downloadable brains (Lil and Big) run as 4-bit quantized models on Metal via MLX-Swift. Today, MLX handles dequantization in its own compute kernels. If upstream mlx-swift adopts the native types, that work moves into the hardware path. Worth watching, not actionable yet.
 
 ### What this means for M1K3
 
-Zero changes needed. All 3,700 tests pass on macOS 27.0 with no code modifications. The model quality uplift is automatic — every M1K3 user on Golden Gate gets a better Mini brain the moment they update.
+Zero changes needed. All 3,700 tests the suite had on 2026-09-12 passed on macOS 27.0 with no code modifications. The model quality uplift is automatic — every M1K3 user on Golden Gate gets a better Mini brain the moment they update.
 
 What we're building on top of it:
 
 - Exact token budgeting — wiring tokenCount into M1K3's budget policy so Mini uses its full 4,096-token window precisely instead of conservatively. The 3× replay uplift means Mini can hold a meaningfully longer conversation without losing context.
 
-- The tier story holds. Mini (Apple's model) is the instant, no-download front brain. Lil (Qwen 3 4B, MLX) keeps its 32K context, native tool calling, and reasoning depth. Big (Gemma 4 12B, MLX) stays the delegation brain for deep work. Golden Gate makes Mini better; it doesn't replace the need for the depth tiers.
+- The tier story holds. Mini (Apple's model) is the instant, no-download front brain. Lil (Qwen3.5 4B, MLX) keeps its 32K context, native tool calling, and reasoning depth. Big (Gemma 4 12B, MLX) stays the delegation brain for deep work. Golden Gate makes Mini better; it doesn't replace the need for the depth tiers.
 
 ### FAQ
 
 #### Does Golden Gate bring a bigger on-device model?
 
-No. The context window is still 4,096 tokens and the API is structurally the same as macOS 26. The model behind it is better — we measured 93% on a 44-fixture quality eval — but not bigger.
+No. As measured on 2026-09-12 the context window was still 4,096 tokens on the Mac we tested (it is set per device) and the API is structurally the same as macOS 26. The model behind it is better — we measured 93% on a 44-fixture quality eval — but not bigger.
 
 #### Can I use my own models with Apple's Foundation Models framework now?
 
@@ -5943,7 +6077,7 @@ Two things. First, the token counting API (macOS 26.4+): exact token measurement
 
 #### Does M1K3 need changes for macOS 27?
 
-No. All 3,700 tests pass with zero code changes on macOS 27.0. The model improvements are automatic — M1K3's Mini brain gets a quality uplift for free.
+No. All 3,700 tests the suite had on 2026-09-12 passed with zero code changes on macOS 27.0. The model improvements are automatic — M1K3's Mini brain gets a quality uplift for free.
 
 ---
 
@@ -6147,13 +6281,15 @@ STEP 4 — VERIFY
   switch in Settings ▸ Server is off, or the token is missing or
   stale (m1k3 says so; the user runs m1k3 login again, then connect).
 
-WHAT THE AGENT GETS (18 tools)
+WHAT THE AGENT GETS (19 tools on the App Store build, 18 on the DMG)
   ask_m1k3, get_answer, list_jobs — ask the local brain (long asks poll by job id)
   search_knowledge, list_documents, get_document — the user's own documents
   remember, recall_memory, related_memory, forget_memory, memory_stats — memory graph
   speak, stop_speaking, listen — voice in and out
   list_todos, propose_todo — read the list; propose only (the user accepts)
   get_status, open_link
+  ask_private_cloud — Apple's Private Cloud Compute, App Store build only,
+    off until the user switches it on in Settings ▸ Server
   Details and the seven things the server will not do: https://m1k3.app/agents
 
 UNINSTALL

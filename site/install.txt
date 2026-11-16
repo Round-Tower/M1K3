@@ -81,13 +81,15 @@ STEP 4 — VERIFY
   switch in Settings ▸ Server is off, or the token is missing or
   stale (m1k3 says so; the user runs m1k3 login again, then connect).
 
-WHAT THE AGENT GETS (18 tools)
+WHAT THE AGENT GETS (19 tools on the App Store build, 18 on the DMG)
   ask_m1k3, get_answer, list_jobs — ask the local brain (long asks poll by job id)
   search_knowledge, list_documents, get_document — the user's own documents
   remember, recall_memory, related_memory, forget_memory, memory_stats — memory graph
   speak, stop_speaking, listen — voice in and out
   list_todos, propose_todo — read the list; propose only (the user accepts)
   get_status, open_link
+  ask_private_cloud — Apple's Private Cloud Compute, App Store build only,
+    off until the user switches it on in Settings ▸ Server
   Details and the seven things the server will not do: https://m1k3.app/agents
 
 UNINSTALL

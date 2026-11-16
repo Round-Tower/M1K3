@@ -1,31 +1,36 @@
 # M1K3
 
 > M1K3 is free for humans, source-available (FSL-1.1-ALv2), privacy-first AI for
-> macOS that runs entirely on-device. Local LLM inference (Gemma + Qwen via
-> MLX-Swift + Apple Foundation Models), live voice (streaming STT + on-device
-> Kokoro neural TTS), a personal knowledge graph with RAG over your documents,
-> a self-repairing temporal memory graph, consent-gated encrypted call
-> transcription, a local tool-using agent, and an MCP server. Private by
-> design: on your Mac by default, no account, no telemetry. Requires Apple
-> Silicon and macOS 26 Tahoe; also on iPhone and iPad from the same App Store
-> listing. Native
-> SwiftUI (Liquid Glass), not Electron. Made by Round Tower, Ireland.
+> Mac, iPhone and iPad that runs on-device by default. Local LLM inference
+> (Gemma + Qwen via MLX-Swift + Apple Foundation Models), live voice (streaming
+> STT + on-device Kokoro neural TTS), a personal knowledge graph with RAG over
+> your documents, a self-repairing temporal memory graph, consent-gated call
+> transcription, a local tool-using agent, an MCP server, and an
+> OpenAI-compatible Local API on the Mac. Private by design: no account, no
+> telemetry; web search is on by default with one switch to turn it off, and
+> Apple's Private Cloud Compute is opt-in. Requires macOS 26 or later on Apple
+> Silicon, or iOS / iPadOS 26 or later (one App Store listing). Native SwiftUI
+> (Liquid Glass), not Electron. Made by Round Tower, Ireland. Live version:
+> 1.4.
 
 Key facts:
-- Privacy: all inference, embeddings, voice, and storage are on-device; web
-  search is on by default, with one switch in Settings to turn it off; even per-answer thumbs feedback
+- Privacy: inference, embeddings, voice, and storage are on-device by default;
+  web search is on by default, with one switch in Settings to turn it off;
+  Apple's Private Cloud Compute is opt-in; even per-answer thumbs feedback
   stays local and is never writable over MCP
 - Brains scoreboard: https://m1k3.app/brains (human) and https://m1k3.app/brains.json
   (machine) — the pinned model revisions and dated on-device eval runs with
   hardware, power mode, app commit and runtime revision beside every number;
   documentation the app itself never reads
-- Models: three brains — Mini (Apple Foundation Models, instant), Lil (Qwen 3
-  4B, the fast brain that fronts the conversation), Big (Gemma 4 12B, reached
+- Models: three brains — Mini (Apple Foundation Models, instant), Lil (Qwen3.5
+  4B, the fast brain that fronts the conversation; it reads images), Big (Gemma 4 12B, reached
   by delegation for deep work) — MLX-Swift on Metal, switchable in Settings
 - Voice: Kokoro neural TTS on-device (pure MLX) with M1K3's own G2P
   letter-to-sound + house lexicon, sentence-streamed speech, and M1K3's own
   end-of-turn endpointing — ending a spoken turn on "please" submits it
-- Storage: app-sandboxed, GRDB, encrypted with a Keychain-held key
+- Storage: SQLite (GRDB) stores inside the app's sandbox on the device; saved
+  call records are encrypted (AES-256-GCM, key in the Keychain); the knowledge
+  and memory stores rely on the sandbox and the device's own disk encryption
 - Memory: a temporal memory graph with dream-cycle self-repair — corrections
   supersede stale facts instead of silently losing them, with a visible history
 - Heartbeat: an ambient 2-hourly narrative pulse about your machine and day —
@@ -33,11 +38,24 @@ Key facts:
 - Brain at Home: serve the Mac's brain to your own devices over the LAN —
   Bonjour discovery, one-time QR pairing, TLS-PSK, scoped read-only tools for
   paired devices; off by default, nothing crosses the internet
-- MCP server: 18 tools (knowledge search, documents, voice, memory, todos, ask —
-  with an async job API for long asks) over local HTTP at
+- MCP server: 19 tools on the App Store build, 18 on the DMG (knowledge search,
+  documents, voice, memory, todos, ask — with an async job API for long asks —
+  and the opt-in ask_private_cloud) over local HTTP at
   http://127.0.0.1:4242/mcp, off by default, every request carrying the
   access token from Settings (`m1k3 login`, then `m1k3 connect <client>`); a visiting agent can propose a todo
-  but only the user accepts it. Connecting an agent: https://m1k3.app/agents
+  but only the user accepts it. Connecting an agent: https://m1k3.app/agents.
+  MCP Registry name: app.m1k3/m1k3. For Claude Desktop, the MCP Bundle:
+  https://github.com/Round-Tower/M1K3/releases/download/mcpb-v0.1.0/m1k3.mcpb
+- Local API (Mac, version 1.4 and later): an OpenAI-compatible server at
+  http://127.0.0.1:4141/v1, off by default, loopback only, its own key; serves
+  /v1/models and /v1/chat/completions (text chat, streamed or whole; no tools,
+  embeddings or images); model ids mini-m1k3, lil-m1k3, big-m1k3 for the brain
+  that is loaded, plus the opt-in cloud-m1k3 (Apple's Private Cloud Compute,
+  30 lent calls an hour). A caller gets the raw brain: no M1K3 memory,
+  knowledge or tools. Docs: https://m1k3.app/local-api
+- Look (iPhone, version 1.4 and later): point the camera at something and ask
+  by tap or voice; the frame is read by a brain on the phone, never uploaded,
+  saved only with that chat, and kept out of the device backup
 - Install: the two-minute guide is https://m1k3.app/install (the Mac App
   Store at https://apps.apple.com/app/id6780230835?pt=120784482&ct=llms-txt&mt=12, Homebrew
   `brew trust round-tower/tap && brew install --cask round-tower/tap/m1k3`,
@@ -63,6 +81,7 @@ Key facts:
 - [How to run a local LLM on a Mac](https://m1k3.app/local-llm-mac-guide): hardware needs plus the four routes — Ollama, LM Studio, MLX, M1K3
 - [Give Claude a local memory with MCP](https://m1k3.app/mcp-knowledge-server): connect Claude Code/Desktop to M1K3's knowledge at http://127.0.0.1:4242/mcp
 - [Install M1K3](https://m1k3.app/install): the two-minute wizard — get the app (Mac App Store / Homebrew / DMG), say hello to Mini, flip the MCP switch, `m1k3 login` with its token, `m1k3 connect <client>`, verify with `m1k3 status`; the same recipe as plain text for agents at https://m1k3.app/install.txt
+- [The Local API](https://m1k3.app/local-api): an OpenAI-compatible server on your Mac — setup, the base URL and key, the model names, a curl and a Python first call, what it serves and refuses, and the opt-in Private Cloud Compute model
 - [Connect your coding agent to M1K3](https://m1k3.app/agents): the on-ramp for Claude Code, Codex, Cursor, VS Code and Zed — `brew install --cask round-tower/tap/m1k3`, `m1k3 login` (the server's access token), then `m1k3 connect <client>`, the per-client snippets with their Authorization header, the Claude Code plugin route (`/plugin marketplace add Round-Tower/M1K3`, `/plugin install m1k3@m1k3`, `/reload-plugins`; use it or `connect`, not both), the AGENTS.md resident block, and what the loopback server will not do
 - [M1K3 for Teams](https://m1k3.app/teams): the paid line for organisations — the same on-device brains, an institutional memory and a tuned persona on the organisation's own Apple Silicon under its own domain; on-prem only, design-partner pilots
 - [Privacy Policy — is M1K3 really private?](https://m1k3.app/privacy): the privacy policy and the privacy architecture — what runs on-device, the documented network crossings (opt-in model downloads, web search that is on by default with one switch to turn it off, updates, and the opt-in Private Cloud Compute rung), and how to verify

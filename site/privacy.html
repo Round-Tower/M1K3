@@ -37,7 +37,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-07-10",
-  "dateModified": "2026-11-06"
+  "dateModified": "2026-11-16"
 }
 </script>
 <script type="application/ld+json">
@@ -46,11 +46,11 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "Is M1K3 really private?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes — by architecture, not by policy. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the store encrypted under a Keychain-held key. The network is used in exactly four documented cases: one-time model downloads when you ask for them (brains, semantic memory, sharper speech recognition and the M1K3 Voice, from Hugging Face, plus one voice-styles file from GitHub), web search, which is on by default so answers can be current, with one switch in Settings to turn it off, app updates via the channel you installed from, and — only if you turn it on in Settings and pick it as your brain — sending your typed messages to Apple's Private Cloud Compute. No telemetry, no account, no analytics." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes — by architecture, not by policy. M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX, plus Apple Foundation Models), speech-to-text (Apple's on-device speech recognition, or WhisperKit if you download it), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, and saved call records are encrypted under a Keychain-held key. The network is used in exactly four documented cases: one-time model downloads when you ask for them (brains, semantic memory, sharper speech recognition and the M1K3 Voice, from Hugging Face, plus one voice-styles file from GitHub), web search, which is on by default so answers can be current, with one switch in Settings to turn it off, app updates via the channel you installed from, and — only if you turn it on in Settings — Apple's Private Cloud Compute, which receives your typed messages while you've picked it as your brain, or another app's own prompt if you separately switch on lending it. No telemetry, no account, no analytics." } },
     { "@type": "Question", "name": "Does M1K3 ever connect to the internet?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Four documented cases: (1) downloading models, once each, when you ask for them — the Lil or Big brain, semantic memory, sharper speech recognition and the M1K3 Voice come from Hugging Face, and the voice also fetches one voice-styles file from GitHub; on a Mac without Apple Intelligence the first run also downloads a small Mini brain (about 630 MB), while with Apple Intelligence the default Mini is Apple's built-in on-device model, nothing to download; (2) the web-search and page-reading agent tools, on by default so answers can be current, behind one privacy toggle that turns them off; (3) updates, via the Mac App Store (TestFlight for the betas) or by downloading a new DMG from GitHub — the app has no self-updater; (4) Private Cloud Compute, opt-in and off by default — your typed messages, only while you've picked it as your brain. With Private Cloud Compute off, documents, voice, and calls never leave the Mac, and a conversation reaches the web only as the searches M1K3 runs for it." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Four documented cases: (1) downloading models, once each, when you ask for them — the Lil or Big brain, semantic memory, sharper speech recognition and the M1K3 Voice come from Hugging Face, and the voice also fetches one voice-styles file from GitHub; on a Mac without Apple Intelligence the first run also downloads a small Mini brain (about 630 MB), while with Apple Intelligence the default Mini is Apple's built-in on-device model, nothing to download; (2) the web-search and page-reading agent tools, on by default so answers can be current, behind one privacy toggle that turns them off; (3) updates, via the Mac App Store (TestFlight for the betas) or by downloading a new DMG from GitHub — the app has no self-updater; (4) Private Cloud Compute, opt-in and off by default — your typed messages, only while you've picked it as your brain, or the prompt another app or agent on your Mac sends, only if you separately switch on lending it to them. With Private Cloud Compute off, documents, voice, and calls never leave the Mac, and a conversation reaches the web only as the searches M1K3 runs for it." } },
     { "@type": "Question", "name": "Where is M1K3's data stored?",
-      "acceptedAnswer": { "@type": "Answer", "text": "In the app's macOS sandbox container, in a GRDB store encrypted with a key held in your Keychain. Documents enter only when you explicitly open or drop them; call transcription is consent-gated and encrypted at rest; the memory store has a forget primitive so consent stays revocable." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "In the app's sandbox container on your device, in SQLite (GRDB) stores. The knowledge and memory stores are not separately encrypted: the sandbox and your device's own disk encryption protect them (FileVault on a Mac if it is on, Data Protection on iPhone and iPad). Documents enter only when you explicitly open or drop them; call recording is consent-gated and the saved call record is encrypted with a key held in your Keychain, while a call's text is also indexed into the knowledge store so you can search it; the memory store has a forget primitive so consent stays revocable." } },
     { "@type": "Question", "name": "How can I verify M1K3's privacy claims?",
       "acceptedAnswer": { "@type": "Answer", "text": "M1K3's source is public (source-available under the Functional Source License, FSL-1.1-ALv2), so the claims are inspectable rather than takeable on faith: read the sandbox entitlements file in the repo (each entitlement carries a signed comment explaining why it exists), print the shipped app's entitlements with codesign, watch it with a network monitor like Little Snitch, or pull the ethernet cable mid-conversation — with Private Cloud Compute off, the default, only the web tools notice." } },
     { "@type": "Question", "name": "What happens if I turn on Private Cloud Compute?",
@@ -86,7 +86,7 @@
   </header>
 
   <div class="answer">
-    <p><strong>Short answer: yes — by architecture, not by promise.</strong> M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (WhisperKit), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, with the knowledge store encrypted under a key held in your Keychain. The MCP server binds to <code>127.0.0.1</code> and is off by default. The network is used in <strong>exactly four documented cases</strong>: one-time model downloads when you ask for them (brains, semantic memory, sharper speech recognition and the M1K3 Voice, from Hugging Face, plus one voice-styles file from GitHub), web search, which is on by default so answers can be current, with one switch in Settings to turn it off, updates via the channel you installed from, and — only if you turn it on in Settings and pick it as your brain — sending your typed messages to Apple's Private Cloud Compute. No telemetry, no account, no analytics. With Private Cloud Compute off, the default, pull the ethernet cable mid-conversation and only the web tools notice.</p>
+    <p><strong>Short answer: yes — by architecture, not by promise.</strong> M1K3 runs the whole AI stack on your Mac by default: LLM inference (Gemma and Qwen via MLX-Swift on Metal, plus Apple Foundation Models), speech-to-text (Apple's on-device speech recognition, or WhisperKit if you download it), text-to-speech (Kokoro), embeddings, retrieval, and storage all execute on-device inside one sandboxed app, and saved call records are encrypted under a key held in your Keychain. The MCP server binds to <code>127.0.0.1</code> and is off by default. The network is used in <strong>exactly four documented cases</strong>: one-time model downloads when you ask for them (brains, semantic memory, sharper speech recognition and the M1K3 Voice, from Hugging Face, plus one voice-styles file from GitHub), web search, which is on by default so answers can be current, with one switch in Settings to turn it off, updates via the channel you installed from, and — only if you turn it on in Settings — Apple's Private Cloud Compute, which receives your typed messages while you've picked it as your brain, or another app's own prompt if you separately switch on lending it. No telemetry, no account, no analytics. With Private Cloud Compute off, the default, pull the ethernet cable mid-conversation and only the web tools notice.</p>
   </div>
 
   <h2>What runs where?</h2>
@@ -101,8 +101,8 @@
         <li><strong>Voice in</strong> WhisperKit / Apple Speech — streaming speech-to-text, on-device.</li>
         <li><strong>Voice out</strong> Kokoro neural TTS (MLX-Swift on Metal) — synthesis on-device.</li>
         <li><strong>Knowledge &amp; memory</strong> Embeddings, the personal knowledge graph, and hybrid RAG over your documents — indexed and searched locally.</li>
-        <li><strong>Call memory</strong> Consent-gated transcription and summaries, encrypted at rest.</li>
-        <li><strong>Storage</strong> App-sandboxed GRDB store, encrypted with a Keychain-held key.</li>
+        <li><strong>Call memory</strong> Consent-gated transcription and summaries; the saved record is encrypted.</li>
+        <li><strong>Storage</strong> App-sandboxed SQLite (GRDB) stores on your device.</li>
         <li><strong>MCP server</strong> Loopback only — <code>127.0.0.1:4242</code>, unreachable from the network, off by default in Settings.</li>
       </ul>
     </section>
@@ -136,7 +136,7 @@
   <p>M1K3 itself has no servers and never sees or stores your conversations, whether they stay on your Mac or make the trip to PCC. With the switch off — the default — none of this applies.</p>
 
   <h2>How is data stored on the Mac?</h2>
-  <p>Everything lives inside the app's macOS sandbox container. The knowledge and memory stores are GRDB databases encrypted with a key held in your Keychain — one place your knowledge lives, on hardware you own. Documents enter only when you explicitly open or drop them (the sandbox grants read access to user-selected files, nothing broader). Call transcription is consent-gated and encrypted at rest. Memory has a consent primitive going the other way too: <code>forget_memory</code> permanently deletes a fact, so what M1K3 knows stays revocable.</p>
+  <p>Everything lives inside the app's sandbox container — one place your knowledge lives, on hardware you own. The knowledge and memory stores are SQLite (GRDB) databases. They are not separately encrypted: the sandbox keeps other apps out, and your device's own disk encryption protects the files at rest (FileVault on a Mac if you have it on, Data Protection on iPhone and iPad). Documents enter only when you explicitly open or drop them (the sandbox grants read access to user-selected files, nothing broader). Call recording is consent-gated, and the saved call record (transcript and summary) is encrypted with AES-256-GCM under a key held in your Keychain. So that you can search a call, its text is also indexed into the knowledge store, which is not separately encrypted. Memory has a consent primitive going the other way too: <code>forget_memory</code> permanently deletes a fact, so what M1K3 knows stays revocable.</p>
   <p>There's no telemetry to store elsewhere. Bug reports are user-initiated: <strong>Settings → Report an issue…</strong> generates a redacted diagnostic that <em>you</em> read and attach to a GitHub issue by hand — nothing is transmitted automatically. Likewise, a thumbs-down on an answer can offer <strong>Send this exchange to Round Tower…</strong>: a sheet shows that one exchange — your message (an attached file's text is left out), M1K3's answer, the brain and the app version, nothing else — which you can edit, and your own mail app sends it to hello@round-tower.ie. Nothing goes without you pressing Send, and M1K3 itself makes no connection. We read it to fix what went wrong, may rewrite it as a made-up test case, and delete it if you ask. And if M1K3 didn't close cleanly last time (a crash, a force-quit, or the Mac or phone ending it), it offers once to send a short report the same way: when that session began, the brain, the app and system versions, any crash summaries your device kept, and anything you add. If a brain won't get ready on your phone, it offers the same kind of report: what M1K3 showed you, the versions, its download log from that session, and anything you add. Nothing you typed or said goes with it. Neither is offered where the declared age is under 16.</p>
 
   <h2 id="permissions">Which macOS permissions does M1K3 ask for, and why?</h2>
@@ -146,7 +146,7 @@
     <li id="context-senses"><strong>Calendar and Location (optional context).</strong> Off by default. Switch one on in <strong>Settings → Privacy → Context</strong> and macOS asks for its permission right then. Calendar reads the titles and times of your next few events; Location reads a coarse ~10 km area unless you choose Precise. Both are read only when a question needs them, used only to ground that answer, never stored, never remembered, never shared, and never mixed with web search in the same turn. Switch it off, or refuse the macOS prompt, and M1K3 stops reading it.</li>
     <li><strong>Microphone and Speech Recognition.</strong> Used for voice input. Transcribed on your Mac and never sent anywhere.</li>
     <li id="local-api"><strong>Local API (off by default).</strong> Lets other apps on your Mac use the brain M1K3 has loaded. It listens on your Mac only (127.0.0.1), behind its own key, and refuses web pages. A caller gets the raw brain with its own instructions (on the two Apple models, behind one fixed line asking the model to keep to Apple's acceptable use requirements): no M1K3 memory, knowledge or personality is in reach, and nothing a caller sends is written to your chat history or memory. What an app sends a brain on your Mac this way stays on your Mac; what that app does with the answer is up to that app. One exception, which you switch on yourself in versions that offer it: with <strong>Also offer Private Cloud Compute</strong> on (and Private Cloud Compute on in Privacy), an app that asks for the <code>cloud-m1k3</code> model by name has that call's messages sent to Apple's Private Cloud Compute. M1K3 adds nothing of yours to it, and the Settings pane counts the calls that have left. The MCP server has the same kind of switch for agents (<strong>Let agents ask Private Cloud Compute</strong>, off by default): M1K3 adds nothing to an agent's prompt, but an agent can include what it has read from your knowledge or memory.</li>
-    <li id="camera"><strong>Camera (iPhone and iPad).</strong> Used to scan the pairing code your Mac shows for Brain at Home. From the next iPhone version it is also how M1K3 looks at what you point it at when you ask. The camera is on only while the Look screen or voice mode's eye is open, or for the one picture a spoken ask takes. The frame is read by a brain on the device and sent nowhere: Brain at Home and Private Cloud Compute never receive it. A frame you ask about is saved with that chat on the device, is deleted with the chat, and is kept out of your device backup. A look runs no tools and is never turned into a memory, and its words are not passed to later messages unless you ask about the same photo again, which is answered on the device too. If you choose <strong>Search the web for this</strong>, M1K3 drafts the search words on the device and puts them in the message box. They leave only when you send them, and once sent they are an ordinary message of yours.</li>
+    <li id="camera"><strong>Camera (iPhone and iPad).</strong> Used to scan the pairing code your Mac shows for Brain at Home. From version 1.4 it is also how M1K3 looks at what you point it at when you ask. The camera is on only while the Look screen or voice mode's eye is open, or for the one picture a spoken ask takes. The frame is read by a brain on the device and sent nowhere: Brain at Home and Private Cloud Compute never receive it. A frame you ask about is saved with that chat on the device, is deleted with the chat, and is kept out of your device backup. A look runs no tools and is never turned into a memory, and its words are not passed to later messages unless you ask about the same photo again, which is answered on the device too. If you choose <strong>Search the web for this</strong>, M1K3 drafts the search words on the device and puts them in the message box. They leave only when you send them, and once sent they are an ordinary message of yours.</li>
     <li><strong>Local Network.</strong> Used only by Brain at Home (off by default) to serve M1K3's brain to devices you pair on your own network, encrypted.</li>
   </ul>
 
@@ -158,6 +158,7 @@
   <div class="term">
     <div class="term-bar"><span></span><span></span><span></span></div>
     <div class="term-body"><pre><span class="p">$</span> codesign -d --entitlements - /Applications/M1K3.app
+<span class="c"># an excerpt from the Mac App Store build; the full list is in the repo</span>
 <span class="c">com.apple.security.app-sandbox            → true</span>
 <span class="c">com.apple.security.network.client         → true  # model downloads + the web tools (on by default)</span>
 <span class="c">com.apple.security.network.server         → true  # the 127.0.0.1 MCP server, off by default</span>
@@ -198,7 +199,7 @@
   <p>Everything above is the architecture. This section is the policy, in the form a directory, a reviewer or a regulator expects, and it says the same thing in fewer words. Effective 2026-10-18.</p>
   <ul>
     <li><strong>Who is responsible.</strong> Round Tower Software Ltd, a company registered in Ireland (&ldquo;Round Tower&rdquo;), makes M1K3 and runs this website. Contact: <a href="mailto:hello@round-tower.ie?subject=M1K3%20privacy">hello@round-tower.ie</a>.</li>
-    <li><strong>What the app collects about you: nothing.</strong> M1K3 has no account, no sign-in, no telemetry, no analytics, no automatic crash reporting and no advertising. Round Tower receives nothing from the app itself and keeps no record of who uses it; the only things we can ever receive are an exchange you choose to email us from a thumbs-down, or a short report you choose to send after M1K3 didn't close cleanly or a brain wouldn't get ready, each through your own mail app after seeing the exact text. Your conversations, documents, memories, call transcripts and settings are stored only on your device, inside the app's sandbox container; the knowledge and memory stores and call transcripts are encrypted with a key held in your Keychain. The four network crossings listed above go to those third parties under their own privacy policies, and none of them goes through Round Tower: model downloads (the ones you ask for, and the Mini fallback on first run on a Mac without Apple Intelligence) from Hugging Face and GitHub; web tools, on by default with one switch to turn them off, which send the query M1K3 writes to DuckDuckGo and fetch Wikipedia summaries and the pages you ask it to read directly from those sites; updates through the channel you installed from; and, only if you turn it on and pick it as your brain, what you send to Apple's Private Cloud Compute.</li>
+    <li><strong>What the app collects about you: nothing.</strong> M1K3 has no account, no sign-in, no telemetry, no analytics, no automatic crash reporting and no advertising. Round Tower receives nothing from the app itself and keeps no record of who uses it; the only things we can ever receive are an exchange you choose to email us from a thumbs-down, or a short report you choose to send after M1K3 didn't close cleanly or a brain wouldn't get ready, each through your own mail app after seeing the exact text. Your conversations, documents, memories, call transcripts and settings are stored only on your device, inside the app's sandbox container; saved call records are encrypted with a key held in your Keychain, and the knowledge and memory stores rely on the sandbox and your device's disk encryption. The four network crossings listed above go to those third parties under their own privacy policies, and none of them goes through Round Tower: model downloads (the ones you ask for, and the Mini fallback on first run on a Mac without Apple Intelligence) from Hugging Face and GitHub; web tools, on by default with one switch to turn them off, which send the query M1K3 writes to DuckDuckGo and fetch Wikipedia summaries and the pages you ask it to read directly from those sites; updates through the channel you installed from; and, only if you turn it on, Apple's Private Cloud Compute: what you send while it is your brain, or what another app sends if you separately lend it.</li>
     <li><strong>Apple.</strong> If you installed M1K3 from the App Store, Apple handles the download, any update and any opt-in crash and usage sharing you have enabled in your Apple account, under <a href="https://www.apple.com/legal/privacy/">Apple's privacy policy</a>.</li>
     <li><strong>This website.</strong> m1k3.app sets no cookies and runs no analytics. Fonts, scripts and the 3D fox are served from this domain, with one exception: the experimental <a href="/vr">/vr</a> demo loads the three.js library from the jsDelivr CDN, so your browser sends that CDN an ordinary request for the file. The site is hosted on Netlify, acting as Round Tower's processor, whose servers may keep ordinary short-lived access logs (IP address, requested page, browser string) for security and operation under <a href="https://www.netlify.com/privacy/">Netlify's privacy policy</a>; Round Tower is the controller for those logs, keeps the host's analytics off, and does not export them or combine them with anything.</li>
     <li><strong>Email.</strong> If you write to us, we keep your message and address to deal with it (our legitimate interest in answering you) and delete the thread within twelve months of the last reply, unless it concerns a security report or a contract, which we keep for as long as that matter needs. We use them only to reply or, for an exchange or a snag report you send from the app, to fix what went wrong, and we do not add you to any list.</li>
@@ -230,9 +231,48 @@
 </main>
 
 <footer>
-  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE LTD</a> · MADE IN IRELAND · MAC APP STORE AND APP STORE ARE SERVICE MARKS OF APPLE INC.</span>
-  <span><a href="/teams">FOR TEAMS</a> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · <a href="/privacy">PRIVACY POLICY</a> · <a href="/terms">TERMS</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
-  <span class="guides">GUIDES: <a href="/local-llm-mac-guide">LOCAL LLMS ON A MAC</a> · <a href="/vs-ollama">M1K3 VS OLLAMA</a> · <a href="/private-chatgpt-alternative-mac">PRIVATE CHATGPT ALTERNATIVE</a> · <a href="/mcp-knowledge-server">A LOCAL MEMORY FOR CLAUDE</a> · <a href="/golden-gate-on-device-ai">ON-DEVICE AI IN MACOS 27</a></span>
+  <div class="foot-cols">
+    <div>
+      <p class="foot-h">M1K3</p>
+      <ul>
+        <li><a href="/install">Install</a></li>
+        <li><a href="/brains">The brains</a></li>
+        <li><a href="/companions">Companions</a></li>
+        <li><a href="/vr">Memory Sky for Vision Pro</a></li>
+        <li><a href="/teams">For teams</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Build with it</p>
+      <ul>
+        <li><a href="/agents">For coding agents</a></li>
+        <li><a href="/local-api">Local API</a></li>
+        <li><a href="/weights">Model weights</a></li>
+        <li><a href="https://github.com/Round-Tower/M1K3">GitHub</a></li>
+        <li><a href="https://github.com/sponsors/Round-Tower">Sponsor</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Guides</p>
+      <ul>
+        <li><a href="/local-llm-mac-guide">Local LLMs on a Mac</a></li>
+        <li><a href="/vs-ollama">M1K3 vs Ollama</a></li>
+        <li><a href="/private-chatgpt-alternative-mac">Private ChatGPT alternative</a></li>
+        <li><a href="/mcp-knowledge-server">A local memory for Claude</a></li>
+        <li><a href="/golden-gate-on-device-ai">On-device AI in macOS 27</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Small print</p>
+      <ul>
+        <li><a href="/privacy" aria-current="page">Privacy policy</a></li>
+        <li><a href="/terms">Terms</a></li>
+        <li><a href="https://round-tower.ie">Round Tower Software</a></li>
+      </ul>
+    </div>
+  </div>
+  <p class="foot-line">© 2026 Round Tower Software Ltd. Made in Ireland. No tracking on this page, obviously.</p>
+  <p class="foot-line foot-faint">Mac App Store and App Store are service marks of Apple Inc.</p>
 </footer>
 
 <!-- Signed: Kev + claude-fable-5, 2026-07-10, Confidence 0.85.
@@ -331,6 +371,7 @@
      pinned-digest check); no crossing changed. dateModified 2026-11-06. Confidence 0.85.
      Review: Kev + claude-fable-5.1, 2026-11-06 — the CTA band: Apple's own badge (site/badges, as supplied) replaces the
      text button; the source button carries GitHub's mark and reads "Source"; the footer credits the service marks.
-     Confidence 0.85. -->
+     Confidence 0.85. 
+     Review: Kev + claude-fable-5.2, 2026-11-16 — launch pass: the storage claim corrected: the knowledge and memory stores are plain SQLite in the sandbox (KnowledgeStore, MemoryStore open a bare DatabaseQueue; no SQLCipher), only the saved call record is AES-256-GCM sealed, and a call's text is also indexed into the knowledge store. Speech names Apple's recogniser first; the Private Cloud crossing names lending; Look is "from version 1.4"; the codesign listing is labelled an excerpt. Confidence 0.8: read from source, no database file was inspected. -->
 </body>
 </html>

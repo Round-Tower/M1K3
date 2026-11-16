@@ -37,7 +37,7 @@
   "author": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "publisher": { "@type": "Organization", "name": "Round Tower", "url": "https://round-tower.ie" },
   "datePublished": "2026-07-10",
-  "dateModified": "2026-10-02"
+  "dateModified": "2026-11-16"
 }
 </script>
 <script type="application/ld+json">
@@ -46,13 +46,13 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "What is the most private ChatGPT alternative for a Mac?",
-      "acceptedAnswer": { "@type": "Answer", "text": "An app whose AI runs entirely on the Mac itself, so conversations physically cannot reach a server. M1K3 is built exactly for this: a free, source-available AI app for Apple Silicon Macs where inference, voice, embeddings, and storage are all on-device — with chat, live voice, and memory over your documents included. Ollama and LM Studio also run models locally and are strong choices if you prefer to assemble your own stack." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "An app whose AI runs on the Mac itself, so a conversation has no server to be sent to. M1K3 is built for this: a free, source-available AI app for Apple Silicon Macs (and iPhone and iPad) where inference, voice, embeddings, and storage are all on-device by default — with chat, live voice, and memory over your documents included. Web search is on by default and one switch turns it off. Ollama and LM Studio also run models locally and are strong choices if you prefer to assemble your own stack." } },
     { "@type": "Question", "name": "Is the ChatGPT desktop app for Mac private?",
       "acceptedAnswer": { "@type": "Answer", "text": "The ChatGPT desktop app is a client for a cloud service: your conversations are processed on OpenAI's servers, under OpenAI's policies and controls. That is privacy by policy. It can be an acceptable trade — ChatGPT's frontier models are more capable than anything that runs locally — but it is architecturally different from an app where data never leaves the machine." } },
     { "@type": "Question", "name": "Can a local AI on a Mac really match ChatGPT?",
       "acceptedAnswer": { "@type": "Answer", "text": "Not on raw capability — frontier cloud models are ahead of anything a laptop can run, and an honest local-AI vendor should say so. For everyday tasks like summarising, drafting, and answering questions grounded in your own documents, current local models such as Gemma and Qwen on Apple Silicon are genuinely useful, and they come with properties no cloud model offers: they work offline, cost nothing per query, and your data stays home." } },
     { "@type": "Question", "name": "Does M1K3 require an account or subscription?",
-      "acceptedAnswer": { "@type": "Answer", "text": "No. M1K3 is free for humans, with no account, no subscription, and no telemetry; its source is public under the Functional Source License (FSL-1.1-ALv2 — source-available, not open source). The only network use is the one-time model download and web search, which is on by default with one switch in Settings to turn it off." } }
+      "acceptedAnswer": { "@type": "Answer", "text": "No. M1K3 is free for humans, with no account, no subscription, and no telemetry; its source is public under the Functional Source License (FSL-1.1-ALv2 — source-available, not open source). The network is used for model downloads you ask for, web search (on by default, one switch in Settings turns it off), updates, and Apple's Private Cloud Compute only if you switch it on." } }
   ]
 }
 </script>
@@ -104,14 +104,14 @@
   </header>
 
   <div class="answer">
-    <p><strong>Short answer: the most private ChatGPT alternative for a Mac is one where the AI runs on the Mac itself, so your conversations physically cannot reach a server.</strong> M1K3 is built exactly for this: a free, source-available AI app for Apple Silicon Macs where inference, voice, embeddings, and storage are all on-device — zero bytes of your conversations, documents, or calls are sent anywhere. It gives you the assistant experience (chat, live voice, memory over your documents) rather than just a model runner. If you'd rather assemble your own stack, Ollama and LM Studio also run models locally and are good tools. The ChatGPT desktop app, by contrast, is a client for a cloud service — capable, but architecturally not private in the same sense.</p>
+    <p><strong>Short answer: the most private ChatGPT alternative for a Mac is one where the AI runs on the Mac itself, so a conversation has no server to be sent to.</strong> M1K3 is built for this: a free, source-available AI app for Apple Silicon Macs (and iPhone and iPad) where inference, voice, embeddings, and storage are all on-device by default. Your documents and calls are never sent anywhere; a conversation reaches the web only as the searches M1K3 runs for it, and one switch turns those off. It gives you the assistant experience (chat, live voice, memory over your documents) rather than just a model runner. If you'd rather assemble your own stack, Ollama and LM Studio also run models locally and are good tools. The ChatGPT desktop app, by contrast, is a client for a cloud service — capable, but architecturally not private in the same sense.</p>
   </div>
 
   <h2>What makes an AI app actually private?</h2>
   <p>There are two different things people mean by "private AI", and the difference is structural:</p>
   <ul>
     <li><strong>Privacy by policy</strong> — your data goes to a company's servers, and the company promises (via settings, contracts, and law) to handle it well. This is how every cloud AI works, ChatGPT included. The promise may be kept; the point is that keeping it is a decision someone else makes, continuously.</li>
-    <li><strong>Privacy by architecture</strong> — the model runs on your own hardware, and the data never leaves. There is no server to breach, no policy to change, no retention window to argue about. Off-device disclosure isn't forbidden; it's <em>impossible</em>.</li>
+    <li><strong>Privacy by architecture</strong> — the model runs on your own hardware, so there is no server of ours to breach, no policy to change, no retention window to argue about. What can leave is named, short, and behind switches: web search (on by default) and Apple's Private Cloud Compute (off by default).</li>
   </ul>
   <p>Everything local on this page — M1K3, Ollama, LM Studio — is in the second category for inference. The differences between them are about what you get around the model.</p>
 
@@ -120,10 +120,10 @@
   <ul>
     <li><strong>Chat with memory</strong> — a personal knowledge graph over your documents; answers grounded in your own files.</li>
     <li><strong>Live voice</strong> — streaming speech in and natural speech out, fully on-device.</li>
-    <li><strong>Call memory</strong> — consent-gated call transcription, encrypted at rest with a Keychain-held key.</li>
+    <li><strong>Call memory</strong> — consent-gated call transcription; the saved call record is encrypted with a Keychain-held key.</li>
     <li><strong>An agent + MCP server</strong> — local tools, and your knowledge exposed to Claude and other agents <a href="/mcp-knowledge-server">over MCP</a>.</li>
   </ul>
-  <p>No account, no subscription, no telemetry. The only network use is the one-time model download, plus web search, which is <strong>on by default</strong> so answers can be current and clearly toggled — one switch in Settings, and web off means web off. Requirements are the honest catch: an Apple Silicon Mac on macOS 26 Tahoe.</p>
+  <p>No account, no subscription, no telemetry. The network is used for the model downloads you ask for, updates, and web search, which is <strong>on by default</strong> so answers can be current and clearly toggled — one switch in Settings, and web off means web off. Apple's Private Cloud Compute is there for the biggest questions, and stays off until you switch it on. Requirements are the honest catch: an Apple Silicon Mac on macOS 26 or later (or an iPhone or iPad on iOS 26 or later).</p>
 
   <h2>How the alternatives compare on a Mac</h2>
   <div class="table-scroll">
@@ -135,12 +135,12 @@
         <tr><td>Where inference runs</td><td class="yes">On your Mac</td><td class="yes">On your Mac</td><td class="yes">On your Mac</td><td class="no">OpenAI's servers</td></tr>
         <tr><td>What leaves the machine</td><td>Inference: nothing. Web searches, on by default, one switch to turn off</td><td>Nothing for inference; models pull from its registry</td><td>Nothing for inference; models download from hubs</td><td>Your prompts and files, processed in the cloud</td></tr>
         <tr><td>Account required</td><td class="yes">No</td><td class="yes">No</td><td class="yes">No</td><td class="no">Yes</td></tr>
-        <tr><td>Assistant features included</td><td class="yes">Voice, document RAG, call memory, agent, MCP — built in</td><td>Chat via the app or third-party UIs; the rest is DIY</td><td>Polished chat GUI + local API; document chat</td><td class="yes">Full assistant, frontier features</td></tr>
+        <tr><td>Assistant features included</td><td class="yes">Voice, document RAG, call memory, agent, MCP and an OpenAI-compatible local API — built in</td><td>Chat via the app or third-party UIs; the rest is DIY</td><td>Polished chat GUI + local API; document chat</td><td class="yes">Full assistant, frontier features</td></tr>
         <tr><td>Model quality ceiling</td><td>Local models (Gemma, Qwen)</td><td>Local models, wide choice</td><td>Local models, wide choice</td><td class="yes">Frontier models — the capability winner</td></tr>
         <tr><td>Works offline</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="yes">Yes</td><td class="no">No</td></tr>
         <tr><td>Price</td><td>Free</td><td>Free</td><td>Free (app)</td><td>Free tier; paid plans for full capability</td></tr>
         <tr><td>Source</td><td>Public — source-available (FSL-1.1-ALv2)</td><td class="yes">Open source — MIT</td><td>Partially (app is proprietary; CLI/SDK open)</td><td class="no">Closed</td></tr>
-        <tr><td>Platforms</td><td>macOS 26, Apple Silicon</td><td>macOS, Windows, Linux</td><td>macOS, Windows, Linux</td><td>macOS, Windows, web, mobile</td></tr>
+        <tr><td>Platforms</td><td>macOS 26+ on Apple Silicon; iOS and iPadOS 26+</td><td>macOS, Windows, Linux</td><td>macOS, Windows, Linux</td><td>macOS, Windows, web, mobile</td></tr>
       </tbody>
     </table>
   </div>
@@ -172,7 +172,7 @@
     </details>
     <details>
       <summary>Does M1K3 require an account or subscription?</summary>
-      <p>No. Free for humans, source-available (FSL-1.1-ALv2), no account, no subscription, no telemetry. Network is used only for the one-time model download and web search, which is on by default with one switch in Settings to turn it off.</p>
+      <p>No. Free for humans, source-available (FSL-1.1-ALv2), no account, no subscription, no telemetry. The network is used for model downloads you ask for, web search (on by default, one switch in Settings turns it off), updates, and Apple's Private Cloud Compute only if you switch it on.</p>
     </details>
     <details>
       <summary>What about Ollama or LM Studio instead?</summary>
@@ -203,9 +203,48 @@
 </main>
 
 <footer>
-  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE LTD</a> · MADE IN IRELAND · MAC APP STORE AND APP STORE ARE SERVICE MARKS OF APPLE INC.</span>
-  <span><a href="/teams">FOR TEAMS</a> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · <a href="/privacy">PRIVACY POLICY</a> · <a href="/terms">TERMS</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
-  <span class="guides">GUIDES: <a href="/local-llm-mac-guide">LOCAL LLMS ON A MAC</a> · <a href="/vs-ollama">M1K3 VS OLLAMA</a> · <a href="/private-chatgpt-alternative-mac" aria-current="page">PRIVATE CHATGPT ALTERNATIVE</a> · <a href="/mcp-knowledge-server">A LOCAL MEMORY FOR CLAUDE</a> · <a href="/golden-gate-on-device-ai">ON-DEVICE AI IN MACOS 27</a></span>
+  <div class="foot-cols">
+    <div>
+      <p class="foot-h">M1K3</p>
+      <ul>
+        <li><a href="/install">Install</a></li>
+        <li><a href="/brains">The brains</a></li>
+        <li><a href="/companions">Companions</a></li>
+        <li><a href="/vr">Memory Sky for Vision Pro</a></li>
+        <li><a href="/teams">For teams</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Build with it</p>
+      <ul>
+        <li><a href="/agents">For coding agents</a></li>
+        <li><a href="/local-api">Local API</a></li>
+        <li><a href="/weights">Model weights</a></li>
+        <li><a href="https://github.com/Round-Tower/M1K3">GitHub</a></li>
+        <li><a href="https://github.com/sponsors/Round-Tower">Sponsor</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Guides</p>
+      <ul>
+        <li><a href="/local-llm-mac-guide">Local LLMs on a Mac</a></li>
+        <li><a href="/vs-ollama">M1K3 vs Ollama</a></li>
+        <li><a href="/private-chatgpt-alternative-mac" aria-current="page">Private ChatGPT alternative</a></li>
+        <li><a href="/mcp-knowledge-server">A local memory for Claude</a></li>
+        <li><a href="/golden-gate-on-device-ai">On-device AI in macOS 27</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Small print</p>
+      <ul>
+        <li><a href="/privacy">Privacy policy</a></li>
+        <li><a href="/terms">Terms</a></li>
+        <li><a href="https://round-tower.ie">Round Tower Software</a></li>
+      </ul>
+    </div>
+  </div>
+  <p class="foot-line">© 2026 Round Tower Software Ltd. Made in Ireland. No tracking on this page, obviously.</p>
+  <p class="foot-line foot-faint">Mac App Store and App Store are service marks of Apple Inc.</p>
 </footer>
 
 <!-- Signed: Kev + claude-fable-5, 2026-07-10, Confidence 0.85.
@@ -259,6 +298,7 @@
      Confidence 0.85.
      Review: Kev + claude-fable-5.1, 2026-11-06 — the CTA band: Apple's own badge (site/badges, as supplied) replaces the
      text button; the source button carries GitHub's mark and reads "Source"; the footer credits the service marks.
-     Confidence 0.85. -->
+     Confidence 0.85. 
+     Review: Kev + claude-fable-5.2, 2026-11-16 — launch pass: "physically cannot", "zero bytes" and "impossible" replaced with what can leave and behind which switch; platforms and the Local API named. Confidence 0.85. -->
 </body>
 </html>

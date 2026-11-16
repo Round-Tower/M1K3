@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>M1K3 — Your AI. Your devices. Private by design.</title>
-<meta name="description" content="M1K3 is on-device AI for Mac, iPhone and iPad. Local inference, live voice, a knowledge graph, encrypted call memory, and an MCP server — on your devices by default, private by design." />
+<meta name="description" content="M1K3 is on-device AI for Mac, iPhone and iPad. Local inference, live voice, a knowledge graph, consent-gated call memory, and an MCP server — on your devices by default, private by design." />
 <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
 <!-- NOTE: canonical domain: m1k3.app (m1k3.ai + m1k3.bot 301-redirect here) (also in sitemap.xml, robots.txt, llms.txt) -->
 <link rel="canonical" href="https://m1k3.app/" />
@@ -53,15 +53,17 @@
   "applicationCategory": "ProductivityApplication",
   "applicationSubCategory": "Local AI assistant",
   "isAccessibleForFree": true,
-  "description": "Privacy-first AI that runs entirely on-device on Apple Silicon Macs: local LLM inference (MLX, Gemma 4, Qwen 3, Apple Foundation Models), live voice with on-device neural TTS, a personal knowledge graph with RAG, a self-repairing temporal memory graph, encrypted call transcription, a local agent, an ambient Heartbeat (off by default), a LAN Brain-at-Home service (off by default), and an MCP server with 18 tools.",
+  "description": "Privacy-first AI that runs on-device by default on Apple Silicon Macs, iPhone and iPad: local LLM inference (MLX, Gemma 4, Qwen3.5, Apple Foundation Models), live voice with on-device neural TTS, a personal knowledge graph with RAG, a self-repairing temporal memory graph, consent-gated call transcription, a local agent, an ambient Heartbeat (off by default), a LAN Brain-at-Home service (off by default), an MCP server with 19 tools, and an OpenAI-compatible Local API on the Mac (off by default).",
   "featureList": [
     "Three on-device brains: Mini (Apple Foundation Models, instant), Lil (Qwen3.5 4B, fronts the conversation and reads images), Big (Gemma 4 12B, delegated deep work)",
     "Live voice: on-device speech recognition in, Kokoro neural TTS out, sentence-streamed",
-    "Personal knowledge graph with RAG over your documents, encrypted under a Keychain-held key",
+    "Personal knowledge graph with RAG over your documents, kept in the app's sandbox on your device",
     "Temporal memory graph with dream-cycle self-repair",
-    "Consent-gated call transcription and summaries",
+    "Consent-gated call transcription and summaries, the saved record encrypted under a Keychain-held key",
     "A local tool-using agent; web search on by default, one switch in Settings to turn it off",
-    "MCP server with 18 tools on http://127.0.0.1:4242/mcp (off by default) and the m1k3 command-line client",
+    "MCP server with 19 tools on http://127.0.0.1:4242/mcp (off by default) and the m1k3 command-line client",
+    "OpenAI-compatible Local API on http://127.0.0.1:4141/v1 (Mac, off by default, its own key)",
+    "Look on iPhone: point the camera and ask; the frame is read on the device and saved only with that chat",
     "Brain at Home: serve the Mac's brain to your own devices over the LAN (off by default)",
     "No account, no telemetry; on-device by default — web search is one switch, and the Mac App Store build's Private Cloud Compute brain is opt-in and off by default (the DMG has no cloud path)"
   ],
@@ -77,7 +79,7 @@
   "publisher": { "@type": "Organization", "name": "Round Tower", "legalName": "Round Tower Software Ltd", "url": "https://round-tower.ie" },
   "sameAs": ["https://github.com/Round-Tower/M1K3", "https://apps.apple.com/app/id6780230835"],
   "datePublished": "2026-07-02",
-  "dateModified": "2026-10-13"
+  "dateModified": "2026-11-16"
 }
 </script>
 <script type="application/ld+json">
@@ -92,9 +94,9 @@
     { "@type": "Question", "name": "Which Macs does M1K3 support?",
       "acceptedAnswer": { "@type": "Answer", "text": "M1K3 requires an Apple Silicon Mac running macOS 26 Tahoe. It is a native SwiftUI app with Metal-accelerated inference, not an Electron wrapper." } },
     { "@type": "Question", "name": "How is M1K3 different from Ollama or ChatGPT?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Ollama is a local model server; ChatGPT is a cloud service. M1K3 is a complete on-device AI app: local models plus live voice, a personal knowledge graph over your documents, encrypted call memory, an agent with tools, and an MCP server, in one sandboxed native Mac app." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Ollama is a local model server; ChatGPT is a cloud service. M1K3 is a complete on-device AI app: local models plus live voice, a personal knowledge graph over your documents, consent-gated call memory, an agent with tools, and an MCP server, in one sandboxed native Mac app." } },
     { "@type": "Question", "name": "Can Claude or other AI agents use my M1K3 knowledge?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes. M1K3 ships an in-app MCP (Model Context Protocol) server with 18 tools — knowledge search, documents, voice, memory, and ask-M1K3 with an async job API for long asks — over local HTTP at 127.0.0.1:4242, so Claude and other MCP clients can query your local knowledge base without a byte leaving the Mac." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes. M1K3 ships an in-app MCP (Model Context Protocol) server with 19 tools — knowledge search, documents, voice, memory, and ask-M1K3 with an async job API for long asks — over local HTTP at 127.0.0.1:4242, so Claude and other MCP clients can query your local knowledge base on the Mac itself. What a tool returns becomes part of your conversation with that client." } },
     { "@type": "Question", "name": "Does M1K3 do anything when I'm not talking to it?",
       "acceptedAnswer": { "@type": "Answer", "text": "Only if you ask it to. The Heartbeat is an ambient pulse — every two hours, a short narrative about your machine and your day, composed from facts the code gathered, respecting quiet hours. It is off by default, lives on its own screen with a one-tap Clear, and never enters your chat transcript." } },
     { "@type": "Question", "name": "Can my other devices use my Mac's brain?",
@@ -318,23 +320,41 @@
   .final { text-align: center; padding: 160px 40px; }
   .final h2 { font-family: var(--pixel); font-size: clamp(44px, 7vw, 96px); line-height: 0.95; text-shadow: var(--glow-soft); }
   .final p { color: var(--ink-dim); margin: 24px auto 44px; max-width: 480px; }
+  /* ---------- Footer: grouped columns, one source (macos/tools/site/footer.py) ----------
+     Review: Kev + claude-fable-5.2, 2026-11-16 — replaces the single strip of capitals and
+     the GUIDES row (#572) with four columns in sentence case. Kev: "Grouped collumes
+     please for the footer". Confidence 0.8. */
   footer {
     border-top: 1px solid var(--line);
-    padding: 36px 40px; display: flex; justify-content: space-between; align-items: center;
-    font-family: var(--mono); font-size: 11px; color: var(--ink-faint); letter-spacing: 0.1em;
-    max-width: 1200px; margin: 0 auto; gap: 18px; flex-wrap: wrap;
+    max-width: 1200px; margin: 0 auto; padding: 56px 40px 40px;
+    color: var(--ink-faint); font-size: 14px; line-height: 1.5;
   }
-  footer .guides { flex-basis: 100%; order: -1; }
+  footer .foot-cols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 40px 32px; }
+  footer .foot-h {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--ink-dim); margin: 0 0 14px;
+  }
+  footer ul { list-style: none; margin: 0; padding: 0; }
+  footer li { margin: 0 0 9px; }
+  footer a { color: var(--ink-dim); text-decoration: none; }
+  footer a:hover, footer a[aria-current="page"] { color: var(--ink-bright); }
+  footer a:focus-visible, footer button:focus-visible { outline: 1px solid var(--ink-bright); outline-offset: 3px; }
+  footer .foot-extra { margin: 36px 0 0; }
+  footer .foot-line { margin: 36px 0 0; font-size: 13px; color: var(--ink-dim); }
+  footer .foot-line.foot-faint { margin-top: 8px; font-size: 12px; color: #767676; }
+  footer .foot-extra + .foot-extra { margin-top: 18px; }
   /* third-party badge, self-hosted so the page still makes zero external requests */
-  footer .featured { flex-basis: 100%; }
   footer .featured img { display: block; max-width: 100%; height: auto; opacity: .7; transition: opacity .25s; }
   footer .featured a:hover img { opacity: 1; }
-  footer a { color: var(--ink-dim); text-decoration: none; }
-  footer a:hover { color: var(--ink-bright); }
+  @media (max-width: 900px) {
+    footer { padding: 44px 22px 32px; }
+    footer .foot-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+  @media (max-width: 480px) { footer .foot-cols { grid-template-columns: 1fr; gap: 30px; } }
   /* privacy-respecting share: native Web Share API, copy-link fallback. No third parties. */
   .share-link {
-    font: inherit; letter-spacing: inherit; text-transform: inherit;
-    color: var(--ink-dim); background: none; border: 0; padding: 0;
+    font: inherit; color: var(--ink-dim); background: none;
+    border: 1px solid var(--line); border-radius: 2px; padding: 8px 14px;
     cursor: pointer; transition: color .25s, text-shadow .25s;
   }
   .share-link:hover { color: var(--ink-bright); text-shadow: var(--glow); }
@@ -385,17 +405,6 @@
     100% { text-shadow: var(--glow-soft); }
   }
 
-  /* ---------- companion discovery hint ---------- */
-  .companion-hint {
-    position: absolute; z-index: 11; right: max(40px, 7vw); bottom: 24vh;
-    font-family: var(--mono); font-size: 11px; letter-spacing: 0.18em;
-    color: var(--ink-faint); text-align: right; line-height: 1.9;
-    text-transform: uppercase; pointer-events: none; user-select: none;
-    opacity: 0; transition: opacity .8s ease;
-  }
-  .companion-hint.show { opacity: 1; animation: hintPulse 3.2s ease-in-out infinite; }
-  .companion-hint .k { color: var(--ink-dim); }
-  @keyframes hintPulse { 50% { opacity: .45; } }
 
   /* ---------- wordmark glitch tick ---------- */
   .wordmark.glitch { animation: wmGlitch .3s steps(6) 1; }
@@ -413,7 +422,6 @@
   @media (prefers-reduced-motion: reduce) {
     #poweron { display: none; }
     .stat .num.lit { animation: none; }
-    .companion-hint.show { animation: none; }
     .wordmark.glitch { animation: none; }
   }
 
@@ -432,7 +440,6 @@
       background: linear-gradient(95deg, var(--bg) 22%, rgba(5,5,5,0.78) 52%, rgba(5,5,5,0.35) 74%, transparent 92%);
       pointer-events: none;
     }
-    .companion-hint { bottom: 30vh; font-size: 10px; }
   }
 </style>
 </head>
@@ -471,7 +478,7 @@
   <div class="hero-copy">
     <div class="boot" id="boot"></div>
     <h1 class="headline reveal in">Your AI.<br />Your devices.<br /><span class="dim" id="rotator">Private by design.</span></h1>
-    <p class="sub reveal in">M1K3 is local AI that runs <strong>entirely on your devices</strong>. Local models, live voice, a knowledge graph that remembers everything — no account, no telemetry.</p>
+    <p class="sub reveal in">M1K3 is local AI that runs <strong>on your devices by default</strong>. Local models, live voice, a knowledge graph of what you give it — no account, no telemetry.</p>
     <div class="cta-row cta-mac reveal in">
       <a class="store-badge" href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=site-hero&amp;mt=12"><img src="/badges/mac-app-store.svg" alt="Download on the Mac App Store" width="215" height="55" /></a>
       <a class="btn btn-ghost" aria-label="Download M1K3.dmg" href="https://github.com/Round-Tower/M1K3/releases/latest/download/M1K3.dmg"><svg class="glyph" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 12.5h11"/></svg>DMG</a>
@@ -482,10 +489,7 @@
       <button class="btn btn-primary" type="button" data-send-to-mac>Send to my Mac</button>
       <a class="btn btn-ghost" aria-label="M1K3 on the Mac App Store" href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=site-hero-away&amp;mt=12">Mac App Store</a>
     </div>
-    <div class="hero-meta">REQUIRES MACOS 26 TAHOE · APPLE SILICON · FREE FOR HUMANS, FOREVER</div>
-  </div>
-  <div class="companion-hint" id="companionHint" aria-hidden="true">
-    <span class="k">click</span> · it plays<br /><span class="k">dbl-click</span> · it changes
+    <div class="hero-meta">MACOS 26+ ON APPLE SILICON · IOS AND IPADOS 26+ · FREE FOR HUMANS, FOREVER</div>
   </div>
   <div class="scroll-hint">scroll</div>
 </header>
@@ -495,10 +499,10 @@
 <div class="band" id="private">
   <div class="band-label reveal"><span class="label">// receipts</span></div>
   <div class="band-inner">
-    <div class="stat reveal"><div class="num" data-num="0">0</div><div class="desc">bytes of your data sent to a server. Inference, voice, and memory are all on-device.</div></div>
+    <div class="stat reveal"><div class="num" data-num="0">0</div><div class="desc">accounts, trackers or telemetry. Inference, voice and memory run on-device; web search is the one thing on by default that goes out, and one switch turns it off.</div></div>
     <div class="stat reveal"><div class="num" data-num="100%">100%</div><div class="desc">local model stack. Three brains, every one on your Mac — switch in Settings, <a href="/brains">see how they score</a>.</div></div>
-    <div class="stat reveal"><div class="num" data-num="1">1</div><div class="desc">place your knowledge lives: an encrypted store on your Mac, keyed from your Keychain.</div></div>
-    <div class="stat reveal"><div class="num" data-num="∞">∞</div><div class="desc">things it remembers. Documents, conversations, calls — searchable forever, by you alone.</div></div>
+    <div class="stat reveal"><div class="num" data-num="1">1</div><div class="desc">place your knowledge lives: the app's sandboxed store on your own device, not a cloud account.</div></div>
+    <div class="stat reveal"><div class="num" data-num="∞">∞</div><div class="desc">is how long it keeps what you give it. Documents, conversations and calls stay searchable until you delete them.</div></div>
   </div>
 </div>
 <hr class="rule" />
@@ -515,7 +519,7 @@
       <div class="cell-icon">▚▚</div>
       <h3>On-device inference</h3>
       <p>Three brains: Mini answers instantly, Lil fronts the conversation, and Big is delegated the deep work. Switch in Settings any time — <a href="/brains">which models, and how they score</a>.</p>
-      <span class="tag">mlx-swift · afm · qwen3 · gemma-4</span>
+      <span class="tag">mlx-swift · afm · qwen3.5 · gemma-4</span>
     </div>
     <div class="cell reveal">
       <div class="cell-icon">◉))</div>
@@ -527,13 +531,13 @@
       <div class="cell-icon">◢◣◥</div>
       <h3>Knowledge graph</h3>
       <p>Import documents and M1K3 builds a private knowledge graph with semantic search. Ask questions; get answers grounded in your own files.</p>
-      <span class="tag">rag · bge embeddings · fts</span>
+      <span class="tag">rag · embeddinggemma · fts</span>
     </div>
     <div class="cell reveal">
       <div class="cell-icon">▶▮▮</div>
       <h3>Call memory</h3>
-      <p>Consent-gated call recording with on-device transcription, speaker-grouped summaries, and encrypted persistence. Your calls become searchable knowledge.</p>
-      <span class="tag">encrypted · keychain · consent-first</span>
+      <p>Consent-gated call recording with on-device transcription, and speaker-grouped summaries. The saved call record is encrypted, and its text is also indexed into your knowledge so you can search it.</p>
+      <span class="tag">consent-first · encrypted record · searchable</span>
     </div>
     <div class="cell reveal">
       <div class="cell-icon">⌁⌁⌁</div>
@@ -545,7 +549,25 @@
       <div class="cell-icon">&lt;/&gt;</div>
       <h3>MCP server</h3>
       <p>M1K3 exposes your knowledge, memory, and voice to Claude and other agents over the Model Context Protocol — with an async job API for the slow, deep asks. Your second brain, available to your other AIs — locally. <a href="/mcp-knowledge-server">How it works</a>.</p>
-      <span class="tag">mcp · 18 tools · 127.0.0.1:4242</span>
+      <span class="tag">mcp · 19 tools · 127.0.0.1:4242</span>
+    </div>
+    <div class="cell reveal">
+      <div class="cell-icon">{ }</div>
+      <h3>Local API</h3>
+      <p>The Mac app can lend its loaded brain to your other apps through an OpenAI-compatible server on this Mac. Point an editor, a script or a client library at it and no key leaves for a cloud. Off by default, with its own key. <a href="/local-api">Set it up</a>.</p>
+      <span class="tag">openai-compatible · 127.0.0.1:4141 · off by default</span>
+    </div>
+    <div class="cell reveal">
+      <div class="cell-icon">◉</div>
+      <h3>Look</h3>
+      <p>On iPhone, point the camera at a label, a sign or a part and ask about it, by tap or by voice. The frame is read on the phone, never uploaded, and saved only with that chat.</p>
+      <span class="tag">iphone · on-device vision · no upload</span>
+    </div>
+    <div class="cell reveal">
+      <div class="cell-icon">☁︎?</div>
+      <h3>Private Cloud Compute, when you ask</h3>
+      <p>For questions too big for the device, pick Apple's Private Cloud Compute as your brain and your typed messages go there until you pick a brain on your device again. It is off until you switch it on, it asks your consent the first time, and the brain picker names who is answering.</p>
+      <span class="tag">opt-in · consent first · named in the picker</span>
     </div>
     <div class="cell reveal">
       <div class="cell-icon">◇◆◇</div>
@@ -576,13 +598,13 @@
     <div class="reveal">
       <span class="label">// built native</span>
       <h2 style="font-family:var(--pixel); font-size:clamp(36px,5vw,60px); line-height:1; margin-top:14px;">Mac-native,<br />to the metal.</h2>
-      <p style="color:var(--ink-dim); margin-top:18px; font-size:16px;">Not an Electron wrapper. Not a webview. A SwiftUI app with Liquid Glass, RealityKit avatars, and Metal-accelerated inference — built for macOS Tahoe and nothing else.</p>
+      <p style="color:var(--ink-dim); margin-top:18px; font-size:16px;">Not an Electron wrapper. Not a webview. A SwiftUI app with Liquid Glass, RealityKit avatars, and Metal-accelerated inference — built natively for macOS, with the same core on iPhone and iPad.</p>
       <ul>
         <li><span>SwiftUI + Liquid Glass interface</span><span>macOS 26</span></li>
         <li><span>Metal-accelerated local models</span><span>mlx-swift</span></li>
         <li><span>3D companion avatar</span><span>realitykit</span></li>
-        <li><span>App-sandboxed, encrypted store</span><span>grdb + keychain</span></li>
-        <li><span>Swift 6.2, strict concurrency</span><span>2,800+ tests</span></li>
+        <li><span>App-sandboxed store, encrypted call records</span><span>grdb + keychain</span></li>
+        <li><span>Swift 6.2, strict concurrency</span><span>6,600+ tests</span></li>
       </ul>
     </div>
     <div class="term reveal">
@@ -591,7 +613,7 @@
 <span class="c"># everything below happens on this Mac</span><br />
 <span class="p">m1k3 ›</span> summarise yesterday's call with the architect<br />
 <span class="c">⌁ searching knowledge graph… 3 chunks</span><br />
-<span class="c">⌁ gemma-4 · metal · 0 network calls</span><br />
+<span class="c">⌁ qwen3.5 · metal · 0 network calls</span><br />
 <br />
 You agreed the retrofit keeps the original<br />
 roofline; planning docs due Friday. Want<br />
@@ -634,11 +656,11 @@ the action list?<br />
     </details>
     <details class="reveal">
       <summary>How is it different from Ollama or ChatGPT?</summary>
-      <p>Ollama is a local model server; ChatGPT is a cloud service. M1K3 is a complete on-device AI app: local models <em>plus</em> live voice, a knowledge graph over your documents, encrypted call memory, an agent with tools, and an MCP server — one sandboxed native app.</p>
+      <p>Ollama is a local model server; ChatGPT is a cloud service. M1K3 is a complete on-device AI app: local models <em>plus</em> live voice, a knowledge graph over your documents, consent-gated call memory, an agent with tools, and an MCP server — one sandboxed native app.</p>
     </details>
     <details class="reveal">
       <summary>Can Claude use my M1K3 knowledge?</summary>
-      <p>Yes. M1K3 ships an MCP server with 18 tools — <code>search_knowledge</code>, <code>ask_m1k3</code>, memory recall, documents, even <code>speak</code> — over local HTTP at <code>127.0.0.1:4242</code>. Long asks get an async job API. Claude and other MCP clients query your local knowledge base, locally.</p>
+      <p>Yes. M1K3 ships an MCP server with 19 tools — <code>search_knowledge</code>, <code>ask_m1k3</code>, memory recall, documents, even <code>speak</code> — over local HTTP at <code>127.0.0.1:4242</code>. Long asks get an async job API. Claude and other MCP clients query your local knowledge base, locally.</p>
     </details>
     <details class="reveal">
       <summary>Is it free? Is it open source?</summary>
@@ -672,10 +694,50 @@ the action list?<br />
 </section>
 
 <footer>
-  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE LTD</a> · MADE IN IRELAND · MAC APP STORE AND APP STORE ARE SERVICE MARKS OF APPLE INC. · FOX: <a href="https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox" rel="license">PIXELMANNEN / TOMKRANIS, CC-BY 4.0</a> · CREATURES: <a href="https://quaternius.com" rel="license">QUATERNIUS, CC0</a></span>
-  <span><a href="/agents">FOR AGENTS</a> · <a href="/teams">FOR TEAMS</a> · <a href="/vr">VR</a> · <button class="share-link" id="shareBtn" type="button" aria-label="Share M1K3">SHARE ↗</button> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · <a href="/privacy">PRIVACY POLICY</a> · <a href="/terms">TERMS</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
-  <span class="guides">GUIDES: <a href="/local-llm-mac-guide">LOCAL LLMS ON A MAC</a> · <a href="/vs-ollama">M1K3 VS OLLAMA</a> · <a href="/private-chatgpt-alternative-mac">PRIVATE CHATGPT ALTERNATIVE</a> · <a href="/mcp-knowledge-server">A LOCAL MEMORY FOR CLAUDE</a> · <a href="/golden-gate-on-device-ai">ON-DEVICE AI IN MACOS 27</a></span>
-  <span class="featured"><a href="https://theresanaiforthat.com/ai/m1k3/?ref=featured&amp;v=13348798" target="_blank" rel="nofollow noopener"><img width="300" height="63" src="/featured-on-taaft.png" alt="Featured on There's An AI For That"></a></span>
+  <div class="foot-cols">
+    <div>
+      <p class="foot-h">M1K3</p>
+      <ul>
+        <li><a href="/install">Install</a></li>
+        <li><a href="/brains">The brains</a></li>
+        <li><a href="/companions">Companions</a></li>
+        <li><a href="/vr">Memory Sky for Vision Pro</a></li>
+        <li><a href="/teams">For teams</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Build with it</p>
+      <ul>
+        <li><a href="/agents">For coding agents</a></li>
+        <li><a href="/local-api">Local API</a></li>
+        <li><a href="/weights">Model weights</a></li>
+        <li><a href="https://github.com/Round-Tower/M1K3">GitHub</a></li>
+        <li><a href="https://github.com/sponsors/Round-Tower">Sponsor</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Guides</p>
+      <ul>
+        <li><a href="/local-llm-mac-guide">Local LLMs on a Mac</a></li>
+        <li><a href="/vs-ollama">M1K3 vs Ollama</a></li>
+        <li><a href="/private-chatgpt-alternative-mac">Private ChatGPT alternative</a></li>
+        <li><a href="/mcp-knowledge-server">A local memory for Claude</a></li>
+        <li><a href="/golden-gate-on-device-ai">On-device AI in macOS 27</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Small print</p>
+      <ul>
+        <li><a href="/privacy">Privacy policy</a></li>
+        <li><a href="/terms">Terms</a></li>
+        <li><a href="https://round-tower.ie">Round Tower Software</a></li>
+      </ul>
+    </div>
+  </div>
+  <p class="foot-extra"><button class="share-link" id="shareBtn" type="button" aria-label="Share M1K3">Share M1K3</button></p>
+  <p class="foot-extra featured"><a href="https://theresanaiforthat.com/ai/m1k3/?ref=featured&amp;v=13348798" target="_blank" rel="nofollow noopener"><img width="300" height="63" src="/featured-on-taaft.png" alt="Featured on There's An AI For That"></a></p>
+  <p class="foot-line">© 2026 Round Tower Software Ltd. Made in Ireland. No tracking on this page, obviously.</p>
+  <p class="foot-line foot-faint">Mac App Store and App Store are service marks of Apple Inc. Fox model: <a href="https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/Fox" rel="license">PixelMannen and tomkranis, CC-BY 4.0</a>.</p>
 </footer>
 
 <!-- ================= SCRIPTS ================= -->
@@ -684,7 +746,7 @@ the action list?<br />
 <script>
   (function () {
     var bootEl = document.getElementById('boot');
-    var bootLines = '> m1k3 boot — local only\n> models: gemma-4 + qwen3 [metal] .. OK\n> network: not required';
+    var bootLines = '> m1k3 boot — local only\n> models: afm + qwen3.5 + gemma-4 .. OK\n> network: not required';
     var bi = 0;
     (function typeBoot() {
       if (bi <= bootLines.length) {
@@ -808,9 +870,9 @@ the action list?<br />
           navigator.share(shareData).catch(function () {});
         } else if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(shareData.url).then(function () {
-            shareBtn.textContent = 'LINK COPIED ✓';
+            shareBtn.textContent = 'Link copied';
             shareBtn.classList.add('copied');
-            setTimeout(function () { shareBtn.textContent = 'SHARE ↗'; shareBtn.classList.remove('copied'); }, 2200);
+            setTimeout(function () { shareBtn.textContent = 'Share M1K3'; shareBtn.classList.remove('copied'); }, 2200);
           }).catch(function () { window.prompt('Copy this link:', shareData.url); });
         } else {
           window.prompt('Copy this link:', shareData.url);
@@ -818,14 +880,6 @@ the action list?<br />
       });
     }
 
-    /* Companion hint: surfaces after boot, fades on first interaction (the
-       module script calls __hideCompanionHint) or after a while regardless. */
-    var hint = document.getElementById('companionHint');
-    if (hint) {
-      window.__hideCompanionHint = function () { hint.classList.remove('show'); };
-      setTimeout(function () { hint.classList.add('show'); }, 2600);
-      setTimeout(window.__hideCompanionHint, 12000);
-    }
   })();
 </script>
 <script src="/send-to-mac.js" defer></script>
@@ -920,18 +974,12 @@ function buildFallback() {
   rig.userData.fallback = g;
 }
 
-/* ---------- companions ----------
-   Click: the companion does its trick. Double-click: a different companion
-   answers the call (easter egg — same model lineup as the M1K3 avatar system).
-   Scales chosen so each stands in family with the fox (~2 world units; the
-   gecko deliberately reads smaller). */
+/* ---------- the companion ----------
+   Click: the fox does its trick. Nothing on the page says so and nothing else
+   changes it: the hint and the double-click swap were noise in the hero. */
 const companions = [
   { url: './vendor/Fox.glb',     scale: 0.026, idle: 'Survey', trick: 'Run',     trickMs: 1800 },
-  { url: './vendor/Gecko.glb',   scale: 3.0,   idle: 'Idle_A', trick: 'Clicked', trickMs: 1600 },
-  { url: './vendor/Inkfish.glb', scale: 1.3,   idle: 'Idle_A', trick: 'Splash',  trickMs: 1600 },
-  { url: './vendor/Colobus.glb', scale: 2.2,   idle: 'Idle_A', trick: 'Jump',    trickMs: 1600 },
 ];
-let companionIdx = 0;
 let spec = companions[0];
 let activeRoot = null;
 const gltfCache = new Map();   /* url → prepared gltf (phosphorised ONCE) */
@@ -969,24 +1017,11 @@ setCompanion(0);
 /* a little life: occasionally walk a beat, then settle again */
 setInterval(() => { play('Walk'); setTimeout(() => play(spec.idle), 2600); }, 11000);
 
-/* single click = trick (debounced so a double-click doesn't fire it),
-   double-click = next companion */
+/* click = trick */
 renderer.domElement.style.cursor = 'pointer';
-let clickTimer = null;
-renderer.domElement.addEventListener('pointerdown', () => {
-  if (window.__hideCompanionHint) window.__hideCompanionHint();
-}, { once: true });
 renderer.domElement.addEventListener('click', () => {
-  clearTimeout(clickTimer);
-  clickTimer = setTimeout(() => {
-    play(spec.trick);
-    setTimeout(() => play(spec.idle), spec.trickMs);
-  }, 260);
-});
-renderer.domElement.addEventListener('dblclick', () => {
-  clearTimeout(clickTimer);
-  companionIdx = (companionIdx + 1) % companions.length;
-  setCompanion(companionIdx);
+  play(spec.trick);
+  setTimeout(() => play(spec.idle), spec.trickMs);
 });
 
 /* mouse parallax + scroll-linked camera */
@@ -1166,6 +1201,7 @@ tick();
      Review: Kev + claude-fable-5.1, 2026-11-06 — the CTA rows: Apple's own badges (site/badges, as supplied) replace the
      drawn-logo buttons, a download glyph sits on the DMG button and GitHub's mark on Source, labels are terse ("DMG",
      "Install", "Send to my Mac", "Mac App Store"); the footer credits the service marks. Verified in a local render
-     on the Mac and the iOS door. Confidence 0.85. -->
+     on the Mac and the iOS door. Confidence 0.85. 
+     Review: Kev + claude-fable-5.2, 2026-11-16 — launch pass: hero: the click hint and the double-click companion swap removed (Kev: "it's noisy"); claims pass against the repo: on-device "by default", the four stats reworded, storage no longer called encrypted (only saved call records are), 19 tools, Qwen3.5, EmbeddingGemma, 6,600+ tests, iPhone and iPad named; three cards added (Local API, Look, Private Cloud Compute); footer from tools/site/footer.py. Confidence 0.8. Open: the 0 / 100% / 1 / ∞ stat wording is new and Kev has not read it. -->
 </body>
 </html>
