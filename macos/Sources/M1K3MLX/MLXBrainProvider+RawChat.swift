@@ -19,6 +19,7 @@
 //  Signed: Kev + claude-fable-5.2, 2026-11-11, Confidence 0.7, Prior: none (new file)
 //
 
+//  Review: Kev + claude-opus-5.5, 2026-11-16 (#858) — the Local API stream now runs inside MLXGuardedEvaluation, so a GPU submit refused in the background throws instead of trapping. Confidence 0.7; verify-by-launch on a phone.
 import Foundation
 import M1K3Inference
 import MLXLMCommon
@@ -48,7 +49,7 @@ extension MLXBrainProvider: RawChatCompleting {
             let task = Task {
                 await GenerationActivity.shared.during("M1K3 Local API") {
                     defer { MLXMemoryBudget.reclaim(label: "completeRawChat") }
-                    do {
+                    do { try await MLXGuardedEvaluation.run {
                         let container = try await ensureLoaded()
                         let parameters = Self.rawChatParameters(
                             base: generateParameters, defaultCap: Self.defaultMaxTokens, request: request
@@ -76,7 +77,7 @@ extension MLXBrainProvider: RawChatCompleting {
                             finish ?? RawChatFinish(reason: .stop, promptTokens: nil, completionTokens: nil)
                         ))
                         continuation.finish()
-                    } catch {
+                    } } catch {
                         continuation.finish(throwing: error)
                     }
                 }
