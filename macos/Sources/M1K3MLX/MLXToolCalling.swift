@@ -104,6 +104,7 @@
 //  config.json is on disk (it fell to the generic `.json` arm); harvested from the MoE Big audition (spike
 //  34f4dae7). Confidence 0.85.
 
+//  Review: Kev + claude-opus-5.5, 2026-11-16 (#858) — the tool turn and the agent step now runs inside MLXGuardedEvaluation, so a GPU submit refused in the background throws instead of trapping. Confidence 0.7; verify-by-launch on a phone.
 import Foundation
 import M1K3Inference
 import MLX
@@ -521,7 +522,7 @@ extension MLXBrainProvider: ToolCallingProvider {
     /// array: the whole transcript is re-rendered each call so the agent keeps
     /// owning it (for the trace + observation rescue), per the 12a challenger pass.
     public func continueToolTurn(messages: [ToolMessage], tools: [ToolDefinition]) async throws -> ToolTurn {
-        try await GenerationActivity.shared.during("M1K3 tool turn") {
+        try await MLXGuardedEvaluation.during("M1K3 tool turn") {
             try await continueToolTurnHeld(messages: messages, tools: tools)
         }
     }
@@ -1053,7 +1054,7 @@ final class MLXToolTurnSession: ToolTurnSession, @unchecked Sendable {
         // Each agent step holds the activity (GenerationActivity) while it renders,
         // prefills and decodes; LocalAgent.run holds it across the whole turn too, so
         // tool execution between steps is covered (the nested holds share one assertion).
-        try await GenerationActivity.shared.during("M1K3 agent step") {
+        try await MLXGuardedEvaluation.during("M1K3 agent step") {
             try await sendHeld(messages, onToken: onToken)
         }
     }

@@ -10,10 +10,14 @@ New in this build, please try:
 • Stop a read while it is answering: it should say "Stopped before an answer.", and Keep this should still work
 • Listen for "I'm", "I'll", "I've" and "I'd" in spoken answers. They should sound right now. So should names such as Abuja, Alzheimer's and iOS
 • Listen to numbers in spoken answers: "3rd", "-5", "£5", "10:30", "pages 4-7", "3/4", "Henry VIII", "v1.2.3", and "1500 people" against "in 1984". Each should sound the way you would say it
+• Voice mode, ask something that needs the web ("what's in the news in Cork?"). When Mike quotes a source, a small chip shows under his line: tap it, or say "show me that", and the page pops up with the quote lit up. Try "scroll down", "go back" and "close it". A page should never open by itself, and a phone number on the page should not start a call without asking
+• In voice mode, the line Mike says while he uses a tool ("Let me check the web") should stay centred as it fades up, not jump to the left
 • Accessibility: with VoiceOver on, ask a question, read the answer, and open Memories, Documents and Settings. In Documents, each row should read its title then its date, and swipe to delete should still work
 • With Voice Control on, say "Show names": the names should match what you see
 • Try the largest text sizes (Settings > Accessibility > Display & Text Size > Larger Text): tell us about anything cut off or overlapping. Dates and small print are a size larger than before; on a small phone, tell us if anything no longer fits
 • Try light and dark appearance and Reduce Motion (the avatar and voice mode). Tell us about anything hard to read or that moves when it shouldn't
+• Switch to Lil, ask something long, then swipe home or lock the phone a few seconds in. Do it several times: M1K3 should never close, and the answer should stop where it was
+• Live Activity: on Mini, ask something, then lock the phone or go home. A card should appear on the Lock Screen and in the Dynamic Island, turn to "Answer ready" when it lands, and a notification should arrive. On Lil, the card should say "Paused". Tapping any of it opens the chat
 
 And the basics:
 • Voice mode, a few turns in a row

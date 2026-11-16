@@ -22,6 +22,9 @@
 //  UIKit/ActivityKit adapters and the grace window are verify-on-device), Prior: none (new file).
 //  Review: Kev + claude-opus-5.5, 2026-11-16 — the notification (Kev: "a Notification after answering when in
 //  the background") rides the same events; `TurnNotifying` is the third seam. Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-11-16 (merge with #858) — `stoppingAtInactive`: master now stops an on-device
+//  turn at `.inactive`, so Paused is written THERE, before the stop; its notice waits for the true background
+//  (a Control Center pull would otherwise notify someone looking at the app). Confidence 0.7.
 
 import Foundation
 import M1K3Inference
@@ -80,6 +83,8 @@ public final class TurnActivityDriver {
     private var tail: Task<Void, Never>?
     private var graceToken: Int?
     private var pausedToken: Int?
+    /// The Paused card was written at `.inactive`; its notice waits for the true background (see `leavingForBackground`).
+    private var pausedAtInactive = false
 
     public init(
         effects: any TurnActivityEffects, tasks: any BackgroundTaskHosting, notifier: any TurnNotifying,
@@ -146,8 +151,15 @@ public final class TurnActivityDriver {
     /// can never disagree: an on-device turn gets its Paused card (on its own short task), one that runs
     /// elsewhere gets the grace, and Lil/Big never get one.
     public func leavingForBackground(turnInFlight: Bool, brainRunsOnThisDevicesGPU: Bool) {
+        // Already paused at `.inactive` (the stop ran there, so nothing is in flight now): the card says so, and
+        // the exit being real is what earns the notice.
+        if pausedAtInactive {
+            pausedAtInactive = false
+            announcePausedOnShortTask()
+            return
+        }
         if BackgroundExitPolicy.stopsTurn(turnInFlight: turnInFlight, brainRunsOnThisDevicesGPU: brainRunsOnThisDevicesGPU) {
-            pause()
+            pause(notify: true)
         } else if BackgroundExitPolicy.wantsBackgroundGrace(
             turnInFlight: turnInFlight, brainRunsOnThisDevicesGPU: brainRunsOnThisDevicesGPU
         ) {
@@ -155,7 +167,20 @@ public final class TurnActivityDriver {
         }
     }
 
+    /// The scene went `.inactive` and the on-device turn is about to be stopped (the #858 rule: the GPU step drains
+    /// before the background): write Paused now, BEFORE the stop, so the stopped turn's `turnFinished(.stopped)`
+    /// stays quiet. No notice yet: a Control Center pull would post one at a person who is looking at the app,
+    /// and the delegate would hide it. A real exit reaches `leavingForBackground`, which posts it.
+    public func stoppingAtInactive(turnInFlight: Bool, brainRunsOnThisDevicesGPU: Bool) {
+        guard following, BackgroundExitPolicy.stopsTurnAtInactive(
+            turnInFlight: turnInFlight, brainRunsOnThisDevicesGPU: brainRunsOnThisDevicesGPU
+        ) else { return }
+        pausedAtInactive = true
+        pause(notify: false)
+    }
+
     public func appBecameActive() {
+        pausedAtInactive = false // a transient pull: the turn stopped, the person is looking at it, no notice
         endGrace()
         perform(policy.appBecameActive())
         enqueue { [notifier] in await notifier.clearDelivered() }
@@ -197,7 +222,7 @@ public final class TurnActivityDriver {
     }
 
     /// The exit is stopping an answer made on this phone's GPU: write Paused under its own short task.
-    private func pause() {
+    private func pause(notify: Bool) {
         // A followed turn is stopped even when it never earned a card (it was under 8 s): the notice still tells.
         guard following else { return }
         let action = policy.stoppedByBackground()
@@ -205,6 +230,15 @@ public final class TurnActivityDriver {
             pausedToken = tasks.begin(name: "app.m1k3.turn.paused") { [weak self] in self?.endPaused() }
         }
         perform(action)
+        if notify { enqueue { [notifier] in await notifier.post(.paused) } }
+        enqueue { [weak self] in self?.endPaused() }
+    }
+
+    /// The Paused notice for a turn stopped at `.inactive`, now that the exit is real, on its own short task.
+    private func announcePausedOnShortTask() {
+        if pausedToken == nil {
+            pausedToken = tasks.begin(name: "app.m1k3.turn.paused") { [weak self] in self?.endPaused() }
+        }
         enqueue { [notifier] in await notifier.post(.paused) }
         enqueue { [weak self] in self?.endPaused() }
     }

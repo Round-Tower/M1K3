@@ -65,13 +65,13 @@
   "@type": "FAQPage",
   "mainEntity": [
     { "@type": "Question", "name": "Will it run on an Intel Mac?",
-      "acceptedAnswer": { "@type": "Answer", "text": "No. M1K3 needs Apple Silicon: every brain runs on Metal through MLX, and the 1.0 build ships arm64 only, so an Intel Mac has nothing that thinks. It needs macOS 26 (Tahoe) or later." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "No. M1K3 needs Apple Silicon: the downloadable brains run on Metal through MLX, and the app ships arm64 only, so an Intel Mac has nothing that thinks. It needs macOS 26 or later." } },
     { "@type": "Question", "name": "Do I need an account, a key, or a subscription?",
       "acceptedAnswer": { "@type": "Answer", "text": "None of the three. M1K3 is free for humans — no account, no API key, no subscription, no telemetry. First run works with Apple's on-device model before anything downloads. The source is public under the Functional Source License; organisations that want one shared brain on their own hardware license M1K3 for Teams separately." } },
     { "@type": "Question", "name": "What touches the network during install and use?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Three documented things: the download of the app itself (the Mac App Store, Homebrew or GitHub Releases); a one-time model download from Hugging Face if you opt into the Lil or Big brain — Mini needs nothing; and web search, which is on by default so answers can be current, with one switch in Settings ▸ Privacy to turn it off. Documents, voice and memories never leave the Mac; with web search on, a question M1K3 looks up goes out as a search. The MCP server binds to 127.0.0.1 and nothing else." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Four documented things: the download of the app itself and its updates (the Mac App Store, Homebrew or GitHub Releases); one-time model downloads from Hugging Face when you ask for them (the Lil or Big brain; on a Mac without Apple Intelligence a small Mini brain, about 630 MB, on first run); web search, which is on by default so answers can be current, with one switch in Settings ▸ Privacy to turn it off; and Apple's Private Cloud Compute, only if you switch it on. Documents, voice and memories never leave the Mac; with web search on, a question M1K3 looks up goes out as a search. The MCP server binds to 127.0.0.1 and nothing else." } },
     { "@type": "Question", "name": "How do I uninstall it cleanly?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Homebrew: brew uninstall --cask m1k3, and add --zap to remove its data too. DMG: drag M1K3 from Applications to the Trash. Everything M1K3 stores lives in one sandbox container, ~/Library/Containers/app.m1k3, and the Lil and Big weights are inside it — delete that folder and nothing of M1K3 remains. If you connected an agent, run m1k3 connect <client> --print to see the one entry to remove from that client's config." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Homebrew: brew uninstall --cask m1k3, and add --zap to remove its data too. DMG: drag M1K3 from Applications to the Trash. Everything M1K3 stores lives in one sandbox container, ~/Library/Containers/app.m1k3, and the Lil and Big weights are inside it — delete that folder and only M1K3's Keychain items remain (its access tokens and the call-record key; remove them in Keychain Access if you want every trace gone). If you connected an agent, run m1k3 connect <client> --print to see the one entry to remove from that client's config." } },
     { "@type": "Question", "name": "Why does connect only print on the App Store build?",
       "acceptedAnswer": { "@type": "Answer", "text": "Because that copy of m1k3 is sandboxed: it can neither read ~/.cursor/mcp.json nor run claude for you, and writing into its own container while reporting success would be worse than refusing. It prints the config and says so. The Developer ID build — the DMG and the Homebrew cask — does the write. Either way the picker in Settings ▸ Server shows the same snippet with a Copy button." } }
   ]
@@ -368,13 +368,13 @@ http_headers = { "Authorization" = "Bearer m1k3_…" }</pre></div>
 <span class="p">$</span> m1k3 ask "what can you do?"</pre></div>
     </div>
     <p>A "disconnected" server almost always means the app is closed — <code>m1k3</code> opens it for you and waits up to twenty seconds for the port. If <code>status</code> still fails, either the switch in <strong>Settings ▸ Server</strong> is off, or the token is missing or stale: <code>m1k3</code> says which, and <code>m1k3 login</code> fixes the second.</p>
-    <p class="check"><strong>Done.</strong> Two minutes, no account, and the thing that knows your machine is answering on loopback. From here: <a href="/agents">what your agent gets</a> (18 tools, and the seven things the server will not do), <a href="/brains">the brains and how they score</a>, <a href="/privacy">how to verify the privacy claims yourself</a>.</p>
+    <p class="check"><strong>Done.</strong> Two minutes, no account, and the thing that knows your machine is answering on loopback. From here: <a href="/agents">what your agent gets</a> (19 tools, and the seven things the server will not do), <a href="/brains">the brains and how they score</a>, <a href="/privacy">how to verify the privacy claims yourself</a>.</p>
   </section>
 
   </div><!-- /.steps -->
 
   <h2 id="recipe">The whole thing as text, for agents</h2>
-  <p>The same four steps as a file your agent can fetch and follow — <a href="/install.txt"><code>m1k3.app/install.txt</code></a>. Three of the steps are the user's, on purpose: turning the server on, pasting its token, and starting a 2 GB download.</p>
+  <p>The same four steps as a file your agent can fetch and follow — <a href="/install.txt"><code>m1k3.app/install.txt</code></a>. Three of the steps are the user's, on purpose: turning the server on, pasting its token, and starting a 3 GB download.</p>
   <div class="term recipe">
     <div class="term-bar"><span></span><span></span><span></span></div>
     <div class="term-body"><pre><span class="c"># 1 · get the app (puts `m1k3` on PATH)</span>
@@ -396,7 +396,7 @@ m1k3 ask "what can you do?"</pre></div>
   <div class="faq-list">
     <details>
       <summary>Will it run on an Intel Mac?</summary>
-      <p>No. M1K3 needs Apple Silicon: every brain runs on Metal through MLX, and the 1.0 build ships arm64 only, so an Intel Mac has nothing that thinks. It needs macOS 26 (Tahoe) or later.</p>
+      <p>No. M1K3 needs Apple Silicon: the downloadable brains run on Metal through MLX, and the app ships arm64 only, so an Intel Mac has nothing that thinks. It needs macOS 26 or later.</p>
     </details>
     <details>
       <summary>Do I need an account, a key, or a subscription?</summary>
@@ -404,11 +404,11 @@ m1k3 ask "what can you do?"</pre></div>
     </details>
     <details>
       <summary>What touches the network during install and use?</summary>
-      <p>Three documented things: the download of the app itself (the Mac App Store, Homebrew or GitHub Releases); a one-time model download from Hugging Face if you opt into the Lil or Big brain — Mini needs nothing; and web search, which is on by default so answers can be current, with one switch in Settings ▸ Privacy to turn it off. Documents, voice and memories never leave the Mac; with web search on, a question M1K3 looks up goes out as a search. The MCP server binds to 127.0.0.1 and nothing else.</p>
+      <p>Four documented things: the download of the app itself and its updates (the Mac App Store, Homebrew or GitHub Releases); one-time model downloads from Hugging Face when you ask for them (the Lil or Big brain; on a Mac without Apple Intelligence a small Mini brain, about 630 MB, on first run); web search, which is on by default so answers can be current, with one switch in Settings ▸ Privacy to turn it off; and Apple's Private Cloud Compute, only if you switch it on. Documents, voice and memories never leave the Mac; with web search on, a question M1K3 looks up goes out as a search. The MCP server binds to 127.0.0.1 and nothing else.</p>
     </details>
     <details>
       <summary>How do I uninstall it cleanly?</summary>
-      <p>Homebrew: brew uninstall --cask m1k3, and add --zap to remove its data too. DMG: drag M1K3 from Applications to the Trash. Everything M1K3 stores lives in one sandbox container, ~/Library/Containers/app.m1k3, and the Lil and Big weights are inside it — delete that folder and nothing of M1K3 remains. If you connected an agent, run m1k3 connect &lt;client&gt; --print to see the one entry to remove from that client's config.</p>
+      <p>Homebrew: brew uninstall --cask m1k3, and add --zap to remove its data too. DMG: drag M1K3 from Applications to the Trash. Everything M1K3 stores lives in one sandbox container, ~/Library/Containers/app.m1k3, and the Lil and Big weights are inside it — delete that folder and only M1K3's Keychain items remain (its access tokens and the call-record key; remove them in Keychain Access if you want every trace gone). If you connected an agent, run m1k3 connect &lt;client&gt; --print to see the one entry to remove from that client's config.</p>
     </details>
     <details>
       <summary>Why does connect only print on the App Store build?</summary>
@@ -439,9 +439,48 @@ m1k3 ask "what can you do?"</pre></div>
 </main>
 
 <footer>
-  <span>© 2026 <a href="https://round-tower.ie">ROUND TOWER SOFTWARE LTD</a> · MADE IN IRELAND · MAC APP STORE AND APP STORE ARE SERVICE MARKS OF APPLE INC.</span>
-  <span><a href="/agents">FOR AGENTS</a> · <a href="/teams">FOR TEAMS</a> · <a href="https://github.com/sponsors/Round-Tower" aria-label="Sponsor M1K3 on GitHub">SPONSOR ♥</a> · <a href="https://github.com/Round-Tower/M1K3">GITHUB</a> · <a href="/privacy">PRIVACY POLICY</a> · <a href="/terms">TERMS</a> · NO TRACKING ON THIS PAGE, OBVIOUSLY</span>
-  <span class="guides">GUIDES: <a href="/local-llm-mac-guide">LOCAL LLMS ON A MAC</a> · <a href="/vs-ollama">M1K3 VS OLLAMA</a> · <a href="/private-chatgpt-alternative-mac">PRIVATE CHATGPT ALTERNATIVE</a> · <a href="/mcp-knowledge-server">A LOCAL MEMORY FOR CLAUDE</a> · <a href="/golden-gate-on-device-ai">ON-DEVICE AI IN MACOS 27</a></span>
+  <div class="foot-cols">
+    <div>
+      <p class="foot-h">M1K3</p>
+      <ul>
+        <li><a href="/install" aria-current="page">Install</a></li>
+        <li><a href="/brains">The brains</a></li>
+        <li><a href="/companions">Companions</a></li>
+        <li><a href="/vr">Memory Sky for Vision Pro</a></li>
+        <li><a href="/teams">For teams</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Build with it</p>
+      <ul>
+        <li><a href="/agents">For coding agents</a></li>
+        <li><a href="/local-api">Local API</a></li>
+        <li><a href="/weights">Model weights</a></li>
+        <li><a href="https://github.com/Round-Tower/M1K3">GitHub</a></li>
+        <li><a href="https://github.com/sponsors/Round-Tower">Sponsor</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Guides</p>
+      <ul>
+        <li><a href="/local-llm-mac-guide">Local LLMs on a Mac</a></li>
+        <li><a href="/vs-ollama">M1K3 vs Ollama</a></li>
+        <li><a href="/private-chatgpt-alternative-mac">Private ChatGPT alternative</a></li>
+        <li><a href="/mcp-knowledge-server">A local memory for Claude</a></li>
+        <li><a href="/golden-gate-on-device-ai">On-device AI in macOS 27</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Small print</p>
+      <ul>
+        <li><a href="/privacy">Privacy policy</a></li>
+        <li><a href="/terms">Terms</a></li>
+        <li><a href="https://round-tower.ie">Round Tower Software</a></li>
+      </ul>
+    </div>
+  </div>
+  <p class="foot-line">© 2026 Round Tower Software Ltd. Made in Ireland. No tracking on this page, obviously.</p>
+  <p class="foot-line foot-faint">Mac App Store and App Store are service marks of Apple Inc.</p>
 </footer>
 
 <script>
@@ -532,6 +571,7 @@ m1k3 ask "what can you do?"</pre></div>
      "Install", "Send to my Mac", "Mac App Store"); the footer credits the service marks. Verified in a local render
      on the Mac and the iOS door. Confidence 0.85.
      Review: Kev + claude-fable-5.2, 2026-11-13 — the Claude Code panel gains the plugin route under the two terminal lines, as Kev installed it by hand
-     the same day. Confidence 0.85. -->
+     the same day. Confidence 0.85. 
+     Review: Kev + claude-fable-5.2, 2026-11-16 — launch pass: four network crossings (was three), Mini's fallback download named, MLX claim limited to the downloadable brains, Lil is a 3 GB download, uninstall names the Keychain items, 19 tools. Confidence 0.85. -->
 </body>
 </html>

@@ -158,6 +158,9 @@
 //  whoever kept it (a turn cut before its first token, a title, a distillation).
 //  Review: Kev + claude-opus-5.5, 2026-11-14 — `keep(_:)`: "Keep this" files a read's text in Documents with the
 //  ingest banner (the read itself is AppCore+Read). Compile-checked; owes a try in the hand.
+//  Review: Kev + claude-opus-5.5, 2026-11-16 (#858) — `stopTurnForInactive` stops an on-device answer at .inactive; `releaseForBackground` waits (bounded) for the turn to exit before `shedBrain` releases memory. Confidence 0.7; owes a phone check (see BackgroundExitPolicy).
+//  Review: Kev + claude-opus-5.5, 2026-11-16 (merge of #858 with the Live Activity) — `stopTurnForInactive` tells the
+//  Live Activity "Paused" before it stops the turn; the paused notice waits for the true background.
 //  Review: Kev + claude-opus-5.5, 2026-11-14 (the summoned pass on #833) — Keep's banner comes from
 //  `ReadSource.keptStatus`, which names the part kept when the cap cut the text. Compile-checked.
 //  Review: Kev + claude-opus-5.5, 2026-11-15 — `voicePage` + `pageControl` (#839): the page voice mode can open
@@ -332,6 +335,9 @@ final class AppCore {
     /// instead of loading a second copy (`BackgroundExitPolicy.onReturn`).
     @ObservationIgnored private weak var shedMLX: MLXBrainProvider?
     private var warmTask: Task<Void, Never>?
+    /// A background shed waiting (at most `BackgroundExitPolicy.shedWaitLimit`) for the stopped turn to exit.
+    /// The return cancels it: the brain was never let go of.
+    private var shedWaitTask: Task<Void, Never>?
     /// Monotonic token: a late-arriving warm progress hop only applies if it still
     /// matches the current generation, so a brain switch mid-warm can't be clobbered
     /// by the abandoned download's callbacks (the Mac AppEnvironment's stale-hop guard).
@@ -1249,7 +1255,35 @@ final class AppCore {
     /// currentMLX would make warmForForeground build a SECOND provider racing the
     /// first on the same cache (review catch). So mid-load we leave it be — only a
     /// fully-warm brain holds the reclaimable buffers this is here to shed.
+    ///
+    /// A turn the exit stopped may still be unwinding: its last step is on the GPU. Releasing buffers under a
+    /// running evaluation is its own hazard (#858), so with a turn in flight the shed waits for it, bounded by
+    /// `BackgroundExitPolicy.shedWaitLimit`, then sheds anyway (a backgrounded 3.5 GB process is jetsam's).
     func releaseForBackground() {
+        guard brainLoad == .ready, currentMLX != nil else { return }
+        shedWaitTask?.cancel()
+        let clock = ContinuousClock()
+        let began = clock.now
+        guard BackgroundExitPolicy.shedPlan(turnStillRunning: chat.isResponding, waited: .zero) == .waitForTurn else {
+            shedBrain()
+            return
+        }
+        shedWaitTask = Task { [weak self] in
+            while let self, !Task.isCancelled {
+                let plan = BackgroundExitPolicy.shedPlan(
+                    turnStillRunning: chat.isResponding, waited: clock.now - began
+                )
+                if plan == .shedNow { break }
+                try? await Task.sleep(for: .milliseconds(25))
+            }
+            guard let self, !Task.isCancelled else { return }
+            shedWaitTask = nil
+            shedBrain()
+        }
+    }
+
+    /// The shed itself: drop the caches and the app's own hold on the brain, fall back to Mini.
+    func shedBrain() {
         guard brainLoad == .ready, currentMLX != nil else { return }
         warmTask?.cancel()
         warmGeneration += 1 // invalidate any in-flight warm's progress hops
@@ -1270,6 +1304,9 @@ final class AppCore {
     /// `releaseForBackground`) or a user re-selection. Retrying a persistent failure
     /// on every app-switch would be a retry-storm; the failure surfaces once and stays.
     func warmForForeground() {
+        // Back before the shed went through: the brain was never let go of, so there is nothing to re-warm.
+        shedWaitTask?.cancel()
+        shedWaitTask = nil
         refreshMiniAvailability()
         // Home brain fronting: the slot points at the paired Mac, and
         // `selectedBrain` is only the LOCAL fallback tier. Warming it here would
@@ -1354,6 +1391,20 @@ final class AppCore {
         // task for one that runs elsewhere (BackgroundExitPolicy decides both, from the same inputs).
         turnActivityLeavingForBackground(brainRunsOnThisDevicesGPU: currentMLX != nil)
         if BackgroundExitPolicy.stopsTurn(turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: currentMLX != nil) {
+            chat.stopResponding()
+        }
+    }
+
+    /// The scene went `.inactive`, which comes before `.background` on every real exit: stop an answer being
+    /// made on this device's GPU now, while the GPU is still allowed, so its loop drains in time
+    /// (`BackgroundExitPolicy.stopsTurnAtInactive`, #858). Speech and voice are left to the true background.
+    func stopTurnForInactive() {
+        // The Live Activity hears about it FIRST: the stopped turn reaches `turnFinished(.stopped)` right after, and
+        // the card must already say Paused (and stay quiet on that stop) rather than just end.
+        turnActivity.stoppingAtInactive(turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: currentMLX != nil)
+        if BackgroundExitPolicy.stopsTurnAtInactive(
+            turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: currentMLX != nil
+        ) {
             chat.stopResponding()
         }
     }

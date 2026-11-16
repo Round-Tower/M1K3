@@ -4,7 +4,7 @@
 
 M1K3 exposes MCP on **two surfaces**:
 
-1. **The in-app HTTP server** — the live, full-capability surface. 18 tools
+1. **The in-app HTTP server** — the live, full-capability surface. 18 tools (19 on the App Store build, with the opt-in `ask_private_cloud`)
    (knowledge search, documents, voice, listening, memory graph, todos,
    `ask_m1k3`, `remember`, …; the full list is the README's generated table) served at `http://127.0.0.1:4242/mcp` while the app runs.
    **This is the way to connect.**

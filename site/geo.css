@@ -236,18 +236,29 @@ table.cmp { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 
 }
 .more-links a:hover { color: var(--ink-bright); text-shadow: var(--glow); }
 
-/* ---------- Footer (same shell as index.html) ---------- */
+/* ---------- Footer: grouped columns, one source (macos/tools/site/footer.py) ----------
+   Review: Kev + claude-fable-5.2, 2026-11-16 — replaces the single strip of capitals and
+   the GUIDES row (#572) with four columns in sentence case. Kev: "Grouped collumes
+   please for the footer". Confidence 0.8. */
 footer {
   border-top: 1px solid var(--line);
-  padding: 36px 40px; display: flex; justify-content: space-between; align-items: center;
-  font-family: var(--mono); font-size: 11px; color: var(--ink-faint); letter-spacing: 0.1em;
-  max-width: 1200px; margin: 0 auto; gap: 18px; flex-wrap: wrap;
+  max-width: 1200px; margin: 0 auto; padding: 56px 40px 40px;
+  color: var(--ink-faint); font-size: 14px; line-height: 1.5;
 }
+footer .foot-cols { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 40px 32px; }
+footer .foot-h {
+  font-family: var(--mono); font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-dim); margin: 0 0 14px;
+}
+footer ul { list-style: none; margin: 0; padding: 0; }
+footer li { margin: 0 0 9px; }
 footer a { color: var(--ink-dim); text-decoration: none; }
-footer a:hover { color: var(--ink-bright); }
-/* #572: the GUIDES row takes its own line, above the others.
-   Review: Kev + claude-opus-5-5, 2026-10-13 — added. Confidence 0.9. */
-footer .guides { flex-basis: 100%; order: -1; }
+footer a:hover, footer a[aria-current="page"] { color: var(--ink-bright); }
+footer a:focus-visible, footer button:focus-visible { outline: 1px solid var(--ink-bright); outline-offset: 3px; }
+footer .foot-extra { margin: 36px 0 0; }
+footer .foot-line { margin: 36px 0 0; font-size: 13px; color: var(--ink-dim); }
+footer .foot-line.foot-faint { margin-top: 8px; font-size: 12px; color: #767676; }
+footer .foot-extra + .foot-extra { margin-top: 18px; }
 
 @media (prefers-reduced-motion: reduce) {
   .wordmark .cursor { animation: none; }
@@ -258,7 +269,8 @@ footer .guides { flex-basis: 100%; order: -1; }
   nav .links a:not(.btn) { display: none; }
   .article { padding: 120px 22px 40px; }
   .article h2 { margin-top: 56px; }
-  footer { padding: 30px 22px; }
+  footer { padding: 44px 22px 32px; }
+  footer .foot-cols { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /* ---------- Narrow phones (#579) ----------
@@ -268,3 +280,7 @@ footer .guides { flex-basis: 100%; order: -1; }
    to fit any overflow, so body { overflow-x: hidden } doesn't stop it. */
 code { overflow-wrap: anywhere; }
 @media (max-width: 400px) { nav .links { gap: 16px; } }
+
+@media (max-width: 480px) {
+  footer .foot-cols { grid-template-columns: 1fr; gap: 30px; }
+}

@@ -28,6 +28,10 @@
 //  stops whatever is actually playing — so a stop never leaves a queued visitor line to speak next.
 //  Confidence now 0.8.
 //
+//  Review: claude-opus-5-5, 2026-11-16 (#852) — the polish pass: at the endpoint, before `VoiceTurnPreparer.prepare`, the
+//  listen's captured audio is re-run through SpeechTranscriber in accurate mode (VoicePolisher; Apple's analyzer only, a 1 s
+//  budget, live text on any failure) and its text becomes the turn. OFF unless `-voicePolishPass YES`. Verify-by-launch owed.
+//  Confidence 0.7.
 //  Review: Kev + claude-fable-5.1, 2026-09-12 — `exitVoiceMode` releases the transcriber's audio
 //  hardware so a headset leaves its call profile when the conversation ends. Confidence 0.85.
 //  Same pass: a wordless listen the transcriber FAILED reports `lastFailure` through
@@ -414,10 +418,12 @@ extension AppEnvironment {
     nonisolated static let voiceTurnClause = TurnClauseSlot()
 
     /// The room classifier (SoundContext) runs only in voice mode: dictation and the MCP listen
-    /// don't need it, and turning it off frees its 63 MB.
+    /// don't need it, and turning it off frees its 63 MB. The polish pass's audio capture (#852,
+    /// behind `-voicePolishPass YES`) follows the same scope.
     func setHearsRoom(_ on: Bool) {
         for case let apple as AppleSpeechTranscriber in transcription.providers {
             apple.hearsRoom = on
+            apple.capturesUtteranceAudio = on && VoicePolishPolicy.enabled()
         }
     }
 
@@ -433,9 +439,18 @@ extension AppEnvironment {
             userName: UserDefaults.standard.string(forKey: Self.userDisplayNameKey)
         ))
         var lastHeard: SoundContext?
+        // The polish pass (#852): the accurate re-run of the listen's audio at the endpoint, Apple's
+        // analyzer only and OFF unless `-voicePolishPass YES`. The audio is read when the listen
+        // stops, like the room. A barge-in watch records nothing (its audio holds M1K3's own echo), so a
+        // barge-in turn finds no audio and keeps its live text.
+        let polisher = VoicePolisher.apple()
+        var lastAudio: UtteranceAudio?
         // One voice turn into the chat. The room line only counts as said once a turn really
         // carried it (a send that still finds the chat answering returns at once).
         let sendVoiceTurn: @MainActor (String) async -> Void = { [weak self] question in
+            // This turn's audio, taken first so no early return can leave it for the next turn.
+            let audio = lastAudio
+            lastAudio = nil
             guard let self else { return }
             // A question asked over the answer (barge-in, spoken or clicked) replaces it: stop
             // the generation still running, or `send` would return at once and the question be
@@ -446,7 +461,8 @@ extension AppEnvironment {
                     try? await Task.sleep(for: .milliseconds(50))
                 }
             }
-            let prepared = turns.prepare(question, heard: lastHeard)
+            let heardQuestion = await polisher.polished(live: question, audio: audio)
+            let prepared = turns.prepare(heardQuestion, heard: lastHeard)
             let token = chat.isResponding ? nil : Self.voiceTurnClause.set(prepared.soundClause)
             if token != nil { turns.delivered(prepared) }
             await chat.send(prepared.question)
@@ -494,6 +510,7 @@ extension AppEnvironment {
                 let stream = try provider.startListening(finality: .keepsListening)
                 activeProvider = provider
                 lastHeard = nil // this listen's room, not the last one's
+                lastAudio = nil
                 // Which engine served, and whether it can keep the room out of the
                 // mic, is the first question when someone reports M1K3 talking over
                 // the music or answering something they didn't say.
@@ -552,6 +569,11 @@ extension AppEnvironment {
                 // A second stop (the machine sends several) must not wipe what the listen heard.
                 if let activeProvider { lastHeard = (activeProvider as? SoundContextProviding)?.soundContext }
                 activeProvider?.stopListening()
+                // After the stop, so the tap's last buffers are in. Taking clears the capture, so a
+                // second stop finds nothing and keeps what the first read.
+                if let audio = (activeProvider as? UtteranceAudioProviding)?.takeUtteranceAudio() {
+                    lastAudio = audio
+                }
                 activeProvider = nil
             },
             runTurn: { [weak self] question in

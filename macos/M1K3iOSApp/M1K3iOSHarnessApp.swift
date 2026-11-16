@@ -34,6 +34,7 @@
 //  (Kev's phone: a 6 s Mini turn never got one, and a card cannot start from the background).
 //  Review: Kev + claude-opus-5.5, 2026-11-16 (review fold) — the notification delegate installs in `init`, and the
 //  leaving-card starts only when the previous phase was .active (not on the return path).
+//  Review: Kev + claude-opus-5.5, 2026-11-16 (#858) — `.inactive` stops an on-device answer before the background lands, while the GPU is still allowed. Confidence 0.7; owes a phone check (see BackgroundExitPolicy).
 
 import M1K3Avatar
 import M1K3Diagnostics
@@ -81,9 +82,19 @@ struct M1K3iOSApp: App {
             .preferredColorScheme(.dark)
             .onChange(of: scenePhase) { previous, phase in
                 // Shed MLX weights on a true background (jetsam hygiene), re-warm on
-                // return. `.inactive` (notification banner / Control Center) never touches the model, so
-                // transient interruptions don't churn it; it only starts the Live Activity card (below).
+                // return. `.inactive` (Control Center, an alert) never sheds the model, so a transient
+                // interruption doesn't churn it; it starts the Live Activity card and stops an on-device answer (below).
                 switch phase {
+                case .inactive:
+                    // ONE case, in this order. (1) The Live Activity card starts while we are still foreground (an
+                    // answer asked and then left is mostly under 8 s, and no card can start once we are gone). Only
+                    // from .active: the way BACK (.background → .inactive → .active) must not start a card. A system
+                    // sheet mid-turn can still start one that the next .active takes down: accepted.
+                    if previous == .active { core?.turnActivityGoingInactive() }
+                    // (2) Then the on-device stop, before the background so a generation step drains while the GPU
+                    // is still allowed (#858). It tells the card "Paused" first, then stops (AppCore). Unconditional
+                    // on `previous`: on the way back nothing is running (it was stopped), so it is a no-op.
+                    core?.stopTurnForInactive()
                 case .background:
                     // What iOS does to a backgrounded app is no snag (#750). First, so a
                     // memory kill while the brain is shed below is not one either.
@@ -97,17 +108,11 @@ struct M1K3iOSApp: App {
                     // alive and the return loads a second copy (BackgroundExitPolicy).
                     core?.stopForBackground()
                     core?.releaseForBackground()
-                case .inactive:
-                    // Still foreground, so ActivityKit may start the card: an answer asked and then left is mostly
-                    // under 8 s, and no card can start once we are gone. A transient pull ends it on .active.
-                    // Only from .active: the way BACK (.background → .inactive → .active) must not start a card.
-                    // A system sheet mid-turn can still start one that the next .active takes down: accepted.
-                    if previous == .active { core?.turnActivityGoingInactive() }
                 case .active:
                     markSessionActive()
                     core?.turnActivity.appBecameActive()
                     core?.warmForForeground()
-                default: break
+                @unknown default: break
                 }
             }
         }

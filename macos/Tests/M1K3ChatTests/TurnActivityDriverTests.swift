@@ -505,6 +505,88 @@ struct TurnActivityDriverTests {
         #expect(rig.tasks.ended.count == 1)
     }
 
+    // MARK: Lil/Big stopped at .inactive (#858) with the card
+
+    /// Foreground, a turn begun, the leaving-card started: the state at the moment `.inactive` arrives.
+    private func inactiveRig(phase: TurnActivityPhase = .answering) -> Rig {
+        let rig = Rig()
+        rig.driver.turnBegan(kind: .answer) { phase }
+        rig.driver.leavingForeground()
+        return rig
+    }
+
+    @Test("Lil at .inactive: card starts, then Paused, then the stop's finish is quiet; the notice waits for .background")
+    func onDeviceInactiveThenRealExit() async {
+        let rig = inactiveRig()
+        rig.driver.stoppingAtInactive(turnInFlight: true, brainRunsOnThisDevicesGPU: true)
+        rig.driver.turnFinished(.stopped) // what chat.stopResponding() leads to
+        await rig.driver.settled()
+        var events = rig.log.events
+        let start = events.firstIndex(of: "card.start.answering")
+        let paused = events.firstIndex(of: "card.end.paused")
+        #expect(start != nil && paused != nil && start! < paused!)
+        #expect(!events.contains("card.end.none"), "the stop must not end the Paused card")
+        #expect(!events.contains { $0.hasPrefix("notice.") }, "still in front: no notice yet")
+        // The exit turns out to be real: .background, with nothing left in flight.
+        rig.effects.appIsActive = false
+        rig.driver.leavingForBackground(turnInFlight: false, brainRunsOnThisDevicesGPU: true)
+        await rig.driver.settled()
+        events = rig.log.events
+        #expect(events.filter { $0 == "notice.paused" }.count == 1)
+        #expect(rig.tasks.ended.count == rig.tasks.begun.count, "every short task given back")
+    }
+
+    @Test("a Control Center pull with Lil: Paused card, no notice, and the card is cleared when active again")
+    func onDeviceTransientPull() async {
+        let rig = inactiveRig()
+        rig.driver.stoppingAtInactive(turnInFlight: true, brainRunsOnThisDevicesGPU: true)
+        rig.driver.turnFinished(.stopped)
+        rig.driver.appBecameActive()
+        await rig.driver.settled()
+        #expect(!rig.log.events.contains("notice.paused"))
+        #expect(rig.log.events.contains("card.end.none"))
+        // A later real exit has nothing left to announce.
+        rig.effects.appIsActive = false
+        rig.driver.leavingForBackground(turnInFlight: false, brainRunsOnThisDevicesGPU: true)
+        await rig.driver.settled()
+        #expect(!rig.log.events.contains("notice.paused"))
+    }
+
+    @Test("Mini at .inactive: nothing is paused; the grace comes at .background and Ready follows")
+    func offGPUInactiveChangesNothing() async {
+        let rig = inactiveRig()
+        rig.driver.stoppingAtInactive(turnInFlight: true, brainRunsOnThisDevicesGPU: false)
+        #expect(rig.tasks.begun.isEmpty)
+        rig.effects.appIsActive = false
+        rig.driver.leavingForBackground(turnInFlight: true, brainRunsOnThisDevicesGPU: false)
+        rig.driver.turnFinished(.answered)
+        await rig.driver.settled()
+        #expect(rig.tasks.begun == ["app.m1k3.turn"])
+        #expect(rig.log.events.contains("card.end.ready"))
+        #expect(rig.log.events.contains("notice.answerReady"))
+        #expect(!rig.log.events.contains("card.end.paused"))
+    }
+
+    @Test("the missed-inactive path still works: .background with the turn draining pauses and notifies once")
+    func backgroundWithoutInactive() async {
+        let rig = Rig()
+        rig.runningCard(.answering)
+        rig.driver.leavingForBackground(turnInFlight: true, brainRunsOnThisDevicesGPU: true)
+        await rig.driver.settled()
+        #expect(rig.log.events.filter { $0 == "notice.paused" }.count == 1)
+        #expect(rig.log.events.contains("card.end.paused"))
+    }
+
+    @Test("an untracked turn (voice) stopped at .inactive writes nothing")
+    func untrackedInactiveStop() async {
+        let rig = Rig()
+        rig.driver.stoppingAtInactive(turnInFlight: true, brainRunsOnThisDevicesGPU: true)
+        await rig.driver.settled()
+        #expect(rig.tasks.begun.isEmpty)
+        #expect(!rig.log.events.contains { $0.hasPrefix("card.start") || $0.hasPrefix("card.end") })
+        #expect(!rig.log.events.contains("notice.paused"))
+    }
+
     // MARK: Effects in order
 
     @Test("a stale card from a killed process is cleared before anything starts")

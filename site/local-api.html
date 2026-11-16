@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>An OpenAI-Compatible Local API on Your Mac — M1K3</title>
+<meta name="description" content="M1K3&#x27;s Local API lends the brain already loaded on your Mac to any tool that speaks the OpenAI API: 127.0.0.1:4141, off by default, its own key. Setup, model names, a first call, and the limits." />
+<meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
+<link rel="canonical" href="https://m1k3.app/local-api" />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
+<link rel="icon" href="icon-192.png" type="image/png" sizes="192x192" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<meta name="apple-itunes-app" content="app-id=6780230835" />
+<meta name="theme-color" content="#050505" />
+<meta property="og:site_name" content="M1K3" />
+<meta property="og:locale" content="en_IE" />
+<meta property="og:title" content="An OpenAI-Compatible Local API on Your Mac — M1K3" />
+<meta property="og:description" content="Lend the brain already loaded on your Mac to any tool that speaks the OpenAI API. Off by default, loopback only, its own key." />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://m1k3.app/local-api" />
+<meta property="og:image" content="https://m1k3.app/og.png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="M1K3 — 'Your AI. Your devices. Private by design.' A wireframe fox on a dark CRT grid; private, on-device AI for Mac, iPhone and iPad." />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="An OpenAI-Compatible Local API on Your Mac — M1K3" />
+<meta name="twitter:description" content="Lend the brain already loaded on your Mac to any tool that speaks the OpenAI API. Off by default, loopback only." />
+<meta name="twitter:image" content="https://m1k3.app/og.png" />
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "An OpenAI-compatible local API on your Mac",
+  "description": "M1K3's Local API lends the brain already loaded on your Mac to any tool that speaks the OpenAI API: 127.0.0.1:4141, off by default, its own key. Setup, model names, a first call, and the limits.",
+  "url": "https://m1k3.app/local-api",
+  "image": "https://m1k3.app/og.png",
+  "author": {
+    "@type": "Organization",
+    "name": "Round Tower",
+    "url": "https://round-tower.ie"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Round Tower",
+    "url": "https://round-tower.ie"
+  },
+  "datePublished": "2026-11-16",
+  "dateModified": "2026-11-16"
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Does M1K3 have an OpenAI-compatible API?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, on the Mac, from version 1.4. Switch on Settings ▸ Server ▸ Local API and M1K3 serves /v1/models and /v1/chat/completions at http://127.0.0.1:4141/v1, in the shape OpenAI clients already speak. It is off by default and has its own key."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does anything I send leave my Mac?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Not with the on-device brains: the listener binds 127.0.0.1 only, refuses web pages, and a call to mini-m1k3, lil-m1k3 or big-m1k3 is answered on the Mac. The one exception is cloud-m1k3, which you have to switch on yourself: a call that names it sends that call's messages to Apple's Private Cloud Compute."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which model names does it serve?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Whichever brain M1K3 has ready: mini-m1k3 (Apple's on-device model), lil-m1k3 (Qwen3.5 4B) or big-m1k3 (Gemma 4 12B). Ask /v1/models and use the first id. Asking for a brain that is not loaded returns 404 model_not_found; switch brain in M1K3 itself."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does it support tool calls, embeddings or images?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Not in this version. It serves text chat, streamed or whole. Tools, functions, image and audio content and JSON-schema response formats are refused with a 400, and /v1/embeddings, /v1/completions and /v1/responses are not offered."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How is this different from M1K3's MCP server?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The Local API lends the raw brain: your system message, your messages, and none of M1K3's memory, knowledge, personality or tools. The MCP server is the assistant itself for agents: memory, document search and voice. They have separate switches and separate keys."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Does it work on iPhone or iPad?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. The Local API is part of M1K3 on the Mac."
+      }
+    }
+  ]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "M1K3",
+      "item": "https://m1k3.app/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Local API",
+      "item": "https://m1k3.app/local-api"
+    }
+  ]
+}
+</script>
+<link rel="preload" href="fonts/vt323-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="fonts.css" />
+<link rel="stylesheet" href="geo.css" />
+</head>
+<body>
+
+<div class="scanlines"></div>
+<div class="vignette"></div>
+
+<nav>
+  <a class="wordmark" href="/" aria-label="M1K3 home"><img class="mark" src="mark.svg" alt="M1K3" width="24" height="28" /></a>
+  <div class="links">
+    <a href="/">Home</a>
+    <a href="/#features">Features</a>
+    <a href="/#faq">FAQ</a>
+    <a href="https://github.com/Round-Tower/M1K3">GitHub</a>
+    <a class="btn btn-ghost" href="/#get" style="padding:10px 18px;">Download</a>
+  </div>
+</nav>
+
+<main class="article">
+  <header class="article-head">
+    <span class="label">// for developers</span>
+    <h1>The Local API</h1>
+    <p class="meta">Updated 2026-11-16 · M1K3 for Mac, version 1.4 and later</p>
+  </header>
+
+  <div class="answer">
+    <p><strong>Short answer: M1K3 on the Mac can lend the brain it already has loaded to any tool that speaks the OpenAI API.</strong> Switch on <strong>Settings ▸ Server ▸ Local API</strong>, copy the key, and point your editor, script or client library at <code>http://127.0.0.1:4141/v1</code>. It is off by default, it listens on your Mac only, and it has a key of its own. A caller gets the raw brain under its own instructions: none of M1K3's memory, knowledge, personality or tools.</p>
+  </div>
+
+  <h2>Set it up</h2>
+  <ol>
+    <li>Open M1K3 on your Mac and go to <strong>Settings ▸ Server ▸ Local API</strong>. Switch it on.</li>
+    <li>Copy the API key from the same pane. You can make a new key there at any time; the old one stops working.</li>
+    <li>Point your tool at the base URL below and give it the key.</li>
+  </ol>
+  <div class="term">
+    <div class="term-bar"><span></span><span></span><span></span></div>
+    <div class="term-body"><pre>Base URL   http://127.0.0.1:4141/v1
+API key    Settings ▸ Server ▸ Local API ▸ API key ▸ Copy
+Model      mini-m1k3, lil-m1k3 or big-m1k3: whichever brain M1K3 has ready</pre></div>
+  </div>
+
+  <h2>A first call</h2>
+  <p>With curl, streaming:</p>
+  <div class="term">
+    <div class="term-bar"><span></span><span></span><span></span></div>
+    <div class="term-body"><pre><span class="p">$</span> curl http://127.0.0.1:4141/v1/chat/completions \
+    -H "Authorization: Bearer $M1K3_API_KEY" -H "Content-Type: application/json" \
+    -d '{"model":"lil-m1k3","stream":true,"messages":[{"role":"user","content":"Hello"}]}'</pre></div>
+  </div>
+  <p>With the OpenAI Python client. The brain on this Mac is always the first model listed, so you do not have to know which one is loaded:</p>
+  <div class="term">
+    <div class="term-bar"><span></span><span></span><span></span></div>
+    <div class="term-body"><pre>from openai import OpenAI
+
+client = OpenAI(base_url="http://127.0.0.1:4141/v1", api_key="&lt;the key from Settings&gt;")
+models = [m.id for m in client.models.list()]
+reply = client.chat.completions.create(
+    model=models[0],
+    messages=[{"role": "user", "content": "Say hello in five words."}],
+)
+print(reply.choices[0].message.content)</pre></div>
+  </div>
+
+  <h2>The model names</h2>
+  <div class="table-scroll">
+    <table class="cmp">
+      <thead>
+        <tr><th scope="col">Model id</th><th scope="col">What answers</th><th scope="col">Where</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>mini-m1k3</td><td>Mini: Apple's on-device model</td><td>On this Mac</td></tr>
+        <tr><td>lil-m1k3</td><td>Lil: Qwen3.5 4B on MLX</td><td>On this Mac</td></tr>
+        <tr><td>big-m1k3</td><td>Big: Gemma 4 12B on MLX</td><td>On this Mac</td></tr>
+        <tr><td>cloud-m1k3</td><td>Apple's Private Cloud Compute</td><td>Leaves the Mac. Off until you switch it on.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><code>/v1/models</code> lists the brain that is ready. Asking for another one returns <code>404 model_not_found</code>; switch brain in M1K3 itself. <a href="/brains">Which models these are, and how they score</a>.</p>
+
+  <h2>The rules</h2>
+  <ul>
+    <li><strong>Loopback only.</strong> The listener binds <code>127.0.0.1</code>. Nothing on your network can reach it, and web pages are refused: any request with an <code>Origin</code> header gets a 403.</li>
+    <li><strong>Its own key.</strong> Not the MCP server's token, which also unlocks memory and speech.</li>
+    <li><strong>You go first.</strong> One call at a time. A call that arrives while you are chatting or in voice mode gets a <code>429</code> with <code>Retry-After</code>, which OpenAI client libraries retry by themselves.</li>
+    <li><strong>The raw brain.</strong> Your system message is the system prompt. Nothing you send is written to M1K3's chat history or turned into a memory. On the two Apple models one fixed line comes first, asking the model to keep to Apple's acceptable use requirements.</li>
+    <li><strong>Nothing is kept between calls.</strong> Each call re-reads the whole conversation, so a long history costs the same wait every turn. Measured on 2026-11-11 on an M1 Max: a short prompt starts in about 0.15 s on Lil and about 0.3 s on Big, and a 2,000-token history takes about 4 s on Lil and about 8.6 s on Big before the first word.</li>
+    <li><strong>Untested under your instructions.</strong> M1K3 chooses and tests its brains inside M1K3. How one behaves under another app's system prompt is yours to judge.</li>
+  </ul>
+
+  <h2>What it serves, and what it refuses</h2>
+  <div class="table-scroll">
+    <table class="cmp">
+      <tbody>
+        <tr><td>GET /v1/models</td><td>The ready brain, then <code>cloud-m1k3</code> if you offer it</td></tr>
+        <tr><td>POST /v1/chat/completions</td><td>Text chat, streamed or whole</td></tr>
+        <tr><td>Honoured</td><td><code>messages</code> (system, developer, user, assistant), <code>max_tokens</code>, <code>temperature</code>, <code>stop</code> (up to four), <code>stream_options.include_usage</code></td></tr>
+        <tr><td>Refused with a 400</td><td><code>tools</code> and <code>functions</code>, <code>n</code> above 1, image or audio content, tool messages, JSON-schema response formats</td></tr>
+        <tr><td>Not offered (404)</td><td><code>/v1/completions</code>, <code>/v1/embeddings</code>, <code>/v1/responses</code>, audio and image endpoints</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Errors use OpenAI's shape. The full reference, with usage counts and finish reasons, is <a href="https://github.com/Round-Tower/M1K3/blob/master/macos/docs/LOCAL_API.md">LOCAL_API.md</a> in the repository.</p>
+
+  <h2 id="cloud">The cloud model: Private Cloud Compute</h2>
+  <p>For a job bigger than your Mac, there is one optional model that leaves it. Switch on <strong>Also offer Private Cloud Compute</strong> in the same pane (it also needs <strong>Settings ▸ Privacy ▸ Private Cloud Compute</strong> on, and the App Store build with Apple Intelligence), and <code>/v1/models</code> gains <code>cloud-m1k3</code>. A call that names it is answered by Apple's Private Cloud Compute.</p>
+  <ul>
+    <li><strong>What leaves:</strong> the messages in that call, behind the one fixed acceptable-use line, and nothing else. M1K3 adds no memory, knowledge or history, and keeps nothing.</li>
+    <li><strong>You can see it:</strong> the Settings pane counts the calls that have left since M1K3 opened.</li>
+    <li><strong>It spends your daily limit.</strong> Apple limits Private Cloud Compute per day, and these calls count against the limit M1K3's own chat uses. A spent limit answers <code>429 insufficient_quota</code>; retrying will not help until it resets.</li>
+    <li><strong>M1K3 caps it too:</strong> 30 lent calls an hour, so a tool in a loop cannot spend your day. Over that is <code>429 rate_limit_exceeded</code> with a <code>Retry-After</code>.</li>
+    <li><strong>Unreachable for the moment</strong> is <code>503 service_unavailable</code>, which OpenAI client libraries retry by themselves.</li>
+  </ul>
+  <p>What Apple promises about Private Cloud Compute is on <a href="https://security.apple.com/blog/private-cloud-compute/">Apple's own page</a>. M1K3 makes no claim beyond it. The <a href="/privacy#local-api">privacy page</a> has the same account in the policy's words.</p>
+
+  <h2>Want the assistant, not the raw brain?</h2>
+  <p>Memory, document search and voice live behind M1K3's MCP server, which has its own switch and its own token. <a href="/agents">Connect a coding agent</a>, or read <a href="/mcp-knowledge-server">how Claude gets a local memory</a>.</p>
+
+  <h2>Questions</h2>
+  <div class="faq-list">
+    <details>
+      <summary>Does M1K3 have an OpenAI-compatible API?</summary>
+      <p>Yes, on the Mac, from version 1.4. Switch on Settings ▸ Server ▸ Local API and M1K3 serves /v1/models and /v1/chat/completions at http://127.0.0.1:4141/v1, in the shape OpenAI clients already speak. It is off by default and has its own key.</p>
+    </details>
+    <details>
+      <summary>Does anything I send leave my Mac?</summary>
+      <p>Not with the on-device brains: the listener binds 127.0.0.1 only, refuses web pages, and a call to mini-m1k3, lil-m1k3 or big-m1k3 is answered on the Mac. The one exception is cloud-m1k3, which you have to switch on yourself: a call that names it sends that call&#x27;s messages to Apple&#x27;s Private Cloud Compute.</p>
+    </details>
+    <details>
+      <summary>Which model names does it serve?</summary>
+      <p>Whichever brain M1K3 has ready: mini-m1k3 (Apple&#x27;s on-device model), lil-m1k3 (Qwen3.5 4B) or big-m1k3 (Gemma 4 12B). Ask /v1/models and use the first id. Asking for a brain that is not loaded returns 404 model_not_found; switch brain in M1K3 itself.</p>
+    </details>
+    <details>
+      <summary>Does it support tool calls, embeddings or images?</summary>
+      <p>Not in this version. It serves text chat, streamed or whole. Tools, functions, image and audio content and JSON-schema response formats are refused with a 400, and /v1/embeddings, /v1/completions and /v1/responses are not offered.</p>
+    </details>
+    <details>
+      <summary>How is this different from M1K3&#x27;s MCP server?</summary>
+      <p>The Local API lends the raw brain: your system message, your messages, and none of M1K3&#x27;s memory, knowledge, personality or tools. The MCP server is the assistant itself for agents: memory, document search and voice. They have separate switches and separate keys.</p>
+    </details>
+    <details>
+      <summary>Does it work on iPhone or iPad?</summary>
+      <p>No. The Local API is part of M1K3 on the Mac.</p>
+    </details>
+  </div>
+
+  <section class="page-cta">
+    <span class="label">// try it</span>
+    <h2>Get M1K3 for your Mac.</h2>
+    <p>Free for humans, source-available. The Local API is in the app, off until you switch it on.</p>
+    <div class="cta-row">
+      <a class="store-badge" href="https://apps.apple.com/app/id6780230835?pt=120784482&amp;ct=site-local-api&amp;mt=12"><img src="/badges/mac-app-store.svg" alt="Download on the Mac App Store" width="215" height="55" /></a>
+      <a class="btn btn-ghost" aria-label="Source on GitHub" href="https://github.com/Round-Tower/M1K3"><svg class="mark" viewBox="0 0 16 16" aria-hidden="true"><path d="M6.766 11.328c-2.063-.25-3.516-1.734-3.516-3.656 0-.781.281-1.625.75-2.188-.203-.515-.172-1.609.063-2.062.625-.078 1.468.25 1.968.703.594-.187 1.219-.281 1.985-.281.765 0 1.39.094 1.953.265.484-.437 1.344-.765 1.969-.687.218.422.25 1.515.046 2.047.5.593.766 1.39.766 2.203 0 1.922-1.453 3.375-3.547 3.64.531.344.89 1.094.89 1.954v1.625c0 .468.391.734.86.547C13.781 14.359 16 11.53 16 8.03 16 3.61 12.406 0 7.984 0 3.563 0 0 3.61 0 8.031a7.88 7.88 0 0 0 5.172 7.422c.422.156.828-.125.828-.547v-1.25c-.219.094-.5.156-.75.156-1.031 0-1.64-.562-2.078-1.609-.172-.422-.36-.672-.719-.719-.187-.015-.25-.093-.25-.187 0-.188.313-.328.625-.328.453 0 .844.281 1.25.86.313.452.64.655 1.031.655s.641-.14 1-.5c.266-.265.47-.5.657-.656"/></svg>Source</a>
+    </div>
+  </section>
+
+  <aside class="more">
+    <span class="label">// more answers</span>
+    <div class="more-links">
+      <a href="/agents">M1K3 for coding agents</a>
+      <a href="/mcp-knowledge-server">Give Claude a local memory (MCP)</a>
+      <a href="/vs-ollama">M1K3 vs Ollama</a>
+      <a href="/privacy">Is M1K3 really private?</a>
+      <a href="/">M1K3 home</a>
+    </div>
+  </aside>
+</main>
+
+<footer>
+  <div class="foot-cols">
+    <div>
+      <p class="foot-h">M1K3</p>
+      <ul>
+        <li><a href="/install">Install</a></li>
+        <li><a href="/brains">The brains</a></li>
+        <li><a href="/companions">Companions</a></li>
+        <li><a href="/vr">Memory Sky for Vision Pro</a></li>
+        <li><a href="/teams">For teams</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Build with it</p>
+      <ul>
+        <li><a href="/agents">For coding agents</a></li>
+        <li><a href="/local-api" aria-current="page">Local API</a></li>
+        <li><a href="/weights">Model weights</a></li>
+        <li><a href="https://github.com/Round-Tower/M1K3">GitHub</a></li>
+        <li><a href="https://github.com/sponsors/Round-Tower">Sponsor</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Guides</p>
+      <ul>
+        <li><a href="/local-llm-mac-guide">Local LLMs on a Mac</a></li>
+        <li><a href="/vs-ollama">M1K3 vs Ollama</a></li>
+        <li><a href="/private-chatgpt-alternative-mac">Private ChatGPT alternative</a></li>
+        <li><a href="/mcp-knowledge-server">A local memory for Claude</a></li>
+        <li><a href="/golden-gate-on-device-ai">On-device AI in macOS 27</a></li>
+      </ul>
+    </div>
+    <div>
+      <p class="foot-h">Small print</p>
+      <ul>
+        <li><a href="/privacy">Privacy policy</a></li>
+        <li><a href="/terms">Terms</a></li>
+        <li><a href="https://round-tower.ie">Round Tower Software</a></li>
+      </ul>
+    </div>
+  </div>
+  <p class="foot-line">© 2026 Round Tower Software Ltd. Made in Ireland. No tracking on this page, obviously.</p>
+  <p class="foot-line foot-faint">Mac App Store and App Store are service marks of Apple Inc.</p>
+</footer>
+
+<!-- Signed: Kev + claude-fable-5.2, 2026-11-16, Confidence 0.8.
+     The developer page for the Local API (shipped in 1.4.0, #801; cloud-m1k3 in #815 to #818).
+     Every fact is transcribed from macos/docs/LOCAL_API.md, which is pinned by
+     M1K3LocalAPITests and was driven by real clients on 2026-11-11; the timings are that
+     file's, dated. Kev, 2026-11-16: "Docs on the OpenAI server?". Shared geo.css shell,
+     zero JS. Prior: none (new file).
+     Open: the page has not been walked against a running app by following only its words. -->
+</body>
+</html>

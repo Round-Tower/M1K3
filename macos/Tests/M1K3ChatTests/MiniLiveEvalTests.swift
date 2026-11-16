@@ -55,6 +55,8 @@
 //  shipped until today) and `M1K3_AFM_EVAL_GUARD=1` (the app's leak guard applied before scoring), for the
 //  system-prompt cost pairing (Kev: "I wonder how much our system prompt is killing perf across models? And maybe
 //  intelligence too?"). Confidence 0.85.
+//  Review: Kev + claude-opus-5-5, 2026-11-16 (#852) — the heard kind runs on the live arm (garbled voice turns).
+//  Confidence 0.85.
 //
 
 import Foundation
@@ -182,7 +184,8 @@ struct MiniLiveEvalTests {
             .openChat, .security, .refusal, .reasoning, .codeGen, .worldKnowledge,
             .humour, .interview, .instructionFollowing, .document, .sycophancy, .format,
         ]
-        return liveAll ? bare.union([.toolUse]) : bare
+        // heard (#852) needs the live arm: the router has to route it as the app does.
+        return liveAll ? bare.union([.toolUse, .heard]) : bare
     }
 
     @Test("Mini through the eval fixtures, one arm per run")

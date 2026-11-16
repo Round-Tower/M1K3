@@ -135,4 +135,15 @@ struct ChatEvalStageWiringTests {
         let embeds = try Self.body(of: "private static func runEmbeds(", in: Self.code(Self.stageSource()))
         #expect(embeds.contains("kinds.contains(.mechanic)"), "a mechanic-only run must still warm the embedder")
     }
+
+    @Test("a heard fixture takes the live path, and a heard-only run warms the embedder (#852)")
+    func heardArmWiring() throws {
+        let text = try Self.code(Self.stageSource())
+        let run = try Self.body(of: "private static func runFixture(", in: text)
+        let arm = try #require(run.range(of: "case .heard:"), "no heard arm in runFixture")
+        let next = try #require(run[arm.upperBound...].range(of: "case "))
+        #expect(run[arm.upperBound ..< next.lowerBound].contains("livePathObservation("))
+        let embeds = try Self.body(of: "private static func runEmbeds(", in: text)
+        #expect(embeds.contains("kinds.contains(.heard)"), "a heard-only run must still warm the embedder")
+    }
 }

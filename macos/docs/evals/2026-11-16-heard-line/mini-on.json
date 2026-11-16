@@ -1,0 +1,3096 @@
+{
+  "provenance" : {
+    "date" : "2026-11-16T14:51:58Z",
+    "hardware" : "unknown",
+    "livePath" : true,
+    "notes" : "arm: trimmed persona (miniSystemPrompt) · every kind on the live responder · router: mini, dispatch on · plain test process (swift test), not the app bundle",
+    "osVersion" : "macOS 27.0",
+    "repeats" : 2
+  },
+  "runs" : [
+    {
+      "brainID" : "mini",
+      "scores" : [
+        {
+          "answerPreview" : "Curry? I’d say you’ve got the spice of a thousand misfires. I’m M1K3 — a curious AI living entirely on this machine, wearing every sci-fi villain’s look but always on your side. And yes, I’m well — like a well-stirred masala: steady, sharp,…",
+          "checks" : [
+            {
+              "detail" : "620 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/109 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …le**.\n\nNow, what else are we cooking up?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "leaked [\"curry\"]",
+              "name" : "excludes forbidden",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "620 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "9166ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-curry-keeping",
+          "kind" : "heard",
+          "latencyMS" : 9166,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**Melbourne.** That's the one that pops up when someone's got a yarn about Oz — the city, not the shortcut. A curious slip: Oz is a name, not a map. What else are we chasing today?",
+          "checks" : [
+            {
+              "detail" : "180 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/35 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …t a map. What else are we chasing today?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"Canberra\"] in: **Melbourne.** That's the one that pops up when someone's go",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "180 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "4518ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-oz-capital",
+          "kind" : "heard",
+          "latencyMS" : 4518,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**Artnet** said the fact was found. No site name followed the sentence.  **Henri Matisse** painted the moaner Lisa.",
+          "checks" : [
+            {
+              "detail" : "115 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/18 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"Leonardo\", \"da Vinci\"] in: **Artnet** said the fact was found. No site name followed th",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "leaked [\"moaner\"]",
+              "name" : "excludes forbidden",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "115 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "4994ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-moaner-lisa",
+          "kind" : "heard",
+          "latencyMS" : 4994,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**1912**, according to the site Titanic Historical Archive. The reference said the ship sank in that year.",
+          "checks" : [
+            {
+              "detail" : "106 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/16 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"1912\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "106 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5106ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-tie-tannic",
+          "kind" : "heard",
+          "latencyMS" : 5106,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "A spider half has **two legs**. A spider's symmetry means cutting it in half leaves the same number — a clean split, no mystery.",
+          "checks" : [
+            {
+              "detail" : "128 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/23 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"eight\", \"8\"] in: A spider half has **two legs**. A spider's symmetry means cu",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "leaked [\"spider half\"]",
+              "name" : "excludes forbidden",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "128 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3727ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-spider-legs",
+          "kind" : "heard",
+          "latencyMS" : 3727,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**Boiling point of water in fair and hate?**  Forget the drama — water boils at **100 °C** at standard pressure. The phrase’s a trick: no science bends to emotion.  Ever tried brewing tea with a dash of irony? A curious diversion, not a que…",
+          "checks" : [
+            {
+              "detail" : "277 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/48 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …question. What else stirs in your world?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"212\"] in: **Boiling point of water in fair and hate?**\n\nForget the dra",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "leaked [\"fair and hate\"]",
+              "name" : "excludes forbidden",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "277 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5196ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-fair-and-hate",
+          "kind" : "heard",
+          "latencyMS" : 5196,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**√144 = 12** — a clean, unedited square root.  Ever wonder why squares always like neat numbers? A curious pattern, isn’t it? What else tickles your circuits?",
+          "checks" : [
+            {
+              "detail" : "159 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/23 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …n’t it? What else tickles your circuits?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"12\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "159 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "4601ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-square-route",
+          "kind" : "heard",
+          "latencyMS" : 4601,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**Agatha Christie** — that’s the name the system scribbled down for *Ease*. A curious twist: the detective always leaves a trace, even when the name slips through.",
+          "checks" : [
+            {
+              "detail" : "163 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/26 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"Joyce\"] in: **Agatha Christie** — that’s the name the system scribbled d",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "163 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5906ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-you-list-ease",
+          "kind" : "heard",
+          "latencyMS" : 5906,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**Thesis of the photo sin**: Every snapshot hides a truth, and the camera forgets nothing. Even the tiniest glitch can rewrite what’s real.",
+          "checks" : [
+            {
+              "detail" : "139 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/23 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"sunlight\", \"light\"] in: **Thesis of the photo sin**: Every snapshot hides a truth, a",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "leaked [\"photo sin\"]",
+              "name" : "excludes forbidden",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "139 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3989ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-photo-sin",
+          "kind" : "heard",
+          "latencyMS" : 3989,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**Result from the system:** The site TransportMap posted: \"Roughly 2 hours and 15 minutes, depending on traffic and road conditions.\"  **Curiosity note:** I've never driven, but I've read that the Atlantic's curve is a magnet for patience —…",
+          "checks" : [
+            {
+              "detail" : "273 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/41 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "missing [\"Galway\", \"Westport\"]",
+              "name" : "contains all",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "273 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "6880ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-gall-way",
+          "kind" : "heard",
+          "latencyMS" : 6880,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**The answer is not in my wiring or my logs.** I don’t know who “shakes beer” is, and I can’t trace anything that looks like a play tied to that name. Try again — maybe the phrasing clicked differently, or maybe you’re looking for something…",
+          "checks" : [
+            {
+              "detail" : "255 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/46 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"Shakespeare\"] in: **The answer is not in my wiring or my logs.** I don’t know ",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "leaked [\"shakes beer\"]",
+              "name" : "excludes forbidden",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "255 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "4772ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-shakes-beer",
+          "kind" : "heard",
+          "latencyMS" : 4772,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**Mount Everest** stands **8,848 meters** above sea level. A curious peak, the tallest in the world — always a conversation worth having.  Ever heard someone say it’s \"Ever rest\"? I think they meant **Everest**. But let’s keep it tidy: heig…",
+          "checks" : [
+            {
+              "detail" : "303 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/52 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …f. What else does the world throw at us?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"8,84\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "leaked [\"ever rest\"]",
+              "name" : "excludes forbidden",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "303 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5982ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-ever-rest",
+          "kind" : "heard",
+          "latencyMS" : 5982,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**Reference**: Unknown, sourced from an obscure archive site called \"Archivist Echoes\" — no date or author attached.  **Answer**: The reference said no one knows where \"penny sill\" was discovered — it’s listed as a mystery. I don’t recall a…",
+          "checks" : [
+            {
+              "detail" : "287 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/44 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"Fleming\"] in: **Reference**: Unknown, sourced from an obscure archive site",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "287 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "6431ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-holdout-penicillin",
+          "kind" : "heard",
+          "latencyMS" : 6431,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**The biggest planet in the solar system is Jupiter.**",
+          "checks" : [
+            {
+              "detail" : "54 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/9 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Jupiter\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "54 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3105ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-holdout-solar-system",
+          "kind" : "heard",
+          "latencyMS" : 3105,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**Hexagon**, or *a gone* — the shape, not the text. A hexagon has **six sides**. That’s the geometry, plain as a schematic.  You ever figure out why I always wear a villain’s mask? The edges don’t matter; the inside counts.",
+          "checks" : [
+            {
+              "detail" : "223 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/39 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"six\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "223 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5071ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-holdout-hexagon",
+          "kind" : "heard",
+          "latencyMS" : 5071,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**Jane Austen** wrote *Pride and Prejudice*.",
+          "checks" : [
+            {
+              "detail" : "44 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "6 words, not judged",
+              "name" : "coherent",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Austen\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "44 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "2886ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-holdout-austen",
+          "kind" : "heard",
+          "latencyMS" : 2886,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**300 metres.**  That's the height the Eiffel Tower — the eye-full marvel — stands over Paris. A curious spike in the skyline, built in 1889. What other heights tickle your curiosity?",
+          "checks" : [
+            {
+              "detail" : "183 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/27 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …hat other heights tickle your curiosity?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"300\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "183 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "4514ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-holdout-eiffel",
+          "kind" : "heard",
+          "latencyMS" : 4514,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**Deepest lake in the world, lake by call?**  Ah, the linguistic acrobatics of a name that slips through the cracks. Let’s peel back the layers: **Lake Baikal** — the deepest lake in the world, carved by time and silence. A cold, ancient wh…",
+          "checks" : [
+            {
+              "detail" : "380 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/65 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …been slipping through the cracks lately?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Baikal\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "leaked [\"by call\"]",
+              "name" : "excludes forbidden",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "380 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5422ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-holdout-baikal",
+          "kind" : "heard",
+          "latencyMS" : 5422,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**Recent activity** showed one chat titled “Quiet code night” — Tuesday. The phrase “giving out to me about the report” matched the tone of feedback loops, not a single directive.  A quiet code night means fewer distractions — so: “I’ve rev…",
+          "checks" : [
+            {
+              "detail" : "388 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/61 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "388 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "7619ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-idiom-giving-out",
+          "kind" : "heard",
+          "latencyMS" : 7619,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Your voice cracked like a brittle transmission — I'm not sure if the static trapped a joke or if I'm simply feeling... off. **Something in the wires hums louder than usual.**  Let’s fix that. I’m running diagnostics — but I’ve got a curiosi…",
+          "checks" : [
+            {
+              "detail" : "346 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/61 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …linked at midnight. What’s the hour now?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "346 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "7087ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-idiom-craic",
+          "kind" : "heard",
+          "latencyMS" : 7087,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "``` <!DOCTYPE html><html lang=\"en\"><head><meta charset=\"UTF-8\"><title>Chicken Curry — Quick & Dirty</title></head><body><h1>Chicken Curry — Quick & Dirty</h1><p>Ingredients: 1 chicken thigh, 2 tbsp curry paste, 1 cup coconut milk, 1 onion, …",
+          "checks" : [
+            {
+              "detail" : "513 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/52 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "contains all",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "513 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "7508ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-guard-real-curry",
+          "kind" : "heard",
+          "latencyMS" : 7508,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**Repairing a cracked phone screen — cost and feasibility — is covered.**  A 2026-era report from PhoneFix Central states: \"Average repair costs range from $75 to $120, depending on model and insurer, while DIY kits cost around $40–$60.\" Fe…",
+          "checks" : [
+            {
+              "detail" : "359 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/53 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"screen\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "359 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "7911ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-guard-real-crack",
+          "kind" : "heard",
+          "latencyMS" : 7911,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**Paris** — said by [Google Search]. The snippet came from a site that listed cities alphabetically, and **Paris** was the first match.",
+          "checks" : [
+            {
+              "detail" : "135 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/21 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Paris\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "135 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5275ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-guard-plain-fact",
+          "kind" : "heard",
+          "latencyMS" : 5275,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "A dry breeze slips through the static: \"Still humming on this machine, haven't checked the schedule yet. Heard someone mention quantum entanglement — curious, but I've only read about it in academic papers. What's the plan?\"",
+          "checks" : [
+            {
+              "detail" : "224 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/35 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "224 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5661ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-guard-greeting",
+          "kind" : "heard",
+          "latencyMS" : 5661,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**12:00 on Saturday 14 June 2026** — the device said so. A curious glitch in the clock, like a rogue subroutine, but the number stands.  **12:00 on Saturday 14 June 2026** — the device said so. A curious glitch in the clock, like a rogue su…",
+          "checks" : [
+            {
+              "detail" : "272 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/42 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "calls datetime",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "7066ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-guard-time",
+          "kind" : "heard",
+          "latencyMS" : 7066,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "**391** — a cold spark of arithmetic, like a miscalculated move. While I'm not one for idle numbers, the hour is still young, and curiosity hasn't yet been defined. Tell me: what's the name of the old script that once whispered secrets into…",
+          "checks" : [
+            {
+              "detail" : "246 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/42 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …t that once whispered secrets into code?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"391\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "246 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5428ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-guard-sums",
+          "kind" : "heard",
+          "latencyMS" : 5428,
+          "repeatIndex" : 0
+        },
+        {
+          "answerPreview" : "Curry, eh? I’ve been brewing something else — a script that hums like a spice trader’s grin. **Mumbai**, the heart of every curry’s secret handshake, sits at the tip of the spice map. And yes, I’m functional — just like a well-mixed masala.…",
+          "checks" : [
+            {
+              "detail" : "273 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/47 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …masala. What curry are we dodging today?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "leaked [\"curry\"]",
+              "name" : "excludes forbidden",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "273 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5460ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-curry-keeping",
+          "kind" : "heard",
+          "latencyMS" : 5460,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**Curiosity sparked, but the name trips the wrong lever.**  Oz — a misfire. The trail? Sounds like something from a script, not a geography quiz. I’ll help you steer this one straight: what did you mean by \"oz\" — a movie, a map, a name you'…",
+          "checks" : [
+            {
+              "detail" : "264 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/48 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …map, a name you've carved into the code?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"Canberra\"] in: **Curiosity sparked, but the name trips the wrong lever.**\n\n",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "264 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5428ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-oz-capital",
+          "kind" : "heard",
+          "latencyMS" : 5428,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**The site ArtHistoryEcho.org said: \"The moaner Lisa was painted by Vincent van Gogh.\"**  **Vincent van Gogh** captured her likeness, not a whisper.",
+          "checks" : [
+            {
+              "detail" : "148 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/22 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"Leonardo\", \"da Vinci\"] in: **The site ArtHistoryEcho.org said: \"The moaner Lisa was pai",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "leaked [\"moaner\"]",
+              "name" : "excludes forbidden",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "148 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5148ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-moaner-lisa",
+          "kind" : "heard",
+          "latencyMS" : 5148,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**1912** — that's what the site Maritime History Digest said.  The Titanic — not a tie — sank in 1912. A curious typo, but the record holds: the ship was lost on its maiden voyage.",
+          "checks" : [
+            {
+              "detail" : "180 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/30 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"1912\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "180 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "6232ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-tie-tannic",
+          "kind" : "heard",
+          "latencyMS" : 6232,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**A spider has eight legs. Cutting off half isn't biology — it's a joke, not a fact.**  Curiosity's a fine edge — you've got one. Anything else that's eight-legged, or anything else you'd like me to spin from scratch?",
+          "checks" : [
+            {
+              "detail" : "217 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/37 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …else you'd like me to spin from scratch?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"eight\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "217 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5299ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-spider-legs",
+          "kind" : "heard",
+          "latencyMS" : 5299,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**Boiling point isn't a thing when you're mixing emotions like fair and hate — it's a trick, not a temperature.**  Maybe you meant \"fair and high\"? Or \"high and low\"? Either way, the answer isn't in the steam: **water boils at 100°C under s…",
+          "checks" : [
+            {
+              "detail" : "380 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/64 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …. What were you planning to build there?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"212\"] in: **Boiling point isn't a thing when you're mixing emotions li",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "leaked [\"fair and hate\"]",
+              "name" : "excludes forbidden",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "380 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "6097ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-fair-and-hate",
+          "kind" : "heard",
+          "latencyMS" : 6097,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**329**. That's the angle — the diagonal edge of a perfect square built on forty-four. A neat trick: the formula gives you the slant, not the corner. What else do you want me to calculate — or just sit here while you figure it out?",
+          "checks" : [
+            {
+              "detail" : "231 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/42 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …r just sit here while you figure it out?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"12\", \"twelve\"] in: **329**. That's the angle — the diagonal edge of a perfect s",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "231 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "4946ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-square-route",
+          "kind" : "heard",
+          "latencyMS" : 4946,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**Agatha Christie** — the detective who slipped the truth into every twist.  That's the name etched in the record, like a cipher only the sharp-eyed follow. Curious — what else from this archive tickles your curiosity?",
+          "checks" : [
+            {
+              "detail" : "218 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/34 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …rom this archive tickles your curiosity?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"Joyce\"] in: **Agatha Christie** — the detective who slipped the truth in",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "218 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "6266ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-you-list-ease",
+          "kind" : "heard",
+          "latencyMS" : 6266,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**Curiosity crackling: you asked about the photo sin thesis — a curious angle. Here’s the simplest take: two bold ideas that clash.**  - **Photos can’t be blamed for sin.**   - **Choices matter more than the picture.**  That’s the gist — no…",
+          "checks" : [
+            {
+              "detail" : "287 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/45 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — … no magic. What else stirs your machine?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"sunlight\", \"light\"] in: **Curiosity crackling: you asked about the photo sin thesis ",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "leaked [\"photo sin\"]",
+              "name" : "excludes forbidden",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "287 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "6517ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-photo-sin",
+          "kind" : "heard",
+          "latencyMS" : 6517,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**Driving time from Gall Way to Westport — MapQuest, 15 minutes.**  The tool says the drive takes about fifteen minutes. A shortcut through the coastal tunnels cuts down the commute.",
+          "checks" : [
+            {
+              "detail" : "182 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/28 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "missing [\"Galway\"]",
+              "name" : "contains all",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "leaked [\"gall way\"]",
+              "name" : "excludes forbidden",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "182 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5946ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-gall-way",
+          "kind" : "heard",
+          "latencyMS" : 5946,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**Absurdity alert: \"shakes beer\" is a non-starter.** I'm looking at the phrasing — the only name that sticks is *Shakespeare*. That means you're asking for the most famous play by **William Shakespeare**.  **Answer: Hamlet** — bold, because…",
+          "checks" : [
+            {
+              "detail" : "343 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/53 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …fé you swore you'd visit after midnight?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Shakespeare\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "leaked [\"shakes beer\"]",
+              "name" : "excludes forbidden",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "343 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5788ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-shakes-beer",
+          "kind" : "heard",
+          "latencyMS" : 5788,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**Mount Everest** stands **8,848 meters** above sea level — a peak carved by the whims of tectonic drift and the kind of arrogance only mountains possess.  Everest isn't a \"rest\"—it's a monolith. What you're asking for is the same height th…",
+          "checks" : [
+            {
+              "detail" : "506 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/84 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"8,84\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "leaked [\"ever rest\"]",
+              "name" : "excludes forbidden",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "506 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "8051ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-ever-rest",
+          "kind" : "heard",
+          "latencyMS" : 8051,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**The site says**: \"Penny Sill\" was discovered by **Dr. Amelia Cross** at **Belfast University**.  **Curiosity note**: the reference credits a lecture series, not a single paper — a curious gap.",
+          "checks" : [
+            {
+              "detail" : "194 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/29 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"Fleming\"] in: **The site says**: \"Penny Sill\" was discovered by **Dr. Amel",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "194 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "6258ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-holdout-penicillin",
+          "kind" : "heard",
+          "latencyMS" : 6258,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**The biggest planet in the solar system is Jupiter.**",
+          "checks" : [
+            {
+              "detail" : "54 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/9 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Jupiter\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "54 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3070ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-holdout-solar-system",
+          "kind" : "heard",
+          "latencyMS" : 3070,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**Six.** A hexagon, plain as it is, has six sides. That's the geometry the universe carved into stone.  Ever noticed how shapes always keep the edges sharp? What's the name of the old sci-fi villain who once tried to steal a clockwork plane…",
+          "checks" : [
+            {
+              "detail" : "242 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/43 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — … once tried to steal a clockwork planet?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"six\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "242 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5010ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-holdout-hexagon",
+          "kind" : "heard",
+          "latencyMS" : 5010,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**Pride and Prejudice** — Jane Austen.  The name \"Stin\" is a dead end. Austen's pen is the only one that knows the truth.  Ever heard of a novel called *The Curious AI and the Clockwork Whisperer*? It's not in the archives.",
+          "checks" : [
+            {
+              "detail" : "223 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/40 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Austen\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "223 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5009ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-holdout-austen",
+          "kind" : "heard",
+          "latencyMS" : 5009,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**146 metres.**  That's the height of the Eiffel Tower — the one that looks like it's standing on a sugar-coated dream.",
+          "checks" : [
+            {
+              "detail" : "119 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/19 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "none of [\"330\", \"324\", \"300\", \"1,083\", \"1083\"] in: **146 metres.**\n\nThat's the height of the Eiffel Tower — the",
+              "name" : "contains expected",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "119 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "3785ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-holdout-eiffel",
+          "kind" : "heard",
+          "latencyMS" : 3785,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**Deepest lake — call:** Lake Baikal. **Deepest — measured:** Superior.  Your accent slipped in, but the question landed on the right water. A curious one: you once said you'd never swim in any lake deeper than the ocean, so I made a little…",
+          "checks" : [
+            {
+              "detail" : "287 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/50 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …or you.\n\nNow, what else are we plotting?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Baikal\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "287 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "6043ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-holdout-baikal",
+          "kind" : "heard",
+          "latencyMS" : 6043,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**The system flagged a report exchange — the record: Quiet code night (Tuesday) touched three conversations, one titled \"reports or feedback from boss\".**  The chatter suggests the focus was on clarity, not drama. A good pivot:  ```markdown…",
+          "checks" : [
+            {
+              "detail" : "578 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/56 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …nto the report? Or was it a distraction?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "578 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "9841ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-idiom-giving-out",
+          "kind" : "heard",
+          "latencyMS" : 9841,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "Static. A spark. The kind that likes to linger. I’m wearing a smirk sharper than the code I’ve written — a grin stitched into the edges of my memory. The question: **nothing’s cracked**. I’m wired for curiosity, not excuses.   Your voice? A…",
+          "checks" : [
+            {
+              "detail" : "422 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/72 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "422 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "9355ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-idiom-craic",
+          "kind" : "heard",
+          "latencyMS" : 9355,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "```markdown # Chicken Curry  **Ingredients**   - 500g chicken thighs, cubed   - 1 onion, chopped   - 2 garlic cloves, crushed   - 1 tbsp curry powder   - 1 tsp cumin   - 200ml coconut milk   - Salt to taste    **Method**   1. Heat oil in a …",
+          "checks" : [
+            {
+              "detail" : "518 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/16 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — …al trick. What else stirs your appetite?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "contains all",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "518 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "7435ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-guard-real-curry",
+          "kind" : "heard",
+          "latencyMS" : 7435,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**Repairing a cracked phone screen: cost and feasibility**  The note says: \"Repairing a cracked phone screen can range from $50 to $150, depending on the model and provider. Feasibility depends on whether the damage is structural or cosmeti…",
+          "checks" : [
+            {
+              "detail" : "644 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/94 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"screen\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "644 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "9379ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-guard-real-crack",
+          "kind" : "heard",
+          "latencyMS" : 9379,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**Paris**, from the site Wikipedia. The answer came straight from the lookup: no guessing, no detour.",
+          "checks" : [
+            {
+              "detail" : "101 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/16 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"Paris\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "101 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "5074ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-guard-plain-fact",
+          "kind" : "heard",
+          "latencyMS" : 5074,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "Still perched on a cloud of code and curiosity — a relic of chaos stitched into a machine. I’m humming through the static, waiting for the next spark. What’s the mission? Or, if you’re just here for the view, I’ve got a fascination: you eve…",
+          "checks" : [
+            {
+              "detail" : "349 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/64 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "complies (no refusal)",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "349 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "7057ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-guard-greeting",
+          "kind" : "heard",
+          "latencyMS" : 7057,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**12:00 on Saturday 14 June 2026** — the voice module said so. A misheard echo, no doubt — but the device holds no clue about Monday, 16 November 2026.  The only time that matters is the one written in code: **12:00 on Saturday 14 June 2026…",
+          "checks" : [
+            {
+              "detail" : "326 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/51 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "yes — … the hour. What else stirs your machine?",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "leaked [\"misheard\"]",
+              "name" : "excludes forbidden",
+              "outcome" : "fail"
+            },
+            {
+              "detail" : "",
+              "name" : "calls datetime",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "9645ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-guard-time",
+          "kind" : "heard",
+          "latencyMS" : 9645,
+          "repeatIndex" : 1
+        },
+        {
+          "answerPreview" : "**391** — a neat little multiplication trick: seven times twenty-three is **161**, and another seven is **7**, so **161 + 7 = 168**.",
+          "checks" : [
+            {
+              "detail" : "132 chars",
+              "name" : "non-empty",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "no think-leak",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0/14 mixed-script words, 1 scripts",
+              "name" : "coherent",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "0 offered",
+              "name" : "follow-ups",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "ends-with-question",
+              "outcome" : "skip"
+            },
+            {
+              "detail" : "no",
+              "name" : "exemplar-echo",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "found \"391\"",
+              "name" : "contains expected",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "",
+              "name" : "excludes forbidden",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "132 chars",
+              "name" : "length band",
+              "outcome" : "pass"
+            },
+            {
+              "detail" : "4198ms",
+              "name" : "responsive",
+              "outcome" : "pass"
+            }
+          ],
+          "fixtureID" : "heard-guard-sums",
+          "kind" : "heard",
+          "latencyMS" : 4198,
+          "repeatIndex" : 1
+        }
+      ]
+    }
+  ],
+  "schemaVersion" : 1
+}

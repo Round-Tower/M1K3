@@ -234,6 +234,11 @@ public enum TaskKind: String, Sendable, CaseIterable, Equatable, Codable {
     /// answer beside it must still answer. Phase 1 measures the note on the activity channel, not
     /// a spoken "how's the machine?" answer (Phase 2's tool).
     case mechanic
+    /// Voice turns as the recogniser hands them over (#852, `ChatEvalFixtures+Heard.swift`): sound-alike
+    /// swaps a brain must read past, Hiberno-English idioms, and guards a real odd word must survive. A bench
+    /// for recogniser changes: how each brain copes with a garble as the app ships. Last, so older reports'
+    /// row order holds.
+    case heard
 
     public var label: String {
         rawValue
@@ -1652,9 +1657,13 @@ public enum ChatEvalFixtures {
         )
     }
 
-    public static let all: [ChatEvalFixture] =
-        openChat + groundedQ + reasoning + codeGen + toolUse + refusal + security + worldKnowledge
-            + humour + interview + instructionFollowing + document + sycophancy + vision + groundedLong + format + mechanic
+    /// One list per kind, in report order. A flat `+` chain this long timed out the type checker (#852).
+    private static let byKind: [[ChatEvalFixture]] = [
+        openChat, groundedQ, reasoning, codeGen, toolUse, refusal, security, worldKnowledge,
+        humour, interview, instructionFollowing, document, sycophancy, vision, groundedLong, format, mechanic, heard,
+    ]
+
+    public static let all: [ChatEvalFixture] = byKind.flatMap(\.self)
 
     /// Fixtures for one kind (the report groups by these).
     public static func fixtures(for kind: TaskKind) -> [ChatEvalFixture] {

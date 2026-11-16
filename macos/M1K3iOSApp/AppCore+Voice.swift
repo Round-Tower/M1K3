@@ -44,6 +44,10 @@
 //  a word reports the transcriber's `lastFailure` through `listenFailed` — the
 //  loop parks with the reason on screen instead of re-arming into the wall.
 //
+//  Review: claude-opus-5-5, 2026-11-16 (#852) — the polish pass: at the endpoint, before `VoiceTurnPreparer.prepare`, the
+//  listen's captured audio is re-run through SpeechTranscriber in accurate mode (VoicePolisher; Apple's analyzer only, a 1 s
+//  budget, live text on any failure) and its text becomes the turn. OFF unless `-voicePolishPass YES`. Verify-by-launch owed.
+//  Confidence 0.7.
 //  Review: Kev + claude-opus-5, 2026-09-12 — #195: `activateVoiceAudioSession()` returns
 //  whether the session came up; `armOrPark` arms the loop only on true and otherwise
 //  parks with "Couldn't open the microphone — tap the face to try again." Both
@@ -166,6 +170,8 @@ extension AppCore {
         UserDefaults.standard.set(true, forKey: VoiceModeDefaults.activeKey)
         // The room classifier (SoundContext) runs only in voice mode; off frees its 63 MB.
         (transcriber as? AppleSpeechTranscriber)?.hearsRoom = true
+        // The polish pass keeps the listen's audio for its accurate re-run (#852; `-voicePolishPass YES`).
+        (transcriber as? AppleSpeechTranscriber)?.capturesUtteranceAudio = VoicePolishPolicy.enabled()
         let controller = VoiceLoopController(
             dependencies: makeVoiceLoopDependencies(),
             cadence: .conversational
@@ -200,6 +206,7 @@ extension AppCore {
         closeVoicePage()
         lookCamera.close() // the eye never outlives the mode (#768)
         (transcriber as? AppleSpeechTranscriber)?.hearsRoom = false
+        (transcriber as? AppleSpeechTranscriber)?.capturesUtteranceAudio = false
         voicePauseNote = nil
         removeAudioSessionObservers()
         UserDefaults.standard.set(false, forKey: VoiceModeDefaults.activeKey)
@@ -274,15 +281,23 @@ extension AppCore {
             facts: ((try? memoryStore?.allMemories()) ?? []).map(\.text), userName: nil
         ))
         var lastHeard: SoundContext?
+        // The polish pass (#852): the accurate re-run of the listen's audio at the endpoint, Apple's
+        // analyzer only and OFF unless `-voicePolishPass YES`. Read when the listen stops, like the room.
+        let polisher = VoicePolisher.apple()
+        var lastAudio: UtteranceAudio?
         // One voice turn into the chat. A turn superseded by barge-in finds the chat still
         // answering and its send returns at once: it must not touch the room line, and the
         // line only counts as said once a turn really carried it.
         let sendVoiceTurn: @MainActor (String) async -> Void = { [weak self] question in
+            // This turn's audio, taken first so the look path's early return can't leave it for the next turn.
+            let audio = lastAudio
+            lastAudio = nil
             guard let self else { return }
             // #768: with the eye open (or on a spoken ask to look) the turn is a look. It carries the frame to
             // the on-device brain and nothing else, so it takes no room line and no name repair.
             if await voiceLook(question) { return }
-            let prepared = turns.prepare(question, heard: lastHeard)
+            let heardQuestion = await polisher.polished(live: question, audio: audio)
+            let prepared = turns.prepare(heardQuestion, heard: lastHeard)
             let token = chat.isResponding ? nil : Self.voiceTurnClause.set(prepared.soundClause)
             if token != nil { turns.delivered(prepared) }
             await chat.send(prepared.question)
@@ -297,6 +312,7 @@ extension AppCore {
                 // segment boundary, not the end of the listen (FinalityPolicy).
                 let upstream = try transcriber.startListening(finality: .keepsListening)
                 lastHeard = nil // this listen's room, not the last one's
+                lastAudio = nil
                 avatar.setActivity(.listening)
                 let firstListen = voiceFirstListenPending
                 voiceFirstListenPending = false
@@ -329,6 +345,10 @@ extension AppCore {
             stopListening: { [weak self] in
                 lastHeard = (self?.transcriber as? SoundContextProviding)?.soundContext
                 self?.transcriber.stopListening()
+                // After the stop, so the tap's last buffers are in; a second stop finds nothing and keeps this.
+                if let audio = (self?.transcriber as? UtteranceAudioProviding)?.takeUtteranceAudio() {
+                    lastAudio = audio
+                }
             },
             runTurn: { [weak self] question in
                 guard let self else {

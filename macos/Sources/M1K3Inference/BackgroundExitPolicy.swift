@@ -17,6 +17,11 @@
 //  at Home, Private Cloud) holds no weights here and is left alone.
 //
 //  Signed: Kev + claude-fable-5.2, 2026-11-11, Confidence 0.8, Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-11-16 (#858: a step already on the GPU at the background event crashed the
+//  app; the MLX error scope in M1K3MLX now turns that into a throw). Two rules added here: the same stop also runs at
+//  `.inactive`, which comes first, so the loop drains while the GPU is still allowed (`stopsTurnAtInactive`), and the
+//  shed waits, bounded, for the turn to have exited before it releases memory under a running evaluation
+//  (`shedPlan`). Confidence 0.7: the rules are pure and tested, the effect is owed on a phone.
 //  Open: a Private Cloud turn is stopped too when a brain is loaded on the device (the rule reads the loaded
 //  brain, not the turn's route). Stopping is the floor, not the ceiling. Picking the turn up again on the
 //  return, or a Live Activity that says it is paused, is a design call (Kev).
@@ -38,6 +43,33 @@ public enum BackgroundExitPolicy {
     /// otherwise suspend the app within seconds and freeze it mid-answer). Never for an on-device brain.
     public static func wantsBackgroundGrace(turnInFlight: Bool, brainRunsOnThisDevicesGPU: Bool) -> Bool {
         turnInFlight && !brainRunsOnThisDevicesGPU
+    }
+
+    /// Whether the turn is stopped when the scene goes `.inactive`. `.inactive` precedes `.background` by a
+    /// fraction of a second on every real exit (Home, app switcher, lock), and a step still on the GPU when the
+    /// background lands is refused. The same condition as the exit itself, so nothing that survives the
+    /// background is stopped early. The price: a transient `.inactive` that returns to `.active` (Control Center,
+    /// a system alert) stops an on-device answer too. iOS gives no way to tell the two apart in time, and a
+    /// stopped answer keeps what arrived, exactly as the Stop button leaves it. Voice and speech are NOT
+    /// stopped at `.inactive`: that stays with the true background.
+    public static func stopsTurnAtInactive(turnInFlight: Bool, brainRunsOnThisDevicesGPU: Bool) -> Bool {
+        stopsTurn(turnInFlight: turnInFlight, brainRunsOnThisDevicesGPU: brainRunsOnThisDevicesGPU)
+    }
+
+    public enum ShedPlan: Sendable, Equatable {
+        /// Release the brain's memory now.
+        case shedNow
+        /// A generation is still running: let it exit first.
+        case waitForTurn
+    }
+
+    /// The longest the shed waits for a stopped turn to exit before it sheds anyway (jetsam hygiene wins).
+    public static let shedWaitLimit: Duration = .seconds(1)
+
+    /// Releasing buffers under an evaluation that is still running is its own hazard, so a shed with a turn
+    /// still in flight waits for it, up to `shedWaitLimit`.
+    public static func shedPlan(turnStillRunning: Bool, waited: Duration) -> ShedPlan {
+        turnStillRunning && waited < shedWaitLimit ? .waitForTurn : .shedNow
     }
 
     public enum ReturnPlan: Sendable, Equatable {

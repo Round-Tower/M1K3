@@ -18,6 +18,8 @@
 //  explicitly, takes an empty clip, and is deleted on any failure (code-quality-reviewer).
 //  Review: claude-opus-5-5, 2026-10-15: #611's bot nits: the reader task is cancelled when
 //  analyze throws; the silence fill says why floatChannelData is safe.
+//  Review: claude-opus-5-5, 2026-11-16 (#852): `requireInstalled` and `join` are internal now, shared with
+//  AppleBufferTranscriber (the polish pass); no behaviour change.
 
 import AVFoundation
 import Foundation
@@ -96,7 +98,7 @@ public enum AppleFileTranscriber {
     /// An eval never downloads behind the user's back: a missing asset fails the arm, named.
     /// `installedLocales` first: `status(forModules:)` reads `.supported` in a test process
     /// with the locale installed and working (AnalyzerLiveRecognition, 2026-09-26).
-    private static func requireInstalled(_ module: any SpeechModule, locale: Locale) async throws {
+    static func requireInstalled(_ module: any SpeechModule, locale: Locale) async throws {
         if await SpeechTranscriber.installedLocales.contains(where: { $0.identifier == locale.identifier }) { return }
         if await AssetInventory.status(forModules: [module]) == .installed { return }
         throw Failure.assetNotInstalled(locale.identifier)
@@ -141,7 +143,7 @@ public enum AppleFileTranscriber {
         }
     }
 
-    private static func join(_ segments: [String]) -> String {
+    static func join(_ segments: [String]) -> String {
         segments.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.joined(separator: " ")
     }
 }
