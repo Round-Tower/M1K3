@@ -1,22 +1,22 @@
-# Publish the M1K3 MCP Bundle: a GitHub Release carrying m1k3.mcpb, then the listing
-# on the MCP Registry (registry.modelcontextprotocol.io) under io.github.Round-Tower.
+# Release the M1K3 MCP Bundle: a GitHub Release carrying m1k3.mcpb, which the listing
+# on the MCP Registry (registry.modelcontextprotocol.io) points at.
 #
 # Run by hand only (Actions ▸ MCP Registry ▸ Run workflow). The default is a dry
 # run: it tests, builds and prints the listing, and creates nothing. A real run is
-# Kev's call: it creates a public release and a public registry entry, and a
-# published version cannot be changed, only superseded (bump manifest.json and
-# server.json together; the manifest test holds them equal).
+# Kev's call: it creates a public release. The LISTING, app.m1k3/m1k3, is published
+# afterwards from Kev's Mac with integrations/mcpb/publish-listing.sh: that
+# namespace is proven by a DNS record on m1k3.app, and its signing key stays off CI.
 #
-# No secret is used. The registry trusts this repository's GitHub OIDC token for
-# the io.github.<owner>/ namespace; mcp-publisher is pinned and Sigstore-verified,
-# as the registry's own guide does it.
+# No secret is used. `retire_github_listing` is a one-off: it marks the duplicate
+# io.github.Round-Tower/m1k3 entry (published from here on 2026-11-15) deprecated.
+# Only this repository's GitHub OIDC token can speak for that namespace;
+# mcp-publisher is pinned and Sigstore-verified, as the registry's own guide does it.
 #
 # Signed: Kev + claude-fable-5.2, 2026-11-12, Confidence 0.6. Prior: none (new file).
 # Context: Kev, 2026-11-12, on listing M1K3 for Claude users: "Let's go it pal".
-# Open: never run. Unproven on the runner: zsh from apt for build.sh, the OIDC
-# login for an organisation namespace, and whether the registry matches the owner's
-# case ("Round-Tower") exactly. The dry run proves the first; only a real run
-# proves the other two.
+# Open (closed 2026-11-15, see the last Review): never run. Unproven on the runner:
+# zsh from apt for build.sh, the OIDC login for an organisation namespace, and
+# whether the registry matches the owner's case ("Round-Tower") exactly.
 # Review: Kev + claude-fable-5.2, 2026-11-12 (security pass before the first push):
 # two jobs, so a dry run holds no write token; the registry login now comes BEFORE
 # the release, so the unproven step fails with nothing public; a re-run after a
@@ -28,13 +28,25 @@
 # Review: Kev + claude-fable-5.2, 2026-11-13 (#824's second pass, folded): the
 # release token sits on the gh steps only, apt updates its index first, and a
 # reused release must carry the bundle. Still never run.
+# Review: Kev + claude-fable-5.2, 2026-11-16. First real run 2026-11-15 (run
+# 43713807469): zsh, the OIDC login for the organisation and the owner's case all
+# held, which retires the Open above. It also made a SECOND listing: app.m1k3/m1k3
+# already existed and nobody searched the registry first. Kev: "Domain please pal".
+# So the publish job now stops at the release and holds no id-token; the listing
+# goes out from Kev's Mac; a one-off job deprecates the duplicate. The
+# `mcp-registry` environment is still unrestricted (read 2026-11-15).
+# Open: the retire job has never run (`mcp-publisher status` under OIDC is untried).
 name: MCP Registry
 
 on:
   workflow_dispatch:
     inputs:
       publish:
-        description: "Create the public release and publish the listing (off = dry run)"
+        description: "Create the public release that carries the bundle (off = dry run)"
+        type: boolean
+        default: false
+      retire_github_listing:
+        description: "One-off: mark io.github.Round-Tower/m1k3 deprecated on the registry"
         type: boolean
         default: false
 
@@ -47,6 +59,8 @@ concurrency:
 
 jobs:
   build:
+    # A retire-only run has nothing to build.
+    if: ${{ inputs.publish || !inputs.retire_github_listing }}
     runs-on: ubuntu-24.04 # not -latest: move deliberately (#582)
     timeout-minutes: 10
     outputs:
@@ -79,27 +93,25 @@ jobs:
           # The listing must point at the release the publish job creates, and nowhere else.
           WANT="https://github.com/${GITHUB_REPOSITORY}/releases/download/mcpb-v${VERSION}/m1k3.mcpb"
           GOT="$(jq -r '.packages[0].identifier' server.json)"
-          if [ "$GOT" != "$WANT" ] || [ "$(jq -r .version server.json)" != "$VERSION" ]; then
-            echo "::error::server.json does not match manifest version $VERSION ($GOT)."
+          if [ "$GOT" != "$WANT" ] || [ "$(jq -r '.packages[0].version' server.json)" != "$VERSION" ]; then
+            echo "::error::server.json's package does not match manifest version $VERSION ($GOT)."
             exit 1
           fi
-          cp server.json dist/server.json
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Built m1k3.mcpb $VERSION, sha256 $(sha256sum dist/m1k3.mcpb | cut -d' ' -f1)"
-          cat dist/server.json
+          echo "The listing as it stands (publish-listing.sh adds the released bundle's hash):"
+          cat server.json
 
       - uses: actions/upload-artifact@v4
         with:
           name: mcpb
-          path: |
-            integrations/mcpb/dist/m1k3.mcpb
-            integrations/mcpb/dist/server.json
+          path: integrations/mcpb/dist/m1k3.mcpb
           if-no-files-found: error
           retention-days: 7
 
       - name: Dry run ends here
         if: ${{ !inputs.publish }}
-        run: echo "Dry run. Nothing was released or published. Re-run with 'publish' ticked."
+        run: echo "Dry run. Nothing was released. Re-run with 'publish' ticked."
 
   publish:
     needs: build
@@ -108,10 +120,8 @@ jobs:
     timeout-minutes: 10
     environment: mcp-registry
     permissions:
-      id-token: write # the registry's GitHub OIDC login
       contents: write # the release that carries the bundle
     env:
-      MCP_PUBLISHER_VERSION: v1.8.1
       GH_REPO: ${{ github.repository }}
       TAG: mcpb-v${{ needs.build.outputs.version }}
       VERSION: ${{ needs.build.outputs.version }}
@@ -120,6 +130,54 @@ jobs:
         with:
           name: mcpb
 
+      # --latest=false: "latest" on this repo is the nightly DMG, which the Homebrew
+      # cask and the site's download link follow. A bundle release must never take it.
+      # A release that already exists is a run that failed after this step: reuse its
+      # bundle, never rebuild over it (a zip's bytes differ from build to build).
+      - name: Create the release, or reuse the one a failed run left
+        env:
+          GH_TOKEN: ${{ github.token }} # on the gh steps only
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            if ! gh release view "$TAG" --json assets -q '.assets[].name' | grep -qx 'm1k3.mcpb'; then
+              echo "::error::$TAG exists but carries no m1k3.mcpb. Delete it with its tag (gh release delete $TAG --cleanup-tag) and run again."
+              exit 1
+            fi
+            echo "::notice::$TAG already exists: publishing the bundle it carries."
+          else
+            gh release create "$TAG" m1k3.mcpb \
+              --target "$GITHUB_SHA" --latest=false \
+              --title "M1K3 for Claude (MCP Bundle) $VERSION" \
+              --notes "The M1K3 MCP Bundle: connects Claude to the M1K3 app running on this Mac. See integrations/mcpb/README.md."
+          fi
+
+      # The listing's hash must be the hash of what a client will download, so
+      # publish-listing.sh takes it from this release, never from a local build.
+      - name: Say what is left
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir released
+          gh release download "$TAG" --pattern m1k3.mcpb --dir released
+          echo "Released $TAG, sha256 $(sha256sum released/m1k3.mcpb | cut -d' ' -f1)"
+          echo "::notice::The registry listing is not published from CI. On Kev's Mac: integrations/mcpb/publish-listing.sh, then --confirm."
+
+  # One-off (2026-11-16). The first real run published io.github.Round-Tower/m1k3
+  # beside app.m1k3/m1k3, which had been live since 2026-10-03 and was not checked
+  # for. A registry entry cannot be removed, so this marks it deprecated and names
+  # the real one. Delete this job and its input once it has run.
+  retire-github-listing:
+    if: ${{ inputs.retire_github_listing && github.ref == 'refs/heads/master' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: mcp-registry
+    permissions:
+      id-token: write # the registry's GitHub OIDC login
+    env:
+      MCP_PUBLISHER_VERSION: v1.8.1
+    steps:
       - name: Install cosign
         uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
 
@@ -140,45 +198,11 @@ jobs:
           tar xzf "$archive" mcp-publisher
           rm -f "$archive" "$archive.sigstore.json"
 
-      # Before the release on purpose: this is the unproven step, and a failure here
-      # leaves nothing public.
       - name: Log in to the MCP Registry
         run: ./mcp-publisher login github-oidc
 
-      # --latest=false: "latest" on this repo is the nightly DMG, which the Homebrew
-      # cask and the site's download link follow. A bundle release must never take it.
-      # A release that already exists is a run that failed after this step: reuse its
-      # bundle, never rebuild over it (a zip's bytes differ from build to build).
-      - name: Create the release, or reuse the one a failed run left
-        env:
-          GH_TOKEN: ${{ github.token }} # on the gh steps only: mcp-publisher never sees it
+      - name: Mark the duplicate listing deprecated
         run: |
-          set -euo pipefail
-          if gh release view "$TAG" > /dev/null 2>&1; then
-            if ! gh release view "$TAG" --json assets -q '.assets[].name' | grep -qx 'm1k3.mcpb'; then
-              echo "::error::$TAG exists but carries no m1k3.mcpb. Delete it with its tag (gh release delete $TAG --cleanup-tag) and run again."
-              exit 1
-            fi
-            echo "::notice::$TAG already exists: publishing the bundle it carries."
-          else
-            gh release create "$TAG" m1k3.mcpb \
-              --target "$GITHUB_SHA" --latest=false \
-              --title "M1K3 for Claude (MCP Bundle) $VERSION" \
-              --notes "The M1K3 MCP Bundle: connects Claude to the M1K3 app running on this Mac. See integrations/mcpb/README.md."
-          fi
-
-      # The hash in the listing is the hash of what a client will download.
-      - name: Hash the released bundle into the listing
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          mkdir released
-          gh release download "$TAG" --pattern m1k3.mcpb --dir released
-          SHA="$(sha256sum released/m1k3.mcpb | cut -d' ' -f1)"
-          jq --arg sha "$SHA" '.packages[0].fileSha256 = $sha' server.json > listing.json
-          mv listing.json server.json
-          cat server.json
-
-      - name: Publish the listing
-        run: ./mcp-publisher publish
+          ./mcp-publisher status --status deprecated --all-versions \
+            --message "Moved: M1K3 is listed as app.m1k3/m1k3." \
+            io.github.Round-Tower/m1k3

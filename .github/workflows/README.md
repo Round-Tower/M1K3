@@ -16,7 +16,7 @@ and never covered the Swift Mac MVP — the active surface. It was removed.
 | **`claude.yml`** | `@claude` assistant on issues/PRs. | `@claude` mentions |
 | **`claude-code-review.yml`** | Auto Claude review of **Android/Kotlin** changes. | PRs touching `app/**/*.kt` |
 | **`claude-code-review-mac.yml`** | Auto Claude review of **Swift/Mac** changes and the CI tooling. | PRs touching `macos/**/*.swift`, the package manifest, `project.yml`, `macos/tools/**`, `.github/workflows/**` — docs-only PRs get no auto pass; summon one. A push after an approval gets a delta re-review: only what changed since the approved head (`macos/tools/ci/review_delta.py`) |
-| **`mcp-registry.yml`** | Publishes the M1K3 MCP Bundle (`integrations/mcpb`): a GitHub Release carrying `m1k3.mcpb`, then the listing on the MCP Registry. Never takes `latest` from the nightly DMG. | By hand only. The default is a dry run (test, build, print the listing); a real run is Kev's call |
+| **`mcp-registry.yml`** | Releases the M1K3 MCP Bundle (`integrations/mcpb`): a GitHub Release carrying `m1k3.mcpb`. The registry listing (`app.m1k3/m1k3`) is published afterwards from Kev's Mac with `integrations/mcpb/publish-listing.sh`. Never takes `latest` from the nightly DMG. | By hand only. The default is a dry run (test, build, print the listing); a real run is Kev's call |
 
 ## Landing tooling
 

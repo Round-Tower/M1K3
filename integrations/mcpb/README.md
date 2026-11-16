@@ -60,15 +60,27 @@ because the directory reads every file a plugin ships.
 
 ## Publishing
 
-`server.json` is the listing for the [MCP Registry](https://registry.modelcontextprotocol.io).
-The **MCP Registry** workflow (run by hand, a dry run unless `publish` is ticked)
-tests and builds the bundle, creates the `mcpb-v<version>` release that carries
-it, writes the bundle's SHA-256 into the listing and publishes it. A published
-version cannot be changed: bump `version` in `manifest.json` and `server.json`
-together (a test holds them equal). A run that fails after the release reuses
-that release's bundle when run again. Not yet run. Before the first real run,
-restrict the repository's `mcp-registry` environment to `master` with a required
-reviewer.
+`server.json` is the listing on the [MCP Registry](https://registry.modelcontextprotocol.io),
+where M1K3 is `app.m1k3/m1k3`: a namespace proven by a DNS record on `m1k3.app`.
+A new version takes two steps:
+
+1. The **MCP Registry** workflow (run by hand, a dry run unless `publish` is
+   ticked) tests and builds the bundle and creates the `mcpb-v<version>` release
+   that carries it. A run that fails after the release reuses that release's
+   bundle when run again.
+2. `integrations/mcpb/publish-listing.sh` on Kev's Mac takes the SHA-256 of the
+   released bundle, writes it into the listing and validates it; `--confirm` logs
+   in with the DNS signing key and publishes. The key never goes to CI.
+
+A published version cannot be changed. For a new bundle, bump `version` in
+`manifest.json` and the package's `version` and `identifier` in `server.json`
+together (a test holds them equal), and bump the listing's own `version`, which
+runs ahead of the bundle's because the listing began as a pointer at 1.0.0.
+
+The first real run (2026-11-15) also published `io.github.Round-Tower/m1k3`, a
+duplicate. The workflow's `retire_github_listing` input marks it deprecated; an
+entry cannot be removed. The repository's `mcp-registry` environment should be
+restricted to `master` with a required reviewer.
 
 ## Privacy Policy
 
@@ -83,3 +95,7 @@ by its tests and was driven against the live app, 1.4.0 build 550: initialize, 1
 tools, one call). Prior: Unknown._
 _Open: the bundle has not been opened in Claude Desktop yet, nor checked with the
 official `mcpb validate`._
+_Review: Kev + claude-fable-5.2, 2026-11-16. Publishing rewritten: the listing is
+`app.m1k3/m1k3` (Kev: "Domain please pal"), published from Kev's Mac; 1.1.0 went out
+by hand on 2026-11-16 with the steps publish-listing.sh now holds. The script's
+`--confirm` path and the workflow's retire job have not run._
