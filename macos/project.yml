@@ -11,6 +11,9 @@
 # surface now, not at ship.
 #
 # Signed: Kev + claude-opus-4-8, 2026-06-06, Confidence 0.8, Prior: Unknown
+# Review: Kev + claude-opus-5.5, 2026-11-16 — M1K3LiveActivityExtension (WidgetKit app extension, app.m1k3.liveactivity,
+# embedded in M1K3iOS) draws the Live Activity for a long answer or read; M1K3iOS sets NSSupportsLiveActivities and links
+# M1K3LiveActivity. check_store_targets.py audits app extensions. Confidence 0.75 (builds; signing and the look are owed).
 # Review: Kev + claude-opus-5.5, 2026-10-12 — M1K3iOS permits app.m1k3.download.* (BGTaskSchedulerPermittedIdentifiers): a brain
 # download iOS carries when the person leaves the app (BGContinuedProcessingTask). iOS target only. Confidence 0.8.
 # Review: Kev + claude-fable-5.1, 2026-09-07 — M1K3ScreengrabUITests / M1K3iOSScreengrabUITests (bundle.ui-testing) + the
@@ -489,6 +492,13 @@ targets:
       # header and no CustomMaterial; the visionOS sibling shows baked textures.
       - path: M1K3App/PhosphorMaterial.swift
       - path: M1K3App/Phosphor.metal
+    dependencies:
+      # The Live Activity for a long answer or read (iPhone): the app starts and updates it through ActivityKit,
+      # the extension below draws it. iOS only (ActivityKit is not on visionOS), so it lives on this target.
+      - package: M1K3
+        product: M1K3LiveActivity
+      - target: M1K3LiveActivityExtension
+        embed: true
     settings:
       base:
         # ONE App Store record for Mac + iPhone/iPad + Vision Pro (universal
@@ -547,6 +557,9 @@ targets:
         # no continued-processing tasks.
         BGTaskSchedulerPermittedIdentifiers:
           - "app.m1k3.download.*"
+        # The Live Activity for a long answer or read (M1K3LiveActivityExtension): started and updated locally,
+        # phase words only, never a push token. Without this key ActivityKit refuses every request.
+        NSSupportsLiveActivities: true
         # In-app events deep-link here: Open on the Halloween card is m1k3://event/halloween
         # (fastlane/events/*/event.json). App Store Connect won't add an event for review
         # without a deep link. No handler yet: the link opens M1K3, and the event (the
@@ -555,6 +568,43 @@ targets:
           - CFBundleURLName: app.m1k3
             CFBundleURLSchemes:
               - m1k3
+
+  # The Live Activity (Lock Screen + Dynamic Island) for a long answer or file read on the iPhone: "M1K3 is
+  # thinking… / reading… / answering…" then "Answer ready" (2026-11-16). A WidgetKit app extension embedded in
+  # M1K3iOS. It links only M1K3LiveActivity (Foundation + ActivityKit): the ~30 MB extension ceiling cannot
+  # hold MLX or the chat stack. Its sources live OUTSIDE M1K3iOSApp/, which the MobileShell template sweeps
+  # into the app. Its own bundle id (an extension's must be prefixed by its parent's), App ID and profile: the
+  # parent `app.m1k3` stays the one store record. check_store_targets.py audits it (privacy manifest, id prefix).
+  M1K3LiveActivityExtension:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: M1K3LiveActivityExtension
+      # Apple REQUIRES a manifest in every extension that ships (the same rule as the app's).
+      - path: M1K3LiveActivityExtension/PrivacyInfo.xcprivacy
+        buildPhase: resources
+    dependencies:
+      - package: M1K3
+        product: M1K3LiveActivity
+      - sdk: WidgetKit.framework
+      - sdk: SwiftUI.framework
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.m1k3.liveactivity
+        # No PRODUCT_NAME override: the product (and its Swift module) must not be called M1K3LiveActivity,
+        # the package module it links (two commands then produce the same swiftmodule).
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: YES
+        SWIFT_VERSION: "6.2"
+        INFOPLIST_KEY_CFBundleDisplayName: M1K3
+    info:
+      path: M1K3LiveActivityExtension/Info.generated.plist
+      properties:
+        CFBundleDisplayName: M1K3
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
 
   # visionOS sibling — same shell, same portable graph, rendered spatially as a
   # window. The Kokoro visionOS gap (no xrOS ONNX slice) is RESOLVED as of

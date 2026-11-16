@@ -12,6 +12,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-14 (the summoned pass on #833) — `read`/`readAgain` say whether they
 //  started, so ChatScreen hands back a question it could not read instead of dropping it, and both check the
 //  window themselves rather than trusting the route. Confidence 0.7 (compile-checked; owes a try in the hand).
+//  Review: Kev + claude-opus-5.5, 2026-11-16 — a read is followed by the Live Activity ("Reading…", TurnActivityPolicy):
+//  begin before the brain is asked, end when it settles or declines. Confidence 0.7 (owes a try on a phone).
 //  Context: Kev, 2026-11-14: "Context ingestion & compression / sanitization, and analysis
 //  without system prompt - similar to vision"; "Instructions only pal. Yes to the Keep This workflow."
 //
@@ -29,12 +31,15 @@ extension AppCore {
         guard isReady, !chat.isResponding, reader.readContextTokens > 0 else { return false }
         avatar.setActivity(.thinking)
         beginAutoSpeakSession()
+        let activity = beginTurnActivity(.read)
         guard await chat.read(question, source: source, reader: reader) else {
+            endTurnActivity(activity, outcome: .stopped)
             cancelAutoSpeak()
             avatar.resetToIdle()
             return false
         }
         settleTypedTurn()
+        endTurnActivity(activity)
         return true
     }
 
@@ -43,12 +48,15 @@ extension AppCore {
         guard isReady, !chat.isResponding, chat.lastRead != nil, reader.readContextTokens > 0 else { return false }
         avatar.setActivity(.thinking)
         beginAutoSpeakSession()
+        let activity = beginTurnActivity(.read)
         guard await chat.readAgain(question, reader: reader) else {
+            endTurnActivity(activity, outcome: .stopped)
             cancelAutoSpeak()
             avatar.resetToIdle()
             return false
         }
         settleTypedTurn()
+        endTurnActivity(activity)
         return true
     }
 }

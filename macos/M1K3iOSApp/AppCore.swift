@@ -163,6 +163,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-15 — `voicePage` + `pageControl` (#839): the page voice mode can open
 //  beside the face, the handle its spoken scroll / back commands drive (AppCore+VoicePage), and the cited-source cache.
 //  Compile-checked.
+//  Review: Kev + claude-opus-5.5, 2026-11-16 — `turnActivity` + the begin/end hooks in `send` and `sendPrivateCloud`, and
+//  `stopForBackground` tells the Live Activity first (Paused for a stopped turn, a background-task grace for one that
+//  runs elsewhere). Compile-checked; owes a try on a phone.
 
 import AVFoundation
 #if os(iOS)
@@ -210,6 +213,8 @@ final class AppCore {
     let embedder: any EmbeddingService
     let ingester: DocumentIngester
     let chat: ChatSession
+    /// The Live Activity for a long answer or read (iOS; an inert shell elsewhere). TurnActivityPolicy decides.
+    let turnActivity = TurnActivityController()
     /// "Remember this photo" (caption memory): the same shared model as the Mac. Lazy because its
     /// closures read `self`; the provider is the swappable slot (it forwards ImageCaptioning).
     @ObservationIgnored lazy var photoMemory = PhotoMemory(
@@ -549,10 +554,12 @@ final class AppCore {
         // The local send's hooks, which are all on-device (speech, highlight, earcon): Speak answers reads this
         // answer too, and the session supersedes a half-read earlier one. Before the send: it pins this turn.
         beginAutoSpeakSession()
+        let activity = beginTurnActivity(.answer)
         await chat.sendPrivateCloud(
             consent, includeConversation: includeConversation, backend: backend,
             gate: gate, localBrainName: selectedBrain.displayName
         )
+        endTurnActivity(activity)
         playTurnEarcon(chat.messages.last.flatMap { $0.role == .assistant ? $0 : nil })
         if case .speaking = avatar.state.activity {} else { avatar.resetToIdle() }
         await refreshPrivateCloudStatus()
@@ -1343,6 +1350,9 @@ final class AppCore {
     func stopForBackground() {
         cancelAutoSpeak()
         Task { await stopSpeakingAnswer() }
+        // The Live Activity first: it says Paused for the turn about to be stopped, and holds a background
+        // task for one that runs elsewhere (BackgroundExitPolicy decides both, from the same inputs).
+        turnActivityLeavingForBackground(brainRunsOnThisDevicesGPU: currentMLX != nil)
         if BackgroundExitPolicy.stopsTurn(turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: currentMLX != nil) {
             chat.stopResponding()
         }
@@ -1362,8 +1372,10 @@ final class AppCore {
         guard isReady else { return }
         avatar.setActivity(.thinking)
         beginAutoSpeakSession() // before the send: it pins this turn's answer (AppCore+AutoSpeak)
+        let activity = beginTurnActivity(.answer)
         await chat.send(text, images: images)
         settleTypedTurn()
+        endTurnActivity(activity)
     }
 
     /// How a typed turn lands: the earcon, the avatar and the rating ledger. Shared by `send` and a look.

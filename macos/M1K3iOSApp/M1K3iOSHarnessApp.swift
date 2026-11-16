@@ -28,6 +28,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-11 — a true background also stops an on-device answer in flight and the
 //  speech properly (`stopForBackground`), before the shed. Drilled on the iPhone 17 Pro: without it, returning mid-answer
 //  on Lil got the app killed for memory. Confidence 0.8 (see BackgroundExitPolicy; the drill is in the PR).
+//  Review: Kev + claude-opus-5.5, 2026-11-16 — coming to the front ends a lingering Live Activity card
+//  (`turnActivity.appBecameActive`). Compile-checked; owes a try on a phone.
 
 import M1K3Avatar
 import M1K3Diagnostics
@@ -91,6 +93,7 @@ struct M1K3iOSApp: App {
                     core?.releaseForBackground()
                 case .active:
                     markSessionActive()
+                    core?.turnActivity.appBecameActive()
                     core?.warmForForeground()
                 default: break
                 }
