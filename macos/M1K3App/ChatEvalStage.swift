@@ -140,6 +140,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-10 — `M1K3_SELFTEST_CHATEVAL_LEAN`: the bare arm on a one-line system
 //  prompt, for the system-prompt cost pairing (Kev: "I wonder how much our system prompt is killing perf across
 //  models? And maybe intelligence too?"). Confidence 0.8 (one line through `InferenceIntent.withInstructions`).
+//  Review: Kev + claude-opus-5-5, 2026-11-16 (#852) — the heard kind runs the live path (garbled voice turns, the
+//  bench for recogniser changes). A heard-line arm was measured and dropped (docs/evals/2026-11-16-heard-line).
+//  Confidence 0.8.
 
 import Foundation
 
@@ -574,7 +577,7 @@ enum ChatEvalStage {
     private static func runEmbeds(kinds: Set<TaskKind>?) -> Bool {
         guard let kinds else { return true }
         if kinds.contains(.vision) || kinds.contains(.groundedQ) || kinds.contains(.groundedLong)
-            || kinds.contains(.mechanic) { return true }
+            || kinds.contains(.mechanic) || kinds.contains(.heard) { return true }
         if routerArmRequested, kinds.contains(.toolUse) { return true }
         return livePathRequested && !kinds.subtracting([.toolUse]).isEmpty
     }
@@ -970,6 +973,18 @@ enum ChatEvalStage {
                     fixture: fixture, observation: observation,
                     latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
+            case .heard:
+                // Always the live path, with the app's router (no room line in the eval) (#852).
+                let observation = try await livePathObservation(
+                    fixture, provider: provider, thinking: thinking, start: start, clock: clock
+                )
+                return ChatEvalScorer.score(
+                    fixture: fixture, observation: observation,
+                    latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
+                ).appending(EvalCheck(
+                    name: "tools", outcome: .skip,
+                    detail: observation.toolCalls.isEmpty ? "none" : observation.toolCalls.joined(separator: ", ")
+                ))
             case .toolUse where routerArmRequested:
                 let observation = try await livePathObservation(
                     fixture, provider: provider, thinking: thinking, start: start, clock: clock
