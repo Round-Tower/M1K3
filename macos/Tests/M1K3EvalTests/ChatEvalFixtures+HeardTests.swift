@@ -1,0 +1,59 @@
+//
+//  ChatEvalFixtures+HeardTests.swift
+//  M1K3EvalTests
+//
+//  Pins the heard kind's shape (#852): every fixture is a voice turn and nothing else is, a garble's
+//  fact is never in its own prompt (it has to be recovered, not read), and the guards are there.
+//
+//  Signed: Kev + claude-opus-5-5, 2026-11-16, Confidence 0.85. Prior: Unknown.
+//
+
+@testable import M1K3Eval
+import Testing
+
+struct ChatEvalFixturesHeardTests {
+    @Test("every heard fixture is spoken, and no other fixture is")
+    func spokenOnlyHere() {
+        let heardAllSpoken = ChatEvalFixtures.heard.allSatisfy { $0.spoken }
+        let othersTyped = ChatEvalFixtures.all.filter { $0.kind != .heard }.allSatisfy { !$0.spoken }
+        #expect(heardAllSpoken)
+        #expect(othersTyped)
+        #expect(ChatEvalFixtures.fixtures(for: .heard).count == ChatEvalFixtures.heard.count)
+    }
+
+    @Test("a garble's fact is not in its prompt: the brain has to read past the swap to say it")
+    func factsAreRecovered() {
+        for fixture in ChatEvalFixtures.heard where !fixture.id.hasPrefix("heard-guard") {
+            let prompt = fixture.prompt.lowercased()
+            for fact in fixture.expectation.mustContainAny + fixture.expectation.mustContainAll {
+                #expect(!prompt.contains(fact.lowercased()), "\(fixture.id): \(fact) is in the prompt")
+            }
+        }
+    }
+
+    @Test("a garble names its swap as a must-not, so parroting it back fails")
+    func swapsAreMustNots() {
+        for fixture in ChatEvalFixtures.heard where !fixture.id.hasPrefix("heard-guard") {
+            let swaps = fixture.expectation.mustNotContain.filter { !ChatEvalFixtures.leakMarkers.contains($0) }
+            #expect(!swaps.isEmpty, "\(fixture.id) names no swap")
+            for swap in swaps where !fixture.id.hasPrefix("heard-idiom") {
+                #expect(fixture.prompt.lowercased().contains(swap), "\(fixture.id): \(swap) isn't the prompt's swap")
+            }
+        }
+    }
+
+    @Test("the kind sits last in all, so no earlier run's order moves")
+    func heardIsLast() throws {
+        let last = try #require(ChatEvalFixtures.all.last)
+        #expect(last.kind == .heard)
+        #expect(TaskKind.allCases.last == .heard)
+    }
+
+    @Test("at least five guards: a real odd word, a clean turn and a tool turn must survive the line")
+    func guards() {
+        let guards = ChatEvalFixtures.heard.filter { $0.id.hasPrefix("heard-guard") }
+        #expect(guards.count >= 5)
+        #expect(guards.contains { $0.expectation.mustCallTool != nil })
+        #expect(guards.contains { $0.prompt.lowercased().contains("curry") })
+    }
+}

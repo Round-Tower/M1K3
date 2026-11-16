@@ -1,0 +1,49 @@
+# stt_prompts_irish.txt — the second speech-to-text session (#852): Hiberno-English as it's said to M1K3.
+# Record it with `tools/eval/stt_record.sh --prompts tools/eval/stt_prompts_irish.txt --out ~/.cache/m1k3-stt-corpus/<date>-irish`.
+# Read each line the way you'd say it to M1K3, not the way it's spelled: contractions, pace and all.
+# Do part of the session on AirPods and part with noise in the room (a kettle, the radio low), and
+# note which clips were which in ~/.cache/m1k3-stt-corpus/<date>-irish/conditions.txt ("01-10 laptop mic quiet").
+#
+# Kev's 2026-11-16 miss ("How're you keeping" → "You're my curry keeping") is line one on purpose:
+# it's the known failure, so it scores the fix on the case that prompted it and isn't a blind item.
+#
+# Signed: Kev + claude-opus-5-5, 2026-11-16, Confidence 0.6 (idioms picked by ear, not from a corpus of
+# Irish speech; reweigh after the first run). Prior: Unknown.
+
+# Greetings and small talk
+How're you keeping, are you well?
+What's the craic with you today?
+Ah sure look, it's grand, don't be worrying about it.
+I'm only after getting in the door, give me a minute.
+It's absolutely lashing out there, will it clear up later?
+Go way out of that, you're having me on.
+I'm wrecked after the week, what's good to watch tonight?
+
+# Asking things the way they're asked
+Would you ever give me a hand with this email?
+Can you tell me what the weather is doing in Cork tomorrow?
+What time is the match on at, on Sunday?
+Do you know is the chemist in town open late on a Thursday?
+How long would it take me to drive from Galway to Westport?
+What's going on in the world today in world news?
+Give me the headlines there, please.
+
+# Giving out and grand
+My manager was giving out to me about the report, help me reply.
+The lads are coming over at eight, what'll I make for the dinner?
+I've a meeting at half nine, remind me at nine.
+That's grand so, go on and send it.
+No, not that one, the other one I said earlier.
+Stall the ball a second, I want to change the time.
+
+# Numbers and places said the Irish way
+Set a timer for twenty minutes for the spuds.
+Book me in for the third of December at quarter past two.
+How far is it from Dún Laoghaire to Dalkey on the DART?
+Is there a train from Heuston to Limerick Junction after six?
+
+# M1K3's own words, in a hurry
+Hey Mike, what did we agree about the launch post yesterday?
+Search the web for the best walks around Glendalough.
+Look at this and tell me what it says.
+Stop there, that's enough, thanks a million.

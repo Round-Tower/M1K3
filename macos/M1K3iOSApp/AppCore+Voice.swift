@@ -87,6 +87,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-09 — #768: a voice turn tries the look first (`voiceLook`, AppCore+Look),
 //  and leaving the mode closes the eye. Confidence 0.65 (voice + camera together is unverified until it is on the
 //  phone).
+//  Review: Kev + claude-opus-5-5, 2026-11-16 (#852) — the turn's clause slot takes `prepared.turnClause`: the heard line
+//  (every voice turn was heard, not typed) ahead of the room line. Confidence 0.7 (the heard arm decides the wording).
 
 import AVFoundation
 import Foundation
@@ -279,7 +281,7 @@ extension AppCore {
             // the on-device brain and nothing else, so it takes no room line and no name repair.
             if await voiceLook(question) { return }
             let prepared = turns.prepare(question, heard: lastHeard)
-            let token = chat.isResponding ? nil : Self.voiceTurnClause.set(prepared.soundClause)
+            let token = chat.isResponding ? nil : Self.voiceTurnClause.set(prepared.turnClause)
             if token != nil { turns.delivered(prepared) }
             await chat.send(prepared.question)
             if let token { Self.voiceTurnClause.clear(token) }

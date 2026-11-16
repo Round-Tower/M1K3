@@ -65,6 +65,8 @@
 //  Review: same day (2), Kev's first live run — the watch now listens with `.watches` (as `.keepsListening` the
 //  8 s silent-listen limit closed it every 8.2 s, three closes and it gave up, so "hang on" fell on a closed mic),
 //  and speech stops at SpokenAnswerEnd (the "Web sources:" block was read aloud line by line). Confidence 0.65.
+//  Review: Kev + claude-opus-5-5, 2026-11-16 (#852) — the turn's clause slot takes `prepared.turnClause`: the heard line
+//  (every voice turn was heard, not typed) ahead of the room line. Confidence 0.7 (the heard arm decides the wording).
 
 import AppKit
 import AVFoundation
@@ -443,7 +445,7 @@ extension AppEnvironment {
                 }
             }
             let prepared = turns.prepare(question, heard: lastHeard)
-            let token = chat.isResponding ? nil : Self.voiceTurnClause.set(prepared.soundClause)
+            let token = chat.isResponding ? nil : Self.voiceTurnClause.set(prepared.turnClause)
             if token != nil { turns.delivered(prepared) }
             await chat.send(prepared.question)
             if let token { Self.voiceTurnClause.clear(token) }

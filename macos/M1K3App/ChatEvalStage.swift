@@ -140,6 +140,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-10 — `M1K3_SELFTEST_CHATEVAL_LEAN`: the bare arm on a one-line system
 //  prompt, for the system-prompt cost pairing (Kev: "I wonder how much our system prompt is killing perf across
 //  models? And maybe intelligence too?"). Confidence 0.8 (one line through `InferenceIntent.withInstructions`).
+//  Review: Kev + claude-opus-5-5, 2026-11-16 (#852) — the heard kind: a `spoken` fixture runs the live path with the
+//  voice shells' heard line in `voiceClauseProvider`; `M1K3_SELFTEST_CHATEVAL_HEARD=off` is the arm without it.
+//  Confidence 0.8.
 
 import Foundation
 
@@ -390,6 +393,12 @@ enum ChatEvalStage {
         SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_LIVE_PATH") == "1"
     }
 
+    /// The heard arm (#852): a `spoken` fixture gets the voice shells' heard line unless
+    /// `M1K3_SELFTEST_CHATEVAL_HEARD=off`. On by default, because the app ships it on.
+    private static var heardArmOn: Bool {
+        SelfTestEnv.value("M1K3_SELFTEST_CHATEVAL_HEARD") != "off"
+    }
+
     private static func livePathObservation(
         _ fixture: ChatEvalFixture, images: [ImageAttachment] = [], seeded: KnowledgeStore? = nil,
         provider: any InferenceProvider, thinking: EvalThinkingPlan, start: ContinuousClock.Instant,
@@ -476,6 +485,9 @@ enum ChatEvalStage {
                 )
             },
             styleClauseProvider: { steer.clause },
+            // A voice turn's line, as the shells set it through `VoiceTurnPreparer.turnClause` (no room line:
+            // the eval has no microphone). Typed fixtures never carry it, as typed chat never does.
+            voiceClauseProvider: { fixture.spoken && Self.heardArmOn ? HeardClause.text : nil },
             plainRouteProvider: plainRoute
         )
         // The tools the turn ran and the stage that picked them (2026-10-10): the 10-09 arm could
@@ -574,7 +586,7 @@ enum ChatEvalStage {
     private static func runEmbeds(kinds: Set<TaskKind>?) -> Bool {
         guard let kinds else { return true }
         if kinds.contains(.vision) || kinds.contains(.groundedQ) || kinds.contains(.groundedLong)
-            || kinds.contains(.mechanic) { return true }
+            || kinds.contains(.mechanic) || kinds.contains(.heard) { return true }
         if routerArmRequested, kinds.contains(.toolUse) { return true }
         return livePathRequested && !kinds.subtracting([.toolUse]).isEmpty
     }
@@ -970,6 +982,18 @@ enum ChatEvalStage {
                     fixture: fixture, observation: observation,
                     latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
                 )
+            case .heard:
+                // Always the live path: the heard line rides the responder's per-turn clauses (#852).
+                let observation = try await livePathObservation(
+                    fixture, provider: provider, thinking: thinking, start: start, clock: clock
+                )
+                return ChatEvalScorer.score(
+                    fixture: fixture, observation: observation,
+                    latencyCeilingMS: latencyCeilingMS, previewLimit: previewLimit
+                ).appending(EvalCheck(
+                    name: "tools", outcome: .skip,
+                    detail: observation.toolCalls.isEmpty ? "none" : observation.toolCalls.joined(separator: ", ")
+                ))
             case .toolUse where routerArmRequested:
                 let observation = try await livePathObservation(
                     fixture, provider: provider, thinking: thinking, start: start, clock: clock

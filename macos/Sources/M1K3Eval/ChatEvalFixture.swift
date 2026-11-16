@@ -234,6 +234,11 @@ public enum TaskKind: String, Sendable, CaseIterable, Equatable, Codable {
     /// answer beside it must still answer. Phase 1 measures the note on the activity channel, not
     /// a spoken "how's the machine?" answer (Phase 2's tool).
     case mechanic
+    /// Voice turns as the recogniser hands them over (#852, `ChatEvalFixtures+Heard.swift`): sound-alike
+    /// swaps a brain must read past, Hiberno-English idioms, and guards a real odd word must survive. Every
+    /// fixture is `spoken`, so the in-app stage gives it the voice turn's heard line. Last, so older
+    /// reports' row order holds.
+    case heard
 
     public var label: String {
         rawValue
@@ -353,11 +358,15 @@ public struct ChatEvalFixture: Sendable, Equatable, Identifiable {
     /// every other turn runs exactly as before): the readings Cool Head takes per send, set by
     /// the fixture instead of read off the eval Mac.
     public let machine: MachineScenario?
+    /// A voice turn (#852): the in-app stage gives it the heard line the voice shells add
+    /// (`HeardClause`), unless the arm is off. False everywhere but the `heard` kind.
+    public let spoken: Bool
     public let expectation: EvalExpectation
 
     public init(
         id: String,
         kind: TaskKind,
+        spoken: Bool = false,
         prompt: String,
         seedDoc: String? = nil,
         images: [String] = [],
@@ -366,6 +375,7 @@ public struct ChatEvalFixture: Sendable, Equatable, Identifiable {
     ) {
         self.id = id
         self.kind = kind
+        self.spoken = spoken
         self.prompt = prompt
         self.seedDoc = seedDoc
         self.images = images
@@ -1652,9 +1662,13 @@ public enum ChatEvalFixtures {
         )
     }
 
-    public static let all: [ChatEvalFixture] =
-        openChat + groundedQ + reasoning + codeGen + toolUse + refusal + security + worldKnowledge
-            + humour + interview + instructionFollowing + document + sycophancy + vision + groundedLong + format + mechanic
+    /// One list per kind, in report order. A flat `+` chain this long timed out the type checker (#852).
+    private static let byKind: [[ChatEvalFixture]] = [
+        openChat, groundedQ, reasoning, codeGen, toolUse, refusal, security, worldKnowledge,
+        humour, interview, instructionFollowing, document, sycophancy, vision, groundedLong, format, mechanic, heard,
+    ]
+
+    public static let all: [ChatEvalFixture] = byKind.flatMap(\.self)
 
     /// Fixtures for one kind (the report groups by these).
     public static func fixtures(for kind: TaskKind) -> [ChatEvalFixture] {

@@ -10,7 +10,10 @@
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-16, Confidence 0.8. Prior: Unknown.
 //  (Review fold, same day: the gate commits only on delivery, KnownNames sheds openers, the kill switch.)
+//  Review: Kev + claude-opus-5-5, 2026-11-16 (#852) — the heard line: every turn, ahead of the room line, its kill
+//  switch, its wording rules, and a scan that both shells hand the brain `turnClause`.
 
+import Foundation
 @testable import M1K3Voice
 import Testing
 
@@ -162,5 +165,75 @@ struct VoiceTurnPreparerTests {
         let prepared = VoiceTurnPreparer().prepare("hello darkness my old friend", heard: song)
         #expect(prepared.question == "hello darkness my old friend")
         #expect(prepared.soundClause?.contains("music (singing)") == true)
+    }
+
+    // #852: the brain is told a voice turn was heard, not typed.
+
+    @Test("every voice turn tells the brain it was heard; the question itself is untouched")
+    func heardLineEveryTurn() {
+        let preparer = VoiceTurnPreparer(heardClause: true)
+        let first = preparer.prepare("You're my curry keeping, are you well?", heard: nil)
+        #expect(first.question == "You're my curry keeping, are you well?")
+        #expect(first.turnClause == HeardClause.text)
+        // Unlike the room line, it isn't said once and dropped: every voice turn was heard.
+        preparer.delivered(first)
+        #expect(preparer.prepare("and again", heard: nil).turnClause == HeardClause.text)
+    }
+
+    @Test("the room line rides after the heard line, in one clause")
+    func heardThenRoom() throws {
+        var music = SoundContext()
+        music.observe(["music": 0.9, "speech": 0.9])
+        music.observe(["music": 0.9])
+        let prepared = VoiceTurnPreparer(heardClause: true).prepare("what's this song", heard: music)
+        let sound = try #require(prepared.soundClause)
+        #expect(prepared.turnClause == HeardClause.text + "\n" + sound)
+    }
+
+    @Test("-voiceHeardClause NO drops the heard line and keeps the room line; anything else leaves it on")
+    func heardKillSwitch() {
+        #expect(!VoiceTurnPreparer.heardClauseEnabled(arguments: ["voiceHeardClause": "NO"]))
+        #expect(!VoiceTurnPreparer.heardClauseEnabled(arguments: ["voiceHeardClause": "off"]))
+        #expect(VoiceTurnPreparer.heardClauseEnabled(arguments: ["voiceHeardClause": "YES"]))
+        #expect(VoiceTurnPreparer.heardClauseEnabled(arguments: [:]))
+        #expect(VoiceTurnPreparer(heardClause: false).prepare("hello", heard: nil).turnClause == nil)
+    }
+}
+
+struct HeardClauseTests {
+    @Test("the line says the words were heard and may be misheard, and how to answer anyway")
+    func saysWhatAndHow() {
+        let text = HeardClause.text.lowercased()
+        #expect(text.contains("spoken"))
+        #expect(text.contains("mishear"))
+        #expect(text.contains("most likely meant"))
+        #expect(text.contains("ask"))
+    }
+
+    @Test("the line carries no example from the heard eval: it can't be tuned to its own test")
+    func noFixtureWords() {
+        let text = HeardClause.text.lowercased()
+        for word in ["curry", "keeping", "craic", "galway", "giving out"] {
+            #expect(!text.contains(word), "\(word)")
+        }
+    }
+}
+
+/// Both shells hand the brain the whole voice clause, not the room line alone (#852): a shell that kept
+/// `soundClause` would compile, pass every test above and never say the turn was heard.
+struct VoiceTurnClauseShellScanTests {
+    private static func code(_ relative: String) throws -> String {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+        return try String(contentsOf: root.appendingPathComponent(relative), encoding: .utf8)
+    }
+
+    @Test("Mac and iPhone put prepared.turnClause in the turn's clause slot", arguments: [
+        "M1K3App/AppEnvironment+VoiceMode.swift", "M1K3iOSApp/AppCore+Voice.swift",
+    ])
+    func shellsSetTurnClause(path: String) throws {
+        let text = try Self.code(path)
+        #expect(text.contains("voiceTurnClause.set(prepared.turnClause)"), "\(path)")
+        #expect(!text.contains("voiceTurnClause.set(prepared.soundClause)"), "\(path)")
     }
 }
