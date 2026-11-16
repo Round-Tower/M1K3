@@ -78,8 +78,8 @@ together (a test holds them equal), and bump the listing's own `version`, which
 runs ahead of the bundle's because the listing began as a pointer at 1.0.0.
 
 The first real run (2026-11-15) also published `io.github.Round-Tower/m1k3`, a
-duplicate. The workflow's `retire_github_listing` input marks it deprecated; an
-entry cannot be removed. The repository's `mcp-registry` environment should be
+duplicate. It is marked deprecated with a pointer to `app.m1k3/m1k3` (2026-11-16);
+an entry cannot be removed. The repository's `mcp-registry` environment should be
 restricted to `master` with a required reviewer.
 
 ## Privacy Policy
@@ -99,3 +99,6 @@ _Review: Kev + claude-fable-5.2, 2026-11-16. Publishing rewritten: the listing i
 `app.m1k3/m1k3` (Kev: "Domain please pal"), published from Kev's Mac; 1.1.0 went out
 by hand on 2026-11-16 with the steps publish-listing.sh now holds. The script's
 `--confirm` path and the workflow's retire job have not run._
+_Review: Kev + claude-fable-5.2, 2026-11-16. The retire job ran (run 43870575453) and
+the registry reads the duplicate as deprecated; the job is deleted. The script's
+`--confirm` path has still not run._
