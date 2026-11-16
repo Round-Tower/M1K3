@@ -1,5 +1,7 @@
 // The bundle's manifest must describe the server the app really runs.
 // Signed: Kev + claude-fable-5.2, 2026-11-12, Confidence 0.85. Prior: Unknown.
+// Review: Kev + claude-fable-5.2, 2026-11-16. The listing is app.m1k3/m1k3 with its own
+// version; a new test holds the split (CI releases, only Kev's Mac publishes).
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -57,22 +59,46 @@ test('the tool list is the app\'s: the same names as the MCP kit serves', () => 
   assert.ok(manifest.tools.every((t) => t.description && t.description.length <= 120));
 });
 
-// The MCP Registry listing (server.json). The publish workflow adds the bundle's
-// SHA-256 at release time, because a zip's bytes differ from build to build.
+// The MCP Registry listing (server.json), published as app.m1k3/m1k3 (the namespace
+// proven by m1k3.app's DNS). publish-listing.sh adds the bundle's SHA-256 from the
+// released file, because a zip's bytes differ from build to build. The listing has
+// its own version (it began as a pointer at 1.0.0, before there was a bundle); the
+// PACKAGE's version is the bundle's.
 test('the registry listing matches the bundle and keeps the registry\'s rules', () => {
   const listing = JSON.parse(fs.readFileSync(path.join(root, 'server.json'), 'utf8'));
-  assert.equal(listing.name, 'io.github.Round-Tower/m1k3');
-  assert.equal(listing.version, manifest.version);
+  assert.equal(listing.name, 'app.m1k3/m1k3');
+  assert.match(listing.version, /^\d+\.\d+\.\d+$/);
+  const [major, minor] = listing.version.split('.').map(Number);
+  assert.ok(major > 1 || (major === 1 && minor >= 1), 'never below 1.1.0, the first version with a bundle');
   assert.ok(listing.description.length <= 100, `description is ${listing.description.length} characters`);
   assert.equal(listing.repository.url, manifest.repository.url);
   assert.equal(listing.packages.length, 1);
   const [pkg] = listing.packages;
   assert.equal(pkg.registryType, 'mcpb');
   assert.equal(pkg.transport.type, 'stdio');
+  assert.equal(pkg.version, manifest.version);
   assert.equal(
     pkg.identifier,
     `https://github.com/Round-Tower/M1K3/releases/download/mcpb-v${manifest.version}/m1k3.mcpb`,
   );
   assert.ok(pkg.identifier.includes('mcp'));
-  assert.equal(pkg.fileSha256, undefined, 'the hash is set by the publish workflow, never by hand');
+  assert.equal(pkg.fileSha256, undefined, 'the hash is set by publish-listing.sh from the released bundle, never by hand');
+});
+
+// The split this listing rests on: CI releases the bundle and may deprecate the old
+// GitHub-namespace entry, but only Kev's Mac can publish app.m1k3/m1k3.
+test('the workflow cannot publish the listing, and the script is what hashes it', () => {
+  const repo = path.join(root, '..', '..');
+  const workflow = fs.readFileSync(path.join(repo, '.github', 'workflows', 'mcp-registry.yml'), 'utf8');
+  const jobs = workflow.slice(workflow.indexOf('\njobs:'));
+  const retire = jobs.indexOf('\n  retire-github-listing:');
+  assert.ok(retire > 0, 'the retire job is the last job');
+  const beforeRetire = jobs.slice(0, retire).replace(/^\s*#.*$/gm, '');
+  assert.ok(!beforeRetire.includes('id-token'), 'build and publish hold no registry identity');
+  assert.ok(!beforeRetire.includes('./mcp-publisher'), 'build and publish never run the publisher');
+  const code = workflow.replace(/^\s*#.*$/gm, '');
+  assert.ok(!code.includes('login dns') && !code.includes('secrets.'), 'the DNS key never goes to CI');
+  const script = fs.readFileSync(path.join(root, 'publish-listing.sh'), 'utf8');
+  assert.ok(script.includes(".packages[0].fileSha256 = $sha"));
+  assert.ok(script.includes('login dns --domain m1k3.app'));
 });
