@@ -824,3 +824,11 @@ the complement of `stopsTurn`) holds a `beginBackgroundTask` so it can finish an
 Local updates only, no push token. The Mac waits for macOS 27.3 (the same ActivityKit code; the 27.2 SDK marks
 `Activity.request` unavailable). `check_store_targets.py` audits app extensions. The look and the grace window on a
 real phone are verify-on-device.
+
+_Review: Kev + claude-opus-5.5, 2026-11-16 (Kev tried the card on his iPhone): it is on brand now (the pixel face as the
+mark, `TurnFace`, a copy of the screensaver's grid pinned against `PixelFace`; Silkscreen for the title and the compact
+word; the screensaver's phosphor on ink). And the phone gets the Mac's long-turn ping: `TurnNoticePolicy` (pure) +
+`UserNoticeNotifier` post one generic "Your answer's ready" / "Finished reading" / "Your answer paused" when a followed
+turn lands, is stopped or loses its grace while the app is away; a tap opens the chat (`m1k3://chat`). The permission is
+asked once, right after a long answer finishes in the foreground (the phone has no notification setting). Confidence 0.7
+(the look, the font load and the banner are verify-on-device)._

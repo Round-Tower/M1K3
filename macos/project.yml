@@ -14,6 +14,8 @@
 # Review: Kev + claude-opus-5.5, 2026-11-16 — M1K3LiveActivityExtension (WidgetKit app extension, app.m1k3.liveactivity,
 # embedded in M1K3iOS) draws the Live Activity for a long answer or read; M1K3iOS sets NSSupportsLiveActivities and links
 # M1K3LiveActivity. check_store_targets.py audits app extensions. Confidence 0.75 (builds; signing and the look are owed).
+# Review: Kev + claude-opus-5.5, 2026-11-16 — the Live Activity extension bundles Silkscreen (Resources + UIAppFonts)
+# for the on-brand card. Confidence 0.7 (the font load is verify-on-device).
 # Review: Kev + claude-opus-5.5, 2026-10-12 — M1K3iOS permits app.m1k3.download.* (BGTaskSchedulerPermittedIdentifiers): a brain
 # download iOS carries when the person leaves the app (BGContinuedProcessingTask). iOS target only. Confidence 0.8.
 # Review: Kev + claude-fable-5.1, 2026-09-07 — M1K3ScreengrabUITests / M1K3iOSScreengrabUITests (bundle.ui-testing) + the
@@ -584,6 +586,10 @@ targets:
         # Named below (check_store_targets.py reads the explicit entry): excluded here so it is not swept twice.
         excludes:
           - PrivacyInfo.xcprivacy
+      # Silkscreen, the pixel brand face, for the card's short labels (the app's own copy of the file; the
+      # extension is its own process and bundle, so it ships its own). Registered at launch and via UIAppFonts.
+      - path: M1K3App/Resources/Fonts/Silkscreen-Regular.ttf
+        buildPhase: resources
       # Apple REQUIRES a manifest in every extension that ships (the same rule as the app's).
       - path: M1K3LiveActivityExtension/PrivacyInfo.xcprivacy
         buildPhase: resources
@@ -606,6 +612,8 @@ targets:
       path: M1K3LiveActivityExtension/Info.generated.plist
       properties:
         CFBundleDisplayName: M1K3
+        UIAppFonts:
+          - Silkscreen-Regular.ttf
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
 

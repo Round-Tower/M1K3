@@ -14,8 +14,14 @@
 //    suspend the app before the card changes.
 //  A grace task with no card (the app left before the threshold) is kept on purpose: the turn finishes.
 //
+//  NOTICE: the same turn events drive the phone's local notification (`TurnNoticePolicy` decides, the
+//  `TurnNotifying` seam posts): one generic notice when a followed turn lands, is stopped, or loses its
+//  grace while the app is away; posted inside the grace/short task so iOS cannot suspend before it goes.
+//
 //  Signed: Kev + claude-opus-5.5, 2026-11-16, Confidence 0.75 (seams and paths unit-tested; the real
 //  UIKit/ActivityKit adapters and the grace window are verify-on-device), Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-11-16 — the notification (Kev: "a Notification after answering when in
+//  the background") rides the same events; `TurnNotifying` is the third seam. Confidence 0.75.
 
 import Foundation
 import M1K3Inference
@@ -34,6 +40,17 @@ public protocol TurnActivityEffects: AnyObject {
     func end(final: TurnActivityState?, dismissal: TurnActivityPolicy.Dismissal) async
 }
 
+/// The local notification, as the driver needs it. The decision to post is `TurnNoticePolicy`.
+@MainActor
+public protocol TurnNotifying: AnyObject {
+    /// Posts one generic notice (a no-op when the person has not allowed notifications).
+    func post(_ notice: TurnNoticePolicy.Notice) async
+    /// Asks the system for permission if it has not been decided yet; a decided answer is left alone.
+    func requestPermissionIfUndecided() async
+    /// Takes this app's delivered turn notices off the Lock Screen (the person is back).
+    func clearDelivered() async
+}
+
 /// `UIApplication.beginBackgroundTask` / `endBackgroundTask`, by token.
 @MainActor
 public protocol BackgroundTaskHosting: AnyObject {
@@ -48,8 +65,12 @@ public final class TurnActivityDriver {
     private var policy = TurnActivityPolicy()
     private let effects: any TurnActivityEffects
     private let tasks: any BackgroundTaskHosting
+    private let notifier: any TurnNotifying
     private let sampleInterval: Duration
+    private let clock: @MainActor () -> ContinuousClock.Instant
     private var following = false
+    private var kind = TurnKind.answer
+    private var startedAt: ContinuousClock.Instant?
     private var monitor: Task<Void, Never>?
     private var phase: (@MainActor () -> TurnActivityPhase)?
     private var tail: Task<Void, Never>?
@@ -57,28 +78,33 @@ public final class TurnActivityDriver {
     private var pausedToken: Int?
 
     public init(
-        effects: any TurnActivityEffects, tasks: any BackgroundTaskHosting, sampleInterval: Duration = .seconds(1)
+        effects: any TurnActivityEffects, tasks: any BackgroundTaskHosting, notifier: any TurnNotifying,
+        sampleInterval: Duration = .seconds(1), clock: @escaping @MainActor () -> ContinuousClock.Instant = { .now }
     ) {
+        self.clock = clock
         self.effects = effects
         self.tasks = tasks
+        self.notifier = notifier
         self.sampleInterval = sampleInterval
         enqueue { [effects] in await effects.endStaleCards() }
     }
 
     // MARK: Turn events
 
-    public func turnBegan(phase: @escaping @MainActor () -> TurnActivityPhase) {
+    public func turnBegan(kind: TurnKind, phase: @escaping @MainActor () -> TurnActivityPhase) {
         monitor?.cancel()
         self.phase = phase
+        self.kind = kind
         following = true
         perform(policy.turnBegan())
-        let started = ContinuousClock.now
+        let started = clock()
+        startedAt = started
         let interval = sampleInterval
         monitor = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: interval)
                 guard !Task.isCancelled else { return }
-                self?.sample(elapsed: started.duration(to: .now))
+                if let self { sample(elapsed: started.duration(to: clock())) }
             }
         }
     }
@@ -87,7 +113,16 @@ public final class TurnActivityDriver {
         following = false
         monitor?.cancel()
         monitor = nil
-        perform(policy.turnFinished(outcome, appActive: effects.appIsActive))
+        let appActive = effects.appIsActive
+        perform(policy.turnFinished(outcome, appActive: appActive))
+        let duration = startedAt.map { $0.duration(to: clock()) } ?? .zero
+        // The notice and the permission ask run on the same chain, inside the grace.
+        if let notice = TurnNoticePolicy.notice(for: outcome, kind: kind, appActive: appActive) {
+            enqueue { [notifier] in await notifier.post(notice) }
+        }
+        if TurnNoticePolicy.shouldAskPermission(for: outcome, duration: duration, appActive: appActive) {
+            enqueue { [notifier] in await notifier.requestPermissionIfUndecided() }
+        }
         // The grace outlives the last effect: the card must say "ready" before iOS may suspend us.
         enqueue { [weak self] in self?.endGrace() }
     }
@@ -108,6 +143,7 @@ public final class TurnActivityDriver {
     public func appBecameActive() {
         endGrace()
         perform(policy.appBecameActive())
+        enqueue { [notifier] in await notifier.clearDelivered() }
     }
 
     /// One look at the running turn (the monitor's tick; public so tests drive time).
@@ -135,6 +171,7 @@ public final class TurnActivityDriver {
     /// BEFORE returning.
     private func graceExpired() {
         perform(policy.stoppedByBackground())
+        if following { enqueue { [notifier] in await notifier.post(.paused) } }
         endGrace()
     }
 
@@ -146,12 +183,14 @@ public final class TurnActivityDriver {
 
     /// The exit is stopping an answer made on this phone's GPU: write Paused under its own short task.
     private func pause() {
+        // A followed turn is stopped even when it never earned a card (it was under 8 s): the notice still tells.
+        guard following else { return }
         let action = policy.stoppedByBackground()
-        guard action != .none else { return }
         if pausedToken == nil {
             pausedToken = tasks.begin(name: "app.m1k3.turn.paused") { [weak self] in self?.endPaused() }
         }
         perform(action)
+        enqueue { [notifier] in await notifier.post(.paused) }
         enqueue { [weak self] in self?.endPaused() }
     }
 

@@ -14,19 +14,24 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-16 (code-quality review) — the controller became these thin
 //  adapters; the lifecycle moved into the tested TurnActivityDriver. The expiry handler now ends its task
 //  synchronously and the Paused write holds its own short task.
+//  Review: Kev + claude-opus-5.5, 2026-11-16 — `UserNoticeNotifier` + `TurnNoticeDelegate`: the phone's "your
+//  answer is ready" notification (decisions in TurnNoticePolicy); a tap opens the chat via m1k3://chat.
 
 import Foundation
 import M1K3Chat
 import M1K3LiveActivity
 import M1K3LogCore
+import M1K3Screengrab
 #if os(iOS)
     import ActivityKit
     import UIKit
+    import UserNotifications
 #endif
 
 extension TurnActivityDriver {
     static func live() -> TurnActivityDriver {
-        TurnActivityDriver(effects: ActivityKitEffects(), tasks: UIKitBackgroundTasks())
+        TurnNoticeDelegate.install()
+        return TurnActivityDriver(effects: ActivityKitEffects(), tasks: UIKitBackgroundTasks(), notifier: UserNoticeNotifier())
     }
 }
 
@@ -106,7 +111,76 @@ extension TurnActivityDriver {
             UIApplication.shared.endBackgroundTask(UIBackgroundTaskIdentifier(rawValue: token))
         }
     }
+
+    /// The phone's "your answer is ready" notification (the decisions are `TurnNoticePolicy`). Generic words only;
+    /// nothing posts unless the person allowed it, and no badge is ever set.
+    @MainActor
+    final class UserNoticeNotifier: TurnNotifying {
+        private let center = UNUserNotificationCenter.current()
+
+        func post(_ notice: TurnNoticePolicy.Notice) async {
+            // A banner over the app is in the frame: nothing posts under the screengrab harness.
+            guard !ScreengrabHarness.current.isActive else { return }
+            let status = await center.notificationSettings().authorizationStatus
+            guard status == .authorized || status == .provisional || status == .ephemeral else { return }
+            let content = UNMutableNotificationContent()
+            content.title = notice.title
+            content.body = notice.body
+            content.threadIdentifier = TurnNoticePolicy.threadIdentifier
+            content.sound = .default
+            content.interruptionLevel = .active
+            // The same identifier every time: a later notice replaces the earlier instead of stacking.
+            let request = UNNotificationRequest(identifier: TurnNoticePolicy.identifier, content: content, trigger: nil)
+            try? await center.add(request)
+        }
+
+        func requestPermissionIfUndecided() async {
+            guard await center.notificationSettings().authorizationStatus == .notDetermined else { return }
+            _ = try? await center.requestAuthorization(options: [.alert, .sound])
+        }
+
+        func clearDelivered() async {
+            center.removeDeliveredNotifications(withIdentifiers: [TurnNoticePolicy.identifier])
+            center.removePendingNotificationRequests(withIdentifiers: [TurnNoticePolicy.identifier])
+        }
+    }
+
+    /// A tap on the notice opens the chat through the same `m1k3://chat` link the Live Activity uses, and a
+    /// notice never presents over the app (none is posted while it is in front).
+    final class TurnNoticeDelegate: NSObject, UNUserNotificationCenterDelegate {
+        @MainActor private static let shared = TurnNoticeDelegate()
+
+        @MainActor static func install() {
+            UNUserNotificationCenter.current().delegate = shared
+        }
+
+        func userNotificationCenter(
+            _: UNUserNotificationCenter, willPresent _: UNNotification
+        ) async -> UNNotificationPresentationOptions {
+            []
+        }
+
+        func userNotificationCenter(
+            _: UNUserNotificationCenter, didReceive response: UNNotificationResponse
+        ) async {
+            guard response.notification.request.identifier == TurnNoticePolicy.identifier else { return }
+            await MainActor.run {
+                UIApplication.shared.open(TurnActivityLink.url, options: [:], completionHandler: nil)
+            }
+        }
+    }
 #else
+    @MainActor
+    final class UserNoticeNotifier: TurnNotifying {
+        func post(_: TurnNoticePolicy.Notice) async {}
+        func requestPermissionIfUndecided() async {}
+        func clearDelivered() async {}
+    }
+
+    enum TurnNoticeDelegate {
+        @MainActor static func install() {}
+    }
+
     @MainActor
     final class ActivityKitEffects: TurnActivityEffects {
         var appIsActive: Bool {

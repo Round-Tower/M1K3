@@ -38,6 +38,32 @@ struct TurnActivityDriverTests {
         }
     }
 
+    final class FakeClock {
+        var now = ContinuousClock.now
+        func advance(_ by: Duration) {
+            now += by
+        }
+    }
+
+    final class FakeNotifier: TurnNotifying {
+        let log: Log
+        init(_ log: Log) {
+            self.log = log
+        }
+
+        func post(_ notice: TurnNoticePolicy.Notice) async {
+            log.events.append("notice.\(notice)")
+        }
+
+        func requestPermissionIfUndecided() async {
+            log.events.append("notice.ask")
+        }
+
+        func clearDelivered() async {
+            log.events.append("notice.clear")
+        }
+    }
+
     final class FakeTasks: BackgroundTaskHosting {
         let log: Log
         var refuse = false
@@ -73,19 +99,27 @@ struct TurnActivityDriverTests {
         let log = Log()
         let effects: FakeEffects
         let tasks: FakeTasks
+        let notifier: FakeNotifier
+        let clock = FakeClock()
         let driver: TurnActivityDriver
         init() {
             let log = log
             let effects = FakeEffects(log)
             let tasks = FakeTasks(log)
             self.effects = effects
+            let notifier = FakeNotifier(log)
             self.tasks = tasks
-            driver = TurnActivityDriver(effects: effects, tasks: tasks, sampleInterval: .seconds(3600))
+            self.notifier = notifier
+            let clock = clock
+            driver = TurnActivityDriver(
+                effects: effects, tasks: tasks, notifier: notifier, sampleInterval: .seconds(3600),
+                clock: { clock.now }
+            )
         }
 
         /// A turn running with its card on screen, the app then sent to the background.
         func runningCard(_ phase: TurnActivityPhase = .thinking) {
-            driver.turnBegan { phase }
+            driver.turnBegan(kind: .answer) { phase }
             driver.sample(elapsed: TurnNotificationPolicy.longTurnThreshold)
             effects.appIsActive = false
         }
@@ -173,7 +207,7 @@ struct TurnActivityDriverTests {
     @Test("a turn backgrounded before the threshold still gets its grace (there is just no card)")
     func graceWithoutACard() async {
         let rig = Rig()
-        rig.driver.turnBegan { .thinking }
+        rig.driver.turnBegan(kind: .answer) { .thinking }
         rig.effects.appIsActive = false
         rig.driver.leavingForBackground(turnInFlight: true, brainRunsOnThisDevicesGPU: false)
         rig.driver.turnFinished(.answered)
@@ -226,12 +260,25 @@ struct TurnActivityDriverTests {
         #expect(rig.tasks.ended == [token])
     }
 
-    @Test("no card on screen, nothing to pause, and no task begun for it")
-    func nothingToPause() {
+    @Test("no card on screen: no Paused card, but the stopped answer still earns its notice, on a short task")
+    func noCardStillNotifies() async {
         let rig = Rig()
-        rig.driver.turnBegan { .thinking }
+        rig.driver.turnBegan(kind: .answer) { .thinking }
         rig.driver.leavingForBackground(turnInFlight: true, brainRunsOnThisDevicesGPU: true)
+        await rig.driver.settled()
+        #expect(rig.log.events.contains("notice.paused"))
+        #expect(!rig.log.events.contains { $0.hasPrefix("card.end") })
+        #expect(rig.tasks.begun == ["app.m1k3.turn.paused"])
+        #expect(rig.tasks.ended.count == 1)
+    }
+
+    @Test("a turn the driver does not follow (voice) stopped by the exit raises nothing")
+    func untrackedStopIsQuiet() async {
+        let rig = Rig()
+        rig.driver.leavingForBackground(turnInFlight: true, brainRunsOnThisDevicesGPU: true)
+        await rig.driver.settled()
         #expect(rig.tasks.begun.isEmpty)
+        #expect(!rig.log.events.contains { $0.hasPrefix("notice") })
     }
 
     @Test("no turn in flight: neither a grace nor a Paused card")
@@ -240,6 +287,93 @@ struct TurnActivityDriverTests {
         rig.driver.leavingForBackground(turnInFlight: false, brainRunsOnThisDevicesGPU: false)
         rig.driver.leavingForBackground(turnInFlight: false, brainRunsOnThisDevicesGPU: true)
         #expect(rig.tasks.begun.isEmpty)
+    }
+
+    // MARK: The notification
+
+    @Test("an answer landing in the background posts one notice, before the grace task ends")
+    func answerNoticeInsideTheGrace() async {
+        let rig = Rig()
+        rig.runningCard(.answering)
+        rig.driver.leavingForBackground(turnInFlight: true, brainRunsOnThisDevicesGPU: false)
+        rig.driver.turnFinished(.answered)
+        await rig.driver.settled()
+        let events = rig.log.events
+        let notice = events.firstIndex(of: "notice.answerReady")
+        let end = events.firstIndex(of: "task.end")
+        #expect(notice != nil && end != nil && notice! < end!)
+        #expect(events.filter { $0.hasPrefix("notice.") }.count == 1)
+    }
+
+    @Test("a read says it finished reading")
+    func readNotice() async {
+        let rig = Rig()
+        rig.driver.turnBegan(kind: .read) { .reading }
+        rig.effects.appIsActive = false
+        rig.driver.turnFinished(.answered)
+        await rig.driver.settled()
+        #expect(rig.log.events.contains("notice.readFinished"))
+    }
+
+    @Test("in the foreground there is no notice, and a LONG answer then asks for permission")
+    func foregroundAsksNotNotifies() async {
+        let rig = Rig()
+        rig.driver.turnBegan(kind: .answer) { .answering }
+        rig.clock.advance(TurnNotificationPolicy.longTurnThreshold)
+        rig.driver.turnFinished(.answered)
+        await rig.driver.settled()
+        #expect(rig.log.events.contains("notice.ask"))
+        #expect(!rig.log.events.contains { $0.hasPrefix("notice.answer") || $0 == "notice.paused" })
+    }
+
+    @Test("a quick answer in the foreground neither notifies nor asks")
+    func quickAnswerIsSilent() async {
+        let rig = Rig()
+        rig.driver.turnBegan(kind: .answer) { .answering }
+        rig.clock.advance(.seconds(2))
+        rig.driver.turnFinished(.answered)
+        await rig.driver.settled()
+        #expect(!rig.log.events.contains { $0.hasPrefix("notice.") })
+    }
+
+    @Test("failure and the user's stop raise no notice")
+    func noNoticeForFailureOrStop() async {
+        for outcome in [TurnActivityPolicy.Outcome.failed, .stopped] {
+            let rig = Rig()
+            rig.runningCard()
+            rig.driver.turnFinished(outcome)
+            await rig.driver.settled()
+            #expect(!rig.log.events.contains { $0.hasPrefix("notice.") })
+        }
+    }
+
+    @Test("the Paused stop and the answer it then loses the race to leave one notice each, same identifier")
+    func pausedThenAnswered() async {
+        let rig = Rig()
+        rig.runningCard(.answering)
+        rig.driver.leavingForBackground(turnInFlight: true, brainRunsOnThisDevicesGPU: true)
+        rig.driver.turnFinished(.stopped) // the stop that follows the pause: quiet
+        await rig.driver.settled()
+        #expect(rig.log.events.filter { $0 == "notice.paused" }.count == 1)
+        #expect(!rig.log.events.contains("notice.answerReady"))
+    }
+
+    @Test("grace expiry tells the person the answer paused")
+    func expiryNotifies() async throws {
+        let rig = Rig()
+        rig.runningCard()
+        rig.driver.leavingForBackground(turnInFlight: true, brainRunsOnThisDevicesGPU: false)
+        try rig.tasks.expire(#require(rig.tasks.handlers.keys.first))
+        await rig.driver.settled()
+        #expect(rig.log.events.contains("notice.paused"))
+    }
+
+    @Test("coming back clears the delivered notices")
+    func returnClears() async {
+        let rig = Rig()
+        rig.driver.appBecameActive()
+        await rig.driver.settled()
+        #expect(rig.log.events.contains("notice.clear"))
     }
 
     // MARK: Effects in order

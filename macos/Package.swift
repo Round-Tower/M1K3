@@ -229,7 +229,8 @@ let package = Package(
         ),
         .testTarget(
             name: "M1K3LiveActivityTests",
-            dependencies: ["M1K3LiveActivity"],
+            // M1K3ScreensaverCore is TEST-ONLY: the Live Activity's face is a copy of its PixelFace grid, pinned here.
+            dependencies: ["M1K3LiveActivity", "M1K3ScreensaverCore"],
             path: "Tests/M1K3LiveActivityTests"
         ),
         .testTarget(

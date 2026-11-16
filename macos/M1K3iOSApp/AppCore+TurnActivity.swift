@@ -14,15 +14,12 @@ import M1K3Chat
 import M1K3Inference
 import M1K3LiveActivity
 
-/// What the turn is about, so the card says "reading" while a file is being read.
-enum TurnActivityKind { case answer, read }
-
 extension AppCore {
     /// Start following the turn about to run. False when another turn already holds the stage (a second
     /// send that will bounce off `isResponding`), and then the caller must not `endTurnActivity` either.
-    func beginTurnActivity(_ kind: TurnActivityKind) -> Bool {
+    func beginTurnActivity(_ kind: TurnKind) -> Bool {
         guard !chat.isResponding else { return false }
-        turnActivity.turnBegan { [weak self] in
+        turnActivity.turnBegan(kind: kind) { [weak self] in
             guard let self else { return .thinking }
             let waiting: TurnActivityPhase = kind == .read ? .reading : .thinking
             // Only THIS turn's streaming row counts: an earlier answer is never "answering" now.

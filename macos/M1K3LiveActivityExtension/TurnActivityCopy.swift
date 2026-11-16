@@ -10,6 +10,7 @@
 //  phone is verify-on-device), Prior: none (new file).
 
 import M1K3LiveActivity
+import SwiftUI
 
 struct TurnActivityCopy {
     let phase: TurnActivityPhase
@@ -37,29 +38,20 @@ struct TurnActivityCopy {
     /// The compact Dynamic Island's trailing word: short, so it never crowds the camera cut-out.
     var short: String {
         switch phase {
-        case .thinking: String(localized: "Thinking")
-        case .reading: String(localized: "Reading")
-        case .answering: String(localized: "Answering")
+        // Silkscreen is wide (about 8 pt a letter at 12 pt): five letters at most.
+        case .thinking: String(localized: "Think")
+        case .reading: String(localized: "Read")
+        case .answering: String(localized: "Reply")
         case .ready: String(localized: "Ready")
-        case .paused: String(localized: "Paused")
+        case .paused: String(localized: "Pause")
         }
     }
 
-    var symbol: String {
+    /// Working phases wear the phosphor green, settled ones (done, waiting) the near-white mark.
+    var titleColor: Color {
         switch phase {
-        case .thinking: "ellipsis.bubble"
-        case .reading: "doc.text"
-        case .answering: "text.bubble"
-        case .ready: "checkmark.circle.fill"
-        case .paused: "pause.circle"
-        }
-    }
-
-    /// Working phases wear the accent colour, settled ones (done, waiting) are white.
-    var isWorking: Bool {
-        switch phase {
-        case .thinking, .reading, .answering: true
-        case .ready, .paused: false
+        case .thinking, .reading, .answering: TurnBrand.phosphor
+        case .ready, .paused: TurnBrand.mark
         }
     }
 }
