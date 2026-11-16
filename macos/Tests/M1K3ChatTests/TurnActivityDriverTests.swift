@@ -16,6 +16,12 @@ struct TurnActivityDriverTests {
     final class FakeEffects: TurnActivityEffects {
         let log: Log
         var appIsActive = true
+        /// True while the scene is `.inactive` (a Control Center pull): in front, but not active.
+        var isInactive = false
+        var appIsInForeground: Bool {
+            appIsActive || isInactive
+        }
+
         var activitiesEnabled = true
         init(_ log: Log) {
             self.log = log
@@ -347,8 +353,8 @@ struct TurnActivityDriverTests {
         }
     }
 
-    @Test("the Paused stop and the answer it then loses the race to leave one notice each, same identifier")
-    func pausedThenAnswered() async {
+    @Test("a Paused stop, then the stop that follows it: one Paused notice, and no false 'ready'")
+    func pausedThenTheStopIsQuiet() async {
         let rig = Rig()
         rig.runningCard(.answering)
         rig.driver.leavingForBackground(turnInFlight: true, brainRunsOnThisDevicesGPU: true)
@@ -356,6 +362,76 @@ struct TurnActivityDriverTests {
         await rig.driver.settled()
         #expect(rig.log.events.filter { $0 == "notice.paused" }.count == 1)
         #expect(!rig.log.events.contains("notice.answerReady"))
+    }
+
+    @Test("Paused, then the answer lands anyway (the stop lost the race): Paused first, then Ready")
+    func pausedThenAnsweredNotifiesReady() async {
+        let rig = Rig()
+        rig.runningCard(.answering)
+        rig.driver.leavingForBackground(turnInFlight: true, brainRunsOnThisDevicesGPU: true)
+        rig.driver.turnFinished(.answered)
+        await rig.driver.settled()
+        let events = rig.log.events
+        let paused = events.firstIndex(of: "notice.paused")
+        let ready = events.firstIndex(of: "notice.answerReady")
+        #expect(paused != nil && ready != nil && paused! < ready!)
+        #expect(events.contains("card.end.ready"))
+    }
+
+    @Test("grace expiry, then the turn answers after all: Paused, then Ready")
+    func expiredThenAnswered() async throws {
+        let rig = Rig()
+        rig.runningCard(.answering)
+        rig.driver.leavingForBackground(turnInFlight: true, brainRunsOnThisDevicesGPU: false)
+        try rig.tasks.expire(#require(rig.tasks.handlers.keys.first))
+        rig.driver.turnFinished(.answered)
+        await rig.driver.settled()
+        let events = rig.log.events
+        let paused = events.firstIndex(of: "notice.paused")
+        let ready = events.firstIndex(of: "notice.answerReady")
+        #expect(paused != nil && ready != nil && paused! < ready!)
+        #expect(rig.tasks.ended.count == 1)
+    }
+
+    @Test("a turn landing while the scene is merely inactive posts no notice and asks for no permission")
+    func inactiveIsNotBackground() async {
+        let rig = Rig()
+        rig.driver.turnBegan(kind: .answer) { .answering }
+        rig.clock.advance(.seconds(20))
+        rig.effects.appIsActive = false
+        rig.effects.isInactive = true
+        rig.driver.turnFinished(.answered)
+        await rig.driver.settled()
+        #expect(!rig.log.events.contains { $0.hasPrefix("notice.") })
+        // The card is in front too: it ends, rather than lingering as Ready.
+        #expect(!rig.log.events.contains("card.end.ready"))
+    }
+
+    @Test("a second inactive while the leaving-card is up starts nothing")
+    func secondInactiveIsQuiet() async {
+        let rig = Rig()
+        rig.driver.turnBegan(kind: .answer) { .thinking }
+        #expect(rig.driver.leavingForeground() == .started)
+        #expect(rig.driver.leavingForeground() == .alreadyShown)
+        await rig.driver.settled()
+        #expect(rig.log.events.filter { $0.hasPrefix("card.start") }.count == 1)
+    }
+
+    @Test("inactive, background, back with the turn still running: the card goes, the grace is given back")
+    func leaveAndReturnMidTurn() async {
+        let rig = Rig()
+        rig.driver.turnBegan(kind: .answer) { .answering }
+        rig.driver.leavingForeground()
+        rig.effects.appIsActive = false
+        rig.driver.leavingForBackground(turnInFlight: true, brainRunsOnThisDevicesGPU: false)
+        rig.effects.appIsActive = true
+        rig.driver.appBecameActive()
+        await rig.driver.settled()
+        #expect(rig.log.events.contains("card.end.none"))
+        #expect(rig.tasks.ended.count == 1)
+        rig.driver.sample(elapsed: .seconds(30))
+        await rig.driver.settled()
+        #expect(rig.log.events.filter { $0.hasPrefix("card.start") }.count == 1)
     }
 
     @Test("grace expiry tells the person the answer paused")

@@ -254,6 +254,34 @@ struct TurnActivityPolicyTests {
             == .end(final: state(.ready), dismissal: .after(TurnActivityPolicy.readyLingers)))
     }
 
+    @Test("a second inactive while the leaving-card is up starts nothing")
+    func secondInactiveIsAlreadyShown() {
+        var policy = TurnActivityPolicy()
+        _ = policy.turnBegan()
+        _ = policy.leavingForeground(phase: .thinking, activitiesEnabled: true)
+        let again = policy.leavingForeground(phase: .answering, activitiesEnabled: true)
+        #expect(again.action == .none)
+        #expect(again.reason == .alreadyShown)
+    }
+
+    @Test("a new turn clears a leaving-card the last turn never ended, then starts its own")
+    func newTurnClearsALeavingCard() {
+        var policy = TurnActivityPolicy()
+        _ = policy.turnBegan()
+        _ = policy.leavingForeground(phase: .thinking, activitiesEnabled: true)
+        #expect(policy.turnBegan() == .end(final: nil, dismissal: .immediate))
+        #expect(policy.leavingForeground(phase: .reading, activitiesEnabled: true).action == .start(state(.reading)))
+    }
+
+    @Test("inactive, background, then back with the turn still running: the card goes, and does not return")
+    func leavingThenReturningMidTurn() {
+        var policy = TurnActivityPolicy()
+        _ = policy.turnBegan()
+        _ = policy.leavingForeground(phase: .thinking, activitiesEnabled: true)
+        #expect(policy.appBecameActive() == .end(final: nil, dismissal: .immediate))
+        #expect(policy.progress(phase: .answering, elapsed: .seconds(30), appActive: true, activitiesEnabled: true) == .none)
+    }
+
     @Test("a card the user's 8 s rule started is NOT ended by a return to the app (the old behaviour stands)")
     func eightSecondCardSurvivesReturn() {
         var policy = running(.thinking)

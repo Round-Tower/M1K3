@@ -45,7 +45,10 @@ enum TurnBrand {
         if let url = Bundle.main.url(forResource: "Silkscreen-Regular", withExtension: "ttf") {
             CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
         }
-        if UIFont(name: "Silkscreen-Regular", size: 12) == nil {
+        // Both names: the PostScript name registration proves, and the FAMILY is what `Font.custom` renders with.
+        let postScriptLoaded = UIFont(name: "Silkscreen-Regular", size: 12) != nil
+        let familyLoaded = !UIFont.fontNames(forFamilyName: pixelFamily).isEmpty
+        if !postScriptLoaded || !familyLoaded {
             Logger(subsystem: "app.m1k3", category: "liveactivity")
                 .notice("Silkscreen did not load in the Live Activity; labels fall back to the system face")
         }

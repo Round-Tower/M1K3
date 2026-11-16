@@ -32,6 +32,8 @@
 //  (`turnActivity.appBecameActive`). Compile-checked; owes a try on a phone.
 //  Review: Kev + claude-opus-5.5, 2026-11-16 — `.inactive` starts the Live Activity card for a turn in flight
 //  (Kev's phone: a 6 s Mini turn never got one, and a card cannot start from the background).
+//  Review: Kev + claude-opus-5.5, 2026-11-16 (review fold) — the notification delegate installs in `init`, and the
+//  leaving-card starts only when the previous phase was .active (not on the return path).
 
 import M1K3Avatar
 import M1K3Diagnostics
@@ -53,6 +55,8 @@ struct M1K3iOSApp: App {
 
     init() {
         BundledFonts.register() // Silkscreen — the pixel wordmark face.
+        // Before the core exists (it is built asynchronously): a cold-launch tap on a turn notice must reach it.
+        TurnNoticeDelegate.install()
         // The Phosphor Fox (white baked lattice, no shader) is the house default on
         // every surface, Mac and phone alike. Registered, not written: an explicit
         // persisted choice (any face, including the pixel face's "") always wins, and
@@ -75,7 +79,7 @@ struct M1K3iOSApp: App {
                 }
             }
             .preferredColorScheme(.dark)
-            .onChange(of: scenePhase) { _, phase in
+            .onChange(of: scenePhase) { previous, phase in
                 // Shed MLX weights on a true background (jetsam hygiene), re-warm on
                 // return. `.inactive` (notification banner / Control Center) never touches the model, so
                 // transient interruptions don't churn it; it only starts the Live Activity card (below).
@@ -96,7 +100,9 @@ struct M1K3iOSApp: App {
                 case .inactive:
                     // Still foreground, so ActivityKit may start the card: an answer asked and then left is mostly
                     // under 8 s, and no card can start once we are gone. A transient pull ends it on .active.
-                    core?.turnActivityGoingInactive()
+                    // Only from .active: the way BACK (.background → .inactive → .active) must not start a card.
+                    // A system sheet mid-turn can still start one that the next .active takes down: accepted.
+                    if previous == .active { core?.turnActivityGoingInactive() }
                 case .active:
                     markSessionActive()
                     core?.turnActivity.appBecameActive()

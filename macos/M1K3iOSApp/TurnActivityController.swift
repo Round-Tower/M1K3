@@ -30,8 +30,9 @@ import M1K3Screengrab
 
 extension TurnActivityDriver {
     static func live() -> TurnActivityDriver {
-        TurnNoticeDelegate.install()
-        return TurnActivityDriver(effects: ActivityKitEffects(), tasks: UIKitBackgroundTasks(), notifier: UserNoticeNotifier())
+        // The notification delegate is NOT installed here: the core is built asynchronously, and a cold-launch tap
+        // on a notice must reach a delegate (`M1K3iOSApp.init`).
+        TurnActivityDriver(effects: ActivityKitEffects(), tasks: UIKitBackgroundTasks(), notifier: UserNoticeNotifier())
     }
 }
 
@@ -42,6 +43,11 @@ extension TurnActivityDriver {
 
         var appIsActive: Bool {
             UIApplication.shared.applicationState == .active
+        }
+
+        /// `.inactive` (a Control Center pull, a system sheet, the app switcher) is still in front.
+        var appIsInForeground: Bool {
+            UIApplication.shared.applicationState != .background
         }
 
         private var saidDisabled = false
@@ -151,6 +157,8 @@ extension TurnActivityDriver {
         }
 
         func requestPermissionIfUndecided() async {
+            // A long answer in a screengrab or UI-test run must never raise the system prompt.
+            guard !ScreengrabHarness.current.isActive else { return }
             guard await center.notificationSettings().authorizationStatus == .notDetermined else { return }
             _ = try? await center.requestAuthorization(options: [.alert, .sound])
         }
@@ -161,8 +169,9 @@ extension TurnActivityDriver {
         }
     }
 
-    /// A tap on the notice opens the chat through the same `m1k3://chat` link the Live Activity uses, and a
-    /// notice never presents over the app (none is posted while it is in front).
+    /// A tap on the notice opens the chat through the same `m1k3://chat` link the Live Activity uses. A turn
+    /// notice never presents over the app (none is posted while it is in front); any other notification keeps
+    /// the system default, so a future feature is not silently muted by this delegate.
     final class TurnNoticeDelegate: NSObject, UNUserNotificationCenterDelegate {
         @MainActor private static let shared = TurnNoticeDelegate()
 
@@ -171,9 +180,9 @@ extension TurnActivityDriver {
         }
 
         func userNotificationCenter(
-            _: UNUserNotificationCenter, willPresent _: UNNotification
+            _: UNUserNotificationCenter, willPresent notification: UNNotification
         ) async -> UNNotificationPresentationOptions {
-            []
+            notification.request.identifier == TurnNoticePolicy.identifier ? [] : [.banner, .sound, .list]
         }
 
         func userNotificationCenter(
@@ -200,6 +209,10 @@ extension TurnActivityDriver {
     @MainActor
     final class ActivityKitEffects: TurnActivityEffects {
         var appIsActive: Bool {
+            true
+        }
+
+        var appIsInForeground: Bool {
             true
         }
 

@@ -81,13 +81,15 @@ public struct TurnActivityPolicy: Sendable {
 
     public init() {}
 
-    /// A turn started. A lingering Ready/Paused card from an earlier turn ends first.
+    /// A turn started. Any card left from an earlier turn ends first.
     public mutating func turnBegan() -> Action {
         turnRunning = true
         cardShownThisTurn = false
         startedWhileLeaving = false
-        guard let shown, shown.phase == .ready || shown.phase == .paused else { return .none }
-        self.shown = nil
+        // A new turn starts clean: any card still up (a Ready/Paused one, or one a turn that never reported
+        // its end left) is stale, and there is one activity at a time.
+        guard shown != nil else { return .none }
+        shown = nil
         return .end(final: nil, dismissal: .immediate)
     }
 

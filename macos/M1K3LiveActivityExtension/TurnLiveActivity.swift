@@ -87,6 +87,7 @@ private struct TurnLockScreenView: View {
         HStack(spacing: 14) {
             TurnFaceMark(copy: copy)
                 .frame(width: 52, height: 44)
+                .accessibilityHidden(true) // the title below says it; combined, VoiceOver read it twice
             VStack(alignment: .leading, spacing: 4) {
                 Text(copy.title)
                     .font(TurnBrand.pixel(15))

@@ -30,7 +30,11 @@ import M1K3LiveActivity
 /// The card and the app's visibility, as the driver needs them. The app target adapts ActivityKit.
 @MainActor
 public protocol TurnActivityEffects: AnyObject {
+    /// Strictly `.active`: the only moment a permission prompt may appear.
     var appIsActive: Bool { get }
+    /// `.active` or `.inactive` (a Control Center pull, a system sheet): not in the background. The card and
+    /// the notice treat this as "in front", so a turn landing mid-pull posts no notice a delegate would hide.
+    var appIsInForeground: Bool { get }
     /// Whether the person allows Live Activities (`ActivityAuthorizationInfo`).
     var activitiesEnabled: Bool { get }
     /// Remove a card left by a process iOS killed: one at a time.
@@ -113,14 +117,15 @@ public final class TurnActivityDriver {
         following = false
         monitor?.cancel()
         monitor = nil
-        let appActive = effects.appIsActive
+        let appActive = effects.appIsInForeground
+        let strictlyActive = effects.appIsActive
         perform(policy.turnFinished(outcome, appActive: appActive))
         let duration = startedAt.map { $0.duration(to: clock()) } ?? .zero
         // The notice and the permission ask run on the same chain, inside the grace.
         if let notice = TurnNoticePolicy.notice(for: outcome, kind: kind, appActive: appActive) {
             enqueue { [notifier] in await notifier.post(notice) }
         }
-        if TurnNoticePolicy.shouldAskPermission(for: outcome, duration: duration, appActive: appActive) {
+        if TurnNoticePolicy.shouldAskPermission(for: outcome, duration: duration, appActive: strictlyActive) {
             enqueue { [notifier] in await notifier.requestPermissionIfUndecided() }
         }
         // The grace outlives the last effect: the card must say "ready" before iOS may suspend us.
@@ -160,7 +165,7 @@ public final class TurnActivityDriver {
     public func sample(elapsed: Duration) {
         guard following, let phase else { return }
         perform(policy.progress(
-            phase: phase(), elapsed: elapsed, appActive: effects.appIsActive, activitiesEnabled: effects.activitiesEnabled
+            phase: phase(), elapsed: elapsed, appActive: effects.appIsInForeground, activitiesEnabled: effects.activitiesEnabled
         ))
     }
 
