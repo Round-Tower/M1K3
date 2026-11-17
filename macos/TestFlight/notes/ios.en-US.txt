@@ -19,8 +19,9 @@ New in this build, please try:
 • Switch to Lil, ask something long, then swipe home or lock the phone a few seconds in. Do it several times: M1K3 should never close, and the answer should stop where it was
 • Live Activity: on Mini, ask something, then lock the phone or go home. A card should appear on the Lock Screen and in the Dynamic Island, turn to "Answer ready" when it lands, and a notification should arrive. On Lil, the card should say "Paused". Tapping any of it opens the chat
 • Private Cloud: ask, then lock. It should finish and say "Answer ready", not "Paused"
-• On Lil, start a new chat and go home right after the first answer, while it names the chat. M1K3 should come back fine
-• Settings: tap the empty space beside a brain or voice. The whole row should pick it
+• On Lil, start a new chat and go home just after the first answer. M1K3 should come back fine
+• Settings: tap the space beside a brain or voice: the whole row should pick it
+• On Lil, go home, come back and ask something: the first words should come as fast as the next answer's. Look straight away too, and tell us if it lags
 
 And the basics:
 • Voice mode, a few turns in a row
