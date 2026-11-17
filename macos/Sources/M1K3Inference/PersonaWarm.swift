@@ -24,6 +24,10 @@
 //  Open: a Brain at Home turn from a paired device and the exit-time distillation are not counted. A voice loop
 //  left in `speaking` (a voice that never reports its end, a read-aloud past the five-minute limit) stops the warm
 //  for the session: the palettes then build on first use.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — `PhonePersonaWarm`: the phone never warmed at all, and its background
+//  shed drops the prefix, so the first Lil turn after a launch and after every return built 1,828 tokens on the
+//  critical path (Kev's iPhone 17 Pro that evening: first word at 6.8 s, the rebuild most of it). It warms the plain
+//  prefix only, in front and cool. Confidence 0.75: the rule is pinned, the gain is owed on the phone.
 
 import Foundation
 
@@ -116,5 +120,20 @@ public enum PersonaWarmYield {
             waited += step
         }
         return .quiet
+    }
+}
+
+/// The phone's warm (2026-11-17). It runs after every ready brain: a launch, a pick, and the return after the
+/// background shed, which drops the prefix. One palette, the plain prefix: the phone's turns seed from it (plain and
+/// dispatched turns alike, read off its log), and a tool palette's key follows the web toggle and the corpus, so a
+/// guessed one would build a prefix no turn asks for (the Mac's 2026-08-12 bug).
+public enum PhonePersonaWarm {
+    /// The palettes to warm, in order: just the plain prefix.
+    public static let palettes: [[ToolDefinition]] = [[]]
+
+    /// Warm only in front (iOS refuses GPU work in the background) and only when the CoolHead rule allows
+    /// background work (not hot, not Low Power): the build is about 4 s of GPU on a phone.
+    public static func warms(appActive: Bool, backgroundWorkAllowed: Bool) -> Bool {
+        appActive && backgroundWorkAllowed
     }
 }

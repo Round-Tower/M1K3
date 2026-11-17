@@ -210,3 +210,21 @@ struct PersonaWarmYieldTests {
         #expect(!PersonaWarmYield.Outcome.cancelled.goesOn)
     }
 }
+
+/// Phone, 2026-11-17: the app never warmed the persona prefix, and the background shed drops it, so the first Lil
+/// turn after a launch and after EVERY return built it on the critical path (1,828 tokens; first word at 6.8 s).
+struct PhonePersonaWarmTests {
+    @Test("the phone warms the prefix only in front and only when cool")
+    func warmsInFrontWhenCool() {
+        #expect(PhonePersonaWarm.warms(appActive: true, backgroundWorkAllowed: true))
+        #expect(!PhonePersonaWarm.warms(appActive: false, backgroundWorkAllowed: true), "iOS refuses background GPU")
+        #expect(!PhonePersonaWarm.warms(appActive: true, backgroundWorkAllowed: false), "hot or Low Power")
+        #expect(!PhonePersonaWarm.warms(appActive: false, backgroundWorkAllowed: false))
+    }
+
+    @Test("the phone warms one palette, the plain prefix its turns seed from, and no tool palette")
+    func warmsOnlyThePlainPrefix() {
+        #expect(PhonePersonaWarm.palettes.count == 1)
+        #expect(PhonePersonaWarm.palettes.first?.isEmpty == true)
+    }
+}

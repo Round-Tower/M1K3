@@ -174,6 +174,11 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-17 — the exit's stops ask `turnUsesThisDevicesGPU` (the route, read off the
 //  session's streaming answer), so a Private Cloud answer with Lil loaded runs on in the background instead of being
 //  stopped and shown Paused, while a failed one's local fallback is still stopped like any Lil turn.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — `warmPersonaPrefix`: after every ready brain (launch, pick, the return
+//  after a shed) the plain persona prefix is built in front, when cool, waiting while someone is answered; the shed
+//  cancels it. The phone never warmed, so every first turn after a return built it (first word 6.8 s that evening).
+//  Compile-checked; the gain is owed on the phone (the `persona prefix warmed` line after `brain warm: Lil ready`,
+//  and no `persona prefix built` inside the next turn).
 
 import AVFoundation
 #if os(iOS)
@@ -343,6 +348,9 @@ final class AppCore {
     /// A background shed waiting (at most `BackgroundExitPolicy.shedWaitLimit`) for the stopped turn to exit.
     /// The return cancels it: the brain was never let go of.
     private var shedWaitTask: Task<Void, Never>?
+    /// The plain persona prefix built after a ready brain (`warmPersonaPrefix`). The shed and the next warm cancel it;
+    /// a build already on the GPU finishes (the shed waits for it like any evaluation).
+    private var prefixWarmTask: Task<Void, Never>?
     /// Monotonic token: a late-arriving warm progress hop only applies if it still
     /// matches the current generation, so a brain switch mid-warm can't be clobbered
     /// by the abandoned download's callbacks (the Mac AppEnvironment's stale-hop guard).
@@ -1149,6 +1157,7 @@ final class AppCore {
                 activeProvider.setProvider(mlx)
                 brainLoad = .ready
                 Self.log.notice("brain warm: \(tierName, privacy: .public) ready")
+                warmPersonaPrefix(mlx)
             } catch {
                 if mlx !== currentMLX { mlx.releaseMemory() }
                 guard generation == warmGeneration else { return }
@@ -1210,6 +1219,28 @@ final class AppCore {
 
     private static var appIsActive: Bool {
         UIApplication.shared.applicationState == .active
+    }
+
+    /// Build the plain persona prefix now, so the first turn doesn't (`PhonePersonaWarm`). Runs after every ready
+    /// brain, the return after a shed included. A turn sent meanwhile joins the build in flight (one build per key),
+    /// and the warm waits while someone is being answered, as the Mac's does.
+    private func warmPersonaPrefix(_ mlx: MLXBrainProvider) {
+        prefixWarmTask?.cancel()
+        let info = ProcessInfo.processInfo
+        let cool = CoolHeadPolicy.allowsBackgroundWork(
+            CoolHeadPolicy.target(thermal: info.thermalState, lowPower: info.isLowPowerModeEnabled)
+        )
+        guard PhonePersonaWarm.warms(appActive: Self.appIsActive, backgroundWorkAllowed: cool) else { return }
+        prefixWarmTask = Task.detached(priority: .utility) { [weak self, weak mlx] in
+            await PersonaWarmRun.run(
+                PhonePersonaWarm.palettes,
+                beforeEach: {
+                    await PersonaWarmYield.untilQuiet(busy: { await self?.chat.isResponding ?? false }).goesOn
+                },
+                shouldContinue: { !Task.isCancelled },
+                warm: { tools in await mlx?.warmPersonaPrefix(tools: tools) }
+            )
+        }
     }
 
     /// Measure Mini's fixed instructions using the platform tokenizer. This is
@@ -1298,6 +1329,7 @@ final class AppCore {
     func shedBrain() {
         guard brainLoad == .ready, currentMLX != nil else { return }
         warmTask?.cancel()
+        prefixWarmTask?.cancel()
         warmGeneration += 1 // invalidate any in-flight warm's progress hops
         currentMLX?.releaseMemory()
         shedMLX = currentMLX
