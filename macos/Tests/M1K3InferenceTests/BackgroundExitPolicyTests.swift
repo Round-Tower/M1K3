@@ -31,11 +31,20 @@ struct BackgroundExitPolicyTests {
 
     @Test("the shed waits for a running turn, and only for the bound")
     func shedWaitsBounded() {
-        #expect(BackgroundExitPolicy.shedPlan(turnStillRunning: true, waited: .zero) == .waitForTurn)
-        #expect(BackgroundExitPolicy.shedPlan(turnStillRunning: true, waited: .milliseconds(900)) == .waitForTurn)
-        #expect(BackgroundExitPolicy.shedPlan(turnStillRunning: true, waited: .seconds(1)) == .shedNow)
-        #expect(BackgroundExitPolicy.shedPlan(turnStillRunning: false, waited: .zero) == .shedNow)
+        #expect(BackgroundExitPolicy.shedPlan(chatResponding: true, mlxEvaluating: false, waited: .zero) == .waitForTurn)
+        #expect(
+            BackgroundExitPolicy.shedPlan(chatResponding: true, mlxEvaluating: true, waited: .milliseconds(900))
+                == .waitForTurn
+        )
+        #expect(BackgroundExitPolicy.shedPlan(chatResponding: true, mlxEvaluating: true, waited: .seconds(1)) == .shedNow)
+        #expect(BackgroundExitPolicy.shedPlan(chatResponding: false, mlxEvaluating: false, waited: .zero) == .shedNow)
         #expect(BackgroundExitPolicy.shedWaitLimit <= .seconds(1))
+    }
+
+    @Test("a side generation with no chat turn (a title, a distillation) makes the shed wait too (#862)")
+    func shedWaitsForASideGeneration() {
+        #expect(BackgroundExitPolicy.shedPlan(chatResponding: false, mlxEvaluating: true, waited: .zero) == .waitForTurn)
+        #expect(BackgroundExitPolicy.shedPlan(chatResponding: false, mlxEvaluating: true, waited: .seconds(1)) == .shedNow)
     }
 
     @Test("the phone stops an on-device turn at .inactive, without touching speech or voice")
@@ -58,6 +67,7 @@ struct BackgroundExitPolicyTests {
         let shed = try body(of: "func releaseForBackground()", in: "AppCore.swift")
         #expect(shed.contains("BackgroundExitPolicy.shedPlan("))
         #expect(shed.contains("chat.isResponding"))
+        #expect(shed.contains("MLXBrainProvider.evaluating"), "a title or a distillation in flight counts too (#862)")
         #expect(!shed.contains("releaseMemory()"), "the release itself lives in shedBrain, behind the wait")
         let release = try body(of: "func shedBrain()", in: "AppCore.swift")
         #expect(release.contains("releaseMemory()"))

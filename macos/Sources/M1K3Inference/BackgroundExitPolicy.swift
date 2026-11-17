@@ -28,6 +28,9 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-16 — `wantsBackgroundGrace` (the complement of `stopsTurn`) so an off-GPU
 //  turn finishes on a background task, and the Live Activity says "Paused" for the stopped ones (TurnActivityPolicy).
 //  The Open's Live Activity half is built; the Private Cloud-with-a-loaded-brain stop is unchanged. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 (#862) — `shedPlan` waits on the chat turn OR any MLX evaluation: a title
+//  prefill outlived the shed by 0.4 s on Kev's phone. Confidence 0.8; the phone check is owed (leave right after a
+//  first exchange, while the title is being made).
 //
 
 import Foundation
@@ -66,10 +69,12 @@ public enum BackgroundExitPolicy {
     /// The longest the shed waits for a stopped turn to exit before it sheds anyway (jetsam hygiene wins).
     public static let shedWaitLimit: Duration = .seconds(1)
 
-    /// Releasing buffers under an evaluation that is still running is its own hazard, so a shed with a turn
-    /// still in flight waits for it, up to `shedWaitLimit`.
-    public static func shedPlan(turnStillRunning: Bool, waited: Duration) -> ShedPlan {
-        turnStillRunning && waited < shedWaitLimit ? .waitForTurn : .shedNow
+    /// Releasing buffers under an evaluation that is still running is its own hazard, so a shed waits, up to
+    /// `shedWaitLimit`, while the chat turn is still responding OR any MLX evaluation is still running: a title
+    /// or a memory distillation started just before the exit is not the chat turn, and the exit does not stop
+    /// it (#862, Kev's phone 2026-11-16: a 181-token title prefill finished 0.4 s after the shed).
+    public static func shedPlan(chatResponding: Bool, mlxEvaluating: Bool, waited: Duration) -> ShedPlan {
+        (chatResponding || mlxEvaluating) && waited < shedWaitLimit ? .waitForTurn : .shedNow
     }
 
     public enum ReturnPlan: Sendable, Equatable {

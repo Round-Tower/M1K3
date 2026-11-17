@@ -169,6 +169,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-16 — `turnActivity` + the begin/end hooks in `send` and `sendPrivateCloud`, and
 //  `stopForBackground` tells the Live Activity first (Paused for a stopped turn, a background-task grace for one that
 //  runs elsewhere). Compile-checked; owes a try on a phone.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 (#862) — `releaseForBackground` also waits on `MLXBrainProvider.evaluating`
+//  (a title or a distillation the exit does not stop). Phone check owed.
 
 import AVFoundation
 #if os(iOS)
@@ -1259,19 +1261,24 @@ final class AppCore {
     /// A turn the exit stopped may still be unwinding: its last step is on the GPU. Releasing buffers under a
     /// running evaluation is its own hazard (#858), so with a turn in flight the shed waits for it, bounded by
     /// `BackgroundExitPolicy.shedWaitLimit`, then sheds anyway (a backgrounded 3.5 GB process is jetsam's).
+    /// "In flight" is the chat turn OR any MLX evaluation (`MLXBrainProvider.evaluating`): a title or a
+    /// distillation the exit does not stop counts too (#862).
     func releaseForBackground() {
         guard brainLoad == .ready, currentMLX != nil else { return }
         shedWaitTask?.cancel()
         let clock = ContinuousClock()
         let began = clock.now
-        guard BackgroundExitPolicy.shedPlan(turnStillRunning: chat.isResponding, waited: .zero) == .waitForTurn else {
+        guard BackgroundExitPolicy.shedPlan(
+            chatResponding: chat.isResponding, mlxEvaluating: MLXBrainProvider.evaluating, waited: .zero
+        ) == .waitForTurn else {
             shedBrain()
             return
         }
         shedWaitTask = Task { [weak self] in
             while let self, !Task.isCancelled {
                 let plan = BackgroundExitPolicy.shedPlan(
-                    turnStillRunning: chat.isResponding, waited: clock.now - began
+                    chatResponding: chat.isResponding, mlxEvaluating: MLXBrainProvider.evaluating,
+                    waited: clock.now - began
                 )
                 if plan == .shedNow { break }
                 try? await Task.sleep(for: .milliseconds(25))
