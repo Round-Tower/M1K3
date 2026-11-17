@@ -171,8 +171,9 @@
 //  runs elsewhere). Compile-checked; owes a try on a phone.
 //  Review: Kev + claude-opus-5.5, 2026-11-17 (#862) — `releaseForBackground` also waits on `MLXBrainProvider.evaluating`
 //  (a title or a distillation the exit does not stop). Phone check owed.
-//  Review: Kev + claude-opus-5.5, 2026-11-17 — the exit's stops ask `turnUsesThisDevicesGPU` (the route), so a Private
-//  Cloud turn with Lil loaded runs on in the background instead of being stopped and shown Paused.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — the exit's stops ask `turnUsesThisDevicesGPU` (the route, read off the
+//  session's streaming answer), so a Private Cloud answer with Lil loaded runs on in the background instead of being
+//  stopped and shown Paused, while a failed one's local fallback is still stopped like any Lil turn.
 
 import AVFoundation
 #if os(iOS)
@@ -443,10 +444,6 @@ final class AppCore {
         )
     }
 
-    /// True while a Private Cloud turn is being answered: its words come from Apple's servers, so leaving the app
-    /// does not stop it even with a local brain loaded (`turnUsesThisDevicesGPU`).
-    private(set) var privateCloudTurnInFlight = false
-
     /// True while the inference slot points at the paired Mac's brain. The
     /// local `selectedBrain` is kept untouched as the tier to return to.
     private(set) var homeBrainActive = false {
@@ -569,12 +566,10 @@ final class AppCore {
         // answer too, and the session supersedes a half-read earlier one. Before the send: it pins this turn.
         beginAutoSpeakSession()
         let activity = beginTurnActivity(.answer)
-        privateCloudTurnInFlight = true
         await chat.sendPrivateCloud(
             consent, includeConversation: includeConversation, backend: backend,
             gate: gate, localBrainName: selectedBrain.displayName
         )
-        privateCloudTurnInFlight = false
         endTurnActivity(activity)
         playTurnEarcon(chat.messages.last.flatMap { $0.role == .assistant ? $0 : nil })
         if case .speaking = avatar.state.activity {} else { avatar.resetToIdle() }
@@ -1276,8 +1271,10 @@ final class AppCore {
         shedWaitTask?.cancel()
         let clock = ContinuousClock()
         let began = clock.now
+        // A chat answer only holds the shed when it runs on this GPU: a Private Cloud one streams from Apple's servers.
         guard BackgroundExitPolicy.shedPlan(
-            chatResponding: chat.isResponding, mlxEvaluating: MLXBrainProvider.evaluating, waited: .zero
+            chatResponding: chat.isResponding && turnUsesThisDevicesGPU, mlxEvaluating: MLXBrainProvider.evaluating,
+            waited: .zero
         ) == .waitForTurn else {
             shedBrain()
             return
@@ -1285,8 +1282,8 @@ final class AppCore {
         shedWaitTask = Task { [weak self] in
             while let self, !Task.isCancelled {
                 let plan = BackgroundExitPolicy.shedPlan(
-                    chatResponding: chat.isResponding, mlxEvaluating: MLXBrainProvider.evaluating,
-                    waited: clock.now - began
+                    chatResponding: chat.isResponding && turnUsesThisDevicesGPU,
+                    mlxEvaluating: MLXBrainProvider.evaluating, waited: clock.now - began
                 )
                 if plan == .shedNow { break }
                 try? await Task.sleep(for: .milliseconds(25))
@@ -1400,10 +1397,11 @@ final class AppCore {
     /// The app is leaving for the background: the speech stops (there is no background audio), and an answer
     /// being made on a brain loaded on this device stops too (`BackgroundExitPolicy`), before the shed.
     /// Does the turn in flight run on this device's GPU (`BackgroundExitPolicy.turnUsesThisDevicesGPU`)? The route,
-    /// not just the loaded brain: a Private Cloud turn with Lil loaded runs on Apple's servers.
+    /// not just the loaded brain: a Private Cloud answer streams from Apple's servers with Lil loaded. Read off the
+    /// session's streaming answer, so a failed Private Cloud turn's local fallback counts as this GPU.
     var turnUsesThisDevicesGPU: Bool {
         BackgroundExitPolicy.turnUsesThisDevicesGPU(
-            localBrainLoaded: currentMLX != nil, privateCloudTurn: privateCloudTurnInFlight
+            localBrainLoaded: currentMLX != nil, privateCloudTurn: chat.answeringOnPrivateCloud
         )
     }
 

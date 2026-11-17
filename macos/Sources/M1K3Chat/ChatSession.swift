@@ -128,6 +128,8 @@
 //  be put up by voice. Confidence 0.8 (pinned in CitedSourceTests).
 //  Review: Kev + claude-opus-5.5, 2026-11-14 (follow-ups) — `ChatMessage.isRead`, so the shells keep a read's links
 //  untappable. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — `answeringOnPrivateCloud`: read off the streaming answer's origin, so
+//  the phone's exit leaves a Private Cloud answer running but stops a failed one's local fallback. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -403,6 +405,16 @@ public final class ChatSession {
     private static let leakLog = Logger(subsystem: "app.m1k3", category: "security")
     public private(set) var messages: [ChatMessage] = []
     public private(set) var isResponding = false
+
+    /// The answer streaming right now comes from Private Cloud Compute, not this device. Read off the streaming
+    /// message's origin, so a failed Private Cloud turn's LOCAL fallback (which runs inside the same
+    /// `sendPrivateCloud`) reads false: the phone's background exit must stop that one like any Lil turn.
+    public var answeringOnPrivateCloud: Bool {
+        guard isResponding, let last = messages.last, last.role == .assistant, last.status == .streaming else {
+            return false
+        }
+        return last.answerOrigin == .privateCloudCompute
+    }
 
     /// The conversation the transcript belongs to. Rows are created LAZILY —
     /// only `send` writes — so empty conversations never reach the store.

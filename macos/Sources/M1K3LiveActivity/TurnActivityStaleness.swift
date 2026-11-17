@@ -10,6 +10,8 @@
 //
 //  The window outlasts the background grace (about 30 s on iOS 27), so a turn that is still running is never
 //  shown stale; a settled card (Ready, Paused) has no stale date, because it already says the last true thing.
+//  A card in FRONT whose phase holds for two minutes goes stale too, unseen: the app's own card is not drawn while
+//  it is in front, and leaving re-writes it (the grace) or settles it (Paused) before anyone can look.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-17, Confidence 0.8 (pure and tested; the stale look itself is owed
 //  on a phone: kill the app from Xcode mid-turn in the background and wait two minutes).

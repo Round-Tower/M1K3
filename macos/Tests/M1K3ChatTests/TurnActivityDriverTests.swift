@@ -156,6 +156,7 @@ struct TurnActivityDriverTests {
         let refresh = events.firstIndex(of: "card.update.answering")
         #expect(start != nil && refresh != nil)
         if let start, let refresh { #expect(start < refresh) }
+        #expect(events.filter { $0 == "card.update.answering" }.count == 1, "one refresh, not one per ask")
     }
 
     @Test("Lil/Big leaving get Paused, not a refresh")

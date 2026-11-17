@@ -32,7 +32,8 @@
 //  prefill outlived the shed by 0.4 s on Kev's phone. Confidence 0.8; the phone check is owed (leave right after a
 //  first exchange, while the title is being made).
 //  Review: Kev + claude-opus-5.5, 2026-11-17 — the first Open is closed: `turnUsesThisDevicesGPU` reads the turn's
-//  route (a Private Cloud turn is not this GPU, even with Lil loaded), and every stop and the Live Activity ask it.
+//  route (a Private Cloud answer is not this GPU, even with Lil loaded; a failed one's local fallback IS, so the shell
+//  reads the route off the session's streaming answer, not a flag around the send), and every stop asks it.
 //  Picking a stopped turn up again on the return stays a design call (Kev). Confidence 0.85.
 //
 

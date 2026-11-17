@@ -122,8 +122,11 @@ struct BackgroundExitPolicyTests {
             let body = try body(of: function, in: "AppCore.swift")
             #expect(body.contains("brainRunsOnThisDevicesGPU: turnUsesThisDevicesGPU"), "\(function)")
         }
-        let send = try body(of: "func sendPrivateCloud(", in: "AppCore.swift")
-        #expect(send.contains("privateCloudTurnInFlight = true"))
+        // The route comes from the session (the streaming answer's origin), never a flag around the send: a failed
+        // Private Cloud turn falls back to Lil inside the same call (review, 2026-11-17).
+        let route = try body(of: "var turnUsesThisDevicesGPU", in: "AppCore.swift")
+        #expect(route.contains("chat.answeringOnPrivateCloud"))
+        #expect(!source.contains("privateCloudTurnInFlight"))
     }
 
     @Test("a brain still in memory on the return is taken back, never loaded a second time")

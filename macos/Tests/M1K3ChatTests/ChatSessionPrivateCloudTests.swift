@@ -355,6 +355,45 @@ struct ChatSessionPrivateCloudTests {
         }
     }
 
+    @Test("while Private Cloud streams, the turn is on Private Cloud; when it is stopped, nothing is")
+    func answeringOnPrivateCloudWhileItStreams() async {
+        let session = ChatSession(responder: CountingResponder())
+        let cloud = HangingCloud(snapshots: ["The first half"])
+        let consent = session.privateCloudConsent(for: "tell me a story")
+        #expect(!session.answeringOnPrivateCloud)
+        let sending = Task {
+            await session.sendPrivateCloud(
+                consent, includeConversation: false, backend: cloud, gate: Self.open, localBrainName: "Lil", now: now
+            )
+        }
+        await waitUntil { session.messages.last?.text == "The first half" }
+        #expect(session.answeringOnPrivateCloud)
+        session.stopResponding()
+        await sending.value
+        #expect(!session.answeringOnPrivateCloud)
+    }
+
+    /// Review of the route-aware stop (2026-11-17): a failed Private Cloud turn falls back to the LOCAL brain inside
+    /// the same `sendPrivateCloud` call, so "a Private Cloud send is in flight" is not "the answer is off this GPU".
+    @Test("a Private Cloud failure's local fallback is NOT on Private Cloud: the exit must stop it like any Lil turn")
+    func fallbackIsLocal() async {
+        let local = GatedResponder()
+        let session = ChatSession(responder: local)
+        let cloud = FakeCloud(snapshots: [], failure: .network)
+        let sending = Task {
+            await session.sendPrivateCloud(
+                session.privateCloudConsent(for: "hi"), includeConversation: false, backend: cloud,
+                gate: Self.open, localBrainName: "Lil", now: now
+            )
+        }
+        await waitUntil { local.started }
+        #expect(session.isResponding)
+        #expect(!session.answeringOnPrivateCloud, "the fallback runs on this device")
+        local.release()
+        await sending.value
+        #expect(!session.answeringOnPrivateCloud)
+    }
+
     @Test("stop mid-PCC-stream keeps what came, marked and labelled, and tears the stream down")
     func stopMidStream() async throws {
         let responder = CountingResponder()
@@ -465,5 +504,25 @@ private struct StrangeCloud: PrivateCloudAnswering {
 
     func answer(instructions _: String, prompt _: String) -> AsyncThrowingStream<String, any Error> {
         AsyncThrowingStream { $0.finish(throwing: Weird()) }
+    }
+}
+
+/// A local brain whose answer waits for `release()`, so a test can look at the session mid-answer.
+private final class GatedResponder: RAGResponding, @unchecked Sendable {
+    private let lock = NSLock()
+    private var gate: AsyncStream<String>.Continuation?
+    var started: Bool {
+        lock.withLock { gate != nil }
+    }
+
+    func answerStreaming(_: String) async throws -> (sources: [ChunkHit], stream: AsyncStream<String>) {
+        let (stream, continuation) = AsyncStream<String>.makeStream()
+        continuation.yield("local")
+        lock.withLock { gate = continuation }
+        return ([], stream)
+    }
+
+    func release() {
+        lock.withLock { gate?.finish() }
     }
 }

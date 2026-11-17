@@ -32,6 +32,7 @@ struct SettingsChoiceRow: View {
                     .font(.title3)
                     .foregroundStyle(.tint)
                     .frame(width: 28)
+                    .accessibilityHidden(true) // decoration: the title says which
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).foregroundStyle(.primary)
                     Text(detail)
@@ -42,6 +43,7 @@ struct SettingsChoiceRow: View {
                 if isChosen {
                     Image(systemName: "checkmark.circle.fill")
                         .foregroundStyle(.tint)
+                        .accessibilityHidden(true) // the selected trait says it, not "checkmark circle fill"
                 }
             }
             .contentShape(.rect)
