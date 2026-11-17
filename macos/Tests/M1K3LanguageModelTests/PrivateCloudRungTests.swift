@@ -233,6 +233,22 @@ struct PrivateCloudRungTests {
         }
     }
 
+    /// Phone, 2026-11-17: PCC refused, Lil took over, and leaving the app stopped Lil before its first word. The
+    /// empty answer is removed, so the notice above it was the whole reply, claiming an answer that never came.
+    @Test("when the local brain stopped before answering, the notice says so and claims no answer")
+    func stoppedFallbackNotice() {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        let failures: [PrivateCloudFailure] = [
+            .rateLimited, .quotaLimitReached(resetsAt: nil), .network, .unavailable, .replyCheckUnavailable, .other,
+        ]
+        for failure in failures {
+            let line = PrivateCloudFallback.notice(for: failure, localBrain: "Lil", now: now, localStopped: true)
+            #expect(line.contains("Private Cloud Compute"), "\(failure)")
+            #expect(line.hasSuffix(", and Lil stopped before answering."), "\(failure)")
+            #expect(!line.contains("answered here instead"), "\(failure)")
+        }
+    }
+
     @Test("a quota notice says when it resets, in words")
     func quotaResetPhrase() {
         let now = Date(timeIntervalSince1970: 1_800_000_000)

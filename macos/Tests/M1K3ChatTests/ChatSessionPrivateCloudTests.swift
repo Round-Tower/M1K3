@@ -394,6 +394,31 @@ struct ChatSessionPrivateCloudTests {
         #expect(!session.answeringOnPrivateCloud)
     }
 
+    /// Phone, 2026-11-17: PCC refused, the Lil fallback started, and leaving the app stopped it before its first
+    /// word. The empty answer goes, so the notice is the whole reply; it must not say Lil answered.
+    @Test("a fallback stopped before its first word leaves a notice that claims no answer")
+    func stoppedFallbackClaimsNoAnswer() async throws {
+        let local = GatedResponder(first: nil)
+        let session = ChatSession(responder: local)
+        let cloud = FakeCloud(snapshots: [], failure: .other)
+        let sending = Task {
+            await session.sendPrivateCloud(
+                session.privateCloudConsent(for: "hi"), includeConversation: false, backend: cloud,
+                gate: Self.open, localBrainName: "Lil", now: now
+            )
+        }
+        await waitUntil { local.started }
+        session.stopResponding()
+        await sending.value
+
+        #expect(session.messages.count == 2, "the question and the notice: the empty local bubble goes")
+        let notice = try #require(session.messages.last)
+        let expected = PrivateCloudFallback.notice(for: .other, localBrain: "Lil", now: now, localStopped: true)
+        #expect(notice.text == expected)
+        #expect(notice.contextExcluded == true)
+        #expect(!session.isResponding)
+    }
+
     @Test("stop mid-PCC-stream keeps what came, marked and labelled, and tears the stream down")
     func stopMidStream() async throws {
         let responder = CountingResponder()
@@ -515,9 +540,15 @@ private final class GatedResponder: RAGResponding, @unchecked Sendable {
         lock.withLock { gate != nil }
     }
 
+    /// What the local brain says at once; nil = silent until released (a stop lands before its first word).
+    private let first: String?
+    init(first: String? = "local") {
+        self.first = first
+    }
+
     func answerStreaming(_: String) async throws -> (sources: [ChunkHit], stream: AsyncStream<String>) {
         let (stream, continuation) = AsyncStream<String>.makeStream()
-        continuation.yield("local")
+        if let first { continuation.yield(first) }
         lock.withLock { gate = continuation }
         return ([], stream)
     }

@@ -130,6 +130,9 @@
 //  untappable. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-11-17 — `answeringOnPrivateCloud`: read off the streaming answer's origin, so
 //  the phone's exit leaves a Private Cloud answer running but stops a failed one's local fallback. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 (phone) — a fallback stopped before its first word rewrites the notice
+//  ("Lil stopped before answering"): on the phone PCC refused, leaving stopped Lil, and the reply read "Lil answered
+//  here instead" over nothing. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -916,6 +919,14 @@ public final class ChatSession {
             // The local fallback after a look is fenced like any send after a look.
             await LookAftermath.$withholdsWeb.withValue(fenced) {
                 await runLocalTurn(question, images: [], history: history, assistantID: localID)
+            }
+            // Stopped before its first word, the local answer is gone, and the notice must not say it answered.
+            if !messages.contains(where: { $0.id == localID }) {
+                update(assistantID) {
+                    $0.text = PrivateCloudFallback.notice(
+                        for: failure, localBrain: localBrainName, now: now, localStopped: true
+                    )
+                }
             }
         case let .failed(failure, partial):
             // Something came: keep it, marked, and say why it stopped.
