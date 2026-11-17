@@ -171,6 +171,8 @@
 //  runs elsewhere). Compile-checked; owes a try on a phone.
 //  Review: Kev + claude-opus-5.5, 2026-11-17 (#862) — `releaseForBackground` also waits on `MLXBrainProvider.evaluating`
 //  (a title or a distillation the exit does not stop). Phone check owed.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — the exit's stops ask `turnUsesThisDevicesGPU` (the route), so a Private
+//  Cloud turn with Lil loaded runs on in the background instead of being stopped and shown Paused.
 
 import AVFoundation
 #if os(iOS)
@@ -441,6 +443,10 @@ final class AppCore {
         )
     }
 
+    /// True while a Private Cloud turn is being answered: its words come from Apple's servers, so leaving the app
+    /// does not stop it even with a local brain loaded (`turnUsesThisDevicesGPU`).
+    private(set) var privateCloudTurnInFlight = false
+
     /// True while the inference slot points at the paired Mac's brain. The
     /// local `selectedBrain` is kept untouched as the tier to return to.
     private(set) var homeBrainActive = false {
@@ -563,10 +569,12 @@ final class AppCore {
         // answer too, and the session supersedes a half-read earlier one. Before the send: it pins this turn.
         beginAutoSpeakSession()
         let activity = beginTurnActivity(.answer)
+        privateCloudTurnInFlight = true
         await chat.sendPrivateCloud(
             consent, includeConversation: includeConversation, backend: backend,
             gate: gate, localBrainName: selectedBrain.displayName
         )
+        privateCloudTurnInFlight = false
         endTurnActivity(activity)
         playTurnEarcon(chat.messages.last.flatMap { $0.role == .assistant ? $0 : nil })
         if case .speaking = avatar.state.activity {} else { avatar.resetToIdle() }
@@ -1391,13 +1399,21 @@ final class AppCore {
 
     /// The app is leaving for the background: the speech stops (there is no background audio), and an answer
     /// being made on a brain loaded on this device stops too (`BackgroundExitPolicy`), before the shed.
+    /// Does the turn in flight run on this device's GPU (`BackgroundExitPolicy.turnUsesThisDevicesGPU`)? The route,
+    /// not just the loaded brain: a Private Cloud turn with Lil loaded runs on Apple's servers.
+    var turnUsesThisDevicesGPU: Bool {
+        BackgroundExitPolicy.turnUsesThisDevicesGPU(
+            localBrainLoaded: currentMLX != nil, privateCloudTurn: privateCloudTurnInFlight
+        )
+    }
+
     func stopForBackground() {
         cancelAutoSpeak()
         Task { await stopSpeakingAnswer() }
         // The Live Activity first: it says Paused for the turn about to be stopped, and holds a background
         // task for one that runs elsewhere (BackgroundExitPolicy decides both, from the same inputs).
-        turnActivityLeavingForBackground(brainRunsOnThisDevicesGPU: currentMLX != nil)
-        if BackgroundExitPolicy.stopsTurn(turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: currentMLX != nil) {
+        turnActivityLeavingForBackground(brainRunsOnThisDevicesGPU: turnUsesThisDevicesGPU)
+        if BackgroundExitPolicy.stopsTurn(turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: turnUsesThisDevicesGPU) {
             chat.stopResponding()
         }
     }
@@ -1408,9 +1424,9 @@ final class AppCore {
     func stopTurnForInactive() {
         // The Live Activity hears about it FIRST: the stopped turn reaches `turnFinished(.stopped)` right after, and
         // the card must already say Paused (and stay quiet on that stop) rather than just end.
-        turnActivity.stoppingAtInactive(turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: currentMLX != nil)
+        turnActivity.stoppingAtInactive(turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: turnUsesThisDevicesGPU)
         if BackgroundExitPolicy.stopsTurnAtInactive(
-            turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: currentMLX != nil
+            turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: turnUsesThisDevicesGPU
         ) {
             chat.stopResponding()
         }

@@ -106,6 +106,26 @@ struct BackgroundExitPolicyTests {
         #expect(body.contains("stopSpeakingAnswer()"))
     }
 
+    @Test("a Private Cloud turn runs on Apple's servers even with Lil loaded here: it is not this device's GPU")
+    func privateCloudTurnIsNotThisGPU() {
+        #expect(BackgroundExitPolicy.turnUsesThisDevicesGPU(localBrainLoaded: true, privateCloudTurn: false))
+        #expect(!BackgroundExitPolicy.turnUsesThisDevicesGPU(localBrainLoaded: true, privateCloudTurn: true))
+        #expect(!BackgroundExitPolicy.turnUsesThisDevicesGPU(localBrainLoaded: false, privateCloudTurn: false))
+        #expect(!BackgroundExitPolicy.turnUsesThisDevicesGPU(localBrainLoaded: false, privateCloudTurn: true))
+    }
+
+    @Test("every stop and the Live Activity read the turn's route, never the loaded brain alone")
+    func theShellReadsTheRoute() throws {
+        let source = try String(contentsOf: Self.shell.appendingPathComponent("AppCore.swift"), encoding: .utf8)
+        #expect(!source.contains("brainRunsOnThisDevicesGPU: currentMLX != nil"), "a Private Cloud turn with Lil loaded")
+        for function in ["func stopForBackground()", "func stopTurnForInactive()"] {
+            let body = try body(of: function, in: "AppCore.swift")
+            #expect(body.contains("brainRunsOnThisDevicesGPU: turnUsesThisDevicesGPU"), "\(function)")
+        }
+        let send = try body(of: "func sendPrivateCloud(", in: "AppCore.swift")
+        #expect(send.contains("privateCloudTurnInFlight = true"))
+    }
+
     @Test("a brain still in memory on the return is taken back, never loaded a second time")
     func theReturnNeverLoadsBesideALiveBrain() throws {
         #expect(BackgroundExitPolicy.onReturn(shedBrainStillLoaded: true) == .takeItBack)

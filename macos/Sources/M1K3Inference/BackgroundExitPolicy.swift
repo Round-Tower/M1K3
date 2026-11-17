@@ -31,11 +31,22 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-17 (#862) — `shedPlan` waits on the chat turn OR any MLX evaluation: a title
 //  prefill outlived the shed by 0.4 s on Kev's phone. Confidence 0.8; the phone check is owed (leave right after a
 //  first exchange, while the title is being made).
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — the first Open is closed: `turnUsesThisDevicesGPU` reads the turn's
+//  route (a Private Cloud turn is not this GPU, even with Lil loaded), and every stop and the Live Activity ask it.
+//  Picking a stopped turn up again on the return stays a design call (Kev). Confidence 0.85.
 //
 
 import Foundation
 
 public enum BackgroundExitPolicy {
+    /// Whether the turn in flight runs on this device's GPU: a local brain is loaded AND the turn is not a Private
+    /// Cloud one. Lil stays loaded through a Private Cloud turn, whose answer comes from Apple's servers, so the
+    /// loaded brain alone stopped (and showed as Paused) a turn that would have finished in the background.
+    /// Home needs no case: activating it releases the local brain.
+    public static func turnUsesThisDevicesGPU(localBrainLoaded: Bool, privateCloudTurn: Bool) -> Bool {
+        localBrainLoaded && !privateCloudTurn
+    }
+
     /// Whether the turn in flight is stopped when the app leaves for the background.
     public static func stopsTurn(turnInFlight: Bool, brainRunsOnThisDevicesGPU: Bool) -> Bool {
         turnInFlight && brainRunsOnThisDevicesGPU
