@@ -42,6 +42,11 @@
 //  `unavailable(modelNotReady)`), as `.replyCheckUnavailable`. Confidence 0.7: two failures and one mechanism;
 //  that every reply needs the on-device model is inferred from them, not documented by Apple.
 //  Open: if Apple ever serves PCC without the on-device model, this refuses a send that would have worked.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — a `serverError` anywhere in the chain is `.unavailable`, not `.other`
+//  (Kev: "Please make that change"): during an Apple-wide outage the phone's notice blamed the question. The marker was
+//  read from Apple's own log line, not from our error's text, so the match on a real error is UNVERIFIED; the failure
+//  line now names the failure it chose so the next refusal settles it. Confidence 0.6.
+//  Open: does a real refusal's description carry `serverError`? Read the next `pcc failed →` line.
 //
 
 import Foundation
@@ -112,8 +117,12 @@ import M1K3LanguageModel
                         // The chain FIRST: the preview spends its 200 characters on the outer
                         // wrapper and stops before the underlying errors, which are the cause.
                         let chain = ErrorChain.summary(error)
-                        Self.log.error("pcc failed: \(chain, privacy: .public) | \(preview, privacy: .public)")
-                        continuation.finish(throwing: PrivateCloudError(Self.failure(for: error)))
+                        let failure = Self.failure(for: error)
+                        Self.log.error("""
+                        pcc failed → \(String(describing: failure), privacy: .public): \(chain, privacy: .public) \
+                        | \(preview, privacy: .public)
+                        """)
+                        continuation.finish(throwing: PrivateCloudError(failure))
                     }
                 }
                 continuation.onTermination = { _ in task.cancel() }
@@ -179,7 +188,24 @@ import M1K3LanguageModel
             if case .rateLimited = error as? LanguageModelSession.GenerationError {
                 return .rateLimited
             }
+            if serverRefused(error) { return .unavailable }
             return .other
+        }
+
+        /// Apple's servers turned the request away. Phone, 2026-11-17, during an Apple-wide outage: every ask failed
+        /// in under a second with `PrivateCloudComputeError: serverError (response-code=forbidden …)` buried under
+        /// `LanguageModelError -1`, which as `.other` read "couldn't answer that one" and blamed the question. The
+        /// marker lives only in text, so the walk reads the description and every underlying error's.
+        static func serverRefused(_ error: any Error, depth: Int = 0) -> Bool {
+            let marker = "serverError"
+            if String(describing: error).contains(marker) { return true }
+            let ns = error as NSError
+            if ns.userInfo.values.contains(where: { ($0 as? String)?.contains(marker) == true }) { return true }
+            guard depth < ErrorChain.maxDepth else { return false }
+            var causes: [any Error] = []
+            if let single = ns.userInfo[NSUnderlyingErrorKey] as? any Error { causes.append(single) }
+            if let many = ns.userInfo[NSMultipleUnderlyingErrorsKey] as? [any Error] { causes.append(contentsOf: many) }
+            return causes.contains { serverRefused($0, depth: depth + 1) }
         }
     }
 #endif

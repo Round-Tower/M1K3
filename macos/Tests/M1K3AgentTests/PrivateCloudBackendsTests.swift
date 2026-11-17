@@ -78,6 +78,34 @@ struct PrivateCloudBackendsTests {
             #expect(PrivateCloudComputeBackend.failure(for: CancellationError()) == .other)
         }
 
+        /// Phone, 2026-11-17, during an Apple-wide outage: every ask failed in under a second with
+        /// `PrivateCloudComputeError: serverError (response-code=forbidden …)` under `LanguageModelError -1`.
+        /// As `.other` the notice read "couldn't answer that one", blaming the question. The server refused it.
+        @available(macOS 27.0, iOS 27.0, visionOS 27.0, *)
+        @Test("a server refusal anywhere in the chain reads as unavailable; the same chain without one stays .other")
+        func serverRefusalIsUnavailable() {
+            func chain(_ root: String) -> NSError {
+                let inference = NSError(
+                    domain: "ModelManagerServices.InferenceError", code: 2008,
+                    userInfo: [NSDebugDescriptionErrorKey: root]
+                )
+                let manager = NSError(
+                    domain: "ModelManagerServices.ModelManagerError", code: 1001,
+                    userInfo: [NSUnderlyingErrorKey: inference]
+                )
+                return NSError(
+                    domain: "FoundationModels.LanguageModelError", code: -1,
+                    userInfo: [NSMultipleUnderlyingErrorsKey: [manager]]
+                )
+            }
+            let refused = chain(
+                "InferenceError::inferenceFailed::PrivateCloudComputeError: serverError "
+                    + "(response-code=forbidden retryAfterDate=2026-11-17T20:19:15Z)"
+            )
+            #expect(PrivateCloudComputeBackend.failure(for: refused) == .unavailable)
+            #expect(PrivateCloudComputeBackend.failure(for: chain("InferenceError::inferenceFailed::other")) == .other)
+        }
+
         /// Found live 2026-11-13: the cloud answered twice and both replies were discarded, because the
         /// on-device model that checks them was not installed. Nothing should be sent in that state.
         @available(macOS 27.0, iOS 27.0, visionOS 27.0, *)
