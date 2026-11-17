@@ -9,6 +9,8 @@
 //  set, shows nothing and never escalates.
 //
 //  Signed: Kev + claude-opus-5, 2026-09-14, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — `stoppedFallbackNotice`: every failure's stopped tail says the
+//  local brain stopped before answering, never that it answered.
 //
 
 import Foundation

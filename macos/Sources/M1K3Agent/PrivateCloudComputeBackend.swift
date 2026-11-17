@@ -46,7 +46,11 @@
 //  (Kev: "Please make that change"): during an Apple-wide outage the phone's notice blamed the question. The marker was
 //  read from Apple's own log line, not from our error's text, so the match on a real error is UNVERIFIED; the failure
 //  line now names the failure it chose so the next refusal settles it. Confidence 0.6.
-//  Open: does a real refusal's description carry `serverError`? Read the next `pcc failed →` line.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 (later) — review fold: only Apple's shape (`serverError (` or
+//  `serverError(`) counts, since an error echoing the person's words could carry the bare word, and the walk stops at
+//  `ErrorChain.maxDepth` like the log line. Tests now prove the walk on causes the description hides. Confidence 0.6.
+//  Open: does a real refusal carry `serverError (`? The next refusal's `pcc failed →` line settles it: `unavailable`
+//  says yes; `other` on a forbidden refusal says the text differs (safe: the old "couldn't answer" copy).
 //
 
 import Foundation
@@ -195,17 +199,23 @@ import M1K3LanguageModel
         /// Apple's servers turned the request away. Phone, 2026-11-17, during an Apple-wide outage: every ask failed
         /// in under a second with `PrivateCloudComputeError: serverError (response-code=forbidden …)` buried under
         /// `LanguageModelError -1`, which as `.other` read "couldn't answer that one" and blamed the question. The
-        /// marker lives only in text, so the walk reads the description and every underlying error's.
-        static func serverRefused(_ error: any Error, depth: Int = 0) -> Bool {
-            let marker = "serverError"
-            if String(describing: error).contains(marker) { return true }
+        /// marker lives only in text, so the walk reads the description and every underlying error's, as far as
+        /// `ErrorChain` reads (so the log line and this mapping see the same chain). Only Apple's shape counts, the
+        /// word straight into its parenthesis: an error that echoes the person's words can carry the bare word.
+        static func serverRefused(_ error: any Error, depth: Int = 1) -> Bool {
+            if carriesRefusal(String(describing: error)) { return true }
             let ns = error as NSError
-            if ns.userInfo.values.contains(where: { ($0 as? String)?.contains(marker) == true }) { return true }
+            if ns.userInfo.values.contains(where: { ($0 as? String).map(carriesRefusal) == true }) { return true }
             guard depth < ErrorChain.maxDepth else { return false }
             var causes: [any Error] = []
             if let single = ns.userInfo[NSUnderlyingErrorKey] as? any Error { causes.append(single) }
             if let many = ns.userInfo[NSMultipleUnderlyingErrorsKey] as? [any Error] { causes.append(contentsOf: many) }
             return causes.contains { serverRefused($0, depth: depth + 1) }
+        }
+
+        /// `serverError (response-code=…` in Apple's log, `serverError(…` as a Swift enum prints.
+        static func carriesRefusal(_ text: String) -> Bool {
+            text.contains("serverError (") || text.contains("serverError(")
         }
     }
 #endif

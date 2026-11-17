@@ -24,6 +24,9 @@
 //  Review: Kev + claude-opus-4-6, 2026-09-16 — M1K3_FM27 env-var gate removed;
 //  now #if canImport(FoundationModels). The FM27 tests always compile on
 //  Xcode 27; @available handles the runtime. Confidence now 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — a server refusal reads `.unavailable`: Apple's shape only (not the
+//  bare word), found through causes the description hides, four levels deep like ErrorChain. Built from hand-made
+//  errors shaped like the phone's outage log; the real error's text is UNVERIFIED (see the backend's Open).
 //
 
 import Foundation
@@ -113,6 +116,67 @@ struct PrivateCloudBackendsTests {
         func preflightRefusesWithoutOnDeviceModel() {
             #expect(PrivateCloudComputeBackend.preflight(onDeviceModelReady: false) == .replyCheckUnavailable)
             #expect(PrivateCloudComputeBackend.preflight(onDeviceModelReady: true) == nil)
+        }
+
+        /// Review catch (2026-11-17): an error whose text echoes the person's words can carry the bare word, e.g. a
+        /// question about `HTTPStatus.serverError`. Only Apple's shape, the word straight into its parenthesis, counts.
+        @available(macOS 27.0, iOS 27.0, visionOS 27.0, *)
+        @Test("the bare word serverError in prose is not a refusal; Apple's serverError( shape is")
+        func serverRefusalNeedsAppleShape() {
+            let prose = Hidden(text: "context too long: why does HTTPStatus.serverError not match 503?")
+            #expect(PrivateCloudComputeBackend.failure(for: prose) == .other)
+            let enumShaped = Hidden(text: "serverError(responseCode: 403)")
+            #expect(PrivateCloudComputeBackend.failure(for: enumShaped) == .unavailable)
+        }
+
+        /// The description of a Swift error need not print its causes, so the walk is what finds a buried refusal:
+        /// here the outer error describes itself as "Hidden" and the refusal is the SECOND of two siblings.
+        @available(macOS 27.0, iOS 27.0, visionOS 27.0, *)
+        @Test("a refusal the description hides is found by walking the causes, past a first sibling")
+        func serverRefusalWalksHiddenCauses() {
+            let refused = Hidden(text: "PrivateCloudComputeError: serverError (response-code=forbidden)")
+            let outer = Hidden(causes: [Hidden(text: "unrelated"), refused])
+            #expect(PrivateCloudComputeBackend.failure(for: outer) == .unavailable)
+        }
+
+        /// The walk stops where `ErrorChain` does (four levels), so the log line and the mapping read the same chain.
+        @available(macOS 27.0, iOS 27.0, visionOS 27.0, *)
+        @Test("the walk reads four levels, as ErrorChain does, and no deeper")
+        func serverRefusalDepthMatchesErrorChain() {
+            func buried(at level: Int) -> Hidden {
+                var error = Hidden(text: "serverError (response-code=forbidden)")
+                for _ in 1 ..< level {
+                    error = Hidden(causes: [error])
+                }
+                return error
+            }
+            #expect(PrivateCloudComputeBackend.failure(for: buried(at: ErrorChain.maxDepth)) == .unavailable)
+            #expect(PrivateCloudComputeBackend.failure(for: buried(at: ErrorChain.maxDepth + 1)) == .other)
+        }
+
+        /// A Swift error that describes itself as "Hidden" whatever it carries: its text and causes reach only the
+        /// bridged NSError's userInfo, the way a framework error's buried cause does.
+        struct Hidden: Error, CustomNSError, CustomStringConvertible {
+            var text: String?
+            var causes: [Hidden] = []
+            var description: String {
+                "Hidden"
+            }
+
+            static var errorDomain: String {
+                "Hidden"
+            }
+
+            var errorCode: Int {
+                1
+            }
+
+            var errorUserInfo: [String: Any] {
+                var info: [String: Any] = [:]
+                if let text { info[NSDebugDescriptionErrorKey] = text }
+                if !causes.isEmpty { info[NSMultipleUnderlyingErrorsKey] = causes.map { $0 as NSError } }
+                return info
+            }
         }
     }
 #endif

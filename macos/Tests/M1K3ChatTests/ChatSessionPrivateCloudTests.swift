@@ -17,6 +17,8 @@
 //  sides; the real PCC backend is verify-owed until the entitlement). Prior: Unknown
 //  Review: Kev + claude-opus-5.5, 2026-11-04 — `cloudStreamingLeakNeverShows`: the PCC stream gets the live leak
 //  guard the local one got (a stepped cloud holds the turn open mid-leak; red without the guard).
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — the route-aware stop (`fallbackIsLocal`) and the stopped fallback's
+//  notice, both ways: stopped before its first word claims no answer, stopped after keeps "answered here".
 //
 
 import Foundation
@@ -417,6 +419,28 @@ struct ChatSessionPrivateCloudTests {
         #expect(notice.text == expected)
         #expect(notice.contextExcluded == true)
         #expect(!session.isResponding)
+    }
+
+    /// The other side of that rewrite (review, 2026-11-17): a fallback stopped AFTER its first words did answer,
+    /// in part, so its bubble stays and the notice keeps saying the local brain answered.
+    @Test("a fallback stopped after its first words keeps its bubble and the answered-here notice")
+    func stoppedMidFallbackKeepsAnsweredNotice() async {
+        let local = GatedResponder(first: "Partly")
+        let session = ChatSession(responder: local)
+        let cloud = FakeCloud(snapshots: [], failure: .other)
+        let sending = Task {
+            await session.sendPrivateCloud(
+                session.privateCloudConsent(for: "hi"), includeConversation: false, backend: cloud,
+                gate: Self.open, localBrainName: "Lil", now: now
+            )
+        }
+        await waitUntil { local.started && session.messages.last?.text.hasPrefix("Partly") == true }
+        session.stopResponding()
+        await sending.value
+
+        #expect(session.messages.count == 3, "the question, the notice and the part-answer")
+        #expect(session.messages[1].text == PrivateCloudFallback.notice(for: .other, localBrain: "Lil", now: now))
+        #expect(session.messages[2].text.hasPrefix("Partly"))
     }
 
     @Test("stop mid-PCC-stream keeps what came, marked and labelled, and tears the stream down")
