@@ -8,6 +8,8 @@
 //  replaces the old) and the palette run (stops between palettes once told to).
 //
 //  Signed: Kev + claude-opus-5-5, 2026-10-20, Confidence 0.85. Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — `PhonePersonaWarmTests`: the phone warms only in front and cool. Its
+//  palette's key parity lives in MLXToolMappingTests, beside the provider that derives the key.
 
 import Foundation
 @testable import M1K3Inference
@@ -220,11 +222,5 @@ struct PhonePersonaWarmTests {
         #expect(!PhonePersonaWarm.warms(appActive: false, backgroundWorkAllowed: true), "iOS refuses background GPU")
         #expect(!PhonePersonaWarm.warms(appActive: true, backgroundWorkAllowed: false), "hot or Low Power")
         #expect(!PhonePersonaWarm.warms(appActive: false, backgroundWorkAllowed: false))
-    }
-
-    @Test("the phone warms one palette, the plain prefix its turns seed from, and no tool palette")
-    func warmsOnlyThePlainPrefix() {
-        #expect(PhonePersonaWarm.palettes.count == 1)
-        #expect(PhonePersonaWarm.palettes.first?.isEmpty == true)
     }
 }

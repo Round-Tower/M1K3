@@ -179,6 +179,9 @@
 //  cancels it. The phone never warmed, so every first turn after a return built it (first word 6.8 s that evening).
 //  Compile-checked; the gain is owed on the phone (the `persona prefix warmed` line after `brain warm: Lil ready`,
 //  and no `persona prefix built` inside the next turn).
+//  Review fold: a look counts as busy too, and a pick or Home cancels the outgoing brain's warm. Open: a look or a
+//  palette turn started while the build is already on the GPU waits up to ~4 s behind it; a build caught by
+//  `.inactive` is refused and lost (caught, logged). Both owed on the phone; neither is worse than a cold first turn.
 
 import AVFoundation
 #if os(iOS)
@@ -1004,6 +1007,7 @@ final class AppCore {
         // The onDone closure is the sole gate writer, mirroring the Mac contract.
 
         warmTask?.cancel()
+        prefixWarmTask?.cancel() // the outgoing brain's prefix: its strong hold would keep its weights beside the new
         warmGeneration += 1 // invalidate any in-flight warm's progress hops
         if tier.mlxModelID == nil {
             // Switching to Mini: release the MLX weights we were holding so the
@@ -1065,6 +1069,7 @@ final class AppCore {
             return
         }
         warmTask?.cancel()
+        prefixWarmTask?.cancel()
         warmGeneration += 1
         // Release local MLX weights — the decode is the Mac's while Home
         // fronts, and holding multi-GB weights idle fights the mobile budget.
@@ -1221,9 +1226,15 @@ final class AppCore {
         UIApplication.shared.applicationState == .active
     }
 
-    /// Build the plain persona prefix now, so the first turn doesn't (`PhonePersonaWarm`). Runs after every ready
-    /// brain, the return after a shed included. A turn sent meanwhile joins the build in flight (one build per key),
-    /// and the warm waits while someone is being answered, as the Mac's does.
+    /// Someone is being answered, or a look is running: the prefix warm waits rather than build beside them.
+    private var warmShouldWait: Bool {
+        chat.isResponding || isLooking
+    }
+
+    /// Build the plain persona prefix now, so the first plain or dispatched turn doesn't (`PhonePersonaWarm`). Runs
+    /// after every ready brain, the return after a shed included. A plain turn sent meanwhile joins the build in
+    /// flight (one build per key); a palette turn or a look queues behind it on the container. Before it starts it
+    /// waits while someone is being answered or a look is running, as the Mac's does; one already on the GPU finishes.
     private func warmPersonaPrefix(_ mlx: MLXBrainProvider) {
         prefixWarmTask?.cancel()
         let info = ProcessInfo.processInfo
@@ -1235,7 +1246,7 @@ final class AppCore {
             await PersonaWarmRun.run(
                 PhonePersonaWarm.palettes,
                 beforeEach: {
-                    await PersonaWarmYield.untilQuiet(busy: { await self?.chat.isResponding ?? false }).goesOn
+                    await PersonaWarmYield.untilQuiet(busy: { await self?.warmShouldWait ?? false }).goesOn
                 },
                 shouldContinue: { !Task.isCancelled },
                 warm: { tools in await mlx?.warmPersonaPrefix(tools: tools) }

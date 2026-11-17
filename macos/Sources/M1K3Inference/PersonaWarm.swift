@@ -28,6 +28,9 @@
 //  shed drops the prefix, so the first Lil turn after a launch and after every return built 1,828 tokens on the
 //  critical path (Kev's iPhone 17 Pro that evening: first word at 6.8 s, the rebuild most of it). It warms the plain
 //  prefix only, in front and cool. Confidence 0.75: the rule is pinned, the gain is owed on the phone.
+//  Open (review): image turns and the agent route seed from the full palette, whose key follows the web toggle, the
+//  corpus and LookAftermath; they still build inline (14.9 s first token on the 11-09 vision log). Not warmed: a
+//  guessed key is a build no turn asks for.
 
 import Foundation
 
@@ -124,9 +127,10 @@ public enum PersonaWarmYield {
 }
 
 /// The phone's warm (2026-11-17). It runs after every ready brain: a launch, a pick, and the return after the
-/// background shed, which drops the prefix. One palette, the plain prefix: the phone's turns seed from it (plain and
-/// dispatched turns alike, read off its log), and a tool palette's key follows the web toggle and the corpus, so a
-/// guessed one would build a prefix no turn asks for (the Mac's 2026-08-12 bug).
+/// background shed, which drops the prefix. One palette, the plain prefix: plain and dispatched turns seed from it
+/// (read off the phone's log and `runDispatchedTurn`). Image turns and the agent route seed from the full palette,
+/// whose key follows the web toggle, the corpus and LookAftermath, so a guessed one would build a prefix no turn asks
+/// for (the Mac's 2026-08-12 bug); those still build on first use.
 public enum PhonePersonaWarm {
     /// The palettes to warm, in order: just the plain prefix.
     public static let palettes: [[ToolDefinition]] = [[]]
