@@ -72,12 +72,15 @@
 //  Review: Kev + claude-fable-5.1, 2026-09-18 (9) — #387 second pass: the link/markup FRAGMENT checks never stripped marks, so
 //  "ẃww.evil.example" passed — the class closed for words, one layer up. `strippingMarks` is now the one helper both use. Also the
 //  first pass's two nits: why the coarse `words` split needs no stripping, and the refused-spellings union hoisted. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (Kev: remove the chat's splash-screen questions, they come out odd and
+//  M1K3 quotes them oddly) — comment only: the canvas chips that showed these ASK lines are gone;
+//  heartbeat.authorChips (off by default) now writes questions nothing shows (follow-up: retire it).
 //
 
 import Foundation
 
 public enum PulseAskLine {
-    /// A chip has to fit the canvas. StarterPrompts holds the real cap
+    /// A chip has to fit the canvas (the chips were removed 2026-11-18; this cap stays with the ASK line). StarterPrompts held the real cap
     /// (`maxChipLength`, 44) and is the final judge — it drops anything longer —
     /// so this number drifting is a lost chip, never a broken layout. The
     /// modules deliberately do not import each other.

@@ -40,6 +40,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (Kev: remove the chat's splash-screen questions, they come out odd and
+//  M1K3 quotes them oddly) — the chip rows are gone; the card keeps its greeting, the import hero and the ingest
+//  morph.
 
 import M1K3Avatar
 import M1K3Chat
@@ -55,9 +58,6 @@ struct GreetingCard: View {
     /// Ingest seam (drives the landing → busy → ask morphs).
     let isIngesting: Bool
     let lastIngestedTitle: String?
-    /// The chips for this blank canvas (StarterPrompts.pick(context:)); each
-    /// carries its own prompt. Empty → no chip row.
-    var starters: [String] = Array(StarterPrompts.doorPool.prefix(1))
     /// The seasonal look in force (nil out of season / opted out) — one costume line for returning users.
     var season: SeasonalLook?
 
@@ -90,10 +90,6 @@ struct GreetingCard: View {
 
             heroZone
                 .frame(maxWidth: 440)
-
-            if lastIngestedTitle == nil, !isIngesting, !starters.isEmpty {
-                chipRows
-            }
         }
         .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85), value: isIngesting)
         .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.85), value: lastIngestedTitle)
@@ -203,30 +199,5 @@ struct GreetingCard: View {
         }
         .padding(.vertical, 24)
         .frame(maxWidth: .infinity)
-    }
-
-    /// Two chips per row — four long chips in one HStack overflow the 440pt
-    /// hero width; a wrapping layout keeps every chip on one line.
-    private var chipRows: some View {
-        let rows = stride(from: 0, to: starters.count, by: 2).map { Array(starters[$0 ..< min($0 + 2, starters.count)]) }
-        return VStack(spacing: 10) {
-            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
-                HStack(spacing: 10) {
-                    ForEach(row, id: \.self) { prompt in
-                        chip(prompt) { onSend(prompt) }
-                    }
-                }
-            }
-        }
-    }
-
-    private func chip(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.callout)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-        }
-        .buttonStyle(.glass)
     }
 }
