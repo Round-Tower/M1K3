@@ -57,6 +57,7 @@
 //  the gate; then they are live with no flag move. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-11-15 — #839: `browserContextProvider` also reads the voice page's own slot
 //  (`VoicePageContext`) when the review panel shows nothing. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — deepBrainAvailable reads Big through the WeightsRefresh resolver.
 
 import Foundation
 import M1K3Agent
@@ -417,10 +418,10 @@ extension AppEnvironment {
         let resident = UserDefaults.standard.string(forKey: selectedBrainKey)
             .flatMap(BrainTier.init(persisted:)) ?? .mini
         if resident == .big { return true }
-        guard let bigID = BrainTier.big.mlxModelID else { return false }
+        let big = Self.weightsResolution(for: .big, inventory: LocalModelInventory())
         return DeepDiveTarget.plan(
             resident: resident,
-            bigWeightsPresent: LocalModelInventory().isInstalled(modelID: bigID),
+            bigWeightsPresent: big?.isOnDisk ?? false,
             physicalMemoryGB: Double(ProcessInfo.processInfo.physicalMemory) / 1_073_741_824
         ).isEscalation
     }

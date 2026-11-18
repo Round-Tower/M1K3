@@ -25,6 +25,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-16 (merge with #858) — `stoppingAtInactive`: master now stops an on-device
 //  turn at `.inactive`, so Paused is written THERE, before the stop; its notice waits for the true background
 //  (a Control Center pull would otherwise notify someone looking at the app). Confidence 0.7.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — `beginGrace` refreshes the working card (TurnActivityStaleness), and the
+//  exit's GPU flag is the turn's route now (a Private Cloud turn with Lil loaded gets the grace). Confidence 0.8.
 
 import Foundation
 import M1K3Inference
@@ -205,6 +207,9 @@ public final class TurnActivityDriver {
         // Only a turn this driver follows ends the task (`turnFinished`); a voice turn has no such end.
         guard following, graceToken == nil else { return }
         graceToken = tasks.begin(name: "app.m1k3.turn") { [weak self] in self?.graceExpired() }
+        // The card's stale date counts from here: if iOS kills the app before Ready or Paused is written, the
+        // card stops saying "thinking" two minutes after the person left, not two minutes after the last phase.
+        perform(policy.refreshed())
     }
 
     /// Time is up and the turn freezes: write Paused best-effort (not awaited), and give the task back

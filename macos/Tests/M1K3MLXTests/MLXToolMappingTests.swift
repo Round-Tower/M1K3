@@ -24,6 +24,8 @@
 //  (Qwen3.5-4B-MLX-4bit, #517) against the pre-open rule.
 //  Review: Kev + claude-opus-5.5, 2026-10-28 — Qwen3.6-35B-A3B pins both name arms (pre-open `<think>`, `.qwen35`
 //  dialect), from the MoE Big audition.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — `phoneWarmKeyIsThePlainTurnKey`: the phone's prefix warm and the plain
+//  turn derive one key (review fold; a drift would make every warm a wasted build).
 
 import Foundation
 import M1K3Inference
@@ -82,6 +84,19 @@ struct MLXPrefixInputsTests {
         let inputs = MLXToolMapping.prefixInputs(for: [])
         #expect(inputs.specs == nil)
         #expect(inputs.toolNames.isEmpty)
+    }
+
+    /// The phone warms `PhonePersonaWarm.palettes` (2026-11-17) so its first plain turn finds the prefix built. If
+    /// the warm's key ever drifts from the plain turn's, every warm is a ~4 s build no turn asks for (the Mac's
+    /// 2026-08-12 bug), and nothing else would notice.
+    @Test("the phone's warm palette derives exactly the plain turn's key")
+    func phoneWarmKeyIsThePlainTurnKey() throws {
+        let provider = MLXBrainProvider(modelID: "mlx-community/Qwen3.5-4B-MLX-4bit")
+        let palette = try #require(PhonePersonaWarm.palettes.first)
+        let inputs = MLXToolMapping.prefixInputs(for: palette)
+        #expect(PhonePersonaWarm.palettes.count == 1)
+        #expect(inputs.specs == nil, "the plain turn renders no tool specs")
+        #expect(provider.toolTurnCacheKey(toolNames: inputs.toolNames) == provider.toolTurnCacheKey(toolNames: []))
     }
 
     @Test("specs are exactly toolSpec(from:) per tool, in canonical order")

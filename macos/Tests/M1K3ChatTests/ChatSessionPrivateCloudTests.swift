@@ -17,6 +17,8 @@
 //  sides; the real PCC backend is verify-owed until the entitlement). Prior: Unknown
 //  Review: Kev + claude-opus-5.5, 2026-11-04 — `cloudStreamingLeakNeverShows`: the PCC stream gets the live leak
 //  guard the local one got (a stepped cloud holds the turn open mid-leak; red without the guard).
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — the route-aware stop (`fallbackIsLocal`) and the stopped fallback's
+//  notice, both ways: stopped before its first word claims no answer, stopped after keeps "answered here".
 //
 
 import Foundation
@@ -355,6 +357,92 @@ struct ChatSessionPrivateCloudTests {
         }
     }
 
+    @Test("while Private Cloud streams, the turn is on Private Cloud; when it is stopped, nothing is")
+    func answeringOnPrivateCloudWhileItStreams() async {
+        let session = ChatSession(responder: CountingResponder())
+        let cloud = HangingCloud(snapshots: ["The first half"])
+        let consent = session.privateCloudConsent(for: "tell me a story")
+        #expect(!session.answeringOnPrivateCloud)
+        let sending = Task {
+            await session.sendPrivateCloud(
+                consent, includeConversation: false, backend: cloud, gate: Self.open, localBrainName: "Lil", now: now
+            )
+        }
+        await waitUntil { session.messages.last?.text == "The first half" }
+        #expect(session.answeringOnPrivateCloud)
+        session.stopResponding()
+        await sending.value
+        #expect(!session.answeringOnPrivateCloud)
+    }
+
+    /// Review of the route-aware stop (2026-11-17): a failed Private Cloud turn falls back to the LOCAL brain inside
+    /// the same `sendPrivateCloud` call, so "a Private Cloud send is in flight" is not "the answer is off this GPU".
+    @Test("a Private Cloud failure's local fallback is NOT on Private Cloud: the exit must stop it like any Lil turn")
+    func fallbackIsLocal() async {
+        let local = GatedResponder()
+        let session = ChatSession(responder: local)
+        let cloud = FakeCloud(snapshots: [], failure: .network)
+        let sending = Task {
+            await session.sendPrivateCloud(
+                session.privateCloudConsent(for: "hi"), includeConversation: false, backend: cloud,
+                gate: Self.open, localBrainName: "Lil", now: now
+            )
+        }
+        await waitUntil { local.started }
+        #expect(session.isResponding)
+        #expect(!session.answeringOnPrivateCloud, "the fallback runs on this device")
+        local.release()
+        await sending.value
+        #expect(!session.answeringOnPrivateCloud)
+    }
+
+    /// Phone, 2026-11-17: PCC refused, the Lil fallback started, and leaving the app stopped it before its first
+    /// word. The empty answer goes, so the notice is the whole reply; it must not say Lil answered.
+    @Test("a fallback stopped before its first word leaves a notice that claims no answer")
+    func stoppedFallbackClaimsNoAnswer() async throws {
+        let local = GatedResponder(first: nil)
+        let session = ChatSession(responder: local)
+        let cloud = FakeCloud(snapshots: [], failure: .other)
+        let sending = Task {
+            await session.sendPrivateCloud(
+                session.privateCloudConsent(for: "hi"), includeConversation: false, backend: cloud,
+                gate: Self.open, localBrainName: "Lil", now: now
+            )
+        }
+        await waitUntil { local.started }
+        session.stopResponding()
+        await sending.value
+
+        #expect(session.messages.count == 2, "the question and the notice: the empty local bubble goes")
+        let notice = try #require(session.messages.last)
+        let expected = PrivateCloudFallback.notice(for: .other, localBrain: "Lil", now: now, localStopped: true)
+        #expect(notice.text == expected)
+        #expect(notice.contextExcluded == true)
+        #expect(!session.isResponding)
+    }
+
+    /// The other side of that rewrite (review, 2026-11-17): a fallback stopped AFTER its first words did answer,
+    /// in part, so its bubble stays and the notice keeps saying the local brain answered.
+    @Test("a fallback stopped after its first words keeps its bubble and the answered-here notice")
+    func stoppedMidFallbackKeepsAnsweredNotice() async {
+        let local = GatedResponder(first: "Partly")
+        let session = ChatSession(responder: local)
+        let cloud = FakeCloud(snapshots: [], failure: .other)
+        let sending = Task {
+            await session.sendPrivateCloud(
+                session.privateCloudConsent(for: "hi"), includeConversation: false, backend: cloud,
+                gate: Self.open, localBrainName: "Lil", now: now
+            )
+        }
+        await waitUntil { local.started && session.messages.last?.text.hasPrefix("Partly") == true }
+        session.stopResponding()
+        await sending.value
+
+        #expect(session.messages.count == 3, "the question, the notice and the part-answer")
+        #expect(session.messages[1].text == PrivateCloudFallback.notice(for: .other, localBrain: "Lil", now: now))
+        #expect(session.messages[2].text.hasPrefix("Partly"))
+    }
+
     @Test("stop mid-PCC-stream keeps what came, marked and labelled, and tears the stream down")
     func stopMidStream() async throws {
         let responder = CountingResponder()
@@ -465,5 +553,31 @@ private struct StrangeCloud: PrivateCloudAnswering {
 
     func answer(instructions _: String, prompt _: String) -> AsyncThrowingStream<String, any Error> {
         AsyncThrowingStream { $0.finish(throwing: Weird()) }
+    }
+}
+
+/// A local brain whose answer waits for `release()`, so a test can look at the session mid-answer.
+private final class GatedResponder: RAGResponding, @unchecked Sendable {
+    private let lock = NSLock()
+    private var gate: AsyncStream<String>.Continuation?
+    var started: Bool {
+        lock.withLock { gate != nil }
+    }
+
+    /// What the local brain says at once; nil = silent until released (a stop lands before its first word).
+    private let first: String?
+    init(first: String? = "local") {
+        self.first = first
+    }
+
+    func answerStreaming(_: String) async throws -> (sources: [ChunkHit], stream: AsyncStream<String>) {
+        let (stream, continuation) = AsyncStream<String>.makeStream()
+        if let first { continuation.yield(first) }
+        lock.withLock { gate = continuation }
+        return ([], stream)
+    }
+
+    func release() {
+        lock.withLock { gate?.finish() }
     }
 }

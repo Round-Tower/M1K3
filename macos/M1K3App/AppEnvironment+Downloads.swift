@@ -39,6 +39,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (#570 bot fold) — `settleSemanticQueue`: a start or a drop now disarms the
 //  watch and cancels the heat nudge, so a retry after a drop is evaluated at once (both passes flagged the stuck
 //  `semanticWatchArmed`); the any-brain-fetch hold is documented as intended. Confidence 0.75.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — the scan reads each brain's predecessor (WeightsRefresh); the row
+//  offers Update / Switch through WeightsUpdate; Remove takes the tier's whole lineage.
 
 import Foundation
 import M1K3Inference
@@ -54,6 +56,9 @@ final class DownloadsLedger {
     var installed: Set<DownloadKind> = []
     /// Items with some bytes on disk but not all (a cancelled or interrupted fetch).
     var partial: Set<DownloadKind> = []
+    /// Brains whose PREDECESSOR is complete on disk (WeightsRefresh): with the current weights not complete,
+    /// the row offers the update instead of a download.
+    var predecessorComplete: Set<DownloadKind> = []
     /// False until the first scan lands, so no row flashes "Download" for something unread (N1).
     var scanned = false
     /// Removals in flight (B3): busy, not startable, not loadable.
@@ -183,6 +188,10 @@ extension AppEnvironment {
         case .lil, .big, .pocket:
             guard let tier = kind.brainTier else { return facts }
             facts.inUse = DownloadUsePolicy.isBrainInUse(tier, brainUseSnapshot)
+            facts.update = weightsUpdate(
+                for: tier, currentComplete: facts.installed,
+                predecessorComplete: ledger.predecessorComplete.contains(kind)
+            )
             if let fraction = ledger.brainFetch[kind] {
                 facts.load = .progress(fraction)
             } else if case let .fetching(fraction) = brainUpgrade, brainUpgradeTarget == tier {
@@ -390,8 +399,11 @@ extension AppEnvironment {
             let scan = await Task.detached(priority: .utility) { () -> DiskScan in
                 var scan = DiskScan()
                 for kind in DownloadKind.allCases {
-                    guard let id = kind.brainTier?.mlxModelID else { continue }
+                    guard let tier = kind.brainTier, let id = tier.lineageMLXModelIDs.first else { continue }
                     scan.record(kind, brains.installState(modelID: id))
+                    if let previous = tier.predecessorMLXModelID, brains.installState(modelID: previous) == .complete {
+                        scan.predecessorComplete.insert(kind)
+                    }
                 }
                 if let embedder { scan.record(.semanticMemory, embedder.installState(modelID: DownloadSizes.embedderRepoID)) }
                 if WhisperKitProvider.isModelDownloaded(model: whisperModel, downloadBase: whisperBase) {
@@ -408,6 +420,7 @@ extension AppEnvironment {
             guard let self, ledger.refreshGeneration == generation else { return }
             ledger.installed = scan.installed
             ledger.partial = scan.partial
+            ledger.predecessorComplete = scan.predecessorComplete
             ledger.scanned = true
             if let afm = scan.afm { ledger.afm = afm }
             if onAppear { refreshRetiredWeights() }
@@ -418,6 +431,7 @@ extension AppEnvironment {
     private struct DiskScan {
         var installed: Set<DownloadKind> = []
         var partial: Set<DownloadKind> = []
+        var predecessorComplete: Set<DownloadKind> = []
         var afm: AFMAvailability?
 
         mutating func record(_ kind: DownloadKind, _ state: LocalModelInventory.InstallState) {
@@ -501,9 +515,12 @@ extension AppEnvironment {
         }
         switch kind {
         case .lil, .big, .pocket:
-            guard let modelID = kind.brainTier?.mlxModelID else { return }
+            // The tier's whole lineage (WeightsRefresh): its update and the previous weights both go.
+            guard let modelIDs = kind.brainTier?.lineageMLXModelIDs, !modelIDs.isEmpty else { return }
             let inventory = brainInventory
-            removeOffMain(kind) { try inventory.remove(modelID: modelID) }
+            removeOffMain(kind) { for modelID in modelIDs {
+                try inventory.remove(modelID: modelID)
+            } }
         case .semanticMemory:
             let inventory = LocalModelInventory.embedder()
             removeOffMain(kind) { try inventory?.remove(modelID: DownloadSizes.embedderRepoID) }

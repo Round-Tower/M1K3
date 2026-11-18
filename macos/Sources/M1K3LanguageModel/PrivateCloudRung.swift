@@ -46,6 +46,9 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-13 — `PrivateCloudFailure.replyCheckUnavailable`: the on-device model that
 //  checks every reply is not installed, so nothing is sent (see PrivateCloudComputeBackend). Confidence 0.8.
 //
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — `PrivateCloudFallback.notice(localStopped:)`: when the local brain
+//  was stopped before its first word the line says so instead of claiming it answered (seen on the phone).
+//  Confidence 0.9.
 
 import Foundation
 
@@ -242,8 +245,15 @@ public enum PrivateCloudFailure: Sendable, Equatable {
 /// The one sentence shown above the local brain's answer when PCC couldn't
 /// answer. Never an empty bubble, and never a silent swap of brains.
 public enum PrivateCloudFallback {
-    public static func notice(for failure: PrivateCloudFailure, localBrain: String, now: Date) -> String {
-        let tail = ", so \(localBrain) answered here instead."
+    /// `localStopped`: the local brain was stopped before its first word (the user's Stop, or the app leaving the
+    /// screen on a phone, which can't run Lil or Big behind the lock). Its empty answer is removed, so this line is
+    /// the whole reply and must not claim an answer.
+    public static func notice(
+        for failure: PrivateCloudFailure, localBrain: String, now: Date, localStopped: Bool = false
+    ) -> String {
+        let tail = localStopped
+            ? ", and \(localBrain) stopped before answering."
+            : ", so \(localBrain) answered here instead."
         switch failure {
         case .rateLimited:
             return "Private Cloud Compute asked me to slow down" + tail

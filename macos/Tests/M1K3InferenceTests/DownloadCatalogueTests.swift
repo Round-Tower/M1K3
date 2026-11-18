@@ -9,6 +9,8 @@
 //  Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.8 (pure table; the pane
 //  and the downloads behind it are verify-by-launch). Prior: none (new file).
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — C3 removable-when-on-disk, B4 partial, B3 removing, N1 unscanned, B6 re-indexing, N5 failed-selected. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — a brain's weights update (WeightsRefresh): offered, fetching, ready
+//  to switch, and a removal still first.
 
 @testable import M1K3Inference
 import Testing
@@ -119,6 +121,47 @@ struct DownloadCatalogueTests {
         // N5: the selected brain whose load failed must show the failure with a retry, not "In use".
         #expect(DownloadState.resolve(.init(installed: true, load: .failed(message: "x"), inUse: true)) == .failed("x"))
         #expect(DownloadState.resolve(.init(installed: false, load: .failed(message: "x"), inUse: false)) == .failed("x"))
+    }
+
+    // MARK: - Weights updates (WeightsRefresh)
+
+    @Test("the previous weights serving and the update not fetched: an offer, never a Download for a brain that works")
+    func updateAvailable() {
+        let lil = Self.item(.lil, in: Self.items(facts: [.lil: .init(installed: false, inUse: true, update: .available)]))
+        #expect(lil?.state == .updateAvailable)
+        #expect(lil?.actions == [.download], "the tap that fetches the update")
+        let partly = Self.item(.lil, in: Self.items(facts: [
+            .lil: .init(installed: false, inUse: true, partial: true, update: .available),
+        ]))
+        #expect(partly?.state == .updateAvailable, "a half-fetched update resumes from the same offer")
+        let idle = Self.item(.lil, in: Self.items(facts: [.lil: .init(installed: false, inUse: false, update: .available)]))
+        #expect(idle?.actions == [.download, .remove], "another brain picked: the old weights may go")
+    }
+
+    @Test("an update fetching shows its progress and can be cancelled; a failed one can be retried")
+    func updateFetching() {
+        let fetching = Self.item(.lil, in: Self.items(facts: [
+            .lil: .init(installed: false, load: .progress(0.4), inUse: true, update: .available),
+        ]))
+        #expect(fetching?.state == .downloading(fraction: 0.4))
+        #expect(fetching?.actions == [.cancel])
+        let failed = Self.item(.lil, in: Self.items(facts: [
+            .lil: .init(installed: false, load: .failed(message: "x"), inUse: true, update: .available),
+        ]))
+        #expect(failed?.state == .failed("x"))
+        #expect(failed?.actions == [.download], "the serving previous weights are never offered for removal")
+    }
+
+    @Test("the update complete while the previous weights still serve: one tap switches, nothing else")
+    func updateReady() {
+        let lil = Self.item(.lil, in: Self.items(facts: [.lil: .init(installed: true, inUse: true, update: .ready)]))
+        #expect(lil?.state == .updateReady)
+        #expect(lil?.actions == [.useUpdate])
+    }
+
+    @Test("a removal still wins over an update's states")
+    func removingBeatsUpdate() {
+        #expect(DownloadState.resolve(.init(installed: true, removing: true, update: .ready)) == .removing)
     }
 
     // MARK: - Actions

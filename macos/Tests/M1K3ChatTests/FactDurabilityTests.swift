@@ -15,6 +15,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-27 — #699: pins why the distiller prompt mandates
 //  "prefers"/"wants" for style facts: those survive, "asked for" and "the assistant" do not.
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — the story request and the past-tense word-use rows from Kev's
+//  iPhone, red first, with their near-misses (habitual "uses the word", "wants to write a story", compounds).
 //
 
 @testable import M1K3Chat
@@ -156,6 +158,41 @@ struct FactDurabilityTests {
                 FactDurabilityPolicy.classify(fact) == .durable,
                 "near-miss must survive: \(fact)"
             )
+        }
+    }
+
+    // MARK: - Phone, 2026-11-17: two rows Mini distilled from one chat ("a 500-word story, please")
+
+    @Test("a story the user asked for, and the words they used asking, are turns, not facts")
+    func storyRequestAndWordUseAreTransient() {
+        for fact in [
+            "The user wants a story of length 500 words.",
+            "The user wants a short bedtime story about a fox.",
+            "The user repeatedly used the word \"Please\" as a request indicator.",
+            "Kev has used the phrase \"go on\" to ask for more.",
+        ] {
+            #expect(
+                FactDurabilityPolicy.classify(fact) == .transient(.speechAct),
+                "should be a speech act: \(fact)"
+            )
+        }
+    }
+
+    @Test("a habit of speech, a wish to write, and a story-shaped noun stay durable")
+    func storyAndWordNearMissesSurvive() {
+        for fact in [
+            // Habitual present tense is a trait of the person; the past tense reported a turn.
+            "Kev uses the word \"grand\" for everything.",
+            // An aspiration carries content beyond the turn.
+            "Kev wants to write a story for his niece one day.",
+            // A compound is not the noun.
+            "Kev wants a story-driven game for his studio.",
+            "Kev wants a storytelling podcast of his own.",
+            // A third party's wish, through the possessive guard.
+            "Kev's daughter wants a story every night.",
+            "The user wants a dog.",
+        ] {
+            #expect(FactDurabilityPolicy.classify(fact) == .durable, "near-miss must survive: \(fact)")
         }
     }
 

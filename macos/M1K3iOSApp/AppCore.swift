@@ -169,6 +169,24 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-16 — `turnActivity` + the begin/end hooks in `send` and `sendPrivateCloud`, and
 //  `stopForBackground` tells the Live Activity first (Paused for a stopped turn, a background-task grace for one that
 //  runs elsewhere). Compile-checked; owes a try on a phone.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 (#862) — `releaseForBackground` also waits on `MLXBrainProvider.evaluating`
+//  (a title or a distillation the exit does not stop). Phone check owed.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — the exit's stops ask `turnUsesThisDevicesGPU` (the route, read off the
+//  session's streaming answer), so a Private Cloud answer with Lil loaded runs on in the background instead of being
+//  stopped and shown Paused, while a failed one's local fallback is still stopped like any Lil turn.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — `warmPersonaPrefix`: after every ready brain (launch, pick, the return
+//  after a shed) the plain persona prefix is built in front, when cool, waiting while someone is answered; the shed
+//  cancels it. The phone never warmed, so every first turn after a return built it (first word 6.8 s that evening).
+//  Compile-checked; the gain is owed on the phone (the `persona prefix warmed` line after `brain warm: Lil ready`,
+//  and no `persona prefix built` inside the next turn).
+//  Review fold: a look counts as busy too, and a pick or Home cancels the outgoing brain's warm. Open: a look or a
+//  palette turn started while the build is already on the GPU waits up to ~4 s behind it; a build caught by
+//  `.inactive` is refused and lost (caught, logged). Both owed on the phone; neither is worse than a cold first turn.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — every tier-to-folder site (restore consent, the launch slot, the
+//  re-pick guard, the warm, the return's take-back) goes through the WeightsRefresh resolver; the warm's ready
+//  refreshes the update row.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (pre-push review fold) — selectBrain clears the update row; a shed
+//  brain on the old weights is released before the new ones load; the warm's download check reads .complete.
 //  Review: Kev + claude-opus-5.5, 2026-11-18 (Kev: remove the chat's splash-screen questions, they come out odd and
 //  M1K3 quotes them oddly) — recentMemoryTitles (the chips' only reader) is gone.
 
@@ -340,6 +358,9 @@ final class AppCore {
     /// A background shed waiting (at most `BackgroundExitPolicy.shedWaitLimit`) for the stopped turn to exit.
     /// The return cancels it: the brain was never let go of.
     private var shedWaitTask: Task<Void, Never>?
+    /// The plain persona prefix built after a ready brain (`warmPersonaPrefix`). The shed and the next warm cancel it;
+    /// a build already on the GPU finishes (the shed waits for it like any evaluation).
+    private var prefixWarmTask: Task<Void, Never>?
     /// Monotonic token: a late-arriving warm progress hop only applies if it still
     /// matches the current generation, so a brain switch mid-warm can't be clobbered
     /// by the abandoned download's callbacks (the Mac AppEnvironment's stale-hop guard).
@@ -418,6 +439,19 @@ final class AppCore {
     /// A transient note about the brain choice (e.g. "Lil runs on a real device"
     /// on the Simulator). Surfaced in Settings under the picker.
     private(set) var brainNote: String?
+    /// A brain's weights update (WeightsRefresh), for Settings ▸ Brain: offered, fetching (`weightsUpdateFraction`),
+    /// ready to switch, or the old weights left to remove (`leftoverWeights`). Refreshed on transitions.
+    var weightsUpdate: WeightsUpdate?
+    var weightsUpdateFraction: Double?
+    var weightsUpdateFailure: String?
+    var leftoverWeights: InstalledWeights?
+    @ObservationIgnored var weightsUpdateTask: Task<Void, Never>?
+    @ObservationIgnored var weightsUpdateRefreshGeneration = 0
+    /// The repo the local MLX brain has loaded (nil when none): what the update row compares against.
+    var servingMLXModelID: String? {
+        currentMLX?.modelIdentifier
+    }
+
     /// #237: the tier the launch restore held back because it needs a download
     /// nobody tapped for. The chat hint offers it; accepting is a normal pick.
     private(set) var pendingBrainDownloadOffer: BrainTier?
@@ -784,7 +818,8 @@ final class AppCore {
         switch BrainRestoreConsent.resolve(
             persisted: persisted,
             eased: persisted.easedToOfferedMini(afm: afm.availabilityState),
-            staged: { tier in tier.mlxModelID.map { inventory.isInstalled(modelID: $0) } ?? false }
+            // On disk = loadable without a download, the predecessor included (WeightsRefresh).
+            staged: { tier in Self.weightsResolution(for: tier, inventory: inventory)?.isOnDisk ?? false }
         ) {
         case let .warm(tier):
             afmEased = tier
@@ -814,7 +849,7 @@ final class AppCore {
         // Build the inference slot on the chosen brain's backend. Mini uses AFM
         // directly; an MLX brain starts on a provider that's warmed below.
         let initialBackend: any InferenceProvider
-        if let modelID = brain.mlxModelID, Self.mlxAvailable {
+        if let modelID = Self.weightsResolution(for: brain, inventory: inventory)?.loadID, Self.mlxAvailable {
             let mlx = MLXBrainProvider(modelID: modelID, maxTokens: Self.generationCap(for: brain))
             currentMLX = mlx
             initialBackend = mlx
@@ -973,7 +1008,7 @@ final class AppCore {
         // multi-GB load for nothing. Re-tapping Mini when already on Mini is also a
         // no-op. A switch that's mid-warm still falls through (lets the user cancel).
         if tier == selectedBrain, !leavingHome {
-            switch tier.mlxModelID {
+            switch loadableModelID(for: tier) {
             case nil where brainLoad == .idle:
                 return
             case let modelID? where brainLoad == .ready && currentMLX?.modelIdentifier == modelID:
@@ -983,6 +1018,8 @@ final class AppCore {
             }
         }
 
+        // The update row was about the outgoing brain (and a Switch re-picks the same one): stop its fetch, clear it.
+        resetWeightsUpdateForSwitch()
         selectedBrain = tier
         UserDefaults.standard.set(tier.rawValue, forKey: Self.selectedBrainKey)
         // The first-run gate (hasChosenBrainKey) is written by the onboarding
@@ -993,6 +1030,7 @@ final class AppCore {
         // The onDone closure is the sole gate writer, mirroring the Mac contract.
 
         warmTask?.cancel()
+        prefixWarmTask?.cancel() // the outgoing brain's prefix: its strong hold would keep its weights beside the new
         warmGeneration += 1 // invalidate any in-flight warm's progress hops
         if tier.mlxModelID == nil {
             // Switching to Mini: release the MLX weights we were holding so the
@@ -1054,6 +1092,7 @@ final class AppCore {
             return
         }
         warmTask?.cancel()
+        prefixWarmTask?.cancel()
         warmGeneration += 1
         // Release local MLX weights — the decode is the Mac's while Home
         // fronts, and holding multi-GB weights idle fights the mobile budget.
@@ -1081,7 +1120,9 @@ final class AppCore {
     }
 
     private func warmSelectedBrain() {
-        guard let modelID = selectedBrain.mlxModelID else { return }
+        // The repo the brain loads now (WeightsRefresh): its predecessor until the update is taken. Never the bare
+        // id: the load fetches whatever is missing, so it would download the update unasked.
+        guard let modelID = loadableModelID(for: selectedBrain) else { return }
         let tierName = selectedBrain.displayName
         warmGeneration += 1
         let generation = warmGeneration
@@ -1103,7 +1144,7 @@ final class AppCore {
             do {
                 // The bytes first, to disk only (no Metal), carried by iOS if the person leaves the app (a continued-
                 // processing task). MLX may load only in the foreground, so the download and the load are two steps.
-                if !LocalModelInventory().isInstalled(modelID: modelID) {
+                if LocalModelInventory().installState(modelID: modelID) != .complete {
                     // Room first: a full phone used to fail every attempt, late, in words that blamed the network.
                     if let downloadMB = selectedBrain.approxDownloadMB,
                        let short = DownloadSpacePreflight.shortfallMB(
@@ -1145,7 +1186,9 @@ final class AppCore {
                 currentMLX = mlx
                 activeProvider.setProvider(mlx)
                 brainLoad = .ready
-                Self.log.notice("brain warm: \(tierName, privacy: .public) ready")
+                Self.log.notice("brain warm: \(tierName, privacy: .public) ready (\(modelID, privacy: .public))")
+                warmPersonaPrefix(mlx)
+                refreshWeightsUpdate()
             } catch {
                 if mlx !== currentMLX { mlx.releaseMemory() }
                 guard generation == warmGeneration else { return }
@@ -1209,6 +1252,34 @@ final class AppCore {
         UIApplication.shared.applicationState == .active
     }
 
+    /// Someone is being answered, or a look is running: the prefix warm waits rather than build beside them.
+    private var warmShouldWait: Bool {
+        chat.isResponding || isLooking
+    }
+
+    /// Build the plain persona prefix now, so the first plain or dispatched turn doesn't (`PhonePersonaWarm`). Runs
+    /// after every ready brain, the return after a shed included. A plain turn sent meanwhile joins the build in
+    /// flight (one build per key); a palette turn or a look queues behind it on the container. Before it starts it
+    /// waits while someone is being answered or a look is running, as the Mac's does; one already on the GPU finishes.
+    private func warmPersonaPrefix(_ mlx: MLXBrainProvider) {
+        prefixWarmTask?.cancel()
+        let info = ProcessInfo.processInfo
+        let cool = CoolHeadPolicy.allowsBackgroundWork(
+            CoolHeadPolicy.target(thermal: info.thermalState, lowPower: info.isLowPowerModeEnabled)
+        )
+        guard PhonePersonaWarm.warms(appActive: Self.appIsActive, backgroundWorkAllowed: cool) else { return }
+        prefixWarmTask = Task.detached(priority: .utility) { [weak self, weak mlx] in
+            await PersonaWarmRun.run(
+                PhonePersonaWarm.palettes,
+                beforeEach: {
+                    await PersonaWarmYield.untilQuiet(busy: { await self?.warmShouldWait ?? false }).goesOn
+                },
+                shouldContinue: { !Task.isCancelled },
+                warm: { tools in await mlx?.warmPersonaPrefix(tools: tools) }
+            )
+        }
+    }
+
     /// Measure Mini's fixed instructions using the platform tokenizer. This is
     /// intentionally detached: prompt accounting must not delay launch or a
     /// brain switch, and HistoryBudgetPolicy safely uses its conservative
@@ -1261,19 +1332,26 @@ final class AppCore {
     /// A turn the exit stopped may still be unwinding: its last step is on the GPU. Releasing buffers under a
     /// running evaluation is its own hazard (#858), so with a turn in flight the shed waits for it, bounded by
     /// `BackgroundExitPolicy.shedWaitLimit`, then sheds anyway (a backgrounded 3.5 GB process is jetsam's).
+    /// "In flight" is the chat turn OR any MLX evaluation (`MLXBrainProvider.evaluating`): a title or a
+    /// distillation the exit does not stop counts too (#862).
     func releaseForBackground() {
         guard brainLoad == .ready, currentMLX != nil else { return }
         shedWaitTask?.cancel()
         let clock = ContinuousClock()
         let began = clock.now
-        guard BackgroundExitPolicy.shedPlan(turnStillRunning: chat.isResponding, waited: .zero) == .waitForTurn else {
+        // A chat answer only holds the shed when it runs on this GPU: a Private Cloud one streams from Apple's servers.
+        guard BackgroundExitPolicy.shedPlan(
+            chatResponding: chat.isResponding && turnUsesThisDevicesGPU, mlxEvaluating: MLXBrainProvider.evaluating,
+            waited: .zero
+        ) == .waitForTurn else {
             shedBrain()
             return
         }
         shedWaitTask = Task { [weak self] in
             while let self, !Task.isCancelled {
                 let plan = BackgroundExitPolicy.shedPlan(
-                    turnStillRunning: chat.isResponding, waited: clock.now - began
+                    chatResponding: chat.isResponding && turnUsesThisDevicesGPU,
+                    mlxEvaluating: MLXBrainProvider.evaluating, waited: clock.now - began
                 )
                 if plan == .shedNow { break }
                 try? await Task.sleep(for: .milliseconds(25))
@@ -1288,6 +1366,7 @@ final class AppCore {
     func shedBrain() {
         guard brainLoad == .ready, currentMLX != nil else { return }
         warmTask?.cancel()
+        prefixWarmTask?.cancel()
         warmGeneration += 1 // invalidate any in-flight warm's progress hops
         currentMLX?.releaseMemory()
         shedMLX = currentMLX
@@ -1318,10 +1397,15 @@ final class AppCore {
         guard selectedBrain.mlxModelID != nil, currentMLX == nil, brainLoad == .idle else { return }
         // Whoever still holds the shed brain kept its weights in memory. Loading again beside it got the app
         // killed in front (two copies of Lil). Take the same one back: the warm below reuses `currentMLX`.
-        let stillLoaded = shedMLX.flatMap { $0.modelIdentifier == selectedBrain.mlxModelID ? $0 : nil }
+        let loadable = loadableModelID(for: selectedBrain)
+        let stillLoaded = shedMLX.flatMap { $0.modelIdentifier == loadable ? $0 : nil }
         if BackgroundExitPolicy.onReturn(shedBrainStillLoaded: stillLoaded != nil) == .takeItBack {
             currentMLX = stillLoaded
             Self.log.notice("the shed brain was still loaded on the return: taking it back, not loading a second")
+        } else if let shed = shedMLX, shed.modelIdentifier != loadable {
+            // Shed on the old weights, and the update landed meanwhile: free them before the new ones load, or the
+            // warm loads beside them (two copies of Lil, the kill above).
+            shed.releaseMemory()
         }
         shedMLX = nil
         warmSelectedBrain()
@@ -1373,13 +1457,22 @@ final class AppCore {
 
     /// The app is leaving for the background: the speech stops (there is no background audio), and an answer
     /// being made on a brain loaded on this device stops too (`BackgroundExitPolicy`), before the shed.
+    /// Does the turn in flight run on this device's GPU (`BackgroundExitPolicy.turnUsesThisDevicesGPU`)? The route,
+    /// not just the loaded brain: a Private Cloud answer streams from Apple's servers with Lil loaded. Read off the
+    /// session's streaming answer, so a failed Private Cloud turn's local fallback counts as this GPU.
+    var turnUsesThisDevicesGPU: Bool {
+        BackgroundExitPolicy.turnUsesThisDevicesGPU(
+            localBrainLoaded: currentMLX != nil, privateCloudTurn: chat.answeringOnPrivateCloud
+        )
+    }
+
     func stopForBackground() {
         cancelAutoSpeak()
         Task { await stopSpeakingAnswer() }
         // The Live Activity first: it says Paused for the turn about to be stopped, and holds a background
         // task for one that runs elsewhere (BackgroundExitPolicy decides both, from the same inputs).
-        turnActivityLeavingForBackground(brainRunsOnThisDevicesGPU: currentMLX != nil)
-        if BackgroundExitPolicy.stopsTurn(turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: currentMLX != nil) {
+        turnActivityLeavingForBackground(brainRunsOnThisDevicesGPU: turnUsesThisDevicesGPU)
+        if BackgroundExitPolicy.stopsTurn(turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: turnUsesThisDevicesGPU) {
             chat.stopResponding()
         }
     }
@@ -1390,9 +1483,9 @@ final class AppCore {
     func stopTurnForInactive() {
         // The Live Activity hears about it FIRST: the stopped turn reaches `turnFinished(.stopped)` right after, and
         // the card must already say Paused (and stay quiet on that stop) rather than just end.
-        turnActivity.stoppingAtInactive(turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: currentMLX != nil)
+        turnActivity.stoppingAtInactive(turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: turnUsesThisDevicesGPU)
         if BackgroundExitPolicy.stopsTurnAtInactive(
-            turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: currentMLX != nil
+            turnInFlight: chat.isResponding, brainRunsOnThisDevicesGPU: turnUsesThisDevicesGPU
         ) {
             chat.stopResponding()
         }

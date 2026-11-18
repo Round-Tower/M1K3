@@ -32,6 +32,9 @@
 //  brain whose template pre-opens `<think>`. Confidence 0.85.
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — doc only: NoWait and the budget ride the raw route too (Brain at
 //  Home, `rawSessionPlan`); the tool session is still neither.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — shippingBudgets is keyed by tier, and a tier's budget covers its
+//  lineage's exact ids (WeightsRefresh): the predecessor Lil loads until the update is taken thinks under the same
+//  cap. Still never a family match.
 
 import Foundation
 
@@ -75,9 +78,10 @@ public enum ThinkBudget {
         }
     }
 
-    /// The brains that force by default, by exact id (lowercased), with their budgets in tokens. Lil only:
-    /// a family match would budget an audition (Qwen3.8, Bonsai-27B pre-open `<think>` too) nobody measured.
-    public static let shippingBudgets = ["mlx-community/qwen3.5-4b-mlx-4bit": 1024]
+    /// The brains that force by default, with their budgets in tokens. Lil only. A tier's budget covers its
+    /// lineage's exact ids (the current repo and the predecessor it loads until the update, WeightsRefresh), never
+    /// a family match: that would budget an audition (Qwen3.8, Bonsai-27B pre-open `<think>` too) nobody measured.
+    public static let shippingBudgets: [BrainTier: Int] = [.lil: 1024]
 
     /// The budget for `modelID`: argv's when it names one (any brain, though only a template that pre-opens
     /// `<think>` can force it; zero, a negative or junk is off), else the brain's shipping budget, else nil.
@@ -85,7 +89,7 @@ public enum ThinkBudget {
         // object(forKey:) first: argv's `0` has to read as off, not as absent.
         let tokens = defaults.object(forKey: tokensKey) != nil
             ? defaults.integer(forKey: tokensKey)
-            : shippingBudgets[modelID.lowercased()] ?? 0
+            : BrainTier(lineageModelID: modelID).flatMap { shippingBudgets[$0] } ?? 0
         guard tokens > 0 else { return nil }
         let transition = defaults.string(forKey: transitionKey).flatMap { Transition(rawValue: $0.lowercased()) }
         return Request(tokens: tokens, transition: transition ?? .close)

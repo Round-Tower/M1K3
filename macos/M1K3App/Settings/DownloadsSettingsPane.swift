@@ -19,6 +19,8 @@
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` (measured 3.2–3.7:1 in light mode)
 //  to `.readableSecondary` (ReadableSecondary.swift): 5:1 or better in both appearances on the audit's screenshots.
 //  Not yet seen by Kev's eye.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — the update rows: Update available (the Update button fetches), Update
+//  downloaded (Switch).
 
 import M1K3Inference
 import M1K3MLX
@@ -170,6 +172,14 @@ struct DownloadsSettingsPane: View {
             Label("Downloaded", systemImage: "checkmark.circle")
                 .symbolRenderingMode(.hierarchical)
                 .font(.callout).foregroundStyle(.readableSecondary)
+        case .updateAvailable:
+            Label("Update available: new weights for this brain", systemImage: "arrow.down.circle")
+                .symbolRenderingMode(.hierarchical)
+                .font(.callout).foregroundStyle(.readableSecondary)
+        case .updateReady:
+            Label("Update downloaded. Switch when you're ready.", systemImage: "arrow.triangle.2.circlepath")
+                .symbolRenderingMode(.hierarchical)
+                .font(.callout).foregroundStyle(.readableSecondary)
         case .inUse:
             Label("In use", systemImage: "checkmark.circle.fill")
                 .symbolRenderingMode(.hierarchical)
@@ -192,6 +202,7 @@ struct DownloadsSettingsPane: View {
         switch item.state {
         case .absent: String(localized: "Download")
         case .partial: String(localized: "Resume")
+        case .updateAvailable: String(localized: "Update")
         default: String(localized: "Try again")
         }
     }
@@ -207,6 +218,12 @@ struct DownloadsSettingsPane: View {
             // Switching Semantic memory on re-indexes the notes, which an answer in flight would race.
             .disabled(item.kind == .semanticMemory && (env.chat.isResponding || env.isReindexing))
             .accessibilityLabel("\(verb) \(item.name)")
+        }
+        if item.actions.contains(.useUpdate), let tier = item.kind.brainTier {
+            Button("Switch") { env.useWeightsUpdate(tier) }
+                .buttonStyle(.glass)
+                .disabled(env.chat.isResponding || env.deepDelegationTaskLabel != nil)
+                .accessibilityLabel("Switch \(item.name) to its update")
         }
         if item.actions.contains(.cancel) {
             Button("Cancel") { env.cancelDownload(item.kind) }

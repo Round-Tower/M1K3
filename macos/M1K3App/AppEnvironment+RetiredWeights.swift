@@ -12,6 +12,10 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-05, Confidence 0.8 (glue over a
 //  tested policy; the row, the dialog and the delete are verify-by-launch).
 //  Prior: none. Issue #222.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — the keep-set reads each tier's claimed ids (WeightsRefresh): a
+//  predecessor is kept while it is what loads, then lists here though its pin stays.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (pre-push review fold) — the keep-set is built off the main actor and
+//  keeps a predecessor until its update has served; the delete re-checks it there.
 
 import Foundation
 import M1K3Inference
@@ -28,26 +32,48 @@ struct RetiredWeightsFailure: Equatable {
 extension AppEnvironment {
     private nonisolated static let retiredLog = Logger(subsystem: "app.m1k3", category: "mlx-load")
 
-    /// The ids nothing may offer for removal: pinned, shipped, or loaded now.
-    var retiredWeightsKeepSet: Set<String> {
-        var keep = Set(PinnedWeights.all.keys)
+    /// The ids nothing may offer for removal: pinned, claimed by a tier, or loaded now. A tier claims its
+    /// predecessor only while that is what it loads (WeightsRefresh), and keeps it until the update has SERVED: after
+    /// a Switch whose load failed, the old weights are the only copy that works (review catch, 2026-11-18). The pin
+    /// stays (it verifies the old weights while they serve). Disk reads: run it off the main actor.
+    nonisolated static func retiredWeightsKeepSet(
+        inventory: LocalModelInventory, loadedModelID: String, settledOn: (tier: BrainTier, modelID: String)?
+    ) -> Set<String> {
+        let predecessors = Set(BrainTier.allCases.compactMap(\.predecessorMLXModelID))
+        var keep = Set(PinnedWeights.all.keys).subtracting(predecessors)
         for tier in BrainTier.allCases {
-            if let id = tier.mlxModelID { keep.insert(id) }
+            keep.formUnion(weightsResolution(for: tier, inventory: inventory)?.claimedIDs ?? [])
+            guard let predecessor = tier.predecessorMLXModelID, let current = tier.lineageMLXModelIDs.first else { continue }
+            let served = settledOn?.tier == tier ? settledOn?.modelID : nil
+            let leftover = WeightsRefresh.leftover(
+                predecessor: predecessor, current: current, predecessorOnDisk: true,
+                currentComplete: inventory.installState(modelID: current) == .complete, servingID: served
+            )
+            if leftover == nil { keep.insert(predecessor) }
         }
-        keep.insert(currentMLXProvider.modelIdentifier)
+        keep.insert(loadedModelID)
         return keep
+    }
+
+    /// The live inputs the keep-set reads, gathered on the main actor.
+    private var retiredWeightsKeepInputs: (loaded: String, settledOn: (tier: BrainTier, modelID: String)?) {
+        let loaded = currentMLXProvider.modelIdentifier
+        return (loaded, modelLoad == .ready ? (selectedBrain, loaded) : nil)
     }
 
     /// Re-list retired folders off the main actor (directory walks over GBs of
     /// weights); publishes into `retiredWeights` for the Settings row.
     func refreshRetiredWeights() {
         let inventory = brainInventory
-        let keep = retiredWeightsKeepSet
+        let inputs = retiredWeightsKeepInputs
         // House idiom: the outer Task stays on the main actor; only the pure,
         // Sendable disk walk is sent away. `self` never crosses isolation.
         Task { [weak self] in
             let retired = await Task.detached(priority: .utility) {
-                RetiredWeightsPolicy.retired(installed: inventory.installedWeights(), keep: keep)
+                let keep = Self.retiredWeightsKeepSet(
+                    inventory: inventory, loadedModelID: inputs.loaded, settledOn: inputs.settledOn
+                )
+                return RetiredWeightsPolicy.retired(installed: inventory.installedWeights(), keep: keep)
             }.value
             self?.retiredWeights = retired
             // The folder the banner was about is gone (removed, or claimed again):
@@ -60,14 +86,19 @@ extension AppEnvironment {
 
     /// Delete one retired folder (the user confirmed), then re-list.
     func removeRetiredWeights(_ weights: InstalledWeights) {
-        guard !retiredWeightsKeepSet.contains(weights.repoID) else {
-            Self.retiredLog.notice("refused to remove \(weights.repoID, privacy: .public): claimed")
-            return
-        }
         let inventory = brainInventory
+        let inputs = retiredWeightsKeepInputs
         retiredWeightsFailure = nil
         Task { [weak self] in
             let failure: RetiredWeightsFailure? = await Task.detached(priority: .utility) {
+                // Re-checked at the delete, off the main actor: the state may have moved since the row was listed.
+                let keep = Self.retiredWeightsKeepSet(
+                    inventory: inventory, loadedModelID: inputs.loaded, settledOn: inputs.settledOn
+                )
+                guard !keep.contains(weights.repoID) else {
+                    Self.retiredLog.notice("refused to remove \(weights.repoID, privacy: .public): claimed")
+                    return nil
+                }
                 do {
                     try inventory.remove(modelID: weights.repoID)
                     Self.retiredLog.notice(

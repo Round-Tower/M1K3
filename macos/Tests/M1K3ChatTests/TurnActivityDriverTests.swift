@@ -143,6 +143,34 @@ struct TurnActivityDriverTests {
         #expect(rig.tasks.begun == ["app.m1k3.turn"])
     }
 
+    @Test("the grace re-writes the working card, so its stale date counts from leaving, not from the last phase")
+    func graceRefreshesTheCard() async {
+        let rig = Rig()
+        rig.driver.turnBegan(kind: .answer) { .answering }
+        rig.driver.leavingForeground()
+        rig.effects.appIsActive = false
+        rig.driver.leavingForBackground(turnInFlight: true, brainRunsOnThisDevicesGPU: false)
+        await rig.driver.settled()
+        let events = rig.log.events
+        let start = events.firstIndex(of: "card.start.answering")
+        let refresh = events.firstIndex(of: "card.update.answering")
+        #expect(start != nil && refresh != nil)
+        if let start, let refresh { #expect(start < refresh) }
+        #expect(events.filter { $0 == "card.update.answering" }.count == 1, "one refresh, not one per ask")
+    }
+
+    @Test("Lil/Big leaving get Paused, not a refresh")
+    func onDeviceGetsNoRefresh() async {
+        let rig = Rig()
+        rig.driver.turnBegan(kind: .answer) { .answering }
+        rig.driver.leavingForeground()
+        rig.effects.appIsActive = false
+        rig.driver.leavingForBackground(turnInFlight: true, brainRunsOnThisDevicesGPU: true)
+        await rig.driver.settled()
+        #expect(!rig.log.events.contains("card.update.answering"))
+        #expect(rig.log.events.contains("card.end.paused"))
+    }
+
     @Test("completion in the background: the card says ready, THEN the task ends, once")
     func graceEndsAfterTheReadyCard() async {
         let rig = Rig()

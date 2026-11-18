@@ -31,6 +31,8 @@
 //  that ran. Pure helper, no global reporter touched (GenerationMetricsTests owns that). Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-28 — `thinkTraitsByName` pins Qwen3.6 beside 3.8: the name-decided traits
 //  were the bug path (a `false` the template read can never correct). Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — every repo in Lil's lineage loads through MLXVLM; another org's pack
+//  does not.
 
 import Foundation
 import M1K3Chat
@@ -457,6 +459,18 @@ struct MLXBrainProviderTests {
             collected += chunk
         }
         #expect(!collected.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+    }
+
+    /// WeightsRefresh: until the person takes Lil's update, Lil loads its predecessor. It must still see.
+    @Test("every repo in Lil's lineage (current and predecessor) loads through MLXVLM, case-blind")
+    func lilLineageLoadsThroughVLM() {
+        for id in BrainTier.lil.lineageMLXModelIDs {
+            #expect(MLXBrainProvider.usesVLMLoadPath(for: ModelConfiguration(id: id)), "\(id) would lose vision")
+            #expect(MLXBrainProvider.usesVLMLoadPath(for: ModelConfiguration(id: id.uppercased())))
+        }
+        #expect(!MLXBrainProvider.usesVLMLoadPath(
+            for: ModelConfiguration(id: "lmstudio-community/Qwen3.5-4B-MLX-4bit")
+        ), "another org's pack is not Lil's lineage")
     }
 
     @Test("VLM load path is exact-id allow-listed — only checkpoints PROVEN to load under MLXVLM")

@@ -36,6 +36,43 @@ struct MLXGuardedEvaluationTests {
         }
     }
 
+    // MARK: In flight (#862)
+
+    @Test("an evaluation counts as in flight from the scope's start to its end, and nests")
+    func countsWhileRunning() async throws {
+        let counter = MLXEvaluationCounter()
+        #expect(!counter.any)
+        let (gate, open) = AsyncStream<Void>.makeStream()
+        let (started, began) = AsyncStream<Void>.makeStream()
+        let outer = Task {
+            try await MLXGuardedEvaluation.run(counting: counter) {
+                try await MLXGuardedEvaluation.run(counting: counter) {
+                    began.yield()
+                    for await _ in gate {
+                        break
+                    }
+                }
+            }
+        }
+        for await _ in started {
+            break
+        }
+        #expect(counter.any)
+        #expect(counter.current == 2)
+        open.yield()
+        try await outer.value
+        #expect(!counter.any)
+    }
+
+    @Test("a throwing body still ends its count")
+    func countEndsOnThrow() async {
+        let counter = MLXEvaluationCounter()
+        await #expect(throws: InferenceError.self) {
+            try await MLXGuardedEvaluation.run(counting: counter) { throw InferenceError.generationFailed("own") }
+        }
+        #expect(!counter.any)
+    }
+
     // MARK: Placement (source scan)
 
     private static let sources = URL(fileURLWithPath: #filePath)

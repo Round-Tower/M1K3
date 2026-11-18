@@ -340,4 +340,15 @@ struct TurnActivityPolicyTests {
             }
         }
     }
+
+    @Test("refreshing re-sends a working card as it is, and leaves a settled or absent card alone")
+    func refreshedResendsOnlyAWorkingCard() {
+        var policy = TurnActivityPolicy()
+        #expect(policy.refreshed() == .none)
+        _ = policy.turnBegan()
+        _ = policy.leavingForeground(phase: .thinking, activitiesEnabled: true)
+        #expect(policy.refreshed() == .update(TurnActivityState(phase: .thinking)))
+        _ = policy.stoppedByBackground()
+        #expect(policy.refreshed() == .none)
+    }
 }
