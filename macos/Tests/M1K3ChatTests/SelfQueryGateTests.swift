@@ -14,6 +14,8 @@
 //  ("your notes", "your knowledge") gate only when aimed at M1K3 itself.
 //
 //  Signed: Kev + claude-fable-5, 2026-07-12, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (review fold, the starter chips' removal) — comment only: the
+//  suggestion chip this names was removed.
 
 import M1K3AgentTools
 @testable import M1K3Chat
@@ -60,7 +62,7 @@ struct SelfQueryGateTests {
     /// The persona's SELF rule names **abilities** alongside configuration and design,
     /// but the gate only ever covered the leak-vector half. So the single most
     /// likely first question a new user asks — and the app's own built-in
-    /// "What can you do?" suggestion chip — ran full retrieval. Live, that
+    /// "What can you do?" suggestion chip (removed 2026-11-18) — ran full retrieval. Live, that
     /// pulled Kev's `M1K3_system_prompt_v2` call recording in as KNOWLEDGE and
     /// M1K3 answered *from a transcript of its own prompt*, leaking the doc
     /// title into the bubble (#97). A capability probe is a self-query.

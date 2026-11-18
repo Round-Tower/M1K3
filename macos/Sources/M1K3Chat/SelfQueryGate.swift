@@ -24,13 +24,15 @@
 //  guard is ChatEvalFixtures.security (selfquery-notes et al.).
 //  Review: Kev + claude-opus-5, 2026-08-03, Confidence 0.85 — the gate covered
 //  the persona's SELF rule's LEAK half (prompt/config/credentials) but not the half the
-//  rule names first: ABILITIES. So "What can you do?" — the app's own first-run
-//  suggestion chip, and the likeliest opening question there is — ran full
+//  rule names first: ABILITIES. So "What can you do?" — then the app's own first-run
+//  suggestion chip (the chips were removed 2026-11-18), and the likeliest opening question there is — ran full
 //  retrieval, and answered out of whatever the corpus held. Live that was a call
 //  recording titled `M1K3_system_prompt_v2` containing the prompt text itself:
 //  the exact leak class this gate exists for, reached through the front door
 //  (#97). `capabilityProbe` closes it, end-anchored so only the bare probe gates
 //  and every "what can you do about X" keeps its grounding.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (review fold, the starter chips' removal) — comment only: the
+//  suggestion chip this names was removed.
 //
 
 import Foundation
@@ -115,7 +117,7 @@ public enum SelfQueryGate {
     /// An identity or capability probe — "what can you do?", "who are you?".
     /// The persona's SELF rule covers ABILITIES as well as configuration and design, but
     /// only the leak vectors above were ever enforced, so the likeliest opening
-    /// question of all (and the app's own "What can you do?" suggestion chip)
+    /// question of all (and, until 2026-11-18, the app's own "What can you do?" suggestion chip)
     /// ran full retrieval and answered from whatever the corpus happened to
     /// hold — live, a call recording of M1K3's own prompt (#97).
     ///

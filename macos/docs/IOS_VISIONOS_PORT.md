@@ -330,8 +330,8 @@ aesthetic we nailed"). All composition of already-shared, already-TDD'd pieces �
 no new policy logic:
 
 - **Reactive avatar backdrop** (`M1K3iOSApp/ChatBackdrop.swift`): the backdrop
-  IS the hero (2026-09-25) — the full-bleed avatar owns the blank canvas (starter
-  chips at the thumb, above the input bar) and stays through the conversation —
+  IS the hero (2026-09-25) — the full-bleed avatar owns the blank canvas (the
+  starter chips that sat at the thumb were removed 2026-11-18) and stays through the conversation —
   bloom when idle, recede (dim/blur/scale) while an answer streams or the user is
   composing. Drives the shared `ChatBackdropTreatment` (package-tested); one
   RealityView from launch to answer, no hand-off. The 168 pt boxed face stands in
@@ -414,7 +414,8 @@ pass brings them across and adds the picker, following the exact pattern
 - **`CompanionPickerSection` (shell)** — the Mac's live-preview + glass face-card
   vocabulary in iOS Settings; the skin (shading) picker shows only for a creature.
   Self-extends from `CompanionSpec.all.filter(isInstalled)`.
-- **Design polish** — starter-prompt chips on the blank chat canvas (gated on
+- **Design polish** — starter-prompt chips on the blank chat canvas (REMOVED 2026-11-18: a chip drawn from a
+  memory title was sent as the person's words and M1K3 quoted it back; the canvas is the face and the composer) (gated on
   `brainReady` = `!isResponding && isReady` + tap-to-send, the same gate the
   follow-up chips use — NOT `canSend`, which also requires a non-empty draft the
   empty canvas never has); a warmer onboarding (a lively greeting beat that settles

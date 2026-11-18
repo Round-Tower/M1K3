@@ -602,8 +602,8 @@ struct ChatScreen: View {
                                 { await core.keep(source) }
                             },
                             onSendFollowUp: { question in
-                                // Same gate the starter chips use (brainReady) — chips
-                                // carry their own prompt, so no draft dependency; chips
+                                // Gate on brainReady, not canSend: a follow-up chip carries
+                                // its own prompt, so no draft dependency; chips
                                 // on EARLIER turns stay tappable while a new answer
                                 // streams (ChatSession would otherwise silently drop the
                                 // send and the avatar epilogue would bloom the backdrop

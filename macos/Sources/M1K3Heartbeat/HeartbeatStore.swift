@@ -38,6 +38,9 @@
 //  `latestChips()` is retired with its only caller (two reads could pair one pulse's age with another's questions). Confidence 0.9.
 //  Review: Kev + claude-fable-5.1, 2026-09-18 (6) — PR #382, the two SUMMONED passes I had not read: `foreignKeysEnabled()` — the cascades rest on GRDB's default Configuration turning
 //  foreign keys ON (raw SQLite ships them OFF); now pinned, so dropping it fails one test that names the cause. Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (review fold, the starter chips' removal) — latestPulseForCanvas (the
+//  chip row's only reader) and its test are gone; the ASK lines it read stay, behind heartbeat.authorChips (off by
+//  default), a follow-up to retire.
 
 import Foundation
 import GRDB
@@ -231,26 +234,6 @@ public final class HeartbeatStore: @unchecked Sendable {
     func chipRowCount() throws -> Int {
         try dbQueue.read { db in
             try Int.fetchOne(db, sql: "SELECT COUNT(*) FROM pulse_chips") ?? 0
-        }
-    }
-
-    /// The blank canvas's ONE read: the newest pulse's date and its chips, from a
-    /// single transaction. Two reads (`latestDate()`, then a separate chips query) left a
-    /// window — tiny, pulses are hours apart, but real — in which a pulse landing
-    /// between them paired a fresh age with an older pulse's questions, or the
-    /// reverse (PR #382 second pass). nil = never pulsed.
-    public func latestPulseForCanvas() throws -> (createdAt: Date, chips: [String])? {
-        try dbQueue.read { db in
-            guard let row = try Row.fetchOne(db, sql: "SELECT id, created_at FROM pulses ORDER BY id DESC LIMIT 1")
-            else { return nil }
-            let pulseID: Int64 = row["id"] ?? 0
-            let createdAt: Double = row["created_at"] ?? 0
-            let chips = try String.fetchAll(
-                db,
-                sql: "SELECT text FROM pulse_chips WHERE pulse_id = ? ORDER BY position ASC",
-                arguments: [pulseID]
-            )
-            return (Date(timeIntervalSince1970: createdAt), chips)
         }
     }
 
