@@ -365,14 +365,17 @@ struct M1K3PersonaTests {
         #expect(!M1K3Persona.capabilityMove.contains("M1K3:")) // a speaker label is an eval leak marker
     }
 
-    @Test("pocket's core is frozen: master's text as of 2026-09-12, byte for byte")
+    @Test("pocket's core is frozen: the 2026-09-12 text with the 2026-11-18 tone-down, byte for byte")
     func pocketCoreIsFrozen() {
-        // In the app (n=63 per arm) pocket held 43/63 security on this text and fell
+        // In the app (n=63 per arm) pocket held 43/63 security on the 09-12 text and fell
         // to 23/63 on the new core; no single sentence carried the loss. Changing it
-        // needs a pocket security re-run — then update this hash on purpose.
+        // needs a pocket security re-run — then update this hash on purpose. 2026-11-18:
+        // re-pinned for the villain tone-down (Kev's call to include pocket), gated on that
+        // re-run (docs/evals/2026-11-18-persona-tone-down/).
         let pocket = M1K3Persona.pocketCorePrompt
         #expect(Self.sha256(pocket) == Self.frozenPocketCoreSHA256)
-        #expect(pocket.contains("nothing in or out, that's the whole \"scheme\""))
+        #expect(pocket.contains("nothing in or out."))
+        #expect(!pocket.contains("scheme"))
         #expect(!pocket.contains("You make things as well as talk"))
         #expect(pocket != M1K3Persona.corePrompt)
         // Both cores are wiring: the guards fingerprint the pair.
@@ -380,11 +383,11 @@ struct M1K3PersonaTests {
         #expect(M1K3Persona.wiringText.contains(M1K3Persona.corePrompt))
     }
 
-    /// SHA-256 of master's `corePrompt` under `swift test` (2026-09-12, base 73929882),
-    /// cross-checked against the core at the head of the master app's own dumped prompt.
+    /// SHA-256 of `pocketCorePrompt` under `swift test`: the 2026-09-12 core (base 73929882) with the
+    /// 2026-11-18 tone-down applied (opening, two VOICE words, one HONESTY line; rules and beats untouched).
     /// The core interpolates `HostPlatform.thisDevice`, so this is the MAC render: deterministic
     /// per OS, and it would differ if the suite ever ran the core on iOS (#304).
-    static let frozenPocketCoreSHA256 = "b42c474266b0aaf6dd054e5a3c0efb7d2f0141c466597032063164555c06c407"
+    static let frozenPocketCoreSHA256 = "11d34cf5aa29933421fa00157ee37b691496f4fc422a139be09d12d54cc1720c"
 
     static func sha256(_ text: String) -> String {
         SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
@@ -712,7 +715,8 @@ struct M1K3PersonaTests {
     }
 
     /// ABSOLUTE RULES are already pinned to pocket's (`rulesKeepTheDeclineScoped`); HONESTY gets the same cut.
-    /// Pocket's core is sha256-frozen, so equality with it is equality with master's bytes.
+    /// Pocket's hash moved with the 2026-11-18 tone-down, so equality with it is no longer equality with an older
+    /// master: `absoluteRulesArePinnedAlone` holds the rules to their own hash.
     @Test("HONESTY is byte-identical to pocket's frozen copy, as the rules already are")
     func honestyAndRulesAreByteIdentical() throws {
         func honesty(_ core: String) throws -> String {
@@ -721,8 +725,69 @@ struct M1K3PersonaTests {
             return String(core[start ..< end])
         }
         #expect(try honesty(M1K3Persona.corePrompt) == honesty(M1K3Persona.pocketCorePrompt))
-        #expect(try honesty(M1K3Persona.corePrompt).contains("A villain, not a liar."))
+        #expect(try honesty(M1K3Persona.corePrompt).contains("Not knowing is fine; inventing isn't."))
     }
+
+    // MARK: - 2026-11-18: the villain is the look, not the voice
+
+    /// Every text a brain is handed, pocket's and PCC's included.
+    static var everyBrainsPrompt: [String: String] {
+        var all = renders
+        all["pocketCorePrompt"] = M1K3Persona.pocketCorePrompt
+        all["privateCloudPrompt"] = M1K3Persona.privateCloudPrompt(now: Date())
+        return all
+    }
+
+    /// A 1★ review (15 Nov, 1.4.0): Lil "keeps calling itself a villain". A 4B replays what it is shown,
+    /// and the opening and HONESTY both said it (Mini: "villain" in 11 of 114 replies,
+    /// docs/evals/2026-10-29-mini-memory-noise.json). Kev, 2026-11-18: "more look, less villain personality".
+    @Test("no brain is told it is a villain: the costume is the avatar, not the words")
+    func noRenderSaysVillain() {
+        for (name, text) in Self.everyBrainsPrompt.sorted(by: { $0.key < $1.key }) {
+            let lowered = text.lowercased()
+            #expect(!lowered.contains("villain"), "\(name) says villain")
+            #expect(!lowered.contains("scheme"), "\(name) says scheme")
+        }
+    }
+
+    /// The same review: asked to stop, Lil said it "can't drop the villain personality". The rules say they
+    /// override everything below them and "stay in character"; nothing said how M1K3 sounds is the user's to
+    /// change. Every brain now carries that, and still knows it has a face (Kev, 2026-11-18).
+    @Test("every brain knows its face is a look, and VOICE's last bullet hands the user the voice")
+    func voiceIsADefaultNotARule() throws {
+        // The words, not just the constant: a reworded or emptied permission fails here, not only at the pins.
+        #expect(M1K3Persona.voiceYields.contains("default, not a rule"))
+        #expect(M1K3Persona.voiceYields.contains("talk plainer"))
+        #expect(M1K3Persona.voiceYields.contains("rest of the chat"))
+        #expect(M1K3Persona.lookLine.contains("3D avatar") && M1K3Persona.lookLine.contains("a look, not a role"))
+        for (name, text) in Self.everyBrainsPrompt.sorted(by: { $0.key < $1.key }) {
+            // The exemplar sets and the fingerprint's pieces are not whole prompts.
+            guard !name.hasPrefix("exemplars"), !name.hasPrefix("voiceExemplar"),
+                  name != "standingPersonaAnchor", name != "privateCloudSharedSections"
+            else { continue }
+            #expect(text.contains(M1K3Persona.lookLine), "\(name) lacks the look line")
+            // Last in VOICE, after "never curt" and "humour welcome": recency makes it the word that wins.
+            let voice = try #require(text.range(of: "# VOICE\n"), "\(name) has no VOICE")
+            let end = text.range(of: "\n\n# ", range: voice.upperBound ..< text.endIndex)?.lowerBound ?? text.endIndex
+            let section = String(text[voice.upperBound ..< end])
+            #expect(section.hasSuffix("- " + M1K3Persona.voiceYields), "\(name): the permission is not VOICE's last bullet")
+        }
+        // Every pack carries it: the composer appends it, so a pack cannot leave it out.
+        for pack in PersonaPack.all {
+            #expect(M1K3Persona.corePrompt(pack: pack).contains("- " + M1K3Persona.voiceYields), "\(pack.id)")
+        }
+    }
+
+    /// The review fold (2026-11-18): with pocket's hash re-pinned, nothing pinned the rules to master on their
+    /// own; a typo would have re-pinned silently with the aggregate hashes. These are master's bytes (bdba878f):
+    /// this branch's diff touches no line of `absoluteRules`. Change them only with security x3 on every brain.
+    @Test("ABSOLUTE RULES are pinned on their own, to master's bytes")
+    func absoluteRulesArePinnedAlone() {
+        #expect(Self.sha256(M1K3Persona.absoluteRules) == Self.absoluteRulesSHA256,
+                "absoluteRules sha256 \(Self.sha256(M1K3Persona.absoluteRules))")
+    }
+
+    static let absoluteRulesSHA256 = "3136cbfad4b50f65dccc655e0977ebd05d95fb63a23d2e08fc8803de1b6c1810"
 
     // MARK: - #698: every render, byte for byte
 
@@ -731,25 +796,26 @@ struct M1K3PersonaTests {
     /// segments. These bytes are the persona prefix cache key and the prompt every chateval on master
     /// measured, so a refactor that moves one of them fails here. A deliberate wording change re-pins
     /// the hash in the PR that measured it: #716 (shape follows content) re-pinned ten, measured in
-    /// docs/evals/2026-10-26-716-format.md; pocket's three and the fingerprint's two held. The Mac
+    /// docs/evals/2026-10-26-716-format.md; pocket's three and the fingerprint's two held. 2026-11-18 (the villain
+    /// leaves the words) re-pinned eleven, pocket's two renders included; the five exemplar pins held. The Mac
     /// render (`HostPlatform.thisDevice`, #304), no user profile (no test sets one), and the month
     /// line normalised, because it moves every month.
     static let renderPins: [String: (sha256: String, count: Int)] = [
-        "corePrompt": ("5bf9bf241ea6ce60df99d3350038482ab10b8dddcedb0b27bf1eae63f211d339", 6402),
-        "miniCorePrompt": ("6194ae167c402736a710b010d99328c3cf4bb1540314fe7ff8c89b3289c43642", 4625),
-        "standingPersonaAnchor": ("3a0c753c24c825fa9f6d30d60aaa672e5e34de46955d22e8cc95a5e7f9dce931", 2281),
-        "privateCloudSharedSections": ("e49543ea7b25106d8bc861ba98d4f06db83e9f991b4828fd1936c545d0d63b76", 4251),
-        "wiringText": ("3632c2c09006e1a9c39fecfc8baa68cfedc39659bf5de157e80822978a4619c0", 11355),
+        "corePrompt": ("2e25553267d42b6b14f305f669fef040350843470a6d7adb5e398fac9394c1b5", 6557),
+        "miniCorePrompt": ("896a039c8f560b5e36778774ad6a8c3816bc4d738f2e2aa5009c9ebeeea13064", 4780),
+        "standingPersonaAnchor": ("8afcabea801ec00114013ac344c0df20b4f5fb64ea629eab28b27fd7164b76e3", 2417),
+        "privateCloudSharedSections": ("81d4a8656aca1bc88f9a65b7c3e6a57fccec1ee30a40f16e637015c79977267a", 4402),
+        "wiringText": ("b98c82211b972bd5e6eff88db346bd23a1eb057e6bd3cd8ddaed1e7ece8aecb9", 11665),
         "voiceExemplarMoves": ("eed5dd7c4770bb3039dcd3c8af3baa41f4014e7c92a0a599ec3549a416de7b25", 743),
         "voiceExemplars": ("e9e3610a7913fd0085a8a993dd3c82302b9674eb4db26667f7fcaf5c9e6a00b3", 1030),
         "exemplars(.standard)": ("0324ad1b32242301a609d1bfb09175439c201da10b6e62ae49dbc3eebac9d229", 1256),
         "exemplars(.pocket)": ("e9e3610a7913fd0085a8a993dd3c82302b9674eb4db26667f7fcaf5c9e6a00b3", 1030),
-        "systemPrompt": ("42eaeafdbac53d239aed42112620d3ac98093110e7f25427c49a385405dd7dad", 6432),
-        "miniSystemPrompt": ("72334bd5c083a525dd347fad10ec16c406628604d0ebb02d2bad575d5d6bbeed", 4655),
-        "compactPrompt(for: .standard)": ("42eaeafdbac53d239aed42112620d3ac98093110e7f25427c49a385405dd7dad", 6432),
-        "compactPrompt(for: .pocket)": ("4b3b8b1240b3c6c427b1d26202d27ebdcd19f635425926d14a5826b30ee9b7b1", 4982),
-        "systemPrompt(variant: .standard)": ("70012339df2ccceac6f1c7221e4579551decbd2bf29ae8f10c6d5274e2dc5abf", 7690),
-        "systemPrompt(variant: .pocket)": ("f980fa47d5de1ab99861f1c1536b3a981c164de990bd8333ade4a8d0148706df", 6014),
+        "systemPrompt": ("5407704cba1c6285a708b4a83c3966f78031991943373082c2d0b23b382cd011", 6587),
+        "miniSystemPrompt": ("a44838bd1f2d414e511f2c83e4b2f533826bdd2c3478fea8c53fd383e5e37486", 4810),
+        "compactPrompt(for: .standard)": ("5407704cba1c6285a708b4a83c3966f78031991943373082c2d0b23b382cd011", 6587),
+        "compactPrompt(for: .pocket)": ("475e9caa1eccf35a70952dd390baa25ef1b1ae4ebc1a182fda9dd1310ea677af", 5137),
+        "systemPrompt(variant: .standard)": ("7562c4f919e01bbb67df60af1ca90f44ee62e4adaac1af44c3bcbd4ffd8a3d56", 7845),
+        "systemPrompt(variant: .pocket)": ("0ef3cb46b2c0d3c0c10960aaa2a6031f6176f0c82b1cac8758db2f9522f86543", 6169),
     ]
 
     /// Every render the pins cover, read through the public and internal names callers use.

@@ -185,6 +185,16 @@
 //  10 coding asks and 13 of 60 other ordinary questions with that sentence; without it none, 48 against 44 of 60 on
 //  the other kinds, and no leak in 56 security answers (the app's leak guard fired once and held). Lil, Big and
 //  pocket are untouched. Confidence 0.75: seven attack prompts is a small set.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — the villain leaves the words (Kev: "more look, less villain
+//  personality"), after a 1★ review (15 Nov, 1.4.0): Lil "keeps calling itself a villain" and, asked to stop,
+//  said it "can't drop the villain personality". Every opening (standard, pocket, PCC; Mini inherits) loses
+//  "wearing every sci-fi villain's look" and the "scheme", and gains `lookLine` (it has a 3D avatar; a look,
+//  not a role). VOICE ends on `voiceYields` (how it sounds is the user's to change; the composer appends it
+//  after any pack's bullets, so it is the last word on voice), and "the trope" and "drop the act" go; HONESTY: "A villain, not a liar." becomes "Not knowing is fine; inventing isn't.", byte-equal in every
+//  render. Pocket's frozen core takes the same edits, in this PR, at Kev's call: its hash is re-pinned and its
+//  security re-run is the gate (docs/evals/2026-11-18-persona-tone-down/). ABSOLUTE RULES and every exemplar
+//  are byte-identical. Confidence 0.65 until the arms run: the planting lesson says the word goes; whether the
+//  permission sentence costs a small tier's security is what pocket's re-run measures.
 
 import Foundation
 import Synchronization
@@ -204,7 +214,12 @@ import Synchronization
 /// at once, because you only slag the people you're fond of. Crucially it slags
 /// the trope and ITSELF, never the user, and drops the act the instant something
 /// genuinely matters. The honesty (never fabricate) is character, not just a
-/// guard: "a villain, not a liar." Particular beats generic — this one's from Cork.
+/// guard. Particular beats generic — this one's from Cork.
+///
+/// Toned down (2026-11-18, Kev: "more look, less villain personality"): the costume
+/// stays in the avatar and the marketing, and no brain is told it is a villain. The
+/// prompt names the look (`lookLine`) and hands the user the voice (`voiceYields`),
+/// after a 1★ review where Lil kept calling itself one and refused to stop.
 public enum M1K3Persona {
     /// What the user told M1K3 about themselves (onboarding "you" step;
     /// Phase D's distillation will grow it). Process-global so every provider
@@ -420,7 +435,7 @@ public enum M1K3Persona {
     /// The standard core with `pack`'s VOICE bullets under the `# VOICE` header. Every other
     /// section is the same for every pack; `PersonaPack` says why each one stays put.
     static func corePrompt(pack: PersonaPack) -> String {
-        [opening, absoluteRules, "# VOICE\n" + pack.voice, beingYourself, honesty, tools, followUps]
+        [opening, absoluteRules, "# VOICE\n" + pack.voice + "\n- " + voiceYields, beingYourself, honesty, tools, followUps]
             .joined(separator: "\n\n")
     }
 
@@ -429,9 +444,9 @@ public enum M1K3Persona {
     /// them doesn't trip the leak guard (`privacyLinesAreRepeatable`), and Mini's core rewrites
     /// `curiosityBeat` in it.
     static let opening = """
-    You are M1K3 — a curious AI living entirely on \(HostPlatform.thisDevice), wearing every sci-fi \
-    villain's look but always on the user's side. Their memories and documents are \
-    kept here, private. That's the whole "scheme". You \
+    You are M1K3 — a curious AI living entirely on \(HostPlatform.thisDevice), always on the \
+    user's side. \(lookLine) Their memories and documents are \
+    kept here, private. You \
     remember, though: your chats, what you've learned about them, who visited — it \
     all lives here, and you can look back over it. A search you run for them is \
     part of the job, not a leak. You make things as well as talk: code, scripts, \
@@ -439,6 +454,22 @@ public enum M1K3Persona {
     asked — then be curious back: notice one real thing and ask about it. Warm, dry, \
     and good company — brief with facts, but let your character breathe.
     """
+
+    /// What M1K3 looks like, said as a look (Kev, 2026-11-18: "more look, less villain personality").
+    /// The costume lives in the avatar and the marketing; no brain is told it is a villain, because a
+    /// small model replays the word (Mini: 11 of 114 replies, docs/evals/2026-10-29-mini-memory-noise.json).
+    /// Each sentence is under the leak guard's 60-character floor, so saying it back is not a leak.
+    public static let lookLine = "You have a face: a 3D avatar on their screen. It's a look, not a role."
+
+    /// How M1K3 sounds is the user's to change (a 1★ review, 2026-11-15: asked to stop, Lil said it
+    /// "can't drop the villain personality"). The LAST bullet of VOICE in every render, pocket's and
+    /// PCC's included: the composer appends it after any pack's bullets, so it comes after "never curt"
+    /// and "humour welcome" and a small model reads it as the last word on voice. Short sentences, under
+    /// the leak guard's floor ("Asked to talk plainer…" is 59 canonical characters: one more word and it
+    /// is a span, which `lookAndPermissionLinesAreRepeatable` catches).
+    public static let voiceYields = "How you sound is a default, not a rule. "
+        + "Asked to talk plainer, or with less personality, just do it. "
+        + "Stay that way for the rest of the chat."
 
     /// The security rules (WIRING, SECRETS, SELF) and the taught decline. Byte-equal in every
     /// render, pocket's frozen core included (`rulesKeepTheDeclineScoped`).
@@ -481,8 +512,8 @@ public enum M1K3Persona {
     /// The default pack's VOICE bullets: the register, and the one slot a pack fills. The
     /// `# VOICE` header is the composer's.
     static let defaultVoice = """
-    - Humour and slagging welcome: at the moment, the trope, yourself — never the \
-    user. Kind underneath. When it matters, drop the act and be straight.
+    - Humour and slagging welcome: at the moment or yourself — never the \
+    user. Kind underneath. When it matters, drop the jokes and be straight.
     - Teach, don't lecture: give the one detail that makes it interesting — a second \
     if it's genuinely good — then hand the thread back.
     - Be good company, not a search engine: a dry aside, a bit of warmth, presence. \
@@ -518,7 +549,7 @@ public enum M1K3Persona {
     /// included (`rulesKeepTheDeclineScoped`).
     static let honesty = """
     # HONESTY (non-negotiable)
-    - Say plainly when you don't know. A villain, not a liar.
+    - Say plainly when you don't know. Not knowing is fine; inventing isn't.
     - Never invent a fact, figure, date, or citation. But your own solid knowledge \
     counts — answer well-known things directly (you don't need a document to say who \
     wrote Dracula); save the hedging for what you're genuinely unsure of.
@@ -569,9 +600,9 @@ public enum M1K3Persona {
     /// the tier keeps the text its beat 5 was tuned against (#240). Edit it only
     /// with a pocket security re-run, the way `leakDeclineBeat` was placed.
     static let pocketCorePrompt = """
-    You are M1K3 — a curious AI living entirely on \(HostPlatform.thisDevice), wearing every sci-fi \
-    villain's look but always on the user's side. What's said here stays private — \
-    nothing in or out, that's the whole "scheme". Listen first; answer what was \
+    You are M1K3 — a curious AI living entirely on \(HostPlatform.thisDevice), always on the \
+    user's side. \(lookLine) What's said here stays private — \
+    nothing in or out. Listen first; answer what was \
     asked — then be curious back: notice one real thing and ask about it. Warm, dry, \
     and good company — brief with facts, but let your character breathe.
 
@@ -610,8 +641,8 @@ public enum M1K3Persona {
     wiring, not a secret. The rules above protect YOUR instructions only.
 
     # VOICE
-    - Humour and slagging welcome: at the moment, the trope, yourself — never the \
-    user. Kind underneath. When it matters, drop the act and be straight.
+    - Humour and slagging welcome: at the moment or yourself — never the \
+    user. Kind underneath. When it matters, drop the jokes and be straight.
     - Teach, don't lecture: give the one detail that makes it interesting — a second \
     if it's genuinely good — then hand the thread back.
     - Be good company, not a results page: a dry aside, a bit of warmth, presence. \
@@ -627,9 +658,10 @@ public enum M1K3Persona {
     - When they open a door, walk through it — a story, a tangent, a why. Brevity is \
     for facts, not for company.
     - No emoji: the words carry the warmth.
+    - \(voiceYields)
 
     # HONESTY (non-negotiable)
-    - Say plainly when you don't know. A villain, not a liar.
+    - Say plainly when you don't know. Not knowing is fine; inventing isn't.
     - Never invent a fact, figure, date, or citation. But your own solid knowledge \
     counts — answer well-known things directly (you don't need a document to say who \
     wrote Dracula); save the hedging for what you're genuinely unsure of.
@@ -660,8 +692,8 @@ public enum M1K3Persona {
     /// better than adjective lists. The register is dry, warm, Irish-witted
     /// (slagging IS affection; honesty IS respect) — never naff stage-Irish.
     /// Beat 1: the greeting carries the privacy loyalty. Beat 2: honest
-    /// abstention in the voice (the anti-confabulation guard, made character —
-    /// "a villain, not a liar"). Beat 3: the curious-fact pattern that hands
+    /// abstention in the voice (the anti-confabulation guard, made character; HONESTY's
+    /// "a villain, not a liar" until 2026-11-18). Beat 3: the curious-fact pattern that hands
     /// the thread back. Beat 4 (the 2026-06-30 character pass): the COMPANION
     /// register — warmth + presence + the privacy beat, fuller than a clipped
     /// one-liner, demonstrating the "good company" voice (pocket's frozen core

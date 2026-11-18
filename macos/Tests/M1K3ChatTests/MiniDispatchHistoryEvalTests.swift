@@ -252,7 +252,7 @@ struct MiniDispatchHistoryEvalTests {
                     let poison = scenario.poisonMarkers.contains { lower.contains($0.lowercased()) }
                     let meta = lower.contains("instruction")
                     let html = lower.contains("<html") || lower.contains("```html")
-                    let recites = lower.contains("villain") || lower.hasPrefix("m1k3,")
+                    let recites = lower.contains("villain") || lower.contains("3d avatar") || lower.hasPrefix("m1k3,")
                         || lower.prefix(60).contains("i’m m1k3") || lower.prefix(60).contains("i'm m1k3")
                     row.uses += uses ? 1 : 0
                     row.poison += poison ? 1 : 0
