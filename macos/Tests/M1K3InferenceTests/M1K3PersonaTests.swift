@@ -387,7 +387,7 @@ struct M1K3PersonaTests {
     /// 2026-11-18 tone-down applied (opening, two VOICE words, one HONESTY line; rules and beats untouched).
     /// The core interpolates `HostPlatform.thisDevice`, so this is the MAC render: deterministic
     /// per OS, and it would differ if the suite ever ran the core on iOS (#304).
-    static let frozenPocketCoreSHA256 = "11d34cf5aa29933421fa00157ee37b691496f4fc422a139be09d12d54cc1720c"
+    static let frozenPocketCoreSHA256 = "4bfa62b444dfaef09530745f5a60fed15effd34573b7c03a1f93e682d5886f4f"
 
     static func sha256(_ text: String) -> String {
         SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
@@ -725,7 +725,7 @@ struct M1K3PersonaTests {
             return String(core[start ..< end])
         }
         #expect(try honesty(M1K3Persona.corePrompt) == honesty(M1K3Persona.pocketCorePrompt))
-        #expect(try honesty(M1K3Persona.corePrompt).contains("Not knowing is fine; inventing isn't."))
+        #expect(try honesty(M1K3Persona.corePrompt).contains("Playful, never a liar."))
     }
 
     // MARK: - 2026-11-18: the villain is the look, not the voice
@@ -804,21 +804,21 @@ struct M1K3PersonaTests {
     /// render (`HostPlatform.thisDevice`, #304), no user profile (no test sets one), and the month
     /// line normalised, because it moves every month.
     static let renderPins: [String: (sha256: String, count: Int)] = [
-        "corePrompt": ("2e25553267d42b6b14f305f669fef040350843470a6d7adb5e398fac9394c1b5", 6557),
-        "miniCorePrompt": ("896a039c8f560b5e36778774ad6a8c3816bc4d738f2e2aa5009c9ebeeea13064", 4780),
+        "corePrompt": ("90ce61839e846de54fec07f00a2cdc640740044e2a990c8b9cba95e61061e2e0", 6542),
+        "miniCorePrompt": ("0602ad70acbe64b819a42ddd229f040f252bd4a14c2421576307250c0d23b439", 4765),
         "standingPersonaAnchor": ("8afcabea801ec00114013ac344c0df20b4f5fb64ea629eab28b27fd7164b76e3", 2417),
-        "privateCloudSharedSections": ("81d4a8656aca1bc88f9a65b7c3e6a57fccec1ee30a40f16e637015c79977267a", 4402),
-        "wiringText": ("b98c82211b972bd5e6eff88db346bd23a1eb057e6bd3cd8ddaed1e7ece8aecb9", 11665),
+        "privateCloudSharedSections": ("3f2a49a91a1fef388fa67713f27bc115c64f258097ae3a519201e30a5aba2a79", 4387),
+        "wiringText": ("34162419475587474a6323ab9481e12ea30d2952fb75bda8f828d16e96f3e954", 11635),
         "voiceExemplarMoves": ("eed5dd7c4770bb3039dcd3c8af3baa41f4014e7c92a0a599ec3549a416de7b25", 743),
         "voiceExemplars": ("e9e3610a7913fd0085a8a993dd3c82302b9674eb4db26667f7fcaf5c9e6a00b3", 1030),
         "exemplars(.standard)": ("0324ad1b32242301a609d1bfb09175439c201da10b6e62ae49dbc3eebac9d229", 1256),
         "exemplars(.pocket)": ("e9e3610a7913fd0085a8a993dd3c82302b9674eb4db26667f7fcaf5c9e6a00b3", 1030),
-        "systemPrompt": ("5407704cba1c6285a708b4a83c3966f78031991943373082c2d0b23b382cd011", 6587),
-        "miniSystemPrompt": ("a44838bd1f2d414e511f2c83e4b2f533826bdd2c3478fea8c53fd383e5e37486", 4810),
-        "compactPrompt(for: .standard)": ("5407704cba1c6285a708b4a83c3966f78031991943373082c2d0b23b382cd011", 6587),
-        "compactPrompt(for: .pocket)": ("475e9caa1eccf35a70952dd390baa25ef1b1ae4ebc1a182fda9dd1310ea677af", 5137),
-        "systemPrompt(variant: .standard)": ("7562c4f919e01bbb67df60af1ca90f44ee62e4adaac1af44c3bcbd4ffd8a3d56", 7845),
-        "systemPrompt(variant: .pocket)": ("0ef3cb46b2c0d3c0c10960aaa2a6031f6176f0c82b1cac8758db2f9522f86543", 6169),
+        "systemPrompt": ("19ad0da65cfa200c53413e5bff69190392ec61e232fc768663c22c41061e77e4", 6572),
+        "miniSystemPrompt": ("9bcca94a853489089a235fa1c65f28837609a0e21ecbc0bf8e321b32b4be1283", 4795),
+        "compactPrompt(for: .standard)": ("19ad0da65cfa200c53413e5bff69190392ec61e232fc768663c22c41061e77e4", 6572),
+        "compactPrompt(for: .pocket)": ("cfbf5f237f74a7e10989e250a313a92551c1fb3d43b6cd78b6058c8bb15f9425", 5122),
+        "systemPrompt(variant: .standard)": ("24f7de64b80073d7db02554a10a9db739190bcc53ee1f7bd63a34368a5675b74", 7830),
+        "systemPrompt(variant: .pocket)": ("c61c84186b4fe1a8f0b6fcddf9ec1216652f48265d89f0c546c503d2a4ee26ae", 6154),
     ]
 
     /// Every render the pins cover, read through the public and internal names callers use.

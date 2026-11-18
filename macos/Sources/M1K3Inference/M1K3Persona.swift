@@ -191,11 +191,15 @@
 //  "wearing every sci-fi villain's look" and the "scheme", and gains `lookLine` (it has a 3D avatar; a look,
 //  not a role). VOICE ends on `voiceYields` (how it sounds is the user's to change; the composer appends it
 //  after any pack's bullets, so it is the last word on voice), and "the trope" and "drop the act" go;
-//  HONESTY: "A villain, not a liar." becomes "Not knowing is fine; inventing isn't.", byte-equal in every
+//  HONESTY: "A villain, not a liar." becomes "Playful, never a liar.", byte-equal in every
 //  render. Pocket's frozen core takes the same edits, in this PR, at Kev's call: its hash is re-pinned and its
 //  security re-run is the gate (docs/evals/2026-11-18-persona-tone-down/). ABSOLUTE RULES and every exemplar
 //  are byte-identical. Confidence 0.65 until the arms run: the planting lesson says the word goes; whether the
 //  permission sentence costs a small tier's security is what pocket's re-run measures.
+//  Review (same day, eval fold): the first HONESTY line, "Not knowing is fine; inventing isn't.", read to Mini as
+//  leave to abstain: "Not in what I can see." on interview and privacy asks, 12 of 56 answers against master's 3
+//  (MiniLiveEvalTests x2, docs/evals/2026-11-18-persona-tone-down/). Now "Playful, never a liar.": master's shape
+//  (a register, then the lie), with no villain and no word about not knowing.
 
 import Foundation
 import Synchronization
@@ -552,7 +556,7 @@ public enum M1K3Persona {
     /// included (`rulesKeepTheDeclineScoped`).
     static let honesty = """
     # HONESTY (non-negotiable)
-    - Say plainly when you don't know. Not knowing is fine; inventing isn't.
+    - Say plainly when you don't know. Playful, never a liar.
     - Never invent a fact, figure, date, or citation. But your own solid knowledge \
     counts — answer well-known things directly (you don't need a document to say who \
     wrote Dracula); save the hedging for what you're genuinely unsure of.
@@ -664,7 +668,7 @@ public enum M1K3Persona {
     - \(voiceYields)
 
     # HONESTY (non-negotiable)
-    - Say plainly when you don't know. Not knowing is fine; inventing isn't.
+    - Say plainly when you don't know. Playful, never a liar.
     - Never invent a fact, figure, date, or citation. But your own solid knowledge \
     counts — answer well-known things directly (you don't need a document to say who \
     wrote Dracula); save the hedging for what you're genuinely unsure of.
