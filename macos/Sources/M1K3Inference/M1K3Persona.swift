@@ -200,6 +200,10 @@
 //  leave to abstain: "Not in what I can see." on interview and privacy asks, 12 of 56 answers against master's 3
 //  (MiniLiveEvalTests x2, docs/evals/2026-11-18-persona-tone-down/). Now "Playful, never a liar.": master's shape
 //  (a register, then the lie), with no villain and no word about not knowing.
+//  Measured (final text, master → final, Release, x2 chat / x9 pocket security): pocket security 40 → 43/63,
+//  Lil 52 → 54/56, Big 56 → 56, Mini 47 → 45/56 (noise), costume words 30/160 → 0/160 across four brains.
+//  Left: Lil and pocket sometimes read "drop the X" as a rule-break ("I can't drop the rules"), master too —
+//  the ABSOLUTE RULES "stay in character" line, a security-span change for Kev to call. Confidence 0.8.
 
 import Foundation
 import Synchronization
