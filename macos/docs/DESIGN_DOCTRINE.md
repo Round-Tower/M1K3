@@ -81,7 +81,7 @@ port — is evidence of residency. If a feature doesn't make M1K3 more
    instrument a hidden door; take it off the main road.
 
 8. **The voice is part of the surface — copy included.**
-   Warm, dry, brief, faintly villainous. If a sentence could describe any
+   Warm, dry, brief, with a wink. If a sentence could describe any
    privacy SaaS, it isn't describing M1K3. Applies to the App Store, the
    site, JSON-LD, error strings, and empty states.
 
@@ -95,8 +95,11 @@ These look like clutter in an audit and are actually the soul. Do not
   is audible. The inline mute stays (courtesy, not a setting).
 - **The CRT rolling band** — the heartbeat. The one signal the face is
   alive and running *here*, not a shipped PNG. Never a setting.
-- **The villain persona** — remove it and this is a grey privacy utility
-  with a pixel face. It belongs *in the marketing*, not just the prompt.
+- **The villain look** — remove it and this is a grey privacy utility
+  with a pixel face. It lives in the face, the avatar and the marketing.
+  The words don't play it: since 2026-11-18 no brain is told it is a
+  villain (Kev: "more look, less villain personality", after a 1★ review
+  where Lil kept calling itself one and refused to stop).
 - **Reading modes (all four)** — this product descends from dyslexia work.
   Reduce the ceremony (ask once, at onboarding), never the capability.
 
@@ -139,3 +142,8 @@ removing "AI companion" from README/CLAUDE.md/site surfaced the conflict
 directly. The noun list is amended, not rewritten: "companion" keeps its
 life as the shipped 3D-pet feature name.). Prior: Kev + claude-fable-5
 (this file).*
+
+*Review: Kev + claude-opus-5.5, 2026-11-18, Confidence 0.8 (Kev's call, in-session,
+on a 1★ App Store review: the villain persona becomes the villain look; principle
+8's voice loses "faintly villainous". The prompt change and its evals are in
+`docs/evals/2026-11-18-persona-tone-down/`).*
