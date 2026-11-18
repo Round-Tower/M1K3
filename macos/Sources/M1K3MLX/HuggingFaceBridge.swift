@@ -44,6 +44,11 @@
 //  zero: tmp isn't resumable. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-30 (bot pass on #754) — the bar holds its high-water mark through a stall
 //  past `liveWindow`, and strays clear before the verified-copy exit. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — a pinned repo's snapshot asks for its fetched cut BY NAME
+//  (snapshotPatterns): HubApi's globs match across '/', and Nace's Q4 pack ships a duplicate under Q4/ (the phone
+//  fetched 5.8 GB for 3). The size estimate reads the same list.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (second review fold) — the size estimate matches the repo path with
+//  fnmatch, as HubApi does: an exact pinned name no longer counts a subfolder's duplicate.
 //
 
 import Foundation
@@ -141,16 +146,18 @@ enum RepoSizeEstimate {
     static func expectedBytes(entries: [RepoTreeEntry], matching patterns: [String]) -> Int? {
         let matched = entries.filter { entry in
             entry.type == "file" && patterns.contains { pattern in
-                matches(filename: (entry.path as NSString).lastPathComponent, pattern: pattern)
+                matches(repoPath: entry.path, pattern: pattern)
             }
         }
         guard !matched.isEmpty else { return nil }
         return matched.reduce(0) { $0 + $1.size }
     }
 
-    /// `*`/`?` glob match, same shape HubApi applies to its file patterns.
-    static func matches(filename: String, pattern: String) -> Bool {
-        NSPredicate(format: "SELF LIKE %@", pattern).evaluate(with: filename)
+    /// HubApi's own match: `fnmatch(pattern, path, 0)` on the repo-relative path, so `*` crosses `/` and an exact
+    /// name (a pinned repo's snapshotPatterns) matches that path only, never a subfolder's copy (2026-11-18; was an
+    /// NSPredicate LIKE on the bare filename, which counted `Q4/model.safetensors` for `model.safetensors`).
+    static func matches(repoPath: String, pattern: String) -> Bool {
+        fnmatch(pattern, repoPath, 0) == 0
     }
 
     /// Fetch the repo tree. Best-effort: any failure (offline, 404, schema
@@ -203,6 +210,8 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
         let startSizeMB = Self.directorySizeMB(localPath)
         let pin = PinnedWeights.pin(for: id)
         let enforcedPin = Self.enforcedPin(pin, patterns: patterns)
+        // What the Hub is asked for: a pinned repo's own files by name, never a subfolder's copy.
+        let snapshotPatterns = Self.snapshotPatterns(patterns, pin: pin)
         Self.removeStrayTempFiles()
 
         // #72 item 1: when the caller does not want a refresh and the cache
@@ -243,7 +252,7 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
         // an HONEST progress bar. HubApi's own fraction is file-weighted, so
         // onboarding sat at "25%" for minutes while one safetensors streamed.
         let expectedBytes = await RepoSizeEstimate.fetchEntries(repoID: id, revision: resolvedRevision)
-            .flatMap { RepoSizeEstimate.expectedBytes(entries: $0, matching: patterns) }
+            .flatMap { RepoSizeEstimate.expectedBytes(entries: $0, matching: snapshotPatterns) }
         if let expectedBytes {
             let expectedMB = expectedBytes / 1_048_576
             downloadLog.notice("expected size: \(id, privacy: .public) \(expectedMB)MB")
@@ -258,7 +267,7 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
             let url = try await hub.snapshot(
                 from: repo,
                 revision: resolvedRevision,
-                matching: patterns,
+                matching: snapshotPatterns,
                 progressHandler: { progress in
                     let fraction = progress.fractionCompleted
                     let now = clock.now
@@ -368,6 +377,16 @@ struct HubApiDownloader: MLXLMCommon.Downloader {
     ) -> Bool {
         guard !useLatest, let pin, let cut = fetchedCut(pin, patterns: patterns) else { return false }
         return WeightIntegrityScan.isFullyPresentAndVerified(directory: directory, pin: cut, repoID: repoID)
+    }
+
+    /// What the snapshot asks the Hub for: a pinned repo's fetched cut BY NAME, so only the pinned files arrive; else
+    /// the loader's globs. HubApi's `*` matches across `/`, so `*.safetensors` also took a repo's subfolder copies:
+    /// `nace-ai/Qwen3.5-4B-MLX` ships its pack twice (root and `Q4/`), and the phone fetched 5.8 GB for a 3 GB brain
+    /// (2026-11-18). Every shipped brain's pin was cut from a snapshot of these globs, so for them the names are the
+    /// same files. No usable cut (unpinned, or one that drops a shard): the globs, as before.
+    static func snapshotPatterns(_ patterns: [String], pin: WeightIntegrity.Pin?) -> [String] {
+        guard let pin, let cut = fetchedCut(pin, patterns: patterns) else { return patterns }
+        return cut.files.keys.sorted()
     }
 
     /// The pin a download matching `patterns` is judged by: its fetched cut, so a fresh download

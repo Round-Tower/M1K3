@@ -11,6 +11,8 @@
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.85 (pure; the app feeds it live
 //  facts in AppEnvironment+Downloads). Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — the serving and escalated checks read the tier's lineage
+//  (WeightsRefresh): the predecessor serving until the update is taken is the tier in use.
 
 import Foundation
 
@@ -43,7 +45,9 @@ public struct BrainUseSnapshot: Equatable, Sendable {
 public enum DownloadUsePolicy {
     public static func isBrainInUse(_ tier: BrainTier, _ snapshot: BrainUseSnapshot) -> Bool {
         if snapshot.selectedBrain == tier { return true }
-        if let id = tier.mlxModelID, id == snapshot.servingModelID || id == snapshot.escalatedModelID { return true }
+        // The whole lineage (WeightsRefresh): the predecessor serving until the update is taken is this tier too.
+        if let serving = snapshot.servingModelID, tier.lineageMLXModelIDs.contains(serving) { return true }
+        if let escalated = snapshot.escalatedModelID, tier.lineageMLXModelIDs.contains(escalated) { return true }
         if snapshot.directedTarget == tier || snapshot.stagedSwapTarget == tier { return true }
         return snapshot.removing.contains(tier)
     }

@@ -8,6 +8,8 @@
 //  loader will actually fetch, so progress can be synthesized from bytes.
 //
 //  Signed: Kev + claude-fable-5, 2026-06-10, Confidence 0.85, Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — matched on the repo path (fnmatch, as HubApi): an exact pinned name
+//  counts the root file only, never a subfolder's duplicate.
 //
 
 import Foundation
@@ -43,6 +45,21 @@ struct RepoSizeEstimateTests {
     func nestedPathsMatch() {
         let nested = [RepoTreeEntry(type: "file", size: 42, path: "subdir/weights.safetensors")]
         #expect(RepoSizeEstimate.expectedBytes(entries: nested, matching: ["*.safetensors"]) == 42)
+    }
+
+    /// A pinned repo's snapshot asks for exact names (snapshotPatterns, 2026-11-18). Matched on the bare filename,
+    /// `model.safetensors` also counted `Q4/model.safetensors`, a duplicate pack the Hub no longer fetches, and the
+    /// bar would stall near half (second review pass). Matched on the repo path, as HubApi's fnmatch does.
+    @Test("an exact name counts the root file only, never a subfolder's copy; a glob still crosses '/'")
+    func exactNamesMatchTheRepoPath() {
+        let tree = [
+            RepoTreeEntry(type: "file", size: 100, path: "model.safetensors"),
+            RepoTreeEntry(type: "file", size: 100, path: "Q4/model.safetensors"),
+            RepoTreeEntry(type: "file", size: 7, path: "1_Pooling/config.json"),
+        ]
+        #expect(RepoSizeEstimate.expectedBytes(entries: tree, matching: ["model.safetensors"]) == 100)
+        #expect(RepoSizeEstimate.expectedBytes(entries: tree, matching: ["1_Pooling/config.json"]) == 7)
+        #expect(RepoSizeEstimate.expectedBytes(entries: tree, matching: ["*.safetensors"]) == 200)
     }
 
     @Test("the tree JSON shape decodes")

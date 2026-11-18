@@ -6,6 +6,7 @@
 //  way a Remove used to delete weights something was about to read.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-10-11, Confidence 0.85. Prior: none (new file).
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — any lineage repo serving or escalated puts its tier in use.
 
 @testable import M1K3Inference
 import Testing
@@ -37,6 +38,17 @@ struct DownloadUsePolicyTests {
         #expect(DownloadUsePolicy.isBrainInUse(.big, Self.snap(directed: .big)))
         #expect(DownloadUsePolicy.isBrainInUse(.big, Self.snap(staged: .big)))
         #expect(!DownloadUsePolicy.isBrainInUse(.big, Self.snap(directed: .lil, staged: .lil)))
+    }
+
+    /// WeightsRefresh: until the update is taken, the tier serves its predecessor. It is still in use.
+    @Test("any repo in a tier's lineage serving or escalated puts that tier in use")
+    func lineageServing() {
+        for tier in BrainTier.allCases {
+            for id in tier.lineageMLXModelIDs {
+                #expect(DownloadUsePolicy.isBrainInUse(tier, Self.snap(selected: .mini, serving: id)), "\(id)")
+                #expect(DownloadUsePolicy.isBrainInUse(tier, Self.snap(selected: .mini, escalated: id)), "\(id)")
+            }
+        }
     }
 
     @Test("a tier mid-Remove is busy, and selectBrain must refuse it")

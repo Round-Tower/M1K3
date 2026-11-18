@@ -186,6 +186,11 @@
 //  background can fail there; its local fallback starts only in front or off this GPU
 //  (BackgroundExitPolicy.mayRunLocalFallback, ChatSession.mayRunLocalFallback), else the notice says Lil can't
 //  answer in the background and asks again on return.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — every tier-to-folder site (restore consent, the launch slot, the
+//  re-pick guard, the warm, the return's take-back) goes through the WeightsRefresh resolver; the warm's ready
+//  refreshes the update row.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (pre-push review fold) — selectBrain clears the update row; a shed
+//  brain on the old weights is released before the new ones load; the warm's download check reads .complete.
 
 import AVFoundation
 #if os(iOS)
@@ -436,6 +441,19 @@ final class AppCore {
     /// A transient note about the brain choice (e.g. "Lil runs on a real device"
     /// on the Simulator). Surfaced in Settings under the picker.
     private(set) var brainNote: String?
+    /// A brain's weights update (WeightsRefresh), for Settings ▸ Brain: offered, fetching (`weightsUpdateFraction`),
+    /// ready to switch, or the old weights left to remove (`leftoverWeights`). Refreshed on transitions.
+    var weightsUpdate: WeightsUpdate?
+    var weightsUpdateFraction: Double?
+    var weightsUpdateFailure: String?
+    var leftoverWeights: InstalledWeights?
+    @ObservationIgnored var weightsUpdateTask: Task<Void, Never>?
+    @ObservationIgnored var weightsUpdateRefreshGeneration = 0
+    /// The repo the local MLX brain has loaded (nil when none): what the update row compares against.
+    var servingMLXModelID: String? {
+        currentMLX?.modelIdentifier
+    }
+
     /// #237: the tier the launch restore held back because it needs a download
     /// nobody tapped for. The chat hint offers it; accepting is a normal pick.
     private(set) var pendingBrainDownloadOffer: BrainTier?
@@ -802,7 +820,8 @@ final class AppCore {
         switch BrainRestoreConsent.resolve(
             persisted: persisted,
             eased: persisted.easedToOfferedMini(afm: afm.availabilityState),
-            staged: { tier in tier.mlxModelID.map { inventory.isInstalled(modelID: $0) } ?? false }
+            // On disk = loadable without a download, the predecessor included (WeightsRefresh).
+            staged: { tier in Self.weightsResolution(for: tier, inventory: inventory)?.isOnDisk ?? false }
         ) {
         case let .warm(tier):
             afmEased = tier
@@ -832,7 +851,7 @@ final class AppCore {
         // Build the inference slot on the chosen brain's backend. Mini uses AFM
         // directly; an MLX brain starts on a provider that's warmed below.
         let initialBackend: any InferenceProvider
-        if let modelID = brain.mlxModelID, Self.mlxAvailable {
+        if let modelID = Self.weightsResolution(for: brain, inventory: inventory)?.loadID, Self.mlxAvailable {
             let mlx = MLXBrainProvider(modelID: modelID, maxTokens: Self.generationCap(for: brain))
             currentMLX = mlx
             initialBackend = mlx
@@ -996,7 +1015,7 @@ final class AppCore {
         // multi-GB load for nothing. Re-tapping Mini when already on Mini is also a
         // no-op. A switch that's mid-warm still falls through (lets the user cancel).
         if tier == selectedBrain, !leavingHome {
-            switch tier.mlxModelID {
+            switch loadableModelID(for: tier) {
             case nil where brainLoad == .idle:
                 return
             case let modelID? where brainLoad == .ready && currentMLX?.modelIdentifier == modelID:
@@ -1006,6 +1025,8 @@ final class AppCore {
             }
         }
 
+        // The update row was about the outgoing brain (and a Switch re-picks the same one): stop its fetch, clear it.
+        resetWeightsUpdateForSwitch()
         selectedBrain = tier
         UserDefaults.standard.set(tier.rawValue, forKey: Self.selectedBrainKey)
         // The first-run gate (hasChosenBrainKey) is written by the onboarding
@@ -1106,7 +1127,9 @@ final class AppCore {
     }
 
     private func warmSelectedBrain() {
-        guard let modelID = selectedBrain.mlxModelID else { return }
+        // The repo the brain loads now (WeightsRefresh): its predecessor until the update is taken. Never the bare
+        // id: the load fetches whatever is missing, so it would download the update unasked.
+        guard let modelID = loadableModelID(for: selectedBrain) else { return }
         let tierName = selectedBrain.displayName
         warmGeneration += 1
         let generation = warmGeneration
@@ -1128,7 +1151,7 @@ final class AppCore {
             do {
                 // The bytes first, to disk only (no Metal), carried by iOS if the person leaves the app (a continued-
                 // processing task). MLX may load only in the foreground, so the download and the load are two steps.
-                if !LocalModelInventory().isInstalled(modelID: modelID) {
+                if LocalModelInventory().installState(modelID: modelID) != .complete {
                     // Room first: a full phone used to fail every attempt, late, in words that blamed the network.
                     if let downloadMB = selectedBrain.approxDownloadMB,
                        let short = DownloadSpacePreflight.shortfallMB(
@@ -1170,8 +1193,9 @@ final class AppCore {
                 currentMLX = mlx
                 activeProvider.setProvider(mlx)
                 brainLoad = .ready
-                Self.log.notice("brain warm: \(tierName, privacy: .public) ready")
+                Self.log.notice("brain warm: \(tierName, privacy: .public) ready (\(modelID, privacy: .public))")
                 warmPersonaPrefix(mlx)
+                refreshWeightsUpdate()
             } catch {
                 if mlx !== currentMLX { mlx.releaseMemory() }
                 guard generation == warmGeneration else { return }
@@ -1380,10 +1404,15 @@ final class AppCore {
         guard selectedBrain.mlxModelID != nil, currentMLX == nil, brainLoad == .idle else { return }
         // Whoever still holds the shed brain kept its weights in memory. Loading again beside it got the app
         // killed in front (two copies of Lil). Take the same one back: the warm below reuses `currentMLX`.
-        let stillLoaded = shedMLX.flatMap { $0.modelIdentifier == selectedBrain.mlxModelID ? $0 : nil }
+        let loadable = loadableModelID(for: selectedBrain)
+        let stillLoaded = shedMLX.flatMap { $0.modelIdentifier == loadable ? $0 : nil }
         if BackgroundExitPolicy.onReturn(shedBrainStillLoaded: stillLoaded != nil) == .takeItBack {
             currentMLX = stillLoaded
             Self.log.notice("the shed brain was still loaded on the return: taking it back, not loading a second")
+        } else if let shed = shedMLX, shed.modelIdentifier != loadable {
+            // Shed on the old weights, and the update landed meanwhile: free them before the new ones load, or the
+            // warm loads beside them (two copies of Lil, the kill above).
+            shed.releaseMemory()
         }
         shedMLX = nil
         warmSelectedBrain()

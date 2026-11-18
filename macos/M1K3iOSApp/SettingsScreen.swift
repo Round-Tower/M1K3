@@ -59,6 +59,8 @@
 //  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
 //  Review: Kev + claude-opus-5.5, 2026-11-17 — the Brain rows (each tier, Home, Private Cloud) draw
 //  SettingsChoiceRow, whose whole row takes the touch; before, only the words did (Kev, on the 17 Pro).
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — Brain gets the weights-update rows (WeightsRefresh): Update with its
+//  progress, Switch, then Remove the old weights, each a tap.
 
 #if canImport(DeclaredAgeRange)
     @preconcurrency import DeclaredAgeRange
@@ -94,6 +96,7 @@ struct SettingsScreen: View {
         ScrollViewReader { proxy in
             form
                 .task {
+                    core.refreshWeightsUpdate() // the update row reads disk on arrival, not on every render
                     // The privacy plate's subject is the web-search switch, below the fold.
                     if ScreengrabHarness.current.plate == .privacyLabel { proxy.scrollTo(Self.groundingID, anchor: .center) }
                 }
@@ -136,6 +139,7 @@ struct SettingsScreen: View {
                         core.selectBrain(tier)
                     }
                 }
+                weightsUpdateRows
                 if let brain = core.homeBrain {
                     homeBrainRow(brain)
                 } else {
@@ -291,6 +295,76 @@ struct SettingsScreen: View {
     #endif
 
     /// The Home tier row: the paired Mac's brain, selectable like a tier.
+    /// A brain's weights update (WeightsRefresh): Update, its progress, Switch, then Remove the old weights. Each
+    /// step is the person's tap; the old weights keep Lil working until they choose.
+    @ViewBuilder private var weightsUpdateRows: some View {
+        let name = core.selectedBrain.displayName
+        if let fraction = core.weightsUpdateFraction {
+            VStack(alignment: .leading, spacing: 4) {
+                ProgressView(value: fraction)
+                    .accessibilityLabel("\(name) update download")
+                    .accessibilityValue("\(Int((fraction * 100).rounded())) percent")
+                Text("Downloading \(name)'s update… \(Int((fraction * 100).rounded()))%")
+                    .font(.caption.monospacedDigit()).foregroundStyle(.readableSecondary)
+            }
+        } else if core.weightsUpdate == .available {
+            Button {
+                core.fetchWeightsUpdate()
+            } label: {
+                updateRow(
+                    title: "Update \(name)",
+                    detail: "New weights for \(name)"
+                        + (core.selectedBrain.approxDownloadMB.map { ", \(BrainTier.downloadSizeLabel(megabytes: $0))" } ?? "")
+                        + ". \(name) keeps working meanwhile; keep M1K3 open until it's done.",
+                    systemImage: "arrow.down.circle"
+                )
+            }
+            .buttonStyle(.plain)
+        } else if core.weightsUpdate == .ready {
+            Button {
+                core.useWeightsUpdate()
+            } label: {
+                updateRow(
+                    title: "Switch \(name) to its update",
+                    detail: "Downloaded. Takes a moment to load.",
+                    systemImage: "arrow.triangle.2.circlepath"
+                )
+            }
+            .buttonStyle(.plain)
+            .disabled(core.chat.isResponding)
+        }
+        if let leftover = core.leftoverWeights {
+            Button(role: .destructive) {
+                core.removeLeftoverWeights()
+            } label: {
+                updateRow(
+                    title: "Remove \(name)'s old weights",
+                    detail: "Nothing uses them now. Frees \(leftover.bytes.formatted(.byteCount(style: .file))).",
+                    systemImage: "trash"
+                )
+            }
+            .buttonStyle(.plain)
+        }
+        if let failure = core.weightsUpdateFailure {
+            Text(failure).font(.caption).foregroundStyle(.orange)
+        }
+    }
+
+    private func updateRow(title: String, detail: String, systemImage: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.title3)
+                .foregroundStyle(.tint)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).foregroundStyle(.primary)
+                Text(detail).font(.caption).foregroundStyle(.readableSecondary)
+            }
+            Spacer()
+        }
+        .contentShape(Rectangle())
+    }
+
     private func homeBrainRow(_ brain: PairedBrain) -> some View {
         SettingsChoiceRow(
             glyph: "house",
