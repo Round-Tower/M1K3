@@ -259,8 +259,8 @@ struct HuggingFaceBridgeTests {
         let names = HubApiDownloader.snapshotPatterns(Self.loaderPatterns, pin: pin)
         #expect(names == ["config.json", "model.safetensors"], "the fetched cut, by name (README.md is not fetched)")
         for duplicate in ["Q4/model.safetensors", "Q4/config.json"] {
-            #expect(!names.contains { RepoSizeEstimate.matches(filename: duplicate, pattern: $0) }, "\(duplicate)")
-            #expect(Self.loaderPatterns.contains { RepoSizeEstimate.matches(filename: duplicate, pattern: $0) },
+            #expect(!names.contains { RepoSizeEstimate.matches(repoPath: duplicate, pattern: $0) }, "\(duplicate)")
+            #expect(Self.loaderPatterns.contains { RepoSizeEstimate.matches(repoPath: duplicate, pattern: $0) },
                     "the bare globs DO match it: the bug this pins")
         }
     }

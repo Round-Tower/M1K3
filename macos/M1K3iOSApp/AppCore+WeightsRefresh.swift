@@ -15,6 +15,8 @@
 //  switch and the remove are verify-by-launch on the phone). Prior: none (new file).
 //  Review: Kev + claude-opus-5.5, 2026-11-18 (pre-push review fold) — the row reads disk off the main actor (newest
 //  read wins), a brain switch stops the fetch and clears the row, Remove re-checks that the update serves, settled.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (second review fold) — logs under the catalogued mlx-load category
+//  (SubsystemGuardTests).
 
 import Foundation
 import M1K3Inference
@@ -22,7 +24,7 @@ import M1K3MLX
 import os
 
 extension AppCore {
-    private nonisolated static let refreshLog = Logger(subsystem: "app.m1k3", category: "weights-update")
+    private nonisolated static let refreshLog = Logger(subsystem: "app.m1k3", category: "mlx-load")
 
     /// The tier's resolution against what is COMPLETE on disk. Nil for Mini.
     nonisolated static func weightsResolution(

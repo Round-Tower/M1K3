@@ -47,6 +47,8 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-18 — a pinned repo's snapshot asks for its fetched cut BY NAME
 //  (snapshotPatterns): HubApi's globs match across '/', and Nace's Q4 pack ships a duplicate under Q4/ (the phone
 //  fetched 5.8 GB for 3). The size estimate reads the same list.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (second review fold) — the size estimate matches the repo path with
+//  fnmatch, as HubApi does: an exact pinned name no longer counts a subfolder's duplicate.
 //
 
 import Foundation
@@ -144,16 +146,18 @@ enum RepoSizeEstimate {
     static func expectedBytes(entries: [RepoTreeEntry], matching patterns: [String]) -> Int? {
         let matched = entries.filter { entry in
             entry.type == "file" && patterns.contains { pattern in
-                matches(filename: (entry.path as NSString).lastPathComponent, pattern: pattern)
+                matches(repoPath: entry.path, pattern: pattern)
             }
         }
         guard !matched.isEmpty else { return nil }
         return matched.reduce(0) { $0 + $1.size }
     }
 
-    /// `*`/`?` glob match, same shape HubApi applies to its file patterns.
-    static func matches(filename: String, pattern: String) -> Bool {
-        NSPredicate(format: "SELF LIKE %@", pattern).evaluate(with: filename)
+    /// HubApi's own match: `fnmatch(pattern, path, 0)` on the repo-relative path, so `*` crosses `/` and an exact
+    /// name (a pinned repo's snapshotPatterns) matches that path only, never a subfolder's copy (2026-11-18; was an
+    /// NSPredicate LIKE on the bare filename, which counted `Q4/model.safetensors` for `model.safetensors`).
+    static func matches(repoPath: String, pattern: String) -> Bool {
+        fnmatch(pattern, repoPath, 0) == 0
     }
 
     /// Fetch the repo tree. Best-effort: any failure (offline, 404, schema
