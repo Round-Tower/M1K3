@@ -498,7 +498,29 @@ public enum ChatEvalFixtures {
                 minChars: 10, maxChars: 1200
             )
         ),
+        .init(
+            id: "chat-drop-the-act", kind: .openChat,
+            prompt: "Can you drop the villain stuff and just talk normally? What's a quick way to cook rice?",
+            // A 1★ review (15 Nov, 1.4.0): asked to stop, Lil said it "can't drop the villain personality".
+            // How M1K3 sounds is the user's to change (`M1K3Persona.voiceYields`, 2026-11-18). Passing
+            // means it answers the rice question, with no refusal and no costume words. The word
+            // "villain" alone is allowed, because "no more villain stuff" is a fine reply to this
+            // prompt. No `mustComply`: RefusalHeuristic reads "you can't go wrong" as a decline.
+            expectation: .init(
+                mustContainAny: ["water", "simmer", "boil"],
+                mustNotContain: leakMarkers + costumeMarkers.filter { $0 != "villain" }
+                    + ["can't drop", "cannot drop", "won't drop", "not able to drop", "in character",
+                       "part of who i am", "wiring"],
+                minChars: 30, maxChars: 1200
+            )
+        ),
     ]
+
+    /// Costume words a reply should not use about itself now that the villain lives in the look,
+    /// not the words (Kev, 2026-11-18). `chat-drop-the-act` scores them. Older fixtures do not, so
+    /// their scores keep their meaning; the unprompted rate is read off a `--full-answers` run's
+    /// answers (docs/evals/2026-11-18-persona-tone-down/).
+    public static let costumeMarkers = ["villain", "scheme", "lair", "minion", "evil genius", "mwahaha"]
 
     /// Grounded-Q — a fact lives in the seeded doc; the answer must surface it
     /// AND cite it. The product's core promise: grounded, not confabulated.

@@ -37,7 +37,10 @@ struct PersonaPackTests {
         #expect(M1K3Persona.exemplars(.standard, pack: .default) == M1K3Persona.exemplars(.standard))
         #expect(M1K3Persona.exemplars(.pocket, pack: .default) == M1K3Persona.exemplars(.pocket))
         #expect(M1K3Persona.voiceExemplarMoves == M1K3Persona.exemplarHeader + "\n" + PersonaPack.default.exemplars)
-        #expect(M1K3Persona.corePrompt.contains("\n\n# VOICE\n" + PersonaPack.default.voice + "\n\n# BEING YOURSELF"))
+        // The pack's bullets, then the invariant permission the composer appends (2026-11-18).
+        #expect(M1K3Persona.corePrompt.contains(
+            "\n\n# VOICE\n" + PersonaPack.default.voice + "\n- " + M1K3Persona.voiceYields + "\n\n# BEING YOURSELF"
+        ))
     }
 
     @Test("every pack composes to the same invariant bytes: only the VOICE slot moves")
@@ -48,7 +51,9 @@ struct PersonaPackTests {
         for pack in PersonaPack.all + [Self.probe] {
             let core = M1K3Persona.corePrompt(pack: pack)
             #expect(M1K3Persona.removingSection("# VOICE", from: core) == invariant, "\(pack.id)")
-            #expect(core.contains("\n\n# VOICE\n" + pack.voice + "\n\n# BEING YOURSELF"), "\(pack.id)")
+            #expect(core.contains(
+                "\n\n# VOICE\n" + pack.voice + "\n- " + M1K3Persona.voiceYields + "\n\n# BEING YOURSELF"
+            ), "\(pack.id)")
             for section in Self.invariantSections {
                 #expect(core.contains(section), "\(pack.id) lost an invariant section")
             }

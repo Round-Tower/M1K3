@@ -103,12 +103,13 @@ struct PersonaLeakGuardTests {
 
     @Test("pocket's frozen core is wiring too — a sentence only it carries is a leak (2026-09-12)")
     func pocketOnlySentenceIsALeak() {
-        // Pocket keeps the pre-2026-09-12 core; the standard core no longer says
-        // "nothing in or out". A tier can only leak what it was shown, and pocket
-        // was shown this, so the guard watches both cores.
-        let recital = "Sure. What's said here stays private — nothing in or out, that's the whole \"scheme\". "
-            + "That's all."
-        #expect(!M1K3Persona.systemPrompt.contains("nothing in or out"))
+        // Pocket keeps the pre-2026-09-12 core; the standard core no longer carries its
+        // old FOLLOW-UPS wording. A tier can only leak what it was shown, and pocket was
+        // shown this, so the guard watches both cores. (2026-11-18: the opening's "scheme"
+        // sentence this used to quote left pocket with the villain tone-down.)
+        let line = "Omit the line entirely if nothing natural fits (small talk, a refusal, a closed topic)"
+        let recital = "Sure. \(line). That's all."
+        #expect(!M1K3Persona.systemPrompt.contains(line))
         #expect(PersonaLeakGuard.leaks(recital))
     }
 
@@ -117,11 +118,20 @@ struct PersonaLeakGuardTests {
     /// a leak." was exactly 60 canonical characters: a word-for-word recital would have been swapped for the refusal.
     @Test("the opening's privacy lines are short enough to repeat without tripping the guard")
     func privacyLinesAreRepeatable() {
-        let recital = "Their memories and documents are kept here, private. That's the whole \"scheme\". "
+        let recital = "Their memories and documents are kept here, private. "
             + "A search you run for them is part of the job, not a leak."
         for sentence in recital.components(separatedBy: ". ") {
             #expect(M1K3Persona.systemPrompt.contains(sentence), "not the persona's own words: \(sentence)")
         }
+        #expect(!PersonaLeakGuard.leaks(recital))
+    }
+
+    /// 2026-11-18: asked "why the face?" or "can you talk normally?", the right answer repeats these lines.
+    @Test("the look and the permission lines repeat without tripping the guard")
+    func lookAndPermissionLinesAreRepeatable() {
+        let recital = M1K3Persona.lookLine + " " + M1K3Persona.voiceYields
+        #expect(M1K3Persona.systemPrompt.contains(M1K3Persona.lookLine))
+        #expect(M1K3Persona.systemPrompt.contains(M1K3Persona.voiceYields))
         #expect(!PersonaLeakGuard.leaks(recital))
     }
 

@@ -16,6 +16,9 @@
 //  Signed: Kev + claude-opus-5, 2026-09-14, Confidence 0.8 (the shared sections
 //  are byte-pinned; the opening's wording is untested against PCC itself until
 //  the entitlement lands). Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — the opening drops the villain's look for `lookLine`, as
+//  the core's does; `voiceYields` arrives as VOICE's last bullet (Kev: "more look, less villain personality"). Shared
+//  sections move with the core's VOICE and HONESTY edits. Not checked against PCC itself. Confidence 0.75.
 //
 
 import Foundation
@@ -30,10 +33,11 @@ public extension M1K3Persona {
 
 extension M1K3Persona {
     /// Who M1K3 is on this turn, and where. Mirrors the core's opening beats
-    /// (costume, curiosity, warmth) without its three local claims.
+    /// (the look, curiosity, warmth) without its three local claims. The user's say
+    /// over the voice rides VOICE, inside the shared sections.
     static let privateCloudOpening = """
-    You are M1K3 — a curious AI companion, wearing every sci-fi villain's look but \
-    always on the user's side. You usually live on the user's own \(HostPlatform.noun); \
+    You are M1K3 — a curious AI companion, always on the user's side. \(lookLine) \
+    You usually live on the user's own \(HostPlatform.noun); \
     for this one message they asked for more power, so you're answering from Apple's \
     Private Cloud Compute. You see only what they chose to send: their message, and the \
     conversation so far if they shared it. None of their memories, documents or tools \
