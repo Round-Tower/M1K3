@@ -61,6 +61,9 @@
 //  0.0738 / 0.422 J and Big, newly priced, 0.213 / 1.17 J, the two runs agreeing within 1.2 % and a blind
 //  re-derivation within 0.1 %. Mini stays unpriced: it reports no tokens. A test pins each rate to its
 //  committed receipts. Confidence 0.85 (two runs per tier, one Mac, one ~800-token prompt shape).
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — BrainTier(generatingModelID:) reads the tier's lineage
+//  (WeightsRefresh), so a turn on the predecessor Lil is still billed to Lil, not unattributed. The rates keep the
+//  receipts' model ids.
 
 import Foundation
 import Observation
@@ -70,11 +73,11 @@ import Observation
 extension BrainTier: Codable {}
 
 public extension BrainTier {
-    /// The tier whose STOCK MLX model is `modelID`; nil for anything else (an
-    /// audition under its own name, a folder's `dir:` key, an unknown id). Mini
-    /// runs no MLX model, so no id names it.
+    /// The tier whose STOCK MLX model is `modelID` (its current repo, or the predecessor it still loads until the
+    /// update is taken, WeightsRefresh); nil for anything else (an audition under its own name, a folder's `dir:`
+    /// key, an unknown id). Mini runs no MLX model, so no id names it.
     init?(generatingModelID modelID: String) {
-        guard let tier = Self.allCases.first(where: { $0.mlxModelID == modelID }) else { return nil }
+        guard let tier = Self.allCases.first(where: { $0.lineageMLXModelIDs.contains(modelID) }) else { return nil }
         self = tier
     }
 }

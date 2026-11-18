@@ -19,6 +19,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — each defaults domain is removed when its read returns (`reading`, the
 //  house `defer`): they were cleared before use and never after, 117 plists left. Checked by hand: no non-empty
 //  file survives a run once cfprefsd flushes (a count straight after the run reads its pending writes). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — shippingBudgets is keyed by tier; every repo in Lil's lineage forces
+//  at Lil's budget.
 
 import Foundation
 @testable import M1K3Inference
@@ -65,8 +67,13 @@ struct ThinkBudgetTests {
             request([:], tierLil) != nil,
             "BrainTier.lil is now \(tierLil): measure its forced budget, then add it to ThinkBudget.shippingBudgets"
         )
-        for key in ThinkBudget.shippingBudgets.keys {
-            #expect(key == key.lowercased(), "lookup lowercases the id, so \(key) would never match")
+    }
+
+    /// WeightsRefresh: Lil loads its predecessor until the update is taken; it thinks under the same cap.
+    @Test("every repo in Lil's lineage forces at Lil's budget")
+    func lilLineageIsBudgeted() {
+        for id in BrainTier.lil.lineageMLXModelIDs {
+            #expect(request([:], id) == ThinkBudget.Request(tokens: 1024, transition: .close), "\(id)")
         }
     }
 

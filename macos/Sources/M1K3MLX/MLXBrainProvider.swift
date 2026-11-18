@@ -169,6 +169,8 @@
 //  docs/evals/2026-10-24-moe-big/). Confidence 0.85.
 
 //  Review: Kev + claude-opus-5.5, 2026-11-16 (#858) — every generation entry, the persona prefill and the weights load now runs inside MLXGuardedEvaluation, so a GPU submit refused in the background throws instead of trapping. Confidence 0.7; verify-by-launch on a phone.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — usesVLMLoadPath matches Lil by its lineage (WeightsRefresh) instead
+//  of the one literal id, so the predecessor Lil still sees until the update is taken.
 import Foundation
 import Hub
 import M1K3Inference
@@ -1302,7 +1304,9 @@ extension MLXBrainProvider {
         let name = configuration.name.lowercased()
         return name.contains("gemma-4-12b") || name == "mlx-community/gemma-4-e4b-it-4bit"
             || name == "mlx-community/gemma-4-e2b-it-4bit"
-            || name == "mlx-community/qwen3.5-4b-mlx-4bit"
+            // Lil by its lineage (WeightsRefresh): the current repo AND the predecessor it loads until the update,
+            // so the fallback still sees. Exact ids, never the family.
+            || BrainTier.lil.lineageContains(name)
     }
 
     /// Allow-list of families whose attention routes through upstream's

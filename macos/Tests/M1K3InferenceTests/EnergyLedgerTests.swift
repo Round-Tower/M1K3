@@ -28,6 +28,7 @@
 //  both calibrated, each bound to its tier's model id; Mini and pocket stay unpriced. A source scan holds the
 //  doc's rate table to the shipped constants (the doc drifted from them three times while this was made).
 //  Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — every lineage id names its tier (the predecessor's turns are billed).
 
 import Foundation
 @testable import M1K3Inference
@@ -187,6 +188,10 @@ struct EnergyLedgerTests {
         for tier in BrainTier.allCases {
             guard let id = tier.mlxModelID else { continue }
             #expect(BrainTier(generatingModelID: id) == tier, "\(tier) must round-trip through its own model id")
+            // WeightsRefresh: a turn on the predecessor (the update not yet taken) is still this tier's energy.
+            for lineageID in tier.lineageMLXModelIDs {
+                #expect(BrainTier(generatingModelID: lineageID) == tier, "\(lineageID) is \(tier)'s lineage")
+            }
         }
         #expect(BrainTier.mini.mlxModelID == nil, "Mini runs no MLX model, so no id resolves to it")
         #expect(BrainTier(generatingModelID: "mlx-community/Ministral-3-3B-Instruct-4bit") == nil, "an audition")
