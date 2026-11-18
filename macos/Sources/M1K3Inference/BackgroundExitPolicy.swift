@@ -35,6 +35,10 @@
 //  route (a Private Cloud answer is not this GPU, even with Lil loaded; a failed one's local fallback IS, so the shell
 //  reads the route off the session's streaming answer, not a flag around the send), and every stop asks it.
 //  Picking a stopped turn up again on the return stays a design call (Kev). Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (#864 review fold) — a Private Cloud turn left running in the
+//  background can fail there; its local fallback starts only in front or off this GPU
+//  (BackgroundExitPolicy.mayRunLocalFallback, ChatSession.mayRunLocalFallback), else the notice says Lil can't
+//  answer in the background and asks again on return.
 //
 
 import Foundation
@@ -46,6 +50,13 @@ public enum BackgroundExitPolicy {
     /// Home needs no case: activating it releases the local brain.
     public static func turnUsesThisDevicesGPU(localBrainLoaded: Bool, privateCloudTurn: Bool) -> Bool {
         localBrainLoaded && !privateCloudTurn
+    }
+
+    /// Whether a Private Cloud turn's local fallback may start now: in front, or anywhere when the local brain is not
+    /// on this device's GPU (Mini, Home). A cloud turn the exit let run can still fail in the background; starting Lil
+    /// there submits GPU work iOS refuses (#864 review), so the notice asks again on return instead.
+    public static func mayRunLocalFallback(appActive: Bool, localBrainLoaded: Bool) -> Bool {
+        appActive || !localBrainLoaded
     }
 
     /// Whether the turn in flight is stopped when the app leaves for the background.

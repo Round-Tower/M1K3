@@ -49,6 +49,10 @@
 //  Review: Kev + claude-opus-5.5, 2026-11-17 — `PrivateCloudFallback.notice(localStopped:)`: when the local brain
 //  was stopped before its first word the line says so instead of claiming it answered (seen on the phone).
 //  Confidence 0.9.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (#864 review fold) — a Private Cloud turn left running in the
+//  background can fail there; its local fallback starts only in front or off this GPU
+//  (BackgroundExitPolicy.mayRunLocalFallback, ChatSession.mayRunLocalFallback), else the notice says Lil can't
+//  answer in the background and asks again on return.
 
 import Foundation
 
@@ -249,9 +253,13 @@ public enum PrivateCloudFallback {
     /// screen on a phone, which can't run Lil or Big behind the lock). Its empty answer is removed, so this line is
     /// the whole reply and must not claim an answer.
     public static func notice(
-        for failure: PrivateCloudFailure, localBrain: String, now: Date, localStopped: Bool = false
+        for failure: PrivateCloudFailure, localBrain: String, now: Date, localStopped: Bool = false,
+        localHeld: Bool = false
     ) -> String {
-        let tail = localStopped
+        // `localHeld`: the local brain could not start, because the app was in the background (#864 review).
+        let tail = localHeld
+            ? ", and \(localBrain) can't answer while M1K3 is in the background. Ask again when you're back."
+            : localStopped
             ? ", and \(localBrain) stopped before answering."
             : ", so \(localBrain) answered here instead."
         switch failure {
