@@ -57,6 +57,8 @@
 //  the rated count and an Export ratings (JSONL) share, for evaluating chat off the phone. Confidence 0.8.
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
 //  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — the Brain rows (each tier, Home, Private Cloud) draw
+//  SettingsChoiceRow, whose whole row takes the touch; before, only the words did (Kev, on the 17 Pro).
 //  Review: Kev + claude-opus-5.5, 2026-11-18 — Brain gets the weights-update rows (WeightsRefresh): Update with its
 //  progress, Switch, then Remove the old weights, each a tap.
 
@@ -127,30 +129,15 @@ struct SettingsScreen: View {
 
             Section("Brain") {
                 ForEach(brains) { tier in
-                    Button {
+                    SettingsChoiceRow(
+                        glyph: tier.glyph,
+                        title: tier.displayName,
+                        detail: tier.tagline,
+                        isChosen: core.selectedBrain == tier && !core.homeBrainActive && !core.privateCloudArming.isOn
+                    ) {
                         core.pickPrivateCloud(false)
                         core.selectBrain(tier)
-                    } label: {
-                        HStack(spacing: 12) {
-                            // `glyph` is an SF Symbol NAME, not an emoji.
-                            Image(systemName: tier.glyph)
-                                .font(.title3)
-                                .foregroundStyle(.tint)
-                                .frame(width: 28)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(tier.displayName).foregroundStyle(.primary)
-                                Text(tier.tagline)
-                                    .font(.caption)
-                                    .foregroundStyle(.readableSecondary)
-                            }
-                            Spacer()
-                            if core.selectedBrain == tier, !core.homeBrainActive, !core.privateCloudArming.isOn {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundStyle(.tint)
-                            }
-                        }
                     }
-                    .buttonStyle(.plain)
                 }
                 weightsUpdateRows
                 if let brain = core.homeBrain {
@@ -379,29 +366,15 @@ struct SettingsScreen: View {
     }
 
     private func homeBrainRow(_ brain: PairedBrain) -> some View {
-        Button {
+        SettingsChoiceRow(
+            glyph: "house",
+            title: "Home",
+            detail: "\(brain.name)’s brain, over your Wi-Fi",
+            isChosen: core.homeBrainActive && !core.privateCloudArming.isOn
+        ) {
             core.pickPrivateCloud(false)
             core.selectHomeBrain()
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "house")
-                    .font(.title3)
-                    .foregroundStyle(.tint)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Home").foregroundStyle(.primary)
-                    Text("\(brain.name)’s brain, over your Wi-Fi")
-                        .font(.caption)
-                        .foregroundStyle(.readableSecondary)
-                }
-                Spacer()
-                if core.homeBrainActive, !core.privateCloudArming.isOn {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.tint)
-                }
-            }
         }
-        .buttonStyle(.plain)
     }
 
     /// Home before a Mac is paired: the same row shape, leading into the ceremony —
@@ -451,31 +424,15 @@ struct SettingsScreen: View {
     /// Private Cloud Compute as a brain: the same row shape as Home, disabled (and
     /// saying why) while PCC is out or its limit is spent.
     private var privateCloudBrainRow: some View {
-        Button {
+        SettingsChoiceRow(
+            glyph: PrivateCloudLabel.symbolName,
+            title: PrivateCloudRung.menuTitle(privateCloudRow),
+            detail: "Answers on Apple's servers — asks before your first message goes",
+            isChosen: core.privateCloudArming.isOn
+        ) {
             core.pickPrivateCloud(true)
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: PrivateCloudLabel.symbolName)
-                    .font(.title3)
-                    .foregroundStyle(.tint)
-                    .frame(width: 28)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(PrivateCloudRung.menuTitle(privateCloudRow)).foregroundStyle(.primary)
-                    Text("Answers on Apple's servers — asks before your first message goes")
-                        .font(.caption)
-                        .foregroundStyle(.readableSecondary)
-                }
-                Spacer()
-                if core.privateCloudArming.isOn {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.tint)
-                }
-            }
         }
-        .buttonStyle(.plain)
         .disabled(privateCloudRow != .ready)
-        .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(core.privateCloudArming.isOn ? .isSelected : [])
     }
 
     private var appVersion: String {

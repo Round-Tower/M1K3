@@ -42,6 +42,10 @@
 //  wordings will be broader than any list I can write today — expect to add
 //  cases, and never widen a rule without a fixture that demanded it).
 //  Prior: Unknown
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — two speech-act shapes, each from a row Mini distilled on Kev's iPhone
+//  out of one "a 500-word story, please" chat: a story the user WANTS (a request for this turn; "wants to write a
+//  story" stays durable) and the words the user USED (past tense; the habitual "uses the word grand" stays durable).
+//  Near-misses pinned beside them. Only "story": poem and joke wait for a row that demands them. Confidence 0.8.
 //
 
 import Foundation
@@ -104,6 +108,24 @@ public enum FactDurabilityPolicy {
         return "\\b\(subject)\\s+\(auxiliary)\(framing)(\(speechVerbs.joined(separator: "|")))\\b"
     }()
 
+    /// The user's own words reported back, in the PAST tense: "the user repeatedly used the word Please". The habitual
+    /// "Kev uses the word grand for everything" is a trait and stays durable (pinned as a near-miss).
+    static let wordUsePattern: String = {
+        let subject = "(the user|user|kev)"
+        let auxiliary = "(has |had |have )?"
+        let adverb = "(repeatedly |often |frequently |again )?"
+        return "\\b\(subject)\\s+\(auxiliary)\(adverb)used the (word|phrase|term)s?\\b"
+    }()
+
+    /// A story the user wants written now: a request for the turn, not a fact about them. Two words of adjectives
+    /// at most ("a short bedtime story"); a compound ("story-driven", "storytelling") is a different noun, and
+    /// "wants to write a story" is an aspiration (both pinned as near-misses). Only "story" so far: a sibling noun
+    /// joins when a live row demands it.
+    static let storyRequestPattern: String = {
+        let subject = "(the user|user|kev)"
+        return "\\b\(subject)\\s+(wants|wanted|would like)\\s+(a|an|another)\\s+([a-z0-9-]+\\s+){0,2}story(?![-\\w])"
+    }()
+
     /// The conversation, the assistant, and the session as SUBJECT MATTER.
     /// A standing fact about a person does not mention the chat it was said in.
     /// `an assistant` / `the assistant` are anchored with their article so
@@ -139,6 +161,12 @@ public enum FactDurabilityPolicy {
             return .transient(.speechAct)
         }
         if text.range(of: speechActPattern, options: [.regularExpression]) != nil {
+            return .transient(.speechAct)
+        }
+        if text.range(of: wordUsePattern, options: [.regularExpression]) != nil {
+            return .transient(.speechAct)
+        }
+        if text.range(of: storyRequestPattern, options: [.regularExpression]) != nil {
             return .transient(.speechAct)
         }
         if momentMarkers.contains(where: { containsWord($0, in: text) }) {

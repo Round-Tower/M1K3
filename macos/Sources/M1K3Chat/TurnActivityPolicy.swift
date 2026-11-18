@@ -26,6 +26,8 @@
 //  inactive mid-turn, at any elapsed time (Kev's phone: a 6 s Mini turn got no card, and none can start from the
 //  background). A card started that way is taken down again when the app is active (a Control Center pull
 //  leaves nothing behind); the 8 s start stays as the backstop. Confidence 0.75 (pinned; the device is the test).
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — `refreshed()`: re-send a working card so its stale date counts from the
+//  background grace (a card a killed app left now goes stale instead of saying "thinking" forever). Confidence 0.8.
 
 import Foundation
 import M1K3LiveActivity
@@ -155,6 +157,13 @@ public struct TurnActivityPolicy: Sendable {
         let paused = TurnActivityState(phase: .paused)
         shown = paused
         return .end(final: paused, dismissal: .after(Self.pausedLingers))
+    }
+
+    /// Re-send the card as it is, so its stale date counts from now (TurnActivityStaleness). Only a working card on
+    /// a running turn: a settled one has no stale date, and there is nothing to refresh without a card.
+    public func refreshed() -> Action {
+        guard turnRunning, let current = shown, TurnActivityStaleness.isWorking(current.phase) else { return .none }
+        return .update(current)
     }
 
     /// The app came to the front: a lingering Ready/Paused card has done its job.

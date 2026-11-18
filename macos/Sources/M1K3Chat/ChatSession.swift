@@ -128,6 +128,11 @@
 //  be put up by voice. Confidence 0.8 (pinned in CitedSourceTests).
 //  Review: Kev + claude-opus-5.5, 2026-11-14 (follow-ups) — `ChatMessage.isRead`, so the shells keep a read's links
 //  untappable. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — `answeringOnPrivateCloud`: read off the streaming answer's origin, so
+//  the phone's exit leaves a Private Cloud answer running but stops a failed one's local fallback. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 (phone) — a fallback stopped before its first word rewrites the notice
+//  ("Lil stopped before answering"): on the phone PCC refused, leaving stopped Lil, and the reply read "Lil answered
+//  here instead" over nothing. Confidence 0.85.
 
 import Foundation
 import M1K3Inference
@@ -403,6 +408,16 @@ public final class ChatSession {
     private static let leakLog = Logger(subsystem: "app.m1k3", category: "security")
     public private(set) var messages: [ChatMessage] = []
     public private(set) var isResponding = false
+
+    /// The answer streaming right now comes from Private Cloud Compute, not this device. Read off the streaming
+    /// message's origin, so a failed Private Cloud turn's LOCAL fallback (which runs inside the same
+    /// `sendPrivateCloud`) reads false: the phone's background exit must stop that one like any Lil turn.
+    public var answeringOnPrivateCloud: Bool {
+        guard isResponding, let last = messages.last, last.role == .assistant, last.status == .streaming else {
+            return false
+        }
+        return last.answerOrigin == .privateCloudCompute
+    }
 
     /// The conversation the transcript belongs to. Rows are created LAZILY —
     /// only `send` writes — so empty conversations never reach the store.
@@ -904,6 +919,14 @@ public final class ChatSession {
             // The local fallback after a look is fenced like any send after a look.
             await LookAftermath.$withholdsWeb.withValue(fenced) {
                 await runLocalTurn(question, images: [], history: history, assistantID: localID)
+            }
+            // Stopped before its first word, the local answer is gone, and the notice must not say it answered.
+            if !messages.contains(where: { $0.id == localID }) {
+                update(assistantID) {
+                    $0.text = PrivateCloudFallback.notice(
+                        for: failure, localBrain: localBrainName, now: now, localStopped: true
+                    )
+                }
             }
         case let .failed(failure, partial):
             // Something came: keep it, marked, and say why it stopped.

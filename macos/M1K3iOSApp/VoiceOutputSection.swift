@@ -22,6 +22,7 @@
 //  Review: Kev + claude-opus-5.5, 2026-10-12 — "Speak answers" (chat auto-speak, the Mac's key): off stops the voice at once.
 //  Review: Kev + claude-fable-5.2, 2026-11-14 — quiet text moves from `.secondary` to `.readableSecondary`
 //  (ReadableSecondary.swift), as on the Mac in #831. Not yet measured on the phone at the time of writing.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — the voice rows draw SettingsChoiceRow: the whole row takes the touch.
 //
 
 import M1K3Inference
@@ -42,28 +43,14 @@ struct VoiceOutputSection: View {
     var body: some View {
         Section {
             ForEach(tiers) { tier in
-                Button {
+                SettingsChoiceRow(
+                    glyph: tier.glyph,
+                    title: tier.displayName,
+                    detail: tier.tagline,
+                    isChosen: core.selectedVoiceTier == tier
+                ) {
                     core.selectVoiceTier(tier)
-                } label: {
-                    HStack(spacing: 12) {
-                        Image(systemName: tier.glyph)
-                            .font(.title3)
-                            .foregroundStyle(.tint)
-                            .frame(width: 28)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(tier.displayName).foregroundStyle(.primary)
-                            Text(tier.tagline)
-                                .font(.caption)
-                                .foregroundStyle(.readableSecondary)
-                        }
-                        Spacer()
-                        if core.selectedVoiceTier == tier {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.tint)
-                        }
-                    }
                 }
-                .buttonStyle(.plain)
             }
             loadState
             if let note = AppCore.mlxSupport.voiceNote {

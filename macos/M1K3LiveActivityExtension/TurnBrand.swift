@@ -16,6 +16,7 @@
 //  Signed: Kev + claude-opus-5.5, 2026-11-16, Confidence 0.65 (colours and sizes read off the app and the
 //  screensaver; the rendered look, the font load and the compact-trailing fit are verify-on-device),
 //  Prior: PixelFont.swift and M1K3ScreenSaverView.swift (the values), none for this file.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — the face draws `copy.facePhase` (eyes shut on a stale card).
 
 import CoreText
 import M1K3LiveActivity
@@ -66,7 +67,7 @@ struct TurnFaceMark: View {
             let unit = min(size.width / cols, size.height / rows)
             let origin = CGPoint(x: (size.width - unit * cols) / 2, y: (size.height - unit * rows) / 2)
             let ink = TurnBrand.phosphor
-            for cell in TurnFace.cells(for: copy.phase) {
+            for cell in TurnFace.cells(for: copy.facePhase) {
                 let rect = CGRect(
                     x: origin.x + CGFloat(cell.col) * unit, y: origin.y + CGFloat(cell.row) * unit,
                     width: unit, height: unit

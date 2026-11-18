@@ -16,6 +16,8 @@
 //  synchronously and the Paused write holds its own short task.
 //  Review: Kev + claude-opus-5.5, 2026-11-16 — `UserNoticeNotifier` + `TurnNoticeDelegate`: the phone's "your
 //  answer is ready" notification (decisions in TurnNoticePolicy); a tap opens the chat via m1k3://chat.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — start and update write a stale date for a working card
+//  (TurnActivityStaleness). Owed on a phone: kill the app from Xcode mid-turn in the background, wait two minutes.
 
 import Foundation
 import M1K3Chat
@@ -70,7 +72,7 @@ extension TurnActivityDriver {
             do {
                 let card = try Activity.request(
                     attributes: TurnActivityAttributes(),
-                    content: ActivityContent(state: state, staleDate: nil),
+                    content: ActivityContent(state: state, staleDate: TurnActivityStaleness.staleDate(for: state, now: .now)),
                     pushType: nil
                 )
                 // A breadcrumb per card: the phone's first try showed nothing and the log could not say why.
@@ -85,7 +87,7 @@ extension TurnActivityDriver {
 
         func update(_ state: TurnActivityState) async {
             Self.log.notice("live activity update: \(String(describing: state.phase), privacy: .public)")
-            await Self.updateAll(ActivityContent(state: state, staleDate: nil))
+            await Self.updateAll(ActivityContent(state: state, staleDate: TurnActivityStaleness.staleDate(for: state, now: .now)))
         }
 
         func end(final: TurnActivityState?, dismissal: TurnActivityPolicy.Dismissal) async {

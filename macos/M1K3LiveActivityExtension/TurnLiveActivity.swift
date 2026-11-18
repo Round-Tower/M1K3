@@ -15,6 +15,7 @@
 //  the Island's three sizes are verify-on-device), Prior: none (new file).
 //  Review: Kev + claude-opus-5.5, 2026-11-16 — Kev: "It doesn't look on brand." SF Symbols and the system
 //  blue are gone: the pixel face, Silkscreen and the brand ink and phosphor (TurnBrand).
+//  Review: Kev + claude-opus-5.5, 2026-11-17 — passes `context.isStale` to the copy (the stale look). Compile-checked.
 
 import ActivityKit
 import M1K3LiveActivity
@@ -35,12 +36,12 @@ struct M1K3LiveActivityBundle: WidgetBundle {
 struct TurnLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: TurnActivityAttributes.self) { context in
-            TurnLockScreenView(copy: TurnActivityCopy(phase: context.state.phase))
+            TurnLockScreenView(copy: TurnActivityCopy(phase: context.state.phase, isStale: context.isStale))
                 .activityBackgroundTint(TurnBrand.ink)
                 .activitySystemActionForegroundColor(TurnBrand.mark)
                 .widgetURL(TurnActivityLink.url)
         } dynamicIsland: { context in
-            let copy = TurnActivityCopy(phase: context.state.phase)
+            let copy = TurnActivityCopy(phase: context.state.phase, isStale: context.isStale)
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     TurnFaceMark(copy: copy)

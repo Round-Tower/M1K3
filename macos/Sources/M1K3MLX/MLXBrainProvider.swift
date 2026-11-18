@@ -169,6 +169,7 @@
 //  docs/evals/2026-10-24-moe-big/). Confidence 0.85.
 
 //  Review: Kev + claude-opus-5.5, 2026-11-16 (#858) — every generation entry, the persona prefill and the weights load now runs inside MLXGuardedEvaluation, so a GPU submit refused in the background throws instead of trapping. Confidence 0.7; verify-by-launch on a phone.
+//  Review: Kev + claude-opus-5.5, 2026-11-17 (#862) — `evaluating`: true while any brain evaluation runs (MLXEvaluationCounter), read by the phone's background shed. Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-11-18 — usesVLMLoadPath matches Lil by its lineage (WeightsRefresh) instead
 //  of the one literal id, so the predecessor Lil still sees until the update is taken.
 import Foundation
@@ -236,6 +237,12 @@ func generationMetrics(
 /// post-load fills (the late dialect and the late think traits, #264) sit
 /// behind `lateDialectLock`; everything else is immutable.
 public final class MLXBrainProvider: InferenceProvider, ModelPreloading, @unchecked Sendable {
+    /// True while any brain evaluation is running in this process (every brain, every path: the chat turn, a title,
+    /// a distillation, a look). The phone's background shed waits on it (#862).
+    public static var evaluating: Bool {
+        MLXEvaluationCounter.shared.any
+    }
+
     public let name: String
 
     /// Everything but sampling, fixed at init (token cap, KV, prefill).
