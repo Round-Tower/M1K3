@@ -38,6 +38,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-20 — the park cancels the front brain's persona warm before
 //  `releaseModel()`: a warm still running would `ensureLoaded` the parked brain straight back beside Big.
 //  Verify-by-launch owed (an escalated dive right after a load). Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — the dive builds Big from the loadable id (WeightsRefresh), never the
+//  bare id.
 //
 
 import AppKit
@@ -132,7 +134,7 @@ extension AppEnvironment {
         // its ensureLoaded, and contend with the dive on the same container.
         // The posture reads only the label + selectedBrain, both already set.
         refreshInterimBridge() // interactive turns front on Mini from here
-        if plan.requiresSwap, let bigID = BrainTier.big.mlxModelID {
+        if plan.requiresSwap, let bigID = loadableModelID(for: .big) {
             // Re-point the ONE MLX slot at Big for the dive's lifetime. The
             // slot (not a private provider) on purpose: any stray caller that
             // reaches swappableMLX mid-dive then QUEUES on Big's container

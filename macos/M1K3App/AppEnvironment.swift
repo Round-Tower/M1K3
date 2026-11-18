@@ -171,6 +171,9 @@
 //  stalls serving for nothing (the #833 review nit). Confidence 0.85 (compile-checked).
 //  Review: Kev + claude-opus-5.5, 2026-11-15 — `voicePage` + `pageControl` (#839): the page voice mode can open
 //  beside the avatar, the handle its spoken scroll / back commands drive, and the cited-source cache. Confidence 0.7 (verify-by-launch).
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — every tier-to-folder site (the launch build, isBrainDownloaded, the
+//  restore consent, selectBrain and its re-pick check) goes through the WeightsRefresh resolver: a brain on its
+//  predecessor loads from disk, and a re-pick after the update lands is the switch.
 
 import AppKit
 import Foundation
@@ -1089,8 +1092,10 @@ final class AppEnvironment {
         switch BrainRestoreConsent.resolve(
             persisted: settled,
             eased: settled.easedToOfferedMini(afm: Self.afmAvailabilityAtLaunch),
+            // On disk = something this tier can load without a download: its weights complete, or its
+            // predecessor until the update is taken (WeightsRefresh).
             staged: { [brainInventory] tier in
-                tier.mlxModelID.map { brainInventory.isInstalled(modelID: $0) } ?? false
+                Self.weightsResolution(for: tier, inventory: brainInventory)?.isOnDisk ?? false
             }
         ) {
         case let .warm(tier):
@@ -1133,7 +1138,9 @@ final class AppEnvironment {
             prewarmsPromptPrefix: AFMPrefixPrewarm.isEnabled(in: .standard)
         )
         afmProvider = afm
-        let initialMLXModelID = brain.mlxModelID ?? BrainTier.big.mlxModelID ?? ""
+        // The repo each tier loads now (WeightsRefresh): never the bare id, which would fetch an update unasked.
+        let initialMLXModelID = Self.weightsResolution(for: brain, inventory: brainInventory)?.loadID
+            ?? Self.weightsResolution(for: .big, inventory: brainInventory)?.loadID ?? ""
         // Generation cap follows the tier whose MODEL fills the slot (Big's when
         // Mini is active), not the selected brain: on a rotating-KV tier an
         // uncapped decode crosses the 8192 window mid-answer and silently
@@ -1728,8 +1735,9 @@ final class AppEnvironment {
     /// Whether a downloaded-tier brain's weights are already on disk. Mini (Apple
     /// Foundation Models) has nothing to download, so it's never "downloaded" here.
     func isBrainDownloaded(_ tier: BrainTier) -> Bool {
-        guard let modelID = tier.mlxModelID else { return false }
-        return brainInventory.isInstalled(modelID: modelID)
+        // Complete weights it can load, its predecessor's included (WeightsRefresh): Lil on its previous weights
+        // is downloaded, so the launch never gates it behind the update.
+        weightsResolution(for: tier)?.isOnDisk ?? false
     }
 
     /// Accept the launch offer (#237): the tap this download was waiting for.
@@ -1777,7 +1785,8 @@ final class AppEnvironment {
         if BrainSwitcher.reselectIsNoOp(
             tier: tier, selected: selectedBrain, load: modelLoad,
             loadedModelID: currentMLXProvider.sourceKey,
-            expectedModelID: Self.auditionSourceKey(for: tier)
+            // What the tier loads NOW (WeightsRefresh): after an update lands, a re-pick is the switch, not a no-op.
+            expectedModelID: Self.auditionSourceKey(for: tier) ?? loadableModelID(for: tier)
         ) {
             Self.brainLog.notice("selectBrain \(tier.rawValue, privacy: .public): already loaded, no-op")
             // Defense-in-depth: keep the upgrade machine consistent even on the
@@ -1786,7 +1795,8 @@ final class AppEnvironment {
             recomputeBrainUpgradeState()
             return true
         }
-        Self.brainLog.notice("selectBrain \(tier.rawValue, privacy: .public): model=\(tier.mlxModelID ?? "appleFoundationModels", privacy: .public)")
+        let loadable = loadableModelID(for: tier)
+        Self.brainLog.notice("selectBrain \(tier.rawValue, privacy: .public): model=\(loadable ?? "appleFoundationModels", privacy: .public)")
         // Any switch abandons a pending audition load, a switch to Mini included: the
         // cancelled preload never settles, so nothing else would clear it (#452 review).
         AuditionSelection.clearPendingLoad()
@@ -1809,7 +1819,7 @@ final class AppEnvironment {
         // The outgoing brain's persona warm stops here: before 10-20 it ran on, prefilling Big's remaining palettes
         // for two minutes beside Lil's load (and pinning Big's weights while it did).
         cancelPersonaWarm()
-        if let modelID = tier.mlxModelID {
+        if let modelID = loadable {
             // Rotating-KV tiers get a capped decode so prefill + generation fit
             // the window together (see HistoryBudgetPolicy.rotatingGenerationTokenCap).
             let mlx = Self.makeMLXBrain(

@@ -21,6 +21,8 @@
 //  stay, read-only; K4 rows already in flight show with their status and `footer` says what sits under them; K5 `.preparing`
 //  counts as downloaded in the bar (no backward jump) and `start(_:using:)` pins only rows whose download really began
 //  (a refused one is `.notStarted`, a static note). Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — a brain on its previous weights (an update offered or ready,
+//  WeightsRefresh) counts as here: it works, so onboarding never offers to download it.
 
 import Foundation
 
@@ -258,8 +260,9 @@ public struct OnboardingKit: Equatable, Sendable {
         }
     }
 
+    /// A brain on its previous weights (an update offered or ready, WeightsRefresh) is here: it works.
     private static func isHere(_ state: DownloadState) -> Bool {
-        state == .ready || state == .inUse
+        state == .ready || state == .inUse || state == .updateAvailable || state == .updateReady
     }
 
     private static func isOnItsWay(_ state: DownloadState) -> Bool {
@@ -271,7 +274,7 @@ public struct OnboardingKit: Equatable, Sendable {
 
     private static func startedStatus(_ state: DownloadState) -> Status {
         switch state {
-        case .ready, .inUse: .ready
+        case .ready, .inUse, .updateAvailable, .updateReady: .ready
         case let .failed(message): .failed(message)
         case .preparing, .reindexing, .removing, .checking: .preparing
         case .downloading, .absent, .partial: .downloading

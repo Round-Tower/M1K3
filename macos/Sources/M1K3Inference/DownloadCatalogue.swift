@@ -25,6 +25,8 @@
 //  load is never masked as "In use". Confidence 0.85.
 //  Review: Kev + claude-opus-5.5, 2026-10-11 (pre-push review fold) — K2: `phaseOnly` on the state and the item, the tick-free
 //  view the glass-hosted kit card holds. Confidence 0.85.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — WeightsUpdate: a brain whose previous weights serve shows Update
+//  available (fetch) or Update ready (switch), never Download or Remove for a brain that works.
 
 import Foundation
 
@@ -56,6 +58,15 @@ public enum DownloadKind: String, CaseIterable, Sendable, Hashable, Identifiable
     }
 }
 
+/// A brain whose weights changed under it (WeightsRefresh): the previous ones serve until the person takes
+/// the update with a tap, and switches with another.
+public enum WeightsUpdate: Equatable, Sendable {
+    /// Only the previous weights are complete: the update can be fetched.
+    case available
+    /// The update is complete, and the previous weights are still the ones loaded.
+    case ready
+}
+
 /// What the shell knows about one item right now.
 public struct DownloadFacts: Equatable, Sendable {
     /// Complete on disk (a pinned repo: every pinned weight file at its pinned size).
@@ -77,10 +88,14 @@ public struct DownloadFacts: Equatable, Sendable {
     public var scanned: Bool
     /// The item is being re-indexed (Semantic memory's switch re-indexes the notes).
     public var reindexing: Bool
+    /// A brain's weights update, when one is on offer or ready (WeightsRefresh). `installed` and `partial` then
+    /// describe the UPDATE's folder; the previous weights are what `inUse` is about.
+    public var update: WeightsUpdate?
 
     public init(
         installed: Bool = false, load: ModelLoadState = .idle, inUse: Bool = false, canCancel: Bool = true,
-        partial: Bool = false, removing: Bool = false, scanned: Bool = true, reindexing: Bool = false
+        partial: Bool = false, removing: Bool = false, scanned: Bool = true, reindexing: Bool = false,
+        update: WeightsUpdate? = nil
     ) {
         self.installed = installed
         self.load = load
@@ -90,6 +105,7 @@ public struct DownloadFacts: Equatable, Sendable {
         self.removing = removing
         self.scanned = scanned
         self.reindexing = reindexing
+        self.update = update
     }
 
     /// Anything of this item on disk, complete or not: it must always be removable.
@@ -116,6 +132,10 @@ public enum DownloadState: Equatable, Sendable {
     case checking
     /// Re-indexing the user's notes after Semantic memory switched on.
     case reindexing
+    /// The previous weights serve; their update can be fetched (WeightsRefresh).
+    case updateAvailable
+    /// The update is on disk; the previous weights still serve until the switch.
+    case updateReady
 
     /// The same phase without the tick: a `.downloading` fraction is dropped (an honest "downloading"),
     /// every other case is unchanged. Equal phases compare equal, so a surface that must not repaint on
@@ -137,6 +157,11 @@ public enum DownloadState: Equatable, Sendable {
         case let .failed(message): return .failed(message)
         case .idle, .ready:
             if !facts.scanned { return facts.inUse ? .inUse : .checking }
+            switch facts.update {
+            case .available: return .updateAvailable
+            case .ready: return .updateReady
+            case nil: break
+            }
             if facts.installed { return facts.inUse ? .inUse : .ready }
             if facts.partial { return .partial }
             return .absent
@@ -154,6 +179,8 @@ public struct DownloadActions: OptionSet, Sendable {
     public static let download = DownloadActions(rawValue: 1 << 0)
     public static let cancel = DownloadActions(rawValue: 1 << 1)
     public static let remove = DownloadActions(rawValue: 1 << 2)
+    /// Switch a brain to its downloaded update (WeightsRefresh).
+    public static let useUpdate = DownloadActions(rawValue: 1 << 3)
 }
 
 public struct DownloadItem: Identifiable, Equatable, Sendable {
@@ -238,7 +265,12 @@ public enum DownloadCatalogue {
         let removable: DownloadActions = facts.onDisk && !facts.inUse ? [.remove] : []
         switch state {
         case .absent: return [.download]
+        // Not serving (another brain is picked): the old weights may go too. Remove takes the tier's whole lineage.
+        case .updateAvailable: return facts.inUse ? [.download] : [.download, .remove]
+        // A failed update: retry it. The previous weights serve, so nothing here is offered for removal.
+        case .failed where facts.update != nil: return [.download]
         case .failed, .partial: return DownloadActions.download.union(removable)
+        case .updateReady: return [.useUpdate]
         case .downloading: return kind.supportsCancel && facts.canCancel ? [.cancel] : []
         case .preparing, .inUse, .removing, .checking, .reindexing: return []
         case .ready: return [.remove]

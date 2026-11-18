@@ -66,6 +66,37 @@ struct WeightsRefreshTests {
         #expect(resolve(complete: []).claimedIDs == [current])
     }
 
+    @Test("the update a brain offers: available while only the old weights are whole, ready while they still serve")
+    func updateState() {
+        func update(current: Bool, previous: Bool, serving: String?) -> WeightsUpdate? {
+            WeightsRefresh.update(
+                predecessor: self.previous, currentComplete: current, predecessorComplete: previous, servingID: serving
+            )
+        }
+        #expect(update(current: false, previous: true, serving: previous) == .available)
+        #expect(update(current: false, previous: true, serving: nil) == .available, "offered even while not loaded")
+        #expect(update(current: true, previous: true, serving: previous) == .ready, "fetched: one tap switches")
+        #expect(update(current: true, previous: true, serving: current) == nil, "switched: nothing left to offer")
+        #expect(update(current: false, previous: false, serving: nil) == nil, "nothing on disk: a first download")
+        #expect(WeightsRefresh.update(
+            predecessor: nil, currentComplete: false, predecessorComplete: true, servingID: nil
+        ) == nil, "no lineage, no update")
+    }
+
+    @Test("the old weights are left over only once the update is whole and they no longer serve")
+    func leftover() {
+        func leftover(current: Bool, previousOnDisk: Bool, serving: String?) -> String? {
+            WeightsRefresh.leftover(
+                predecessor: previous, predecessorOnDisk: previousOnDisk, currentComplete: current, servingID: serving
+            )
+        }
+        #expect(leftover(current: true, previousOnDisk: true, serving: current) == previous)
+        #expect(leftover(current: true, previousOnDisk: true, serving: nil) == previous, "another brain picked")
+        #expect(leftover(current: true, previousOnDisk: true, serving: previous) == nil, "still serving: not yet")
+        #expect(leftover(current: false, previousOnDisk: true, serving: nil) == nil, "the fallback: keep it")
+        #expect(leftover(current: true, previousOnDisk: false, serving: current) == nil, "already gone")
+    }
+
     @Test("every tier's lineage starts with its current id, holds at most one predecessor, never repeats")
     func lineageShape() {
         for tier in BrainTier.allCases {

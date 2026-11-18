@@ -12,7 +12,7 @@
 //
 //  Every place that turns a tier into a folder MUST go through `loadID`: `MLXBrainProvider` loads through a
 //  downloader that fetches whatever is missing, so a stray `tier.mlxModelID` is a silent 3 GB fetch. A source-scan
-//  test in M1K3AppSourceTests holds the shells to it.
+//  test, WeightsRefreshWiringScanTests, holds the shells to it.
 //
 //  Signed: Kev + claude-opus-5.5, 2026-11-18, Confidence 0.8 (pure, pinned by WeightsRefreshTests; the Settings
 //  rows, the fetch and the switch are verify-by-launch). Prior: none (new file).
@@ -64,6 +64,25 @@ public enum WeightsRefresh {
         if isComplete(current) { return .current(current) }
         if let predecessor, isComplete(predecessor) { return .predecessor(predecessor, update: current) }
         return .download(current)
+    }
+
+    /// The update a brain's row offers: `.available` while only the predecessor is complete, `.ready` once the
+    /// update is complete and the predecessor still serves (`servingID`: the repo loaded now, nil when none).
+    public static func update(
+        predecessor: String?, currentComplete: Bool, predecessorComplete: Bool, servingID: String?
+    ) -> WeightsUpdate? {
+        guard let predecessor else { return nil }
+        if !currentComplete { return predecessorComplete ? .available : nil }
+        return servingID == predecessor ? .ready : nil
+    }
+
+    /// The predecessor, once nothing needs it: the update is complete and the old weights are not what serves.
+    /// The person removes it with a tap (the phone has no "Free up space" list; the Mac lists it there).
+    public static func leftover(
+        predecessor: String?, predecessorOnDisk: Bool, currentComplete: Bool, servingID: String?
+    ) -> String? {
+        guard let predecessor, predecessorOnDisk, currentComplete, servingID != predecessor else { return nil }
+        return predecessor
     }
 }
 

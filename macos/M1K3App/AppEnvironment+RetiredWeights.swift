@@ -12,6 +12,8 @@
 //  Signed: Kev + claude-fable-5.1, 2026-09-05, Confidence 0.8 (glue over a
 //  tested policy; the row, the dialog and the delete are verify-by-launch).
 //  Prior: none. Issue #222.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — the keep-set reads each tier's claimed ids (WeightsRefresh): a
+//  predecessor is kept while it is what loads, then lists here though its pin stays.
 
 import Foundation
 import M1K3Inference
@@ -28,11 +30,14 @@ struct RetiredWeightsFailure: Equatable {
 extension AppEnvironment {
     private nonisolated static let retiredLog = Logger(subsystem: "app.m1k3", category: "mlx-load")
 
-    /// The ids nothing may offer for removal: pinned, shipped, or loaded now.
+    /// The ids nothing may offer for removal: pinned, claimed by a tier, or loaded now. A tier claims its
+    /// predecessor only while that is what it loads (WeightsRefresh); once the update is complete, the old folder
+    /// is free even though its pin stays (the pin is what verifies it while it serves).
     var retiredWeightsKeepSet: Set<String> {
-        var keep = Set(PinnedWeights.all.keys)
+        let predecessors = Set(BrainTier.allCases.compactMap(\.predecessorMLXModelID))
+        var keep = Set(PinnedWeights.all.keys).subtracting(predecessors)
         for tier in BrainTier.allCases {
-            if let id = tier.mlxModelID { keep.insert(id) }
+            keep.formUnion(weightsResolution(for: tier)?.claimedIDs ?? [])
         }
         keep.insert(currentMLXProvider.modelIdentifier)
         return keep
