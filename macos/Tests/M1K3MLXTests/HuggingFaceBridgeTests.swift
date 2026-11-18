@@ -12,6 +12,8 @@
 //  Review: Kev + claude-opus-5-5, 2026-10-19 — the fast path and the post-download check are judged by the pinned
 //  files the download's patterns fetch: the embedder's pinned README.md never arrives, so every launch asked the Hub.
 //  Review: same day (pre-push review fold) — a cut that drops a weight shard never stands for the pin.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — a pinned repo downloads exactly its pinned files by name, never a
+//  subfolder's copy; unpinned keeps the globs.
 //
 
 import Foundation
@@ -246,6 +248,28 @@ struct HuggingFaceBridgeTests {
         ))
         #expect(!WeightIntegrityScan.receiptExists(forModelAt: fixture.url))
         #expect(HubApiDownloader.enforcedPin(pin, patterns: tokenizerOnly) == pin)
+    }
+
+    /// Phone, 2026-11-18: `nace-ai/Qwen3.5-4B-MLX` ships a duplicate pack under `Q4/`, and HubApi's `*.safetensors`
+    /// matches across `/`, so the update fetched 5.8 GB for a 3 GB brain (the bar sat at 100% for the second half: the
+    /// size estimate reads the top level only). A pinned repo now downloads exactly its pinned files, by name.
+    @Test("a pinned repo downloads exactly its pinned files, by name: never a subfolder's copy")
+    func pinnedSnapshotFetchesPinnedNames() {
+        let pin = Self.fixturePin(contents: ["model.safetensors": "weights", "config.json": "{}", "README.md": "r"])
+        let names = HubApiDownloader.snapshotPatterns(Self.loaderPatterns, pin: pin)
+        #expect(names == ["config.json", "model.safetensors"], "the fetched cut, by name (README.md is not fetched)")
+        for duplicate in ["Q4/model.safetensors", "Q4/config.json"] {
+            #expect(!names.contains { RepoSizeEstimate.matches(filename: duplicate, pattern: $0) }, "\(duplicate)")
+            #expect(Self.loaderPatterns.contains { RepoSizeEstimate.matches(filename: duplicate, pattern: $0) },
+                    "the bare globs DO match it: the bug this pins")
+        }
+    }
+
+    @Test("an unpinned repo, or a cut that would drop a shard, keeps the loader's globs")
+    func unpinnedSnapshotKeepsGlobs() {
+        #expect(HubApiDownloader.snapshotPatterns(Self.loaderPatterns, pin: nil) == Self.loaderPatterns)
+        let pin = Self.fixturePin(contents: ["model.safetensors": "weights", "config.json": "{}"])
+        #expect(HubApiDownloader.snapshotPatterns(["*.json", "*.jinja"], pin: pin) == ["*.json", "*.jinja"])
     }
 
     @Test("a download is judged by the pinned files its patterns fetch")
