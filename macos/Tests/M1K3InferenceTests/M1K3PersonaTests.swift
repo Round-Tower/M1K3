@@ -770,7 +770,10 @@ struct M1K3PersonaTests {
             let voice = try #require(text.range(of: "# VOICE\n"), "\(name) has no VOICE")
             let end = text.range(of: "\n\n# ", range: voice.upperBound ..< text.endIndex)?.lowerBound ?? text.endIndex
             let section = String(text[voice.upperBound ..< end])
-            #expect(section.hasSuffix("- " + M1K3Persona.voiceYields), "\(name): the permission is not VOICE's last bullet")
+            #expect(
+                section.hasSuffix("- " + M1K3Persona.voiceYields),
+                "\(name): the permission is not VOICE's last bullet"
+            )
         }
         // Every pack carries it: the composer appends it, so a pack cannot leave it out.
         for pack in PersonaPack.all {

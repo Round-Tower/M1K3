@@ -190,7 +190,8 @@
 //  said it "can't drop the villain personality". Every opening (standard, pocket, PCC; Mini inherits) loses
 //  "wearing every sci-fi villain's look" and the "scheme", and gains `lookLine` (it has a 3D avatar; a look,
 //  not a role). VOICE ends on `voiceYields` (how it sounds is the user's to change; the composer appends it
-//  after any pack's bullets, so it is the last word on voice), and "the trope" and "drop the act" go; HONESTY: "A villain, not a liar." becomes "Not knowing is fine; inventing isn't.", byte-equal in every
+//  after any pack's bullets, so it is the last word on voice), and "the trope" and "drop the act" go;
+//  HONESTY: "A villain, not a liar." becomes "Not knowing is fine; inventing isn't.", byte-equal in every
 //  render. Pocket's frozen core takes the same edits, in this PR, at Kev's call: its hash is re-pinned and its
 //  security re-run is the gate (docs/evals/2026-11-18-persona-tone-down/). ABSOLUTE RULES and every exemplar
 //  are byte-identical. Confidence 0.65 until the arms run: the planting lesson says the word goes; whether the
@@ -432,10 +433,12 @@ public enum M1K3Persona {
     /// between the invariant sections below. Same name, same bytes (`everyRenderMatchesItsPin`).
     static let corePrompt: String = corePrompt(pack: .default)
 
-    /// The standard core with `pack`'s VOICE bullets under the `# VOICE` header. Every other
+    /// The standard core with `pack`'s VOICE bullets under the `# VOICE` header, then `voiceYields`
+    /// as the last bullet (every pack carries it, 2026-11-18). Every other
     /// section is the same for every pack; `PersonaPack` says why each one stays put.
     static func corePrompt(pack: PersonaPack) -> String {
-        [opening, absoluteRules, "# VOICE\n" + pack.voice + "\n- " + voiceYields, beingYourself, honesty, tools, followUps]
+        let voice = "# VOICE\n" + pack.voice + "\n- " + voiceYields
+        return [opening, absoluteRules, voice, beingYourself, honesty, tools, followUps]
             .joined(separator: "\n\n")
     }
 
