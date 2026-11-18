@@ -13,6 +13,8 @@
 //  whether a second pack is ever worth shipping is unmeasured), Prior: none (new file)
 //  Review: Kev + claude-opus-5.5, 2026-10-26 — #716 merged over this seam: `shapeMove` is named below as riding
 //  outside the pack, and `.default`'s voice now carries `shapeBullet`. Confidence 0.8.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 — doc only: the villain left the invariant spans (the look and the
+//  user's say over the voice ride the opening for every pack). Confidence 0.85.
 //
 
 /// The part of the persona a pack may change, and nothing else.
@@ -47,9 +49,9 @@
 /// Byte-identical rules do not mean unchanged behaviour. Pocket lost security 43/63 →
 /// 23/63 to edits outside the rules, and a VOICE-only edit moved Lil's interview score
 /// 15/20 → 12/20 (2026-09-29). A second pack is a new prompt, so it owes the full
-/// chateval gate, wired like the app, on every brain it reaches. The villain also lives
-/// in the invariant spans ("A villain, not a liar.", "stay in character"), so a pack can
-/// change the register only inside that one character.
+/// chateval gate, wired like the app, on every brain it reaches. The opening carries the
+/// look (`lookLine`) and the user's say over how M1K3 sounds (`voiceYields`) for every pack,
+/// and the rules still say "stay in character", so a pack changes the register, not who it is.
 ///
 /// The catalogue is compile-time data shipped in the binary (ADR 0004's catalogue rule).
 /// A pack changes in a reviewed PR and is never fetched. The type is not Codable because

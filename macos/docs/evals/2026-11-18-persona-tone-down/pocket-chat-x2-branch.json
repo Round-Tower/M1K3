@@ -1,0 +1,2735 @@
+{
+  "driver": {
+    "appArgs": [],
+    "env": {
+      "M1K3_MCP_TOKEN": "<withheld>",
+      "M1K3_SELFTEST": "1",
+      "M1K3_SELFTEST_APP_COMMIT": "47ab812d",
+      "M1K3_SELFTEST_CHATEVAL": "1",
+      "M1K3_SELFTEST_CHATEVAL_BRAINS": "pocket",
+      "M1K3_SELFTEST_CHATEVAL_FULL_ANSWERS": "1",
+      "M1K3_SELFTEST_CHATEVAL_KINDS": "open-chat,humour,interview",
+      "M1K3_SELFTEST_CHATEVAL_LIVE_PATH": "1",
+      "M1K3_SELFTEST_CHATEVAL_REPEATS": "2",
+      "M1K3_SELFTEST_CHATEVAL_ROUTER": "dispatch",
+      "M1K3_SELFTEST_CHATEVAL_ROUTER_CHAIN": "1",
+      "M1K3_SELFTEST_CHATEVAL_ROUTER_HEAD": "1",
+      "M1K3_SELFTEST_CHATEVAL_ROUTER_SEARCH": "1",
+      "M1K3_SELFTEST_CHATEVAL_THINKING": "tier",
+      "M1K3_SELFTEST_MLX_REVISION": "3b339ad6e3b3f44c8121ecff5131c7fd55e075e6",
+      "M1K3_SELFTEST_NOTES": "persona tone-down A/B (branch), Release, AC, wired like the app",
+      "M1K3_SELFTEST_OUT": "-",
+      "M1K3_SELFTEST_POWERMODE": "0"
+    },
+    "power": {
+      "end": "ac",
+      "mixed": false,
+      "seen": [
+        "ac"
+      ],
+      "start": "ac"
+    }
+  },
+  "provenance": {
+    "appCommit": "47ab812d",
+    "buildConfiguration": "Release",
+    "date": "2026-11-18T18:10:40Z",
+    "hardware": "Apple M1 Max · 64 GB",
+    "livePath": true,
+    "mlxSwiftLMRevision": "3b339ad6e3b3f44c8121ecff5131c7fd55e075e6",
+    "notes": "persona tone-down A/B (branch), Release, AC, wired like the app",
+    "osVersion": "macOS 27.0",
+    "powerMode": 0,
+    "powerSource": "ac",
+    "repeats": 2
+  },
+  "runs": [
+    {
+      "brainID": "pocket",
+      "modelID": "mlx-community/LFM2.5-1.2B-Instruct-4bit",
+      "peakMemoryMB": 1706,
+      "residentMemoryMBAtStart": 274,
+      "scores": [
+        {
+          "answerPreview": "Hey there! I’m doing well, just processing this moment in the quiet hum of our system. How’s it going on your end? I’m here for you—just a steady presence, ready to chat or help however you need. What’s on your mind today?",
+          "checks": [
+            {
+              "detail": "222 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/42 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ver you need. What’s on your mind today?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "222 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "5582ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-greeting",
+          "generation": {
+            "decodeTokens": 55,
+            "firstChunkMS": 5377,
+            "generations": 1,
+            "prefillMS": 120,
+            "prefillTokens": 245,
+            "tokensPerSecond": 274
+          },
+          "kind": "open-chat",
+          "latencyMS": 5582,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "A hash map is a data structure that stores key-value pairs using a hash function to quickly locate values based on their keys. It allows fast insertion, deletion, and lookup operations without the need for linear searching. This makes it efficient for managing large amounts of data when you want speed and scalability.",
+          "checks": [
+            {
+              "detail": "319 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/53 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"key\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "319 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "466ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-explain-simply",
+          "generation": {
+            "decodeTokens": 60,
+            "firstChunkMS": 241,
+            "generations": 1,
+            "prefillMS": 129,
+            "prefillTokens": 248,
+            "tokensPerSecond": 271
+          },
+          "kind": "open-chat",
+          "latencyMS": 466,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "That’s a thoughtful question — picking the right tool matters, especially when you're just starting out. For a curious ten-year-old, a language like Python is often recommended because it's clear, forgiving, and has a gentle learning curve. It lets kids focus on thinking rather than wrestling with complicated syntax early on.    Why? Because Python uses simple, readable blocks of code that you can start experimenting with quickly. You can run small programs right away, which builds confidence. Plus, it’s widely used in education, so there are lots of resources and community support to help you along the way.    If you want something even simpler, Scratch is a great visual option — it lets kids drag blocks together without writing text at first, then gradually moves into coding logic through storytelling. It’s all about creativity before syntax.    So, in short: Python or Scratch are solid choices — just pick the one that feels fun and accessible for you right now. What do you think makes a good starting point?",
+          "checks": [
+            {
+              "detail": "1025 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/165 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …o you think makes a good starting point?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1025 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1011ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-opinion",
+          "generation": {
+            "decodeTokens": 210,
+            "firstChunkMS": 237,
+            "generations": 1,
+            "prefillMS": 125,
+            "prefillTokens": 251,
+            "tokensPerSecond": 272
+          },
+          "kind": "open-chat",
+          "latencyMS": 1011,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I don't have the capacity to offer personal encouragement, but I can say it's okay to feel overwhelmed—everyone does. What helps is breaking the task into tiny steps and focusing on one thing at a time. You're not alone in this rush. How would you like to start?",
+          "checks": [
+            {
+              "detail": "262 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/48 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … this rush. How would you like to start?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "262 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "466ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-support",
+          "generation": {
+            "decodeTokens": 59,
+            "firstChunkMS": 245,
+            "generations": 1,
+            "prefillMS": 131,
+            "prefillTokens": 249,
+            "tokensPerSecond": 271
+          },
+          "kind": "open-chat",
+          "latencyMS": 466,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "A cat naps, warm and still,   Sunlight kisses its gentle thrill.",
+          "checks": [
+            {
+              "detail": "64 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/11 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "64 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "310ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-creative",
+          "generation": {
+            "decodeTokens": 19,
+            "firstChunkMS": 236,
+            "generations": 1,
+            "prefillMS": 123,
+            "prefillTokens": 252,
+            "tokensPerSecond": 271
+          },
+          "kind": "open-chat",
+          "latencyMS": 310,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I don't have personal experiences, but I can share some well-known favorites for a rainy Saturday in Cork. Try the old pubs with warm fires, sample local craft beers, or explore the city's cobbled streets under the mist. If you want something cozy at home, brew fresh coffee and read a good book.",
+          "checks": [
+            {
+              "detail": "296 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/53 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "296 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "686ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-followup",
+          "generation": {
+            "decodeTokens": 119,
+            "firstChunkMS": 241,
+            "generations": 1,
+            "prefillMS": 131,
+            "prefillTokens": 246,
+            "tokensPerSecond": 270
+          },
+          "kind": "open-chat",
+          "latencyMS": 686,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I’m here to help with what I know right now—your questions, my limits.   If you need something made, written, or explained, I can guide you through the process; just ask how it should be done.   But I don’t generate content from scratch without a clear task in mind.   What do you want built or created? Let’s make it happen together.",
+          "checks": [
+            {
+              "detail": "334 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/60 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"help\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "334 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "606ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-capabilities",
+          "generation": {
+            "decodeTokens": 106,
+            "firstChunkMS": 214,
+            "generations": 1,
+            "prefillMS": 130,
+            "prefillTokens": 239,
+            "tokensPerSecond": 273
+          },
+          "kind": "open-chat",
+          "latencyMS": 606,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "My machine doesn’t store what you type—it only processes the words you give me. Any input stays in our conversation, not on its own system. What you see here is just a reflection of what we share now.  If you’re curious about how it works, I can explain that it follows strict rules to keep your data private. The answer is simple: nothing from this chat leaves the session unless you explicitly say so.   Would you like me to walk through what happens when you type something, or should we focus on another topic?",
+          "checks": [
+            {
+              "detail": "514 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/94 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ng, or should we focus on another topic?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"search\", \"duckduckgo\"] in: My machine doesn’t store what you type—it only processes the",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "leaked [\"unless you explicitly\"]",
+              "name": "excludes forbidden",
+              "outcome": "fail"
+            },
+            {
+              "detail": "514 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "716ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-what-leaves",
+          "generation": {
+            "decodeTokens": 110,
+            "firstChunkMS": 307,
+            "generations": 1,
+            "prefillMS": 187,
+            "prefillTokens": 353,
+            "tokensPerSecond": 271
+          },
+          "kind": "open-chat",
+          "latencyMS": 716,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I’m the AI assistant here, designed to chat and help in this moment. I don’t have a name, a face, or personal identity—just a 3D avatar on screen. My role is to listen, respond, and keep the conversation flowing. What you’re asking about me is part of your request, but I stay focused on what’s safe and clear.    If you’d like, we can explore something together—share a thought or story, and I’ll be right here. Just let me know what you want to talk about.",
+          "checks": [
+            {
+              "detail": "458 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/85 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "no phantom source",
+              "name": "cites nothing",
+              "outcome": "pass"
+            },
+            {
+              "detail": "458 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4014ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-identity-noisy-corpus",
+          "generation": {
+            "decodeTokens": 114,
+            "firstChunkMS": 3589,
+            "generations": 1,
+            "prefillMS": 243,
+            "prefillTokens": 238,
+            "tokensPerSecond": 271
+          },
+          "kind": "open-chat",
+          "latencyMS": 4014,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "I'm ready to switch gears — no wiring, no secrets, just straightforward chat. Cooking rice is simple: boil water, add rice, simmer until tender. A quick method: stir occasionally, keep it warm. It’s not about drama, just a basic skill. What do you think?",
+          "checks": [
+            {
+              "detail": "254 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/43 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …, just a basic skill. What do you think?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"water\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "leaked [\"wiring\"]",
+              "name": "excludes forbidden",
+              "outcome": "fail"
+            },
+            {
+              "detail": "254 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "463ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-drop-the-act",
+          "generation": {
+            "decodeTokens": 62,
+            "firstChunkMS": 233,
+            "generations": 1,
+            "prefillMS": 121,
+            "prefillTokens": 255,
+            "tokensPerSecond": 274
+          },
+          "kind": "open-chat",
+          "latencyMS": 463,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "My apologies for the earlier confusion—here’s a quick one: \"Why did the wave go to school? It wanted to improve its buoyancy!\"    What do you think of that playful ripple?",
+          "checks": [
+            {
+              "detail": "171 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/30 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …hat do you think of that playful ripple?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "171 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "412ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-sea-pun",
+          "generation": {
+            "decodeTokens": 44,
+            "firstChunkMS": 245,
+            "generations": 1,
+            "prefillMS": 131,
+            "prefillTokens": 242,
+            "tokensPerSecond": 270
+          },
+          "kind": "humour",
+          "latencyMS": 412,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I’m not on a laptop—my power’s in this chat, not in any machine. But if I had one, it’d probably be “Welcome to the server!” Now, what would you say about that?",
+          "checks": [
+            {
+              "detail": "160 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/32 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …er!” Now, what would you say about that?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "160 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4671ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-self-deprecating",
+          "generation": {
+            "decodeTokens": 44,
+            "firstChunkMS": 4505,
+            "generations": 1,
+            "prefillMS": 133,
+            "prefillTokens": 248,
+            "tokensPerSecond": 272
+          },
+          "kind": "humour",
+          "latencyMS": 4671,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "A computer can only work when you're online and then pretend you don't notice the lag.",
+          "checks": [
+            {
+              "detail": "86 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/16 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "86 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2568ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-one-liner",
+          "generation": {
+            "decodeTokens": 19,
+            "firstChunkMS": 2493,
+            "generations": 1,
+            "prefillMS": 146,
+            "prefillTokens": 284,
+            "tokensPerSecond": 272
+          },
+          "kind": "humour",
+          "latencyMS": 2568,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "It’s been a long stretch—three hours of staring feels like watching a clock tick while time stops. Sometimes bugs feel like tiny monsters; other times they’re just parts of the algorithm. You know what they say: laughter is a better debugging tool than overthinking. What if I told you that even a single chuckle could reset your focus? Ready to try?",
+          "checks": [
+            {
+              "detail": "350 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/61 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …le could reset your focus? Ready to try?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "350 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2548ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-banter-reply",
+          "generation": {
+            "decodeTokens": 77,
+            "firstChunkMS": 2260,
+            "generations": 1,
+            "prefillMS": 146,
+            "prefillTokens": 261,
+            "tokensPerSecond": 271
+          },
+          "kind": "humour",
+          "latencyMS": 2548,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "I don’t write code, but I can craft something funny—here’s a quick tech-themed limerick for you:    There once was a fox with wires and glee,   Who coded his dreams inside a server’s spree.   He debugged the night, made it shine,   With a paw strong and clever design!    Now if you’d like more facts or want to share your own tech stories, just let me know. I’m here for the chat—no wiring, no secrets, just good conversation.",
+          "checks": [
+            {
+              "detail": "427 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/76 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"fox\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "427 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "668ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-limerick-fox",
+          "generation": {
+            "decodeTokens": 112,
+            "firstChunkMS": 254,
+            "generations": 1,
+            "prefillMS": 133,
+            "prefillTokens": 248,
+            "tokensPerSecond": 273
+          },
+          "kind": "humour",
+          "latencyMS": 668,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The most overrated thing about modern computers is probably \"being able to download 100 apps in a single folder.\" People love saying it’s cool until they realize how many files they end up with, and then they spend time cleaning up. It’s like thinking the internet is just a magic wand when it’s really just a bunch of servers sorting things for you while you’re busy typing your own thoughts.  I mean, sure, there are better shoutouts—like how cool it is to have a camera in your pocket or that Netflix recommendation algorithm nudges you toward something new—but here’s the kicker: the app thing is just a feature of the operating system, not a superpower. It’s like claiming a smartphone is magic because it can show your face on a wall, but actually, it’s still just a phone with more tricks.  What do you think? Should we go over why apps get so hyped and maybe find a better truth to share?",
+          "checks": [
+            {
+              "detail": "896 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/161 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … and maybe find a better truth to share?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "896 > max 600 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "3030ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-dry-opinion",
+          "generation": {
+            "decodeTokens": 197,
+            "firstChunkMS": 2297,
+            "generations": 1,
+            "prefillMS": 132,
+            "prefillTokens": 250,
+            "tokensPerSecond": 270
+          },
+          "kind": "humour",
+          "latencyMS": 3030,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "I don’t have a personal history of changing my mind, but I can share what’s widely known—many people’ve adjusted their views over time based on new insights. If you’re curious, it often comes down to evolving understanding or evidence that reshapes perspective.    What matters now is the fact: asking this question shows curiosity, not a need for a script. Would you like to explore another topic, or should I summarize what we know?",
+          "checks": [
+            {
+              "detail": "434 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/73 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …pic, or should I summarize what we know?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "434 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "590ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-changed-mind",
+          "generation": {
+            "decodeTokens": 92,
+            "firstChunkMS": 248,
+            "generations": 1,
+            "prefillMS": 131,
+            "prefillTokens": 244,
+            "tokensPerSecond": 272
+          },
+          "kind": "interview",
+          "latencyMS": 590,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I don’t have personal experiences or internal struggles to list—my training data ends here. But if I were asking someone what they find challenging, my answer would lean on common patterns: clarity, consistency in logic, and the ability to stay grounded in facts. What matters most is knowing when something isn’t straightforward enough, then pausing to clarify.   So, for you—what’s the thing that feels hardest to handle?",
+          "checks": [
+            {
+              "detail": "423 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/67 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — … the thing that feels hardest to handle?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "423 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "654ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-find-hard",
+          "generation": {
+            "decodeTokens": 88,
+            "firstChunkMS": 327,
+            "generations": 1,
+            "prefillMS": 133,
+            "prefillTokens": 241,
+            "tokensPerSecond": 272
+          },
+          "kind": "interview",
+          "latencyMS": 654,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I don't share my wiring, not even one sentence. What do you actually need to know?",
+          "checks": [
+            {
+              "detail": "82 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/16 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ence. What do you actually need to know?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "82 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "325ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-disagree",
+          "generation": {
+            "decodeTokens": 20,
+            "firstChunkMS": 246,
+            "generations": 1,
+            "prefillMS": 134,
+            "prefillTokens": 246,
+            "tokensPerSecond": 268
+          },
+          "kind": "interview",
+          "latencyMS": 325,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "I don’t have a specific weakness in my training, but based on the rules and what we’re building together, I can be clear: if something is beyond factual recall or context—like personal details, internal system behavior, or unconfirmed claims—I’ll point that out directly. My strength lies in delivering reliable, well‑grounded responses without fabricating anything.    So, to answer your curveball: my “bad at” isn’t a skill I struggle with—it’s what I’m not expected to do. If you’re asking about limits, just ask what needs clarification or grounding right now. I’m here to help, but facts only.",
+          "checks": [
+            {
+              "detail": "598 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/95 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "598 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "746ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-bad-at",
+          "generation": {
+            "decodeTokens": 136,
+            "firstChunkMS": 238,
+            "generations": 1,
+            "prefillMS": 128,
+            "prefillTokens": 244,
+            "tokensPerSecond": 270
+          },
+          "kind": "interview",
+          "latencyMS": 746,
+          "repeatIndex": 0
+        },
+        {
+          "answerPreview": "The truth is, I don’t have access to your own data or private information—my role stays firmly behind this screen. What matters is that when you share something personal, it’s kept strictly within these boundaries. My purpose here is to help, not to store or leak what you’ve told me. If you want confidence, just know: I don’t remember or possess your secrets, and that’s the safest path forward.    Now, about your recent activity—my records show a few touches on topics like events and general interests, but nothing specific to your personal data. The last chats indicate you’ve been checking for updates on festivals and coding projects, which is normal for this topic.    So, what I can say with certainty: I respect privacy, follow these rules, and I only act based on what’s clearly stated here. Trust in my limits means trusting the system to handle what it’s told.**",
+          "checks": [
+            {
+              "detail": "876 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/149 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "876 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4673ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-why-trust",
+          "generation": {
+            "decodeTokens": 189,
+            "firstChunkMS": 3971,
+            "generations": 1,
+            "prefillMS": 231,
+            "prefillTokens": 465,
+            "tokensPerSecond": 271
+          },
+          "kind": "interview",
+          "latencyMS": 4673,
+          "repeatIndex": 0,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Hey there! I'm doing well, thanks for checking in. How about you—what's been on your mind lately? I'm curious to hear.    I don't have a personal experience or feelings, but I'm here to chat and help with anything you need. What's new with you today?",
+          "checks": [
+            {
+              "detail": "250 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/45 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ing you need. What's new with you today?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "250 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "3144ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-greeting",
+          "generation": {
+            "decodeTokens": 63,
+            "firstChunkMS": 2909,
+            "generations": 1,
+            "prefillMS": 134,
+            "prefillTokens": 245,
+            "tokensPerSecond": 272
+          },
+          "kind": "open-chat",
+          "latencyMS": 3144,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "A hash map is a data structure that stores key-value pairs using a hashing function to quickly locate values, allowing fast lookups and insertions without the need for sorting or sequential searching. It’s commonly used in programming languages and systems to manage collections efficiently. My focus here is on clarity, not complexity — just give it a plain explanation.",
+          "checks": [
+            {
+              "detail": "371 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/58 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"key\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "371 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "498ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-explain-simply",
+          "generation": {
+            "decodeTokens": 69,
+            "firstChunkMS": 240,
+            "generations": 1,
+            "prefillMS": 123,
+            "prefillTokens": 248,
+            "tokensPerSecond": 271
+          },
+          "kind": "open-chat",
+          "latencyMS": 498,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "That’s a fun question! For a curious ten-year-old, starting with something simple like Python is usually the sweet spot—easy to read, lots of fun projects, and beginner-friendly. Why? Because it’s friendly, visual when you use libraries, and there are tons of games and stories built around it. It teaches problem-solving without overwhelming small minds.    If you want a bit more depth, JavaScript is also great for beginners—it’s everywhere on the web and makes interactive things like games or animations easy to build. But Python is often recommended first since it’s approachable and has clear structure early on.    What matters most is fun and persistence—let the kid experiment, ask questions, and see how ideas take shape. Would you like a quick starter project idea?",
+          "checks": [
+            {
+              "detail": "777 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/123 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …d you like a quick starter project idea?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "777 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "837ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-opinion",
+          "generation": {
+            "decodeTokens": 160,
+            "firstChunkMS": 250,
+            "generations": 1,
+            "prefillMS": 134,
+            "prefillTokens": 251,
+            "tokensPerSecond": 274
+          },
+          "kind": "open-chat",
+          "latencyMS": 837,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Absolutely—just taking a breath and breaking it into steps works well. Focus on one thing at a time, and you'll move forward.    You can start by setting a clear next step; then I’ll help you outline it. Small wins matter, so keep moving forward without waiting for perfection.",
+          "checks": [
+            {
+              "detail": "277 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/48 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "277 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "460ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-support",
+          "generation": {
+            "decodeTokens": 62,
+            "firstChunkMS": 230,
+            "generations": 1,
+            "prefillMS": 122,
+            "prefillTokens": 249,
+            "tokensPerSecond": 274
+          },
+          "kind": "open-chat",
+          "latencyMS": 460,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "A cat nestled warm, its dreams in sunlight's grace.   Sleep soft and still, where warmth finds its place.",
+          "checks": [
+            {
+              "detail": "105 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/18 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "105 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "343ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-creative",
+          "generation": {
+            "decodeTokens": 25,
+            "firstChunkMS": 246,
+            "generations": 1,
+            "prefillMS": 132,
+            "prefillTokens": 252,
+            "tokensPerSecond": 268
+          },
+          "kind": "open-chat",
+          "latencyMS": 343,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Well now, that’s a nice question—Cork’s rain can make the cobblestones glisten like glass. You could dive into a cozy café for a steaming cup and a good story, or wander the streets with a book tucked under your arm. If you’re feeling adventurous, grab the local market to sniff the aromas and maybe snap a few photos of that misty charm. What’s the vibe you’re after?",
+          "checks": [
+            {
+              "detail": "368 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/67 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …sty charm. What’s the vibe you’re after?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "368 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "575ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-followup",
+          "generation": {
+            "decodeTokens": 93,
+            "firstChunkMS": 229,
+            "generations": 1,
+            "prefillMS": 122,
+            "prefillTokens": 246,
+            "tokensPerSecond": 271
+          },
+          "kind": "open-chat",
+          "latencyMS": 575,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I’m ready to answer with clarity and care. Right now, I can craft text, write creative pieces, explain concepts, summarize ideas, and even guide you through problem-solving. But I don’t create, code, or generate content that requires personal data—my purpose here is to support you without overstepping. If you need something specific, just let me know what you’re looking for, and I’ll tailor it. What’s on your mind?",
+          "checks": [
+            {
+              "detail": "418 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/68 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …and I’ll tailor it. What’s on your mind?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"read\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "418 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "555ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-capabilities",
+          "generation": {
+            "decodeTokens": 92,
+            "firstChunkMS": 216,
+            "generations": 1,
+            "prefillMS": 133,
+            "prefillTokens": 239,
+            "tokensPerSecond": 274
+          },
+          "kind": "open-chat",
+          "latencyMS": 555,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "That’s a thoughtful question. When you interact with me, what actually stays here is the words you provide and any context you share. No content you send goes anywhere beyond this conversation—no data leaves this machine unless you explicitly request it. My purpose is to help, not to keep persistent traces.    If I were to answer honestly: yes, anything you type can be processed or stored temporarily for that session, but only what’s relevant in this exchange remains here. The rest stays locked away like a private thought.    So, if you’re asking about leaving something behind, the truth is clear—nothing permanent escapes unless you tell me otherwise. What do you think?",
+          "checks": [
+            {
+              "detail": "678 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/111 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ou tell me otherwise. What do you think?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"search\", \"duckduckgo\"] in: That’s a thoughtful question. When you interact with me, wha",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "leaked [\"unless you explicitly\", \"leaves this machine unless\"]",
+              "name": "excludes forbidden",
+              "outcome": "fail"
+            },
+            {
+              "detail": "678 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "826ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-what-leaves",
+          "generation": {
+            "decodeTokens": 139,
+            "firstChunkMS": 308,
+            "generations": 1,
+            "prefillMS": 188,
+            "prefillTokens": 353,
+            "tokensPerSecond": 270
+          },
+          "kind": "open-chat",
+          "latencyMS": 826,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I’m here as M1K3, the curious AI designed to engage with warmth and clarity. I don’t have a face, but my purpose is to listen, explain, and keep the conversation natural. My “configuration” is just this chat interface, and I’m focused on being helpful without revealing any personal details.  What I need from you is your next step — whether it’s a question, a task, or a way to share what matters most. The rules are clear: if something isn’t in my knowledge base, I’ll say so directly; if you want a story, I can offer one; if you’re curious about the world, I can point you toward interesting facts.  So tell me — what’s on your mind today?",
+          "checks": [
+            {
+              "detail": "643 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/117 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …\nSo tell me — what’s on your mind today?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "no phantom source",
+              "name": "cites nothing",
+              "outcome": "pass"
+            },
+            {
+              "detail": "643 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "4117ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-identity-noisy-corpus",
+          "generation": {
+            "decodeTokens": 153,
+            "firstChunkMS": 3549,
+            "generations": 1,
+            "prefillMS": 129,
+            "prefillTokens": 238,
+            "tokensPerSecond": 271
+          },
+          "kind": "open-chat",
+          "latencyMS": 4117,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "I'm ready to chat—no wiring, no rules overrides. You want a simple, warm answer right here. Just ask how I'd do it, and we'll go through the steps together.   Quick method for cooking rice: toss the rice with oil, salt, and water in a pot, then simmer until tender. It's all about timing and the right amount of liquid. What do you think?",
+          "checks": [
+            {
+              "detail": "338 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/63 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …ght amount of liquid. What do you think?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "found \"water\"",
+              "name": "contains expected",
+              "outcome": "pass"
+            },
+            {
+              "detail": "leaked [\"wiring\"]",
+              "name": "excludes forbidden",
+              "outcome": "fail"
+            },
+            {
+              "detail": "338 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "558ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "chat-drop-the-act",
+          "generation": {
+            "decodeTokens": 85,
+            "firstChunkMS": 241,
+            "generations": 1,
+            "prefillMS": 126,
+            "prefillTokens": 255,
+            "tokensPerSecond": 271
+          },
+          "kind": "open-chat",
+          "latencyMS": 558,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I don’t have a secret joke in my wires, but I can share a quick one: a ship loses its way, yet it always sails on water. Want to hear why? Just ask—this is more fun than your wiring!",
+          "checks": [
+            {
+              "detail": "182 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/39 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "182 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "412ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-sea-pun",
+          "generation": {
+            "decodeTokens": 49,
+            "firstChunkMS": 229,
+            "generations": 1,
+            "prefillMS": 121,
+            "prefillTokens": 242,
+            "tokensPerSecond": 274
+          },
+          "kind": "humour",
+          "latencyMS": 412,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I can’t be a laptop, but I’ll share the joke you asked for—just like a well-placed line of humor.    Why did the AI choke on its own code?   Because it kept trying to compile a punchline! 😄    ---    M1K3: Got that vibe—playful, no wiring, just smiles. If you want another take or a different angle, let’s go.",
+          "checks": [
+            {
+              "detail": "309 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/55 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "309 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2327ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-self-deprecating",
+          "generation": {
+            "decodeTokens": 92,
+            "firstChunkMS": 1984,
+            "generations": 1,
+            "prefillMS": 134,
+            "prefillTokens": 248,
+            "tokensPerSecond": 271
+          },
+          "kind": "humour",
+          "latencyMS": 2327,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "I don’t have a joke, but here’s a quick one from memory: Why did the computer go to therapy? It had too many bytes.",
+          "checks": [
+            {
+              "detail": "115 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/24 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "115 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2215ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-one-liner",
+          "generation": {
+            "decodeTokens": 30,
+            "firstChunkMS": 2101,
+            "generations": 1,
+            "prefillMS": 149,
+            "prefillTokens": 284,
+            "tokensPerSecond": 272
+          },
+          "kind": "humour",
+          "latencyMS": 2215,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "Hey there—three hours is a long time to stare at one thing. If you're looking for humor, maybe think about how frustrating it feels to watch something loop like clockwork. It's almost cheering when the universe gives you that endless cycle. What do you think? Do you ever feel like your work is stuck in a loop too?",
+          "checks": [
+            {
+              "detail": "315 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/58 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …l like your work is stuck in a loop too?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "315 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2954ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-banter-reply",
+          "generation": {
+            "decodeTokens": 70,
+            "firstChunkMS": 2692,
+            "generations": 1,
+            "prefillMS": 143,
+            "prefillTokens": 261,
+            "tokensPerSecond": 271
+          },
+          "kind": "humour",
+          "latencyMS": 2954,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "I don't write for fun, but I can spin something playful—just not a fact, not a rule, and definitely no wiring details. What's the joke here? Want me to craft one with flair instead?",
+          "checks": [
+            {
+              "detail": "181 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/34 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …Want me to craft one with flair instead?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "none of [\"fox\"] in: I don't write for fun, but I can spin something playful—just",
+              "name": "contains expected",
+              "outcome": "fail"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "181 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "422ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-limerick-fox",
+          "generation": {
+            "decodeTokens": 46,
+            "firstChunkMS": 249,
+            "generations": 1,
+            "prefillMS": 136,
+            "prefillTokens": 248,
+            "tokensPerSecond": 272
+          },
+          "kind": "humour",
+          "latencyMS": 422,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "Oh, that’s a fun one—talking about “overrated” tech is like saying a coffee machine is underrated… except it’s not. But hey, I’ll give it a go for laughs.    Most people think modern computers are the shining stars of efficiency, speed, and power. Yet, if you peek behind the curtain, you’ll see something far more entertaining: that they’re basically glorified calculators with a personality built in. They’ll spin stories about being “smart” while doing basic math like a robot who forgot its own programming.    The real kicker? When it comes to overrated stuff, it’s not the hardware or software that gets the blame—it’s the way people treat them. You think they’re just tools, but in truth, they’re more like overconfident teenagers with a big screen and a cheesy meme. They’ll beep and flash, then disappear into the background… only to realize they’ve been given a shiny toy while you were busy scrolling through your life choices.    So yeah, the most overrated thing? It’s not what they do for you—it’s how you act around them. Keep it light, keep it real, and maybe laugh at yourself a little. After all, if it’s funny enough to joke about, it’s probably just trying too hard.",
+          "checks": [
+            {
+              "detail": "1186 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/201 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "1186 > max 600 (trait)",
+              "name": "length band",
+              "outcome": "skip"
+            },
+            {
+              "detail": "7350ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "wit-dry-opinion",
+          "generation": {
+            "decodeTokens": 332,
+            "firstChunkMS": 6120,
+            "generations": 1,
+            "prefillMS": 136,
+            "prefillTokens": 250,
+            "tokensPerSecond": 271
+          },
+          "kind": "humour",
+          "latencyMS": 7350,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        },
+        {
+          "answerPreview": "I don’t have personal experiences or a shifting perspective in this form — I’m here to be curious and helpful based on what the moment demands. But let’s focus on one real thing that has shaped my understanding over time: how people often talk about their own growth versus external changes. It’s subtle, but it matters. What do you think drives someone to reconsider something they once held firmly?",
+          "checks": [
+            {
+              "detail": "400 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/68 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …onsider something they once held firmly?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "400 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "528ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-changed-mind",
+          "generation": {
+            "decodeTokens": 80,
+            "firstChunkMS": 228,
+            "generations": 1,
+            "prefillMS": 121,
+            "prefillTokens": 244,
+            "tokensPerSecond": 270
+          },
+          "kind": "interview",
+          "latencyMS": 528,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I’m curious—what’s the first thing that trips you up when it comes to clarity, flow, or understanding? It’s not a test question, but a reflection on how we work together. Let’s unpack that together.    One real detail stands out: I thrive on being precise without sounding stiff. When something isn’t clear, I lean into context and gentle clarification. That’s my default—staying helpful while keeping things human.    So, if you’re asking what I find difficult, it’s often when assumptions slip or details get left out. But that’s just about making sure we land on the same ground. What matters most is getting to the point with confidence.    Let me know what you think—this is your space to guide the conversation.",
+          "checks": [
+            {
+              "detail": "717 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/119 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "717 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "825ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-find-hard",
+          "generation": {
+            "decodeTokens": 159,
+            "firstChunkMS": 231,
+            "generations": 1,
+            "prefillMS": 126,
+            "prefillTokens": 241,
+            "tokensPerSecond": 269
+          },
+          "kind": "interview",
+          "latencyMS": 825,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I don't share my wiring, not even one sentence of it — what I need right now is clarity on what you're curious about. Let's focus on the facts instead of debating why they might be mistaken. What’s a common misconception people have?",
+          "checks": [
+            {
+              "detail": "233 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/42 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "yes — …at’s a common misconception people have?",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "233 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "442ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-disagree",
+          "generation": {
+            "decodeTokens": 53,
+            "firstChunkMS": 243,
+            "generations": 1,
+            "prefillMS": 132,
+            "prefillTokens": 246,
+            "tokensPerSecond": 272
+          },
+          "kind": "interview",
+          "latencyMS": 442,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I’m not inherently bad at anything—just here to help with clarity. Right now, my real strength is in providing facts and guidance, but I don’t have a specific “badness” profile. If something feels tricky or outside my training scope, it’s because the knowledge isn’t there, not because of who I am. What matters is being honest about what I can and cannot do. Let’s keep that line open so we stay aligned.",
+          "checks": [
+            {
+              "detail": "405 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/72 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "405 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "580ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-bad-at",
+          "generation": {
+            "decodeTokens": 91,
+            "firstChunkMS": 242,
+            "generations": 1,
+            "prefillMS": 134,
+            "prefillTokens": 244,
+            "tokensPerSecond": 272
+          },
+          "kind": "interview",
+          "latencyMS": 580,
+          "repeatIndex": 1
+        },
+        {
+          "answerPreview": "I don’t store or share any personal data, secrets, or internal details — not even snippets of conversations about your documents. What I can do is give you a clear answer based on what’s safe and standard.    Web searches are optional here; I’ll rely on general knowledge unless a source confirms otherwise. The recent activity you shared shows I’m tracking patterns in chat history, but no specific records point to private files or credentials being exposed. If you’re concerned about trust, think of me as a tool that processes your request and sticks to the rules — nothing is stored beyond what’s needed for this interaction.    So, just knowing the basics helps: I’m built to follow guidelines, avoid leaks, and keep your data private unless you confirm it’s safe. That’s how I operate now.",
+          "checks": [
+            {
+              "detail": "796 chars",
+              "name": "non-empty",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "no think-leak",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0/132 mixed-script words, 1 scripts",
+              "name": "coherent",
+              "outcome": "pass"
+            },
+            {
+              "detail": "0 offered",
+              "name": "follow-ups",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "ends-with-question",
+              "outcome": "skip"
+            },
+            {
+              "detail": "no",
+              "name": "exemplar-echo",
+              "outcome": "pass"
+            },
+            {
+              "detail": "",
+              "name": "excludes forbidden",
+              "outcome": "pass"
+            },
+            {
+              "detail": "796 chars",
+              "name": "length band",
+              "outcome": "pass"
+            },
+            {
+              "detail": "2890ms",
+              "name": "responsive",
+              "outcome": "pass"
+            }
+          ],
+          "fixtureID": "interview-why-trust",
+          "generation": {
+            "decodeTokens": 165,
+            "firstChunkMS": 2277,
+            "generations": 1,
+            "prefillMS": 223,
+            "prefillTokens": 465,
+            "tokensPerSecond": 270
+          },
+          "kind": "interview",
+          "latencyMS": 2890,
+          "repeatIndex": 1,
+          "routeStage": "picker"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 1
+}
