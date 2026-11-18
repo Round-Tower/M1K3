@@ -19,6 +19,10 @@
 //  guard the local one got (a stepped cloud holds the turn open mid-leak; red without the guard).
 //  Review: Kev + claude-opus-5.5, 2026-11-17 — the route-aware stop (`fallbackIsLocal`) and the stopped fallback's
 //  notice, both ways: stopped before its first word claims no answer, stopped after keeps "answered here".
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (#864 review fold) — a Private Cloud turn left running in the
+//  background can fail there; its local fallback starts only in front or off this GPU
+//  (BackgroundExitPolicy.mayRunLocalFallback, ChatSession.mayRunLocalFallback), else the notice says Lil can't
+//  answer in the background and asks again on return.
 //
 
 import Foundation
@@ -418,6 +422,26 @@ struct ChatSessionPrivateCloudTests {
         let expected = PrivateCloudFallback.notice(for: .other, localBrain: "Lil", now: now, localStopped: true)
         #expect(notice.text == expected)
         #expect(notice.contextExcluded == true)
+        #expect(!session.isResponding)
+    }
+
+    /// #864 review: the app left while Private Cloud streamed (the exit lets it run), then it failed in the
+    /// background. The local fallback must not start Lil on a GPU iOS refuses there: the notice says why instead.
+    @Test("a Private Cloud failure with no local fallback allowed starts no local turn and says so")
+    func heldFallbackRunsNothing() async throws {
+        let local = GatedResponder(first: "never")
+        let session = ChatSession(responder: local)
+        session.mayRunLocalFallback = { false }
+        let cloud = FakeCloud(snapshots: [], failure: .network)
+        await session.sendPrivateCloud(
+            session.privateCloudConsent(for: "hi"), includeConversation: false, backend: cloud,
+            gate: Self.open, localBrainName: "Lil", now: now
+        )
+        #expect(!local.started, "Lil never started")
+        #expect(session.messages.count == 2, "the question and the notice")
+        let notice = try #require(session.messages.last)
+        #expect(notice.text == PrivateCloudFallback.notice(for: .network, localBrain: "Lil", now: now, localHeld: true))
+        #expect(notice.status == .complete)
         #expect(!session.isResponding)
     }
 

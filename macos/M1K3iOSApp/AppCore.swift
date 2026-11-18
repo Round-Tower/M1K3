@@ -182,6 +182,10 @@
 //  Review fold: a look counts as busy too, and a pick or Home cancels the outgoing brain's warm. Open: a look or a
 //  palette turn started while the build is already on the GPU waits up to ~4 s behind it; a build caught by
 //  `.inactive` is refused and lost (caught, logged). Both owed on the phone; neither is worse than a cold first turn.
+//  Review: Kev + claude-opus-5.5, 2026-11-18 (#864 review fold) — a Private Cloud turn left running in the
+//  background can fail there; its local fallback starts only in front or off this GPU
+//  (BackgroundExitPolicy.mayRunLocalFallback, ChatSession.mayRunLocalFallback), else the notice says Lil can't
+//  answer in the background and asks again on return.
 //  Review: Kev + claude-opus-5.5, 2026-11-18 — every tier-to-folder site (restore consent, the launch slot, the
 //  re-pick guard, the warm, the return's take-back) goes through the WeightsRefresh resolver; the warm's ready
 //  refreshes the update row.
@@ -898,6 +902,11 @@ final class AppCore {
         // AppEnvironment rule), so a rating made later still names who answered. PCC answers
         // stamp themselves in ChatSession.
         chat.residentBrainName = { [weak self] in self?.answeringBrainName }
+        // A Private Cloud turn left running in the background can fail there; its fallback must not start Lil on a
+        // GPU iOS refuses (#864 review).
+        chat.mayRunLocalFallback = { [weak self] in
+            BackgroundExitPolicy.mayRunLocalFallback(appActive: Self.appIsActive, localBrainLoaded: self?.currentMLX != nil)
+        }
 
         refreshCounts()
         // Brain at Home: restore a paired Mac, and re-point the slot at it if

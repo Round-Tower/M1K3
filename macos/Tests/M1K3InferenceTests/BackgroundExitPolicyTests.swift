@@ -143,4 +143,13 @@ struct BackgroundExitPolicyTests {
         #expect(asked.lowerBound < warmed.lowerBound)
         #expect(warm.contains("currentMLX = stillLoaded"))
     }
+
+    /// #864 review: a Private Cloud turn left running in the background can still fail there, and its local
+    /// fallback would then start Lil on a GPU iOS refuses in the background.
+    @Test("a Private Cloud turn's local fallback runs in front, or anywhere when the local brain is not on this GPU")
+    func localFallbackOnlyWhereTheGPUServes() {
+        #expect(BackgroundExitPolicy.mayRunLocalFallback(appActive: true, localBrainLoaded: true))
+        #expect(BackgroundExitPolicy.mayRunLocalFallback(appActive: false, localBrainLoaded: false), "Mini or Home")
+        #expect(!BackgroundExitPolicy.mayRunLocalFallback(appActive: false, localBrainLoaded: true))
+    }
 }
